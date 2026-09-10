@@ -14,3 +14,25 @@ DUDU 下子项目对照表（口语 → 规范名，用于精准定位）：
 | DuduDesk | Desk / 客服端 / 工作台 | `dudu-desk/` | 嘟嘟客服坐席工作台（Tauri 2 + React 19，桌面端起步） |
 | DuduAdmin | Admin / 管理后台 | `dudu-admin/` | 嘟嘟管理后台——纯 Web 前端（Vite + React 19 + shadcn），业务待规划 |
 | DuduConsole | Console / 控制台 | `dudu-console/` | 嘟嘟控制台——纯 Web 前端（Vite + React 19 + shadcn），业务待规划 |
+
+## Language
+
+**渠道（Channel）**:
+接入 DUDU 的外部聊天平台（微信、支付宝、B 站等），经回调把来访用户消息送入后端。
+_Avoid_: 平台（口语可用，正式文档用渠道）、第三方
+
+**坐席（Agent）**:
+在工作台接待渠道来访用户的客服人员，是 DUDU 自有前端的登录用户。
+_Avoid_: 客服（口语）、operator
+
+**来访用户**:
+通过渠道发起会话、最终由坐席接待的人，不是 DUDU 的登录用户。
+_Avoid_: 客户、C 端用户
+
+**工作台**:
+坐席日常接待使用的 DUDU 自有前端（桌面端或网页）。
+_Avoid_: 接待系统（口语别名）
+
+**管理后台**:
+按角色权限管理配置与数据的 DUDU 自有前端；与工作台同一套用户体系（单用户表 + role）。
+
