@@ -26,3 +26,6 @@ dist-ssr
 # Build caches
 *.tsbuildinfo
 .yarn/install-state.gz
+
+# Vitest reports and artifacts
+.vitest/
