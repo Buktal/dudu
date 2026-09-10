@@ -35,14 +35,14 @@
 | 群会话添加人员 `chat_add_member`（Stream/HTTP/SyncHTTP 三形态+biz_type=177） | https://open.dingtalk.com/document/orgapp/event-chat-add-member.md | WebFetch 全文 |
 | 套件票据 `suite_ticket`（5 小时推送/biz_type=2） | https://open.dingtalk.com/document/isvapp/event-suite-ticket.md | WebFetch 全文 |
 | 获取企业内部应用 access_token（旧 oapi 版） | https://open.dingtalk.com/document/orgapp/obtain-orgapp-token.md | `[摘录]`（WebSearch 官方页原文，与 development/obtain-orgapp-token.md 同文） |
-| 获取企业内部应用 accessToken（新 api 版） | https://open.dingtalk.com/document/development/obtain-the-access-token-of-an-internal-app.md | `[摘录]`（WebSearch 官方页原文） |
+| 获取企业内部应用 accessToken（新 api 版） | https://open.dingtalk.com/document/development/obtain-the-access-token-of-an-internal-app.md | WebFetch 全文（2026-09-10 复核升级） |
 | 获取第三方应用授权企业 accessToken（新版 corpAccessToken） | https://open.dingtalk.com/document/isvapp/obtain-the-access_token-of-the-authorized-enterprise.md | WebFetch 全文 |
 | 服务商获取授权企业 access_token（旧版 service/get_corp_token） | https://open.dingtalk.com/document/isvapp/obtains-the-enterprise-authorized-credential.md | WebFetch 全文 |
-| 发送工作通知 `asyncsend_v2` | https://open.dingtalk.com/document/development/asynchronous-sending-of-enterprise-session-messages.md | `[摘录]`（WebSearch 官方页原文，请求/响应/频控逐字） |
-| 机器人发送群聊消息 `POST /v1.0/robot/groupMessages/send` | https://open.dingtalk.com/document/development/the-robot-sends-a-group-message.md | `[摘录]`（WebSearch 官方页原文） |
+| 发送工作通知 `asyncsend_v2` | https://open.dingtalk.com/document/development/asynchronous-sending-of-enterprise-session-messages.md | WebFetch 全文（2026-09-10 复核升级） |
+| 机器人发送群聊消息 `POST /v1.0/robot/groupMessages/send` | https://open.dingtalk.com/document/development/the-robot-sends-a-group-message.md | WebFetch 全文（2026-09-10 复核升级） |
 | 配置 Stream 推送（推荐，开发配置>事件订阅四步） | https://open.dingtalk.com/document/orgapp/configure-stream-push | `[摘录]`（2026-09-10 复核：前提开发者权限+内部应用+先完成服务端开发；保存后事件列表才展示） |
 | 旧回调审批事件（type start/finish/terminate/cancel 语义） | https://open.dingtalk.com/document/isvapp/approval-events-2 | `[摘录]`（2026-09-10 复核：更新于 2024-01-11；实例 `type` start/finish/terminate，任务 `type` finish/cancel；`result` agree/refuse） |
-| 旧回调通讯录事件（12 类 call_back_tag 字典） | https://open.dingtalk.com/document/app/tvgq1n | `[摘录]`（2026-09-10 复核：更新于 2022-12-09；user_add/modify/leave/active + admin_add/remove + dept_create/modify 等） |
+| 旧回调通讯录事件（15 类 call_back_tag 字典） | https://open.dingtalk.com/document/app/tvgq1n | WebFetch 全文（2026-09-10 复核升级；15 行：user_add/modify/leave/active + org_admin_add/remove + org_dept_create/modify/remove + org_remove/org_change + label_user_change/conf_add/conf_del/conf_modify） |
 | API 调用步骤详解（准入：建应用→配权限→取 Token→调 API） | https://open.dingtalk.com/document/development/server-api-calling-guide.md | `[摘录]`（2026-09-10 复核：`server-api-calling-guide` 全流程页；敏感权限走 authCode 换 user token） |
 | 新 HTTP 回调握手（1500ms 回 success 加密包） | https://open.dingtalk.com/document/development/configure-event-subscription （镜像 https://help.dingtalk.io/open/development/configure-event-subscription） | `[摘录]`（2026-09-10 复核：`{"encrypt":"…"}` 握手，1500ms 内回 `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`） |
 
@@ -117,11 +117,11 @@
 |---|---|---|---|
 | `bpms_instance_change` | 审批实例开始/结束/终止/删除 | 企业内部应用：Stream+HTTP；SyncHTTP/RDS 不支持 | 全文 https://open.dingtalk.com/document/development/event-bpms-instance-change.md |
 | `bpms_task_change` | 审批任务开始/结束/转交 | 同上 | 全文 https://open.dingtalk.com/document/development/event-bpms-task-change.md |
-| `workflow_instance_change_directed` | 审批定向事件：ISV 建的官方 OA 审批或"ISV 套件"模板的实例/任务变更，定向推给归属 ISV | 第三方企业应用：Stream 支持、HTTP 不支持、SyncHTTP/RDS 支持 | `[摘录]` https://open.dingtalk.com/document/development/event-workflow-instance-change-directed.md |
+| `workflow_instance_change_directed` | 审批定向事件：ISV 建的官方 OA 审批或"ISV 套件"模板的实例/任务变更，定向推给归属 ISV | 第三方企业应用：Stream 支持、HTTP 不支持、SyncHTTP/RDS 支持 | 全文 https://open.dingtalk.com/document/development/event-workflow-instance-change-directed.md（finsh 拼写照录，biz_type=247） |
 | 请假/加班/出差/外出状态变更 | 审批单发起/完成/撤销/删除（考勤视角） | — | 目录有链 `events-attendance-approve-status-change`，全文待核验(09-27) |
 
 - 订阅规则（实例页逐字）：` /v1.0/event/bpms_instance_change/bizCategoryId/{bizCategoryId}/processCode/{processCode}/type/{type}` 或 `/v1.0/event/bpms_instance_change/processCode/{processCode}/type/{type}`；`type` 取 start/finish/terminate（页内示例用 `start`）。常用 `bizCategoryId` 表（打卡 `open.com.dd.at.approveCheck`、外出 `attendance.goout`、出差 `alitrip.business`、离职 `hrm.termination`、报销 `dingtalk.businessFinance.reimbursement` 等 30+ 行）见原文页。
-- `bpms_task_change.data`：`result/processInstanceId/finishTime/createTime/processCode/bizCategoryId/businessId/remark/type/title/taskId/staffId`；`type` 取 start/finish（转交语义在标题，正文 `type` 枚举待核验(09-27)）；`result` 如 `agree`。
+- `bpms_task_change.data`：`result/processInstanceId/finishTime/createTime/processCode/bizCategoryId/businessId/remark/type/title/taskId/staffId`；`type` 取 start/finish（含转交：type:finish + result:redirect），结束另有 cancel（或签）；`result` 如 `agree`。来源 https://open.dingtalk.com/document/isvapp/approval-events-2.md（直抓）。
 - `bpms_instance_change.data`：`result/processInstanceId/finishTime/createTime/processCode/bizCategoryId/businessId/type/title/businessType/url/staffId`；`type` 如 `finish`。
 
 ### 2.3 IM / 群会话 / 机器人

@@ -257,15 +257,16 @@ SDK 语言：官方 SDK 支持"JAVA/PHP/.NET/Python"（`[摘录]` jdunion 页；
 | `app_key` / `appSecret` | 应用中心创建应用获取；控制台应用管理可查；签名两端夹 secret；签名工具按字段输入含 `access_token/app_key/app_secret/method/timestamp/360buy_param_json/V` | `[摘录]` listId=33/530、commontools?id=2 |
 | Token 运维 | "Token有效期查询"工具、"Token过期处置"文档存在（导航标题实锤，规则正文待核验(09-27)）；网关错误按 `code/errorMessage/errorSolution` 三元组返回（如 `500 Internal Server Error…请稍后重试`、`-110000 访问太频繁…限流`） | `[摘录]` 导航 + `[摘录]` enSearch/afsservice 错误码表 |
 | 权限包（接口授权单元） | 按权限包申请（listId=170）：`客服工单-基础接口包`（push2、chatsession 等）、`客服插件接口包`、`B2C-客服-机器人2.0`（智能机器人）、`B2C-客服-商家1.0`、`客服质检-基础接口包`、`基础能力包`、`通用-服务市场1.0`；"拥有此API的权限包 \| 可获得/可申请该API权限包的应用类型"为每页标配段 | `[摘录]` 各 apilist 页"如何获取该API"段 |
-| 应用类型与准入 | ISV/京东商家/个人三类账号可登录；应用创建后运营 3 个工作日内审核；测试态每日 500 次，发布上线后 30 万次/日；自研/服务商/物流/联盟有独立接入流程；"发布应用"前可删除 | `[摘录]` listId=298 |
+| 应用类型与准入 | ISV/京东商家/个人三类账号可登录；应用创建后运营 3 个工作日内审核；测试态每日 500 次，发布上线后 30 万次/日（并列原文 listId=160《应用创建流程》2021-06-08 同句）；自研/服务商/物流/联盟有独立接入流程；"发布应用"前可删除 | `[摘录]` listId=298（并列原文 listId=160） |
 | 流量自助调整 | APPKEY 流量自助调整规则（listId=186，标题实锤，正文待核验(09-27)）；收费规则（listId=184，标题实锤，正文待核验(09-27)） | `[摘录]` 导航 |
-| code→token 端点/refresh/有效期 | → 待核验(09-27)（`oauth.jd.com/oauth/token` 仅见于第三方 SDK README，不可采信） | 待核验(09-27) |
+| code→token 端点/refresh/有效期 | 官方端点 `open-oauth.jd.com/oauth2/to_login` + `open-oauth.jd.com/oauth2/access_token?app_key&app_secret&grant_type=authorization_code&code`（`[摘录]` listId=32）；有效期/刷新正文 → 待核验(09-27)（`oauth.jd.com/oauth/token` 仍仅见第三方，不可采信） | 部分实锤+待核验(09-27) |
 
 ---
 
 ## 7. 待核验清单（统一标待核验(09-27)）
 
 1. **消息推送服务全文**：https://open.jd.com/home/home#/doc/common?listId=520（投递形态 HTTP/JMQ/拉取、订阅配置、重试、幂等键、保序）。→ 待核验(09-27)
+1b. **JOS 关闭迁移（2026-09-10 复核新发现）**：JOS 2026-07-01 融合至 `https://open.jd.com`、2026-08-30 前关闭；新增仅企业账号、需软著/保证金、敏感接口须部署云鼎（`[摘录]` https://jos.jd.com/ 首页公告《关于JOS系统关闭及迁移至JDO平台的公告》）。影响 09-27 复核入口。
 2. **订单/商品/库存/财务消息精确类型名与载荷**（仅状态枚举与查询 API 实锤，类型名无）。→ 待核验(09-27)
 3. **`AFS_StepResult_JOS` 载荷字段与订阅方式**（仅消息名实锤；`asc.sync.list` 2026-09 下线为旁证）。→ 待核验(09-27)
 4. **咚咚 `chat_message4.2` 协议全文**（platformdetail itemId=2222；目前仅标题+voice 一片段；text/image/order 等类型未知）。→ 待核验(09-27)

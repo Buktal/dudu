@@ -7,18 +7,18 @@
 ## 1. 官方文档入口与关键页面地址
 
 - 门户：https://open.bilibili.com/ —— 导航含 **开平文档中心 / 开平管理中心 / 账号管理 / 应用管理 / 授权管理 / 直播创作者服务中心 / 互动玩法**（`[摘录]` 门户页）
-- 文档中心：https://open.bilibili.com/doc（`[摘录]` DotnetDemo README 指引“哔哩哔哩开放平台文档中心 https://open.bilibili.com/doc 中相关接口的签名实现”）
+- 文档中心：https://open.bilibili.com/doc（门户/仓库旁证：官方 org bilibili-openplatform/SignatureAlgorithm_DotnetDemo 自述“开放平台文档中各项接口的签名实现案例”；README 逐字引文未取）
 - 管理中心（应用管理 / 查看应用详情 / Webhooks 配置入口指向）：https://openhome.bilibili.com/company-core（`[镜像]` https://bilibili.apifox.cn/doc-895911 ；管理中心域名本身在门户导航“开平管理中心”可验壳）
 - 能力总览（OPEN API 六域 + 三端 SDK + 运营指南）：https://openhome.bilibili.com/doc（`[摘录]`，见 §2.1）
-- 接口签名实现标准和状态码：https://open.bilibili.com/doc/4/8673959e-f7bb-56e6-6e68-d225f971b81b（`[摘录]`，头表/包络/错误码均有官方原文；WebFetch 仅回 SPA 壳）
-- 第三方应用接入 OAuth 2.0：https://open.bilibili.com/doc/4/eaf0e2b5-bde9-b9a0-9be1-019bb455701c（`[摘录]`，code→token / refresh 续期 / scope 重授权）
-- 第三方网页应用接入 OAuth 2.0：https://open.bilibili.com/doc/4/aac73b2e-4ff2-b75c-4c96-35ced865797b（`[摘录]`，标题实锤，参数细节待核验(09-27)）
-- 推送事件列表（含 deauthorize 全文）：https://open.bilibili.com/doc/4/a3f37dde-212b-b71b-5388-fbd3bfb41623（`[摘录]`，公共参数 + deauthorize 事件体 + 注销广播语义）
+- 接口签名实现标准和状态码：https://open.bilibili.com/doc/4/8673959e-f7bb-56e6-6e68-d225f971b81b（`[摘录]`，头表/包络/签名机制有官方原文；4000 系错误码未见官方原文；WebFetch 仅回 SPA 壳）
+- 第三方应用接入 OAuth 2.0：https://open.bilibili.com/doc/4/eaf0e2b5-bde9-b9a0-9be1-019bb455701c（`[摘录]`，code→token / refresh 提前刷新语义；“expires_in 过期时间（UTC时间）”措辞出自镜像非官方页；“refresh 一次性”未见官方原文）
+- 第三方网页应用接入 OAuth 2.0：https://open.bilibili.com/doc/4/aac73b2e-4ff2-b75c-4c96-35ced865797b（`[摘录]`，简介+四步流程+302 重定向 `${return_url}?code=${code}&state=${state}` 有官方原文；其余细节待核验(09-27)）
+- 推送事件列表：https://open.bilibili.com/doc/4/a3f37dde-212b-b71b-5388-fbd3bfb41623（既有`[摘录]`存档：公共参数 + deauthorize 事件体 + 注销广播语义；本次未能复现该页正文，降级为镜像+侧页印证，正文待复核(09-27)）
 - 视频稿件提交：https://open.bilibili.com/doc/4/f7fc57dd-55a1-5cb1-cba4-61fb2994bf0f（`[摘录]`，`Scope: ARC_BASE` + 非正式会员每日 5 稿）
 - 通用应用基于 OAuth 2.0 与直播互动（两套体系声明 + 报备邮箱）：https://open.bilibili.com/doc/4/19350a57-2e2d-43cf-3e6d-c7de132b24b6（`[摘录]`）
-- 直播间数据（标题实锤，正文未取）：https://open.bilibili.com/doc/4/c7b549c9-d5d6-0331-b510-465ed4107e01 → 待核验(09-27)
-- 管理规约（含私信禁令原文）：https://open.bilibili.com/agreement/management-protocol（`[摘录]`）
-- 简介页（标题实锤，正文未取）：https://open.bilibili.com/doc/4/1f1cd948-de8f-6a9f-3b9c-2cb484da3cbb → 待核验(09-27)
+- 直播间数据：https://open.bilibili.com/doc/4/c7b549c9-d5d6-0331-b510-465ed4107e01（`[摘录]`，正文含 OPEN_LIVEROOM_DM/DM_MIRROR 等 CMD；wss 建连/心跳细则待核验(09-27)）
+- 管理规约（含私信禁令原文）：https://openhome.bilibili.com/agreement/management-protocol（`[摘录]`；注：open.bilibili.com 同路径仅验壳）
+- 第三方移动应用接入 OAuth 2.0（SDK 授权）：https://open.bilibili.com/doc/4/1f1cd948-de8f-6a9f-3b9c-2cb484da3cbb（`[摘录]`，简介+授权四步+SDK 初始化/回调设置有官方原文）
 - 获取投稿连接 / union_id 等资源页（标题实锤，正文未取）：https://open.bilibili.com/doc/4/8b825dee-e49e-5843-7e80-f289b878076a 、https://open.bilibili.com/doc/4/22e9cc93-1559-f262-0375-bdcefe9257ee → 待核验(09-27)
 
 本次实际抓到并核实的状态清单：

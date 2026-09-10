@@ -30,7 +30,7 @@
 |---|---|---|
 | 门户/文档/个人中心 SPA 壳存在性 | https://developer.zhihu.com/ 等（§1.1） | `[官方直抓]` WebFetch（仅标题，无正文） |
 | `open.zhihu.com` 根路径状态 | https://open.zhihu.com/ | `[官方直抓]` WebFetch（422） |
-| 其余官方文档正文（鉴权说明、任一 API 参考页、事件/回调页） | — | **均未抓到** → 待核验(09-27) |
+| 鉴权说明、zhihu_search/global_search/hot_list/zhida/quota/pdf_parse/ppt_generation/OAuth 等官方正文 | https://developer.zhihu.com/console/api/v2/docs（同域官方文档 JSON，29 条目：guide 3 + api 18 + skill 4 + mcp 4） | `[官方直抓]` 已抓到，见 2026-09-10 复核注 |
 
 ---
 
@@ -40,7 +40,7 @@
 
 **知乎开放平台没有公开的消息推送、几种事件类型、Webhook、私信（DM）下发或接收事件。** 证据链：
 
-1. **能力目录枚举中无推送类目。** 第三方对官方文档目录的统计（`[第三方]` https://www.jzl.com/news/zhihu-api）称"官方目录目前共有 21 条文档，涵盖 2 条指南、11 条 API、4 条 Skill 和 4 条 MCP，11 条 API 实际包含 14 个数据端点"，列出的能力为：知乎热榜（`hot_list`）、知乎搜索（`zhihu_search`）、全网搜索（`global_search`）、直答（`/v1/chat/completions`）、用户数据（创作列表/关注列表/收藏夹/收藏夹内容）、PDF 与 PPT 生成、额度（`quota`）、知识库——**无 webhook、无事件订阅、无回调、无私信**。该目录为第三方转述，官方目录原文待核验(09-27)，但它是目前最全的公开目录口径。
+1. **能力目录枚举中无推送类目。** 第三方对官方文档目录的统计（`[第三方]` https://www.jzl.com/news/zhihu-api）称"官方目录目前共有 21 条文档，涵盖 2 条指南、11 条 API、4 条 Skill 和 4 条 MCP"，但同域官方文档接口实测 29 条目（api 类 18），jzl 口径疑为旧快照，目录全文以官方 29 key 为准，字段细节待逐条对敲；两口径**均无 webhook、无事件订阅、无回调、无私信**。该目录为第三方转述，官方目录原文待核验(09-27)，但它是目前最全的公开目录口径。
 2. **能力实现交叉一致：全部为拉取式 REST，无订阅。** 多个独立第三方实现（`[第三方]` https://github.com/acedatacloud/skills/blob/main/skills/zhihu/scripts/search.py、`[第三方]` https://github.com/lioensky/VCPToolBox/blob/bdc2228c/Plugin/ZhihuSearch/ZhihuSearch.py、`[第三方]` https://github.com/dsd2077/CyberVerse/blob/5b42fc52/inference/plugins/voice_llm/persona/tools.py、`[第三方]` https://pypi.org/project/zhihu-search/）一致只实现 `GET /api/v1/content/{zhihu_search,global_search,hot_list}` + `POST /v1/chat/completions` + 用户公开数据/知识库/PDF/PPT/quota 查询，**没有任何 webhook 接收、事件订阅、回调验签代码**。`zhihu-search` v1.0.0 自述能力表（`[第三方]` https://pypi.org/project/zhihu-search/1.0.0/）："搜索直答热榜 4 + 官方额度 1 + 用户公开数据 5 + 知识库 4 + PDF 解析 3 + PPT 生成 2 + OAuth 辅助 2"，无推送项。
 3. **"只读、无写入"口径旁证。** 第三方报道（`[第三方]` https://www.openai-hub.net/news/441/）称平台"does not expose user data or writing capabilities (like posting answers or liking/commenting), offering only read and search access"——连写入都不开放，更无"收到私信/被@时推事件给开发者"的推送语义。该表述为第三方概括，官方原话待核验(09-27)。
 4. **关键词检索零命中。** `"developer.zhihu.com" webhook OR 回调 OR 事件推送 OR 私信` 全网检索：返回的命中全部是抖音开放平台私信 webhook、企微 webhook 概念科普、企业微信群推送等**其他平台**内容（见 §2.1 查过入口表），**零条知乎官方事件推送文档**。

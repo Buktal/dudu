@@ -2,14 +2,14 @@
 
 > 研究日期：2026-09-10。方法：WebFetch 直抓 `openapi-doc.faas.ele.me` 官方文档正文（全部成功，逐字）+ WebSearch 官方站（`open.shop.ele.me`）页面摘录（标注 `[摘录]`）+ 抓不到全文的标 `待核验(09-27)`。
 > 标注约定：无标注 = 本次 WebFetch 官方正文已核验；`[摘录]` = WebSearch 返回的官方页面原文摘录（未取全文）；`待核验(09-27)` = 未能取得官方原文（多为 `open.shop.ele.me` SPA 壳、无服务端渲染正文），需复核。非 primary 来源（第三方博客/镜像站/SDK 转述）一律不列为事实，只在 §7 注明其声称内容。
-> 核心结论前置：饿了么存在**两代两线**——**用户线 OpenAPI**（`openapi-doc.faas.ele.me`，`consumer_key` + SHA1 签名，**无 token**，推送仅 4 种订单类，本文已全文核验）与**商户线开放平台**（`open.shop.ele.me`，`app_key` + OAuth `access_token` + 签名，消息 `type` 数字体系，站内文档为 SPA，**多数待核验**）。两者签名算法、凭证模型、推送信封**互不相同**，不可混用。
+> 核心结论前置：饿了么存在**两代两线**——**用户线 OpenAPI**（`openapi-doc.faas.ele.me`，`consumer_key` + SHA1 签名（推送鉴权无 token；账户同步 token 见 §5.11，与推送无关），推送仅 4 种订单类，本文已全文核验）与**商户线开放平台**（`open.shop.ele.me`，`app_key` + OAuth `access_token` + 签名，`[摘录]`包络字段见 §2.2；数字 type 体系仅见非 primary 转述，不列为事实，待核验）。两者签名算法、凭证模型、推送信封**互不相同**，不可混用。
 
 ## 1. 官方文档入口与关键页面地址
 
 门户与协议：
 
 - 商户线门户：https://open.shop.ele.me/ —— `[摘录]` 首页 footer 含「开发文档 / 开发规范 / 授权说明 / 消息推送 / 接口能力说明 / SDK 下载 / 如何测试 / 运营规范」入口。
-- 商户线在线服务协议：https://open.shop.ele.me/openapi/documents/agreement —— `[摘录]` 含"推送：开放平台向应用发送'新订单'、'运单状态变化'等消息"、"回调：商户同意或拒绝授权请求后开放平台打开应用设置的回调 URL"定义（与用户线 `listen.html` 全文定义同构，见 §3.3）。
+- 商户线在线服务协议：https://open.shop.ele.me/openapi/documents/agreement —— `[摘录]` 含"推送：开放平台向应用发送'新订单'、'运单状态变化'等消息"、"回调：商户同意或拒绝授权请求后开放平台打开应用设置的回调 URL"定义（措辞据摘录与用户线 `listen.html` 全文疑似同构，待全文复核，见 §3.3）。
 - 用户线文档根：https://openapi-doc.faas.ele.me/ —— WebFetch 全文（版权 `openapi.dev@ele.me`，用户端联系 `openapi.coop@ele.me`、商户端 `openapi.merchant@ele.me`）。
 - 用户线协议（旧版，定义 Key/Secret/OpenAPI/授权/推送）：https://openapi-doc.faas.ele.me/v2/listen.html —— WebFetch 全文（协议版本 2018-05-03；开放平台站写 `https://open.faas.ele.me`）。
 

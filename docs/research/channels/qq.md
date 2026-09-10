@@ -10,7 +10,7 @@
 - 门户/控制台：开放平台官网 https://bot.q.qq.com/open ；注册地址 https://q.qq.com/#/ ；Webhook 回调配置页 https://q.qq.com/qqbot/#/developer/webhook-setting
 - 文档根：https://bot.q.qq.com/wiki/ ；开发文档（api-v2）：https://bot.q.qq.com/wiki/develop/api-v2/
 - 运营规范：https://bot.q.qq.com/wiki/business/
-- 官方 SDK（出自启动接入页原文，附"SDK 仅提供接入参考，详情能力以官方文档能力描述为准"）：Go `botgo`（https://github.com/tencent-connect/botgo）、Python `botpy`（https://github.com/tencent-connect/botpy，`pip install qq-botpy`，python3.8+）、Node `bot-node-sdk`（https://github.com/tencent-connect/bot-node-sdk，`npm i qq-guild-bot`，老包 `@tencent-connect/bot-node-sdk` 已废弃）
+- 官方 SDK（出自启动接入页原文，附"SDK 仅提供接入参考，详情能力以官方文档能力描述为准"）：Go `botgo`（https://github.com/tencent-connect/botgo）、Python `botpy`（https://github.com/tencent-connect/botpy）`[摘录]`（`pip install qq-botpy`，python3.8+，出自 pythonsdk 页摘录）、Node `bot-node-sdk`（https://github.com/tencent-connect/bot-node-sdk）`[摘录]`（`npm i qq-guild-bot`，老包已废弃，出自 nodesdk 页摘录）
 
 本次实际抓到并核实的页面清单：
 
@@ -31,13 +31,13 @@
 | 发送群聊消息 | https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_groups_group_openid_messages.post.html | WebFetch 全文 |
 | 单聊消息事件 C2C_MESSAGE_CREATE | https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/c2c_message_create.html | WebFetch 全文 |
 | 群@机器人消息 GROUP_AT_MESSAGE_CREATE | https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_at_message_create.html | WebFetch 全文 |
-| 群消息全量 GROUP_MESSAGE_CREATE | https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_message_create.html | `[摘录]`（事件名/Intent/事件体/示例） |
+| 群消息全量 GROUP_MESSAGE_CREATE | https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_message_create.html | WebFetch 全文 |
 | 用户添加好友 FRIEND_ADD | https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/friend_add.html | WebFetch 全文 |
 | 机器人加入群聊 GROUP_ADD_ROBOT | https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_add_robot.html | WebFetch 全文 |
-| 频道消息事件（AT/MESSAGE/DIRECT/AUDIT） | https://bot.q.qq.com/wiki/develop/api-v2/server-inter/channel/message/event.html | WebFetch 全文 |
+| 频道消息事件（AT/MESSAGE/DIRECT/AUDIT） | https://bot.q.qq.com/wiki/develop/api-v2/server-inter/channel/message/event.html | WebFetch 全文（注：MESSAGE_CREATE 小节标题误写 PUBLIC_GUILD_MESSAGES，以 payload 页 GUILD_MESSAGES(1<<9)私域为准） |
 | 获取通用 WSS 接入点 GET /gateway | https://bot.q.qq.com/wiki/develop/api-v2/openapi/wss/url_get.html | WebFetch 全文 |
-| 获取带分片 WSS 接入点 /gateway/bot | https://bot.q.qq.com/wiki/develop/api-v2/openapi/wss/shard_url_get.html | `[摘录]`（见 §3.4） |
-| 消息收发事件总页（单聊/群@/群全量/频道/私信） | https://bot.q.qq.com/wiki/develop/api-v2/server-inter/message/send-receive/event.html | `[摘录]` |
+| 获取带分片 WSS 接入点 /gateway/bot | https://bot.q.qq.com/wiki/develop/api-v2/openapi/wss/shard_url_get.html | WebFetch 全文（注：官方本页示例缺 "url" 键且 shards/remaining 与 websocket 页示例不同，§3.4 引 websocket 页归一化示例） |
+| 消息收发事件总页（单聊/群@/群全量/频道/私信） | https://bot.q.qq.com/wiki/develop/api-v2/server-inter/message/send-receive/event.html | 死链（实抓回退为启动接入页；收发矩阵以 overview 页为准，待核验(09-27)） |
 | NodeSDK 接入指南 | https://bot.q.qq.com/wiki/develop/nodesdk | `[摘录]` |
 | PythonSDK 接入指南 | https://bot.q.qq.com/wiki/develop/pythonsdk | `[摘录]` |
 | WebSocket 错误码页 | https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/error-trace/websocket.html | `[摘录]` |
@@ -119,7 +119,7 @@
 4. 成功下发 Ready：`{"op":0,"s":1,"t":"READY","d":{"version":1,"session_id":"082ee18c-...","user":{"id":"6158788878435714165","username":"群pro测试机器人","bot":true},"shard":[0,0]}}`。
 5. 按周期发心跳 `{"op":1,"d":251}`（d 为最新 s，首次 null），回 `{"op":11}`。
 6. 断线重连发 Resume `{"op":6,"d":{"token":"my_token","session_id":"session_id_i_stored","seq":1337}}`，补发后下发 `{"op":0,"s":2002,"t":"RESUMED","d":""}`。官方建议处理完事件即记录 `s`。
-7. 错误码（websocket 页全文）：`4009` 重发起 resume；`4914`（下架，仅许连沙箱）、`4915`（封禁）不可连；其余重发起 identify。`4008`（payload 过快）与 `4900~4913`（内部错误）可 resume+identify；`4006/4007` 转 identify。
+7. 错误码（websocket 页全文）：`4009` 可 resume（identify 亦可）；`4914`（下架，仅许连沙箱）、`4915`（封禁）不可连；`4008`（payload 过快）可 resume+identify；`4900~4913`（内部错误）仅可 identify（resume 列为否）；`4006/4007` 转 identify；`4001/4002/4010~4014` 不可重试。
 
 ### 3.4 网关/域名地址
 
@@ -366,7 +366,7 @@ Identify `{"op":2,"d":{"token":"token string","intents":513,"shard":[0,4],"prope
 | 凭证 | 换取方式 | 寿命/规则 | 出处 |
 |---|---|---|---|
 | `access_token`（机器人身份，唯一凭证类型） | `POST {api域名}/app/getAppAccessToken`，body `{appId, clientSecret}` | 默认 7200 秒；有效期内重复获取返回相同值；临过期 60 秒内获取发新值、老值 60 秒内仍有效；过期自行刷新，建议服务端定时刷 | access-token 页全文 + api-use 页全文 |
-| `AppID` / `AppSecret`（`clientSecret`） | 注册创建机器人获得（管理端开发基础设置；`QQ号`、`AppID`、`Token`、`AppSecret` 同页展示） | 长 radically 保密，"不要对外传播"；`AppSecret` 即验签 secret；老 `Token` 鉴权已废弃，用 Access Token | wiki 首页 §8.1 + getting-started 页全文 |
+| `AppID` / `AppSecret`（`clientSecret`） | 注册创建机器人获得（管理端开发基础设置；`QQ号`、`AppID`、`Token`、`AppSecret` 同页展示） | 须长期保密，"不要对外传播"；`AppSecret` 即验签 secret；老 `Token` 鉴权已废弃，用 Access Token | wiki 首页 §8.1 + getting-started 页全文 |
 | 调用传参 | `Authorization: QQBot {ACCESS_TOKEN}`；`Content-Type: application/json; charset=utf-8` | 不要在前端使用凭证，服务端发起 | access-token/api-call-guide 页全文 |
 | 身份隔离 | 不同 bot 取到的 `user_openid`/`group_openid` 均不同；群内用户另有 `member_openid`；跨 App 关联靠后续类 unionid 机制（`union_openid`/`union_user_account` 字段已存在，部分为空） | — | api-call-guide 唯一身份节 + C2C/群事件 User 表全文 |
 | 发送去重 | `msg_id + msg_seq`（默认 1；递增实现多次回复；重复发送失败 `40054005`） | 接收侧按 `msg_seq`/`msg_idx` 去重（§3.5） | overview + 单聊/群发送页全文 |

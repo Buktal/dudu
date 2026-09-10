@@ -144,10 +144,11 @@ toSignStr = ${http_body} + ${appSecret}
 sign = MD5(toSignStr)
 boolean result = sign.equals(kwaisign); // 验证是否相同
 ```
-请求示例 header（逐字）：`kwaisign: e10adc3949ba59abbe56e057f20f883e`（注：该值为 MD5 空串 `123456` 的经典示例值，官方示例原文如此，不作回归向量）。
+请求示例 header（逐字）：`kwaisign: e10adc3949ba59abbe56e057f20f883e`（注：该值 `e10adc…` 为 MD5("123456")，非空串，空串 MD5 为 `d41d8…`；官方示例原文如此，不作回归向量，2026-09-10 复核注）。
 - body 用**原始字符串**（不得重序列化后再算），与飞书 sha256 口径同理。
 
 ### 4.2 请求签名（开发者 → 平台）：ASCII 升序 + app_secret 后缀 MD5
 
-- 范围（附录1逐字）："所有由开发者发起
-...[truncated 14068 chars]
+- 范围（附录1逐字，2026-09-10 复核补全，原文件截断已修复）：“所有由开发者发起的接口请求，都需要使用 app_secret 签名”；不参签：字段名 sign/access_token、值为空的字段。
+- 算法：收集 URL 参数 + POST body 字段 → 按 key ASCII 升序 → `k=v&…` 拼接 → 末尾拼 app_secret → MD5。嵌套 JSON（contract_info/provider）先按示例键序转字符串再参签。
+- 来源：https://open.kuaishou.com/docs/develop/server/epay/appendix.html 附录1。

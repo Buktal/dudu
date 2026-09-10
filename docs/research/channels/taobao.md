@@ -12,14 +12,14 @@
 - 文档中心：https://open.taobao.com/doc/index.htm
 - 消息文档（TMC topic 目录）：https://open.taobao.com/tmc.htm
 - 消息类目树（`[镜像全文]` 同源）：https://developer.alibaba.com/docs/topic_list.htm
-- 消息服务使用介绍（From淘宝/To淘宝、长连接/API/MQ 三方式、分组、重试）：https://open.taobao.com/doc.htm?docId=101663&docType=1（`[摘录]` 全文级摘录，2024-08-30 更新）
-- TOP-SDK 使用说明（含 TMC 长连接示例、服务地址表）：https://open.taobao.com/doc.htm?docId=101618&docType=1（`[摘录]`）
-- API 调用方式/公共参数/签名算法（三算法 md5/hmac/hmac-sha256）：https://open.taobao.com/doc.htm?docId=101617&docType=1（`[摘录]`；`[镜像全文]` https://developer.alibaba.com/docs/doc.htm?articleId=101617&docType=1）
-- 用户授权介绍（OAuth2 code→access_token/sessionkey）：https://open.taobao.com/doc.htm?docId=102635&docType=1（`[摘录]`；`[镜像全文]` https://open.alitrip.com/docs/doc.htm?articleId=102635&docType=1&treeId=1）
+- 消息服务使用介绍（From淘宝/To淘宝、长连接/API/MQ 三方式、分组、重试）：https://open.taobao.com/doc.htm?docId=101663&docType=1（`[镜像全文]` https://open.alitrip.com/docs/doc.htm?articleId=101663&docType=1&treeId=1，更新 2026-08-28）
+- TOP-SDK 使用说明（含 TMC 长连接示例、服务地址表）：https://open.taobao.com/doc.htm?docId=101618&docType=1（`[镜像全文]` https://open.alitrip.com/docs/doc.htm?articleId=101618&docType=1&treeId=1，更新 2026-06-26）
+- API 调用方式/公共参数/签名算法（三算法 md5/hmac/hmac-sha256）：https://open.taobao.com/doc.htm?docId=101617&docType=1（`[镜像全文]` https://developer.alibaba.com/docs/doc.htm?articleId=101617&docType=1，更新 2026-04-24）
+- 用户授权介绍（OAuth2 code→access_token/sessionkey）：https://open.taobao.com/doc.htm?docId=102635&docType=1（`[镜像全文]` https://open.alitrip.com/docs/doc.htm?articleId=102635&docType=1&treeId=1，更新 2024-09-25）
 - 千牛开放业务（插件应用、AppKey/AppSecret、审核上架）：https://open.taobao.com/businessDetail.htm?tagId=79（`[摘录]`）
 - 千牛工作台：https://qn.taobao.com/
 - OAuth 授权入口（正式）：https://oauth.taobao.com/authorize ／ 换 token：https://oauth.taobao.com/token（`[摘录]` docId=102635；code 有效期 30 分钟）
-- API 网关：正式 `http://gw.api.taobao.com/router/rest` ／ HTTPS `https://eco.taobao.com/router/rest`；海外 `http://api.taobao.com/router/rest`（`[镜像全文]` https://open.fliggy.com/docs/doc.htm?articleId=108101&docType=1&treeId=502）
+- API 网关：正式 `http://gw.api.taobao.com/router/rest` ／ HTTPS `https://eco.taobao.com/router/rest`；海外 `http://api.taobao.com/router/rest`（`[镜像全文]` https://open.fliggy.com/docs/doc.htm?articleId=108101&docType=1&treeId=502）。注：101617（2026/04）简写正式 `https://gw…`/海外 `https://api…`（https-first）；101618 服务地址表为 `http://gw…`＋`https://eco…`，均为官方原文，按栈区分引用。
 - TMC 长连接地址：`ws://mc.api.taobao.com/`（生产），预发 `ws://premc.api.taobao.com/`（`[摘录]` docId=101663；`[摘录]` docId=101618）
 - 收费规则（API/数据同步/瓦力）：https://open.alitrip.com/docs/doc.htm?articleId=104559&docType=1&treeId=23（`[摘录]`，TOP 收费细则官方页）
 
@@ -42,7 +42,8 @@
 | TMC API 双接口消费/确认（consume+confirm 代码） | https://developer.alibaba.com/docs/doc.htm?articleId=103623&docType=1&treeId=74 | `[摘录]` |
 | 签名三算法+错误码表（25/26/27/28/29） | https://open.taobao.com/doc.htm?docId=101617&docType=1 ／ 镜像 https://developer.alibaba.com/docs/doc.htm?articleId=101617&docType=1 | `[摘录]` |
 | 国内 OAuth（code 30min/sessionkey/安全等级） | https://open.alitrip.com/docs/doc.htm?articleId=102635&docType=1&treeId=1 | `[摘录]` |
-| taobao.top.auth.token.create/refresh | https://open.taobao.com/api.htm?docId=25388&docType=2 | `[摘录]` |
+| taobao.top.auth.token.create | https://open.taobao.com/api.htm?docId=25388&docType=2 | `[摘录]`（获取 Access Token） |
+| taobao.top.auth.token.refresh | https://developer.alibaba.com/docs/api.htm?apiId=25387 | `[镜像全文]`（刷新 Access Token；正文“只有服务市场订购类应用可以刷新”，w2 不可刷新须重授权） |
 | taobao.tmc.user.permit（开通用户消息） | https://open.taobao.com/en/api.htm?docId=21990&docType=2 | `[摘录]` |
 | 千牛 TPN 系统消息发送（topic/NotifyMessage/订阅） | https://open.alitrip.com/docs/doc.htm?articleId=102422&docType=1&treeId=330 | `[摘录]` |
 

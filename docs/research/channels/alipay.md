@@ -76,7 +76,7 @@
   - `TRADE_FINISHED`："商家开通的产品不支持退款功能的前提下，买家付款成功；或…支持退款…并且已经超过可退款期限"；
   - 付款成功判定："只有交易通知状态为 TRADE_SUCCESS 或 TRADE_FINISHED 时，支付宝才会认定为买家付款成功"（https://opendocs.alipay.com/open/194/103296）。
   - 未支付态 `WAIT_BUYER_PAY`（https://opendocs.alipay.com/open/00dn78 换单号建议："若为买家仍未支付（trade_status = WAIT_BUYER_PAY），则调用 alipay.trade.close 关闭此订单后再请求支付宝进行支付"；若为 `TRADE_SUCCESS` 则不要重复支付）。
-  - `TRADE_CLOSED` 等其余状态枚举 → 待核验(09-27)。
+  - `TRADE_CLOSED`（指定时间未支付关闭，或支付完成全额退款关闭；收银台未提交则无交易、无通知；`open-v3/05vuxp` 旁证，原文全文待直抓复核）。
 - 触发场景不限于支付成功（https://opendocs.alipay.com/open/00dn78 §9）："在交易支付成功、交易关单、交易退款、交易分账等场景下都可能触发异步通知"，区分特征：
   - 支付成功：`trade_status=TRADE_SUCCESS` 且不包含 `out_biz_no`；
   - 退款成功：含 `gmt_refund`、`refund_fee`、`out_biz_no`（= 退款请求号）；
@@ -177,7 +177,7 @@
   - 程序执行完"该…"后输出 success（https://opendocs.alipay.com/open/064jha 摘录截断，全文 → 待核验(09-27)；实践含义：纯文本 success，无多余字符）。
 - 重试节拍（两处官方口径并存，照录）：
   - 支付类异步通知（https://opendocs.alipay.com/open/04ij9t?pathHash=8b971aad；https://opendocs.alipay.com/open/270/105902）："一般情况下，25 小时以内完成 8 次通知（通知的间隔频率一般是：4m、10m、10m、1h、2h、6h、15h）"；
-  - From 蚂蚁消息（https://opendocs.alipay.com/common/02km9j）："一般情况下，25 小时以内完成 8 次通知，除了第一次是实时投递外…间隔频率一般是：2m、10m、10m、1h、2h、6h、15h"——首次重试 2m vs 4m 差异已核验照录，模拟器建议按产品取 4m（支付）/2m（From 蚂蚁）。
+  - From 蚂蚁消息（https://opendocs.alipay.com/common/02km9j）："一般情况下，25 小时以内完成 8 次通知，除了第一次是实时投递外…间隔频率一般是：2m、10m、10m、1h、2h、6h、15h"——首次重试 2m vs 4m 差异照录（2m 首重本次未获第二源，单源口径，模拟器暂按产品区分，标单源）。
 - 交易通知 Crazy Diamond 规则外，还强调丢通知兜底（https://opendocs.alipay.com/open/00dn78）："由于网络异常、系统波动等原因，可能会存在用户支付成功、但是商户侧未能成功接收到支付结果异步通知的情况…需要商户同时接入支付结果异步通知与统一收单交易查询接口。当商户侧未收到支付结果异步通知时，必须调用 alipay.trade.query 查询订单的支付结果。"
 
 ### 3.4 幂等与正确性校验
@@ -214,7 +214,7 @@
 
 来源：https://opendocs.alipay.com/common/02mse7；https://opendocs.alipay.com/open/270/105902 §7。
 
-- 四步（逐字转录 02mse7）："1. 获取异步通知…2. 获取待验签参数：(1) 在通知返回参数列表中，除去 sign、sign_type 两个参数外，凡是通知返回的参数皆是待验签的参数。说明：生活号异步通知组成的待验签串里需要保留 sign_type 参数。(2) 将剩下参数进行 url_decode，然后进行字典排序，组成字符串，得到待签名字符串。3. 获取签名值 sign：将签名参数（sign）使用 base64 解码为字节码串。4. 调用验签函数：使用 RSA 的验签方法，通过签名字符串、签名参数（经过 base64 解码）及支付宝公钥验证签名"（SDK 对应 `AlipaySignature.verifyV1`，同页）。
+- 四步（逐字转录 02mse7）："1. 获取异步通知…2. 获取待验签参数：(1) 在通知返回参数列表中，除去 sign、sign_type 两个参数外，凡是通知返回的参数皆是待验签的参数。说明：生活号异步通知组成的待验签串里需要保留 sign_type 参数。(2) 将剩下参数进行 url_decode，然后进行字典排序，组成字符串，得到待签名字符串。3. 获取签名值 sign：将签名参数（sign）使用 base64 解码为字节码串。4. 调用验签函数：使用 RSA 的验签方法，通过签名字符串、签名参数（经过 base64 解码）及支付宝公钥验证签名"（SDK 对应 `AlipaySignature.rsaCheckV1`（公钥）/`rsaCertCheckV1`（证书）（support/01rawm 实证；`verifyV1` 系 02mse7 单源名称，并列保留待复核），同页）。
 - 生活号例外：待验签串**保留** `sign_type`（同页说明，原因未给 → 待核验(09-27)）。
 - 密钥工具可核查自验签结果：左侧导航 异步验签，"此功能只支持对支付宝异步通知内容做验签，响应报文需要填支付宝异步通知内容，格式为 key1=value1&key2…"（https://opendocs.alipay.com/open/02khjo）。
 - From 蚂蚁消息同样用支付宝公钥验签（https://opendocs.alipay.com/mini/02xtl7"商家/服务商可使用支付宝 SDK 根据…验签"，截断；https://opendocs.alipay.com/common/02km9j 要求先设应用公钥）。

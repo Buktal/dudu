@@ -344,7 +344,11 @@
     <aside class="sidebar" id="sidebar" aria-label="主导航"></aside>
     <div class="main">
       <header class="topbar" id="topbar"></header>
-      <main class="page" id="page"></main>
+      <main class="page" id="page">
+        <h1>MockPulse</h1>
+        <p style="margin-top:12px">正在打开交互原型。如预览窗口没有继续加载，请使用 Edge 或 Chrome 直接打开此 HTML 文件。</p>
+        <noscript><p>此交互原型需要启用 JavaScript。</p></noscript>
+      </main>
       <footer class="statusbar" id="statusbar"></footer>
     </div>
   </div>
@@ -491,12 +495,12 @@
     const good=r.kind==='passed', tone=good?'':r.kind==='timeout'?'warn':'bad';
     return '<div class="panel-body"><div class="result-banner '+tone+'">'+icon(good?'check':r.kind==='timeout'?'clock':'x')+'<div><h3>'+h(r.title)+'</h3><p>'+h(r.reason)+'</p></div></div><div class="metrics"><div class="metric"><span>HTTP 状态</span><strong>'+h(r.status===null?'—':r.status)+'</strong></div><div class="metric"><span>响应耗时</span><strong>'+r.duration+'<small style="font-size:10px"> ms</small></strong></div><div class="metric"><span>期待检查</span><strong>'+r.checks.filter(c=>c.ok).length+' / '+r.checks.length+'</strong></div></div>'+r.checks.map(c=>'<div class="assertion '+(c.ok?'':'bad')+'">'+icon(c.ok?'check':'x')+'<span>'+h(c.label)+'</span><span class="value">'+h(c.value)+'</span></div>').join('')+'<div class="result-footnote">判断范围：本次 HTTP 回执。业务结果需由你的服务另行验证。<br>来源：'+h(r.source)+' · 演示数据</div></div>';
   }
-  function flow() {
-    return '<div class="flow">'+['准备载荷','附加签名','推送回调','检查回执'].map((t,i)=>(i?'<i></i>':'')+'<span class="'+(S.running?(i<S.phase?'done':i===S.phase?'current':''):(S.result?(S.result.kind==='passed'?'done':i===3?'failed':'done'):''))+'">'+(S.running&&i===S.phase?'<b class="spinner"></b>':icon('check',true))+t+'</span>').join('')+'</div>';
+  function flow(record,busy) {
+    return '<div class="flow">'+['准备载荷','附加签名','推送回调','检查回执'].map((t,i)=>(i?'<i></i>':'')+'<span class="'+(busy?(i<S.phase?'done':i===S.phase?'current':''):(record?(record.kind==='passed'?'done':i===3?'failed':'done'):''))+'">'+(busy&&i===S.phase?'<b class="spinner"></b>':icon('check',true))+t+'</span>').join('')+'</div>';
   }
   function resultPanel(record) {
-    const r=record===undefined?S.result:record;
-    return '<section class="panel"><div class="panel-head"><h2>02&nbsp; 检查服务回执</h2>'+badge(S.running&&!record?'running':r?r.kind:'waiting')+'</div><div class="tabs" role="tablist" aria-label="回执视图">'+[['overview','概览'],['body','响应体'],['request','请求详情']].map(t=>'<button role="tab" aria-selected="'+(S.resultTab===t[0])+'" class="'+(S.resultTab===t[0]?'active':'')+'" data-action="result-tab" data-id="'+t[0]+'">'+t[1]+'</button>').join('')+'</div>'+(S.running&&!record?'<div class="empty-result"><span class="spinner" style="width:26px;height:26px;margin-bottom:20px"></span><h3>'+['正在准备事件','正在附加演示签名','正在模拟服务应答','正在检查回执'][Math.max(0,S.phase)]+'</h3><p>这里展示状态变化，不会发出真实网络请求。</p></div>':resultContent(r,S.resultTab))+flow()+'</section>';
+    const r=record===undefined?S.result:record,busy=S.running&&!S.execution&&!record;
+    return '<section class="panel"><div class="panel-head"><h2>02&nbsp; 检查服务回执</h2>'+badge(busy?'running':r?r.kind:'waiting')+'</div><div class="tabs" role="tablist" aria-label="回执视图">'+[['overview','概览'],['body','响应体'],['request','请求详情']].map(t=>'<button role="tab" aria-selected="'+(S.resultTab===t[0])+'" class="'+(S.resultTab===t[0]?'active':'')+'" data-action="result-tab" data-id="'+t[0]+'">'+t[1]+'</button>').join('')+'</div>'+(busy?'<div class="empty-result"><span class="spinner" style="width:26px;height:26px;margin-bottom:20px"></span><h3>'+['正在准备事件','正在附加演示签名','正在模拟服务应答','正在检查回执'][Math.min(3,Math.max(0,S.phase))]+'</h3><p>这里展示状态变化，不会发出真实网络请求。</p></div>':resultContent(r,S.resultTab))+flow(r,busy)+'</section>';
   }
   function recentRows(limit) {return S.history.slice(0,limit).map(r=>'<button class="recent-row" data-action="record" data-id="'+r.id+'"><span class="stamp">'+r.time+'</span><span class="platform-name">'+PLATFORMS[r.platform].name+'</span><span class="event truncate">'+h(r.event)+'</span>'+badge(r.kind)+'<span class="duration">'+r.duration+' ms</span>'+icon('right',true)+'</button>').join('');}
   function debugView() {
@@ -508,7 +512,7 @@
     const scroll=$('page').scrollTop;
     $('sidebar').innerHTML='<div class="brand"><span class="brand-mark">'+icon('pulse')+'</span><span>MockPulse<span style="color:var(--accent)">.</span></span></div><div class="nav-caption">构建与执行</div><nav class="nav">'+[['debug','terminal'],['scripts','layers'],['plans','route']].map(n=>'<button class="nav-btn '+(S.view===n[0]?'active':'')+'" data-action="nav" data-view="'+n[0]+'" title="'+routeNames[n[0]]+'">'+icon(n[1])+'<span class="nav-text">'+routeNames[n[0]]+'</span><span class="count">'+({debug:'01',scripts:'02',plans:'03'}[n[0]])+'</span></button>').join('')+'</nav><div class="sidebar-section"><div class="nav-caption">检查与配置</div><nav class="nav">'+[['history','history'],['settings','settings']].map(n=>'<button class="nav-btn '+(S.view===n[0]?'active':'')+'" data-action="nav" data-view="'+n[0]+'" title="'+routeNames[n[0]]+'">'+icon(n[1])+'<span class="nav-text">'+routeNames[n[0]]+'</span></button>').join('')+'</nav></div><div class="sidebar-section"><div class="nav-caption">可用平台</div>'+Object.keys(PLATFORMS).map(p=>'<button class="nav-btn" data-action="platform" data-id="'+p+'" title="'+PLATFORMS[p].name+'">'+mark(p)+'<span class="nav-text">'+PLATFORMS[p].name+'</span><span class="count">'+S.scripts.filter(s=>s.platform===p).length+'</span></button>').join('')+'</div><div class="sidebar-bottom"><button class="nav-btn" data-action="design" title="设计说明">'+icon('help')+'<span class="nav-text">设计与操作指南</span></button><div class="workspace-label"><i class="dot"></i>本地工作区 · v0.1 原型</div></div>';
     $('topbar').innerHTML='<div class="breadcrumb"><span>本地工作区</span><span>/</span><strong>'+routeNames[S.view]+'</strong></div><div class="row"><span class="badge accent">交互原型</span>'+btn('操作指南','design','help','ghost small')+'</div>';
-    $('page').innerHTML=(renderers[S.view]||(()=>pageHeader(routeNames[S.view],'页面正在补齐中。')))();
+    $('page').innerHTML=renderers[S.view]();
     $('page').scrollTop=scroll;
     $('statusbar').innerHTML='<span class="row"><i class="dot" style="color:var(--accent)"></i>演示模式 · 不发送真实请求</span><span class="status-right">'+(storageNotice||'剧本与编排可保存在此浏览器')+' &nbsp; / &nbsp; Ctrl + Enter 发送</span>';
     $('proto-bar').innerHTML='<span class="proto-label">DESIGN EXPLORATION</span><button data-action="variant-prev" aria-label="上一个布局">'+icon('left',true)+'</button><button class="variant-name" data-action="variant-next">'+variants[S.variant]+'</button><button data-action="variant-next" aria-label="下一个布局">'+icon('right',true)+'</button><i class="proto-divider"></i><label for="scenario">演示回执</label><select id="scenario" data-change="scenario" '+(S.running?'disabled':'')+'>'+[['normal','正常应答'],['rejected','签名被拒绝'],['timeout','等待超时']].map(a=>'<option value="'+a[0]+'" '+(S.scenario===a[0]?'selected':'')+'>'+a[1]+'</option>').join('')+'</select><i class="proto-divider"></i><button class="design-button" data-action="state" title="查看完整原型状态">'+icon('terminal',true)+'状态</button><button class="design-button" data-action="design">'+icon('help',true)+'设计说明</button>';

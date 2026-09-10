@@ -1,18 +1,30 @@
-# 七渠道事实库索引（国内全量）
+# 十八渠道事实库索引（国内全量）
 
-> 摄取日期：2026-09-10；新增四渠道 2026-09-10（4 路 research 并行）+ 4 路核验并行复核（primary source 直抓官方文档本身）。
-> 复核结论：抖音 23 URL 全 200 无伪造；企微 28 页中 23 页逐字验过、5 页验证码限流待补；小红书 miniapp 官方 claim 逐字复现、ark 侧维持 `[多源]`；飞书 18 页全文已验（含 sha256/AES 回归向量，§5.8 模板 ID 为示意）；微博 18 页 18/18 通过（仅 6 处表述精度修正）；公众号 16 核心页 16/16 通过（被动 7+转客服 1、补 err93115/Label 空格/http scheme）；小程序 9 页通过（Encrypt 全量串、Content 测试、个人主体推断收紧）。
+> 摄取日期：2026-09-10；新增四渠道（飞书/微博/公众号/小程序）2026-09-10（4 路 research 并行＋4 路核验并行）；第二批十一渠道（钉钉/QQ/淘宝/京东/拼多多/美团/饿了么/B站/快手/知乎/支付宝）2026-09-10（逐个 research＋分批核验）。
+> 核验结论：抖音 23 URL 全 200 无伪造；企微 28 页中 23 页逐字验过；小红书 miniapp 逐字复现、ark 侧维持 `[多源]`；飞书 18 页全文已验；微博 18/18 通过；公众号 16/16 通过；小程序 9 页通过；钉钉 18 页直抓通过（通讯录 15 类、转交 redirect 落定）；淘宝 30 点位 24 通过（OffMsgPush 销项、token.create/refresh 拆分）；支付宝三地址/25h8次/notify_id/app_auth_token 旁证通过；京东网关/签名/OAuth 方向通过（JOS 关闭迁移新发现）；拼多多网关/MD5向量/OAuth链路通过（permit 方法名降级）；美团双体系/三态回调/签名通过（IM 体降级）；饿了么用户线 15/15 通过（商户线维持摘录）；B站六域/签名/OAuth302/直播报备通过（事件页降级）；快手 17 页全文通过（§4.2 截断已修复）；知乎无推送结论成立（官方 29 key 无推送类目）；QQ 30 点位基本全过（op13/Ed25519/双口径照录）。
 > 各文档 §1 均有完整页面地址清单；标注「待核验(09-27)」的条目等配额恢复后补——补摄计划见 issue #14。
+> 注：朴朴超市无开放平台（无公开文档入口），未建事实库。
 
 | 渠道 | 形态 | 官方文档门户 | 事实库 | 文档数 |
 |---|---|---|---|---|
-| 抖音 | 直连私信（dop IM，要求企业号）+ 小游戏/服务商/生活服务 | https://developer.open-douyin.com/ | [douyin.md](./douyin.md) | 24 项（23 已验 + 1 新定位待抓） |
+| 抖音 | 直连私信（dop IM，要求企业号）+ 小游戏/服务商/生活服务 | https://developer.open-douyin.com/ | [douyin.md](./douyin.md) | 24 项 |
 | 小红书 | 小程序客服消息 + 电商 ark 推送 | https://miniapp.xiaohongshu.com/ ；电商 https://open.xiaohongshu.com/ | [xiaohongshu.md](./xiaohongshu.md) | 14 项 |
-| 企业微信 | 直连私信（自建应用回调，XML+AES）+ 机器人 JSON | https://developer.work.weixin.qq.com/document/ | [wecom.md](./wecom.md) | 28 页（23 已验 + 5 限流待补） |
-| 飞书 | Webhook 或 WebSocket 长连接（JSON v2.0） | https://open.feishu.cn/ | [feishu.md](./feishu.md) | 21 项（18 全文已验 + 3 摘录/镜像） |
-| 微博 | 粉丝服务平台 Webhook（JSON/微信XML 可切） | https://open.weibo.com/wiki/ | [weibo.md](./weibo.md) | 18 页（18/18 通过） |
-| 微信公众号 | Webhook（XML 仅，GET 明文 echostr，三模式） | https://developers.weixin.qq.com/doc/service/ | [wechat-mp.md](./wechat-mp.md) | 16 核心页（16/16 通过） |
-| 微信小程序 | Webhook（XML/JSON 可选，客服消息为主） | https://developers.weixin.qq.com/ | [wechat-mini.md](./wechat-mini.md) | 10 项（9 正文 + 1 事件族目录） |
+| 企业微信 | 直连私信（自建应用回调，XML+AES）+ 机器人 JSON | https://developer.work.weixin.qq.com/document/ | [wecom.md](./wecom.md) | 28 页 |
+| 飞书 | Webhook 或 WebSocket 长连接（JSON v2.0） | https://open.feishu.cn/ | [feishu.md](./feishu.md) | 21 项 |
+| 微博 | 粉丝服务平台 Webhook（JSON/微信XML 可切） | https://open.weibo.com/wiki/ | [weibo.md](./weibo.md) | 18 页 |
+| 微信公众号 | Webhook（XML 仅，GET 明文 echostr，三模式） | https://developers.weixin.qq.com/doc/service/ | [wechat-mp.md](./wechat-mp.md) | 16 核心页 |
+| 微信小程序 | Webhook（XML/JSON 可选，客服消息为主） | https://developers.weixin.qq.com/ | [wechat-mini.md](./wechat-mini.md) | 10 项 |
+| 钉钉 | Stream 明文 / 新 HTTP 密文 / 旧 oapi 三体系 | https://open.dingtalk.com/ | [dingtalk.md](./dingtalk.md) | 21 项 |
+| QQ 机器人 | WebSocket 网关 / Webhook（Ed25519） | https://bot.q.qq.com/wiki/ | [qq.md](./qq.md) | 30 点位 |
+| 淘宝/天猫 | TMC 长连接（国内无 HTTP 回调）+ 全球栈 HTTP | https://open.taobao.com/ | [taobao.md](./taobao.md) | 30 点位 |
+| 京东 | JOS 消息推送（listId=520，SPA 待复核） | https://open.jd.com/ | [jingdong.md](./jingdong.md) | 20+ 页 |
+| 拼多多 | 订阅推送 PMC（SPA 待复核） | https://open.pinduoduo.com/ | [pinduoduo.md](./pinduoduo.md) | 17 页 |
+| 美团 | 技术服务合作中心回调（表单 POST） | https://developer.meituan.com/ | [meituan.md](./meituan.md) | 20+ 页 |
+| 饿了么 | 用户线推送（SHA1）/ 商户线（待核验） | https://openapi-doc.faas.ele.me/ | [eleme.md](./eleme.md) | 15+9 页 |
+| B站 | Webhooks（仅 4 事件；私信无公开推送） | https://open.bilibili.com/ | [bilibili.md](./bilibili.md) | 15 页 |
+| 快手 | 开放域 3 事件 + 小程序支付回调族 | https://open.kuaishou.com/ | [kuaishou.md](./kuaishou.md) | 17 页 |
+| 知乎 | 无公开推送（拉取式只读 REST） | https://developer.zhihu.com/ | [zhihu.md](./zhihu.md) | 5 页（结论库） |
+| 支付宝 | notify_url/应用网关/蚂蚁订阅三地址 | https://opendocs.alipay.com/ | [alipay.md](./alipay.md) | 50 页 |
 
 ## 七家速记
 
@@ -23,6 +35,17 @@
 - **微博**：现役可新接入＝粉服 Webhook（JSON 默认，`set_format` 切 XML）；握手 GET `signature/timestamp/nonce/echostr`，`sha1(排序(appsecret,timestamp,nonce))`（黄金算例 xyz123xyz→90e4c22c）；载荷 `type/receiver_id/sender_id/created_at/text/data`；事件 `follow/unfollow/subscribe/unsubscribe/scan/scan_follow/click/view`（mention 暂停）；客服 `reply.json`（48h/99 条）；5s×3；排重 `sender_id+created_at`。
 - **公众号**：服务器配置四项、推送仅 XML；GET 三参 sha1＋原样回 echostr；安全模式收包仅 `ToUserName+Encrypt`，四参 `msg_signature`（数值例 899cf89e/046e02f8/1b933996）；AES 同企微但尾部为 AppId 须校验；7 种消息（含 MediaId16K）+ 6 基础事件 + 9 菜单扩展 + 模板/群发/订阅通知回执；被动 7＋转客服 1；客服 11 msgtype；token 双轨（普通 GET/stable POST）。
 - **小程序**：配置五项、数据格式 XML/JSON 可选；GET 握手同公众号（算例 f464b24）；客服接收仅 `text/image/miniprogrampage`＋事件 `user_enter_tempsession`（证伪 `user_enter_session`）；加密回包 Nonce 复用请求值；云函数仅客服且二元组抢占、云托管内网免签（`x-wx-sources` vs `x-wx-source` 官方不一致）；客服发送 11 体＋窗口（发消息 5/48h、进会话 2/1min）；token 双轨 7200s 隔离。
+- **钉钉**：三体系（Stream 明文 WebSocket 50 连接/SUCCESS-LATER / 新 HTTP 大写密文信封 / 旧 oapi encrypt）；旧回调 sha1 四参＋AES（调试向量）；机器人 HmacSHA256；审批双信封＋按 Code 订阅；token 7200s（第三方重复获取返新）；asyncsend_v2 频控。
+- **QQ 机器人**：WS 网关（Hello/Identify/Ready/心跳/Resume/分片）或 Webhook（op13 `plain_token/event_ts`）；Ed25519 签名、无 AES（两组向量）；事件 `C2C/GROUP_AT/GROUP/AT频道/DIRECT/FRIEND_ADD/GROUP_ADD_ROBOT`；`access_token` 7200s＋60s 轮换；发送单聊/群 API；`msg_seq` 去重；准入企业/个人＋沙箱 20 人＋IP 白名单。
+- **淘宝**：国内 TOP 无 HTTP 回调——消息走 TMC 长连接（`ws://mc.api.taobao.com/`）/轮询 consume-confirm/ MQ；交易 27/退款 15/商品 14；OpenIM 仅 `OffMsgPush`；签名 md5/hmac 三算法；OAuth code 30min＋安全等级＋refresh 60/天；未 confirm 6min 重发；全球栈另有 HTTPS 回调。
+- **京东**：JOS 消息推送（listId=520，SPA 正文待复核；JOS 2026-07-01 融合至 open.jd.com）；订单 9 枚举；AFS 售后消息名；咚咚 `chat_message4.2`/`push2`；签名 MD5(secret+字母序+secret)＋timestamp 10min；OAuth token 商家绑定；测试 500/日→上线 30 万/日。
+- **拼多多**：订阅后主动推（`permit/cancel` 方法名待核验）；网关 `gw-api`；签名 `UPPER(MD5(secret+排序kv+secret))`（向量 E4DE3E 已重算）；token 经 `token.create` 放 body 或 OAuth 链路；订单 1-待发货/2-已发货/3-已签收；客服无开放 API 证据。
+- **美团**：双体系（合作中心回调 vs 生态 OAuth）；签名 MD5(url?字母序+secret)；POST 表单（form-urlencoded）限 80/8080；订单三态 4/8＋5 分钟未接单自动取消退款；IM `biz_type=1`（体待核验）；2s ok＋1 分钟×3；ISV/品牌商/个人三分。
+- **饿了么**：两代两线（用户线 SHA1 五步＋4 订单推送＋H5，无 token 无加密，200+ok；商户线 SPA 待核验）；频控 1009；账户 token 与推送无关。
+- **B站**：SPA 仅回壳；开放六域；Webhooks HTTPS POST（镜像）；封闭 4 事件（`authorize/deauthorize/video_open/video_fail`）；私信/客服无公开推送（禁令原文）；服务端 HMAC-SHA256＋OAuth302；直播双体系＋报备邮箱。
+- **快手**：开放域仅 3 事件（`TEST/AUTHORIZE/UN_AUTHORIZE`，上下篇链闭合）；私信无公开推送；小程序支付回调族（`PAYMENT/REFUND/SETTLE/WITHHOLD/CONTRACT`，16 次重试表）；`kwaisign=MD5(body+secret)` 无 AES；token 48h/refresh 180 天/code 2 分钟；企业资质认证。
+- **知乎**：无公开消息/私信推送（官方 29 key 无推送类目，枚举消极证据）；拉取式只读 REST＋任务轮询；Bearer＋秒级时间戳；OAuth 仅登录用途；只做请求-响应桩。
+- **支付宝**：三地址（接口 `notify_url` / 应用网关 / From 蚂蚁订阅）；支付通知仅 SUCCESS/FINISHED 认付款；success+200/fail 重推 25h 8 次；`notify_id` 幂等＋RSA2 验签（`rsaCheckV1`）；`app_auth_token` 代调用；生活号网关验证；小程序客服为前端组件非推送。
 
 ---
 
@@ -361,3 +384,265 @@
 | [授权变更事件](https://developers.weixin.qq.com/doc/server/event_push/platform/authorized_user_information_changes.html) | 三枚举 + RevokeInfo + 回 success/空串免加密 | `user_info_modified/user_authorization_revoke/user_authorization_cancellation` |
 | [云托管指引](https://developers.weixin.qq.com/doc/wxcloudservice/wxcloudrun/src/guide/weixin/push.html) | 内网免签、单数 `x-wx-source`（与总纲复数冲突，双写兼容）、MsgId 去重 | 云托管通道 |
 | 事件族目录（违规/物流/配送/短剧/付费/评价/直播） | 导航树已验、正文字段待核验(09-27)，只列入口不列字段 | 目录级 |
+
+---
+
+## 八、钉钉（21 项）——详见 `dingtalk.md §1`
+
+### 8A. 事件订阅总纲——3 页
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [事件订阅总纲](https://open.dingtalk.com/document/development/event-subscription-overview.md) | Stream 免加解密 vs HTTP 密文自验签（前者内部+第三方，后者仅内部） | 全部新事件通道选型 |
+| [Stream 接入](https://open.dingtalk.com/document/resourcedownload/introduction-to-stream-mode.md) | 50 连接 / SUCCESS-LATER / 三 topic / ClientID-Secret 鉴权 | 全部 Stream 事件 + 机器人/卡片回调 |
+| [企业内部事件总目录](https://open.dingtalk.com/document/orgapp/org-event-overview.md) | 通讯录/审批/IM/考勤/会议/直播/存储全量链接 | 事件选型入口 |
+
+### 8B. 旧回调与握手——4 页
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [旧回调加解密](https://open.dingtalk.com/document/app/callback-event-message-body-encryption-and-decryption.md) | sha1 四参 + AES-CBC + 调试向量 | 全部旧 oapi 回调 + 新 HTTP 验签算法 |
+| [回调测试地址事件](https://open.dingtalk.com/document/development/event-subscription-callback-test-url-event.md) | 握手事件 + success 加密回包（不回连推 100 次） | 握手系 + suite_ticket |
+| [旧回调注册](https://open.dingtalk.com/document/isvapp/register-callback-events.md) | 单 URL / token≥6<64 / aes_key43 | 15 类 call_back_tag |
+| [失败推送兜底](https://open.dingtalk.com/document/development/obtain-the-event-list-of-failed-push-messages.md) | 10s/30s 重试，3~5min 查失败列表≤200 | 旧体系全事件 |
+
+### 8C. 消息/审批/通讯录/群事件
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [机器人收消息](https://open.dingtalk.com/document/orgapp/receive-message.md) | 明文 6 msgtype + HmacSHA256 + 1h 时钟 | 机器人收消息 |
+| [审批实例变更](https://open.dingtalk.com/document/development/event-bpms-instance-change.md) | 双信封 + 订阅规则 bizCategoryId/processCode/type | `bpms_instance_change` |
+| [审批任务变更](https://open.dingtalk.com/document/development/event-bpms-task-change.md) | 双信封（转交 finish+redirect，结束 cancel） | `bpms_task_change` |
+| [通讯录更改/离职](https://open.dingtalk.com/document/orgapp/event-v3user-modify-org.md) | 双信封（diffInfo/字符串 timeStamp） | `user_modify_org/user_leave_org` |
+| [群加人](https://open.dingtalk.com/document/orgapp/event-chat-add-member.md) | Stream/HTTP/SyncHTTP 三形态（biz_type=177） | 群管理系 |
+| [套件票据](https://open.dingtalk.com/document/isvapp/event-suite-ticket.md) | 5h 推一次（biz_type=2） | `suite_ticket` |
+| [旧审批语义](https://open.dingtalk.com/document/isvapp/approval-events-2.md) | 实例 start/finish/terminate，任务 finish/cancel | 旧审批回调 |
+| [旧通讯录 15 类字典](https://open.dingtalk.com/document/app/tvgq1n.md) | 旧体示例 | 旧通讯录回调 |
+
+### 8D. 凭证/发送
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [新内部 token](https://open.dingtalk.com/document/development/obtain-the-access-token-of-an-internal-app.md) | 7200s，重复获取相同并续期 | api.dingtalk.com 凭证 |
+| [旧内部 token](https://open.dingtalk.com/document/orgapp/obtain-orgapp-token.md) | GET gettoken，7200s | oapi 凭证 |
+| [第三方 corp token](https://open.dingtalk.com/document/isvapp/obtain-the-access_token-of-the-authorized-enterprise.md) | 7200s，重复获取返新 | 第三方凭证 |
+| [工作通知 asyncsend_v2](https://open.dingtalk.com/document/development/asynchronous-sending-of-enterprise-session-messages.md) | 5000/1000/500/100/同内容1天1条 | 发消息频控 |
+| [机器人发群消息](https://open.dingtalk.com/document/development/the-robot-sends-a-group-message.md) | POST robot/groupMessages/send | 机器人发消息 |
+
+---
+
+## 九、QQ 机器人（30 点位）——详见 `qq.md §1`
+
+### 9A. 网关与连接
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [通用 WSS 接入点](https://bot.q.qq.com/wiki/develop/api-v2/openapi/wss/url_get.html) | `GET /gateway` → wss 地址 | 全部 WS 事件 |
+| [分片接入点](https://bot.q.qq.com/wiki/develop/api-v2/openapi/wss/shard_url_get.html) | url/shards/session_start_limit（示例缺键笔误注） | 分片连接 |
+| [WebSocket 方式](https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/event-emit/websocket.html) | Hello/Identify/Ready/心跳/Resume/分片/错误码 | 全部 WS 事件 |
+| [WebSocket 错误码](https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/error-trace/websocket.html) | 与上页互证（4900系仅 identify） | 重连决策 |
+
+### 9B. 事件订阅
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [事件订阅总览](https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/interface-framework/event-emit.html) | 信封+OpCode+Intents 全表 | 全部事件选型 |
+| [通用 payload](https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/event-emit/payload.html) | 四件套复述交叉证 | 同上 |
+| [单聊消息](https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/c2c_message_create.html) | 去重双句 + message_type 表 | `C2C_MESSAGE_CREATE` |
+| [群@消息](https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_at_message_create.html) | content 去@前缀 | `GROUP_AT_MESSAGE_CREATE` |
+| [群全量](https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_message_create.html) | 与群@字段完全一致 | `GROUP_MESSAGE_CREATE` |
+| [频道事件](https://bot.q.qq.com/wiki/develop/api-v2/server-inter/channel/message/event.html) | AT(公域)/全量(私域)/私信/审核 | `AT_MESSAGE_CREATE/MESSAGE_CREATE/DIRECT_MESSAGE_CREATE` |
+| [好友添加](https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/friend_add.html) | scene 全表 | `FRIEND_ADD` |
+| [加群](https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_add_robot.html) | 群 openid + 操作人 | `GROUP_ADD_ROBOT` |
+
+### 9C. 签名/收发/凭证/准入
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [Ed25519 验签](https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/interface-framework/sign.html) | 无 AES，两组向量 | 全部 Webhook 安全层 |
+| [Webhook 方式](https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/event-emit/webhook.html) | op13 验证 + 端口 + HTTPS | Webhook 通道 |
+| [消息收发概述](https://bot.q.qq.com/wiki/develop/api-v2/server-inter/message/overview.html) | 频控/去重/撤回/窗口双口径 | 收发矩阵 |
+| [单聊发送](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_users_user_openid_messages.post.html) | msg_type 0/2/6/7，60min×4/msg_id 5min 双口径 | 单聊发送 |
+| [群发送](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_groups_group_openid_messages.post.html) | msg_type 0/2/7，5min×5 | 群发送 |
+| [access_token](https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/access-token.html) | 7200s＋60s 轮换，`QQBot` 头 | 全部 API 凭证 |
+| [介绍与接入](https://bot.q.qq.com/wiki/) | 企业/个人＋沙箱 20 人＋IP 白名单 | 准入 |
+
+---
+
+## 十、淘宝/天猫（30 点位）——详见 `taobao.md §1`
+
+### 10A. 消息服务（TMC 三方式）
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [消息服务介绍 101663](https://open.alitrip.com/docs/doc.htm?articleId=101663&docType=1&treeId=1) | TMC 长连接/API 轮询/MQ，分组＋6min 重发＋8–24h | 全部 TMC 事件 |
+| [TOP-SDK 101618](https://open.alitrip.com/docs/doc.htm?articleId=101618&docType=1&treeId=1) | `ws://mc.api.taobao.com/`＋服务地址表 | 连接与网关 |
+| [消费确认 103623](https://developer.alibaba.com/docs/doc.htm?articleId=103623&docType=1&treeId=74) | consume 指针/confirm＋`status.fail()` | 轮询消费 |
+
+### 10B. 事件清单（交易 27/退款 15/商品 14/OpenIM 1）
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [交易类目 cid=101](https://developer.alibaba.com/docs/topic_list.htm?cid=101) | 27 条全表 | `taobao_trade_*` |
+| [退款类目 cid=102](https://developer.alibaba.com/docs/topic_list.htm?cid=102) | 15 条全表 | `taobao_refund_*/retrieve_*` |
+| [商品类目 cid=103](https://developer.alibaba.com/docs/topic_list.htm?cid=103) | 14 条全表 | `taobao_item_*` |
+| [OpenIM cid=233](https://developer.alibaba.com/docs/topic_list.htm?cid=233) | 唯一 `OffMsgPush`（免授权） | `taobao_openim_OffMsgPush` |
+| [TradeCreate/RefundCreated/ItemAdd 载荷](https://developer.alibaba.com/docs/topicDetail.htm?apiId=101) | 三页全文载荷 | 代表事件体 |
+| [千牛接口 22593](https://developer.alibaba.com/docs/api.htm?apiId=22593) | jindoucloud/tpn/qianniu/cloudkefu/bcpush | 千牛上下行 |
+| [TPN 通知 102422](https://open.alitrip.com/docs/doc.htm?articleId=102422&docType=1&treeId=330) | 工作台系统消息下行 | TPN NotifyMessage |
+
+### 10C. 签名/授权/全球栈/收费
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [签名 101617](https://developer.alibaba.com/docs/doc.htm?articleId=101617&docType=1) | md5/hmac 三算法＋timestamp 10min＋错误码 21–29 | 全部 API 签名 |
+| [授权 102635](https://open.alitrip.com/docs/doc.htm?articleId=102635&docType=1&treeId=1) | code 30min＋r1/r2/w1/w2＋refresh 60/天（仅订购类） | OAuth |
+| [token.create/refresh](https://developer.alibaba.com/docs/api.htm?apiId=25387) | create 25388 / refresh 25387 拆分 | token 换取 |
+| [全球栈接收 119493](https://open.alitrip.com/docs/doc.htm?articleId=119493&docType=1&treeId=735) | HTTPS 回调＋500ms/半小时/12 次＋HMAC-SHA256 | 全球栈事件 |
+| [全球栈配置 119404](https://open.alitrip.com/docs/doc.htm?articleId=119404&docType=1&treeId=735) | 回调 URL+Verify+订阅 | 全球栈配置 |
+| [收费 104559](https://open.alitrip.com/docs/doc.htm?articleId=104559&docType=1&treeId=23) | 基础/增值/数据同步/瓦力量级 | 费用 |
+
+---
+
+## 十一、京东（20+ 页）——详见 `jingdong.md §1`
+
+| 分类 | 文档 | 一句话 | 覆盖事件 |
+|---|---|---|---|
+| 推送 | [消息推送 listId=520](https://open.jd.com/home/home#/doc/common?listId=520) | 投递/订阅/重试全文待核验(09-27) | JOS 推送（指针） |
+| 订单 | 查询 API 群（apilist） | 订单 9 枚举＋查询接口实锤 | 订单状态/查询 |
+| 售后 | AFS 消息名 | `AFS_StepResult_JOS` 名实锤，载荷待核验 | 售后全流程 |
+| 咚咚 | [chat_message4.2](https://jos.jd.com/platformdetail?itemId=2222&listId=0)＋push2 | 标题+voice 片段＋外发五参数 | 咚咚收发 |
+| 签名 | listId=33/530 | MD5(secret+字母序+secret)＋timestamp 10min＋三算法 | 全部 API 签名 |
+| 凭证 | listId=32 | `open-oauth.jd.com` 双端点＋token 商家绑定 10500001 | OAuth |
+| 准入 | listId=298/160 | 三类账号＋3 工作日＋500/日→30 万/日 | 准入 |
+| 迁移 | JOS 首页公告 | 2026-07-01 融合至 open.jd.com、08-30 关闭 | 入口变更 |
+| 排除 | EMOP 白皮书 | APP 触达推送，与 JOS 无关 | — |
+
+---
+
+## 十二、拼多多（17 页）——详见 `pinduoduo.md §1`
+
+| 分类 | 文档 | 一句话 | 覆盖事件 |
+|---|---|---|---|
+| 网关 | `POST https://gw-api.pinduoduo.com/api/router` | 正式网关（84_static_9 原文） | 全部 API |
+| 签名 | POP 签名页 | `UPPER(MD5(secret+ASCII排序kv+secret))`＋向量 E4DE3E（已重算） | 全部 API 签名 |
+| 授权 | OAuth 页＋`pdd.pop.auth.token.create` | code 10min＋token 放 body 参签（双链路） | 授权 |
+| 推送 | 消息推送指南 | 订阅后主动推（permit/cancel 名待核验）；PMC 通道 SDK 旁证 | 推送通道 |
+| 订单 | 接入方案＋基础介绍 | 三接口分工＋24h/30min/90天＋状态 1/2/3 | 订单事件 |
+| 短信 | 短信指南 | 三接口名弱证，配额待核验 | 短信 |
+| 客服 | 客服平台页 | 无开放 API 证据（第三方声称未证实） | — |
+
+---
+
+## 十三、美团（20+ 页）——详见 `meituan.md §1`
+
+| 分类 | 文档 | 一句话 | 覆盖事件 |
+|---|---|---|---|
+| 体系 | developer.meituan.com＋openapi.meituan.com | 合作中心回调 vs 生态 OAuth 双体系＋ISV/品牌/个人三分 | 选型 |
+| 签名 | guide/31 | MD5(url?字母序+secret) 5 步＋示例串 | 全部回调验签 |
+| 订单 | docDetail/177/180/172/111 | 已支付必接/已确认 4/已完成 8＋5 分钟未接单自动取消退款 | 订单三态 |
+| 配送结算 | docDetail/169/181/168/235 | 配送/结算/催单/隐私号降级存在性 | 履约事件 |
+| IM | docDetail/842/845 | 单聊 biz_type=1（体待核验）＋工单审批待核验 | IM 推送 |
+| 可靠性 | docDetail/177/254 | 2s ok＋1 分钟×3＋4 次失败记异常 | 重试 |
+| 准入 | ability-center/list | 联系邮箱＋三分入驻 | 准入 |
+
+---
+
+## 十四、饿了么（15+9 页）——详见 `eleme.md §1`
+
+### 14A. 用户线（全文已验）
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [协议 listen](https://openapi-doc.faas.ele.me/v2/listen.html) | Key/Secret/App key 定义＋推送定义 | 通道选型 |
+| [快速开始](https://openapi-doc.faas.ele.me/v2/quickstart.html) | 签名五步＋sig 作 Query＋末尾 `/` | 签名 |
+| [推送总纲](https://openapi-doc.faas.ele.me/v2/api/signal/index.html) | 4 推送目录＋200+ok＋重试 | 推送总纲 |
+| [订单/配送/退款/赔付推送](https://openapi-doc.faas.ele.me/v2/api/signal/order-signal.html) | 4 载荷逐字（赔付暂不开放） | `order_status_update` 等 4 推送 |
+| [H5 推送](https://openapi-doc.faas.ele.me/h5/api/order.html) | push_action 1/2＋form＋签名同构 | H5 订单推送 |
+| [枚举](https://openapi-doc.faas.ele.me/v2/appendix/enums.html) | 订单/取消/配送/退单/role/赔付全表 | 枚举 |
+| [签名示例](https://openapi-doc.faas.ele.me/v2/appendix/sig-example-codes.html) | Python/PHP/Java 三语言 | 签名实现 |
+| [频控](https://openapi-doc.faas.ele.me/v2/appendix/rate-limit.html) | consumer_key 级＋1009＋协商制 | 频控 |
+| [账户/H5 账户](https://openapi-doc.faas.ele.me/v2/api/account.html) | token/1019/1020＋反向 OAuth | 账户（非推送） |
+
+### 14B. 商户线（SPA，维持摘录/待核验）
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [商户门户](https://open.shop.ele.me/) | footer 入口（已更名淘宝闪购服务商平台） | 导航 |
+| [推送/回调/token/包络页组](https://open.shop.ele.me/openapi/documents/httppushmethod) | 全文待核验(09-27) | 商户推送 |
+
+---
+
+## 十五、B站（15 页）——详见 `bilibili.md §1`
+
+| 分类 | 文档 | 一句话 | 覆盖事件 |
+|---|---|---|---|
+| 总览 | [能力总览](https://openhome.bilibili.com/doc) | 账号/用户/视频/数据/专栏/直播长连六域 | 选型 |
+| 签名 | [签名页](https://open.bilibili.com/doc/4/8673959e-f7bb-56e6-6e68-d225f971b81b) | 头表＋HMAC-SHA256＋包络（4000 系码未见） | 服务端签名 |
+| 授权 | [OAuth 页](https://open.bilibili.com/doc/4/eaf0e2b5-bde9-b9a0-9be1-019bb455701c) | 有效期/提前刷新（一次性未见） | OAuth |
+| 授权 | [网页 OAuth](https://open.bilibili.com/doc/4/aac73b2e-4ff2-b75c-4c96-35ced865797b) | 302 `${return_url}?code=&state=` | 网页授权 |
+| 事件 | [事件列表](https://open.bilibili.com/doc/4/a3f37dde-212b-b71b-5388-fbd3bfb41623) | 4 事件（正文待复核，镜像印证） | `authorize/deauthorize/video_open/video_fail` |
+| 视频 | [投稿页](https://open.bilibili.com/doc/4/f7fc57dd-55a1-5cb1-cba4-61fb2994bf0f) | ARC_BASE＋审核＋非正式会员日投 5 稿 | 投稿 |
+| 直播 | [双体系页](https://open.bilibili.com/doc/4/19350a57-2e2d-43cf-3e6d-c7de132b24b6) | 双体系＋报备邮箱 | 直播 |
+| 直播 | [直播间数据](https://open.bilibili.com/doc/4/c7b549c9-d5d6-0331-b510-465ed4107e01) | CMD（DM/DM_MIRROR）存在性 | 弹幕 |
+| 规约 | [管理规约](https://openhome.bilibili.com/agreement/management-protocol) | 私信禁令原文 | 合规 |
+| Webhook | 镜像 doc-895911（非 primary） | HTTPS POST＋SHA1＋5s＋共推 3 次 | 回调（镜像） |
+
+---
+
+## 十六、快手（17 页）——详见 `kuaishou.md §1`
+
+### 16A. 开放域事件（`event` 判型，仅 3 个）
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [接入指南](https://open.kuaishou.com/platformDocs/openAbility/webHook/accessGuide) | 信封 5 字段＋200+result＋kwaisign＋上下篇链 | 通道总纲 |
+| [测试事件](https://open.kuaishou.com/platformDocs/openAbility/webHook/eventList/testEvent.html) | 配地址握手 | `TEST` |
+| [授权事件](https://open.kuaishou.com/platformDocs/openAbility/webHook/eventList/authorizationEvent.html) | open_id/scope/is_new | `AUTHORIZE` |
+| [解约事件](https://open.kuaishou.com/platformDocs/openAbility/webHook/eventList/revocationOfAuth.html) | 下划线命名原文 | `UN_AUTHORIZE` |
+
+### 16B. 小程序支付回调族（`biz_type` 判型）
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [附录](https://open.kuaishou.com/docs/develop/server/epay/appendix.html) | 五 biz_type＋kwaisign＋16 次重试表 | 回调总纲 |
+| [支付](https://open.kuaishou.com/docs/develop/server/epay/open-api-new/prePay-new.html) | 三态＋地址优先级＋禁查询串 | `PAYMENT` |
+| [签约代扣](https://open.kuaishou.com/docs/develop/server/epayAuto/contract-new.html) | 双回调＋三地址＋统一解约 | `CONTRACT/WITHHOLD` |
+| [退款](https://open.kuaishou.com/docs/develop/server/epay/open-api-new/refund-new.html) | 三态＋30QPS | `REFUND` |
+| [结算](https://open.kuaishou.com/docs/develop/server/epay/open-api-new/settle-new.html) | 360 天＋核销规则 | `SETTLE` |
+
+### 16C. 安全/身份/准入/发送侧
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| 安全 | 附录1/2：出站 MD5(body+secret)/入站 ASCII+secret 后缀，无 AES | 签名 |
+| 身份 | kwaiLogin/getAccessToken/code2Session：OAuth code 2 分钟/access 48h/refresh 180 天/js_code 10 分钟 | token |
+| 准入 | entry/login/introduce：企业资质认证→应用注册→app_id/secret | 准入 |
+| 发送侧 | sendMessage：订阅模板单向下发 QPS 100（私信仅用户端开关） | 下发 |
+
+---
+
+## 十七、知乎（结论库）——详见 `zhihu.md`
+
+| 分类 | 文档 | 一句话 | 覆盖事件 |
+|---|---|---|---|
+| 门户 | [开发者平台](https://developer.zhihu.com/) | UMI SPA 空壳（同域 29 key 无推送类目） | —（无推送） |
+| 文档 | [文档 JSON](https://developer.zhihu.com/console/api/v2/docs) | guide 3＋api 18＋skill 4＋mcp 4 | 拉取式 REST |
+| 旧域 | `https://open.zhihu.com/` | 根 422，无文档 | 历史 |
+| 鉴权 | 官方鉴权文档 | Bearer＋秒级时间戳（容差 10 分钟） | 鉴权 |
+| 端点 | 搜索/热榜/直答/quota/PDF/PPT | 拉取＋任务轮询（task_id＋succeeded） | 查询 |
+| 排除 | v4 messages/sugar 回调/营销文 | 非开放推送体系 | — |
+
+---
+
+## 十八、支付宝（50 页）——详见 `alipay.md §1`
+
+| 分类 | 文档 | 一句话 | 覆盖事件 |
+|---|---|---|---|
+| 支付通知 | `open/270/105902`＋`open/04ij9t` | POST 表单＋仅 SUCCESS/FINISHED 认付款＋success/200＋25h 8 次＋notify_id＋RSA2 四步 | `trade_status_sync` |
+| 网关 | `common/02qibh`＋`support/01raub` | 应用网关（生活号被动/订阅）＋fund 示例 | 网关通知 |
+| 订阅 | `common/02km9j`＋三地址对照 | notify_url/应用网关/From 蚂蚁（首重 2m 单源） | 订阅消息 |
+| 生活号 | `fw/guide`＋验证流程 | 网关验证＋被动通知（事件表待核验） | 生活号 |
+| 小程序客服 | `mini/component/contact-button` | 零号云客服前端组件（企业用户），非服务端推送 | — |
+| 授权 | `isv/*` | app_auth_token 代调用必填＋永久/刷新失效 | 代调用 |
+| 准入 | 创建/上线/加签/沙箱组 | 实名→五项设置→审核约 1 工作日 | 准入 |
