@@ -7,7 +7,7 @@
 ## 1. 官方文档入口与关键页面
 
 - 门户首页：https://developer.open-douyin.com/
-- 文档根：https://developer.open-douyin.com/docs/resource/zh-CN/（多棵文档树共存：`dop` 移动/网站应用、`mini-app` 小程序、`mini-game` 小游戏、`local-life` 生活服务、`thirdparty` 服务商、`interaction` 直播互动、`developer` 抖音云等）
+- 文档根：https://developer.open-douyin.com/docs/resource/zh-CN/（多棵文档树共存：`dop` 移动/网站应用、`mini-app` 小程序、`mini-game` 小游戏、`local-life` 生活服务、`thirdparty` 服务商；`interaction` 直播互动、`developer` 抖音云等树在本次抓取中未采样，2026-09-10 复核注）
 - 抖音开放平台使用指引：https://developer.open-douyin.com/docs/resource/zh-CN/dop/overview/usage-guide
 
 本次实际抓到并核实的页面清单：
@@ -105,7 +105,7 @@ content 字段：
 | lead_commodity_card | 21 | 线索商品卡 |
 | poi_card | 22 | 门店/POI 卡 |
 | applet_card | 10 | 小程序引导卡片（发送侧） |
-| text / image | 1 / 2 | 文本 / 图片（发送侧） |
+| text / image | 1 / 2 | 文本 / 图片（发送侧；text=1 已复核，image=2 待补抓 2026-09-10 注） |
 
 线索私信事件开放（同页 5 节）：scope `ad.leads.im_event_open`，content 额外含 `invalid_conversation`（0-否 1-是折叠）、`enter_chat_from`（0-自然 1-广告）、`item_enter_from`（0-短视频 1-直播 5-未知）、`is_clued`、`guest_id`、`enterprise_id`、`conversation_short_id`、`create_time`。
 
@@ -147,7 +147,7 @@ content 字段：
 ### 3.2 订阅管理
 
 - 控制台开关或 OpenAPI 订阅：「需要在管理中心打开该事件的订阅才可收到通知」。
-- OpenAPI：获取订阅状态 `GET /event/status/list/`（无参数，不需授权）；更新订阅状态 `POST /event/status/update/`（event-list 页表格写 GET，update 页写 POST，两处矛盾，见待核验）。均为 `https://open.douyin.com` 域，Content-Type: application/json。
+- OpenAPI：获取订阅状态 `GET /event/status/list/`（无参数，不需授权）；更新订阅状态 `POST /event/status/update/`（已复核 2026-09-10：event-list 页内联表格原文为 `GET /event/status/update/`，专页原文为 `POST /event/status/update/`，官方自相矛盾；模拟器按 POST 实现）。均为 `https://open.douyin.com` 域，Content-Type: application/json。
 - 「如果开发者服务器长时间未响应事件推送请求，可能会取消开发者的订阅状态，开发者需重新订阅」。
 
 ### 3.3 重试与响应判定
@@ -205,7 +205,7 @@ func sign(clientSecret string, body []byte) string {
 2. 再直接拼接 body 和 token（无任何连接符）。
 3. md5（16 bytes）后 base64 编码即 signature。
 
-文档示例拼接串（逐字）：`x-appid=tt12321&x-msg-type=verify_request&x-nonce-str=123456&x-timestamp=456789verify_bodyverify_token` → `AoOtx/dFR5MFrCTqUmtmDg==`。
+文档示例拼接串（逐字）：`x-appid=tt12321&x-msg-type=verify_request&x-nonce-str=123456&x-timestamp=456789verify_bodyverify_token` → `AoOtx/dFR5MFrCTqUmtmDg==`。（注：官方两处示例取值本就不一致——Header 示例用真实时间戳/nonce，拼接串用 123456/456789 占位，逐字保留，2026-09-10 复核注）。
 
 ### 4.3 服务商（第三方小程序）：MsgSignature + AES Encrypt
 
@@ -639,7 +639,7 @@ XML 格式：
 | client_key / client_secret | 控制台-应用信息-应用基础信息 | — | 应用标识与密钥；client_secret 同时是 webhook 验签 key 与生活服务 AES 密钥原料 |
 
 - API 域：`https://open.douyin.com/`。
-- 调用侧凭证传递（来自 clue 页发送组件消息接口）：Header `access-token: <token>` + Query `open_id=<...>`；client_token 类接口同理（各 API 文档单列）。
+- 调用侧凭证传递（来自 clue 页发送组件消息接口，待复核页内锚点 2026-09-10 注）：Header `access-token: <token>` + Query `open_id=<...>`；client_token 类接口同理（各 API 文档单列）。
 - 用户可在抖音 App「我-设置-账号与安全-授权管理」取消授权，取消后 access_token 立即失效；平台会定期清理不合规授权。
 - 关键错误码：10002 参数错误、10003/10013 key/secret 错误、10007 code 过期、10010 refresh_token 过期、10014 client_key 不匹配、10020 client_token 频控。
 - 注意：dop webhook 事件推送本身**不携带/不需要 token**，验签只用 client_secret + body。
@@ -649,10 +649,10 @@ XML 格式：
 1. **服务商 MsgSignature 精确算法**：文档只说「根据 TOKEN、Nonce、TimeStamp、Encrypt 获取签名」，sha1 的拼接顺序（是否字典序）在官方示例代码包（java/php/go）里，本次未能下载 → 待核验(09-27)。来源页：thirdparty encryption。
 2. **服务商 Encrypt 的 AES 参数**（模式/填充/key 长度/编码，MsgDecrypt 实现）：同样在示例代码包内 → 待核验(09-27)。
 3. **dop 群聊事件 content 明细**（im_group_receive_msg / im_group_send_msg / enter_group_audit_change / group_fans_event）：事件列表只给空 `{}`，站内未搜到字段表 → 待核验(09-27)。
-4. **抖音客服平台（新）推送协议**：小游戏「消息推送客服」体系 2025-06-30 关闭迁移至「抖音客服平台」，新平台的回调/验签文档本次未定位 → 待核验(09-27)。
-5. **event/status/update 的 HTTP method**：event-list 页表格写 GET，update 专页写 POST，官方自相矛盾 → 待核验(09-27)（做模拟器时按 POST 实现并注明）。
+4. **抖音客服平台（新）推送协议**：小游戏「消息推送客服」体系 2025-06-30 关闭迁移至「抖音客服平台」，新平台文档已定位（`https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/message-push/douyin-microgame-im-guide`，2026-09-10 复核在 msg-push-config-guide 左侧导航发现），待抓全文核验 → 待核验(09-27)。
+5. **event/status/update 的 HTTP method**：已确认官方矛盾（2026-09-10 双页复核：event-list 内联表为 GET，专页为 POST）→ 做模拟器时按 POST 实现并注明。
 6. **IM 文本示例中 conversation_type=2 与字段表「1：私聊」的矛盾**：原文如此，群聊是否=2 无官方字段表佐证 → 待核验(09-27)。
-7. **dop 树「私信能力」正式文档页**（搜索命中 mobile-web-app「私信能力」「私信/群管理能力」但无路径）：目录树懒加载无法枚举 → 待核验(09-27)。
+7. **dop 树「私信能力」正式文档页**：企业号线索私信正式页即 clue-component-open（PR 2024112059215，已定位）；mobile-web-app「私信/群管理能力」目录页仍未定位 → 待核验(09-27)。
 8. **抖音云专线推送**（interaction 树 danmu-callback 等）：本次未盘 → 待核验(09-27)。
 9. **webhook 响应体要求（dop）**：summarize 页只说 5s 断开+重试 3 次，未明确响应体格式（生活服务明确「响应内容可以为空」）；dop 是否要求返回特定 body → 待核验(09-27)。
 10. **小程序树订阅消息推送事件**（subscribe-feedcard-webhook、subscription-status-push-event）：本次未抓全文 → 待核验(09-27)。

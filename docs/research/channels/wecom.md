@@ -6,7 +6,7 @@
 
 ## 1. 官方文档入口与关键页面地址
 
-- 入口：https://developer.work.weixin.qq.com/document/ （首页为 JS 空壳；内容页 `/document/path/<id>` 为 SSR，可直接抓取。注意：部分页面首访返回空壳，重试即可拿到 SSR）
+- 入口：https://developer.work.weixin.qq.com/document/ （首页为 JS 空壳；内容页 `/document/path/<id>` 为 SSR，可直接抓取。注意：部分页面首访返回空壳，重试即可拿到 SSR；2026-09-10 复验确认连续高频抓取会触发 `企业微信-验证码` 空壳（HTTP 200/1353B），属站方反爬而非页面下线）
 
 本次实际抓取并完整摄取的页面（均验证过正文内容）：
 
@@ -19,7 +19,7 @@
 | 90240 | 事件格式（自建应用事件） | https://developer.work.weixin.qq.com/document/path/90240 | 2025/11/26 |
 | 90241 | 被动回复消息格式 | https://developer.work.weixin.qq.com/document/path/90241 | 2024/11/21 |
 | 90970 | 成员变更通知（通讯录） | https://developer.work.weixin.qq.com/document/path/90970 | 2026/02/26 |
-| 90971 | 部门变更通知（通讯录） | https://developer.work.weixin.qq.com/document/path/90971 | — |
+| 90971 | 部门变更通知（通讯录） | https://developer.work.weixin.qq.com/document/path/90971 | 2022/08/04 |
 | 90972 | 标签变更通知（通讯录） | https://developer.work.weixin.qq.com/document/path/90972 | 2021/09/16 |
 | 92032 | 成员变更事件（家校通讯录） | https://developer.work.weixin.qq.com/document/path/92032 | 2023/11/29 |
 | 92052 | 部门变更事件（家校通讯录） | https://developer.work.weixin.qq.com/document/path/92052 | 2023/11/29 |
@@ -32,14 +32,14 @@
 | 101027 | 接收事件（智能机器人） | https://developer.work.weixin.qq.com/document/path/101027 | 2026/05/20 |
 | 101463 | 智能机器人长连接 | https://developer.work.weixin.qq.com/document/path/101463 | 2026/05/25 |
 | 91815 | 审批申请状态变化回调通知 | https://developer.work.weixin.qq.com/document/path/91815 | 2025/06/11 |
-| 95796 | 上下游变更回调 | https://developer.work.weixin.qq.com/document/path/95796 | — |
-| 97299 | 获客助手事件通知 | https://developer.work.weixin.qq.com/document/path/97299 | — |
+| 95796 | 上下游变更回调 | https://developer.work.weixin.qq.com/document/path/95796 | 2023/11/29 |
+| 97299 | 获客助手事件通知 | https://developer.work.weixin.qq.com/document/path/97299 | 2026/07/22 |
 | 95333 | 回调事件（会议室预定） | https://developer.work.weixin.qq.com/document/path/95333 | 2023/11/29 |
-| 100080 | 回调通知（域名/IP 变更） | https://developer.work.weixin.qq.com/document/path/100080 | 2024/07/12 |
-| 100180 | 回调通知（公共邮箱） | https://developer.work.weixin.qq.com/document/path/100180 | 2024/09/03 |
-| 91770 | 消息推送配置说明（群机器人 webhook） | https://developer.work.weixin.qq.com/document/path/91770 | 2025/08/07 |
-| 90236 | 发送应用消息 | https://developer.work.weixin.qq.com/document/path/90236 | — |
-| 90238 | 服务端API 概述（导航树来源） | https://developer.work.weixin.qq.com/document/path/90238 | — |
+| 100080 | 回调通知（域名/IP 变更） | https://developer.work.weixin.qq.com/document/path/100080 | 2024/07/12（2026-09-10 复验未果：站方验证码限流，待补） |
+| 100180 | 回调通知（公共邮箱） | https://developer.work.weixin.qq.com/document/path/100180 | 2024/09/03（2026-09-10 复验未果：站方验证码限流，待补） |
+| 91770 | 消息推送配置说明（群机器人 webhook） | https://developer.work.weixin.qq.com/document/path/91770 | 2025/08/07（2026-09-10 复验注：连取返回验证码空壳；现行导航树中对应功能页为 99110“消息推送配置说明”，疑 91770 已迁移/下线，待冷 IP 复验二选一） |
+| 90236 | 发送应用消息 | https://developer.work.weixin.qq.com/document/path/90236 | —（2026-09-10 复验未果：站方验证码限流，待补） |
+| 90238 | 服务端API 概述（导航树来源） | https://developer.work.weixin.qq.com/document/path/90238 | —（2026-09-10 复验未果：站方验证码限流，待补） |
 
 抓取方法备注：文档站全站导航树内嵌在任一 SSR 内容页中（本库从 90238 提取到 983 个页面链接）；旧版锚点 ID（12973 普通消息格式 / 12974 事件消息格式 / 12975 被动回复消息格式 / 12976 消息体签名校验 / 12977 设置接收消息的参数 / 10128 下载地址）在现行站点返回空壳，其内容分别对应现行页 90239 / 90240 / 90241 / 90968 原理详解 / 90930 回调配置 / 90307。
 
@@ -53,7 +53,7 @@
 | image | PicUrl、MediaId | 发图片 |
 | voice | MediaId、Format（amr/speex 等） | 发语音 |
 | video | MediaId、ThumbMediaId | 发视频 |
-| location | Location_X/Y、Scale、Label、AppType=wxwork | 发位置 |
+| location | Location_X/Y、Scale、Label、AppType（wxwork 绑定见于 90240 LOCATION 示例，90239 页内未独立断言，2026-09-10 弱验证注） | 发位置 |
 | link | Title、Description、Url、PicUrl | 发链接 |
 
 公共字段：ToUserName（企业 CorpID）、FromUserName（成员 UserID）、CreateTime（整型秒级时间戳）、MsgId（64 位整型）、AgentID（整型应用 id）。MediaId 仅三天内有效。

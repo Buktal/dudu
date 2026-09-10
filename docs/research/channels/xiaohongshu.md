@@ -112,9 +112,9 @@
 
 ## 4. 验签与加密算法
 
-### 4.1 调用方签名（请求平台 API 时）`[官方+多源]`
+### 4.1 调用方签名（请求平台 API 时）`[官方公共参数定义 + 多源组装公式]`
 
-官方公共参数文档（paramNew 直抓，见 §5.3）定义请求体必填 `["appId","method","sign","timestamp","version"]`，并注明：**「accessToken：通过code获取的accessToken(授权接口等部分接口不需要此参数，该字段不参与sign签名运算)」**。
+官方公共参数文档（paramNew 直抓，见 §5.3）定义请求体必填 `["appId","method","sign","timestamp","version"]`，并注明：**「accessToken：通过code获取的accessToken(授权接口等部分接口不需要此参数，该字段不参与sign签名运算)」**。官方 paramNew 仅写“签名算法参考开发者文档”，md5 组装公式来自 zsmhub Go 与 qihang Java 两 SDK 交叉（2026-09-10 复核注），未见官方原文。
 
 签名算法（zsmhub Go 与 qihang Java 两源逐字一致）：
 
@@ -286,7 +286,8 @@ sign = md5_hex_lowercase(signString)
 - https://miniapp.xiaohongshu.com/doc/DC026595 ✔（小程序简介；左侧导航含「服务端能力→消息推送」「事件回调」全目录）
 - https://miniapp.xiaohongshu.com/doc/DC897608 ✔（客服消息：接收消息与发送消息）
 - https://miniapp.xiaohongshu.com/doc/DC577113 ✔（消息推送：配置/握手/验签/重试/应答，更新于 2026-01-09）
-- https://miniapp.xiaohongshu.com/doc/DC591932 ✔（**官方错链**：DC577113 引用的「消息加解密」指到此页，实际内容为「开放数据校验与解密」，见 §10.6）
+- https://miniapp.xiaohongshu.com/doc/DC234367 ✔（[客服]-发送客服消息：POST /api/rmp/message/custom，48h 回复通道；2026-09-10 复核补入）
+- https://miniapp.xiaohongshu.com/doc/DC591932 ✔（**官方错链**：DC577113 引用的「消息加解密」指到此页，实际内容为「开放数据校验与解密」，见 §10.6；另含 DataDecrypt.zip，与消息推送的 MsgDecrypt.zip 是两个不同包，勿混）
 
 ---
 
@@ -362,7 +363,7 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 
 ### 11.1 支付结果回调（DC753163，`[官方]`）
 
-来源：https://miniapp.xiaohongshu.com/doc/DC753163?path=/third/api-3rd-doc/msgCrypt （更新 2024-11-25）
+来源：https://miniapp.xiaohongshu.com/doc/DC753163?path=/third/api-3rd-doc/msgCrypt （裸 DC753163 亦回全文，path 参数非必需，2026-09-10 注；更新 2024-11-25）
 
 - 担保支付场景下支付结果主动推送（原文面向服务商推送，主单与预约单共用同一 Event，`OrderType` 区分）；「推送请求需解密，解密后参数为……」——业务字段在 Encrypt 密文内，解密细节链接 → DC519884。
 - **OrderType=1（预售券/团购券主订单通知）字段表**：`Event`（固定 `PAY_RESULT`）、`OrderId`、`OutOrderId`、`Status`（2=支付成功，998=支付取消）、`PayChannel`（1=微信，2=支付宝，99=其它，仅成功时返回）、`TotalAmount`（单位：分）、`VoucherInfos` 列表（含 `VoucherCode` 券码）、`ProductType`（1=团购券，2=酒旅预售券）、`PayTime`（秒级时间戳）。
@@ -370,10 +371,10 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 
 ### 11.2 消息加解密文档（DC519884，`[官方]`）——DC577113 错链的真正目标
 
-来源：https://miniapp.xiaohongshu.com/doc/DC519884 （「第三方平台 → 操作指南 → 消息加解密」，更新 2024-11-28）
+来源：https://miniapp.xiaohongshu.com/doc/DC519884?path=/third/api-3rd-doc/msgCrypt （「第三方平台 → 操作指南 → 消息加解密」，更新 2024-11-28；裸 DC519884 只回骨架无正文，必须带此 path 参数，2026-09-10 实抓注）
 
-- POST 推送 body（JSON）字段表：`Nonce`（string）、`Timestamp`（i32，秒级）、`Encrypt`（string）、`MsgSignature`（string）——**签名与随机数在 body 内**（企微自建应用是 query 参数，此处不同）。
-- 创建服务商时的 URL 验证消息为 GET（参数在 query）；服务器须返回字符串 `success`，否则重试，重试过多触发熔断。
+- POST 推送 body（JSON）字段表：`Nonce`（string）、`Timestamp`（i32，时间戳；原文未注单位，秒级为推断——支付页 PayTime 明确秒级）、`Encrypt`（string）、`MsgSignature`（string）——**签名与随机数在 body 内**（企微自建应用是 query 参数，此处不同）。
+- 创建服务商时的 URL 验证消息为 GET（参数在 query，第三方平台语境；小程序语境见 DC577113，机制相同）；服务器须返回字符串 `success`，否则重试，重试过多触发熔断。
 - 验签 = 用「消息验证 TOKEN」+ Nonce + Timestamp + Encrypt 计算签名与 MsgSignature 比对（指引示例代码 `MsgSignature.getSignature`）；解密 = `MsgDecrypt.decrypt`（指引示例代码）。
 - 官方 Java 示例包（本次已下载并解析）：https://fe-video-qc.xhscdn.com/fe-platform/87989404f48299d3ab814cef6ce4013d85fb827b.zip?attname=MsgDecrypt.zip （包名 `com.xiaohongshu.mp.security.util`，含 MsgDecrypt.java / MsgSignature.java / PKCS7Decoder.java）
 
