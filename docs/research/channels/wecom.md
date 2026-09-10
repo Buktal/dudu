@@ -35,13 +35,13 @@
 | 95796 | 上下游变更回调 | https://developer.work.weixin.qq.com/document/path/95796 | 2023/11/29 |
 | 97299 | 获客助手事件通知 | https://developer.work.weixin.qq.com/document/path/97299 | 2026/07/22 |
 | 95333 | 回调事件（会议室预定） | https://developer.work.weixin.qq.com/document/path/95333 | 2023/11/29 |
-| 100080 | 回调通知（域名/IP 变更） | https://developer.work.weixin.qq.com/document/path/100080 | 2024/07/12（2026-09-10 复验未果：站方验证码限流，待补） |
-| 100180 | 回调通知（公共邮箱） | https://developer.work.weixin.qq.com/document/path/100180 | 2024/09/03（2026-09-10 复验未果：站方验证码限流，待补） |
-| 91770 | 消息推送配置说明（群机器人 webhook） | https://developer.work.weixin.qq.com/document/path/91770 | 2025/08/07（2026-09-10 复验注：连取返回验证码空壳；现行导航树中对应功能页为 99110“消息推送配置说明”，疑 91770 已迁移/下线，待冷 IP 复验二选一） |
-| 90236 | 发送应用消息 | https://developer.work.weixin.qq.com/document/path/90236 | —（2026-09-10 复验未果：站方验证码限流，待补） |
-| 90238 | 服务端API 概述（导航树来源） | https://developer.work.weixin.qq.com/document/path/90238 | —（2026-09-10 复验未果：站方验证码限流，待补） |
+| 100080 | 回调通知（域名/IP 变更） | https://developer.work.weixin.qq.com/document/path/100080 | 2024/07/12（2026-09-10 冷 IP 复验通过，SSR 正文完整） |
+| 100180 | 回调通知（公共邮箱） | https://developer.work.weixin.qq.com/document/path/100180 | 2024/09/03（2026-09-10 冷 IP 复验通过，SSR 正文完整） |
+| 91770 | 消息推送配置说明（群机器人 webhook） | https://developer.work.weixin.qq.com/document/path/91770 | 2025/08/07（2026-09-10 冷 IP 复验通过：SSR 正文完整，91770 仍有效、未迁移/未下线；99110 为服务端 API 章节下同名页，两 ID 并存，二选一已决） |
+| 90236 | 发送应用消息 | https://developer.work.weixin.qq.com/document/path/90236 | 2025/09/24（2026-09-10 冷 IP 复验通过，SSR 正文完整） |
+| 90238 | 接收消息与事件概述（导航树来源） | https://developer.work.weixin.qq.com/document/path/90238 | 2024/07/22（2026-09-10 冷 IP 复验通过，SSR 正文完整；页内导航树含 99110 等全站链接） |
 
-抓取方法备注：文档站全站导航树内嵌在任一 SSR 内容页中（本库从 90238 提取到 983 个页面链接）；旧版锚点 ID（12973 普通消息格式 / 12974 事件消息格式 / 12975 被动回复消息格式 / 12976 消息体签名校验 / 12977 设置接收消息的参数 / 10128 下载地址）在现行站点返回空壳，其内容分别对应现行页 90239 / 90240 / 90241 / 90968 原理详解 / 90930 回调配置 / 90307。
+抓取方法备注：文档站全站导航树内嵌在任一 SSR 内容页中（本库从 90238 提取到 983 个页面链接）；旧版锚点 ID（12973 普通消息格式 / 12974 事件消息格式 / 12975 被动回复消息格式 / 12976 消息体签名校验 / 12977 设置接收消息的参数 / 10128 下载地址）在现行站点返回空壳，其内容分别对应现行页 90239 / 90240 / 90241 / 90968 原理详解 / 90930 回调配置 / 90307。（2026-09-10 冷 IP 复验：90238 SSR 正文完整，最后更新 2024/07/22，页内导航树仍含全站链接；服务端 API 章节下消息推送页为 99110，与客户端 API 章节下 91770 同名并存）
 
 ## 2. 消息/事件推送全清单
 
@@ -163,10 +163,48 @@ ChangeType：balance_increased / balance_low / balance_exhausted（余额变化�
 
 | Event | 域 | ChangeType/备注 | 页面 |
 | --- | --- | --- | --- |
-| security | 安全 | change_domain_ip（企微域名/IP 变更） | 100080 |
-| public_email_change | 公共邮箱 | receive_email 等 | 100180 |
+| security | 安全 | change_domain_ip（企微域名/IP 变更；FromUserName=sys；仅自建应用，需配入「我的企业 - 设置 - 域名IP - 可调用API的应用」，代开发/第三方暂不支持，无接收事件开关） | 100080 |
+| public_email_change | 公共邮箱 | receive_email（公共邮箱收到邮件；FromUserName=sys；载荷 Id=公共邮箱 id、Amount=当前新邮件数） | 100180 |
 | book_meeting_room / cancel_meeting_room | 会议室预定/取消 | MeetingRoomId、BookingId | 95333 |
 | 微盘/文档/日历/会议/知识集等 | 各自域 | 变更事件众多（见导航树） | 97833+、97728+、98333+ 等 |
+
+域名/IP 变更事件示例［100080 原文］：
+
+```xml
+<xml>
+	<ToUserName><![CDATA[toUser]]></ToUserName>
+	<FromUserName><![CDATA[sys]]></FromUserName> 
+	<CreateTime>1403610513</CreateTime>
+	<MsgType><![CDATA[event]]></MsgType>
+	<Event><![CDATA[security]]></Event>
+	<ChangeType><![CDATA[change_domain_ip]]></ChangeType>
+</xml>
+```
+
+参数：ToUserName=企业 CorpID；FromUserName 固定 sys（系统生成）；CreateTime 整型；MsgType 固定 event；Event 固定 security；ChangeType 固定 change_domain_ip。上/下一篇为 100079 获取企业微信域名IP信息 / 101680 概述。
+
+公共邮箱接收邮件事件示例［100180 原文］：
+
+```xml
+<xml>
+   <ToUserName><![CDATA[toUser]]></ToUserName>
+   <FromUserName><![CDATA[sys]]></FromUserName> 
+   <CreateTime>1668831860</CreateTime>
+   <MsgType><![CDATA[event]]></MsgType>
+   <Event><![CDATA[public_email_change]]></Event>
+   <ChangeType><![CDATA[receive_email]]></ChangeType>
+   <Id>1</Id>
+   <Amount>2</Amount>
+</xml>
+```
+
+参数：ToUserName=企业 CorpID；FromUserName 固定 sys；CreateTime 为 unix 时间戳；MsgType/Event/ChangeType 分别固定 event/public_email_change/receive_email；Id=公共邮箱 id；Amount=公共邮箱当前新邮件数。页内注「接收并解析事件的方法见接收事件」（指向旧锚点 12977，其内容现由 90930 覆盖）。上/下一篇为 98003 模糊搜索公共邮箱 / 100183 获取客户端专用密码列表。
+
+出站/配置页补证（非回调事件，2026-09-10 冷 IP 复验通过，备查）：
+
+- 91770 消息推送配置说明（2025/08/07）：webhook 为 `POST https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=KEY`，`Content-Type: application/json`；8 种消息类型 text / markdown / markdown_v2 / image / news / file / voice / template_card；text 最长 2048 字节、markdown（含 v2）最长 4096 字节（utf8）；text/markdown 支持 `<@userid>` @群成员（markdown_v2 不支持）；image 传 base64+md5（原图 ≤2M，仅 JPG/PNG）；file/voice 传 media_id；voice 仅 AMR、≤2M、≤60s；发送限 20 条/分钟；文件上传 `POST https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=KEY&type=TYPE`（multipart，字段名 media），media_id 仅三天内有效且仅对应上传的消息推送可用。
+- 90236 发送应用消息（2025/09/24）：`POST https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=ACCESS_TOKEN`；寻址 touser/toparty/totag（touser 支持 @all、最多 1000 个，以 `|` 分隔）+ agentid；频率限制每应用 ≤ 账号上限数×200 人次/天、同成员 ≤30 次/分钟且 ≤1000 次/小时（超限丢弃）；支持 enable_duplicate_check（默认去重窗 1800 秒）与 id 转译（8 种消息类型部分字段）；返回 invaliduser/invalidparty/invalidtag/unlicenseduser（全部无权限时 errcode=81013），msgid 用于撤回（94867），response_code（按钮/投票/多选型与带 action_menu 卡片）72 小时内有效且仅一次（用于更新模版卡片 94888）。
+- 90238 接收消息与事件概述（2024/07/22）：与 §3.1–§3.4 同源（GET echostr 握手、POST XML、5 秒超时重试三次、msgid / FromUserName+CreateTime 排重、空串 200 兜底）；含 `GET https://qyapi.weixin.qq.com/cgi-bin/getcallbackip?access_token=ACCESS_TOKEN` 返回 ip_list（示例 `["101.226.103.*", "101.226.62.*"]`，权限无限定）。
 
 ## 3. 回调机制（URL 配置、echostr 握手、重试、官方库）［90930/90307/101033/101463］
 
@@ -526,7 +564,8 @@ signature = sha1(sort_str) = "477715d11cdb4164915debcba66cb864d751f3e6"
 | response_url（机器人） | 消息回调携带 | 主动回复用临时 url | 100719 |
 | media_id | 媒体上传接口 | 仅三天内有效 | 90239 |
 | 机器人长连接 Secret | 管理端长连接模式 | 与回调模式的 Token/AESKey 独立；单连接，新连接踢旧连接 | 101463 |
-| 群机器人 webhook key | 群配置页 | 发送限 20 条/分钟 | 91770 |
+| 群机器人 webhook key | 群配置页（消息推送详情页取专属 webhookurl，需保密防泄漏） | 发送限 20 条/分钟；media_id 仅三天内有效且仅对应 webhook 可用；POST 为 application/json | 91770（2026-09-10 冷 IP 复验通过，未迁移/未下线） |
+| 应用消息发送配额 | access_token 调用 message/send | 每应用≤账号上限×200 人次/天；同成员≤30 次/分、1000 次/时（超限丢弃）；可选 enable_duplicate_check（默认 1800 秒窗） | 90236 |
 
 access_token 返回示例（91039 原文）：
 
@@ -546,5 +585,6 @@ access_token 返回示例（91039 原文）：
 3. 第三方应用（服务商）回调协议：suite_ticket 推送、suite_access_token、ticket 换取流程（ReceiveId=suiteid 已确认，但推送样例与频率未取）。→ 待核验(09-27)
 4. 会话内容存档回调（95039 产生会话回调事件、99994 产生会话回调通知、92005 客户同意存档）未细抓。→ 待核验(09-27)
 5. 微盘/文档/日历/日程/会议/知识集专区等新域回调（97833+、97728+、98333+、99963/99996 等）仅盘到导航，未抓正文。→ 待核验(09-27)
-6. 回调 POST 的 Content-Type 头（官方文档页面未显式标注，真实请求一般为 `text/xml`；webhook 机器人为 `application/json`）→ 待核验(09-27)
+6. 回调 POST 的 Content-Type 头（官方文档页面未显式标注，真实请求一般为 `text/xml`）→ 待核验(09-27)；其中 webhook 机器人侧已消项：91770 curl 示例明示 `Content-Type: application/json`（2026-09-10 冷 IP 复验通过）。
 7. 官方加解密库源码内部实现（下载 zip 中的 Sample 与 PKCS7 pad 32 常量）未下载核验；如需可取 weworkapi_python-master.zip 比对。→ 待核验(09-27)
+8. B 类冷 IP 补证（2026-09-10，5 页单发串行、页间 ≥5 秒，一次通过、无验证码反爬）：100080（security/change_domain_ip）、100180（public_email_change/receive_email）、91770（webhook，迁移猜测已证伪）、90236（message/send）、90238（接收概述 + 导航树实证）均已入 §1/§2.11/§6，本轮消项完毕。

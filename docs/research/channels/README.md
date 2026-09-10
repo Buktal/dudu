@@ -1,9 +1,9 @@
-# 十八渠道事实库索引（国内全量）
+# 二十渠道事实库索引（国内外全量）
 
 > 摄取日期：2026-09-10；新增四渠道（飞书/微博/公众号/小程序）2026-09-10（4 路 research 并行＋4 路核验并行）；第二批十一渠道（钉钉/QQ/淘宝/京东/拼多多/美团/饿了么/B站/快手/知乎/支付宝）2026-09-10（逐个 research＋分批核验）。
 > 核验结论：抖音 23 URL 全 200 无伪造；企微 28 页中 23 页逐字验过；小红书 miniapp 逐字复现、ark 侧维持 `[多源]`；飞书 18 页全文已验；微博 18/18 通过；公众号 16/16 通过；小程序 9 页通过；钉钉 18 页直抓通过（通讯录 15 类、转交 redirect 落定）；淘宝 30 点位 24 通过（OffMsgPush 销项、token.create/refresh 拆分）；支付宝三地址/25h8次/notify_id/app_auth_token 旁证通过；京东网关/签名/OAuth 方向通过（JOS 关闭迁移新发现）；拼多多网关/MD5向量/OAuth链路通过（permit 方法名降级）；美团双体系/三态回调/签名通过（IM 体降级）；饿了么用户线 15/15 通过（商户线维持摘录）；B站六域/签名/OAuth302/直播报备通过（事件页降级）；快手 17 页全文通过（§4.2 截断已修复）；知乎无推送结论成立（官方 29 key 无推送类目）；QQ 30 点位基本全过（op13/Ed25519/双口径照录）。
 > 各文档 §1 均有完整页面地址清单；标注「待核验(09-27)」的条目等配额恢复后补——补摄计划见 issue #14。
-> 注：朴朴超市无开放平台（无公开文档入口），未建事实库。
+> 注：朴朴超市无开放平台（无公开文档入口），未建事实库。海外 WhatsApp/Telegram 2026-09-10 已入库（逐个 research＋并行核验）：WhatsApp 官方摘录交叉全过（3MB 上限落定、v23 快照注、无加密软化）；Telegram 7 页 WebFetch 全文全过（测试根地址落定、challenge 缺席收紧）。
 
 | 渠道 | 形态 | 官方文档门户 | 事实库 | 文档数 |
 |---|---|---|---|---|
@@ -25,6 +25,8 @@
 | 快手 | 开放域 3 事件 + 小程序支付回调族 | https://open.kuaishou.com/ | [kuaishou.md](./kuaishou.md) | 17 页 |
 | 知乎 | 无公开推送（拉取式只读 REST） | https://developer.zhihu.com/ | [zhihu.md](./zhihu.md) | 5 页（结论库） |
 | 支付宝 | notify_url/应用网关/蚂蚁订阅三地址 | https://opendocs.alipay.com/ | [alipay.md](./alipay.md) | 50 页 |
+| WhatsApp | Webhook（HMAC-SHA256，无加密）+ 7 天递减重试 | https://developers.facebook.com/docs/whatsapp/ | [whatsapp.md](./whatsapp.md) | 22 页 |
+| Telegram | 长轮询/Webhook 互斥（恒等头，无 HMAC） | https://core.telegram.org/bots/ | [telegram.md](./telegram.md) | 8 页 |
 
 ## 七家速记
 
@@ -46,6 +48,8 @@
 - **快手**：开放域仅 3 事件（`TEST/AUTHORIZE/UN_AUTHORIZE`，上下篇链闭合）；私信无公开推送；小程序支付回调族（`PAYMENT/REFUND/SETTLE/WITHHOLD/CONTRACT`，16 次重试表）；`kwaisign=MD5(body+secret)` 无 AES；token 48h/refresh 180 天/code 2 分钟；企业资质认证。
 - **知乎**：无公开消息/私信推送（官方 29 key 无推送类目，枚举消极证据）；拉取式只读 REST＋任务轮询；Bearer＋秒级时间戳；OAuth 仅登录用途；只做请求-响应桩。
 - **支付宝**：三地址（接口 `notify_url` / 应用网关 / From 蚂蚁订阅）；支付通知仅 SUCCESS/FINISHED 认付款；success+200/fail 重推 25h 8 次；`notify_id` 幂等＋RSA2 验签（`rsaCheckV1`）；`app_auth_token` 代调用；生活号网关验证；小程序客服为前端组件非推送。
+- **WhatsApp**：单 URL＋`messages` 订阅；GET 三参握手＋200 裸回 challenge；信封 `object→entry→messages/statuses/contacts`；`wamid` 三处同源；`X-Hub-Signature-256=HMAC-SHA256(AppSecret,body)`；仅 HTTPS＋签名、无加密字段；mTLS 可选；发送 `POST graph.facebook.com/{v}/…/messages`＋Bearer；重试递减 7 天；阶梯 250→Unlimited＋80mps→1000mps；10-01 计费矛盾做开关。
+- **Telegram**：长轮询与 Webhook 互斥（24h 暂存）；端口 443/80/88/8443；IPv4 only；源段双段；TLS1.2+；无官方记述的 challenge；27 类 Update（默认排除 3 类）；`update_id` 去重；恒等头 1–256 无 HMAC；发送 `bot<token>/METHOD`；sendMessage 1–4096；失败包络＋`retry_after/migrate`；免费三档＋429；付费广播 1000/s；文件 50MB/20MB；BotFather 零门槛。
 
 ---
 
@@ -646,3 +650,54 @@
 | 小程序客服 | `mini/component/contact-button` | 零号云客服前端组件（企业用户），非服务端推送 | — |
 | 授权 | `isv/*` | app_auth_token 代调用必填＋永久/刷新失效 | 代调用 |
 | 准入 | 创建/上线/加签/沙箱组 | 实名→五项设置→审核约 1 工作日 | 准入 |
+
+---
+
+## 十九、WhatsApp（22 页）——详见 `whatsapp.md §1`
+
+### 19A. 订阅与握手
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [配置 Webhooks](https://developers.facebook.com/docs/whatsapp/cloud-api/guides/set-up-webhooks/) | App Dashboard 配单 URL＋Verify token，必订 `messages` | 通道配置 |
+| [Webhooks 总览](https://developers.facebook.com/docs/whatsapp/webhooks/) | 字段表＋mTLS 可选＋重试 7 天＋载荷上限 3MB | 通道总纲 |
+| [创建回调端点](https://developers.facebook.com/docs/whatsapp/webhooks/create-webhook-endpoint/) | GET 三参＋HMAC-SHA256＋200 裸回 challenge/403 | 握手＋验签 |
+| [Graph 通用入门](https://developers.facebook.com/docs/graph-api/webhooks/getting-started/) | hub.mode/challenge/verify_token 通用语义 | 握手 |
+| [Echo 机器人](https://developers.facebook.com/docs/whatsapp/cloud-api/guides/set-up-whatsapp-echo-bot/) | fbsamples app.py 回显实锤 | 握手 |
+
+### 19B. 载荷（messages/statuses）
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [messages 参考](https://developers.facebook.com/docs/whatsapp/webhooks/reference/messages) | inbound/outbound 逐字载荷 | `messages/statuses` |
+| [载荷示例](https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-examples/) | 示例集 | 各 type 载荷 |
+| [组件](https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components/) | 字段组件 | 载荷组件 |
+
+### 19C. 管理面/发送/凭证/配额
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [管理面组件](https://developers.facebook.com/docs/whatsapp/business-management-api/webhooks/components/) | account/capability/template/phone 更新表 | 管理面事件 |
+| [发送指南](https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages/) | 同步受理＋TTL 30 天 | 发送 |
+| [Messages 参考](https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages) | `POST /{v}/{id}/messages`＋wamid 同源 | 发送 |
+| [文本消息](https://developers.facebook.com/docs/whatsapp/cloud-api/messages/text-messages/) | 4096＋to＋preview_url（v25/v26） | 文本发送 |
+| [接入指南](https://developers.facebook.com/documentation/business-messaging/whatsapp/get-started) | 临时 token＋系统用户＋v23 示例快照 | 凭证 |
+| [Token 指南](https://developers.facebook.com/documentation/business-messaging/whatsapp/access-tokens) | 系统用户长效 | 凭证 |
+| [阶梯](https://developers.facebook.com/docs/whatsapp/messaging-limits/) | 250→Unlimited（组合级） | 配额 |
+| [吞吐](https://developers.facebook.com/docs/whatsapp/throughput/) | 80mps→1000mps，超限 130429 | 频控 |
+| [定价](https://developers.facebook.com/docs/whatsapp/pricing/) | 8-01/10-01 更新与主站矛盾（做开关） | 计费 |
+
+---
+
+## 二十、Telegram（8 页）——详见 `telegram.md §1`
+
+| 文档 | 一句话 | 覆盖事件 |
+|---|---|---|
+| [机器人平台](https://core.telegram.org/bots) | 1000 万+机器人＋BotFather＋token 即全权 | 准入总纲 |
+| [Bot API](https://core.telegram.org/bots/api) | 互斥/24h/端口/恒等头/发送基式/包络/限流 | 全部机制 |
+| [Webhooks](https://core.telegram.org/bots/webhooks) | IPv4/源段/TLS/CN/自签/自测 Update | 建联＋握手（无 challenge） |
+| [FAQ](https://core.telegram.org/bots/faq) | 互斥/去重/secret path/三档限流/文件尺寸 | 常见口径 |
+| [功能](https://core.telegram.org/bots/features) | BotFather/命名/转让/测试根地址/Bot-to-Bot/Guest | 准入＋测试 |
+| [教程](https://core.telegram.org/bots/tutorial) | token 形＋浏览器直调＋发送三件套 | 上手 |
+| 事件 | `Update` 27 类字段（Bot API 10.3 时点，默认排除 3 类） | 全部事件 |
+| 验签 | 恒等头 `X-Telegram-Bot-Api-Secret-Token` 原样比对，无 HMAC | 安全层 |
