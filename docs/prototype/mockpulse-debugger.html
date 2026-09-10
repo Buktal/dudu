@@ -1,0 +1,846 @@
+<!doctype html>
+<!--
+  MockPulse — disposable interaction prototype.
+  Design question: what is the clearest way to compose a platform event and diagnose its receipt?
+  Three independently arranged debugging views: split, guided, stream. ?variant= selects one.
+  Single offline HTML file. No imports, build, server, real HTTP or crypto.
+  Explicitly saved scripts and execution plans use this browser's localStorage, with JSON export.
+  Product assumptions and interface decisions remain open for review.
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>MockPulse · 交互原型</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas:#eeefed; --surface:#fff; --surface-subtle:#f8f9f8; --surface-hover:#f0f2f0;
+      --text:#222922; --muted:#737b73; --faint:#90978f; --line:#e6e9e4; --line-strong:#d4dacf;
+      --accent:#de613b; --accent-hover:#c94d29; --accent-soft:#fff0e8; --accent-text:#a74627;
+      --good:#267251; --good-soft:#edf6ef; --bad:#b44646; --bad-soft:#fff0ee;
+      --warn:#9b721a; --warn-soft:#fbf5e6; --code:#f6f8f5; --shadow:0 12px 50px #24321e0b;
+      --sans:Inter,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+      --mono:"Cascadia Code","SFMono-Regular",Consolas,monospace;
+    }
+    [data-theme="dark"] {
+      color-scheme:dark; --canvas:#171b18; --surface:#222823; --surface-subtle:#1d231f;
+      --surface-hover:#2c342e; --text:#e8ede7; --muted:#a0aba0; --faint:#7b887d;
+      --line:#354036; --line-strong:#49574a; --accent:#ec8a66; --accent-hover:#f0a080;
+      --accent-soft:#3c2e24; --accent-text:#f3b395; --good:#8bcaa5; --good-soft:#253b2d;
+      --bad:#f0a3a0; --bad-soft:#402c2c; --warn:#e1c17d; --warn-soft:#3b3526; --code:#1b211d;
+    }
+    * {box-sizing:border-box}
+    body {margin:0; background:var(--canvas); color:var(--text); font:13px/1.6 var(--sans)}
+    button,input,textarea,select {font:inherit}
+    button {cursor:pointer}
+    button,a,input,textarea,select,summary {outline-offset:3px}
+    :focus-visible {outline:2px solid var(--accent)}
+    button {color:inherit}
+    button:disabled {opacity:.48; cursor:not-allowed}
+    button svg {flex:none}
+    a {color:var(--accent-text)}
+    h1,h2,h3,p {margin:0}
+    h1 {font-size:25px; letter-spacing:-.8px; font-weight:650; line-height:1.4}
+    h2 {font-size:15px; font-weight:650}
+    h3 {font-size:13px; font-weight:650}
+    .icon {width:18px; height:18px; stroke:currentColor; stroke-width:1.7; fill:none; stroke-linecap:round; stroke-linejoin:round; vertical-align:middle}
+    .icon.small {width:14px; height:14px}
+    .muted {color:var(--muted)}
+    .tiny {font-size:11px}
+    .mono,code,pre {font-family:var(--mono); font-size:12px}
+    .row {display:flex; align-items:center; gap:9px}
+    .spread {justify-content:space-between}
+    .stack {display:flex; flex-direction:column; gap:16px}
+    .grow {flex:1; min-width:0}
+    .truncate {overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+    .eyebrow {color:var(--faint); font-size:10px; letter-spacing:1.5px; font-weight:650; margin-bottom:7px}
+    .btn {display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:8px 13px; border:1px solid var(--line-strong); border-radius:7px; background:var(--surface); white-space:nowrap; font-size:12px; font-weight:550; line-height:1.45}
+    .btn:hover:not(:disabled) {background:var(--surface-hover); border-color:var(--muted)}
+    .btn.primary {background:var(--accent); border-color:var(--accent); color:#fff}
+    .btn.primary:hover:not(:disabled) {background:var(--accent-hover); border-color:var(--accent-hover)}
+    .btn.ghost {border-color:transparent; background:transparent; color:var(--muted)}
+    .btn.small {padding:5px 9px; font-size:11px}
+    .btn.square {padding:7px; width:32px; height:32px}
+    .btn.danger {color:var(--bad)}
+    .badge {display:inline-flex; align-items:center; gap:5px; border-radius:5px; background:var(--surface-hover); color:var(--muted); padding:2px 7px; font-size:10px; font-weight:550; white-space:nowrap}
+    .badge.good {color:var(--good); background:var(--good-soft)}
+    .badge.bad {color:var(--bad); background:var(--bad-soft)}
+    .badge.warn {color:var(--warn); background:var(--warn-soft)}
+    .badge.accent {color:var(--accent-text); background:var(--accent-soft)}
+    .dot {width:6px; height:6px; display:inline-block; border-radius:50%; background:currentColor; flex:none}
+    .shell {display:grid; grid-template-columns:196px minmax(0,1fr); height:calc(100vh - 98px); min-height:690px; max-width:1680px; margin:18px auto 80px; border:1px solid var(--line-strong); border-radius:12px; overflow:hidden; background:var(--surface); box-shadow:var(--shadow)}
+    @media(min-width:1740px){.shell{margin-left:auto;margin-right:auto}}
+    @media(max-width:1739px){.shell{margin-left:18px;margin-right:18px}}
+    .sidebar {background:var(--surface-subtle); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; padding:22px 13px 14px}
+    .brand {display:flex; gap:9px; align-items:center; padding:0 9px 29px; font-weight:750; letter-spacing:-.65px; font-size:19px}
+    .brand-mark {height:31px; width:31px; display:grid; place-items:center; background:var(--accent); color:#fff; border-radius:9px; box-shadow:inset 0 0 0 1px #ffffff26}
+    .brand-mark svg {width:23px; height:23px; stroke-width:2}
+    .nav-caption {font-size:10px; letter-spacing:1.1px; color:var(--faint); padding:0 11px 8px}
+    .nav {display:flex; flex-direction:column; gap:4px}
+    .nav-btn {display:flex; gap:10px; align-items:center; width:100%; border:0; background:transparent; color:var(--muted); border-radius:7px; padding:10px 11px; text-align:left; font-size:12px}
+    .nav-btn:hover {background:var(--surface-hover); color:var(--text)}
+    .nav-btn.active {background:var(--accent-soft); color:var(--accent-text); font-weight:650}
+    .nav-btn .count {margin-left:auto; color:var(--faint); font:10px var(--mono)}
+    .sidebar-section {border-top:1px solid var(--line); margin-top:23px; padding-top:20px}
+    .platform-mark {display:inline-grid; place-items:center; width:25px; height:25px; border-radius:7px; font-weight:650; font-size:11px; background:#202823; color:#fff; flex:none}
+    .platform-mark.wecom {background:#e8f1fe; color:#306dbb}
+    .platform-mark.big {width:36px; height:36px; font-size:16px; border-radius:10px}
+    .sidebar-bottom {margin-top:auto; padding-top:20px}
+    .workspace-label {margin:13px 10px 0; display:flex; align-items:center; gap:6px; color:var(--faint); font-size:10px}
+    .main {display:flex; flex-direction:column; min-width:0; min-height:0}
+    .topbar {height:54px; flex:none; border-bottom:1px solid var(--line); padding:0 27px; display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .breadcrumb {display:flex; align-items:center; gap:11px; font-size:11px; color:var(--muted)}
+    .breadcrumb strong {font-weight:500; color:var(--text)}
+    .page {flex:1; overflow:auto; padding:25px 27px 28px; min-height:0; scroll-behavior:smooth}
+    .page-header {display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:21px}
+    .page-header p {margin-top:5px; color:var(--muted); font-size:12px}
+    .statusbar {height:28px; border-top:1px solid var(--line); padding:0 18px; display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--faint); font-size:10px; background:var(--surface-subtle)}
+    .targetbar {display:flex; align-items:center; gap:13px; padding:12px 14px; background:var(--surface-subtle); border:1px solid var(--line); border-radius:9px; margin-bottom:18px}
+    .target-platform {min-width:140px; display:flex; align-items:center; gap:8px; border-right:1px solid var(--line); padding-right:13px}
+    .target-platform select {border:0; padding:0 16px 0 0; background:transparent; color:var(--text); font-weight:600; max-width:118px; font-size:12px}
+    .method {font:650 10px var(--mono); color:var(--good); background:var(--good-soft); border-radius:4px; padding:3px 5px}
+    .target-url {border:0; background:transparent; padding:0; text-align:left; color:var(--text); min-width:0}
+    .target-label {display:block; font:9px var(--sans); color:var(--faint); margin-bottom:2px; letter-spacing:.3px}
+    .target-url code {font-size:11px}
+    .event-picker {display:flex; align-items:center; gap:7px; margin-bottom:15px; flex-wrap:wrap}
+    .event-option {border:1px solid var(--line); background:var(--surface); color:var(--muted); border-radius:6px; padding:6px 11px; font-size:11px; display:flex; align-items:center; gap:6px}
+    .event-option.active {background:var(--text); border-color:var(--text); color:var(--surface)}
+    .event-option:hover:not(.active) {border-color:var(--muted)}
+    .event-picker .event-hint {margin-right:5px; color:var(--faint); font-size:10px}
+    .debug-grid {display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:stretch}
+    .panel {border:1px solid var(--line); border-radius:9px; background:var(--surface); overflow:hidden; min-width:0}
+    .panel-head {min-height:48px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 16px; border-bottom:1px solid var(--line)}
+    .panel-head h2 {font-size:12px}
+    .panel-body {padding:17px}
+    .segmented {display:inline-flex; gap:2px; background:var(--surface-subtle); border:1px solid var(--line); padding:2px; border-radius:6px}
+    .segmented button {border:0; border-radius:4px; background:transparent; color:var(--muted); padding:3px 10px; font-size:10px}
+    .segmented button.active {background:var(--surface); color:var(--text); box-shadow:0 1px 3px #0000000e}
+    .field {display:flex; flex-direction:column; gap:6px; margin-bottom:15px; min-width:0}
+    .field:last-child {margin-bottom:0}
+    .field label,.field-label {display:block; font-size:11px; font-weight:600}
+    .field .help {font-size:10px; color:var(--faint); line-height:1.5}
+    input,textarea,select {width:100%; color:var(--text); background:var(--surface); border:1px solid var(--line-strong); border-radius:6px; padding:8px 10px; min-width:0; font-size:12px}
+    input::placeholder,textarea::placeholder {color:var(--faint)}
+    input[readonly] {background:var(--surface-subtle); color:var(--muted)}
+    textarea {resize:vertical; line-height:1.7; min-height:84px}
+    textarea.code-input {font:11px/1.75 var(--mono); background:var(--code); min-height:224px; tab-size:2}
+    .field-pair {display:grid; grid-template-columns:1fr 1fr; gap:13px}
+    .event-name {display:flex; align-items:center; justify-content:space-between; border:1px solid var(--line); border-radius:6px; background:var(--surface-subtle); padding:8px 10px}
+    .event-name code {font-size:11px}
+    .expect-box {padding:13px; background:var(--surface-subtle); border:1px solid var(--line); border-radius:7px; margin-top:15px}
+    .expect-box .field {margin:10px 0 0}
+    .expect-box input,.expect-box select {font:11px var(--mono); padding:7px 8px}
+    .expect-title {display:flex; justify-content:space-between; align-items:center; font-size:10px; font-weight:600}
+    .expect-title span:last-child {color:var(--faint); font-weight:400}
+    .compose-footer {padding:13px 16px; border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:auto}
+    .compose-panel {display:flex; flex-direction:column}
+    .compose-panel .panel-body {flex:1}
+    .signature-note {font-size:9px; color:var(--faint)}
+    kbd {font:9px var(--mono); color:var(--faint); border:1px solid var(--line-strong); border-radius:3px; padding:1px 4px; white-space:nowrap}
+    .btn.primary kbd {border-color:#ffffff40; color:#ffffffc0}
+    .tabs {display:flex; gap:17px; border-bottom:1px solid var(--line); padding:0 16px}
+    .tabs button {border:0; background:transparent; border-bottom:2px solid transparent; padding:10px 0 9px; font-size:11px; color:var(--muted)}
+    .tabs button.active {color:var(--text); border-bottom-color:var(--accent); font-weight:600}
+    .empty-result {min-height:292px; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:28px 24px}
+    .empty-art {position:relative; width:170px; height:84px; display:flex; align-items:center; justify-content:center; gap:28px; margin-bottom:16px}
+    .empty-art:before {content:""; width:100px; position:absolute; height:1px; background:var(--line-strong)}
+    .empty-art .endpoint {position:relative; width:52px; height:52px; border:1px solid var(--line-strong); border-radius:13px; background:var(--surface); display:grid; place-items:center; box-shadow:0 4px 10px #20301507; transform:rotate(-7deg)}
+    .empty-art .endpoint:last-child {transform:rotate(7deg); color:var(--accent)}
+    .empty-art .endpoint .icon {width:24px; height:24px}
+    .empty-result h3 {font-size:13px; margin-bottom:7px}
+    .empty-result p {color:var(--muted); max-width:280px; font-size:11px}
+    .empty-checks {display:flex; gap:12px; margin-top:23px; font-size:9px; color:var(--faint); flex-wrap:wrap; justify-content:center}
+    .empty-checks span {display:flex; gap:4px; align-items:center}
+    .result-banner {display:flex; gap:11px; align-items:flex-start; padding:14px; border:1px solid transparent; border-radius:7px; margin-bottom:16px; background:var(--good-soft); color:var(--good)}
+    .result-banner.bad {background:var(--bad-soft); color:var(--bad)}
+    .result-banner.warn {background:var(--warn-soft); color:var(--warn)}
+    .result-banner h3 {font-size:13px; line-height:1.5}
+    .result-banner p {font-size:10px; margin-top:3px; opacity:.85}
+    .metrics {display:grid; grid-template-columns:1fr 1fr 1fr; border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:14px}
+    .metric {border-right:1px solid var(--line); padding-left:15px}
+    .metric:first-child {padding-left:0}
+    .metric:last-child {border:0}
+    .metric span {display:block; color:var(--faint); font-size:9px; margin-bottom:4px}
+    .metric strong {font:500 17px var(--mono)}
+    .assertion {display:flex; align-items:center; gap:8px; padding:7px 0; font-size:11px}
+    .assertion .icon {width:14px; height:14px; color:var(--good)}
+    .assertion.bad .icon {color:var(--bad)}
+    .assertion .value {margin-left:auto; color:var(--muted); font:10px var(--mono)}
+    .result-footnote {font-size:10px; color:var(--faint); margin-top:13px; border-top:1px solid var(--line); padding-top:11px}
+    .code-view {margin:0; padding:14px; color:var(--text); background:var(--code); border:1px solid var(--line); border-radius:6px; font:11px/1.85 var(--mono); overflow:auto; max-height:380px; white-space:pre-wrap; word-break:break-word}
+    .code-view .key {color:#857646}
+    .code-view .string {color:var(--good)}
+    .code-view .number {color:var(--accent-text)}
+    .code-label {color:var(--faint); font-size:9px; letter-spacing:.7px; margin:13px 0 6px}
+    .code-label:first-child {margin-top:0}
+    .flow {display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 17px; background:var(--surface-subtle); border-top:1px solid var(--line); font-size:9px; color:var(--faint)}
+    .flow span {display:flex; align-items:center; gap:5px; white-space:nowrap}
+    .flow i {flex:1; height:1px; background:var(--line)}
+    .flow .done {color:var(--good)}
+    .flow .failed {color:var(--bad)}
+    .flow .current {color:var(--accent)}
+    .spinner {width:13px; height:13px; border:2px solid var(--line-strong); border-top-color:var(--accent); border-radius:50%; display:inline-block; animation:spin .8s linear infinite; flex:none}
+    @keyframes spin {to{transform:rotate(360deg)}}
+    .recent {margin-top:21px}
+    .recent-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:9px}
+    .recent-head h2 {font-size:11px}
+    .recent-row {display:flex; align-items:center; gap:13px; width:100%; border:0; border-bottom:1px solid var(--line); background:transparent; padding:9px 2px; text-align:left; font-size:10px}
+    .recent-row:hover {background:var(--surface-subtle)}
+    .recent-row .event {font:10px var(--mono); flex:1; min-width:0}
+    .recent-row .stamp {font:10px var(--mono); color:var(--faint); width:61px}
+    .recent-row .platform-name {width:62px; color:var(--muted)}
+    .recent-row .duration {width:60px; text-align:right; font:10px var(--mono); color:var(--muted)}
+    .guide-steps {display:flex; align-items:center; justify-content:center; gap:10px; margin:7px auto 22px; max-width:780px}
+    .guide-steps button {display:flex; align-items:center; gap:8px; border:0; background:transparent; color:var(--faint); padding:7px 9px; font-size:11px}
+    .guide-steps button b {display:grid; place-items:center; border:1px solid var(--line-strong); width:24px; height:24px; border-radius:50%; font:10px var(--mono)}
+    .guide-steps button.active {color:var(--accent-text)}
+    .guide-steps button.active b {background:var(--accent); color:#fff; border-color:var(--accent)}
+    .guide-steps i {flex:1; height:1px; background:var(--line); max-width:55px}
+    .guided {max-width:760px; margin:auto}
+    .guided .panel-body {padding:22px 28px}
+    .guided .empty-result {min-height:260px}
+    .guide-intro {font-size:12px; color:var(--muted); margin-bottom:20px}
+    .guide-actions {display:flex; justify-content:space-between; gap:12px; margin-top:18px}
+    .platform-choices {display:grid; grid-template-columns:1fr 1fr; gap:13px; margin:18px 0}
+    .platform-choice {display:flex; align-items:center; gap:12px; padding:19px; border:1px solid var(--line-strong); border-radius:9px; background:var(--surface); text-align:left}
+    .platform-choice.active {border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft)}
+    .platform-choice span small {display:block; color:var(--muted); margin-top:3px}
+    .stream-compose {display:grid; grid-template-columns:180px minmax(0,1fr) auto; gap:12px; padding:16px; border:1px solid var(--line); border-radius:9px; align-items:end; margin-bottom:17px; background:var(--surface-subtle)}
+    .stream-compose .field {margin:0}
+    .stream-compose input {height:37px}
+    .stream-layout {display:grid; grid-template-columns:minmax(0,1.1fr) minmax(330px,.9fr); gap:16px; min-height:386px}
+    .stream-row {display:grid; grid-template-columns:67px minmax(0,1fr) auto; gap:12px; padding:14px 16px; border:0; border-bottom:1px solid var(--line); background:transparent; width:100%; text-align:left; align-items:center}
+    .stream-row:hover {background:var(--surface-subtle)}
+    .stream-row.active {background:var(--accent-soft)}
+    .stream-row small {display:block; color:var(--muted); font-size:10px; margin-top:3px}
+    .split-layout {display:grid; grid-template-columns:250px minmax(0,1fr); gap:17px; align-items:start}
+    .library-item {display:block; width:100%; border:0; border-bottom:1px solid var(--line); background:transparent; padding:16px; text-align:left}
+    .library-item:hover {background:var(--surface-subtle)}
+    .library-item.active {background:var(--accent-soft); box-shadow:inset 3px 0 var(--accent)}
+    .library-item h3 {font-size:12px; margin:8px 0 4px}
+    .library-item p {font-size:10px; color:var(--muted)}
+    .script-description {padding:17px 18px; border-bottom:1px solid var(--line)}
+    .script-description p {font-size:11px; color:var(--muted); margin-top:4px}
+    .script-step {display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:12px; padding:15px 18px; border-bottom:1px solid var(--line)}
+    .step-number {display:grid; place-items:center; width:26px; height:26px; border:1px solid var(--line-strong); border-radius:6px; color:var(--faint); font:10px var(--mono)}
+    .step-number.good {color:var(--good); background:var(--good-soft); border-color:transparent}
+    .step-number.bad {color:var(--bad); background:var(--bad-soft); border-color:transparent}
+    .script-step h3 {font-size:12px}
+    .script-step code {font-size:10px; color:var(--muted)}
+    .script-step .step-summary {display:block; font-size:10px; color:var(--faint); margin-top:3px}
+    .script-footer {padding:13px 17px; display:flex; align-items:center; justify-content:space-between}
+    .lane-grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; margin-bottom:20px}
+    .lane {border:1px solid var(--line); border-radius:8px; padding:13px 15px; background:var(--surface-subtle)}
+    .lane-head {display:flex; justify-content:space-between; gap:9px; align-items:center; margin-bottom:10px}
+    .lane-head h3 {font-size:11px}
+    .lane-progress {display:flex; gap:5px}
+    .lane-progress span {height:4px; flex:1; border-radius:3px; background:var(--line-strong)}
+    .lane-progress span.good {background:var(--good)}
+    .lane-progress span.bad {background:var(--bad)}
+    .lane-progress span.current {background:var(--accent)}
+    .lane p {color:var(--muted); font-size:10px; margin-top:8px}
+    .toolbar {display:flex; gap:10px; align-items:center; margin-bottom:17px; flex-wrap:wrap}
+    .toolbar select {width:auto; min-width:112px; padding:7px 9px; font-size:11px}
+    .search {position:relative; flex:1; min-width:180px; max-width:310px}
+    .search .icon {position:absolute; left:10px; top:10px; width:14px; height:14px; color:var(--faint)}
+    .search input {padding-left:31px; font-size:11px}
+    table {width:100%; border-collapse:collapse; text-align:left; font-size:11px}
+    th {font-weight:500; color:var(--faint); font-size:10px; background:var(--surface-subtle); padding:11px 15px; border-bottom:1px solid var(--line)}
+    td {padding:14px 15px; border-bottom:1px solid var(--line)}
+    td .mono {font-size:10px}
+    tr:last-child td {border-bottom:0}
+    tbody tr:hover {background:var(--surface-subtle)}
+    .table-wrap {overflow:auto}
+    .table-event small {display:block; color:var(--faint); font-size:10px; margin-top:3px}
+    .table-footer {padding:12px 15px; color:var(--faint); font-size:10px; border-top:1px solid var(--line)}
+    .empty-list {text-align:center; padding:54px 20px; color:var(--muted)}
+    .empty-list .icon {width:30px; height:30px; margin-bottom:10px; color:var(--faint)}
+    .empty-list h3 {color:var(--text); margin-bottom:5px}
+    .empty-list p {font-size:11px; margin-bottom:15px}
+    .settings-layout {display:grid; grid-template-columns:200px minmax(0,680px); gap:27px}
+    .settings-nav {display:flex; flex-direction:column; gap:5px}
+    .settings-nav button {text-align:left; padding:11px 13px; border:0; border-radius:7px; background:transparent; color:var(--muted); font-size:12px}
+    .settings-nav button.active {background:var(--surface-hover); color:var(--text); font-weight:600}
+    .settings-section {padding:20px; border-bottom:1px solid var(--line)}
+    .settings-section:last-child {border:0}
+    .settings-section h2 {font-size:13px; margin-bottom:6px}
+    .settings-section>p {font-size:11px; color:var(--muted); margin-bottom:19px}
+    .settings-footer {display:flex; justify-content:space-between; align-items:center; gap:12px; padding:15px 20px; background:var(--surface-subtle); border-top:1px solid var(--line)}
+    .setting-row {display:flex; align-items:center; justify-content:space-between; gap:15px; padding:15px 0; border-bottom:1px solid var(--line)}
+    .setting-row:last-child {border:0}
+    .setting-row p {color:var(--muted); font-size:10px; margin-top:4px}
+    .setting-row select {width:132px}
+    .inline-note {display:flex; gap:9px; font-size:10px; padding:11px 13px; background:var(--surface-subtle); color:var(--muted); border:1px solid var(--line); border-radius:6px; margin:14px 0}
+    .inline-note .icon {width:14px; height:14px; margin-top:1px; flex:none}
+    .form-error {color:var(--bad); background:var(--bad-soft); font-size:11px; padding:9px 11px; border-radius:5px; margin-bottom:12px}
+    .proto-bar {position:fixed; z-index:30; bottom:15px; left:50%; transform:translateX(-50%); background:#252b26; border:1px solid #444b43; color:#f0f4ed; border-radius:10px; box-shadow:0 8px 25px #12231124; padding:7px 9px; display:flex; gap:8px; align-items:center; max-width:calc(100vw - 24px)}
+    .proto-bar .proto-label {font:9px var(--mono); letter-spacing:.8px; color:#929c90; padding:0 9px; white-space:nowrap}
+    .proto-bar button {background:transparent; color:#dce4d8; border:0; border-radius:5px; padding:6px 8px; font-size:11px; display:flex; align-items:center; gap:7px; white-space:nowrap}
+    .proto-bar button:hover {background:#3a4339}
+    .proto-bar .variant-name {min-width:148px; justify-content:center; color:#fff}
+    .proto-bar .proto-divider {height:20px; width:1px; background:#485046; margin:0 5px}
+    .proto-bar label {font-size:10px; color:#a9b3a6; white-space:nowrap}
+    .proto-bar select {width:104px; padding:5px 6px; border-color:#4a5347; background:#30382f; color:#ecf1e9; font-size:10px}
+    dialog {border:1px solid var(--line-strong); background:var(--surface); color:var(--text); border-radius:12px; padding:0; width:600px; max-width:calc(100vw - 32px); max-height:calc(100vh - 50px); box-shadow:0 25px 90px #00000035}
+    dialog::backdrop {background:#18251d50; backdrop-filter:blur(2px)}
+    dialog.wide {width:780px}
+    dialog.sheet {margin:15px 15px 15px auto; height:calc(100vh - 30px); max-height:unset; width:560px}
+    .dialog-header {position:sticky; top:0; background:var(--surface); display:flex; align-items:center; justify-content:space-between; gap:14px; padding:17px 22px; border-bottom:1px solid var(--line); z-index:1}
+    .dialog-header h2 {font-size:15px}
+    .dialog-body {padding:22px}
+    .dialog-actions {display:flex; justify-content:flex-end; align-items:center; gap:9px; margin-top:21px}
+    .design-point {display:grid; grid-template-columns:32px 1fr; gap:13px; padding:17px 0; border-bottom:1px solid var(--line)}
+    .design-point:last-child {border:0}
+    .design-point>b {font:17px var(--mono); color:var(--accent)}
+    .design-point p {color:var(--muted); font-size:12px; margin-top:5px}
+    .design-point h3 {font-size:14px}
+    .design-summary {padding:16px; border:1px solid var(--line); background:var(--surface-subtle); border-radius:8px; color:var(--muted); font-size:11px; margin-top:20px}
+    .design-summary p+p {margin-top:10px}
+    .toast {position:fixed; z-index:80; top:28px; left:50%; transform:translateX(-50%) translateY(-12px); max-width:calc(100vw - 50px); padding:11px 18px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); color:var(--text); box-shadow:0 8px 30px #14250f20; font-size:12px; opacity:0; pointer-events:none; transition:.18s}
+    .toast.show {opacity:1; transform:translateX(-50%) translateY(0)}
+    [hidden] {display:none!important}
+    @media(max-width:1190px) {
+      .shell{grid-template-columns:172px minmax(0,1fr); margin:10px 10px 80px; height:calc(100vh - 90px)}
+      .sidebar{padding:20px 9px 12px}.brand{font-size:17px;padding-left:8px;gap:7px}
+      .page{padding:22px 20px}.topbar{padding:0 20px}.target-platform{min-width:125px}
+      .panel-body{padding:14px}.metrics .metric{padding-left:9px}.metric:first-child{padding-left:0}
+      .signature-note{max-width:130px}.split-layout{grid-template-columns:215px minmax(0,1fr)}
+      .flow{gap:5px;padding:12px;font-size:8px}.settings-layout{grid-template-columns:155px 1fr;gap:20px}
+      .proto-bar .proto-label{display:none}
+    }
+    @media(max-width:960px) {
+      .shell{grid-template-columns:63px minmax(0,1fr)}.sidebar{padding:18px 8px 12px}
+      .brand{padding:0 7px 25px}.brand>span:last-child,.nav-caption,.nav-btn .nav-text,.nav-btn .count,.workspace-label{display:none}
+      .nav-btn{justify-content:center;padding:11px 5px}.nav-btn .icon{width:20px;height:20px}
+      .sidebar-section{padding-top:13px;margin-top:15px}.sidebar-bottom .nav-btn .nav-text{display:none}
+      .targetbar{gap:9px}.targetbar>.badge{display:none}.target-url code{font-size:10px}
+      .stream-layout{grid-template-columns:1fr 1fr}.signature-note{display:none}
+      .topbar .badge{display:none}
+    }
+    @media(max-width:730px) {
+      .shell{height:auto;min-height:calc(100vh - 88px);margin:7px 7px 100px;border-radius:8px}
+      .page{padding:20px 15px;overflow:visible}.topbar{padding:0 15px}.topbar>.row>.btn.ghost{font-size:0}.topbar>.row>.btn.ghost .icon{width:17px;height:17px}
+      .page-header{align-items:flex-start}.page-header h1{font-size:22px}.page-header p{font-size:11px;max-width:290px}
+      .page-header>.row{flex-wrap:wrap;justify-content:flex-end}.page-header .btn{font-size:10px;padding:7px 8px}
+      .targetbar{flex-wrap:wrap}.target-platform{width:auto;border:0;min-width:0}.targetbar>.grow{order:3;flex-basis:100%;border-top:1px solid var(--line);padding-top:9px}.targetbar>.btn{margin-left:auto}
+      .debug-grid,.stream-layout,.split-layout,.settings-layout{grid-template-columns:1fr}
+      .split-layout>.panel:first-child{display:flex;overflow:auto}.library-item{min-width:180px;border-bottom:0;border-right:1px solid var(--line)}
+      .empty-result{min-height:240px}.statusbar .status-right{display:none}
+      .recent-row .platform-name{display:none}.recent-row{gap:7px}.recent-row .stamp{width:53px;font-size:9px}
+      .proto-bar{gap:3px;bottom:10px;padding:6px}.proto-bar .proto-divider{margin:0 2px}.proto-bar .variant-name{min-width:112px;font-size:10px}.proto-bar>label{display:none}.proto-bar select{width:94px}
+      .proto-bar .design-button{font-size:0;gap:0}.proto-bar .design-button svg{width:16px;height:16px}
+      .stream-compose{grid-template-columns:1fr auto}.stream-compose>.field:first-child{grid-column:1/-1}
+      .guide-steps{gap:3px;flex-wrap:wrap}.guide-steps button{padding:5px;font-size:9px;gap:4px}.guide-steps i{display:none}
+      .guided .panel-body{padding:18px}.settings-nav{flex-direction:row;flex-wrap:wrap}.lane-grid{grid-template-columns:1fr}
+      .script-step{padding:12px;gap:8px}.script-step .btn.square{width:27px;height:27px;padding:5px}
+    }
+    @media(prefers-reduced-motion:reduce) {*{scroll-behavior:auto!important;transition:none!important}.spinner{animation:none}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar" aria-label="主导航"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar"></header>
+      <main class="page" id="page"></main>
+      <footer class="statusbar" id="statusbar"></footer>
+    </div>
+  </div>
+  <div class="proto-bar" id="proto-bar" aria-label="原型方案与演示状态"></div>
+  <dialog id="modal" aria-labelledby="dialog-title"></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const copy = value => JSON.parse(JSON.stringify(value));
+  const h = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pretty = value => JSON.stringify(value,null,2);
+  let serial = 0, epoch = 0, toastTimer;
+  const uid = prefix => prefix + '-' + Date.now().toString(36) + '-' + (++serial);
+  const paths = {
+    pulse:'<path d="M2 12h5l3-8 4 16 3-8h5"/>',
+    terminal:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m6 0h4"/>',
+    layers:'<path d="m12 3 10 5-10 5L2 8l10-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/>',
+    route:'<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h6a3 3 0 0 1 3 3v6M6 9v9h9"/>',
+    history:'<path d="M3 12a9 9 0 1 0 3-6M3 3v5h5m4 0v5l3 2"/>',
+    settings:'<path d="M4 7h16M4 17h16"/><circle cx="8" cy="7" r="3"/><circle cx="16" cy="17" r="3"/>',
+    message:'<path d="M21 11a8 8 0 0 1-8 8H8l-5 3 1-6a8 8 0 0 1-1-5 8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/><path d="M8 10h8M8 14h5"/>',
+    door:'<path d="M9 3h10v18H9m-6-9h11m-4-4 4 4-4 4"/>',
+    link:'<path d="m10 13 4-4m-6 7-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m2 1 2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0" transform="translate(1 0)"/>',
+    play:'<path d="m8 4 12 8-12 8V4Z"/>',
+    stop:'<rect x="5" y="5" width="14" height="14" rx="2"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    check:'<path d="m5 12 4 4L19 6"/>',
+    x:'<path d="m6 6 12 12M6 18 18 6"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    arrow:'<path d="M4 12h16m-6-6 6 6-6 6"/>',
+    left:'<path d="m14 6-6 6 6 6"/>',
+    right:'<path d="m10 6 6 6-6 6"/>',
+    up:'<path d="m6 14 6-6 6 6"/>',
+    down:'<path d="m6 10 6 6 6-6"/>',
+    download:'<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
+    upload:'<path d="M12 16V4m-5 5 5-5 5 5M4 16v5h16v-5"/>',
+    save:'<path d="M5 3h12l4 4v14H3V3h2Zm2 0v6h9V3M7 21v-8h10v8"/>',
+    edit:'<path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-4-4L5 15l-1 5Z"/>',
+    trash:'<path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/>',
+    search:'<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',
+    help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .5-1.5 1-1.5 2m0 3h.01"/>',
+    server:'<rect x="3" y="3" width="18" height="8" rx="2"/><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 7h.01M7 17h.01m4-10h6m-6 10h6"/>',
+    image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/>',
+    reset:'<path d="M3 11a9 9 0 1 1 2 7M3 4v7h7"/>'
+  };
+  function icon(name,small) {return '<svg class="icon'+(small?' small':'')+'" viewBox="0 0 24 24" aria-hidden="true">'+(paths[name]||paths.terminal)+'</svg>';}
+  function btn(label,action,glyph,style,attrs) {return '<button type="button" class="btn '+(style||'')+'" data-action="'+action+'" '+(attrs||'')+'>'+(glyph?icon(glyph):'')+label+'</button>';}
+  function badge(status) {
+    const types={passed:['good','符合期待'],failed:['bad','未符合期待'],timeout:['warn','回执超时'],running:['accent','执行中'],waiting:['','待执行'],cancelled:['','已停止'],skipped:['','已跳过']};
+    const item=types[status]||types.waiting;
+    return '<span class="badge '+item[0]+'">'+(status==='running'?'<span class="spinner"></span>':'<i class="dot"></i>')+item[1]+'</span>';
+  }
+  const PLATFORMS={
+    douyin:{name:'抖音',short:'抖',type:'dop Webhooks',channel:'douyin-dop',url:'http://127.0.0.1:8080/webhooks/douyin',key:'demo_client_key',secret:'demo_client_secret'},
+    wecom:{name:'企业微信',short:'企',type:'自建应用',channel:'wecom-app',url:'http://127.0.0.1:8080/webhooks/wecom',key:'ww_demo_corp',secret:'demo_callback_token',agent:'1000002',aes:'demo_encoding_aes_key'}
+  };
+  const EVENTS={
+    douyin:[
+      {id:'im_receive_msg',title:'收到文本私信',kind:'消息',icon:'message',key:'text',label:'消息内容',example:{conversation_short_id:'@demo_conversation',server_message_id:'@demo_message',conversation_type:1,message_type:'text',text:'你好，我想了解一下这款产品。',create_time:1789027200000}},
+      {id:'im_enter_direct_msg',title:'进入私信会话',kind:'事件',icon:'door',key:'scene_type',label:'进入来源（5 = 消息页）',example:{conversation_short_id:'@demo_conversation',conversation_type:1,scene_type:5,create_time:1789027200000}},
+      {id:'verify_webhook',title:'校验回调地址',kind:'事件',icon:'link',key:'challenge',label:'校验值 Challenge',example:{challenge:12345}}
+    ],
+    wecom:[
+      {id:'text',title:'收到文本消息',kind:'消息',icon:'message',key:'Content',label:'消息内容',example:{MsgType:'text',Content:'你好，请帮我查询一下进度。'}},
+      {id:'enter_agent',title:'进入应用会话',kind:'事件',icon:'door',key:'EventKey',label:'事件附加值',example:{MsgType:'event',Event:'enter_agent',EventKey:''}},
+      {id:'image',title:'收到图片消息',kind:'消息',icon:'image',key:'MediaId',label:'图片素材 ID',example:{MsgType:'image',MediaId:'DEMO_MEDIA_ID',PicUrl:'https://example.invalid/demo.jpg'}}
+    ]
+  };
+  const eventFor=(p,id)=>EVENTS[p].find(e=>e.id===id);
+  function makeStep(p,id) {const e=eventFor(p,id)||EVENTS[p][0]; return {id:uid('step'),event:e.id,content:copy(e.example),sender:p==='douyin'?'demo_open_id':'demo_member',expect:{status:200,max_ms:5000}};}
+  const seeds=[
+    {id:'dy-a',platform:'douyin',name:'抖音 A · 私信接入',steps:[makeStep('douyin','verify_webhook'),makeStep('douyin','im_enter_direct_msg'),makeStep('douyin','im_receive_msg')]},
+    {id:'wx-a',platform:'wecom',name:'企微 A · 应用消息',steps:[makeStep('wecom','enter_agent'),makeStep('wecom','text')]},
+    {id:'dy-b',platform:'douyin',name:'抖音 B · 单条私信',steps:[makeStep('douyin','im_receive_msg')]}
+  ];
+  const STORAGE_KEY='mockpulse.prototype.debugger.v1';
+  let storageNotice='';
+  function validLibrary(data) {
+    return data && Array.isArray(data.scripts) && data.scripts.length>0 && Array.isArray(data.plans) &&
+      data.scripts.every(s=>typeof s.id==='string' && PLATFORMS[s.platform] && typeof s.name==='string' && Array.isArray(s.steps) &&
+        s.steps.every(st=>eventFor(s.platform,st.event) && st.content && typeof st.content==='object' && !Array.isArray(st.content) && st.expect && Number(st.expect.max_ms)>0));
+  }
+  let saved;
+  try {const raw=localStorage.getItem(STORAGE_KEY); if(raw){const parsed=JSON.parse(raw);if(validLibrary(parsed))saved=parsed;else storageNotice='已忽略不兼容的本地原型数据。';}} catch (_) {storageNotice='浏览器存储不可用；可用导出 JSON 保存剧本。';}
+  const S={
+    view:'debug',platform:'douyin',variant:'split',guide:2,editMode:'form',resultTab:'overview',scenario:'normal',
+    drafts:{douyin:makeStep('douyin','im_receive_msg'),wecom:makeStep('wecom','text')},
+    scripts:saved? saved.scripts:copy(seeds),plans:saved?saved.plans:[{id:'plan-a',name:'跨平台接入回归',mode:'parallel',scripts:['dy-a','wx-a']}],
+    activeScript:saved?saved.scripts[0].id:'dy-a',scriptFilter:'all',plan:null,planDirty:false,
+    history:[],result:null,running:false,phase:-1,execution:null,selectedRecord:null,
+    settingsTab:'douyin',historyPlatform:'all',historyStatus:'all',historyQuery:'',editorError:'',theme:'light'
+  };
+  S.plan=copy(S.plans[0]||{id:uid('plan'),name:'新的运行编排',mode:'parallel',scripts:[]});
+  const variants={split:'01 · 并排调试',guided:'02 · 分步调试',stream:'03 · 事件流'};
+  const routeNames={debug:'事件调试',scripts:'平台剧本',plans:'运行编排',history:'运行记录',settings:'连接设置'};
+  try {const q=new URLSearchParams(location.search);const hash=new URLSearchParams(location.hash.slice(1));const v=hash.get('variant')||q.get('variant');const page=hash.get('page')||q.get('page');if(variants[v])S.variant=v;if(routeNames[page])S.view=page;} catch(_){}
+  function routeURL() {
+    const params='variant='+S.variant+'&page='+S.view;
+    // file: documents have opaque origins in some hosts. A same-document hash needs no history API or reload.
+    if(location.protocol==='file:') {if(location.hash.slice(1)!==params)location.hash=params;}
+    else {try {history.replaceState(null,'',location.pathname+'?'+params);}catch(_){}}
+  }
+  function persist(message) {
+    try {localStorage.setItem(STORAGE_KEY,JSON.stringify({version:1,scripts:S.scripts,plans:S.plans}));storageNotice='';toast(message||'已保存到此浏览器，刷新后仍可使用。');return true;}
+    catch(_) {storageNotice='浏览器存储不可用；请导出 JSON 保存。';toast(storageNotice);return false;}
+  }
+  function toast(message) {$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3200);}
+  function mark(p,big) {return '<span class="platform-mark '+(p==='wecom'?'wecom ':'')+(big?'big':'')+'">'+PLATFORMS[p].short+'</span>';}
+  function pageHeader(title,sub,actions,eyebrow) {return '<div class="page-header"><div><div class="eyebrow">'+(eyebrow||'MOCKPULSE / LOCAL WORKSPACE')+'</div><h1>'+title+'</h1><p>'+sub+'</p></div><div class="row">'+(actions||'')+'</div></div>';}
+  function targetbar() {
+    return '<div class="targetbar"><div class="target-platform">'+mark(S.platform)+'<select aria-label="调试平台" data-change="platform">'+Object.keys(PLATFORMS).map(p=>'<option value="'+p+'" '+(p===S.platform?'selected':'')+'>'+PLATFORMS[p].name+'</option>').join('')+'</select></div><span class="method">POST</span><button class="target-url grow" data-action="connection"><span class="target-label">待测服务 · 点击修改</span><code>'+h(PLATFORMS[S.platform].url)+'</code></button><span class="badge">示例连接</span>'+btn('','connection','settings','square','aria-label="编辑当前平台连接"')+'</div>';
+  }
+  function eventPicker() {return '<div class="event-picker"><span class="event-hint">选择事件</span>'+EVENTS[S.platform].map(e=>'<button class="event-option '+(S.drafts[S.platform].event===e.id?'active':'')+'" data-action="event" data-id="'+e.id+'">'+icon(e.icon,true)+e.title+'</button>').join('')+'</div>';}
+  function expectedFields(draft) {
+    return '<div class="expect-box"><div class="expect-title"><span>期待的回执</span><span>独立判断是否符合期待</span></div><div class="field-pair"><div class="field"><label for="expect-status">HTTP 状态码</label><input id="expect-status" type="number" min="100" max="599" data-input="expect-status" value="'+h(draft.expect.status)+'"></div><div class="field"><label for="expect-time">最长响应时间 / ms</label><input id="expect-time" type="number" min="1" max="60000" data-input="expect-time" value="'+h(draft.expect.max_ms)+'"></div></div></div>';
+  }
+  function composeBody() {
+    const d=S.drafts[S.platform], e=eventFor(S.platform,d.event);
+    return (S.editorError?'<div class="form-error" role="alert">'+h(S.editorError)+'</div>':'')+
+      '<div class="field"><span class="field-label">事件类型</span><div class="event-name"><code>'+h(e.id)+'</code><span class="badge">'+e.kind+'</span></div></div>'+
+      (S.editMode==='json'?'<div class="field"><label for="content-json">事件内容 · content</label><textarea id="content-json" class="code-input" data-input="content-json" spellcheck="false">'+h(d.rawText===undefined?pretty(d.content):d.rawText)+'</textarea></div>':
+      '<div class="field"><label for="event-sender">模拟发送者</label><input id="event-sender" class="mono" data-input="sender" value="'+h(d.sender)+'"></div><div class="field"><label for="event-message">'+h(e.label)+'</label><textarea id="event-message" data-input="message" '+(typeof e.example[e.key]==='number'?'inputmode="numeric"':'')+'>'+h(d.content[e.key])+'</textarea><span class="help">其余字段来自该平台的事件示例，可在 JSON 中编辑。</span></div>')+expectedFields(d);
+  }
+  function composePanel() {
+    return '<section class="panel compose-panel"><div class="panel-head"><h2>01&nbsp; 构造平台事件</h2><div class="segmented" aria-label="编辑方式">'+['form','json'].map(m=>'<button class="'+(S.editMode===m?'active':'')+'" data-action="edit-mode" data-id="'+m+'">'+(m==='form'?'表单':'JSON')+'</button>').join('')+'</div></div><div class="panel-body">'+composeBody()+'</div><div class="compose-footer"><span class="signature-note">'+(S.platform==='douyin'?'dop · SHA-1 签名示例':'自建应用 · XML / AES 示例')+'</span>'+btn(S.running?'停止执行':'发送事件 <kbd>Ctrl ↵</kbd>',S.running?'stop':'send',S.running?'stop':'play',S.running?'':'primary')+'</div></section>';
+  }
+  function emptyResult() {return '<div class="empty-result"><div class="empty-art"><span class="endpoint">'+icon('pulse')+'</span><span class="endpoint">'+icon('server')+'</span></div><h3>发出一条事件，看清一次回执</h3><p>修改左侧内容，点击发送。请求结果和判断依据会出现在这里。</p><div class="empty-checks"><span>'+icon('check',true)+'是否收到应答</span><span>'+icon('check',true)+'是否符合期待</span><span>'+icon('search',true)+'失败在哪里</span></div></div>';}
+  function requestFor(p,d) {
+    const config=PLATFORMS[p];
+    if(p==='douyin') {
+      const body=d.event==='verify_webhook'?{event:d.event,client_key:config.key,content:copy(d.content)}:{event:d.event,client_key:config.key,from_user_id:d.sender,to_user_id:'demo_business_open_id',log_id:'DEMO_LOG_ID',content:d.event==='im_enter_direct_msg'?JSON.stringify(d.content):copy(d.content)};
+      return {method:'POST',url:config.url,headers:{'Content-Type':'application/json','X-Douyin-Signature':'DEMO_SIGNATURE','Msg-Id':'DEMO_MSG_ID'},body:pretty(body)};
+    }
+    const plain=Object.assign({ToUserName:config.key,FromUserName:d.sender,CreateTime:1789027200,AgentID:Number(config.agent)},d.content);
+    if(d.event!=='enter_agent')plain.MsgId='6745231890123456789';
+    return {method:'POST',url:config.url+'?msg_signature=DEMO_SIGNATURE&timestamp=1789027200&nonce=demo',headers:{'Content-Type':'text/xml'},body:'<xml>\n  <ToUserName>'+config.key+'</ToUserName>\n  <Encrypt><![CDATA[DEMO_ENCRYPTED_BODY]]></Encrypt>\n  <AgentID>'+config.agent+'</AgentID>\n</xml>',decoded:plain};
+  }
+  function codeBlock(value) {return '<pre class="code-view">'+h(typeof value==='string'?value:pretty(value))+'</pre>';}
+  function resultContent(r,tab) {
+    if(!r)return emptyResult();
+    if(tab==='request')return '<div class="panel-body"><div class="code-label">MOCKPULSE → 待测服务 · 请求快照</div>'+codeBlock(r.request.method+' '+r.request.url)+'<div class="code-label">HEADERS · 签名为演示占位值</div>'+codeBlock(r.request.headers)+'<div class="code-label">BODY</div>'+codeBlock(r.request.body)+(r.request.decoded?'<div class="code-label">对应明文 · 演示</div>'+codeBlock(r.request.decoded):'')+'</div>';
+    if(tab==='body')return '<div class="panel-body"><div class="code-label">RESPONSE · 待测服务 → MOCKPULSE</div>'+codeBlock(r.status===null?'未收到 HTTP 应答':r.body||'（空响应体）')+'<div class="result-footnote">这是演示回执。HTTP 应答不代表业务处理已经完成。</div></div>';
+    const good=r.kind==='passed', tone=good?'':r.kind==='timeout'?'warn':'bad';
+    return '<div class="panel-body"><div class="result-banner '+tone+'">'+icon(good?'check':r.kind==='timeout'?'clock':'x')+'<div><h3>'+h(r.title)+'</h3><p>'+h(r.reason)+'</p></div></div><div class="metrics"><div class="metric"><span>HTTP 状态</span><strong>'+h(r.status===null?'—':r.status)+'</strong></div><div class="metric"><span>响应耗时</span><strong>'+r.duration+'<small style="font-size:10px"> ms</small></strong></div><div class="metric"><span>期待检查</span><strong>'+r.checks.filter(c=>c.ok).length+' / '+r.checks.length+'</strong></div></div>'+r.checks.map(c=>'<div class="assertion '+(c.ok?'':'bad')+'">'+icon(c.ok?'check':'x')+'<span>'+h(c.label)+'</span><span class="value">'+h(c.value)+'</span></div>').join('')+'<div class="result-footnote">判断范围：本次 HTTP 回执。业务结果需由你的服务另行验证。<br>来源：'+h(r.source)+' · 演示数据</div></div>';
+  }
+  function flow() {
+    return '<div class="flow">'+['准备载荷','附加签名','推送回调','检查回执'].map((t,i)=>(i?'<i></i>':'')+'<span class="'+(S.running?(i<S.phase?'done':i===S.phase?'current':''):(S.result?(S.result.kind==='passed'?'done':i===3?'failed':'done'):''))+'">'+(S.running&&i===S.phase?'<b class="spinner"></b>':icon('check',true))+t+'</span>').join('')+'</div>';
+  }
+  function resultPanel(record) {
+    const r=record===undefined?S.result:record;
+    return '<section class="panel"><div class="panel-head"><h2>02&nbsp; 检查服务回执</h2>'+badge(S.running&&!record?'running':r?r.kind:'waiting')+'</div><div class="tabs" role="tablist" aria-label="回执视图">'+[['overview','概览'],['body','响应体'],['request','请求详情']].map(t=>'<button role="tab" aria-selected="'+(S.resultTab===t[0])+'" class="'+(S.resultTab===t[0]?'active':'')+'" data-action="result-tab" data-id="'+t[0]+'">'+t[1]+'</button>').join('')+'</div>'+(S.running&&!record?'<div class="empty-result"><span class="spinner" style="width:26px;height:26px;margin-bottom:20px"></span><h3>'+['正在准备事件','正在附加演示签名','正在模拟服务应答','正在检查回执'][Math.max(0,S.phase)]+'</h3><p>这里展示状态变化，不会发出真实网络请求。</p></div>':resultContent(r,S.resultTab))+flow()+'</section>';
+  }
+  function recentRows(limit) {return S.history.slice(0,limit).map(r=>'<button class="recent-row" data-action="record" data-id="'+r.id+'"><span class="stamp">'+r.time+'</span><span class="platform-name">'+PLATFORMS[r.platform].name+'</span><span class="event truncate">'+h(r.event)+'</span>'+badge(r.kind)+'<span class="duration">'+r.duration+' ms</span>'+icon('right',true)+'</button>').join('');}
+  function debugView() {
+    return pageHeader('事件调试','从一条事件开始，让每一次回执都有据可查。',btn('加入平台剧本','add-to-script','plus'),'01 / SINGLE EVENT')+targetbar()+eventPicker()+
+      '<div class="debug-grid">'+composePanel()+resultPanel()+'</div><section class="recent"><div class="recent-head"><h2>最近调试 <span class="muted tiny">/ '+S.history.length+'</span></h2>'+btn('查看全部','nav','right','ghost small','data-view="history"')+'</div>'+(S.history.length?recentRows(3):'<p class="muted tiny">还没有运行记录。发送事件后会自动留下一份请求与回执快照。</p>')+'</section>';
+  }
+  const renderers={debug:debugView};
+  function render() {
+    const scroll=$('page').scrollTop;
+    $('sidebar').innerHTML='<div class="brand"><span class="brand-mark">'+icon('pulse')+'</span><span>MockPulse<span style="color:var(--accent)">.</span></span></div><div class="nav-caption">构建与执行</div><nav class="nav">'+[['debug','terminal'],['scripts','layers'],['plans','route']].map(n=>'<button class="nav-btn '+(S.view===n[0]?'active':'')+'" data-action="nav" data-view="'+n[0]+'" title="'+routeNames[n[0]]+'">'+icon(n[1])+'<span class="nav-text">'+routeNames[n[0]]+'</span><span class="count">'+({debug:'01',scripts:'02',plans:'03'}[n[0]])+'</span></button>').join('')+'</nav><div class="sidebar-section"><div class="nav-caption">检查与配置</div><nav class="nav">'+[['history','history'],['settings','settings']].map(n=>'<button class="nav-btn '+(S.view===n[0]?'active':'')+'" data-action="nav" data-view="'+n[0]+'" title="'+routeNames[n[0]]+'">'+icon(n[1])+'<span class="nav-text">'+routeNames[n[0]]+'</span></button>').join('')+'</nav></div><div class="sidebar-section"><div class="nav-caption">可用平台</div>'+Object.keys(PLATFORMS).map(p=>'<button class="nav-btn" data-action="platform" data-id="'+p+'" title="'+PLATFORMS[p].name+'">'+mark(p)+'<span class="nav-text">'+PLATFORMS[p].name+'</span><span class="count">'+S.scripts.filter(s=>s.platform===p).length+'</span></button>').join('')+'</div><div class="sidebar-bottom"><button class="nav-btn" data-action="design" title="设计说明">'+icon('help')+'<span class="nav-text">设计与操作指南</span></button><div class="workspace-label"><i class="dot"></i>本地工作区 · v0.1 原型</div></div>';
+    $('topbar').innerHTML='<div class="breadcrumb"><span>本地工作区</span><span>/</span><strong>'+routeNames[S.view]+'</strong></div><div class="row"><span class="badge accent">交互原型</span>'+btn('操作指南','design','help','ghost small')+'</div>';
+    $('page').innerHTML=(renderers[S.view]||(()=>pageHeader(routeNames[S.view],'页面正在补齐中。')))();
+    $('page').scrollTop=scroll;
+    $('statusbar').innerHTML='<span class="row"><i class="dot" style="color:var(--accent)"></i>演示模式 · 不发送真实请求</span><span class="status-right">'+(storageNotice||'剧本与编排可保存在此浏览器')+' &nbsp; / &nbsp; Ctrl + Enter 发送</span>';
+    $('proto-bar').innerHTML='<span class="proto-label">DESIGN EXPLORATION</span><button data-action="variant-prev" aria-label="上一个布局">'+icon('left',true)+'</button><button class="variant-name" data-action="variant-next">'+variants[S.variant]+'</button><button data-action="variant-next" aria-label="下一个布局">'+icon('right',true)+'</button><i class="proto-divider"></i><label for="scenario">演示回执</label><select id="scenario" data-change="scenario" '+(S.running?'disabled':'')+'>'+[['normal','正常应答'],['rejected','签名被拒绝'],['timeout','等待超时']].map(a=>'<option value="'+a[0]+'" '+(S.scenario===a[0]?'selected':'')+'>'+a[1]+'</option>').join('')+'</select><i class="proto-divider"></i><button class="design-button" data-action="state" title="查看完整原型状态">'+icon('terminal',true)+'状态</button><button class="design-button" data-action="design">'+icon('help',true)+'设计说明</button>';
+  }
+  function selectedScript() {return S.scripts.find(s=>s.id===S.activeScript)||S.scripts[0];}
+  function scriptData(script) {
+    return {format:'mockpulse-prototype-v1',name:script.name,platform:script.platform,steps:script.steps.map(step=>({channel:PLATFORMS[script.platform].channel,event:step.event,content:{sender:step.sender,payload:copy(step.content)},expect:copy(step.expect)}))};
+  }
+  function executionLanes() {
+    if(!S.execution)return '';
+    const ex=S.execution;
+    return '<section style="margin-bottom:22px"><div class="recent-head"><h2>'+h(ex.name)+' <span class="muted tiny">/ '+(ex.mode==='parallel'?'并发执行':'串行执行')+'</span></h2>'+(S.running?btn('停止全部','stop','stop','small'):badge(ex.status))+'</div><div class="lane-grid">'+ex.lanes.map(l=>'<div class="lane"><div class="lane-head"><div class="row">'+mark(l.platform)+'<h3>'+h(l.name)+'</h3></div>'+badge(l.status)+'</div><div class="lane-progress">'+l.steps.map((st,i)=>'<span class="'+(l.results[i]?l.results[i].kind==='passed'?'good':'bad':l.status==='running'&&i===l.current?'current':'')+'" title="'+h(eventFor(l.platform,st.event).title)+'"></span>').join('')+'</div><p>'+l.results.length+' / '+l.steps.length+' 步已执行'+(l.status==='running'?' · '+h(eventFor(l.platform,l.steps[l.current].event).title):l.status==='waiting'?' · 等待前一个剧本结束':l.status==='failed'||l.status==='timeout'?' · 当前剧本在失败处停止':'')+'</p></div>').join('')+'</div></section>';
+  }
+  function scriptsView() {
+    let list=S.scripts.filter(s=>S.scriptFilter==='all'||s.platform===S.scriptFilter);
+    let script=selectedScript();
+    if(!list.includes(script))script=list[0];
+    if(script)S.activeScript=script.id;
+    const header=pageHeader('平台剧本','把一次次单条调试，保存成可以重复运行的流程。',btn('导入','import-script','upload')+btn('新建剧本','new-script','plus','primary'),'02 / PLATFORM SCRIPT');
+    const filter='<div class="toolbar"><div class="event-picker" style="margin:0">'+[['all','全部平台'],['douyin','抖音'],['wecom','企业微信']].map(p=>'<button class="event-option '+(S.scriptFilter===p[0]?'active':'')+'" data-action="script-filter" data-id="'+p[0]+'">'+p[1]+' <span class="tiny">'+S.scripts.filter(s=>p[0]==='all'||s.platform===p[0]).length+'</span></button>').join('')+'</div><span class="grow"></span><span class="muted tiny">一个剧本，一个平台；内部步骤按顺序执行。</span></div>';
+    if(!script)return header+filter+'<div class="panel empty-list">'+icon('layers')+'<h3>这个平台还没有剧本</h3><p>从一条事件开始，保存你的第一段测试流程。</p>'+btn('新建剧本','new-script','plus','primary')+'</div>';
+    const lane=S.execution&&S.execution.lanes.find(l=>l.scriptId===script.id);
+    return header+filter+(S.execution&&S.execution.origin==='script'?executionLanes():'')+
+      '<div class="split-layout"><section class="panel" aria-label="剧本列表">'+list.map(s=>'<button class="library-item '+(script.id===s.id?'active':'')+'" data-action="select-script" data-id="'+s.id+'"><span class="row">'+mark(s.platform)+'<span class="tiny muted">'+PLATFORMS[s.platform].name+'</span></span><h3>'+h(s.name)+'</h3><p>'+s.steps.length+' 个步骤 · 顺序执行</p></button>').join('')+'</section><section class="panel"><div class="panel-head"><div class="row">'+mark(script.platform)+'<h2>'+h(script.name)+'</h2></div>'+btn('','rename-script','edit','square','aria-label="重命名剧本"')+'</div><div class="script-description"><div class="row spread"><span class="badge accent">'+PLATFORMS[script.platform].name+'专属剧本</span><span class="muted tiny">'+script.steps.length+' 个步骤</span></div><p>只使用'+PLATFORMS[script.platform].name+'的事件和消息。每步可单独发送，也可从头运行。</p></div>'+
+      (script.steps.length?script.steps.map((st,i)=>{const ev=eventFor(script.platform,st.event), r=lane&&lane.results[i];return '<div class="script-step"><span class="step-number '+(r?r.kind==='passed'?'good':'bad':'')+'">'+(r?icon(r.kind==='passed'?'check':'x',true):String(i+1).padStart(2,'0'))+'</span><div><h3>'+h(ev.title)+'</h3><code>'+h(st.event)+'</code><span class="step-summary truncate">'+h(String(st.content[ev.key]===undefined?'自定义内容':st.content[ev.key]).slice(0,60))+'</span></div><div class="row" style="gap:3px">'+btn('','run-step','play','square','data-index="'+i+'" aria-label="单独发送第 '+(i+1)+' 步" '+(S.running?'disabled':''))+btn('','edit-step','edit','square','data-index="'+i+'" aria-label="编辑第 '+(i+1)+' 步"')+btn('','step-up','up','square','data-index="'+i+'" aria-label="上移第 '+(i+1)+' 步" '+(i===0?'disabled':''))+btn('','remove-step','trash','square danger','data-index="'+i+'" aria-label="删除第 '+(i+1)+' 步"')+'</div></div>';}).join(''):'<div class="empty-list"><h3>添加第一个步骤</h3><p>事件列表已锁定为'+PLATFORMS[script.platform].name+'。</p></div>')+
+      '<div class="script-footer">'+btn('添加步骤','add-step','plus','ghost small')+'<span class="tiny muted">某步失败时停止当前剧本</span></div><div class="settings-footer"><div class="row">'+btn('保存剧本','save-script','save','small')+btn('导出 JSON','export-script','download','small')+'</div>'+btn('运行整个剧本','run-script','play','primary',''+(S.running||!script.steps.length?'disabled':''))+'</div></section></div>';
+  }
+  function plansView() {
+    const plan=S.plan;
+    const chosen=plan.scripts.map(id=>S.scripts.find(s=>s.id===id)).filter(Boolean);
+    return pageHeader('运行编排','把多个平台剧本放在一起，按顺序执行，或同时启动。',btn('新建编排','new-plan','plus')+btn('保存编排','save-plan','save'),'03 / MULTI-SCRIPT RUN')+
+      '<div class="toolbar"><label class="tiny muted" for="plan-select">已保存的编排</label><select id="plan-select" data-change="plan-select">'+S.plans.map(p=>'<option value="'+p.id+'" '+(plan.id===p.id?'selected':'')+'>'+h(p.name)+'</option>').join('')+(S.plans.some(p=>p.id===plan.id)?'':'<option value="'+plan.id+'" selected>新编排 · 未保存</option>')+'</select><span class="badge '+(S.planDirty?'warn':'')+'">'+(S.planDirty?'有未保存修改':'已载入')+'</span></div>'+
+      (S.execution&&S.execution.origin==='plan'?executionLanes():'')+
+      '<div class="debug-grid" style="grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr)"><section class="panel"><div class="panel-head"><h2>编排内容</h2><span class="badge">'+chosen.length+' 个剧本</span></div><div class="panel-body"><div class="field"><label for="plan-name">编排名称</label><input id="plan-name" data-input="plan-name" value="'+h(plan.name)+'"></div><span class="field-label">执行方式</span><div class="platform-choices" style="margin:10px 0 18px">'+[['sequential','串行','一个结束，再启动下一个','route'],['parallel','并发','所有剧本同时启动','layers']].map(m=>'<button class="platform-choice '+(plan.mode===m[0]?'active':'')+'" style="padding:13px;gap:9px" data-action="plan-mode" data-id="'+m[0]+'">'+icon(m[3])+'<span><b>'+m[1]+'</b><small style="font-size:9px">'+m[2]+'</small></span></button>').join('')+'</div><div class="row"><select id="add-plan-script" aria-label="选择要加入编排的剧本">'+S.scripts.filter(s=>s.steps.length).map(s=>'<option value="'+s.id+'">'+PLATFORMS[s.platform].name+' / '+h(s.name)+'</option>').join('')+'</select>'+btn('添加','plan-add','plus','small')+'</div></div>'+
+      (chosen.length?chosen.map((s,i)=>'<div class="script-step"><span class="step-number">'+(plan.mode==='parallel'?icon('play',true):String(i+1).padStart(2,'0'))+'</span><div class="row">'+mark(s.platform)+'<div><h3>'+h(s.name)+'</h3><span class="tiny muted">'+PLATFORMS[s.platform].name+' · '+s.steps.length+' 步</span></div></div><div class="row" style="gap:3px">'+btn('','plan-up','up','square','data-index="'+i+'" aria-label="上移剧本" '+(i===0?'disabled':''))+btn('','plan-remove','x','square','data-index="'+i+'" aria-label="从编排移除剧本"')+'</div></div>').join(''):'<div class="empty-list"><h3>添加要运行的剧本</h3><p>这里可以组合抖音、企业微信，也可以重复添加同一剧本。</p></div>')+
+      '<div class="settings-footer"><span class="tiny muted">每个剧本内部仍按步骤顺序执行</span>'+btn('运行编排','run-plan','play','primary',S.running||!chosen.length?'disabled':'')+'</div></section><div class="stack"><section class="panel"><div class="panel-head"><h2>执行预览</h2><span class="badge">'+(plan.mode==='parallel'?'并发':'串行')+'</span></div><div class="panel-body"><div class="code-label">开始</div><div style="border-left:2px solid var(--line-strong);padding-left:17px;margin-left:4px">'+chosen.map((s,i)=>'<div style="padding:11px 0"><div class="row">'+(plan.mode==='parallel'?'<span class="badge accent">同时</span>':'<span class="badge">'+(i+1)+'</span>')+'<b class="tiny">'+h(s.name)+'</b></div><div class="tiny muted" style="margin-top:5px">'+s.steps.map(st=>h(eventFor(s.platform,st.event).title)).join(' → ')+'</div></div>').join('')+'</div><div class="code-label" style="margin-top:15px">汇总全部结果</div></div></section><div class="inline-note">'+icon('help')+'<div>跨平台发生在剧本之间。单个剧本的事件列表始终受所属平台约束。<br><br>当前演示规则：失败时停止所在剧本；其他剧本继续，最后统一汇总。</div></div></div></div>';
+  }
+  function filteredHistory() {const q=S.historyQuery.toLowerCase();return S.history.filter(r=>(S.historyPlatform==='all'||r.platform===S.historyPlatform)&&(S.historyStatus==='all'||(S.historyStatus==='failed'?r.kind!=='passed':r.kind==='passed'))&&(!q||(r.event+' '+r.source+' '+r.id).toLowerCase().includes(q)));}
+  function historyTable() {
+    const rows=filteredHistory();
+    return rows.length?'<div class="table-wrap"><table><thead><tr><th>发送时间</th><th>平台</th><th>事件 / 来源</th><th>结果</th><th>耗时</th><th></th></tr></thead><tbody>'+rows.map(r=>'<tr><td class="mono">'+r.time+'</td><td><span class="row">'+mark(r.platform)+'<span class="tiny">'+PLATFORMS[r.platform].name+'</span></span></td><td class="table-event"><code>'+h(r.event)+'</code><small>'+h(r.source)+'</small></td><td>'+badge(r.kind)+'</td><td class="mono">'+r.duration+' ms</td><td>'+btn('详情','record','right','ghost small','data-id="'+r.id+'"')+'</td></tr>').join('')+'</tbody></table></div><div class="table-footer">'+rows.length+' 条记录 · 点击详情查看运行时的请求和回执快照</div>':'<div class="empty-list">'+icon('history')+'<h3>'+(S.history.length?'没有匹配的记录':'还没有运行记录')+'</h3><p>'+(S.history.length?'调整平台、结果或搜索条件。':'发送单条事件、运行剧本或运行编排后，结果会汇总到这里。')+'</p>'+btn('调试一条事件','nav','arrow','primary','data-view="debug"')+'</div>';
+  }
+  function historyView() {
+    return pageHeader('运行记录','从最终结果追溯到编排、剧本，再到具体事件。',btn('导出记录','export-history','download','',''+(!S.history.length?'disabled':'')),'EVIDENCE / REQUEST & RECEIPT')+
+      '<div class="toolbar"><div class="search">'+icon('search')+'<input aria-label="搜索事件或来源" placeholder="搜索事件、剧本或编排…" data-input="history-query" value="'+h(S.historyQuery)+'"></div><select aria-label="按平台筛选记录" data-change="history-platform">'+[['all','全部平台'],['douyin','抖音'],['wecom','企业微信']].map(p=>'<option value="'+p[0]+'" '+(S.historyPlatform===p[0]?'selected':'')+'>'+p[1]+'</option>').join('')+'</select><select aria-label="按结果筛选记录" data-change="history-status">'+[['all','全部结果'],['passed','符合期待'],['failed','未符合 / 超时']].map(p=>'<option value="'+p[0]+'" '+(S.historyStatus===p[0]?'selected':'')+'>'+p[1]+'</option>').join('')+'</select><span class="grow"></span><span class="tiny muted">'+S.history.filter(r=>r.kind==='passed').length+' 符合期待 / '+S.history.length+' 总计</span></div><section class="panel" id="history-table">'+historyTable()+'</section>';
+  }
+  function settingsView() {
+    const p=S.settingsTab, config=PLATFORMS[p];
+    const nav='<nav class="settings-nav">'+[['douyin','抖音 · dop'],['wecom','企业微信 · 自建应用'],['general','通用偏好']].map(a=>'<button class="'+(p===a[0]?'active':'')+'" data-action="settings-tab" data-id="'+a[0]+'">'+a[1]+'</button>').join('')+'</nav>';
+    let content;
+    if(p==='general')content='<section class="panel"><div class="settings-section"><h2>通用偏好</h2><div class="setting-row"><div><h3>外观</h3><p>调整原型的浅色或深色显示</p></div><select aria-label="外观" data-change="theme"><option value="light" '+(S.theme==='light'?'selected':'')+'>浅色</option><option value="dark" '+(S.theme==='dark'?'selected':'')+'>深色</option></select></div><div class="setting-row"><div><h3>保存位置</h3><p>剧本和已保存编排：当前浏览器本地存储。<br>需要转移到其他设备时，可以导出 JSON。</p></div><span class="badge">'+(storageNotice?'导出保存':'浏览器本地')+'</span></div><div class="setting-row"><div><h3>运行记录</h3><p>原型运行记录只保留在本次打开期间。</p></div>'+btn('清空记录','clear-history','trash','small')+'</div><div class="setting-row"><div><h3>快捷键</h3><p>Ctrl + Enter 发送当前事件；Esc 关闭弹窗。<br>非输入状态下，左右方向键切换调试布局。</p></div>'+icon('terminal')+'</div></div></section>';
+    else content='<form class="panel" id="connection-form" data-form="connection"><div class="settings-section"><div class="row" style="margin-bottom:16px">'+mark(p,true)+'<div><h2>'+config.name+'</h2><span class="tiny muted">'+config.type+'</span></div></div><h2>待测服务</h2><p>MockPulse 会扮演'+config.name+'平台，向这个地址推送回调。</p><div class="field"><label for="connection-url">回调接收地址</label><input id="connection-url" name="url" type="url" required value="'+h(config.url)+'"><span class="help">本原型仅预览配置，不会访问此地址。</span></div></div><div class="settings-section"><h2>平台身份与签名配置</h2><p>以下为演示占位值。正式应用中按平台分别配置。</p><div class="field"><label for="connection-key">'+(p==='douyin'?'Client Key':'Corp ID')+'</label><input id="connection-key" name="key" value="'+h(config.key)+'" required autocomplete="off"></div><div class="field"><label for="connection-secret">'+(p==='douyin'?'Client Secret':'Callback Token')+'</label><input id="connection-secret" name="secret" type="password" value="'+h(config.secret)+'" autocomplete="off"></div>'+(p==='wecom'?'<div class="field-pair"><div class="field"><label for="connection-agent">Agent ID</label><input id="connection-agent" name="agent" value="'+h(config.agent)+'"></div><div class="field"><label for="connection-aes">Encoding AES Key</label><input id="connection-aes" name="aes" type="password" value="'+h(config.aes)+'" autocomplete="off"></div></div>':'')+'</div><div class="settings-footer"><span class="tiny muted">连接配置只用于本次原型演示</span><button class="btn primary" type="submit">'+icon('check')+'应用配置</button></div></form>';
+    return pageHeader('连接设置','各平台独立配置接收地址和模拟身份。','','CONFIGURATION / PER PLATFORM')+'<div class="settings-layout">'+nav+content+'</div>';
+  }
+  function guidedView() {
+    let inner='';
+    if(S.guide===1)inner='<div class="panel"><div class="panel-body"><h2>先确定这条回调来自哪里</h2><p class="guide-intro" style="margin-top:7px">选择平台后，事件类型、签名方式和接收地址会一起切换。</p><div class="platform-choices">'+Object.keys(PLATFORMS).map(p=>'<button class="platform-choice '+(p===S.platform?'active':'')+'" data-action="platform-in-guide" data-id="'+p+'">'+mark(p,true)+'<span><b>'+PLATFORMS[p].name+'</b><small>'+PLATFORMS[p].type+'</small></span></button>').join('')+'</div>'+targetbar()+'</div></div>';
+    if(S.guide===2)inner=eventPicker()+composePanel();
+    if(S.guide===3)inner='<section class="panel"><div class="panel-head"><h2>确认将发送的请求</h2><span class="badge">原始载荷预览</span></div><div class="panel-body">'+codeBlock(requestFor(S.platform,S.drafts[S.platform]).body)+'<div class="inline-note">'+icon('arrow')+'<div>'+h(PLATFORMS[S.platform].url)+'<br>期待 HTTP '+S.drafts[S.platform].expect.status+'，'+S.drafts[S.platform].expect.max_ms+' ms 内应答。</div></div></div><div class="compose-footer"><span class="muted tiny">推送方向：模拟平台 → 你的服务</span>'+btn('发送事件','send','play','primary',S.running?'disabled':'')+'</div></section>';
+    if(S.guide===4)inner=resultPanel();
+    return pageHeader('一步步完成事件调试','先选平台，再构造事件，最后核对回执。',btn('加入平台剧本','add-to-script','plus'),'GUIDED / SINGLE EVENT')+
+      '<div class="guide-steps">'+['选择平台','构造事件','确认请求','检查回执'].map((t,i)=>(i?'<i></i>':'')+'<button class="'+(S.guide===i+1?'active':'')+'" data-action="guide-step" data-id="'+(i+1)+'"><b>0'+(i+1)+'</b>'+t+'</button>').join('')+'</div><div class="guided">'+inner+'<div class="guide-actions">'+btn('上一步','guide-prev','left','',S.guide===1?'disabled':'')+btn(S.guide===4?'再调试一条':'下一步','guide-next','right','')+'</div></div>';
+  }
+  function streamView() {
+    const d=S.drafts[S.platform], ev=eventFor(S.platform,d.event), active=S.history.find(r=>r.id===S.selectedRecord)||S.result;
+    return pageHeader('事件流调试','连续发送，在事件流中对照每一次请求和回执。',btn('加入平台剧本','add-to-script','plus'),'STREAM / SEND & INSPECT')+targetbar()+
+      '<div class="stream-compose"><div class="field"><label for="stream-event">当前平台事件</label><select id="stream-event" data-change="stream-event">'+EVENTS[S.platform].map(e=>'<option value="'+e.id+'" '+(e.id===d.event?'selected':'')+'>'+e.title+'</option>').join('')+'</select></div><div class="field"><label for="stream-content">'+h(ev.label)+'</label><input id="stream-content" data-input="message" value="'+h(d.content[ev.key])+'"></div>'+btn(S.running?'停止':'发送事件',S.running?'stop':'send',S.running?'stop':'play','primary')+'</div><div class="stream-layout"><section class="panel"><div class="panel-head"><h2>事件流</h2><span class="badge">'+S.history.length+' 条</span></div>'+(S.history.length?S.history.map(r=>'<button class="stream-row '+(active&&r.id===active.id?'active':'')+'" data-action="stream-record" data-id="'+r.id+'"><span class="mono tiny muted">'+r.time+'</span><span><b class="mono tiny">'+h(r.event)+'</b><small>'+PLATFORMS[r.platform].name+' · '+h(r.source)+'</small></span>'+badge(r.kind)+'</button>').join(''):'<div class="empty-list">'+icon('pulse')+'<h3>等待第一条事件</h3><p>使用上方的快速发送栏开始调试。</p></div>')+'</section>'+resultPanel(active)+'</div>';
+  }
+  renderers.debug=()=>S.variant==='guided'?guidedView():S.variant==='stream'?streamView():debugView();
+  renderers.scripts=scriptsView;renderers.plans=plansView;renderers.history=historyView;renderers.settings=settingsView;
+  function currentDraft() {
+    const d=S.drafts[S.platform];
+    if(d.rawText!==undefined) {
+      try {const value=JSON.parse(d.rawText);if(!value||typeof value!=='object'||Array.isArray(value))throw Error();d.content=value;}
+      catch(_){S.editorError='事件内容需要是有效的 JSON 对象。';render();return null;}
+    }
+    if(!Number.isFinite(d.expect.status)||d.expect.status<100||d.expect.status>599||!Number.isFinite(d.expect.max_ms)||d.expect.max_ms<1){S.editorError='请填写有效的 HTTP 状态码和大于 0 的响应时间。';render();return null;}
+    S.editorError='';return copy(d);
+  }
+  function newEvent(id) {if(!eventFor(S.platform,id))return;S.drafts[S.platform]=makeStep(S.platform,id);S.editorError='';S.result=null;S.resultTab='overview';render();}
+  function refreshLive() {if(S.view!=='settings')render();}
+  const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  function makeRecord(p,step,scenario,source) {
+    const status=scenario==='timeout'?null:scenario==='rejected'?401:200;
+    const duration=scenario==='timeout'?5000:p==='douyin'?128:164;
+    const checks=[{label:'HTTP 状态符合期待',ok:status===step.expect.status,value:String(status===null?'无应答':status)+' / '+step.expect.status},{label:'在指定时间内应答',ok:status!==null&&duration<=step.expect.max_ms,value:duration+' / '+step.expect.max_ms+' ms'}];
+    let body=status===null?'':status===401?pretty({error:'invalid_signature',message:'演示：待测服务拒绝了签名'}):p==='wecom'?'success':step.event==='verify_webhook'?pretty({challenge:step.content.challenge}):'';
+    if(step.event==='verify_webhook')checks.push({label:'回显 Challenge',ok:status===200,value:status===200?String(step.content.challenge):'未回显'});
+    const kind=scenario==='timeout'?'timeout':checks.every(c=>c.ok)?'passed':'failed';
+    return {id:uid('run'),time:new Date().toLocaleTimeString('zh-CN',{hour12:false}),platform:p,event:step.event,step:copy(step),request:requestFor(p,step),status,duration,body,checks,kind,source,
+      title:kind==='passed'?'已收到应答，符合本次期待':scenario==='timeout'?'等待回执超时':scenario==='rejected'?'服务拒绝了这次签名':'收到应答，但不符合期待',
+      reason:kind==='passed'?'请继续核对响应体；业务处理结果需要另外验证。':scenario==='timeout'?'演示到达 5 秒超时点，未收到 HTTP 应答。':scenario==='rejected'?'演示 HTTP 401。可检查两端的密钥和参与签名的原始正文。':'实际状态码或响应时间与设置的期待不同。'};
+  }
+  async function simulate(p,step,scenario,source,token,phaseCallback) {
+    for(let phase=0;phase<4;phase++){if(token!==epoch)return null;phaseCallback(phase);await pause(scenario==='timeout'?350:230);}
+    if(token!==epoch)return null;
+    const record=makeRecord(p,step,scenario,source);S.history.unshift(record);return record;
+  }
+  async function sendSingle(p,step,source) {
+    if(S.running)return;
+    const token=++epoch, scenario=S.scenario;
+    S.running=true;S.result=null;S.selectedRecord=null;S.resultTab='overview';S.execution=null;
+    if(S.variant==='guided')S.guide=4;
+    const record=await simulate(p,step,scenario,source||'单条调试',token,phase=>{S.phase=phase;refreshLive();});
+    if(!record||token!==epoch)return;
+    S.result=record;S.running=false;S.phase=4;refreshLive();
+    toast(record.kind==='passed'?'演示完成：本次回执符合期待。':'演示完成：请查看回执中的失败原因。');
+  }
+  async function runScripts(ids,mode,name,origin) {
+    if(S.running)return;
+    const scripts=ids.map(id=>S.scripts.find(s=>s.id===id));
+    if(!scripts.length||scripts.some(s=>!s||!s.steps.length)){toast('请为编排添加有步骤的有效剧本。');return;}
+    const token=++epoch, scenario=S.scenario;
+    S.running=true;
+    S.execution={id:uid('execution'),name,mode,origin,status:'running',lanes:scripts.map(s=>({scriptId:s.id,name:s.name,platform:s.platform,steps:copy(s.steps),results:[],current:0,status:'waiting'}))};
+    const ex=S.execution;
+    async function laneRun(lane) {
+      if(token!==epoch)return;
+      lane.status='running';refreshLive();
+      for(let i=0;i<lane.steps.length;i++){
+        if(token!==epoch)return;
+        lane.current=i;refreshLive();
+        const record=await simulate(lane.platform,lane.steps[i],scenario,(origin==='plan'?name+' / ':'')+lane.name+' / 第 '+(i+1)+' 步',token,()=>{});
+        if(!record||token!==epoch)return;
+        lane.results.push(record);S.result=record;
+        if(record.kind!=='passed'){lane.status=record.kind;refreshLive();return;}
+      }
+      lane.status='passed';refreshLive();
+    }
+    refreshLive();
+    if(mode==='parallel')await Promise.all(ex.lanes.map(laneRun));else for(const lane of ex.lanes){if(token!==epoch)break;await laneRun(lane);}
+    if(token!==epoch)return;
+    ex.status=ex.lanes.every(l=>l.status==='passed')?'passed':'failed';S.running=false;refreshLive();
+    toast('运行结束：'+ex.lanes.filter(l=>l.status==='passed').length+' / '+ex.lanes.length+' 个剧本符合期待。');
+  }
+  function stopExecution() {
+    if(!S.running)return;
+    epoch++;S.running=false;S.phase=-1;
+    if(S.execution){S.execution.status='cancelled';S.execution.lanes.forEach(l=>{if(l.status==='running')l.status='cancelled';if(l.status==='waiting')l.status='skipped';});}
+    render();toast('已停止执行，已完成的结果保留在运行记录中。');
+  }
+  function openModal(title,body,style) {
+    const modal=$('modal');if(modal.open)modal.close();
+    modal.className=style||'';
+    modal.innerHTML='<div class="dialog-header"><h2 id="dialog-title">'+h(title)+'</h2>'+btn('','close','x','square ghost','aria-label="关闭弹窗"')+'</div><div class="dialog-body">'+body+'</div>';
+    modal.showModal();
+  }
+  function formError(message) {let node=$('dialog-error');if(!node){node=document.createElement('div');node.id='dialog-error';node.className='form-error';node.setAttribute('role','alert');$('modal').querySelector('.dialog-body').prepend(node);}node.textContent=message;}
+  function designModal() {
+    openModal('从调试任务出发，设计 MockPulse',
+      '<p class="muted">核心目标：构造平台事件，把它送给待测服务，依据回执判断本次测试。</p>'+
+      '<div class="design-point"><b>01</b><div><h3>单条调试，是最小操作</h3><p>选择平台 → 选择该平台事件 → 修改内容 → 单独发送。请求和回执并排，方便对照。调试好的事件可以加入同平台剧本。</p></div></div>'+
+      '<div class="design-point"><b>02</b><div><h3>平台剧本，是可保存的流程</h3><p>一个剧本固定属于一个平台，只能加入本平台事件或消息。步骤按顺序执行，每一步也可单独发送。支持本地保存和 JSON 导入、导出。</p></div></div>'+
+      '<div class="design-point"><b>03</b><div><h3>运行编排，组合多个剧本</h3><p>例如抖音 A 与企微 A。串行时前一个结束后再启动下一个；并发时同时启动。单个剧本内部保持顺序。结果能追溯到编排、剧本和步骤。</p></div></div>'+
+      '<div class="design-summary"><p><b>为什么这轮选 HTML：</b>这里的设计风险集中在平台约束、保存、组装和执行反馈。实际点一遍，比静态画面更容易发现问题。Figma 可用于之后的视觉规范与设计交接。</p><p><b>三个布局：</b>并排调试适合反复修改和对照；分步调试适合第一次使用；事件流适合连续发送和回看。底部箭头可以切换，页面内容和数据共享。</p><p><b>原型边界：</b>不发真实 HTTP，不进行真实签名、AES 或重试。耗时和回执均为示例。显式保存的剧本与编排保存在当前浏览器；运行记录和连接配置只在本次打开期间保留。</p><p><b>待确认的设计：</b>默认采用并排布局；步骤失败时停止所在剧本，其余剧本继续执行。</p></div>','wide');
+  }
+  function recordModal(id) {
+    const r=S.history.find(x=>x.id===id);if(!r)return;
+    S.selectedRecord=id;
+    openModal(eventFor(r.platform,r.event).title+' · '+r.time,'<div class="row spread" style="margin-bottom:16px"><span class="row">'+mark(r.platform)+'<span>'+PLATFORMS[r.platform].name+'</span></span>'+badge(r.kind)+'</div>'+resultContent(r,'overview')+'<div class="code-label">发送请求快照</div>'+codeBlock(r.request.method+' '+r.request.url)+codeBlock(r.request.headers)+codeBlock(r.request.body)+(r.request.decoded?'<div class="code-label">对应明文</div>'+codeBlock(r.request.decoded):'')+'<div class="code-label">收到的回执</div>'+codeBlock(r.status===null?'未收到应答':r.body||'（空响应体）')+'<div class="dialog-actions">'+btn('载入调试台','load-record','terminal','primary','data-id="'+r.id+'"')+'</div>','sheet');
+  }
+  function exportJSON(name,data) {
+    const blob=new Blob([pretty(data)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download=name.replace(/[<>:"/\\|?*]/g,'-')+'.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  function navigate(view) {if(!routeNames[view])return;S.view=view;render();$('page').scrollTop=0;routeURL();}
+  function setPlatform(p) {if(!PLATFORMS[p])return;S.platform=p;S.result=null;S.editorError='';S.resultTab='overview';}
+  function setVariant(delta) {const keys=Object.keys(variants);S.variant=keys[(keys.indexOf(S.variant)+delta+keys.length)%keys.length];S.view='debug';render();routeURL();}
+  const actions={
+    nav:el=>navigate(el.dataset.view),
+    platform:el=>{setPlatform(el.dataset.id);navigate('debug');},
+    'platform-in-guide':el=>{setPlatform(el.dataset.id);render();},
+    event:el=>newEvent(el.dataset.id),
+    connection:()=>{S.settingsTab=S.platform;navigate('settings');},
+    'edit-mode':el=>{if(el.dataset.id==='form'&&!currentDraft())return;S.editMode=el.dataset.id;render();},
+    'result-tab':el=>{S.resultTab=el.dataset.id;render();},
+    send:()=>{const step=currentDraft();if(step)void sendSingle(S.platform,step);},
+    stop:stopExecution,
+    'variant-prev':()=>setVariant(-1),'variant-next':()=>setVariant(1),
+    'guide-step':el=>{S.guide=Number(el.dataset.id);render();},
+    'guide-prev':()=>{S.guide=Math.max(1,S.guide-1);render();},
+    'guide-next':()=>{if(!currentDraft())return;S.guide=S.guide===4?2:S.guide+1;render();},
+    close:()=>$('modal').close(),design:designModal,
+    state:()=>openModal('完整原型状态',codeBlock({view:S.view,variant:S.variant,platform:S.platform,scenario:S.scenario,drafts:S.drafts,scripts:S.scripts,plans:S.plans,planDraft:S.plan,planDirty:S.planDirty,running:S.running,execution:S.execution,history:S.history}),'wide'),
+    record:el=>recordModal(el.dataset.id),
+    'stream-record':el=>{S.selectedRecord=el.dataset.id;render();},
+    'load-record':el=>{const r=S.history.find(x=>x.id===el.dataset.id);if(!r)return;setPlatform(r.platform);S.drafts[r.platform]=copy(r.step);S.result=null;$('modal').close();navigate('debug');toast('已载入当时的事件内容，可以修改后再次发送。');},
+    'script-filter':el=>{S.scriptFilter=el.dataset.id;render();},
+    'select-script':el=>{S.activeScript=el.dataset.id;render();},
+    'save-script':()=>persist('剧本已保存，刷新后仍然可用。'),
+    'export-script':()=>{const s=selectedScript();exportJSON(s.platform+'--'+s.name,scriptData(s));},
+    'run-script':()=>{const s=selectedScript();void runScripts([s.id],'sequential',s.name,'script');},
+    'run-step':el=>{const s=selectedScript(),st=copy(s.steps[Number(el.dataset.index)]);setPlatform(s.platform);S.drafts[s.platform]=copy(st);navigate('debug');void sendSingle(s.platform,st,s.name+' / 单步调试');},
+    'step-up':el=>{const s=selectedScript(),i=Number(el.dataset.index);if(i<1)return;[s.steps[i-1],s.steps[i]]=[s.steps[i],s.steps[i-1]];persist('步骤顺序已保存。');render();},
+    'remove-step':el=>{const s=selectedScript();s.steps.splice(Number(el.dataset.index),1);persist('步骤已移除，剧本已保存。');render();},
+    'plan-mode':el=>{S.plan.mode=el.dataset.id;S.planDirty=true;render();},
+    'plan-add':()=>{const el=$('add-plan-script');if(!el||!el.value)return;S.plan.scripts.push(el.value);S.planDirty=true;render();},
+    'plan-up':el=>{const i=Number(el.dataset.index);if(i<1)return;[S.plan.scripts[i-1],S.plan.scripts[i]]=[S.plan.scripts[i],S.plan.scripts[i-1]];S.planDirty=true;render();},
+    'plan-remove':el=>{S.plan.scripts.splice(Number(el.dataset.index),1);S.planDirty=true;render();},
+    'new-plan':()=>{S.plan={id:uid('plan'),name:'新的运行编排',mode:'parallel',scripts:[]};S.planDirty=true;render();},
+    'save-plan':()=>{if(!S.plan.name.trim()){toast('请填写编排名称。');return;}const i=S.plans.findIndex(p=>p.id===S.plan.id);if(i<0)S.plans.push(copy(S.plan));else S.plans[i]=copy(S.plan);if(persist('运行编排已保存。'))S.planDirty=false;render();},
+    'run-plan':()=>void runScripts(S.plan.scripts,S.plan.mode,S.plan.name||'未命名编排','plan'),
+    'export-history':()=>exportJSON('mockpulse-run-records',S.history),
+    'settings-tab':el=>{S.settingsTab=el.dataset.id;render();},
+    'clear-history':()=>{if(S.running){toast('请等待运行结束或先停止执行。');return;}S.history=[];S.result=null;S.execution=null;S.selectedRecord=null;render();toast('本次演示的运行记录已清空。');}
+  };
+  let dialogContext={};
+  function formActions(label) {return '<div class="dialog-actions">'+btn('取消','close',null,'')+'<button type="submit" class="btn primary">'+icon('save')+label+'</button></div>';}
+  actions['new-script']=()=>{
+    dialogContext={};
+    openModal('新建平台剧本','<form data-form="new-script"><div class="field"><label for="new-script-name">剧本名称</label><input id="new-script-name" name="name" required maxlength="70" placeholder="例如：抖音 C · 私信重试" autofocus></div><div class="field"><label for="new-script-platform">所属平台</label><select id="new-script-platform" name="platform">'+Object.keys(PLATFORMS).map(p=>'<option value="'+p+'" '+(p===(S.scriptFilter==='all'?S.platform:S.scriptFilter)?'selected':'')+'>'+PLATFORMS[p].name+'</option>').join('')+'</select><span class="help">平台确定后，剧本只允许添加该平台的事件和消息。</span></div>'+formActions('创建并保存')+'</form>');
+  };
+  actions['add-to-script']=()=>{
+    const d=currentDraft();if(!d)return;
+    dialogContext={platform:S.platform,step:d};
+    const matching=S.scripts.filter(s=>s.platform===S.platform);
+    openModal('加入'+PLATFORMS[S.platform].name+'剧本','<form data-form="add-to-script"><div class="inline-note">'+mark(S.platform)+'<div>'+h(eventFor(S.platform,d.event).title)+'<br>当前事件只能加入'+PLATFORMS[S.platform].name+'剧本。</div></div><div class="field"><label for="target-script">目标剧本</label><select id="target-script" name="script">'+matching.map(s=>'<option value="'+s.id+'">'+h(s.name)+' · '+s.steps.length+' 步</option>').join('')+'<option value="__new">＋ 创建新的'+PLATFORMS[S.platform].name+'剧本</option></select></div><div class="field"><label for="target-script-name">新剧本名称</label><input id="target-script-name" name="name" maxlength="70" placeholder="仅在选择创建新剧本时使用"></div><div class="code-label">本次事件内容</div>'+codeBlock(d.content)+formActions('加入并保存')+'</form>');
+  };
+  function stepModal(index) {
+    const script=selectedScript(),isNew=index===undefined,step=isNew?makeStep(script.platform,EVENTS[script.platform][0].id):copy(script.steps[index]);
+    dialogContext={scriptId:script.id,platform:script.platform,index:isNew?-1:index,step};
+    openModal((isNew?'添加':'编辑')+PLATFORMS[script.platform].name+'步骤','<form data-form="step"><div class="row spread" style="margin-bottom:16px"><span class="row">'+mark(script.platform)+'<b>'+h(script.name)+'</b></span><span class="badge accent">平台已锁定</span></div><div class="field"><label for="step-event">事件或消息</label><select id="step-event" name="event" data-change="step-event">'+EVENTS[script.platform].map(ev=>'<option value="'+ev.id+'" '+(ev.id===step.event?'selected':'')+'>'+ev.title+' · '+ev.id+'</option>').join('')+'</select></div><div class="field"><label for="step-sender">模拟发送者</label><input id="step-sender" name="sender" value="'+h(step.sender)+'"></div><div class="field"><label for="step-content">事件内容 · JSON</label><textarea id="step-content" name="content" class="code-input" spellcheck="false" required>'+h(pretty(step.content))+'</textarea></div><div class="field-pair"><div class="field"><label for="step-status">期待 HTTP 状态码</label><input id="step-status" name="status" type="number" min="100" max="599" required value="'+step.expect.status+'"></div><div class="field"><label for="step-time">最长响应时间 / ms</label><input id="step-time" name="time" type="number" min="1" max="60000" required value="'+step.expect.max_ms+'"></div></div>'+formActions('保存步骤')+'</form>');
+  }
+  actions['add-step']=()=>stepModal();
+  actions['edit-step']=el=>stepModal(Number(el.dataset.index));
+  actions['rename-script']=()=>{
+    const s=selectedScript();dialogContext={scriptId:s.id};
+    openModal('重命名剧本','<form data-form="rename-script"><div class="field"><label for="rename-script-name">剧本名称</label><input id="rename-script-name" name="name" required maxlength="70" value="'+h(s.name)+'"></div>'+formActions('保存名称')+'</form>');
+  };
+  actions['import-script']=()=>{
+    dialogContext={};
+    openModal('导入平台剧本','<form data-form="import-script"><p class="muted" style="margin-bottom:16px">选择导出的 JSON 文件，或粘贴内容。导入时会检查每一步的平台归属。</p><div class="field"><label for="import-file">从文件读取</label><input id="import-file" type="file" accept=".json,application/json" data-change="import-file"></div><div class="field"><label for="import-json">剧本 JSON</label><textarea id="import-json" name="json" class="code-input" required placeholder="粘贴 MockPulse 原型导出的剧本 JSON"></textarea></div>'+formActions('检查并导入')+'</form>','wide');
+  };
+  function importScript(data) {
+    if(!data||!PLATFORMS[data.platform])throw Error('剧本必须声明有效平台：douyin 或 wecom。');
+    if(typeof data.name!=='string'||!data.name.trim())throw Error('剧本需要一个名称。');
+    if(!Array.isArray(data.steps))throw Error('steps 必须是步骤数组。');
+    const p=data.platform;
+    const steps=data.steps.map((st,i)=>{
+      if(!st||st.channel!==PLATFORMS[p].channel||!eventFor(p,st.event))throw Error('第 '+(i+1)+' 步不属于'+PLATFORMS[p].name+'，不能导入这个剧本。');
+      const content=data.format==='mockpulse-prototype-v1'?st.content&&st.content.payload:st.content;
+      const sender=data.format==='mockpulse-prototype-v1'?st.content&&st.content.sender:makeStep(p,st.event).sender;
+      if(!content||typeof content!=='object'||Array.isArray(content))throw Error('第 '+(i+1)+' 步的内容需要是 JSON 对象。');
+      const status=Number(st.expect&&st.expect.status),max=Number(st.expect&&st.expect.max_ms);
+      if(!Number.isInteger(status)||status<100||status>599||!Number.isFinite(max)||max<1)throw Error('第 '+(i+1)+' 步的期待回执设置无效。');
+      return {id:uid('step'),event:st.event,content:copy(content),sender:String(sender||''),expect:{status,max_ms:max}};
+    });
+    return {id:uid('script'),name:data.name.trim(),platform:p,steps};
+  }
+  document.addEventListener('submit',event=>{
+    const form=event.target;if(!form.dataset.form)return;event.preventDefault();
+    const data=new FormData(form);
+    try {
+      switch(form.dataset.form){
+        case 'new-script':{
+          const name=String(data.get('name')||'').trim(),platform=data.get('platform');if(!name||!PLATFORMS[platform])throw Error('请填写名称并选择平台。');
+          const script={id:uid('script'),platform,name,steps:[]};S.scripts.push(script);S.activeScript=script.id;S.scriptFilter=platform;
+          persist('新剧本已保存，可以开始添加本平台步骤。');$('modal').close();navigate('scripts');break;
+        }
+        case 'add-to-script':{
+          const ctx=dialogContext;let script;
+          if(data.get('script')==='__new'){
+            const name=String(data.get('name')||'').trim();if(!name)throw Error('请填写新剧本名称。');
+            script={id:uid('script'),platform:ctx.platform,name,steps:[]};S.scripts.push(script);
+          }else script=S.scripts.find(s=>s.id===data.get('script'));
+          if(!script||script.platform!==ctx.platform)throw Error('事件只能加入同平台剧本。');
+          const step=copy(ctx.step);step.id=uid('step');delete step.rawText;
+          script.steps.push(step);S.activeScript=script.id;S.scriptFilter=ctx.platform;
+          persist('事件已加入'+script.name+'并保存。');$('modal').close();navigate('scripts');break;
+        }
+        case 'step':{
+          const ctx=dialogContext,script=S.scripts.find(s=>s.id===ctx.scriptId),eventId=data.get('event');if(!script||!eventFor(script.platform,eventId))throw Error('该事件不属于当前剧本的平台。');
+          let content;try{content=JSON.parse(data.get('content'));}catch(_){throw Error('事件内容不是有效 JSON。');}
+          if(!content||typeof content!=='object'||Array.isArray(content))throw Error('事件内容需要是 JSON 对象。');
+          const status=Number(data.get('status')),max=Number(data.get('time'));if(!Number.isInteger(status)||status<100||status>599||max<1||!Number.isFinite(max))throw Error('请检查期待状态码和响应时间。');
+          const step={id:ctx.index<0?uid('step'):ctx.step.id,event:eventId,content,sender:String(data.get('sender')||''),expect:{status,max_ms:max}};
+          if(ctx.index<0)script.steps.push(step);else script.steps[ctx.index]=step;
+          persist('步骤和剧本已保存。');$('modal').close();render();break;
+        }
+        case 'rename-script':{
+          const script=S.scripts.find(s=>s.id===dialogContext.scriptId),name=String(data.get('name')||'').trim();if(!name)throw Error('名称不能为空。');
+          script.name=name;persist('剧本名称已保存。');$('modal').close();render();break;
+        }
+        case 'import-script':{
+          let parsed;try{parsed=JSON.parse(data.get('json'));}catch(_){throw Error('无法读取 JSON，请检查文件内容。');}
+          const script=importScript(parsed);S.scripts.push(script);S.activeScript=script.id;S.scriptFilter=script.platform;
+          persist('剧本已导入，平台归属检查通过。');$('modal').close();navigate('scripts');break;
+        }
+        case 'connection':{
+          const config=PLATFORMS[S.settingsTab],url=new URL(String(data.get('url')));if(!['http:','https:'].includes(url.protocol))throw Error('回调地址需要使用 http 或 https。');
+          config.url=url.href;config.key=String(data.get('key'));config.secret=String(data.get('secret')||'');
+          if(S.settingsTab==='wecom'){config.agent=String(data.get('agent'));config.aes=String(data.get('aes'));}
+          setPlatform(S.settingsTab);navigate('debug');toast('本次演示已应用连接配置。');break;
+        }
+      }
+    }catch(error){if($('modal').open)formError(error.message);else toast(error.message);}
+  });
+  document.addEventListener('click',event=>{const el=event.target.closest('[data-action]');if(el&&!el.disabled&&actions[el.dataset.action])actions[el.dataset.action](el);});
+  document.addEventListener('input',event=>{
+    const el=event.target,d=S.drafts[S.platform],ev=eventFor(S.platform,d.event);
+    switch(el.dataset.input){
+      case 'message':d.content[ev.key]=typeof ev.example[ev.key]==='number'?Number(el.value):el.value;delete d.rawText;break;
+      case 'sender':d.sender=el.value;break;
+      case 'content-json':d.rawText=el.value;break;
+      case 'expect-status':d.expect.status=Number(el.value);break;
+      case 'expect-time':d.expect.max_ms=Number(el.value);break;
+      case 'plan-name':S.plan.name=el.value;S.planDirty=true;break;
+      case 'history-query':S.historyQuery=el.value;if($('history-table'))$('history-table').innerHTML=historyTable();break;
+    }
+  });
+  document.addEventListener('change',event=>{
+    const el=event.target;
+    switch(el.dataset.change){
+      case 'platform':setPlatform(el.value);render();break;
+      case 'stream-event':newEvent(el.value);break;
+      case 'scenario':S.scenario=el.value;toast('后续运行将演示：'+el.options[el.selectedIndex].text);break;
+      case 'plan-select':{const p=S.plans.find(p=>p.id===el.value);if(p){S.plan=copy(p);S.planDirty=false;render();}break;}
+      case 'history-platform':S.historyPlatform=el.value;render();break;
+      case 'history-status':S.historyStatus=el.value;render();break;
+      case 'theme':S.theme=el.value;document.documentElement.dataset.theme=el.value;break;
+      case 'step-event':{const ev=eventFor(dialogContext.platform,el.value);if(ev)$('step-content').value=pretty(ev.example);break;}
+      case 'import-file':{const file=el.files&&el.files[0];if(file)file.text().then(text=>{if($('import-json'))$('import-json').value=text;}).catch(()=>formError('无法读取所选文件。'));break;}
+    }
+  });
+  document.addEventListener('keydown',event=>{
+    if($('modal').open)return;
+    if((event.ctrlKey||event.metaKey)&&event.key==='Enter'&&S.view==='debug'){event.preventDefault();actions.send();return;}
+    if(event.target.closest('input,textarea,select,[contenteditable]'))return;
+    if(event.key==='ArrowLeft'){event.preventDefault();setVariant(-1);}
+    if(event.key==='ArrowRight'){event.preventDefault();setVariant(1);}
+  });
+  render();
+  </script>
+</body>
+</html>
