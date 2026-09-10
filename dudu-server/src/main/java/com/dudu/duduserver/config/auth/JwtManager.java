@@ -1,5 +1,6 @@
 package com.dudu.duduserver.config.auth;
 
+import cn.hutool.jwt.JWTException;
 import cn.hutool.jwt.JWTUtil;
 import com.dudu.duduserver.common.JwtUser;
 import com.dudu.duduserver.constant.ApiEnum;
@@ -45,7 +46,7 @@ public class JwtManager {
                 .filter(s -> !s.isBlank())
                 .orElseThrow(() -> new AuthException(ApiEnum.TOKEN_EMPTY));
 
-        if (!JWTUtil.verify(raw, properties.jwtSecret().getBytes(StandardCharsets.UTF_8))) {
+        if (!verifySignature(raw)) {
             throw new AuthException(ApiEnum.TOKEN_VERIFY);
         }
 
@@ -61,6 +62,17 @@ public class JwtManager {
                     .orElseThrow(() -> new AuthException(ApiEnum.TOKEN_VERIFY));
         } catch (IOException e) {
             throw new AuthException(ApiEnum.TOKEN_VERIFY);
+        }
+    }
+
+    /**
+     * Hutool 对畸形 token（缺段/坏 Base64）抛 JWTException 而非返回 false，结构错误同视为验签失败。
+     */
+    private boolean verifySignature(String token) {
+        try {
+            return JWTUtil.verify(token, properties.jwtSecret().getBytes(StandardCharsets.UTF_8));
+        } catch (JWTException e) {
+            return false;
         }
     }
 
