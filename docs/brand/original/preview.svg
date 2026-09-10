@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960" role="img" aria-labelledby="dudu-preview-title dudu-preview-desc">
+  <title id="dudu-preview-title">DuDu logo presentation</title>
+  <desc id="dudu-preview-desc">DuDu logo in its primary, application-icon, dark-background and small-size versions. Signal orange F2673C and ink 232B33.</desc>
+  <rect width="1440" height="960" fill="#F8F5EF"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif">
+    <circle cx="66" cy="55" r="6" fill="#F2673C"/>
+    <text x="86" y="62" font-size="19" letter-spacing="2.2" font-weight="600" fill="#232B33">DUDU / 嘟嘟</text>
+    <text x="1380" y="62" text-anchor="end" font-size="19" fill="#6A6E6F">统一消息收发平台</text>
+    <rect x="60" y="102" width="916" height="454" rx="20" fill="#fff"/>
+    <text x="96" y="151" font-size="20" fill="#737778">双 D · 双向对话</text>
+    <g transform="translate(93 231) scale(1.25)"><g transform="scale(.75)"><defs>
+    <mask id="preview-primary-channel" x="0" y="0" width="256" height="256" maskUnits="userSpaceOnUse" style="mask-type:luminance">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#000" stroke="#000" stroke-width="12" stroke-linejoin="round" fill-rule="evenodd"/>
+    </mask>
+  </defs>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" fill="#F2673C" fill-rule="evenodd" mask="url(#preview-primary-channel)"/>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#232B33" fill-rule="evenodd"/></g>
+  <g transform="translate(216 40)"><g fill="#232B33" fill-rule="evenodd">
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(120)"/>
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z" transform="translate(226)"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(346)"/>
+  </g></g></g>
+    <text x="96" y="516" font-size="25" fill="#232B33">一个接口，消息自由来往。</text>
+    <rect x="1000" y="102" width="380" height="454" rx="20" fill="#F2673C"/>
+    <text x="1036" y="151" font-size="20" fill="#fff">应用图标</text>
+    <g transform="translate(1062 204)"><defs>
+    <mask id="preview-app-channel" x="0" y="0" width="256" height="256" maskUnits="userSpaceOnUse" style="mask-type:luminance">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#000" stroke="#000" stroke-width="12" stroke-linejoin="round" fill-rule="evenodd"/>
+    </mask>
+  </defs>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" fill="#fff" fill-rule="evenodd" mask="url(#preview-app-channel)"/>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#fff" fill-rule="evenodd"/></g>
+    <g transform="translate(1121 491) scale(.32)"><g fill="#fff" fill-rule="evenodd">
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(120)"/>
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z" transform="translate(226)"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(346)"/>
+  </g></g>
+    <rect x="60" y="580" width="916" height="254" rx="20" fill="#232B33"/>
+    <text x="96" y="625" font-size="19" fill="#C2C6C8">深色背景</text>
+    <g transform="translate(236 637) scale(.84)"><g transform="scale(.75)"><defs>
+    <mask id="preview-dark-channel" x="0" y="0" width="256" height="256" maskUnits="userSpaceOnUse" style="mask-type:luminance">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#000" stroke="#000" stroke-width="12" stroke-linejoin="round" fill-rule="evenodd"/>
+    </mask>
+  </defs>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" fill="#F2673C" fill-rule="evenodd" mask="url(#preview-dark-channel)"/>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#F8F5EF" fill-rule="evenodd"/></g>
+  <g transform="translate(216 40)"><g fill="#F8F5EF" fill-rule="evenodd">
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(120)"/>
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z" transform="translate(226)"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(346)"/>
+  </g></g></g>
+    <rect x="1000" y="580" width="380" height="254" rx="20" fill="#fff"/>
+    <text x="1036" y="625" font-size="19" fill="#737778">小尺寸 / 单色</text>
+    <g transform="translate(1045 701) scale(0.09375)"><defs>
+    <mask id="preview-size-24-channel" x="0" y="0" width="256" height="256" maskUnits="userSpaceOnUse" style="mask-type:luminance">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#000" stroke="#000" stroke-width="12" stroke-linejoin="round" fill-rule="evenodd"/>
+    </mask>
+  </defs>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" fill="#232B33" fill-rule="evenodd" mask="url(#preview-size-24-channel)"/>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#232B33" fill-rule="evenodd"/></g><text x="1057" y="774" text-anchor="middle" font-size="16" fill="#737778">24px</text><g transform="translate(1126 697) scale(0.125)"><defs>
+    <mask id="preview-size-32-channel" x="0" y="0" width="256" height="256" maskUnits="userSpaceOnUse" style="mask-type:luminance">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#000" stroke="#000" stroke-width="12" stroke-linejoin="round" fill-rule="evenodd"/>
+    </mask>
+  </defs>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" fill="#232B33" fill-rule="evenodd" mask="url(#preview-size-32-channel)"/>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#232B33" fill-rule="evenodd"/></g><text x="1142" y="774" text-anchor="middle" font-size="16" fill="#737778">32px</text><g transform="translate(1207 689) scale(0.1875)"><defs>
+    <mask id="preview-size-48-channel" x="0" y="0" width="256" height="256" maskUnits="userSpaceOnUse" style="mask-type:luminance">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#000" stroke="#000" stroke-width="12" stroke-linejoin="round" fill-rule="evenodd"/>
+    </mask>
+  </defs>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" fill="#232B33" fill-rule="evenodd" mask="url(#preview-size-48-channel)"/>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#232B33" fill-rule="evenodd"/></g><text x="1231" y="774" text-anchor="middle" font-size="16" fill="#737778">48px</text>
+    <g transform="translate(1302 692) scale(.18)"><defs>
+    <mask id="preview-orange-channel" x="0" y="0" width="256" height="256" maskUnits="userSpaceOnUse" style="mask-type:luminance">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#000" stroke="#000" stroke-width="12" stroke-linejoin="round" fill-rule="evenodd"/>
+    </mask>
+  </defs>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" fill="#F2673C" fill-rule="evenodd" mask="url(#preview-orange-channel)"/>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#F2673C" fill-rule="evenodd"/></g>
+    <line x1="60" y1="870" x2="1380" y2="870" stroke="#DDDCD6"/>
+    <rect x="60" y="903" width="24" height="24" rx="6" fill="#F2673C"/>
+    <text x="98" y="922" font-size="18" fill="#232B33">信号橙 <tspan fill="#777B7B">#F2673C</tspan></text>
+    <rect x="345" y="903" width="24" height="24" rx="6" fill="#232B33"/>
+    <text x="383" y="922" font-size="18" fill="#232B33">深墨色 <tspan fill="#777B7B">#232B33</tspan></text>
+    <text x="1380" y="922" text-anchor="end" font-size="18" fill="#777B7B">连接多平台 · 统一收与发</text>
+  </g>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="dudu-white-title dudu-white-desc">
+  <title id="dudu-white-title">DuDu — white mark</title>
+  <desc id="dudu-white-desc">Two opposing D-shaped speech bubbles connect through a clear channel, representing DuDu’s unified sending and receiving of messages.</desc>
+  <defs>
+    <mask id="dudu-white-channel" x="0" y="0" width="256" height="256" maskUnits="userSpaceOnUse" style="mask-type:luminance">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#000" stroke="#000" stroke-width="12" stroke-linejoin="round" fill-rule="evenodd"/>
+    </mask>
+  </defs>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" fill="#fff" fill-rule="evenodd" mask="url(#dudu-white-channel)"/>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#fff" fill-rule="evenodd"/>
+</svg>

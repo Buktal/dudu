@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="430" height="114" viewBox="0 0 430 114" role="img" aria-labelledby="dudu-wordmark-title dudu-wordmark-desc" color="#232B33">
+  <title id="dudu-wordmark-title">DuDu — wordmark</title>
+  <desc id="dudu-wordmark-desc">Custom geometric DuDu lettering. All characters are vector paths; no font is required.</desc>
+  <g fill="currentColor" fill-rule="evenodd">
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(120)"/>
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z" transform="translate(226)"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(346)"/>
+  </g>
+</svg>

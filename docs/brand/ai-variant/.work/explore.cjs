@@ -1,0 +1,19 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const sharp = require('C:/Users/Buktal/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/sharp');
+
+const eye='M69.2 105.5C73 121 81 128 94 128C107 128 115 121 118.8 105.5C119.7 101.7 117.4 98 113.6 97.2C109.8 96.3 106.1 98.6 105.2 102.4C103.1 111.2 99.6 114 94 114C88.4 114 84.9 111.2 82.8 102.4C81.9 98.6 78.2 96.3 74.4 97.2C70.6 98 68.3 101.7 69.2 105.5Z';
+const shapes=[
+  'M64 32H128C186 32 226 68 226 113C226 158 186 194 128 194H80L43 219C36 224 28 219 28 210V68C28 46 42 32 64 32Z',
+  'M66 30H126C187 30 228 69 228 123C228 177 187 216 126 216H66C43 216 28 201 28 178V68C28 45 43 30 66 30Z',
+  'M73 34C48 33 33 49 32 75L28 187C27 200 39 208 50 201L78 184C90 188 108 190 126 190C186 190 226 157 228 114C230 69 191 34 133 32C112 31 91 32 73 34Z',
+  'M72 32H126C187 32 228 69 228 118C228 167 187 204 126 204H81L48 223C39 228 28 222 28 212V76C28 49 44 32 72 32Z'
+];
+const labels=['01 / 消息 D','02 / 柔软容器','03 / 柔软消息泡','04 / 外框 D'];
+function mark(i,id,color='#F2673C',bg='#fff') {
+  let eyes=`<path d="${eye}" fill="${i===3?color:bg}"/><path d="${eye}" fill="${i===3?color:bg}" transform="translate(68)"/>`;
+  return `<path d="${shapes[i]}" fill="${color}"/>${i===3?`<path d="M72 56H126C173 56 202 83 202 118C202 153 173 180 126 180H73L54 191V76Q54 56 72 56Z" fill="${bg}"/>`:''}${eyes}`;
+}
+const content=`<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="1020" viewBox="0 0 1320 1020"><rect width="1320" height="1020" fill="#F8F5EF"/>${shapes.map((_,i)=>`<g transform="translate(${36+(i%2)*642} ${32+Math.floor(i/2)*490})"><rect width="606" height="462" rx="16" fill="white"/><g transform="translate(72 42)">${mark(i,'large'+i)}</g><g transform="translate(382 86) scale(.52)">${mark(i,'mono'+i,'#232B33')}</g><text x="36" y="360" font-family="Segoe UI, Microsoft YaHei" font-size="22" fill="#232B33">${labels[i]}</text>${[24,32,48].map((s,j)=>`<g transform="translate(${36+j*100} 400) scale(${s/256})">${mark(i,'small'+i+'-'+j,'#232B33')}</g>`).join('')}</g>`).join('')}</svg>`;
+fs.writeFileSync(path.join(__dirname,'explore.svg'),content);
+sharp(Buffer.from(content)).png().toFile(path.join(__dirname,'explore.png'));

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="24 24 208 208" role="img" aria-labelledby="dudu-favicon-title dudu-favicon-desc">
+  <title id="dudu-favicon-title">DuDu</title>
+  <desc id="dudu-favicon-desc">Small-size DuDu mark with enlarged negative space for browser tabs.</desc>
+  <defs>
+    <mask id="dudu-favicon-channel" x="0" y="0" width="256" height="256" maskUnits="userSpaceOnUse" style="mask-type:luminance">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#000" stroke="#000" stroke-width="20" stroke-linejoin="round" fill-rule="evenodd"/>
+    </mask>
+  </defs>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" fill="#F2673C" fill-rule="evenodd" mask="url(#dudu-favicon-channel)"/>
+  <path d="M48 32H104C146 32 176 60 176 100C176 140 146 168 104 168H76L40 194Q32 200 32 188V48Q32 32 48 32ZM72 68H104C126 68 140 81 140 100C140 119 126 132 104 132H72Q68 132 68 128V72Q68 68 72 68Z" transform="rotate(180 128 128)" fill="#F2673C" fill-rule="evenodd"/>
+</svg>
