@@ -1,4 +1,7 @@
-export type { DispatchOutcome } from "./api";
+export type {
+  DispatchOutcome,
+  WecomDispatchOutcome,
+} from "./api";
 export { DispatchPanel } from "./components/dispatch-panel";
 export { RunsView } from "./components/runs-view";
 export type {
@@ -6,6 +9,7 @@ export type {
   RunRecord,
   RunStep,
   RunVerdict,
+  SendOutcome,
 } from "./model";
 export {
   clearDispatch,

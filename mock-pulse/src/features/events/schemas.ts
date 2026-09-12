@@ -7,10 +7,23 @@ import type { ChannelId } from "@/lib/channels";
  * 编辑/导入导出在 #9 落地，本模块只读。
  */
 
-export type FieldType = "string" | "number" | "boolean" | "json";
+// FieldType 中的 numberString：数字串——值全程按字符串处理
+// （如企微 MsgId 64 位整型，不经 number 不丢精度）
+export type FieldType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "json"
+  | "numberString";
 
 /** 新建事件时按官方形态生成的 ID 种类 */
-export type IdKind = "openId" | "encryptedId" | "logId" | "createTimeMs";
+export type IdKind =
+  | "openId"
+  | "encryptedId"
+  | "logId"
+  | "createTimeMs" // 抖音 13 位毫秒时间戳
+  | "createTimeSec" // 企微 10 位秒级时间戳（字符串）
+  | "msgId64"; // 企微 MsgId：64 位整型数字串（18 位，恒在 int64 内）
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */
@@ -33,6 +46,21 @@ export type IdGeneration = {
 
 export type WirePayload = { [key: string]: unknown };
 
+/** 报文的线上形态：抖音 JSON、企微 XML（决定拼装/解析方式） */
+export type WireForm = "json" | "xml";
+
+/**
+ * 企微 XML 载荷的确定性拼装规则（逐字复现官方样本的排版）：
+ * - indent：元素行的缩进前缀（官方消息样本 §5.2 用三空格、事件样本 §5.3/§5.4 用 tab）
+ * - bareTags：裸文本输出的元素（官方样本中 CreateTime/MsgId/AgentID 不带 CDATA）
+ * - trailingSpaceTags：闭合标签后带一个空格的元素（§5.2 FromUserName 行官方原文如此）
+ */
+export type XmlLayout = {
+  indent: string;
+  bareTags: readonly string[];
+  trailingSpaceTags?: readonly string[];
+};
+
 export type EventSchema = {
   id: string;
   channelId: ChannelId;
@@ -46,6 +74,10 @@ export type EventSchema = {
   source: string;
   /** content 在线上是 JSON 字符串（im_enter_direct_msg） */
   contentString: boolean;
+  /** 线上报文形态：决定 wireBodyText 拼装与完整报文页解析 */
+  wire: WireForm;
+  /** wire = xml 时的确定性拼装规则 */
+  xmlLayout?: XmlLayout;
   fields: FieldDescriptor[];
   /** 新建事件时需要按官方形态重新生成的 ID 路径 */
   idGenerations: IdGeneration[];
@@ -280,6 +312,7 @@ export const DOUYIN_EVENT_SCHEMAS: readonly EventSchema[] = [
     version: "2026.09",
     source: SOURCE_PRIVATE_MSG,
     contentString: false,
+    wire: "json",
     fields: [
       ...dyIdentity,
       field(
@@ -311,6 +344,7 @@ export const DOUYIN_EVENT_SCHEMAS: readonly EventSchema[] = [
     version: "2026.09",
     source: SOURCE_PRIVATE_MSG,
     contentString: false,
+    wire: "json",
     fields: [
       ...dyIdentity,
       field(
@@ -334,6 +368,7 @@ export const DOUYIN_EVENT_SCHEMAS: readonly EventSchema[] = [
     version: "2026.09",
     source: SOURCE_ENTER_DIRECT,
     contentString: true,
+    wire: "json",
     fields: [
       ...dyIdentity,
       field(
@@ -358,6 +393,7 @@ export const DOUYIN_EVENT_SCHEMAS: readonly EventSchema[] = [
     version: "2026.09",
     source: SOURCE_MESSAGE_READ,
     contentString: false,
+    wire: "json",
     fields: [
       // 已读事件无 user_infos，身份组由发送者与已读用户构成
       dySenderField,
@@ -389,8 +425,190 @@ export const DOUYIN_EVENT_SCHEMAS: readonly EventSchema[] = [
   },
 ] as const;
 
+// ---- 企业微信（自建应用回调，XML 报文）----
+// 载荷与协议事实：docs/research/channels/wecom.md（官方 90239/90240 摄取）。
+// 载荷模型：扁平对象，键 = XML 元素名（文档序）；MsgId 64 位整型全程按字符串处理。
+
+const SOURCE_WC_MESSAGE =
+  "https://developer.work.weixin.qq.com/document/path/90239";
+const SOURCE_WC_EVENT =
+  "https://developer.work.weixin.qq.com/document/path/90240";
+
+/** 企微公共字段（§5.2/§5.3 消息与事件共用；序 = 官方文档序） */
+const wcCommonFields: FieldDescriptor[] = [
+  field(
+    "ToUserName",
+    "企业 CorpID",
+    "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。",
+    "企业与身份",
+  ),
+  field(
+    "FromUserName",
+    "成员 UserID",
+    "发送消息/触发事件的成员。修改它可模拟不同成员进入会话。",
+    "企业与身份",
+    "string",
+    { required: true },
+  ),
+  field(
+    "CreateTime",
+    "消息时间",
+    "10 位 Unix 秒级时间戳（与抖音的 13 位毫秒不同）。新建时按当前时间生成。",
+    "会话与时序",
+    "numberString",
+  ),
+];
+
+const wcAgentField = field(
+  "AgentID",
+  "应用 ID",
+  "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。",
+  "企业与身份",
+  "numberString",
+);
+
+/** 事件模板的 MsgType/Event/EventKey（§2.2 事件推送字段集） */
+const wcEventFields = (eventKeyNote: string): FieldDescriptor[] => [
+  field("MsgType", "消息类型", "事件推送固定为 event。", "事件内容"),
+  field(
+    "Event",
+    "事件类型",
+    "官方事件名：enter_agent = 成员进入应用会话；click = 点击菜单按钮。",
+    "事件内容",
+  ),
+  field("EventKey", "事件键值", eventKeyNote, "事件内容"),
+];
+
+/** 事件类排版：§5.3/§5.4 官方事件样本（tab 缩进、无行尾空格） */
+const wcEventLayout: XmlLayout = {
+  indent: "\t",
+  bareTags: ["CreateTime", "MsgId", "AgentID"],
+};
+
+/** 官方黄金样本 §5.2：文本消息（逐字，MsgId 按字符串保真） */
+const goldenWcText: WirePayload = {
+  ToUserName: "toUser",
+  FromUserName: "fromUser",
+  CreateTime: "1348831860",
+  MsgType: "text",
+  Content: "this is a test",
+  MsgId: "1234567890123456",
+  AgentID: "1",
+};
+
+export const WECOM_EVENT_SCHEMAS: readonly EventSchema[] = [
+  {
+    id: "wc-text",
+    channelId: "wecom",
+    eventName: "text",
+    name: "接收消息 · 文本",
+    kind: "message",
+    version: "2026.09",
+    source: SOURCE_WC_MESSAGE,
+    contentString: false,
+    wire: "xml",
+    xmlLayout: {
+      indent: "   ",
+      bareTags: ["CreateTime", "MsgId", "AgentID"],
+      // §5.2 官方原文 FromUserName 行尾带一个空格——逐字保真
+      trailingSpaceTags: ["FromUserName"],
+    },
+    fields: [
+      ...wcCommonFields,
+      field(
+        "MsgType",
+        "消息类型",
+        "文本消息固定为 text。其他消息类型（图片/语音等）可按官方文档在完整报文页补充专有字段。",
+        "消息内容",
+      ),
+      field(
+        "Content",
+        "消息正文",
+        "模拟成员发来的完整文本。换行与特殊字符都会按原样进入 CDATA。",
+        "消息内容",
+        "string",
+        { multiline: true, required: true },
+      ),
+      field(
+        "MsgId",
+        "消息 ID",
+        "64 位整型消息去重 ID。全程按字符串处理不丢精度；新建时按官方形态生成 18 位数字串。",
+        "会话与时序",
+        "numberString",
+      ),
+      wcAgentField,
+    ],
+    idGenerations: [
+      { path: "CreateTime", kind: "createTimeSec" },
+      { path: "MsgId", kind: "msgId64" },
+    ],
+    payload: goldenWcText,
+  },
+  {
+    id: "wc-enter",
+    channelId: "wecom",
+    eventName: "enter_agent",
+    name: "进入应用会话",
+    kind: "event",
+    version: "2026.09",
+    source: SOURCE_WC_EVENT,
+    contentString: false,
+    wire: "xml",
+    xmlLayout: wcEventLayout,
+    fields: [
+      ...wcCommonFields,
+      ...wcEventFields(
+        "enter_agent 的 EventKey 为空（官方 §2.2：进入会话不携带键值）。",
+      ),
+      wcAgentField,
+    ],
+    idGenerations: [{ path: "CreateTime", kind: "createTimeSec" }],
+    payload: {
+      ToUserName: "toUser",
+      FromUserName: "UserID",
+      CreateTime: "1348831860",
+      MsgType: "event",
+      Event: "enter_agent",
+      EventKey: "",
+      AgentID: "1",
+    },
+  },
+  {
+    id: "wc-click",
+    channelId: "wecom",
+    eventName: "click",
+    name: "点击菜单按钮",
+    kind: "event",
+    version: "2026.09",
+    source: SOURCE_WC_EVENT,
+    contentString: false,
+    wire: "xml",
+    xmlLayout: wcEventLayout,
+    fields: [
+      ...wcCommonFields,
+      ...wcEventFields(
+        "点击菜单按钮时回传的菜单 key 值（官方 §2.2：与菜单配置对应）。",
+      ),
+      wcAgentField,
+    ],
+    idGenerations: [{ path: "CreateTime", kind: "createTimeSec" }],
+    payload: {
+      ToUserName: "toUser",
+      FromUserName: "UserID",
+      CreateTime: "1348831860",
+      MsgType: "event",
+      Event: "click",
+      EventKey: "EVENTKEY",
+      AgentID: "1",
+    },
+  },
+] as const;
+
 const SCHEMA_BY_ID = new Map<string, EventSchema>(
-  DOUYIN_EVENT_SCHEMAS.map((schema) => [schema.id, schema]),
+  [...DOUYIN_EVENT_SCHEMAS, ...WECOM_EVENT_SCHEMAS].map((schema) => [
+    schema.id,
+    schema,
+  ]),
 );
 
 export function schemaById(id: string): EventSchema {

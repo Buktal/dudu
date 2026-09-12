@@ -19,6 +19,7 @@ pub fn run() {
             runs::runs_load,
             runs::runs_save,
             sends::sends_dispatch_douyin,
+            sends::sends_dispatch_wecom,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

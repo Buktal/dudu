@@ -9,6 +9,8 @@ import type { ExpectedReceipt, ReceiptBodyMode } from "./model";
 export type ReceiptFact = {
   status: number;
   body: string;
+  /** 企微加密被动回复解密后的明文（目标未回加密包时为 null） */
+  reply?: string | null;
 };
 
 export type ReceiptVerdict = {
@@ -36,6 +38,11 @@ export const RECEIPT_BODY_MODES: readonly {
     id: "jsonField",
     label: "JSON 字段",
     hint: "期望正文按 JSON 解析：其中每个字段（含嵌套）需在回执同路径出现且值相等；回执可以有额外字段。",
+  },
+  {
+    id: "wecomReply",
+    label: "企微回执",
+    hint: "按企微官方三种回执形态比对：期望留空 = 回执必须是空串；填 success = 逐字相等（不带引号）；填其他内容 = 目标须回加密被动回复，且解密明文包含该片段。",
   },
 ];
 
@@ -98,7 +105,7 @@ function compareBody(
   fact: ReceiptFact,
 ): ReceiptVerdict {
   const label = statusLabel(fact.status);
-  if (expected.body === "") {
+  if (expected.body === "" && expected.bodyMode !== "wecomReply") {
     return { passed: true, reason: `${label}，与期望状态一致` };
   }
   switch (expected.bodyMode) {
@@ -106,6 +113,8 @@ function compareBody(
       return fact.body === expected.body
         ? { passed: true, reason: `${label}，正文与期望逐字一致` }
         : { passed: false, reason: `${label}，正文与期望不一致` };
+    case "wecomReply":
+      return compareWecomReply(expected.body, fact, label);
     case "jsonField": {
       let expectedJson: unknown;
       try {
@@ -143,6 +152,52 @@ function compareBody(
   }
 }
 
+/**
+ * 企微回执三形态比对（官方 §3.3：空串 / success 不带引号 / 加密被动回复包）：
+ * - 期望留空：回执正文必须恰为空串；
+ * - 期望 success：逐字相等；
+ * - 期望其他内容：回执须是加密被动回复（Rust 已解密为 reply 明文），
+ *   且解密明文包含期望片段。
+ */
+function compareWecomReply(
+  expectedBody: string,
+  fact: ReceiptFact,
+  label: string,
+): ReceiptVerdict {
+  if (expectedBody === "") {
+    return fact.body === ""
+      ? { passed: true, reason: `${label}，回执为空串` }
+      : {
+          passed: false,
+          reason: `${label}，期望空串，实际「${clip(fact.body)}」`,
+        };
+  }
+  if (expectedBody === "success") {
+    return fact.body === "success"
+      ? { passed: true, reason: `${label}，回执为 success（不带引号）` }
+      : {
+          passed: false,
+          reason: `${label}，期望逐字 success，实际「${clip(fact.body)}」`,
+        };
+  }
+  const reply = fact.reply;
+  if (reply == null) {
+    return {
+      passed: false,
+      reason: `${label}，期望加密被动回复，但目标未回可解密的加密包`,
+    };
+  }
+  return reply.includes(expectedBody)
+    ? {
+        passed: true,
+        reason: `${label}，解密被动回复包含「${clip(expectedBody)}」`,
+      }
+    : {
+        passed: false,
+        reason: `${label}，解密被动回复未包含「${clip(expectedBody)}」`,
+      };
+}
+
 export function compareReceipt(
   expected: ExpectedReceipt,
   fact: ReceiptFact,
@@ -160,12 +215,21 @@ const MODE_LABEL: Record<ReceiptBodyMode, string> = {
   contains: "正文包含",
   equals: "正文完全一致",
   jsonField: "正文含 JSON 字段",
+  wecomReply: "企微回执形态",
 };
 
 /** 期望的人类可读描述（回执面板/运行记录展示用） */
 export function describeExpected(expected: ExpectedReceipt): string {
-  if (expected.body === "") {
+  if (expected.body === "" && expected.bodyMode !== "wecomReply") {
     return `期望 HTTP ${expected.status}，不校验正文`;
+  }
+  if (expected.bodyMode === "wecomReply" && expected.body === "") {
+    return `期望 HTTP ${expected.status}，企微回执为空串`;
+  }
+  if (expected.bodyMode === "wecomReply") {
+    return `期望 HTTP ${expected.status}，企微${
+      expected.body === "success" ? "回执为 success" : "解密被动回复包含"
+    }「${clip(expected.body)}」`;
   }
   return `期望 HTTP ${expected.status}，${MODE_LABEL[expected.bodyMode]}「${clip(expected.body)}」`;
 }

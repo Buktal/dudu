@@ -11,6 +11,7 @@ import {
   renameEvent,
   saveEvent,
   selectDraft,
+  selectDraftChannelId,
   selectEvents,
   selectFilters,
   selectPage,
@@ -235,5 +236,20 @@ describe("events slice 版本化状态流转", () => {
       body: '{"code":0}',
       bodyMode: "jsonField",
     });
+  });
+});
+
+describe("selectDraftChannelId（跨 feature 窄 selector）", () => {
+  it("按草稿渠道返回（抖音/企微），无草稿为 undefined；兼容 RootState 形状", () => {
+    const store = makeStore();
+    expect(selectDraftChannelId(store.getState())).toBeUndefined();
+
+    store.dispatch(startDraft({ name: "企微文本", schemaId: "wc-text" }));
+    expect(selectDraftChannelId(store.getState())).toBe("wecom");
+    // 子状态形态同样可用
+    expect(selectDraftChannelId(store.getState().events)).toBe("wecom");
+
+    store.dispatch(startDraft({ name: "抖音文本", schemaId: "dy-text" }));
+    expect(selectDraftChannelId(store.getState())).toBe("douyin");
   });
 });

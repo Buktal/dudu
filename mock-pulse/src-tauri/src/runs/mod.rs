@@ -8,12 +8,15 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 /// 回执事实：HTTP 状态（0 = 未收到响应）、耗时与原始回执文本。
+/// reply = 企微加密被动回复解密后的明文（旧记录/其他渠道为 None）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ReceiptSnapshot {
     pub status: u16,
     pub elapsed_ms: u64,
     pub body: String,
+    #[serde(default)]
+    pub reply: Option<String>,
     pub error: Option<String>,
 }
 
@@ -36,12 +39,15 @@ pub struct RunStep {
     pub channel: String,
     /// 发送目标地址快照
     pub url: String,
-    /// 发出的明文载荷快照（逐字节与发送一致）
+    /// 发出的明文载荷快照（逐字节与发送一致；企微为加密前的明文 XML）
     pub payload: String,
-    /// 签名头快照（X-Douyin-Signature）
+    /// 签名快照：抖音 X-Douyin-Signature 头 / 企微 msg_signature 查询参数
     pub signature: String,
-    /// Msg-Id 头快照
+    /// 发送唯一标识快照：抖音 Msg-Id 头 / 企微 nonce
     pub msg_id: String,
+    /// 企微 msg_signature 的时间戳（旧记录/抖音为 None）
+    #[serde(default)]
+    pub timestamp: Option<String>,
     pub receipt: ReceiptSnapshot,
     pub verdict: RunVerdict,
 }
@@ -99,10 +105,12 @@ mod tests {
                 payload: r#"{"event":"im_receive_msg","content":{"text":"你好，抖音"}}"#.into(),
                 signature: "a".repeat(40),
                 msg_id: "0f8c1b2a-3d4e-4f5a-9b8c-7d6e5f4a3b2c".into(),
+                timestamp: None,
                 receipt: ReceiptSnapshot {
                     status: 200,
                     elapsed_ms: 12,
                     body: "{\"code\":0}".into(),
+                    reply: None,
                     error: None,
                 },
                 verdict: RunVerdict {
@@ -120,7 +128,39 @@ mod tests {
         assert!(raw.contains("\"eventId\""));
         assert!(raw.contains("\"msgId\""));
         assert!(raw.contains("\"elapsedMs\""));
+        assert!(raw.contains("\"reply\""));
         assert!(!raw.contains("started_at"));
         assert!(!raw.contains("elapsed_ms"));
+    }
+
+    #[test]
+    fn run_record_deserializes_legacy_records_without_new_fields() {
+        // 旧版持久化记录没有 reply/timestamp 字段：反序列化为 None，不丢数据
+        let raw = serde_json::json!({
+            "id": "run-old",
+            "startedAt": "2026-09-01T00:00:00.000Z",
+            "source": "direct",
+            "steps": [{
+                "eventName": "旧记录",
+                "eventId": "evt-old",
+                "channel": "douyin",
+                "url": "http://127.0.0.1:8080/hook",
+                "payload": "{}",
+                "signature": "a".repeat(40),
+                "msgId": "m-1",
+                "receipt": {
+                    "status": 200,
+                    "elapsedMs": 5,
+                    "body": "ok",
+                    "error": null
+                },
+                "verdict": { "passed": true, "reason": "ok" }
+            }]
+        })
+        .to_string();
+        let record: RunRecord = serde_json::from_str(&raw).unwrap();
+        assert_eq!(record.steps[0].timestamp, None);
+        assert_eq!(record.steps[0].receipt.reply, None);
+        assert_eq!(record.steps[0].msg_id, "m-1");
     }
 }

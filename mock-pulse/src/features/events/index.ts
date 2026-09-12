@@ -7,7 +7,11 @@ export {
   type ExpectedReceipt,
   type ReceiptBodyMode,
 } from "./model";
-export { wireBodyText } from "./payload";
+export {
+  parseWireDraft,
+  wireBodyText,
+  wireDraftText,
+} from "./payload";
 export {
   compareReceipt,
   describeExpected,
@@ -19,6 +23,9 @@ export {
   DOUYIN_EVENT_SCHEMAS,
   type EventSchema,
   schemaById,
+  WECOM_EVENT_SCHEMAS,
+  type WireForm,
+  type XmlLayout,
 } from "./schemas";
 export {
   deleteEvent,
@@ -31,6 +38,8 @@ export {
   openEvent,
   renameEvent,
   saveEvent,
+  selectDraftChannelId,
+  setDraftExpected,
   setDraftField,
   setDraftName,
   setDraftPayload,

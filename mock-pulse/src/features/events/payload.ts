@@ -1,11 +1,13 @@
+import { keyParts, safePath } from "./paths";
 import type { EventSchema, WirePayload } from "./schemas";
+import { buildXmlBody, parseXmlBody } from "./xml";
 
 /**
  * 报文载荷领域逻辑：路径读写、叶子展开、表单/线上双向转换、
  * 未知字段标注与发送者 ID 同步。全部为纯函数。
+ * 线上形态按 schema.wire 分发：抖音 JSON（紧凑序列化）、企微 XML（确定性拼装）。
+ * 路径工具（keyParts/safePath）见 ./paths，各模块直接导入。
  */
-
-const RESERVED_KEYS = ["__proto__", "prototype", "constructor"];
 
 /**
  * 载荷深拷贝：载荷是 JSON 契约值（经 Rust serde_json 往返），
@@ -13,19 +15,6 @@ const RESERVED_KEYS = ["__proto__", "prototype", "constructor"];
  */
 export function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
-}
-
-/** "content.user_infos[0].open_id" → ["content","user_infos","0","open_id"] */
-export function keyParts(path: string): string[] {
-  return path
-    .replace(/\[(\d+)\]/g, ".$1")
-    .split(".")
-    .filter(Boolean);
-}
-
-export function safePath(path: string): boolean {
-  if (!path) return false;
-  return keyParts(path).every((key) => !RESERVED_KEYS.includes(key));
 }
 
 export function getAt(obj: unknown, path: string): unknown {
@@ -128,7 +117,10 @@ export function editorPayload(
   payload: WirePayload,
 ): WirePayload {
   const draft = cloneJson(payload);
-  draft.content = parseContentString(schema, draft.content);
+  // 仅当载荷确有 content 键时转换（XML 模板无 content，不能造出 undefined 键）
+  if ("content" in draft) {
+    draft.content = parseContentString(schema, draft.content);
+  }
   return draft;
 }
 
@@ -138,24 +130,63 @@ export function wirePayload(
   payload: WirePayload,
 ): WirePayload {
   const draft = cloneJson(payload);
-  draft.content = stringifyContentString(schema, draft.content);
+  if ("content" in draft) {
+    draft.content = stringifyContentString(schema, draft.content);
+  }
   return draft;
 }
 
 /**
- * 直发明文：wirePayload 的确定性 JSON 序列化，产出逐字节稳定的报文文本。
+ * 直发明文：按 schema.wire 产出逐字节稳定的报文文本。
  *
  * 键序规则（定死）：报文键序一律取载荷文档序——
  * - 模板载荷即官方黄金样本的文档序（事件信封在前，未知官方字段按原文位置）；
  * - 编辑新增字段按插入位置追加；JSON/持久化往返按文档序保序
  *   （Rust 端 serde_json 开启 preserve_order，见 src-tauri/Cargo.toml）。
- * 序列化选项固定：JSON.stringify 紧凑无空格（UTF-8 原文，不转义非 ASCII）。
+ * - 抖音（json）：JSON.stringify 紧凑无空格（UTF-8 原文，不转义非 ASCII）。
+ * - 企微（xml）：确定性 XML 拼装（元素序 = 文档序，CDATA/排版按 xmlLayout）。
  */
 export function wireBodyText(
   schema: EventSchema,
   payload: WirePayload,
 ): string {
+  if (schema.wire === "xml") {
+    return buildXmlBody(
+      requireXmlLayout(schema),
+      schema.fields.map((field) => field.path),
+      payload,
+    );
+  }
   return JSON.stringify(wirePayload(schema, payload));
+}
+
+/** 完整报文页的编辑文本：JSON 模板为 2 空格缩进；XML 模板即线上明文原文。 */
+export function wireDraftText(
+  schema: EventSchema,
+  payload: WirePayload,
+): string {
+  if (schema.wire === "xml") {
+    return wireBodyText(schema, payload);
+  }
+  return JSON.stringify(wirePayload(schema, payload), null, 2);
+}
+
+/** 完整报文文本 → 载荷（JSON 校验对象形态；XML 校验扁平元素结构）。 */
+export function parseWireDraft(schema: EventSchema, text: string): WirePayload {
+  if (schema.wire === "xml") {
+    return parseXmlBody(
+      schema.fields.map((field) => field.path),
+      text,
+    );
+  }
+  return parseWirePayload(text);
+}
+
+function requireXmlLayout(schema: EventSchema) {
+  if (!schema.xmlLayout) {
+    throw new Error(`模板 ${schema.id} 缺少 XML 排版规则。`);
+  }
+  return schema.xmlLayout;
 }
 
 /** 完整报文文本 → 载荷（JSON 校验：最外层必须是对象，路径安全）。 */
@@ -189,7 +220,7 @@ export function setPayloadField(
 export type EditorField = {
   path: string;
   title: string;
-  type: "string" | "number" | "boolean" | "json";
+  type: "string" | "number" | "boolean" | "json" | "numberString";
   group: string;
   description: string;
   required?: boolean;

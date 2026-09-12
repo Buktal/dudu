@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import { Button } from "@/components/ui/button";
+import { selectDraftChannelId } from "@/features/events";
 import { channelById } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 import type { AppDispatch, RootState } from "@/store";
@@ -38,10 +39,18 @@ export function DispatchPanel() {
   const result = useSelector((state: RootState) =>
     selectLastDispatch(state.runs),
   );
+  // 未配置指引按草稿渠道呈现（抖音/企微必填集不同；窄 selector 走 events index.ts）
+  const draftChannel = useSelector((state: RootState) =>
+    selectDraftChannelId(state),
+  );
   const [expanded, setExpanded] = useState(false);
 
   const step = result?.step;
-  const channel = step ? channelById(step.channel) : undefined;
+  const channel = step
+    ? channelById(step.channel)
+    : draftChannel
+      ? channelById(draftChannel)
+      : undefined;
 
   return (
     <>
@@ -67,7 +76,7 @@ export function DispatchPanel() {
           <>
             <Plug className="size-3.5 text-muted-foreground" aria-hidden />
             <span className="font-medium text-foreground">
-              尚未配置抖音连接
+              尚未配置{channel?.name ?? "平台"}连接
             </span>
             <span className="text-muted-foreground">
               直发需要目标地址与签名密钥，先到平台连接完成配置。

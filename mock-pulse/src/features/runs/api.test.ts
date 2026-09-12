@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ConnectionConfig } from "@/features/connections";
-import { dispatchDouyin, loadRuns, saveRun } from "./api";
+import { dispatchDouyin, dispatchWecom, loadRuns, saveRun } from "./api";
 import type { RunRecord } from "./model";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -69,6 +69,34 @@ describe("runs api 契约", () => {
     await expect(dispatchDouyin(connection, body)).resolves.toEqual(outcome);
     expect(invokeMock).toHaveBeenCalledWith("sends_dispatch_douyin", {
       config: connection,
+      body,
+    });
+  });
+
+  it("dispatchWecom 调用 sends_dispatch_wecom，传企微连接配置与明文 XML", async () => {
+    const wecom: ConnectionConfig = {
+      channel: "wecom",
+      url: "http://127.0.0.1:8080/webhooks/wecom",
+      corpId: "ww_corp",
+      token: "QDG6eK",
+      encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
+      agentId: "218",
+    };
+    const body = "<xml><ToUserName><![CDATA[ww_corp]]></ToUserName></xml>";
+    const outcome = {
+      signature: "a".repeat(40),
+      timestamp: "1409659813",
+      nonce: "1372623149",
+      status: 200,
+      elapsedMs: 9,
+      body: "success",
+      reply: null,
+      error: null,
+    };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(dispatchWecom(wecom, body)).resolves.toEqual(outcome);
+    expect(invokeMock).toHaveBeenCalledWith("sends_dispatch_wecom", {
+      config: wecom,
       body,
     });
   });

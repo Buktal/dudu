@@ -36,12 +36,12 @@ import {
 import {
   type EditorField,
   getAt,
-  parseWirePayload,
+  parseWireDraft,
   resolveEditorFields,
-  wirePayload,
+  wireDraftText,
 } from "../payload";
 import { describeExpected, RECEIPT_BODY_MODES } from "../receipt";
-import { schemaById } from "../schemas";
+import { type EventSchema, schemaById } from "../schemas";
 import {
   deleteEvent,
   discardDraft,
@@ -97,6 +97,7 @@ function fieldControl(
     field.value === undefined || field.value === null
       ? ""
       : String(field.value);
+  // numberString：64 位整型等大数字按文本输入处理，全程字符串不经 Number
   return (
     <Input
       aria-label={field.title}
@@ -104,6 +105,7 @@ function fieldControl(
       className={cn(
         "h-8 text-xs",
         field.format === "url" && "font-mono text-[11px]",
+        field.type === "numberString" && "font-mono text-[11px]",
       )}
       spellCheck={false}
       value={value}
@@ -163,10 +165,20 @@ function FieldRows({
   );
 }
 
-function VersionJson({ version }: { version: EventVersion }) {
+function VersionJson({
+  version,
+  schema,
+}: {
+  version: EventVersion;
+  schema: EventSchema;
+}) {
+  const text =
+    schema.wire === "xml"
+      ? wireDraftText(schema, version.payload)
+      : JSON.stringify(version.payload, null, 2);
   return (
     <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 font-mono text-[10px] leading-relaxed text-foreground">
-      {JSON.stringify(version.payload, null, 2)}
+      {text}
     </pre>
   );
 }
@@ -212,7 +224,8 @@ export function EventEditor() {
 
   const wireText = useMemo(() => {
     if (!draft || !schema) return "";
-    return JSON.stringify(wirePayload(schema, draft.payload), null, 2);
+    // 报文页文本：抖音 = 2 空格缩进 JSON；企微 = 线上 XML 明文原文
+    return wireDraftText(schema, draft.payload);
   }, [draft, schema]);
 
   useEffect(() => {
@@ -235,8 +248,9 @@ export function EventEditor() {
   }, [draftId, dispatch]);
 
   const applyRaw = (): boolean => {
+    if (!schema) return false;
     try {
-      const parsed = parseWirePayload(rawText);
+      const parsed = parseWireDraft(schema, rawText);
       dispatch(setDraftPayload(parsed));
       setRawError("");
       setApplied(true);
@@ -537,31 +551,35 @@ export function EventEditor() {
           <div className="flex h-full flex-col gap-3">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="font-mono text-[9px]">
-                平台原始 JSON
+                {schema.wire === "xml" ? "平台原始 XML" : "平台原始 JSON"}
               </Badge>
               <span className="grow" />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  try {
-                    setRawText(
-                      `${JSON.stringify(JSON.parse(rawText), null, 2)}`,
-                    );
-                    setRawError("");
-                  } catch {
-                    setRawError("报文还不是合法 JSON，无法格式化。");
-                  }
-                }}
-              >
-                格式化
-              </Button>
+              {schema.wire === "json" ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    try {
+                      setRawText(
+                        `${JSON.stringify(JSON.parse(rawText), null, 2)}`,
+                      );
+                      setRawError("");
+                    } catch {
+                      setRawError("报文还不是合法 JSON，无法格式化。");
+                    }
+                  }}
+                >
+                  格式化
+                </Button>
+              ) : null}
               <Button variant="secondary" size="sm" onClick={applyRaw}>
                 应用到字段
               </Button>
             </div>
             <Textarea
-              aria-label="完整 JSON 报文"
+              aria-label={
+                schema.wire === "xml" ? "完整 XML 报文" : "完整 JSON 报文"
+              }
               className="min-h-0 flex-1 resize-none font-mono text-[11px] leading-relaxed"
               spellCheck={false}
               value={rawText}
@@ -581,8 +599,9 @@ export function EventEditor() {
               </p>
             ) : (
               <p className="text-[10px] leading-relaxed text-muted-foreground">
-                字段编辑与完整报文共享同一份参数。手工新增的未知字段会原样保留，
-                表单中以「待补充说明」标注。
+                {schema.wire === "xml"
+                  ? "字段编辑与完整报文共享同一份参数。手工增补的未知元素按原文片段保留，表单中以「待补充说明」标注。"
+                  : "字段编辑与完整报文共享同一份参数。手工新增的未知字段会原样保留，表单中以「待补充说明」标注。"}
               </p>
             )}
           </div>
@@ -710,7 +729,7 @@ export function EventEditor() {
                   </div>
                   {viewing?.revision === version.revision ? (
                     <div className="border-t border-border p-3">
-                      <VersionJson version={version} />
+                      <VersionJson version={version} schema={schema} />
                     </div>
                   ) : null}
                 </div>

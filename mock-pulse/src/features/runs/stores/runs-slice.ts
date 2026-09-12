@@ -6,10 +6,17 @@ import type { RootState } from "@/store";
 
 import {
   dispatchDouyin as dispatchDouyinApi,
+  dispatchWecom as dispatchWecomApi,
   loadRuns,
   saveRun as saveRunApi,
 } from "../api";
-import { buildDirectRun, type RunRecord, type RunStep } from "../model";
+import {
+  buildDirectRun,
+  type RunRecord,
+  type RunStep,
+  type SendOutcome,
+  wecomSendOutcome,
+} from "../model";
 
 /**
  * 运行记录域状态：持久化列表 + 直发面板（最近一次直发结果）。
@@ -73,24 +80,38 @@ export const directDispatch = createAsyncThunk<
     // 未配置连接（缺条目/缺地址/缺密钥）：不报错，面板给「前往平台连接」指引
     return { kind: "needConnection" };
   }
-  // 直发命令目前仅抖音（sends_dispatch_douyin）；switch 穷尽——新增渠道时
-  // 编译期在此强制显式决策（企微直发 #18 扩展，其余渠道同走连接指引）
+  // 直发明文按渠道 wire 形态确定性拼装（抖音紧凑 JSON / 企微 XML），
+  // 直发命令按渠道路由（douyin=JSON 签名 POST、wecom=XML 加密信封 POST）；
+  // switch 穷尽——新增渠道时编译期在此强制显式决策
+  const body = wireBodyText(schemaById(draft.schemaId), draft.payload);
+  let outcome: SendOutcome;
   switch (connection.channel) {
-    case "douyin":
+    case "douyin": {
+      const sent = await dispatchDouyinApi(connection, body);
+      outcome = {
+        signature: sent.signature,
+        msgId: sent.msgId,
+        status: sent.status,
+        elapsedMs: sent.elapsedMs,
+        body: sent.body,
+        error: sent.error,
+      };
       break;
-    case "wecom":
-      return { kind: "needConnection" };
+    }
+    case "wecom": {
+      const sent = await dispatchWecomApi(connection, body);
+      outcome = wecomSendOutcome(sent);
+      break;
+    }
     default: {
       const exhaustive: never = connection;
       return exhaustive;
     }
   }
-  const schema = schemaById(draft.schemaId);
-  const body = wireBodyText(schema, draft.payload);
-  const outcome = await dispatchDouyinApi(connection, body);
   const verdict = compareReceipt(draft.expected, {
     status: outcome.status,
     body: outcome.body,
+    reply: outcome.reply ?? undefined,
   });
   const run = buildDirectRun({
     draft,

@@ -4,6 +4,8 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 
+import type { ChannelId } from "@/lib/channels";
+
 import {
   deleteEventById as deleteEventApi,
   loadEvents,
@@ -237,4 +239,13 @@ export function selectSelectedId(state: EventsState): string | null {
 
 export function selectLoaded(state: EventsState): boolean {
   return state.loaded;
+}
+
+/** 当前草稿渠道（跨 feature 消费：直发面板的未配置指引按渠道呈现）。
+ *  入参收 RootState 形状（含 events 键即可），避免外部直读 draft 形状。 */
+export function selectDraftChannelId(
+  state: EventsState | { events: EventsState },
+): ChannelId | undefined {
+  const events = "events" in state ? state.events : state;
+  return events.draft?.channelId;
 }

@@ -112,6 +112,74 @@ describe("filterEvents", () => {
       ),
     ).toBe(true);
   });
+
+  it("企微与抖音事件在同一素材库共存，渠道筛选正确分流且模板可解析", () => {
+    const items: EventItem[] = [
+      {
+        id: "evt-dy",
+        name: "抖音文本",
+        channelId: "douyin",
+        schemaId: "dy-text",
+        versions: [
+          {
+            revision: 1,
+            savedAt: "2026-09-12T01:00:00.000Z",
+            payload: { event: "im_receive_msg" },
+            expected: { status: 200, body: "", bodyMode: "contains" },
+          },
+        ],
+      },
+      {
+        id: "evt-wc-text",
+        name: "企微文本",
+        channelId: "wecom",
+        schemaId: "wc-text",
+        versions: [
+          {
+            revision: 1,
+            savedAt: "2026-09-12T02:00:00.000Z",
+            payload: { MsgType: "text" },
+            expected: { status: 200, body: "", bodyMode: "contains" },
+          },
+        ],
+      },
+      {
+        id: "evt-wc-enter",
+        name: "企微进入会话",
+        channelId: "wecom",
+        schemaId: "wc-enter",
+        versions: [
+          {
+            revision: 1,
+            savedAt: "2026-09-12T03:00:00.000Z",
+            payload: { Event: "enter_agent" },
+            expected: { status: 200, body: "", bodyMode: "contains" },
+          },
+        ],
+      },
+    ];
+
+    const wecom = filterEvents(items, { ...NO_FILTERS, channel: "wecom" });
+    expect(wecom.map((row) => row.item.id)).toEqual([
+      "evt-wc-enter",
+      "evt-wc-text",
+    ]);
+    expect(wecom.every((row) => row.item.channelId === "wecom")).toBe(true);
+    expect(wecom.map((row) => row.schema?.id)).toEqual(["wc-enter", "wc-text"]);
+
+    const douyin = filterEvents(items, { ...NO_FILTERS, channel: "douyin" });
+    expect(douyin.map((row) => row.item.id)).toEqual(["evt-dy"]);
+    expect(douyin[0]?.schema?.id).toBe("dy-text");
+
+    // 企微事件按 schema 的 kind 正确分类（wc-text=消息、wc-enter=事件）
+    expect(
+      filterEvents(items, {
+        ...NO_FILTERS,
+        channel: "wecom",
+        kind: "event",
+      }).map((row) => row.item.id),
+    ).toEqual(["evt-wc-enter"]);
+  });
 });
 
 describe("paginateEvents", () => {

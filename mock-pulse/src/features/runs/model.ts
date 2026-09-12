@@ -1,6 +1,6 @@
 import type { EventDraft } from "@/features/events";
 import type { ChannelId } from "@/lib/channels";
-import type { DispatchOutcome } from "./api";
+import type { WecomDispatchOutcome } from "./api";
 
 /**
  * 运行记录领域模型：一次运行 = 步骤快照数组。
@@ -13,6 +13,8 @@ export type ReceiptSnapshot = {
   status: number;
   elapsedMs: number;
   body: string;
+  /** 企微加密被动回复解密后的明文（非企微渠道/未回加密包为空） */
+  reply?: string | null;
   error: string | null;
 };
 
@@ -36,12 +38,14 @@ export type RunStep = {
   channel: ChannelId;
   /** 发送目标地址快照 */
   url: string;
-  /** 发出的明文载荷快照（逐字节与发送一致） */
+  /** 发出的明文载荷快照（逐字节与发送一致；企微为加密前的明文 XML） */
   payload: string;
-  /** 签名头快照（X-Douyin-Signature） */
+  /** 签名快照：抖音 X-Douyin-Signature 头 / 企微 msg_signature 查询参数 */
   signature: string;
-  /** Msg-Id 头快照 */
+  /** 发送唯一标识快照：抖音 Msg-Id 头 / 企微 nonce */
   msgId: string;
+  /** 企微 msg_signature 的 timestamp（秒级字符串；抖音为空） */
+  timestamp?: string;
   receipt: ReceiptSnapshot;
   verdict: RunVerdict;
 };
@@ -62,12 +66,40 @@ export function newRunId(): string {
   return `run-${Date.now().toString(36)}-${idCounter.toString(36)}`;
 }
 
-/** 直发 = 单步运行记录：载荷、签名头与回执全部落快照。 */
+/** 渠道直发结果的公共形态（抖音/企微命令返回值归一后落记录） */
+export type SendOutcome = {
+  signature: string;
+  msgId: string;
+  timestamp?: string;
+  status: number;
+  elapsedMs: number;
+  body: string;
+  reply?: string | null;
+  error: string | null;
+};
+
+/** 企微命令返回值 → 公共形态（nonce 充当发送唯一标识快照） */
+export function wecomSendOutcome(outcome: WecomDispatchOutcome): SendOutcome {
+  return {
+    signature: outcome.signature,
+    msgId: outcome.nonce,
+    timestamp: outcome.timestamp,
+    status: outcome.status,
+    elapsedMs: outcome.elapsedMs,
+    body: outcome.body,
+    reply: outcome.reply,
+    error: outcome.error,
+  };
+}
+
+/** 直发 = 单步运行记录：载荷、签名与回执全部落快照。
+ *  outcome 为渠道命令返回值的公共形态（抖音 DispatchOutcome 结构可直传：
+ *  timestamp/reply 为可选字段，缺省即 undefined）。 */
 export function buildDirectRun(input: {
   draft: EventDraft;
   url: string;
   body: string;
-  outcome: DispatchOutcome;
+  outcome: SendOutcome;
   verdict: RunVerdict;
   startedAt: string;
 }): RunRecord {
@@ -85,10 +117,12 @@ export function buildDirectRun(input: {
         payload: body,
         signature: outcome.signature,
         msgId: outcome.msgId,
+        timestamp: outcome.timestamp,
         receipt: {
           status: outcome.status,
           elapsedMs: outcome.elapsedMs,
           body: outcome.body,
+          reply: outcome.reply,
           error: outcome.error,
         },
         verdict,

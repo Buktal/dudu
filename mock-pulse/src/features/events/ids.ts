@@ -12,7 +12,10 @@ import type { EventSchema, IdKind } from "./schemas";
  * - open_id：uuid v4 风格
  * - 会话/消息 ID：`@` 开头 base64 风格加密串
  * - log_id：32 位十六进制串（日期时间前缀 + hex 后缀，官方样本形态）
- * - create_time：13 位毫秒时间戳
+ * - create_time：13 位毫秒时间戳（抖音）
+ * - createTimeSec：10 位秒级时间戳（企微；字符串形态）
+ * - msgId64：64 位整型消息 ID（企微 MsgId；18 位数字串，恒在 int64 内，
+ *   全程字符串不经 number，防 2^53 精度丢失）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -54,6 +57,21 @@ export function generateCreateTimeMs(): number {
   return Date.now();
 }
 
+/** 企微 CreateTime：10 位 Unix 秒级时间戳（字符串形态，XML 裸文本输出） */
+export function generateCreateTimeSec(): string {
+  return String(Math.floor(Date.now() / 1000));
+}
+
+/** 企微 MsgId：18 位数字串（首位非零，恒 < 2^63-1） */
+export function generateMsgId64(): string {
+  const bytes = randomBytes(18);
+  let out = String((bytes[0] % 9) + 1);
+  for (let i = 1; i < 18; i += 1) {
+    out += String(bytes[i] % 10);
+  }
+  return out;
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -61,6 +79,8 @@ const GENERATORS: Record<IdKind, Generator> = {
   encryptedId: generateEncryptedId,
   logId: generateLogId,
   createTimeMs: generateCreateTimeMs,
+  createTimeSec: generateCreateTimeSec,
+  msgId64: generateMsgId64,
 };
 
 /**
@@ -75,7 +95,11 @@ export function applyGeneratedIds(
   payload: Record<string, unknown>,
 ): Record<string, unknown> {
   const draft: Record<string, unknown> = cloneJson(payload);
-  draft.content = parseContentString(schema, draft.content);
+  // contentString 转换只在载荷确有 content 键时进行（XML 模板无 content，
+  // 不能凭空造出 undefined 键污染脏检查）
+  if ("content" in draft) {
+    draft.content = parseContentString(schema, draft.content);
+  }
 
   const shared = new Map<string, string | number>();
   for (const rule of schema.idGenerations) {
@@ -90,6 +114,8 @@ export function applyGeneratedIds(
     setAt(draft, rule.path, value);
   }
 
-  draft.content = stringifyContentString(schema, draft.content);
+  if ("content" in draft) {
+    draft.content = stringifyContentString(schema, draft.content);
+  }
   return draft;
 }

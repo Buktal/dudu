@@ -6,13 +6,13 @@ import {
   draftFromItem,
   type EventItem,
 } from "./model";
+import { safePath } from "./paths";
 import {
   editorPayload,
   flattenPayload,
   getAt,
   parseWirePayload,
   resolveEditorFields,
-  safePath,
   setAt,
   setPayloadField,
   syncSenderIdentity,

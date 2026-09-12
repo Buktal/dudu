@@ -10,8 +10,12 @@ import { schemaById } from "./schemas";
  * 保存 = 追加不可变版本（保存时间 + 来源草稿快照）；旧版本可回看。
  */
 
-/** 期望回执的正文形态：包含 / 完全一致 / JSON 字段子集匹配 */
-export type ReceiptBodyMode = "contains" | "equals" | "jsonField";
+/** 期望回执的正文形态：包含 / 完全一致 / JSON 字段子集匹配 / 企微回执形态 */
+export type ReceiptBodyMode =
+  | "contains"
+  | "equals"
+  | "jsonField"
+  | "wecomReply";
 
 export type ExpectedReceipt = {
   status: number;

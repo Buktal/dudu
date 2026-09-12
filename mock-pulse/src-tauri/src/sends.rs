@@ -1,7 +1,8 @@
-//! 直发域：把前端逐字节拼装好的明文按渠道协议签名并真实 POST 到目标地址。
-//! Rust 只负责签名、头部构造与网络，不重新解析/重排 body。
+//! 直发域：把前端逐字节拼装好的明文按渠道协议处理并真实 POST 到目标地址。
+//! Rust 只负责签名/加密、头部构造与网络，不重新解析/重排 body。
 
 use crate::connections::douyin::{self, DispatchOutcome};
+use crate::connections::wecom::{self, WecomDispatchOutcome};
 use crate::connections::ConnectionConfig;
 
 /// 抖音直发：X-Douyin-Signature = sha1hex(client_secret + body)、Msg-Id = uuid v4。
@@ -13,6 +14,21 @@ pub async fn sends_dispatch_douyin(
 ) -> Result<DispatchOutcome, String> {
     tauri::async_runtime::spawn_blocking(move || {
         douyin::dispatch_event(&douyin::handshake_client(), &config, &body)
+    })
+    .await
+    .map_err(|err| err.to_string())
+}
+
+/// 企微直发：明文 XML → AES 加密信封（receiveid=corpId）→
+/// msg_signature 四值签名 → text/xml POST；加密被动回复解密明文一并返回。
+/// 网络等待放到阻塞线程池，避免卡住主线程。
+#[tauri::command]
+pub async fn sends_dispatch_wecom(
+    config: ConnectionConfig,
+    body: String,
+) -> Result<WecomDispatchOutcome, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        wecom::dispatch_event(&wecom::dispatch_client(), &config, &body)
     })
     .await
     .map_err(|err| err.to_string())

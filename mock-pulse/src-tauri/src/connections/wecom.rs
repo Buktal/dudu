@@ -10,6 +10,7 @@ use aes::cipher::{block_padding::NoPadding, BlockDecryptMut, BlockEncryptMut, Ke
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use base64::Engine;
+use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use std::time::Duration;
 
@@ -27,9 +28,7 @@ const BASE64_LENIENT: GeneralPurpose = GeneralPurpose::new(
 /// AES-256-CBC 编码器（底层块运算；补位按企微 PKCS#7-32 自实现，故用 NoPadding）。
 type Aes256CbcEnc = cbc::Encryptor<aes::Aes256>;
 
-// 解密路径：生产链路当前仅加密（本工具模拟企微推送方）；解密是官方算法的
-// 成对实现——黄金例验收载体，也是后续解析加密被动回复的现成入口。
-#[allow(dead_code)]
+/// AES-256-CBC 解码器（解密路径：黄金例验收 + 加密被动回复明文解析）。
 type Aes256CbcDec = cbc::Decryptor<aes::Aes256>;
 
 /// 企微补位块大小：RFC 2315 语义下的 32 字节（不是常见 AES 的 16）。
@@ -60,7 +59,6 @@ pub fn derive_aes_key(encoding_aes_key: &str) -> Result<[u8; 32], String> {
 }
 
 /// 企微 PKCS#7 去补位：以 32 字节块为单位（补位值 1..=32，整段同值）。
-#[allow(dead_code)]
 fn pkcs7_unpad_32(data: &[u8]) -> Result<&[u8], String> {
     let Some((&last, _)) = data.split_last() else {
         return Err("解密结果为空，无法去补位".into());
@@ -77,7 +75,6 @@ fn pkcs7_unpad_32(data: &[u8]) -> Result<&[u8], String> {
 
 /// 企微 AES-256-CBC 解密：IV = key 前 16 字节，密文须为 16 字节块整数倍，
 /// 解出后按 32 字节块 PKCS#7 去补位。
-#[allow(dead_code)]
 pub fn aes_decrypt(key: &[u8; 32], data: &[u8]) -> Result<Vec<u8>, String> {
     let decryptor = Aes256CbcDec::new_from_slices(key, &key[..16])
         .map_err(|err| format!("AES 解密器初始化失败：{err}"))?;
@@ -89,7 +86,6 @@ pub fn aes_decrypt(key: &[u8; 32], data: &[u8]) -> Result<Vec<u8>, String> {
 }
 
 /// 解密结果：明文字节 + 尾部 receiveid（企业应用回调即 corpid）。
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecryptedMsg {
     pub msg: Vec<u8>,
@@ -98,7 +94,6 @@ pub struct DecryptedMsg {
 
 /// 解密 msg_encrypt：Base64 → AES 解密 → 去 16 随机字节 → 读 4 字节大端
 /// msg_len → 截 msg → 余下为 receiveid。
-#[allow(dead_code)]
 pub fn decrypt_msg(encoding_aes_key: &str, msg_encrypt: &str) -> Result<DecryptedMsg, String> {
     let key = derive_aes_key(encoding_aes_key)?;
     let raw = BASE64
@@ -284,6 +279,151 @@ pub fn verify_handshake(
 pub fn handshake_client() -> reqwest::blocking::Client {
     reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(1))
+        .build()
+        .expect("构造 reqwest 客户端失败")
+}
+
+/// 企微直发结果：加密信封协议要素快照 + 回执事实。
+/// status 0 = 未收到响应（超时/连接失败，原因在 error）；
+/// reply = 加密被动回复解密后的明文（目标未回加密包时为 None）。
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WecomDispatchOutcome {
+    pub signature: String,
+    pub timestamp: String,
+    pub nonce: String,
+    pub status: u16,
+    pub elapsed_ms: u64,
+    pub body: String,
+    pub reply: Option<String>,
+    pub error: Option<String>,
+}
+
+/// POST 业务推送信封（官方 §5.1 示例元素序：ToUserName → Encrypt → AgentID）。
+/// 明文 XML 字节透传进 Encrypt，不重排。
+fn build_envelope_xml(corp_id: &str, msg_encrypt: &str, agent_id: &str) -> String {
+    format!(
+        "<xml><ToUserName><![CDATA[{corp_id}]]></ToUserName>\
+         <Encrypt><![CDATA[{msg_encrypt}]]></Encrypt>\
+         <AgentID><![CDATA[{agent_id}]]></AgentID></xml>"
+    )
+}
+
+/// 从回执文本提取加密被动回复的 Encrypt 密文（§3.5 包结构；无则 None）。
+fn extract_reply_encrypt(body: &str) -> Option<&str> {
+    const OPEN: &str = "<Encrypt><![CDATA[";
+    let start = body.find(OPEN)? + OPEN.len();
+    let end = start + body[start..].find("]]>")?;
+    Some(&body[start..end])
+}
+
+/// 未发出请求即失败（配置不匹配/加密失败）的空回执：不携带任何随机值。
+fn failed_outcome(error: String) -> WecomDispatchOutcome {
+    WecomDispatchOutcome {
+        signature: String::new(),
+        timestamp: String::new(),
+        nonce: String::new(),
+        status: 0,
+        elapsed_ms: 0,
+        body: String::new(),
+        reply: None,
+        error: Some(error),
+    }
+}
+
+/// 企微直发一条事件：明文 XML → 加密信封（receiveid=corpId）→
+/// 四值字典序签名 → text/xml POST（msg_signature/timestamp/nonce 查询参数）。
+/// 回执按企微语义处理：空串 / success 原样返回；
+/// 若回执是加密被动回复包则解密出明文一并返回（入运行记录）。
+pub fn dispatch_event(
+    client: &reqwest::blocking::Client,
+    config: &ConnectionConfig,
+    plaintext: &str,
+) -> WecomDispatchOutcome {
+    let ConnectionConfig::Wecom {
+        url,
+        corp_id,
+        token,
+        encoding_aes_key,
+        agent_id,
+    } = config
+    else {
+        return failed_outcome("配置不是企业微信渠道，无法直发".into());
+    };
+
+    let msg_encrypt = match encrypt_msg(
+        encoding_aes_key,
+        &random_16(),
+        plaintext.as_bytes(),
+        corp_id,
+    ) {
+        Ok(value) => value,
+        Err(reason) => return failed_outcome(reason),
+    };
+    let timestamp = unix_timestamp_secs().to_string();
+    let nonce = uuid::Uuid::new_v4().simple().to_string();
+    let signature = build_signature(token, &timestamp, &nonce, &msg_encrypt);
+    let envelope = build_envelope_xml(corp_id, &msg_encrypt, agent_id);
+    let started = std::time::Instant::now();
+
+    let response = client
+        .post(url)
+        .query(&[
+            ("msg_signature", signature.as_str()),
+            ("timestamp", timestamp.as_str()),
+            ("nonce", nonce.as_str()),
+        ])
+        .header("Content-Type", "text/xml")
+        .body(envelope)
+        .send();
+
+    let elapsed_ms = started.elapsed().as_millis() as u64;
+    match response {
+        Ok(response) => {
+            let status = response.status().as_u16();
+            let body = response.text().unwrap_or_default();
+            let reply = extract_reply_encrypt(&body).and_then(|encrypt| {
+                decrypt_msg(encoding_aes_key, encrypt)
+                    .ok()
+                    .map(|decrypted| String::from_utf8_lossy(&decrypted.msg).to_string())
+            });
+            WecomDispatchOutcome {
+                signature,
+                timestamp,
+                nonce,
+                status,
+                elapsed_ms,
+                body,
+                reply,
+                error: None,
+            }
+        }
+        Err(err) => {
+            let reason = if err.is_timeout() {
+                "等待响应超时"
+            } else if err.is_connect() {
+                "无法连接到目标地址"
+            } else {
+                "请求发送失败"
+            };
+            WecomDispatchOutcome {
+                signature,
+                timestamp,
+                nonce,
+                status: 0,
+                elapsed_ms,
+                body: String::new(),
+                reply: None,
+                error: Some(format!("{reason}：{err}")),
+            }
+        }
+    }
+}
+
+/// 直发用默认客户端：对齐官方 5 秒应答窗口，本地留 5s 上限。
+pub fn dispatch_client() -> reqwest::blocking::Client {
+    reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(5))
         .build()
         .expect("构造 reqwest 客户端失败")
 }
@@ -621,5 +761,267 @@ mod tests {
             GOLDEN_ENCRYPT,
         );
         assert_eq!(signature, GOLDEN_SIGNATURE);
+    }
+
+    // ---- 直发全链路：本地 TcpListener 覆盖加密信封 / 三种回执形态 / 非 200 / 超时 ----
+
+    #[derive(Clone)]
+    struct RecordedPost {
+        request_line: String,
+        head: String,
+        body: String,
+    }
+
+    impl RecordedPost {
+        fn header(&self, name: &str) -> Option<String> {
+            self.head.lines().find_map(|line| {
+                let (key, value) = line.split_once(':')?;
+                if key.trim().eq_ignore_ascii_case(name) {
+                    Some(value.trim().to_string())
+                } else {
+                    None
+                }
+            })
+        }
+    }
+
+    /// 读完整 POST 请求（请求头 + Content-Length 定长的 body）。
+    fn read_head_and_body(stream: &mut TcpStream) -> RecordedPost {
+        let mut buf = Vec::new();
+        let mut chunk = [0u8; 4096];
+        loop {
+            let n = stream.read(&mut chunk).unwrap();
+            assert!(n > 0, "客户端提前断开");
+            buf.extend_from_slice(&chunk[..n]);
+            if let Some(split) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                let head = String::from_utf8_lossy(&buf[..split]).to_string();
+                let content_length = head
+                    .lines()
+                    .find_map(|line| {
+                        let (k, v) = line.split_once(':')?;
+                        if k.trim().eq_ignore_ascii_case("content-length") {
+                            v.trim().parse::<usize>().ok()
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(0);
+                if buf.len() >= split + 4 + content_length {
+                    return RecordedPost {
+                        request_line: head.lines().next().unwrap_or_default().to_string(),
+                        head,
+                        body: String::from_utf8_lossy(&buf[split + 4..split + 4 + content_length])
+                            .to_string(),
+                    };
+                }
+            }
+        }
+    }
+
+    /// 起一个只处理一次 POST 的本地监听；responder 决定状态行与响应体。
+    fn start_post_server(
+        responder: fn(&RecordedPost) -> (String, String),
+        delay: Duration,
+    ) -> (SocketAddr, Receiver<RecordedPost>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let (tx, rx) = channel();
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let request = read_head_and_body(&mut stream);
+            tx.send(request.clone()).unwrap();
+            std::thread::sleep(delay);
+            let (status_line, body) = responder(&request);
+            let response = format!(
+                "{status_line}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(response.as_bytes()).unwrap();
+            stream.shutdown(Shutdown::Both).unwrap();
+        });
+        (addr, rx)
+    }
+
+    /// 测试侧独立提取信封密文（朴素扫描，不复用生产实现，避免同函数自证）。
+    fn naive_extract_encrypt(envelope: &str) -> &str {
+        let open = "<Encrypt><![CDATA[";
+        let start = envelope.find(open).expect("信封应含 Encrypt 元素") + open.len();
+        let end = start + envelope[start..].find("]]>").expect("Encrypt 应有 CDATA 闭合");
+        &envelope[start..end]
+    }
+
+    /// 官方被动回复明文（§5.8 逐字：方向反转，ToUserName=成员、FromUserName=CorpID）。
+    const REPLY_PLAINTEXT: &str = concat!(
+        "<xml>\n",
+        "   <ToUserName><![CDATA[fromUser]]></ToUserName>\n",
+        "   <FromUserName><![CDATA[wx5823bf96d3bd56c7]]></FromUserName> \n",
+        "   <CreateTime>1348831860</CreateTime>\n",
+        "   <MsgType><![CDATA[text]]></MsgType>\n",
+        "   <Content><![CDATA[this is a test]]></Content>\n",
+        "</xml>",
+    );
+
+    /// 目标按官方 §3.5 构造加密被动回复包（固定随机数，便于逐字断言）。
+    fn passive_reply_envelope() -> String {
+        let encrypt =
+            encrypt_msg(GOLDEN_ENCODING_AES_KEY, &[3u8; 16], REPLY_PLAINTEXT.as_bytes(), GOLDEN_CORP_ID)
+                .unwrap();
+        let signature = build_signature(GOLDEN_TOKEN, "1409659813", "1372623149", &encrypt);
+        format!(
+            "<xml>\n   <Encrypt><![CDATA[{encrypt}]]></Encrypt>\n   <MsgSignature><![CDATA[{signature}]]></MsgSignature>\n   <TimeStamp>1409659813</TimeStamp>\n   <Nonce><![CDATA[1372623149]]></Nonce>\n</xml>"
+        )
+    }
+
+    #[test]
+    fn dispatch_delivers_envelope_independently_decryptable_verbatim() {
+        let empty_receipt: fn(&RecordedPost) -> (String, String) =
+            |_| ("HTTP/1.1 200 OK".into(), String::new());
+        let (addr, rx) = start_post_server(empty_receipt, Duration::ZERO);
+        let config = wecom_config(format!("http://{addr}/hook"));
+        // 前端确定性拼装的明文 XML（含非 ASCII，验证 UTF-8 字节透传）
+        let plaintext = "<xml>\n   <ToUserName><![CDATA[wx5823bf96d3bd56c7]]></ToUserName>\n   <MsgType><![CDATA[text]]></MsgType>\n   <Content><![CDATA[你好，企业微信]]></Content>\n</xml>";
+
+        let outcome =
+            dispatch_event(&quick_client(Duration::from_secs(2)), &config, plaintext);
+
+        assert_eq!(outcome.status, 200);
+        assert_eq!(outcome.body, "");
+        assert_eq!(outcome.reply, None);
+        assert_eq!(outcome.error, None);
+
+        let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        // 请求行：POST + msg_signature/timestamp/nonce 查询参数
+        assert!(request.request_line.starts_with("POST /hook?"), "{}", request.request_line);
+        let query = query_of(&request.request_line);
+        for key in ["msg_signature", "timestamp", "nonce"] {
+            assert!(query.contains_key(key), "缺少 {key} 参数：{query:?}");
+        }
+        assert_eq!(request.header("Content-Type").as_deref(), Some("text/xml"));
+        // 信封结构：官方 §5.1 元素序 ToUserName→Encrypt→AgentID
+        let ciphertext = naive_extract_encrypt(&request.body);
+        let expected_envelope = format!(
+            "<xml><ToUserName><![CDATA[{GOLDEN_CORP_ID}]]></ToUserName><Encrypt><![CDATA[{ciphertext}]]></Encrypt><AgentID><![CDATA[218]]></AgentID></xml>"
+        );
+        assert_eq!(request.body, expected_envelope, "信封应逐字节等于官方形态");
+        // 独立解密回原明文（decrypt_msg 已由官方黄金密文独立验证）
+        let decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, ciphertext).unwrap();
+        assert_eq!(decrypted.msg, plaintext.as_bytes());
+        assert_eq!(decrypted.receiveid, GOLDEN_CORP_ID);
+        // msg_signature = sha1(token/timestamp/nonce/密文 四值字典序)，与快照一致
+        assert_eq!(
+            query["msg_signature"],
+            build_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"], ciphertext)
+        );
+        assert_eq!(outcome.signature, query["msg_signature"]);
+        assert_eq!(outcome.timestamp, query["timestamp"]);
+        assert_eq!(outcome.nonce, query["nonce"]);
+    }
+
+    #[test]
+    fn dispatch_returns_success_receipt_verbatim() {
+        let success: fn(&RecordedPost) -> (String, String) =
+            |_| ("HTTP/1.1 200 OK".into(), "success".into());
+        let (addr, _rx) = start_post_server(success, Duration::ZERO);
+        let config = wecom_config(format!("http://{addr}/hook"));
+
+        let outcome = dispatch_event(
+            &quick_client(Duration::from_secs(2)),
+            &config,
+            "<xml><MsgType><![CDATA[event]]></MsgType></xml>",
+        );
+
+        assert_eq!(outcome.status, 200);
+        assert_eq!(outcome.body, "success");
+        assert_eq!(outcome.reply, None);
+        assert_eq!(outcome.error, None);
+    }
+
+    #[test]
+    fn dispatch_decrypts_encrypted_passive_reply_into_record() {
+        let reply: fn(&RecordedPost) -> (String, String) =
+            |_| ("HTTP/1.1 200 OK".into(), passive_reply_envelope());
+        let (addr, _rx) = start_post_server(reply, Duration::ZERO);
+        let config = wecom_config(format!("http://{addr}/hook"));
+
+        let outcome = dispatch_event(
+            &quick_client(Duration::from_secs(2)),
+            &config,
+            "<xml><MsgType><![CDATA[text]]></MsgType></xml>",
+        );
+
+        // 原始回执原样保留；解密明文一并返回（入运行记录）
+        assert_eq!(outcome.status, 200);
+        assert_eq!(outcome.body, passive_reply_envelope());
+        assert_eq!(outcome.reply, Some(REPLY_PLAINTEXT.to_string()));
+        assert_eq!(outcome.error, None);
+    }
+
+    #[test]
+    fn dispatch_reports_non_200_status_and_body() {
+        let boom: fn(&RecordedPost) -> (String, String) =
+            |_| ("HTTP/1.1 500 Internal Server Error".into(), "boom".into());
+        let (addr, _rx) = start_post_server(boom, Duration::ZERO);
+        let config = wecom_config(format!("http://{addr}/hook"));
+
+        let outcome = dispatch_event(
+            &quick_client(Duration::from_secs(2)),
+            &config,
+            "<xml></xml>",
+        );
+
+        assert_eq!(outcome.status, 500);
+        assert_eq!(outcome.body, "boom");
+        assert_eq!(outcome.reply, None);
+        assert_eq!(outcome.error, None, "非 200 是回执事实，不是发送错误");
+    }
+
+    #[test]
+    fn dispatch_reports_timeout_without_response() {
+        let slow: fn(&RecordedPost) -> (String, String) =
+            |_| ("HTTP/1.1 200 OK".into(), "success".into());
+        let (addr, _rx) = start_post_server(slow, Duration::from_secs(1));
+        let config = wecom_config(format!("http://{addr}/hook"));
+
+        let outcome = dispatch_event(
+            &quick_client(Duration::from_millis(200)),
+            &config,
+            "<xml></xml>",
+        );
+
+        assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
+        let error = outcome.error.clone().expect("应有错误原因");
+        assert!(error.contains("超时"), "{outcome:?}");
+        assert_eq!(outcome.body, "");
+        assert_eq!(outcome.reply, None);
+    }
+
+    #[test]
+    fn dispatch_rejects_non_wecom_config() {
+        let config = ConnectionConfig::Douyin {
+            url: "http://127.0.0.1:1/hook".into(),
+            client_key: "tt_key".into(),
+            client_secret: "tt_secret".into(),
+        };
+        let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, "<xml/>");
+        assert_eq!(outcome.status, 0);
+        assert!(outcome.error.unwrap().contains("不是企业微信渠道"));
+    }
+
+    #[test]
+    fn wecom_dispatch_outcome_serializes_camel_case_for_frontend() {
+        let outcome = WecomDispatchOutcome {
+            signature: "a".repeat(40),
+            timestamp: "1409659813".into(),
+            nonce: "1372623149".into(),
+            status: 200,
+            elapsed_ms: 9,
+            body: "success".into(),
+            reply: Some("<xml/>".into()),
+            error: None,
+        };
+        let raw = serde_json::to_string(&outcome).unwrap();
+        assert!(raw.contains("\"elapsedMs\""));
+        assert!(raw.contains("\"reply\""));
+        assert!(!raw.contains("elapsed_ms"));
     }
 }

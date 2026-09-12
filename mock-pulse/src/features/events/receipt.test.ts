@@ -129,6 +129,71 @@ describe("compareReceipt 正文形态", () => {
   });
 });
 
+describe("compareReceipt 企微回执形态（wecomReply）", () => {
+  const wecomFact = (body: string, reply: string | null = null) => ({
+    status: 200,
+    body,
+    reply,
+  });
+
+  it("期望空串：仅回执正文为空串时通过（success 或加密包都不算空串）", () => {
+    const expected = {
+      status: 200,
+      body: "",
+      bodyMode: "wecomReply",
+    } as const;
+    expect(compareReceipt(expected, wecomFact("")).passed).toBe(true);
+    expect(compareReceipt(expected, wecomFact("success")).passed).toBe(false);
+    expect(compareReceipt(expected, wecomFact("<xml>…</xml>")).passed).toBe(
+      false,
+    );
+  });
+
+  it("期望 success：逐字相等，官方要求不带引号", () => {
+    const expected = {
+      status: 200,
+      body: "success",
+      bodyMode: "wecomReply",
+    } as const;
+    expect(compareReceipt(expected, wecomFact("success")).passed).toBe(true);
+    expect(compareReceipt(expected, wecomFact('"success"')).passed).toBe(false);
+    expect(compareReceipt(expected, wecomFact("")).passed).toBe(false);
+    expect(compareReceipt(expected, wecomFact("SUCCESS")).passed).toBe(false);
+  });
+
+  it("期望加密被动回复：解密明文包含期望片段即通过", () => {
+    const expected = {
+      status: 200,
+      body: "<Content><![CDATA[this is a test]]></Content>",
+      bodyMode: "wecomReply",
+    } as const;
+    const reply =
+      "<xml><ToUserName><![CDATA[fromUser]]></ToUserName><Content><![CDATA[this is a test]]></Content></xml>";
+    const rawEnvelope =
+      "<xml><Encrypt><![CDATA[RypEvHKD8QQK…]]></Encrypt><MsgSignature><![CDATA[sig]]></MsgSignature></xml>";
+    const verdict = compareReceipt(expected, wecomFact(rawEnvelope, reply));
+    expect(verdict.passed).toBe(true);
+    expect(verdict.reason).toContain("解密");
+  });
+
+  it("期望加密被动回复但目标未回加密包：不通过，原因可读", () => {
+    const expected = {
+      status: 200,
+      body: "<Content><![CDATA[hi]]></Content>",
+      bodyMode: "wecomReply",
+    } as const;
+    const noReply = compareReceipt(expected, wecomFact("success", null));
+    expect(noReply.passed).toBe(false);
+    expect(noReply.reason).toContain("加密被动回复");
+
+    const wrongReply = compareReceipt(
+      expected,
+      wecomFact("<xml>…</xml>", "<xml><Other/></xml>"),
+    );
+    expect(wrongReply.passed).toBe(false);
+  });
+});
+
 describe("describeExpected", () => {
   it("描述期望：仅状态 / 状态 + 正文形态", () => {
     expect(describeExpected(DEFAULT_EXPECTED)).toBe(
@@ -147,5 +212,17 @@ describe("describeExpected", () => {
         bodyMode: "jsonField",
       }),
     ).toBe('期望 HTTP 200，正文含 JSON 字段「{"code":0}」');
+    expect(
+      describeExpected({ status: 200, body: "", bodyMode: "wecomReply" }),
+    ).toBe("期望 HTTP 200，企微回执为空串");
+    expect(
+      describeExpected({
+        status: 200,
+        body: "<Content><![CDATA[hi]]></Content>",
+        bodyMode: "wecomReply",
+      }),
+    ).toBe(
+      "期望 HTTP 200，企微解密被动回复包含「<Content><![CDATA[hi]]></Content>」",
+    );
   });
 });

@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   applyGeneratedIds,
   generateCreateTimeMs,
+  generateCreateTimeSec,
   generateEncryptedId,
   generateLogId,
+  generateMsgId64,
   generateOpenId,
 } from "./ids";
 import { schemaById } from "./schemas";
@@ -34,6 +36,21 @@ describe("官方 ID 形态生成", () => {
   it("create_time 为 13 位毫秒时间戳", () => {
     const value = generateCreateTimeMs();
     expect(String(value)).toMatch(/^\d{13}$/);
+  });
+
+  it("企微 CreateTime 为 10 位秒级时间戳字符串", () => {
+    const value = generateCreateTimeSec();
+    expect(value).toMatch(/^\d{10}$/);
+    expect(typeof value).toBe("string");
+  });
+
+  it("企微 MsgId 为 18 位数字串（恒在 int64 内、首位非零、全字符串）", () => {
+    const id = generateMsgId64();
+    expect(id).toMatch(/^[1-9]\d{17}$/);
+    // 18 位上限 9.99e17 < 2^63-1（9.22e18），且 > 2^53 验证大数语义
+    expect(Number(BigInt(id) < BigInt("9223372036854775807"))).toBe(1);
+    expect(BigInt(id)).toBeGreaterThan(BigInt("9007199254740992"));
+    expect(generateMsgId64()).not.toBe(id);
   });
 });
 
@@ -138,5 +155,27 @@ describe("applyGeneratedIds", () => {
     const snapshot = structuredClone(original);
     applyGeneratedIds(schema, original);
     expect(original).toEqual(snapshot);
+  });
+});
+
+describe("applyGeneratedIds（企微模板）", () => {
+  it("wc-text 重生成 MsgId 与秒级 CreateTime，其余保持黄金样本原值", () => {
+    const schema = schemaById("wc-text");
+    const result = applyGeneratedIds(schema, structuredClone(schema.payload));
+    expect(result.MsgId).toMatch(/^[1-9]\d{17}$/);
+    expect(result.CreateTime).toMatch(/^\d{10}$/);
+    expect(result.Content).toBe("this is a test");
+    expect(result.FromUserName).toBe("fromUser");
+    // 不凭空注入 content 键（XML 模板无此概念）
+    expect("content" in result).toBe(false);
+  });
+
+  it("wc-enter 仅重生成 CreateTime：EventKey 仍为空、无 MsgId 注入", () => {
+    const schema = schemaById("wc-enter");
+    const result = applyGeneratedIds(schema, structuredClone(schema.payload));
+    expect(result.CreateTime).toMatch(/^\d{10}$/);
+    expect(result.EventKey).toBe("");
+    expect(result.MsgId).toBeUndefined();
+    expect("content" in result).toBe(false);
   });
 });

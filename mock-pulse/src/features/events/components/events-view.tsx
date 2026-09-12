@@ -13,7 +13,11 @@ import { formatClock } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { AppDispatch, RootState } from "@/store";
 import { latestVersion } from "../model";
-import { DOUYIN_EVENT_SCHEMAS } from "../schemas";
+import {
+  DOUYIN_EVENT_SCHEMAS,
+  type EventSchema,
+  WECOM_EVENT_SCHEMAS,
+} from "../schemas";
 import {
   type EventRow,
   filterEvents,
@@ -35,7 +39,7 @@ const KIND_TABS = [
   { key: "event", label: "事件" },
 ] as const;
 
-/** 新建事件：名称 + 内置模板选择（抖音四模板） */
+/** 新建事件：名称 + 内置模板选择（按渠道分组：抖音 / 企业微信） */
 function CreateEventForm({
   onCreate,
   onCancel,
@@ -43,8 +47,13 @@ function CreateEventForm({
   onCreate: (name: string, schemaId: string) => void;
   onCancel: () => void;
 }) {
+  const templateGroups: { label: string; schemas: readonly EventSchema[] }[] = [
+    { label: "抖音 · dop Webhooks（JSON）", schemas: DOUYIN_EVENT_SCHEMAS },
+    { label: "企业微信 · 自建应用回调（XML）", schemas: WECOM_EVENT_SCHEMAS },
+  ];
+  const firstSchemaId = templateGroups[0]?.schemas[0]?.id ?? "dy-text";
   const [name, setName] = useState("");
-  const [schemaId, setSchemaId] = useState(DOUYIN_EVENT_SCHEMAS[0].id);
+  const [schemaId, setSchemaId] = useState(firstSchemaId);
 
   const create = () => {
     const trimmed = name.trim();
@@ -56,14 +65,15 @@ function CreateEventForm({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-8 py-7">
       <header className="space-y-1">
         <Badge variant="secondary" className="font-mono text-[10px]">
-          抖音 · dop Webhooks
+          内置模板 · 抖音 / 企业微信
         </Badge>
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-foreground">
           新建事件
         </h2>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          从内置模板创建。ID 默认值按官方形态生成：uuid 风格 open_id、@
-          开头会话串、13 位毫秒时间与十六进制 log_id。
+          从内置模板创建，载荷为官方黄金样本。ID 默认值按各平台官方形态生成：
+          抖音为 uuid 风格 open_id 与 13 位毫秒时间，企微为秒级时间与 64 位
+          MsgId 数字串。
         </p>
       </header>
 
@@ -80,32 +90,41 @@ function CreateEventForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {DOUYIN_EVENT_SCHEMAS.map((schema) => (
-          <button
-            key={schema.id}
-            type="button"
-            onClick={() => setSchemaId(schema.id)}
-            aria-pressed={schemaId === schema.id}
-            className={cn(
-              "rounded-lg border p-3 text-left transition-colors",
-              schemaId === schema.id
-                ? "border-primary/40 bg-secondary text-secondary-foreground"
-                : "border-border bg-card hover:bg-accent",
-            )}
-          >
-            <span className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-foreground">
-                {schema.name}
-              </span>
-              <Badge variant="outline" className="font-mono text-[9px]">
-                {schema.kind === "message" ? "消息" : "事件"}
-              </Badge>
-            </span>
-            <span className="mt-1 block font-mono text-[10px] text-muted-foreground">
-              {schema.eventName}
-            </span>
-          </button>
+      <div className="space-y-4">
+        {templateGroups.map((group) => (
+          <fieldset key={group.label} className="space-y-2">
+            <legend className="font-mono text-[10px] text-muted-foreground">
+              {group.label}
+            </legend>
+            <div className="grid grid-cols-2 gap-3">
+              {group.schemas.map((schema) => (
+                <button
+                  key={schema.id}
+                  type="button"
+                  onClick={() => setSchemaId(schema.id)}
+                  aria-pressed={schemaId === schema.id}
+                  className={cn(
+                    "rounded-lg border p-3 text-left transition-colors",
+                    schemaId === schema.id
+                      ? "border-primary/40 bg-secondary text-secondary-foreground"
+                      : "border-border bg-card hover:bg-accent",
+                  )}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-foreground">
+                      {schema.name}
+                    </span>
+                    <Badge variant="outline" className="font-mono text-[9px]">
+                      {schema.kind === "message" ? "消息" : "事件"}
+                    </Badge>
+                  </span>
+                  <span className="mt-1 block font-mono text-[10px] text-muted-foreground">
+                    {schema.eventName}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
         ))}
       </div>
 
