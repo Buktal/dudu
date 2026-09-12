@@ -12,6 +12,7 @@ pub fn run() {
             connections::connections_load,
             connections::connections_save,
             connections::connections_test_douyin,
+            connections::connections_test_wecom,
             events::events_load,
             events::events_save,
             events::events_delete,

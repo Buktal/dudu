@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { ConnectionConfig } from "@/features/connections";
+import type { DouyinConnectionConfig } from "@/features/connections";
 import type { RunRecord } from "./model";
 
 /** 抖音直发的回执（Rust sends_dispatch_douyin 返回，camelCase） */
@@ -29,7 +29,7 @@ export function saveRun(run: RunRecord): Promise<RunRecord[]> {
  * Msg-Id）并真实 POST 到连接配置的目标地址；字节透传不重排。
  */
 export function dispatchDouyin(
-  config: ConnectionConfig,
+  config: DouyinConnectionConfig,
   body: string,
 ): Promise<DispatchOutcome> {
   return invoke<DispatchOutcome>("sends_dispatch_douyin", { config, body });

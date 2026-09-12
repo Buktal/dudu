@@ -1,4 +1,8 @@
-export type { ConnectionConfig } from "./api";
+export type {
+  ConnectionConfig,
+  DouyinConnectionConfig,
+  WecomConnectionConfig,
+} from "./api";
 export { ConnectionsView } from "./components/connections-view";
 export type {
   ConnectionsState,
@@ -9,6 +13,7 @@ export {
   connectionsReducer,
   connectionsSlice,
   defaultDouyinConnection,
+  defaultWecomConnection,
   fetchConnections,
   initialConnectionsState,
   isConnectionReady,

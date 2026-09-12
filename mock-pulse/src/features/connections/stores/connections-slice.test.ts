@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ConnectionConfig } from "../api";
 import {
   connectionsReducer,
+  defaultWecomConnection,
   fetchConnections,
   initialConnectionsState,
   isConnectionReady,
@@ -17,12 +18,14 @@ vi.mock("../api", () => ({
   loadConnections: vi.fn(),
   saveConnection: vi.fn(),
   testDouyinConnection: vi.fn(),
+  testWecomConnection: vi.fn(),
 }));
 
 import {
   loadConnections,
   saveConnection as saveApi,
   testDouyinConnection,
+  testWecomConnection,
 } from "../api";
 
 const savedDouyin: ConnectionConfig = {
@@ -30,6 +33,15 @@ const savedDouyin: ConnectionConfig = {
   url: "http://127.0.0.1:9099/hook",
   clientKey: "tt_key",
   clientSecret: "tt_secret",
+};
+
+const savedWecom: ConnectionConfig = {
+  channel: "wecom",
+  url: "http://127.0.0.1:9099/wecom",
+  corpId: "ww_mock_corp",
+  token: "QDG6eK",
+  encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
+  agentId: "1000002",
 };
 
 function makeStore() {
@@ -58,6 +70,16 @@ describe("connections slice", () => {
     expect(selectConnection(stateOf(store), "douyin")).toEqual(savedDouyin);
   });
 
+  it("fetchConnections 携带抖音与企微时两条按 channel 各自落位", async () => {
+    vi.mocked(loadConnections).mockResolvedValue([savedDouyin, savedWecom]);
+    const store = makeStore();
+
+    await store.dispatch(fetchConnections());
+
+    expect(selectConnection(stateOf(store), "douyin")).toEqual(savedDouyin);
+    expect(selectConnection(stateOf(store), "wecom")).toEqual(savedWecom);
+  });
+
   it("saveConnection 成功后按 channel 覆盖保存", async () => {
     vi.mocked(saveApi).mockResolvedValue([savedDouyin]);
     const store = makeStore();
@@ -66,6 +88,27 @@ describe("connections slice", () => {
 
     expect(vi.mocked(saveApi)).toHaveBeenCalledWith(savedDouyin);
     expect(selectConnection(stateOf(store), "douyin")).toEqual(savedDouyin);
+  });
+
+  it("saveConnection 保存企微后列表同时保留两条渠道", async () => {
+    vi.mocked(saveApi).mockResolvedValue([savedDouyin, savedWecom]);
+    const store = makeStore();
+
+    await store.dispatch(saveConnection(savedWecom));
+
+    expect(vi.mocked(saveApi)).toHaveBeenCalledWith(savedWecom);
+    expect(selectConnection(stateOf(store), "wecom")).toEqual(savedWecom);
+    expect(selectConnection(stateOf(store), "douyin")).toEqual(savedDouyin);
+  });
+
+  it("初始状态自带企微默认占位连接（url 预填、凭据留空）", () => {
+    expect(defaultWecomConnection.channel).toBe("wecom");
+    expect(defaultWecomConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/wecom",
+    );
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "wecom")),
+    ).toBe(false);
   });
 
   it("测试连接状态流转 idle → testing → success/failed 并记录原因", async () => {
@@ -106,28 +149,79 @@ describe("connections slice", () => {
     expect(test.status).toBe("failed");
     expect(test.message).toContain("后端不可用");
   });
+
+  it("企微配置走 connections_test_wecom（按渠道路由测试命令）", async () => {
+    vi.mocked(testWecomConnection).mockResolvedValue({
+      ok: true,
+      message: "echostr 握手成功",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedWecom));
+
+    expect(vi.mocked(testWecomConnection)).toHaveBeenCalledWith(savedWecom);
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "echostr 握手成功",
+    });
+  });
+
+  it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
+    // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
+    // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
+    const rogue = { channel: "dingtalk" } as unknown as ConnectionConfig;
+
+    expect(isConnectionReady(rogue)).toBe(false);
+
+    const store = makeStore();
+    const action = await store.dispatch(testConnection(rogue));
+
+    expect(action.type).toBe(testConnection.rejected.type);
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store)).status).toBe("failed");
+  });
 });
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
   it("url 与 clientSecret 齐全才算已配置（clientKey 可空）", () => {
     expect(isConnectionReady(savedDouyin)).toBe(true);
-    expect(
-      isConnectionReady({ ...savedDouyin, clientKey: "" }),
-    ).toBe(true);
+    expect(isConnectionReady({ ...savedDouyin, clientKey: "" })).toBe(true);
   });
 
   it("缺 url 或缺 clientSecret 都不算已配置", () => {
     expect(isConnectionReady({ ...savedDouyin, url: "" })).toBe(false);
     expect(isConnectionReady({ ...savedDouyin, url: "   " })).toBe(false);
-    expect(isConnectionReady({ ...savedDouyin, clientSecret: "" })).toBe(
-      false,
-    );
+    expect(isConnectionReady({ ...savedDouyin, clientSecret: "" })).toBe(false);
   });
 
   it("无条目（undefined）不算已配置；初始默认占位连接凭据为空，也不算", () => {
     expect(isConnectionReady(undefined)).toBe(false);
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "douyin")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（企微按加密必填集判定）", () => {
+  it("url/token/encodingAesKey/corpId 齐全才算已配置（agentId 不参与加密，可空）", () => {
+    expect(isConnectionReady(savedWecom)).toBe(true);
+    expect(isConnectionReady({ ...savedWecom, agentId: "" })).toBe(true);
+  });
+
+  it("缺 url/token/encodingAesKey/corpId 任一都不算已配置", () => {
+    expect(isConnectionReady({ ...savedWecom, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWecom, token: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWecom, encodingAesKey: "" })).toBe(
+      false,
+    );
+    expect(isConnectionReady({ ...savedWecom, corpId: "" })).toBe(false);
+  });
+
+  it("初始企微占位连接（凭据全空）不算已配置", () => {
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "wecom")),
     ).toBe(false);
   });
 });

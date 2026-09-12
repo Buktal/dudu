@@ -22,8 +22,8 @@ export const CHANNELS: readonly Channel[] = [
     id: "wecom",
     name: "企业微信",
     protocol: "自建应用 · XML 回调",
-    note: "企业微信自建应用回调：XML 报文，协议在后续版本实现",
-    implemented: false,
+    note: "企业微信自建应用回调：XML 报文，GET echostr 握手校验 Token/EncodingAESKey",
+    implemented: true,
   },
 ] as const;
 

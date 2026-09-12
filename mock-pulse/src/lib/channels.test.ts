@@ -15,9 +15,12 @@ describe("渠道注册表", () => {
     }
   });
 
-  it("只有抖音的连接协议已实现", () => {
+  it("抖音与企微的连接协议均已实现", () => {
     const implemented = CHANNELS.filter((channel) => channel.implemented);
-    expect(implemented.map((channel) => channel.id)).toEqual(["douyin"]);
+    expect(implemented.map((channel) => channel.id)).toEqual([
+      "douyin",
+      "wecom",
+    ]);
   });
 
   it("channelById 返回注册渠道，未注册返回 undefined", () => {

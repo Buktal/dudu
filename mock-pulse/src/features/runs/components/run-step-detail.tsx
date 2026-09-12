@@ -3,7 +3,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import { receiptStatusText, type RunStep } from "../model";
+import { type RunStep, receiptStatusText } from "../model";
 
 /** 明文载荷的展示形态：能解析则 2 空格缩进，原样展示键序 */
 function prettyPayload(payload: string): string {

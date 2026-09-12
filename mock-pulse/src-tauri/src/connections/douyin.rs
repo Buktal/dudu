@@ -10,15 +10,8 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
+use super::HandshakeOutcome;
 use super::ConnectionConfig;
-
-/// 握手结果：ok + 人类可读原因（前端直接展示）。
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct HandshakeOutcome {
-    pub ok: bool,
-    pub message: String,
-}
 
 /// 直发结果：签名头快照 + HTTP 状态 + 耗时 + 原始回执文本。
 /// status 0 = 未收到响应（超时/连接失败，原因在 error）。
@@ -81,13 +74,24 @@ pub fn verify_handshake(
     client: &reqwest::blocking::Client,
     config: &ConnectionConfig,
 ) -> HandshakeOutcome {
+    let ConnectionConfig::Douyin {
+        url,
+        client_key,
+        client_secret,
+    } = config
+    else {
+        return HandshakeOutcome {
+            ok: false,
+            message: "配置不是抖音渠道，无法执行 verify_webhook 握手".into(),
+        };
+    };
     let challenge = random_challenge();
-    let body = build_verify_body(&config.client_key, challenge);
-    let signature = sign(&config.client_secret, &body);
+    let body = build_verify_body(client_key, challenge);
+    let signature = sign(client_secret, &body);
     let msg_id = uuid::Uuid::new_v4().to_string();
 
     let response = client
-        .post(&config.url)
+        .post(url)
         .header("Content-Type", "application/json")
         .header("X-Douyin-Signature", signature)
         .header("Msg-Id", msg_id)
@@ -148,12 +152,27 @@ pub fn dispatch_event(
     config: &ConnectionConfig,
     body: &str,
 ) -> DispatchOutcome {
-    let signature = sign(&config.client_secret, body);
+    let ConnectionConfig::Douyin {
+        url,
+        client_secret,
+        ..
+    } = config
+    else {
+        return DispatchOutcome {
+            msg_id: uuid::Uuid::new_v4().to_string(),
+            signature: String::new(),
+            status: 0,
+            elapsed_ms: 0,
+            body: String::new(),
+            error: Some("配置不是抖音渠道，无法直发".into()),
+        };
+    };
+    let signature = sign(client_secret, body);
     let msg_id = uuid::Uuid::new_v4().to_string();
     let started = std::time::Instant::now();
 
     let response = client
-        .post(&config.url)
+        .post(url)
         .header("Content-Type", "application/json")
         .header("X-Douyin-Signature", signature.clone())
         .header("Msg-Id", msg_id.clone())
@@ -349,8 +368,7 @@ mod tests {
     }
 
     fn config_with_url(url: String) -> ConnectionConfig {
-        ConnectionConfig {
-            channel: "douyin".into(),
+        ConnectionConfig::Douyin {
             url,
             client_key: "tt_key".into(),
             client_secret: "tt_secret".into(),

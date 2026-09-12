@@ -2,13 +2,13 @@ import { configureStore } from "@reduxjs/toolkit";
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  connectionsReducer,
   type ConnectionConfig,
+  connectionsReducer,
   initialConnectionsState,
 } from "@/features/connections";
 import { eventsReducer, startDraft } from "@/features/events";
-import { appReducer } from "@/stores/app-slice";
 import type { RootState } from "@/store";
+import { appReducer } from "@/stores/app-slice";
 import * as api from "../api";
 import type { RunRecord } from "../model";
 import {
@@ -118,7 +118,12 @@ describe("runs slice 直发状态流转", () => {
     ["无连接条目", undefined],
     [
       "初始默认占位（url 有值但凭据为空）",
-      { ...CONNECTION, url: "http://127.0.0.1:8080/webhooks/douyin", clientKey: "", clientSecret: "" },
+      {
+        ...CONNECTION,
+        url: "http://127.0.0.1:8080/webhooks/douyin",
+        clientKey: "",
+        clientSecret: "",
+      },
     ],
     ["url 为空", { ...CONNECTION, url: "" }],
     ["clientSecret 为空", { ...CONNECTION, clientSecret: "" }],

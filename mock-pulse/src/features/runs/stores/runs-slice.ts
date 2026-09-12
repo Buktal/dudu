@@ -73,6 +73,18 @@ export const directDispatch = createAsyncThunk<
     // 未配置连接（缺条目/缺地址/缺密钥）：不报错，面板给「前往平台连接」指引
     return { kind: "needConnection" };
   }
+  // 直发命令目前仅抖音（sends_dispatch_douyin）；switch 穷尽——新增渠道时
+  // 编译期在此强制显式决策（企微直发 #18 扩展，其余渠道同走连接指引）
+  switch (connection.channel) {
+    case "douyin":
+      break;
+    case "wecom":
+      return { kind: "needConnection" };
+    default: {
+      const exhaustive: never = connection;
+      return exhaustive;
+    }
+  }
   const schema = schemaById(draft.schemaId);
   const body = wireBodyText(schema, draft.payload);
   const outcome = await dispatchDouyinApi(connection, body);
