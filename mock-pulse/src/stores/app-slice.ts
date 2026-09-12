@@ -27,7 +27,7 @@ export type ViewEntry = {
   name: string;
   /** 空态/入口的一句话定位，沿用原型文案 */
   hint: string;
-  /** 本票只有平台连接落地，其余视图为明确空态 */
+  /** 事件调试与平台连接已落地，其余视图为明确空态 */
   implemented: boolean;
   icon: LucideIcon;
   navSection: NavSection;
@@ -39,7 +39,7 @@ export const VIEWS: readonly ViewEntry[] = [
     id: "events",
     name: "事件调试",
     hint: "调好一条，反复复用。",
-    implemented: false,
+    implemented: true,
     icon: Zap,
     navSection: "build",
   },

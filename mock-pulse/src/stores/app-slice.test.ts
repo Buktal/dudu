@@ -24,11 +24,11 @@ describe("应用壳导航（五视图）", () => {
     ]);
   });
 
-  it("只有平台连接视图已实现，其余为空态占位", () => {
+  it("事件调试与平台连接已实现，其余为空态占位", () => {
     const views = selectViews(initialAppState);
     expect(
       views.filter((view) => view.implemented).map((view) => view.id),
-    ).toEqual(["connections"]);
+    ).toEqual(["events", "connections"]);
   });
 
   it("每个视图注册项都带图标与侧栏分组（单一注册表完整）", () => {

@@ -2,6 +2,7 @@ import { EmptyState } from "@/components/empty-state";
 import { type NavGroup, StudioShell } from "@/components/shell/studio-shell";
 import { Button } from "@/components/ui/button";
 import { ConnectionsView } from "@/features/connections";
+import { EventsView } from "@/features/events";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
   type NavSection,
@@ -43,20 +44,22 @@ function App() {
     >
       {view === "connections" ? (
         <ConnectionsView />
+      ) : view === "events" ? (
+        <EventsView />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           <EmptyState
             icon={entry.icon}
             title={`${entry.name} · 未实现`}
-            description={`${entry.hint} 该视图在后续版本落地，当前先到平台连接配置抖音回调目标。`}
+            description={`${entry.hint} 该视图在后续版本落地，当前先到事件调试与平台连接。`}
           />
           <div className="flex justify-center pb-10">
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => dispatch(setView("connections"))}
+              onClick={() => dispatch(setView("events"))}
             >
-              前往平台连接
+              前往事件调试
             </Button>
           </div>
         </div>
