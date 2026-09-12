@@ -47,7 +47,8 @@ export const VIEWS: readonly ViewEntry[] = [
     id: "scenarios",
     name: "平台剧本",
     hint: "同平台的事件，按顺序串起来。",
-    implemented: false,
+    // 剧本编辑已落地（#19）；剧本整体运行与运行记录联动归 #20
+    implemented: true,
     icon: ListVideo,
     navSection: "build",
   },

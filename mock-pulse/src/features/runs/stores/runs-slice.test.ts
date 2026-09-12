@@ -12,6 +12,7 @@ import {
   setDraftField,
   startDraft,
 } from "@/features/events";
+import { initialScenariosState, scenariosReducer } from "@/features/scenarios";
 import type { RootState } from "@/store";
 import { appReducer } from "@/stores/app-slice";
 import * as api from "../api";
@@ -83,9 +84,11 @@ function makeStore(connection?: ConnectionConfig) {
       runs: runsReducer,
       events: eventsReducer,
       connections: connectionsReducer,
+      scenarios: scenariosReducer,
     },
     preloadedState: {
       connections: { ...initialConnectionsState, loaded: true, items },
+      scenarios: initialScenariosState,
     },
   });
 }

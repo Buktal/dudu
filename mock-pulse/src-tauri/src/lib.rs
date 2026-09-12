@@ -2,6 +2,7 @@
 mod connections;
 mod events;
 mod runs;
+mod scenarios;
 mod sends;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -18,6 +19,9 @@ pub fn run() {
             events::events_delete,
             runs::runs_load,
             runs::runs_save,
+            scenarios::scenarios_load,
+            scenarios::scenarios_save,
+            scenarios::scenarios_delete,
             sends::sends_dispatch_douyin,
             sends::sends_dispatch_wecom,
         ])

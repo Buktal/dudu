@@ -23,6 +23,10 @@ import {
   directDispatch,
   selectPanelPhase,
 } from "@/features/runs";
+import {
+  deleteEventGuarded,
+  scenarioNamesReferencingEvent,
+} from "@/features/scenarios";
 import { channelById } from "@/lib/channels";
 import { formatDateTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -43,7 +47,6 @@ import {
 import { describeExpected, RECEIPT_BODY_MODES } from "../receipt";
 import { type EventSchema, schemaById } from "../schemas";
 import {
-  deleteEvent,
   discardDraft,
   duplicateCurrentDraft,
   renameEvent,
@@ -188,6 +191,9 @@ export function EventEditor() {
   const dispatch = useDispatch<AppDispatch>();
   const draft = useSelector((state: RootState) => state.events.draft);
   const items = useSelector((state: RootState) => state.events.items);
+  const referencingScenarios = useSelector((state: RootState) =>
+    draft ? scenarioNamesReferencingEvent(state, draft.id) : [],
+  );
   const dispatchPhase = useSelector((state: RootState) =>
     selectPanelPhase(state.runs),
   );
@@ -345,7 +351,8 @@ export function EventEditor() {
                   variant="destructive"
                   onClick={() => {
                     setConfirmDelete(false);
-                    dispatch(deleteEvent(draft.id));
+                    // 领域层守卫：被剧本引用时拒绝删除（可读错误）
+                    void dispatch(deleteEventGuarded(draft.id));
                   }}
                 >
                   确认删除
@@ -362,6 +369,12 @@ export function EventEditor() {
               <Button
                 variant="ghost"
                 size="sm"
+                disabled={referencingScenarios.length > 0}
+                title={
+                  referencingScenarios.length > 0
+                    ? `事件被剧本引用：${referencingScenarios.join("、")}。先删除或调整剧本，再删除事件。`
+                    : undefined
+                }
                 onClick={() => setConfirmDelete(true)}
               >
                 <Trash2 className="size-3.5" aria-hidden />
@@ -427,6 +440,11 @@ export function EventEditor() {
             <span className="flex items-center gap-1 text-primary">
               <span className="size-1.5 rounded-full bg-primary" aria-hidden />
               有未保存的修改
+            </span>
+          ) : null}
+          {referencingScenarios.length > 0 ? (
+            <span title="被剧本引用的事件不能删除，先删除或调整剧本">
+              · 被剧本引用：{referencingScenarios.join("、")}
             </span>
           ) : null}
         </div>

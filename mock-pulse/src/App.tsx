@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ConnectionsView } from "@/features/connections";
 import { EventsView } from "@/features/events";
 import { RunsView } from "@/features/runs";
+import { ScenariosView } from "@/features/scenarios";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
   type NavSection,
@@ -49,6 +50,8 @@ function App() {
         <EventsView />
       ) : view === "runs" ? (
         <RunsView />
+      ) : view === "scenarios" ? (
+        <ScenariosView />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           <EmptyState
