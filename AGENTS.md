@@ -100,3 +100,12 @@ Done gate：分层落位 ✓、新增依赖已批准 ✓、`yarn lint` ✓。
 - 本地手动 DDL 仅限排障；要留下的结构变更必须回到迁移文件。
 
 Done gate：删库重启，Flyway 能从零建出全部表结构。
+
+### 既有骨架约定（wayfinder #6 落地，细节见 ADR 0006/0007）
+
+- 分层：`com.dudu.duduserver.{controller,service,mapper,config,exception,util,constant}` + `common`（跨层载体，如 R、JwtUser）；枚举进 `constant` 包；认证组件在 `config/auth/`、校验分组在 `config/validate/`。
+- 统一返回：`common/R<T>` record，HTTP 恒 200，业务语义全靠 code；错误码 `constant/ApiEnum` 五位分段（0 成功、10001 未知、101xx 认证、11xxx 参数、13xxx 数据、14xxx 第三方），业务码随业务生长。
+- 业务异常：`exception/BizException` sealed 家族（Param/Data/Third/Auth），service 抛子类、不另建错误类型；全局处理器分流。
+- 表约定：所有表 `create_time`/`update_time`（DB 默认 CURRENT_TIMESTAMP + MP 自动填充兜底）、主键 bigint 自增；逻辑删除按表需要，不全局约定。
+- 认证：Hutool JWT 只签验、payload 走 Jackson；`Authorization: Bearer`；`/api/**` 默认全拦、白名单 `dudu.auth.whitelist`；Controller 用 `@CurrentUser JwtUser` 注入当前用户；`dudu.auth.dev-token-enabled` 控制仅开发用的假登录端点（默认关）。
+
