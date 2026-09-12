@@ -24,7 +24,7 @@ const event: EventItem = {
         custom_unknown: "keep-me",
         content: { text: "你好" },
       },
-      expected: { status: 200, body: "" },
+      expected: { status: 200, body: "", bodyMode: "contains" },
     },
   ],
 };

@@ -32,7 +32,7 @@ function seededEvents(count: number): EventItem[] {
           revision: 1 + (i % 3),
           savedAt: new Date(base).toISOString(),
           payload: { event: "stub" },
-          expected: { status: 200, body: "" },
+          expected: { status: 200, body: "", bodyMode: "contains" },
         },
       ],
     });

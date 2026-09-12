@@ -1,4 +1,13 @@
-import { Copy, Eye, Info, Loader2, Save, Search, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Eye,
+  Info,
+  Loader2,
+  Save,
+  Search,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -8,11 +17,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  clearDispatch,
+  DispatchPanel,
+  directDispatch,
+  selectPanelPhase,
+} from "@/features/runs";
 import { channelById } from "@/lib/channels";
 import { formatDateTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { AppDispatch, RootState } from "@/store";
-
 import {
   type EventItem,
   type EventVersion,
@@ -26,6 +40,7 @@ import {
   resolveEditorFields,
   wirePayload,
 } from "../payload";
+import { describeExpected, RECEIPT_BODY_MODES } from "../receipt";
 import { schemaById } from "../schemas";
 import {
   deleteEvent,
@@ -33,17 +48,19 @@ import {
   duplicateCurrentDraft,
   renameEvent,
   saveEvent,
+  setDraftExpected,
   setDraftField,
   setDraftName,
   setDraftPayload,
   toggleSenderSync,
 } from "../stores/events-slice";
 
-type TabKey = "form" | "raw" | "versions";
+type TabKey = "form" | "raw" | "expect" | "versions";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "form", label: "字段编辑" },
   { key: "raw", label: "完整报文" },
+  { key: "expect", label: "期望回执" },
   { key: "versions", label: "版本历史" },
 ];
 
@@ -154,11 +171,14 @@ function VersionJson({ version }: { version: EventVersion }) {
   );
 }
 
-/** 事件编辑器：字段编辑 / 完整报文 / 版本历史 三种视图共享同一份草稿 */
+/** 事件编辑器：字段编辑 / 完整报文 / 期望回执 / 版本历史 共享同一份草稿 */
 export function EventEditor() {
   const dispatch = useDispatch<AppDispatch>();
   const draft = useSelector((state: RootState) => state.events.draft);
   const items = useSelector((state: RootState) => state.events.items);
+  const dispatchPhase = useSelector((state: RootState) =>
+    selectPanelPhase(state.runs),
+  );
   const [tab, setTab] = useState<TabKey>("form");
   const [fieldQuery, setFieldQuery] = useState("");
   const [rawText, setRawText] = useState("");
@@ -203,7 +223,7 @@ export function EventEditor() {
     }
   }, [tab, wireText]);
 
-  // 切换编辑对象时复位本地编辑态（按 id 触发）
+  // 切换编辑对象时复位本地编辑态（按 id 触发）+ 清空直发面板
   const draftId = draft?.id ?? null;
   useEffect(() => {
     if (!draftId) return;
@@ -211,7 +231,8 @@ export function EventEditor() {
     setFieldQuery("");
     setConfirmDelete(false);
     setViewRevision(null);
-  }, [draftId]);
+    dispatch(clearDispatch());
+  }, [draftId, dispatch]);
 
   const applyRaw = (): boolean => {
     try {
@@ -353,6 +374,18 @@ export function EventEditor() {
               <Save className="size-4" aria-hidden />
             )}
             保存新版本
+          </Button>
+          <Button
+            size="sm"
+            disabled={dispatchPhase === "sending"}
+            onClick={() => void dispatch(directDispatch())}
+          >
+            {dispatchPhase === "sending" ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Send className="size-4" aria-hidden />
+            )}
+            直接发送
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
@@ -553,6 +586,85 @@ export function EventEditor() {
               </p>
             )}
           </div>
+        ) : tab === "expect" ? (
+          <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-4">
+            <p className="flex items-start gap-2 text-[10px] leading-relaxed text-muted-foreground">
+              <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              发送时，回执将与这里的期望对照；正文留空表示只检查 HTTP
+              状态。期望随草稿保存进版本，直发未保存的草稿也按当前值比对。
+            </p>
+            <div className="grid grid-cols-[minmax(140px,200px)_minmax(0,1fr)] items-start gap-5">
+              <div className="space-y-2">
+                <Label htmlFor="expected-status">期望 HTTP 状态</Label>
+                <Input
+                  id="expected-status"
+                  type="number"
+                  min={100}
+                  max={599}
+                  className="h-8 font-mono text-xs"
+                  value={draft.expected.status}
+                  onChange={(change) =>
+                    dispatch(
+                      setDraftExpected({
+                        status: Number(change.target.value) || 200,
+                      }),
+                    )
+                  }
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  如 200、204、403。
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>正文比对方式</Label>
+                <fieldset className="flex gap-1">
+                  <legend className="sr-only">正文比对方式</legend>
+                  {RECEIPT_BODY_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() =>
+                        dispatch(setDraftExpected({ bodyMode: mode.id }))
+                      }
+                      aria-pressed={draft.expected.bodyMode === mode.id}
+                      className={cn(
+                        "rounded-md px-2.5 py-1.5 text-[10px] font-medium transition-colors",
+                        draft.expected.bodyMode === mode.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card text-muted-foreground hover:bg-accent",
+                      )}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </fieldset>
+                <p className="text-[10px] leading-relaxed text-muted-foreground">
+                  {
+                    RECEIPT_BODY_MODES.find(
+                      (mode) => mode.id === draft.expected.bodyMode,
+                    )?.hint
+                  }
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="expected-body">期望响应正文</Label>
+              <Textarea
+                id="expected-body"
+                rows={5}
+                className="font-mono text-xs"
+                spellCheck={false}
+                placeholder="留空时不校验正文"
+                value={draft.expected.body}
+                onChange={(change) =>
+                  dispatch(setDraftExpected({ body: change.target.value }))
+                }
+              />
+              <p className="font-mono text-[10px] text-muted-foreground">
+                {describeExpected(draft.expected)}
+              </p>
+            </div>
+          </div>
         ) : (
           <div className="flex flex-col gap-3">
             <p className="flex items-start gap-2 text-[10px] leading-relaxed text-muted-foreground">
@@ -607,6 +719,8 @@ export function EventEditor() {
           </div>
         )}
       </div>
+
+      <DispatchPanel />
     </div>
   );
 }

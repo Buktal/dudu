@@ -5,6 +5,7 @@ import {
   createDraft,
   draftFromItem,
   duplicateDraft,
+  type ExpectedReceipt,
   isDraftDirty,
   latestVersion,
   newEventId,
@@ -30,7 +31,7 @@ describe("appendVersion", () => {
     expect(event.versions[0]).toMatchObject({
       revision: 1,
       savedAt: SAVED_AT,
-      expected: { status: 200, body: "" },
+      expected: { status: 200, body: "", bodyMode: "contains" },
     });
     expect(event.versions[0].payload.text ?? true).toBe(true);
   });
@@ -57,21 +58,50 @@ describe("appendVersion", () => {
     ).toBe("改成第二句");
   });
 
-  it("期望回执从上一版本继承（模型层预留）", () => {
+  it("期望回执随草稿流转：装载继承上一版本，编辑后写入新版本", () => {
     const draft = createDraft("进入会话", dyEnter);
     const base = appendVersion(null, draft, SAVED_AT);
+    const expected403: ExpectedReceipt = {
+      status: 403,
+      body: "denied",
+      bodyMode: "equals",
+    };
     const withExpected = {
       ...base,
       versions: base.versions.map((version) => ({
         ...version,
-        expected: { status: 403, body: "denied" },
+        expected: expected403,
       })),
     };
-    const next = appendVersion(withExpected, draft, "2026-09-12T03:00:00.000Z");
+
+    // 装载草稿继承最新版本的期望
+    const loaded = draftFromItem(withExpected);
+    expect(loaded.expected).toEqual(expected403);
+
+    // 未改动时期望原样进入新版本
+    const untouched = appendVersion(
+      withExpected,
+      loaded,
+      "2026-09-12T02:00:00.000Z",
+    );
+    expect(latestVersion(untouched)?.expected).toEqual(expected403);
+
+    // 编辑草稿期望后，新版本记录编辑值（旧版本不变）
+    const edited = {
+      ...loaded,
+      expected: { status: 204, body: "", bodyMode: "contains" } as const,
+    };
+    const next = appendVersion(
+      withExpected,
+      edited,
+      "2026-09-12T03:00:00.000Z",
+    );
     expect(latestVersion(next)?.expected).toEqual({
-      status: 403,
-      body: "denied",
+      status: 204,
+      body: "",
+      bodyMode: "contains",
     });
+    expect(next.versions[0].expected).toEqual(expected403);
   });
 
   it("contentString 模板保存的版本 content 为线上字符串", () => {
@@ -99,7 +129,7 @@ describe("draftFromItem / isDraftDirty", () => {
     expect(reloaded.senderSync).toBe(false);
   });
 
-  it("脏检查：装载即干净；改字段或改名后变脏；新草稿恒脏", () => {
+  it("脏检查：装载即干净；改字段、改名或改期望后变脏；新草稿恒脏", () => {
     const draft = createDraft("新客问价", dyText);
     const event = appendVersion(null, draft, SAVED_AT);
 
@@ -113,6 +143,12 @@ describe("draftFromItem / isDraftDirty", () => {
     expect(isDraftDirty(event, edited)).toBe(true);
 
     expect(isDraftDirty(event, { ...fresh, name: "改名" })).toBe(true);
+    expect(
+      isDraftDirty(event, {
+        ...fresh,
+        expected: { status: 403, body: "", bodyMode: "contains" },
+      }),
+    ).toBe(true);
     expect(isDraftDirty(null, fresh)).toBe(true);
   });
 

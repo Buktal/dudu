@@ -3,6 +3,7 @@ import { type NavGroup, StudioShell } from "@/components/shell/studio-shell";
 import { Button } from "@/components/ui/button";
 import { ConnectionsView } from "@/features/connections";
 import { EventsView } from "@/features/events";
+import { RunsView } from "@/features/runs";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
   type NavSection,
@@ -46,6 +47,8 @@ function App() {
         <ConnectionsView />
       ) : view === "events" ? (
         <EventsView />
+      ) : view === "runs" ? (
+        <RunsView />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           <EmptyState

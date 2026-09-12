@@ -13,6 +13,7 @@ import type { AppDispatch, RootState } from "@/store";
 
 import type { ConnectionConfig } from "../api";
 import {
+  defaultDouyinConnection,
   fetchConnections,
   saveConnection,
   selectConnection,
@@ -82,9 +83,11 @@ function ChannelList({
 
 function DouyinForm() {
   const dispatch = useDispatch<AppDispatch>();
-  const config = useSelector((state: RootState) =>
-    selectConnection(state.connections, DOUYIN),
-  );
+  // 从未保存过连接时回退到默认占位值（列表里无 douyin 条目不算已配置）
+  const config =
+    useSelector((state: RootState) =>
+      selectConnection(state.connections, DOUYIN),
+    ) ?? defaultDouyinConnection;
   const test = useSelector((state: RootState) =>
     selectTestState(state.connections),
   );

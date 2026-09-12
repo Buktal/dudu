@@ -69,6 +69,7 @@ mod tests {
                     expected: ExpectedReceipt {
                         status: 200,
                         body: String::new(),
+                        body_mode: "contains".into(),
                     },
                 },
                 StoredVersion {
@@ -83,6 +84,7 @@ mod tests {
                     expected: ExpectedReceipt {
                         status: 200,
                         body: String::new(),
+                        body_mode: "contains".into(),
                     },
                 },
             ],
@@ -133,6 +135,36 @@ mod tests {
         assert!(raw.contains("\"schemaId\""));
         assert!(raw.contains("\"savedAt\""));
         assert!(!raw.contains("channel_id"));
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn payload_key_order_survives_roundtrip() {
+        // serde_json 开启 preserve_order：载荷按键的文档序持久化往返，
+        // 不被字母序重排——前端「逐字节确定拼装」跨重启成立的前提。
+        let dir = temp_dir("order");
+        let mut event = sample_event();
+        event.versions[0].payload =
+            json!({ "zebra": 1, "alpha": { "m": 2, "a": 1 } });
+        save_events(&dir, &[event]).unwrap();
+
+        let raw = fs::read_to_string(events_file(&dir)).unwrap();
+        let zebra = raw.find("\"zebra\"").expect("缺少 zebra");
+        let alpha = raw.find("\"alpha\"").expect("缺少 alpha");
+        assert!(zebra < alpha, "顶层键按文档序持久化：{raw}");
+        let m = raw.find("\"m\"").expect("缺少 m");
+        let a = raw.find("\"a\"").expect("缺少 a");
+        assert!(m < a, "嵌套键按文档序持久化：{raw}");
+
+        let loaded = load_events(&dir).unwrap();
+        let keys = loaded[0].versions[0]
+            .payload
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        assert_eq!(keys, vec!["zebra", "alpha"]);
         fs::remove_dir_all(&dir).unwrap();
     }
 }

@@ -1,3 +1,4 @@
+export type { ConnectionConfig } from "./api";
 export { ConnectionsView } from "./components/connections-view";
 export type {
   ConnectionsState,
@@ -10,6 +11,7 @@ export {
   defaultDouyinConnection,
   fetchConnections,
   initialConnectionsState,
+  isConnectionReady,
   saveConnection,
   selectConnection,
   selectTestState,

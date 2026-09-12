@@ -63,7 +63,8 @@ export const VIEWS: readonly ViewEntry[] = [
     id: "runs",
     name: "运行记录",
     hint: "查看每次模拟运行时的参数和回执。",
-    implemented: false,
+    // 直发记录列表已落地（#16）；剧本/编排的完整运行视图归 #20
+    implemented: true,
     icon: History,
     navSection: "monitor",
   },

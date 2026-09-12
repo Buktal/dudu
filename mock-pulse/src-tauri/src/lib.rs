@@ -1,6 +1,8 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod connections;
 mod events;
+mod runs;
+mod sends;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -13,6 +15,9 @@ pub fn run() {
             events::events_load,
             events::events_save,
             events::events_delete,
+            runs::runs_load,
+            runs::runs_save,
+            sends::sends_dispatch_douyin,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

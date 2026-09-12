@@ -10,13 +10,21 @@ import { schemaById } from "./schemas";
  * 保存 = 追加不可变版本（保存时间 + 来源草稿快照）；旧版本可回看。
  */
 
-/** 期望回执：模型层预留，编辑 UI 在 #16 落地。 */
+/** 期望回执的正文形态：包含 / 完全一致 / JSON 字段子集匹配 */
+export type ReceiptBodyMode = "contains" | "equals" | "jsonField";
+
 export type ExpectedReceipt = {
   status: number;
+  /** 期望正文（空 = 不校验正文，只看状态码） */
   body: string;
+  bodyMode: ReceiptBodyMode;
 };
 
-export const DEFAULT_EXPECTED: ExpectedReceipt = { status: 200, body: "" };
+export const DEFAULT_EXPECTED: ExpectedReceipt = {
+  status: 200,
+  body: "",
+  bodyMode: "contains",
+};
 
 export type EventVersion = {
   /** 从 1 递增，等于在 versions 中的序号 + 1 */
@@ -46,6 +54,8 @@ export type EventDraft = {
   payload: WirePayload;
   /** 发送者 ID 显式同步开关 */
   senderSync: boolean;
+  /** 直发比对用的期望回执；保存时随版本落盘 */
+  expected: ExpectedReceipt;
 };
 
 let idCounter = 0;
@@ -64,6 +74,7 @@ export function createDraft(name: string, schema: EventSchema): EventDraft {
     schemaId: schema.id,
     payload: applyGeneratedIds(schema, schema.payload),
     senderSync: false,
+    expected: { ...DEFAULT_EXPECTED },
   };
 }
 
@@ -94,6 +105,7 @@ export function draftFromItem(event: EventItem): EventDraft {
       ? editorPayload(schema, latest.payload)
       : cloneJson(schema.payload),
     senderSync: false,
+    expected: latest ? { ...latest.expected } : { ...DEFAULT_EXPECTED },
   };
 }
 
@@ -107,6 +119,9 @@ export function isDraftDirty(
   const schema = schemaById(event.schemaId);
   const latest = latestVersion(event);
   if (!latest) return true;
+  if (stableStringify(latest.expected) !== stableStringify(draft.expected)) {
+    return true;
+  }
   return (
     stableStringify(editorPayload(schema, latest.payload)) !==
     stableStringify(draft.payload)
@@ -115,7 +130,7 @@ export function isDraftDirty(
 
 /**
  * 保存草稿为不可变新版本：返回新 EventItem，versions 追加，
- * 旧版本对象原样共享（内容不变）。期望回执自上一版本继承。
+ * 旧版本对象原样共享（内容不变）。期望回执取草稿当前编辑值。
  */
 export function appendVersion(
   event: EventItem | null,
@@ -128,7 +143,7 @@ export function appendVersion(
     revision: previous ? previous.revision + 1 : 1,
     savedAt,
     payload: wirePayload(schema, draft.payload),
-    expected: previous ? previous.expected : DEFAULT_EXPECTED,
+    expected: { ...draft.expected },
   };
   return {
     id: draft.id,

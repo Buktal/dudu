@@ -142,6 +142,22 @@ export function wirePayload(
   return draft;
 }
 
+/**
+ * 直发明文：wirePayload 的确定性 JSON 序列化，产出逐字节稳定的报文文本。
+ *
+ * 键序规则（定死）：报文键序一律取载荷文档序——
+ * - 模板载荷即官方黄金样本的文档序（事件信封在前，未知官方字段按原文位置）；
+ * - 编辑新增字段按插入位置追加；JSON/持久化往返按文档序保序
+ *   （Rust 端 serde_json 开启 preserve_order，见 src-tauri/Cargo.toml）。
+ * 序列化选项固定：JSON.stringify 紧凑无空格（UTF-8 原文，不转义非 ASCII）。
+ */
+export function wireBodyText(
+  schema: EventSchema,
+  payload: WirePayload,
+): string {
+  return JSON.stringify(wirePayload(schema, payload));
+}
+
 /** 完整报文文本 → 载荷（JSON 校验：最外层必须是对象，路径安全）。 */
 export function parseWirePayload(text: string): WirePayload {
   let data: unknown;

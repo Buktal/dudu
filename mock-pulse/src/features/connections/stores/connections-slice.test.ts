@@ -6,6 +6,7 @@ import {
   connectionsReducer,
   fetchConnections,
   initialConnectionsState,
+  isConnectionReady,
   saveConnection,
   selectConnection,
   selectTestState,
@@ -104,5 +105,29 @@ describe("connections slice", () => {
     const test = selectTestState(stateOf(store));
     expect(test.status).toBe("failed");
     expect(test.message).toContain("后端不可用");
+  });
+});
+
+describe("isConnectionReady（直发前置的内容判定）", () => {
+  it("url 与 clientSecret 齐全才算已配置（clientKey 可空）", () => {
+    expect(isConnectionReady(savedDouyin)).toBe(true);
+    expect(
+      isConnectionReady({ ...savedDouyin, clientKey: "" }),
+    ).toBe(true);
+  });
+
+  it("缺 url 或缺 clientSecret 都不算已配置", () => {
+    expect(isConnectionReady({ ...savedDouyin, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedDouyin, url: "   " })).toBe(false);
+    expect(isConnectionReady({ ...savedDouyin, clientSecret: "" })).toBe(
+      false,
+    );
+  });
+
+  it("无条目（undefined）不算已配置；初始默认占位连接凭据为空，也不算", () => {
+    expect(isConnectionReady(undefined)).toBe(false);
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "douyin")),
+    ).toBe(false);
   });
 });

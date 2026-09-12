@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { connectionsReducer } from "@/features/connections";
 import { eventsReducer } from "@/features/events";
+import { runsReducer } from "@/features/runs";
 import { appReducer } from "@/stores/app-slice";
 
 // 组合根：全项目唯一允许 import feature reducer 的模块（运行时方向 store → features）。
@@ -12,6 +13,7 @@ export const store = configureStore({
     app: appReducer,
     connections: connectionsReducer,
     events: eventsReducer,
+    runs: runsReducer,
   },
 });
 

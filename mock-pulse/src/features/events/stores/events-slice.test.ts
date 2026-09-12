@@ -14,6 +14,7 @@ import {
   selectEvents,
   selectFilters,
   selectPage,
+  setDraftExpected,
   setDraftField,
   setDraftName,
   setFilters,
@@ -170,7 +171,7 @@ describe("events slice 版本化状态流转", () => {
           revision: 1,
           savedAt: "2026-09-12T00:00:00.000Z",
           payload: { event: "im_receive_msg" },
-          expected: { status: 200, body: "" },
+          expected: { status: 200, body: "", bodyMode: "contains" },
         },
       ],
     };
@@ -206,5 +207,33 @@ describe("events slice 版本化状态流转", () => {
     store.dispatch(startDraft({ name: "草稿名", schemaId: "dy-text" }));
     store.dispatch(setDraftName("任意"));
     expect(selectDraft(store.getState().events)?.name).toBe("任意");
+  });
+
+  it("期望回执编辑：草稿上改状态/形态/正文，保存随版本落盘", async () => {
+    const store = makeStore();
+    apiMock.saveEvent.mockImplementation(async (event: EventItem) => [event]);
+
+    store.dispatch(startDraft({ name: "新客问价", schemaId: "dy-text" }));
+    expect(selectDraft(store.getState().events)?.expected).toEqual({
+      status: 200,
+      body: "",
+      bodyMode: "contains",
+    });
+
+    store.dispatch(setDraftExpected({ status: 403, bodyMode: "jsonField" }));
+    expect(selectDraft(store.getState().events)?.expected).toEqual({
+      status: 403,
+      body: "",
+      bodyMode: "jsonField",
+    });
+
+    store.dispatch(setDraftExpected({ body: '{"code":0}' }));
+    await store.dispatch(saveEvent());
+    const saved = selectEvents(store.getState().events)[0];
+    expect(saved.versions[0].expected).toEqual({
+      status: 403,
+      body: '{"code":0}',
+      bodyMode: "jsonField",
+    });
   });
 });

@@ -16,6 +16,7 @@ import {
   duplicateDraft,
   type EventDraft,
   type EventItem,
+  type ExpectedReceipt,
 } from "../model";
 import { editorPayload, setPayloadField, syncSenderIdentity } from "../payload";
 import { schemaById, type WirePayload } from "../schemas";
@@ -129,6 +130,11 @@ const eventsSlice = createSlice({
       if (!state.draft) return;
       state.draft.name = action.payload;
     },
+    /** 编辑期望回执（Partial 合并：状态码 / 形态 / 期望正文） */
+    setDraftExpected(state, action: PayloadAction<Partial<ExpectedReceipt>>) {
+      if (!state.draft) return;
+      state.draft.expected = { ...state.draft.expected, ...action.payload };
+    },
     /** 发送者 ID 显式同步开关：开启即对齐资料 open_id */
     toggleSenderSync(state) {
       if (!state.draft) return;
@@ -197,6 +203,7 @@ export const {
   discardDraft,
   duplicateCurrentDraft,
   openEvent,
+  setDraftExpected,
   setDraftField,
   setDraftName,
   setDraftPayload,

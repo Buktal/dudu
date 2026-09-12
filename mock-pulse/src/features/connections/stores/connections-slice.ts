@@ -102,6 +102,20 @@ export const connectionsSlice = createSlice({
 
 export const connectionsReducer = connectionsSlice.reducer;
 
+/**
+ * 「已配置」的内容判定：直发前置条件，发送入口与指引展示共用。
+ * 条目存在不等于已配置——目标地址与签名密钥（client_secret）缺一即视为
+ * 未配置（含初始默认占位连接、仅存 url 未存密钥的半成品）。
+ */
+export function isConnectionReady(
+  config: ConnectionConfig | undefined,
+): config is ConnectionConfig {
+  if (!config) {
+    return false;
+  }
+  return config.url.trim() !== "" && config.clientSecret !== "";
+}
+
 export function selectConnection(
   state: ConnectionsState,
   channel: ChannelId | string,

@@ -6,12 +6,19 @@ pub mod store;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
-/// 期望回执（模型层预留；编辑 UI 在 #16 落地）。
+/// 期望回执：状态码 + 正文形态（contains/equals/jsonField）。
+/// bodyMode 在 #16 引入，旧数据缺省按 contains 读入。
+fn default_body_mode() -> String {
+    "contains".to_string()
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ExpectedReceipt {
     pub status: u16,
     pub body: String,
+    #[serde(default = "default_body_mode")]
+    pub body_mode: String,
 }
 
 /// 事件的一个不可变版本：保存时间 + 来源草稿快照。
@@ -99,6 +106,7 @@ mod tests {
             expected: ExpectedReceipt {
                 status: 200,
                 body: String::new(),
+                body_mode: "contains".into(),
             },
         }
     }

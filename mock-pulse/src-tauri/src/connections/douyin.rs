@@ -20,6 +20,19 @@ pub struct HandshakeOutcome {
     pub message: String,
 }
 
+/// 直发结果：签名头快照 + HTTP 状态 + 耗时 + 原始回执文本。
+/// status 0 = 未收到响应（超时/连接失败，原因在 error）。
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DispatchOutcome {
+    pub msg_id: String,
+    pub signature: String,
+    pub status: u16,
+    pub elapsed_ms: u64,
+    pub body: String,
+    pub error: Option<String>,
+}
+
 /// 官方算法：sha1(client_secret + body 字节) 的小写 hex。
 pub fn sign(client_secret: &str, body: &str) -> String {
     let mut hasher = Sha1::new();
@@ -120,11 +133,61 @@ pub fn verify_handshake(
 }
 
 /// 生产用默认客户端：抖音连接超过 5s 自动断开，本地留 5s 上限。
+/// 握手与直发共用同一超时上限。
 pub fn handshake_client() -> reqwest::blocking::Client {
     reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(5))
         .build()
         .expect("构造 reqwest 客户端失败")
+}
+
+/// 按抖音协议直发一条事件：body 是前端逐字节拼装的明文，
+/// 这里只计算签名、构造头并 POST——字节透传，不重新解析/重排。
+pub fn dispatch_event(
+    client: &reqwest::blocking::Client,
+    config: &ConnectionConfig,
+    body: &str,
+) -> DispatchOutcome {
+    let signature = sign(&config.client_secret, body);
+    let msg_id = uuid::Uuid::new_v4().to_string();
+    let started = std::time::Instant::now();
+
+    let response = client
+        .post(&config.url)
+        .header("Content-Type", "application/json")
+        .header("X-Douyin-Signature", signature.clone())
+        .header("Msg-Id", msg_id.clone())
+        .body(body.to_string())
+        .send();
+
+    let elapsed_ms = started.elapsed().as_millis() as u64;
+    match response {
+        Ok(response) => DispatchOutcome {
+            msg_id,
+            signature,
+            status: response.status().as_u16(),
+            elapsed_ms,
+            body: response.text().unwrap_or_default(),
+            error: None,
+        },
+        Err(err) => {
+            let reason = if err.is_timeout() {
+                "等待响应超时"
+            } else if err.is_connect() {
+                "无法连接到目标地址"
+            } else {
+                "请求发送失败"
+            };
+            DispatchOutcome {
+                msg_id,
+                signature,
+                status: 0,
+                elapsed_ms,
+                body: String::new(),
+                error: Some(format!("{reason}：{err}")),
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -370,5 +433,91 @@ mod tests {
 
         assert!(!outcome.ok);
         assert!(outcome.message.contains("超时"), "{outcome:?}");
+    }
+
+    // ---- 直发全链路：本地 TcpListener 覆盖 成功 200 / 非 200 / 超时 三路径 ----
+
+    #[test]
+    fn dispatch_delivers_signed_body_verbatim_and_returns_receipt() {
+        let responder: fn(&RecordedRequest) -> (String, String) = |_| {
+            ("HTTP/1.1 200 OK".into(), "ok".into())
+        };
+        let (addr, rx) = start_server(responder, Duration::ZERO);
+        let config = config_with_url(format!("http://{addr}/webhooks/douyin"));
+        // 前端逐字节拼装的明文（含非 ASCII，验证 UTF-8 字节透传）
+        let plaintext = r#"{"event":"im_receive_msg","content":{"text":"你好，抖音"}}"#;
+
+        let outcome = dispatch_event(
+            &quick_client(Duration::from_secs(2)),
+            &config,
+            plaintext,
+        );
+
+        assert_eq!(outcome.status, 200);
+        assert_eq!(outcome.body, "ok");
+        assert_eq!(outcome.error, None);
+        assert!(outcome.elapsed_ms < 2_000, "{outcome:?}");
+
+        // 请求侧逐项核对官方协议要素
+        let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(request.request_line.starts_with("POST /webhooks/douyin"));
+        assert_eq!(request.body, plaintext, "body 必须逐字节透传");
+        assert_eq!(
+            request.header("Content-Type").as_deref(),
+            Some("application/json")
+        );
+        // 签名头 = sha1hex(client_secret + 实际发送的 body 字节)
+        assert_eq!(
+            request.header("X-Douyin-Signature"),
+            Some(sign("tt_secret", plaintext))
+        );
+        // 返回的签名头快照与实际发送一致
+        assert_eq!(outcome.signature, sign("tt_secret", plaintext));
+        // Msg-Id 为 uuid v4 且与返回快照一致
+        let msg_id = request.header("Msg-Id").expect("缺少 Msg-Id 头");
+        assert_eq!(msg_id, outcome.msg_id);
+        let parts: Vec<&str> = msg_id.split('-').collect();
+        assert_eq!(
+            parts.iter().map(|p| p.len()).collect::<Vec<_>>(),
+            vec![8, 4, 4, 4, 12],
+            "Msg-Id 应为 uuid：{msg_id}"
+        );
+        assert_eq!(&msg_id[14..15], "4");
+    }
+
+    #[test]
+    fn dispatch_returns_non_200_status_and_body() {
+        let responder: fn(&RecordedRequest) -> (String, String) = |_| {
+            ("HTTP/1.1 500 Internal Server Error".into(), "boom".into())
+        };
+        let (addr, _rx) = start_server(responder, Duration::ZERO);
+        let config = config_with_url(format!("http://{addr}/hook"));
+
+        let outcome = dispatch_event(
+            &quick_client(Duration::from_secs(2)),
+            &config,
+            r#"{"event":"im_message_read"}"#,
+        );
+
+        assert_eq!(outcome.status, 500);
+        assert_eq!(outcome.body, "boom");
+        assert_eq!(outcome.error, None, "非 200 是回执事实，不是发送错误");
+    }
+
+    #[test]
+    fn dispatch_reports_timeout_without_response() {
+        let (addr, _rx) = start_server(echo_ok, Duration::from_secs(1));
+        let config = config_with_url(format!("http://{addr}/hook"));
+
+        let outcome = dispatch_event(
+            &quick_client(Duration::from_millis(200)),
+            &config,
+            r#"{"event":"im_receive_msg"}"#,
+        );
+
+        assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
+        let error = outcome.error.clone().expect("应有错误原因");
+        assert!(error.contains("超时"), "{outcome:?}");
+        assert_eq!(outcome.body, "");
     }
 }

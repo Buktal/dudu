@@ -7,11 +7,11 @@ import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { fetchConnections } from "@/features/connections";
 import { CHANNELS, channelById } from "@/lib/channels";
 import { formatClock } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { AppDispatch, RootState } from "@/store";
-
 import { latestVersion } from "../model";
 import { DOUYIN_EVENT_SCHEMAS } from "../schemas";
 import {
@@ -172,6 +172,8 @@ export function EventsView() {
 
   useEffect(() => {
     dispatch(fetchEvents());
+    // 直发需要读取连接配置：未保存过连接时给「前往平台连接」指引
+    dispatch(fetchConnections());
   }, [dispatch]);
 
   const rows = useMemo(
