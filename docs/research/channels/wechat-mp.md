@@ -358,12 +358,12 @@ access_token 返回示例（两版同形，原文）：`{"access_token":"ACCESS_
 
 ## 7. 待核验清单（均标：待核验(09-27)）
 
-1. **POST 回调的 Content-Type**：官方推送页未明示（XML body 只说 UTF-8；wireshark 常识为 `text/xml`）→ 待核验(09-27)。
+1. **POST 回调的 Content-Type**：官方推送页未明示（2026-09-10 复核直抓 Receiving_standard_messages 全文：首句仅"微信服务器将POST消息的XML数据包到开发者填写的URL上"，无 Content-Type 头口径；wireshark 常识为 `text/xml`）→ 待核验(09-27)。
 2. **AES IV 取值**：encryption.html 只写 CBC+PKCS#7，未明写 IV=key 前 16B（同源 WXBizMsgCrypt 实现如此，但本页无原文）→ 待核验(09-27)。加解密示例包 `cryptoDemo.zip` 未下载核验 → 待核验(09-27)。
-3. **准入主体**：订阅号个人可注册、服务号仅企业主体——本次 primary 仅见旁证（subscription/guide「为媒体和个人提供信息传播方式」；sendcustommessage 适用范围「公众号/服务号仅认证」；模板消息「只有认证后的服务号才可申请」；start.html 含 `mp.weixin.qq.com` 服务号注册入口链接），`mp.weixin.qq.com` 注册页原文未抓 → 待核验(09-27)。微信认证费 300 元/次（本地档案说法，本次官方页未见）→ 待核验(09-27)。
-4. **测试号**：`mp.weixin.qq.com/debug/cgi-bin/sandbox` 扫码即得、IP 白名单要求——start.html 本次抓取未见测试号段落（线索称 start.html 含测试号，实抓正文未复现）→ 待核验(09-27)。
+3. **准入主体**：订阅号个人可注册、服务号仅企业主体——本次 primary 仅见旁证（subscription/guide「为媒体和个人提供信息传播方式」；sendcustommessage 适用范围「公众号/服务号仅认证」；模板消息「只有认证后的服务号才可申请」；start.html 含服务号注册入口链接；同系旁证：小程序 `api_sendcustommessage` 适用范围表小程序/小游戏可用、公众号·服务号仅认证，2026-09-10 直抓 `wechat-mini.md` §6.3），`mp.weixin.qq.com` 注册页原文未抓 → 待核验(09-27)。微信认证费 300 元/次（本地档案说法，本次官方页未见）→ 待核验(09-27)。
+4. **测试号**：`mp.weixin.qq.com/debug/cgi-bin/sandbox` 扫码即得、IP 白名单要求——start.html 本次抓取未见测试号段落（2026-09-10 复核直抓 start.html 全文：§1.1–1.4 为申请服务器/搭建服务/注册服务号/开发者基本配置，无测试号小节；配置入口作「微信开发者平台-我的业务与服务-服务号-开发信息」；5 秒×3 重试有实证日志段落）→ 待核验(09-27)。
 5. **订阅号树正文**：`/doc/subscription/guide/product/message/*`、`/.../kf/*`、`/.../menu/*` 与服务号树是否字字相同——仅确认目录同构，未逐页抓 → 待核验(09-27)。旧 `doc/offiaccount/*` 重定向行为 → 待核验(09-27)。
-6. **卡券/门店/发票等运营类事件**（`Coupons_Vouchers_and_Cards_Event_Push_Messages`、认证事件 `Accreditation`、一次性订阅消息、自动回复规则）：目录可见但与消息总水管无关，本次未抓 → 待核验(09-27)（如需再补）。
+6. **卡券/门店/发票等运营类事件**（`Coupons_Vouchers_and_Cards_Event_Push_Messages`、认证事件 `Accreditation`、一次性订阅消息、自动回复规则）：存在性已由服务号导航树复核确认（2026-09-10 直抓 Receiving_standard_messages 左侧导航：卡券事件推送/微信认证事件推送/一次性订阅消息/微信门店均在列），正文未抓 → 待核验(09-27)（残：正文；与消息总水管无关，如需再补）。
 7. **群发额度细节**：服务号「每月 4 条」按自然月、认证服务号高级群发日调用上限、API 群发保护 30 分钟确认——Batch_Sends 页原文已录，但 MP 后台实际配额数字以线上为准 → 口径性待核验(09-27)。
 8. **客服「48 小时」窗口起算口径**（最后一次互动起算 vs 自然时间）与 mpnewsarticle 草稿灰度状态：官方页未明示 → 待核验(09-27)。
 

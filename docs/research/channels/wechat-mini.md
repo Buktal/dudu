@@ -15,7 +15,7 @@
 | # | 标题 | URL | 覆盖内容 |
 |---|---|---|---|
 | 1 | 消息推送（总纲：配置/握手/明文与安全模式/回包/云函数/云托管） | https://developers.weixin.qq.com/miniprogram/dev/framework/server-ability/message-push.html | URL+Token+EncodingAESKey+三模式+XML/JSON；GET echostr；debug_demo 明/密两套完整算例；回包信封；云函数（仅客服消息，〈MsgType,Event〉二元组唯一）；云托管（x-wx-sources 头） |
-| 2 | 客服消息-接收消息和事件 | https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/customer-message/receive.html | text / image / miniprogrampage 三种推送包（XML+JSON 双格式）+ `user_enter_tempsession` 进入会话事件 |
+| 2 | 客服消息-接收消息和事件 | https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/customer-message/receive.html | text / image / miniprogrampage 三种推送包（XML+JSON 双格式）+ `user_enter_tempsession` 进入会话事件（2026-09-10 复核直抓：全页仅此三包+一事件，无 voice/video 包、无 `user_enter_session`） |
 | 3 | 客服消息-发送消息（概述：48h 窗口+动作额度表） | https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/customer-message/send.html | 48 小时回复窗口；动作表：用户发送消息 5 条/48h、用户进入客服消息 2 条/1 分钟 |
 | 4 | 发送客服消息（API 全字段） | https://developers.weixin.qq.com/miniprogram/dev/server/API/kf-mgnt/kf-message/api_sendcustommessage.html | `POST /cgi-bin/message/custom/send`；touser/msgtype 全类型体；text 小程序文字链；customservice/aimsgcontext/businessid；错误码；适用范围（小程序✔/小游戏✔/公众号·服务号仅认证） |
 | 5 | 获取接口调用凭据 | https://developers.weixin.qq.com/miniprogram/dev/server/API/mp-access-token/api_getaccesstoken.html | `GET /cgi-bin/token`；expires_in 7200；多应用类型隔离；AppSecret 冻结 40243；IP 白名单 40164 |
@@ -23,7 +23,8 @@
 | 7 | 接口调用凭证索引 | https://developers.weixin.qq.com/miniprogram/dev/server/API/mp-access-token/ | 凭证分组索引（内含 5、6 两页） |
 | 8 | 获取微信推送服务器 IP | https://developers.weixin.qq.com/miniprogram/dev/server/API/openApi-mgnt/api_getcallbackip.html | `GET /cgi-bin/getcallbackip` → `ip_list`；建议每天请求 1 次更新 |
 | 9 | 事件通知-授权用户信息变更（event_push 样例页） | https://developers.weixin.qq.com/miniprogram/dev/server/event_push/platform/authorized_user_information_changes.html | event_push 信封字段表 + Event 枚举（user_info_modified/user_authorization_revoke/user_authorization_cancellation）+ RevokeInfo 枚举 + XML/JSON 双示例 + 回 `success`/空串（无需加密） |
-| 10 | 云托管消息推送指引（搜索摘要交叉） | https://developers.weixin.qq.com/miniprogram/dev/wxcloudservice/wxcloudrun/src/guide/weixin/push.html | 走内网链路、无需加解密签名；`x-wx-source` 头（与总纲页 `x-wx-sources` 拼写差异见 §7）；MsgId 去重提示 |
+| 10 | 云托管消息推送指引（全文直抓） | https://developers.weixin.qq.com/miniprogram/dev/wxcloudservice/wxcloudrun/src/guide/weixin/push.html | 走内网链路、无需加解密签名；请求头 `x-wx-source`（单数，2026-09-10 复核直抓）；`CheckContainerPath` 检测请求（回 success/空，Status 须 200）；MsgId 去重提示；**被动回复只支持公众号，小程序用主动回复** |
+| 11 | 发送客服消息 API 页导航树（event_push/客服分组目录） | https://developers.weixin.qq.com/miniprogram/dev/server/API/kf-mgnt/kf-message/api_sendcustommessage.html | 2026-09-10 复核直抓：左侧导航确认 event_push 全树（平台 2/物流运力 15+小程序方 2/即时配送两端/短剧 2/付费 2/评价/直播 2）与客服分组 10 接口；msgtype 枚举含 link 但示例 5.1–5.11 无 link（见 §7.8）；适用范围小程序✔/公众号服务号仅认证（见 §7.10） |
 
 event_push 族其余页面（目录级：链接存在性已由上述各页站内导航树验证，正文未逐抓，字段明细见 §7）：
 
@@ -53,13 +54,13 @@ event_push 族其余页面（目录级：链接存在性已由上述各页站内
 | image | PicUrl（系统生成链接）、MediaId（可调获取临时素材接口拉取） | 用户发图片 |
 | miniprogrampage | MsgId、Title、AppId、PagePath、ThumbUrl、ThumbMediaId | 用户发小程序卡片 |
 
-公共字段：ToUserName（小程序原始 ID）、FromUserName（发送者 OpenID）、CreateTime（整型）、MsgId（64 位整型）。注意：官方本页**只给出以上三种**推送包；voice/video 等接收包本页未列 → 待核验(09-27)。
+公共字段：ToUserName（小程序原始 ID）、FromUserName（发送者 OpenID）、CreateTime（整型）、MsgId（64 位整型）。注意：官方本页**只给出以上三种**推送包（2026-09-10 复核直抓全页确认：文本/图片/小程序卡片三节 + 进入会话事件一节，无 voice/video/位置等其他接收包）→ §7.3 消项（确无）。
 
 ### 2.2 进入会话事件（`user_enter_tempsession`，非 `user_enter_session`）［receive.html］
 
 用户经「客服会话按钮」进入客服会话时推送（MsgType=event）：专有字段 `Event=user_enter_tempsession`、`SessionFrom`（开发者在客服会话按钮设置的 session-from 属性）。公共字段同 2.1（无 MsgId）。
 
-> 澄清：线索中的 `user_enter_session` 在 primary 中不存在；官方实际事件名为 `user_enter_tempsession`。`user_enter_session` 是否另有所指 → 待核验(09-27)。
+> 澄清：线索中的 `user_enter_session` 在 primary 中不存在；官方实际事件名为 `user_enter_tempsession`（2026-09-10 复核直抓 receive.html 全页：事件类型 `user_enter_tempsession` 唯一，无 `user_enter_session` 字样）→ §7.2 消项（确无此名）。
 
 ### 2.3 通用事件骨架（`debug_demo` 演示）［message-push.html］
 
@@ -75,7 +76,7 @@ event_push 族其余页面（目录级：链接存在性已由上述各页站内
 | user_authorization_revoke | 用户撤回授权信息（带 RevokeInfo 枚举：1 车牌号 / 2 地址 / 3 发票 / 4 蓝牙 / 5 麦克风 / 6 昵称和头像 / 7 摄像头 / 8 手机号 / 12 运动步数 / 13 位置 / 14 选中的图片或视频 / 15 选中的文件 / 16 邮箱 / 18 选择的位置 / 19 昵称输入键盘选的昵称 / 20 头像组件选的头像；另含 PluginID/OpenPID 插件场景字段） |
 | user_authorization_cancellation | 授权用户完成注销 |
 
-其余 event_push 页（§1 表：平台违规处罚 / 物流助手运力方 15 事件+小程序方 2 事件 / 即时配送两端 / 短剧媒资 2 事件 / 付费管理 2 事件 / 评价差评 / 直播长期订阅 2 接口）：目录链接已验、正文字段 → 待核验(09-27)。
+其余 event_push 页（§1 表：平台违规处罚 / 物流助手运力方 15 事件+小程序方 2 事件 / 即时配送两端 / 短剧媒资 2 事件 / 付费管理 2 事件 / 评价差评 / 直播长期订阅 2 接口）：目录链接已验（2026-09-10 复核直抓发送客服消息页左侧导航树，event_push 全树存在性确认）、正文字段 → 待核验(09-27)（残：正文字段）。
 
 ### 2.5 云函数分流规则［message-push.html］
 
@@ -123,8 +124,9 @@ event_push 族其余页面（目录级：链接存在性已由上述各页站内
 ### 3.6 云托管形态（内网链路，免加解密签名）
 
 - 小程序/公众号配置一个云托管服务即可接收**所有类型**消息推送：填环境 ID + 服务名称（只需 1 个）+ 服务内 path + 推送模式（JSON/XML）。
-- 配置后微信后台先向该服务发一个检测请求。
-- 来源确认：云托管**未开公网访问则可信任所有推送**；开了公网访问则验请求头——总纲页写作 `x-wx-sources`，云托管指引页写作 `x-wx-source`（单复数官方不一致，见 §7）；另有 `x-wx-openid` 等上下文头（总纲示例用 `headers['x-wx-openid']` 取 openid 再调客服发送接口，示例回 `success`）。
+- 配置后微信后台先向该服务发一个检测请求（指引页全文逐字：JSON 体 `{"action":"CheckContainerPath"}` / XML 体 `<xml><action>CheckContainerPath</action></xml>`，回 success/空，HTTP Status 须 200，2026-09-10 复核直抓）。
+- 来源确认：云托管**未开公网访问则可信任所有推送**；开了公网访问则验请求头——指引页全文为单数 `x-wx-source`（"带 x-wx-source 的请求才是微信侧发起的推送"，2026-09-10 复核直抓；总纲页 `x-wx-sources` 复数写法待冷页复验，见 §7.5）；另有 `x-wx-openid` 等上下文头（总纲示例用 `headers['x-wx-openid']` 取 openid 再调客服发送接口，示例回 `success`）。
+- 回复形态（指引页全文逐字，2026-09-10 复核直抓）：**被动回复只支持公众号，小程序需要使用主动回复**（`POST cgi-bin/message/custom/send`，云调用白名单）；JSON 推送示例含 `MsgId` 并明示"唯一消息 ID，可能发送多个重复消息，需要注意用此 ID 去重"。
 
 ### 3.7 回调出口 IP［api_getcallbackip.html］
 
@@ -338,7 +340,7 @@ event_push 族其余页面（目录级：链接存在性已由上述各页站内
 | msgmenu | head_content? + list[{id, content}] + tail_content? |
 | wxcard | card_id |
 | miniprogrampage | title + appid + pagepath + thumb_media_id（520*416 图片 media_id） |
-| link | 顶层 msgtype 枚举含 link（体结构本页未单列，见 §7） |
+| link | 顶层 msgtype 枚举含 link（"link 表示图文链接"，2026-09-10 复核直抓 API 页请求字段表）但无 Body.link 小节、无 link 示例（示例 5.1–5.11 止于 miniprogrampage）→ §7.8 部分落定（残：体结构） |
 
 返回：`{"errcode": 0, "errmsg": "ok"}`。错误码：-1 系统繁忙、40001 token 无效、40013 AppID 非法、70000 未成年人保护拒发（§6 表）；45008 图文超限（见 Body.mpnews 小节，非 §6 表）。
 
@@ -351,7 +353,7 @@ event_push 族其余页面（目录级：链接存在性已由上述各页站内
 | 用户发送消息 | 5 条 | 48 小时 |
 | 用户进入客服消息 | 2 条 | 1 分钟 |
 
-发送接口 API 页［api_sendcustommessage.html］（4 动作，含公众号菜单/关注/扫码，为公众号同族规则）：用户发送消息 5 条/48h；点击自定义菜单（仅点击推/扫码推/扫码推且弹提示框 3 种）3 条/1 分钟；关注公众号 3 条/1 分钟；扫描二维码 3 条/1 分钟。另：该 API 页适用范围为小程序✔、小游戏✔、公众号/服务号**仅认证**（仅允许企业主体已认证账号）——小程序未标注“仅认证”（与公众号/服务号对比），推断个人主体可用（primary 无“个人主体”原文）。
+发送接口 API 页［api_sendcustommessage.html］（4 动作，含公众号菜单/关注/扫码，为公众号同族规则）：用户发送消息 5 条/48h；点击自定义菜单（仅点击推/扫码推/扫码推且弹提示框 3 种）3 条/1 分钟；关注公众号 3 条/1 分钟；扫描二维码 3 条/1 分钟。另：该 API 页适用范围为小程序✔、小游戏✔、公众号/服务号**仅认证**（2026-09-10 复核直抓第 7 节适用范围表：小程序与小游戏为可用、公众号/服务号仅认证；另注"未认证/支持/认证账号无法调用"）——小程序未标注"仅认证"（与公众号/服务号对比），推断个人主体可用（primary 无"个人主体"原文）。
 
 ### 6.4 其他凭证
 
@@ -365,18 +367,18 @@ event_push 族其余页面（目录级：链接存在性已由上述各页站内
 
 ## 7. 待核验清单（均标：待核验(09-27)）
 
-1. **5 秒超时×重试三次**：message-push.html 全页只写「回复空串或者 success」，未见公众号同体系页面的 5 秒断连+重试三次原文 → 待核验(09-27)。
-2. **`user_enter_session`**：primary 实际事件名为 `user_enter_tempsession`（§2.2）；`user_enter_session` 是否另有所指 → 待核验(09-27)。
-3. **客服接收 voice/video 包**：receive.html 仅列 text/image/miniprogrampage；语音/视频/位置等接收包结构 → 待核验(09-27)。
-4. **event_push 其余页正文**（§1 表：违规处罚/物流助手/即时配送/短剧/付费管理/评价/直播）：仅目录链接已验，字段明细 → 待核验(09-27)。
-5. **云托管来源头拼写**：总纲 message-push.html 作 `x-wx-sources`，云托管指引 push.html 作 `x-wx-source`（后者经站内搜索摘要二次确认，developers.weixin.qq.com 域）→ 以总纲为准、差异待冷页复验(09-27)。
+1. **5 秒超时×重试三次**：message-push.html 全页只写「回复空串或者 success」，未见公众号同体系页面的 5 秒断连+重试三次原文；同系旁证：服务号树被动回复页（见 `wechat-mp.md` §3.3/§3.4）有"5 秒内必须响应…微信服务器在五秒内收不到响应会断掉连接，并且重新发起请求，总共重试三次"三页同句原文 → 小程序侧是否同规则待核验(09-27)（mock 建议按同体系实现并标注）。
+2. **`user_enter_session`**：已消项——2026-09-10 复核直抓 receive.html 全页，官方实际事件名仅 `user_enter_tempsession`（XML+JSON+参数表三处一致），无 `user_enter_session` 字样。
+3. **客服接收 voice/video 包**：已消项——2026-09-10 复核直抓 receive.html 全页，接收包仅 text/image/miniprogrampage 三节 + 进入会话事件一节，确无语音/视频/位置等接收包（与公众号 7 种普通消息不同，小程序客服会话仅此三包）。
+4. **event_push 其余页正文**（§1 表：违规处罚/物流助手/即时配送/短剧/付费管理/评价/直播）：目录存在性已由发送客服消息页左侧导航树复核确认（2026-09-10 直抓），字段明细 → 待核验(09-27)（残：正文字段）。
+5. **云托管来源头拼写**：云托管指引 push.html 全文直抓为单数 `x-wx-source`（"带 x-wx-source 的请求才是微信侧发起的推送"，2026-09-10 复核）；总纲 message-push.html 的 `x-wx-sources` 复数写法 → 以指引页全文为准、总纲侧待冷页复验(09-27)（残：总纲侧原文复验）。另指引页新增坐实：`CheckContainerPath` 检测请求（回 success/空 + Status 200）、MsgId 去重原句、小程序无被动回复（须主动回复）。
 6. **回调 POST 的 Content-Type**：官方页未明示（JSON 时常见 application/json）→ 待核验(09-27)。
-7. **安全模式 XML 信封**：安全模式示例仅给 JSON（ToUserName+Encrypt）；XML 安全包是否为 ToUserName+Encrypt 同名字段 → 待核验(09-27)（公众号同族为是）。
-8. **link 消息体结构**：发送接口顶层 msgtype 枚举含 link 但无 Body.link 小节 → 待核验(09-27)。
+7. **安全模式 XML 信封**：安全模式示例仅给 JSON（ToUserName+Encrypt）；XML 安全包是否为 ToUserName+Encrypt 同名字段 → 待核验(09-27)（公众号同族为是，见 `wechat-mp.md` §3.3）。
+8. **link 消息体结构**：发送接口请求字段表枚举含 link（"link 表示图文链接"，2026-09-10 复核直抓）但无 Body.link 小节、示例 5.1–5.11 无 link → 待核验(09-27)（残：体结构）。
 9. **cryptoDemo.zip 源码**（https://wximg.gtimg.com/shake_tv/mpwiki/cryptoDemo.zip）：未下载核验 PKCS#7/随机数实现 → 待核验(09-27)。
-10. **准入与认证费**：个人主体可注册小程序、客服消息个人主体可用（§6.3 已由适用范围页佐证）；微信认证 300 元/次（本地档案标注未验证）→ 金额待核验(09-27)。
-11. **客服配套页正文**：trans.html（转发消息）/ typing.html（输入状态）/ temp-media.html（临时素材）/ 客服账号管理 9 接口 → 待核验(09-27)。
-12. **mp-access-token 索引页正文**：仅引用作索引，未抓取其正文（5、6 两子页已覆盖实质）→ 待核验(09-27)。
+10. **准入与认证费**：个人主体可注册小程序、客服消息个人主体可用（适用范围表已由 API 页第 7 节复核佐证：小程序/小游戏可用、公众号·服务号仅认证，2026-09-10 直抓）；微信认证 300 元/次（本地档案标注未验证）→ 金额待核验(09-27)（残：金额）。
+11. **客服配套页正文**：trans.html（转发消息）/ typing.html（输入状态）/ temp-media.html（临时素材）/ 客服账号管理 9 接口：存在性已由 API 页导航树复核确认（kf-mgnt 分组 10 接口：addkfaccount/getkflist/getonlinekflist/delkfaccount/sendcustommessage/typing/setkfadmin/cancelkfadmin/uploadtempmedia/getmedia，2026-09-10 直抓），正文 → 待核验(09-27)（残：正文）。
+12. **mp-access-token 索引页正文**：导航树确认索引下仅 2 子页（getaccesstoken/getstableaccesstoken，2026-09-10 直抓；5、6 两子页已覆盖实质）→ 本项消项。
 
 ## 附：对 MockPulse 模拟的直接含义（速查）
 

@@ -54,7 +54,7 @@
 |---|---|---|---|
 | `C2C_MESSAGE_CREATE` | `GROUP_AND_C2C_EVENT (1<<25)` | 用户在单聊发消息给机器人 | C2C 事件页全文 |
 | `GROUP_AT_MESSAGE_CREATE` | `GROUP_AND_C2C_EVENT (1<<25)` | 用户在群里 @机器人 发消息；`content` 已自动去除 @前缀 | 群@页全文 |
-| `GROUP_MESSAGE_CREATE` | `GROUP_AND_C2C_EVENT (1<<25)` | 全量模式：开启"接收所有消息"后群内每条消息都推；字段与 GROUP_AT 完全一致 | `[摘录]` group_message_create 页 |
+| `GROUP_MESSAGE_CREATE` | `GROUP_AND_C2C_EVENT (1<<25)` | 全量模式：开启"接收所有消息"后群内每条消息都推（页首句逐字）；字段与 GROUP_AT 完全一致，另有 `mentions`（@用户列表） | group_message_create 页全文（2026-09-10 复核直抓；事件体字段表+3 示例见 §5 新增） |
 | `AT_MESSAGE_CREATE` | `PUBLIC_GUILD_MESSAGES (1<<30)` | 文字子频道内 @机器人或回复机器人消息时（公域） | 频道事件页全文 |
 | `MESSAGE_CREATE` | `GUILD_MESSAGES (1<<9)`，仅私域机器人可设 | 文字子频道内全部消息（私域） | 频道事件页全文 + payload 页全文 |
 | `DIRECT_MESSAGE_CREATE` | `DIRECT_MESSAGE (1<<12)` | 用户通过频道私信发消息给机器人；私信不支持沙箱环境 | 频道事件页全文 |
@@ -104,6 +104,7 @@
 | 会话/可靠 | Hello 心跳周期 → 定时 Heartbeat(op1, d=最新 s)→ACK(op11)；断线用 Resume(op6, token+session_id+seq) 补发 seq 之后遗漏事件，补完下发 `RESUMED` | 通用信封同构；op12 `HTTP Callback ACK` 定义为"仅用于 http 回调模式的回包"——正常 Dispatch 应答体格式待核验(09-27)（§7.1） |
 | 集群语义 | 官方分片：`shard=[i,n]` 多连接水平分割；分片按 `shard_id = (guild_id >> 22) % num_shards`；连接数受 `session_start_limit.remaining` 约束 | — |
 | 环境 | 正式/沙箱网关地址不同（§3.4） | 沙箱事件仅来自配置的沙箱频道/群/号（wiki 首页全文） |
+| 正常 Dispatch 回包 | op12 `HTTP Callback ACK`（payload 页定义逐字："仅用于 http 回调模式的回包，代表机器人收到了平台推送的数据"）；回包体具体格式（空 200 / `{"op":12}` / 其他）webhook 页全文无口径（§7.1） | — |
 
 ### 3.2 首次验证握手（op13，webhook 页逐字）
 
@@ -126,13 +127,14 @@
 - `GET /gateway` → `{"url": "wss://api.bot.qq.com/websocket/"}`（url_get 页全文）。
 - `/gateway/bot` → `{"url":"wss://api.bot.qq.com/websocket","shards":1,"session_start_limit":{"total":1000,"remaining":1000,"reset_after":86400000,"max_concurrency":1}}`（`[摘录]` websocket 页）。
 - OpenAPI 统一地址 `https://api.bot.qq.com`（api-call-guide 页全文）；取凭证 `POST https://api.bot.qq.com/app/getAppAccessToken`（access-token 页全文）。
-- 正式环境 `https://api.sgroup.qq.com/`、沙箱 `https://sandbox.api.sgroup.qq.com`、取凭证 `https://bots.qq.com/app/getAppAccessToken`（wiki 首页 IP 白名单节全文；与上条三地址并存关系待核验(09-27)，见 §7.5）。
+- 正式环境 `https://api.sgroup.qq.com/`、沙箱 `https://sandbox.api.sgroup.qq.com`、取凭证 `https://bots.qq.com/app/getAppAccessToken`（wiki 首页 §8.5 全文：取凭证"不区分正式环境、沙箱环境"；正式/沙箱 openapi 各走一址；与下条并存关系待核验(09-27)，见 §7.5）。
+- OpenAPI 统一请求地址 `https://api.bot.qq.com`（api-call-guide 页"统一请求地址"节逐字，2026-09-10 复核直抓）；单聊/群发送示例 curl 均以此为 host。
 - 沙箱约束（wiki 首页全文）：沙箱频道/群须为当前用户任频道主或群主/管理员且成员 ≤20 人；沙箱地址只收配置过的沙箱来源事件、openapi 仅能操作沙箱环境；IP 白名单仅作用正式环境。
 
 ### 3.5 重试、幂等、有序
 
 - 幂等（已核验）：单聊/群事件页逐字"为确保消息可达，相同 msg_id 可能重复推送"——单聊页要求结合 `msg_seq` 去重，C2C 页另要求结合 `message_scene.ext` 中的 `msg_idx` 去重；overview 页逐字"相同 `msg_id` 可能多次推送，请结合 `msg_seq` 去重。被动回复时，相同的 `msg_id + msg_seq` 重复发送会失败，可递增 `msg_seq` 实现对同一消息的多次回复。"
-- 有序（已核验）：频道事件"尽量有序，不保证严格有序，按 `Message.seq` 自行排序"；单聊/群事件无 seq 字段口径，按 `msg_seq`/`msg_idx` 去重后消费。
+- 有序（已核验）：频道事件"尽量有序，不保证严格有序，按 `Message.seq` 自行排序"（频道事件页 AT/MESSAGE 两节同句，2026-09-10 复核直抓）；单聊/群事件页（C2C 页全文）无有序口径，仅去重口径（同 `msg_id` 可能重复推，结合 `msg_seq` 去重；另结合 `message_scene.ext` 的 `msg_idx` 去重，两句并存）→ 单聊/群有序性官方无口径（§7.3 残留）。
 - Webhook 超时/重试次数与间隔：官方文档未给出 → 待核验(09-27)（§7.1）。WebSocket 侧断线补发以 Resume/seq 为准（已核验）。
 
 ---
@@ -319,7 +321,7 @@ curl -X POST 'https://api.bot.qq.com/v2/users/A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4/m
 }
 ```
 
-要点：`POST /v2/users/{user_openid}/messages`；`msg_type: 0`=文本(`content`)、`2`=Markdown(`markdown`)、`6`=输入中状态(`input_notify`)、`7`=富媒体(`media.file_info`，来自 `/v2/users/{user_openid}/files`)；被动回复 `msg_id` 取自事件 `d.id`（单聊页写"5 分钟内有效"，概述页写"60 分钟、每条 4 次"，双口径照录，见 §7.4）或 `event_id` 取事件外层 `id`（与 `msg_id` 二选一，仅 `INTERACTION_CREATE`、`C2C_MSG_RECEIVE`、`FRIEND_ADD`）；`msg_seq` 默认 1，同 `msg_id+msg_seq` 重发失败（`40054005` 消息被去重）；`is_wakeup` 与二者互斥（互动召回）；引用回复另用 `message_reference.message_id`（取 `msg_idx`/`ref_idx`）。
+要点：`POST /v2/users/{user_openid}/messages`；`msg_type: 0`=文本(`content`)、`2`=Markdown(`markdown`)、`6`=输入中状态(`input_notify`)、`7`=富媒体(`media.file_info`，来自 `/v2/users/{user_openid}/files`)；被动回复 `msg_id` 取自事件 `d.id`（同页双口径并存已坐实：页头"被动消息有效时间 60 分钟，每个消息最多回复 4 次" vs 请求体 `msg_id` 行"5 分钟内有效"，2026-09-10 复核直抓，见 §7.4）或 `event_id` 取事件外层 `id`（与 `msg_id` 二选一，仅 `INTERACTION_CREATE`、`C2C_MSG_RECEIVE`、`FRIEND_ADD`）；`msg_seq` 默认 1，同 `msg_id+msg_seq` 重发失败（`40054005` 消息被去重）；`is_wakeup` 与二者互斥（互动召回）；引用回复另用 `message_reference.message_id`（取 `msg_idx`/`ref_idx`）；过期类错误码 `304103/40034005/40034026/40034128`（"已过期/超限"）。
 
 ### 5.9 发送群消息请求（群发送页逐字）
 
@@ -359,6 +361,13 @@ curl --location 'https://api.bot.qq.com/app/getAppAccessToken' \
 
 Identify `{"op":2,"d":{"token":"token string","intents":513,"shard":[0,4],"properties":{"$os":"linux","$browser":"my_library","$device":"my_library"}}}`；Hello `{"op":10,"d":{"heartbeat_interval":45000}}`；心跳 `{"op":1,"d":251}`→`{"op":11}`；Resume `{"op":6,"d":{"token":"my_token","session_id":"session_id_i_stored","seq":1337}}`→`{"op":0,"s":2002,"t":"RESUMED","d":""}`；Ready 见 §3.3（含 `session_id` + `user{id,username,bot}` + `shard`）。
 
+### 5.12 群全量事件体与频道发送补证（2026-09-10 复核直抓逐字）
+
+- `GROUP_MESSAGE_CREATE`：页首句"当机器人开启了'接收所有消息'功能后，群里的每条消息（不限于@机器人）都会推送此事件。各字段含义与 GROUP_AT_MESSAGE_CREATE 完全一致。"事件体字段：`id/author/content/group_openid/timestamp/message_type/message_scene/attachments/mentions/ark_data/msg_elements`（`mentions`=消息中@的用户列表，为相对 GROUP_AT 新增字段）；示例1（文本"大家早上好呀"，`member_role=member`）/示例2（含 `attachments[content_type=image/jpeg, filename, url=multimedia.nt.qq.com.cn/download?…&spec=0, width/height/size]`）/示例3（`message_type=103` 聊天记录合并，`msg_elements[0].content` 为"=== 消息 N ==="拼接，`ext` 含 `ref_msg_idx=TMP_uuid`），见原文页。
+- 频道发送：`POST /channels/{channel_id}/messages`（send 页逐字）；被动 5 分钟超时报错；子频道每秒 5 条；主动默认每天每子频道 20 条、每天至多 2 个子频道；**要求 WS 在线**（"发送消息接口要求机器人接口需要连接到 websocket 上保持在线状态"，对应错误码 `304018 SESSION_NOT_EXIST 机器人没连上 gateway`，api-call-guide 错误码表逐字）；Content-Type 支持 `application/json` 与 `multipart/form-data`（回包统一 `application/json`）；审核码 `304023/304024`（data 带 `message_audit.audit_id`）；被动支持事件类型含 `GUILD_MEMBER_ADD/UPDATE/REMOVE`、`MESSAGE_REACTION_ADD/REMOVE`、论坛系 7 种。
+- 频道私信（dms 页逐字）：`POST /users/@me/dms` 建会话（`recipient_id`+`source_guild_id`，须同频道；回 `{guild_id, channel_id, create_time}`）→ `POST /dms/{guild_id}/messages` 发私信（参数/返回同子频道发送页）；主动每用户每天 2 条、累计 200 条，被动无条数限制；撤回 `DELETE /dms/{guild_id}/messages/{message_id}?hidetip=`。
+- C2C 事件页 User 表（2026-09-10 复核）：`union_openid`="跨应用统一用户 OpenID（可能为空）"、`union_user_account`="跨应用统一用户账号（可能为空）"；去重双口径同页并存："结合 msg_seq 做去重"与"结合 message_scene.ext 中的 msg_idx 做去重"；`message_type` 0/3/101/102/103（101 并行消息、102 聊天记录为相对旧版新增枚举）。
+
 ---
 
 ## 6. token / 凭证模型
@@ -366,9 +375,9 @@ Identify `{"op":2,"d":{"token":"token string","intents":513,"shard":[0,4],"prope
 | 凭证 | 换取方式 | 寿命/规则 | 出处 |
 |---|---|---|---|
 | `access_token`（机器人身份，唯一凭证类型） | `POST {api域名}/app/getAppAccessToken`，body `{appId, clientSecret}` | 默认 7200 秒；有效期内重复获取返回相同值；临过期 60 秒内获取发新值、老值 60 秒内仍有效；过期自行刷新，建议服务端定时刷 | access-token 页全文 + api-use 页全文 |
-| `AppID` / `AppSecret`（`clientSecret`） | 注册创建机器人获得（管理端开发基础设置；`QQ号`、`AppID`、`Token`、`AppSecret` 同页展示） | 须长期保密，"不要对外传播"；`AppSecret` 即验签 secret；老 `Token` 鉴权已废弃，用 Access Token | wiki 首页 §8.1 + getting-started 页全文 |
+| `AppID` / `AppSecret`（`clientSecret`） | 注册创建机器人获得（管理端开发基础设置；`QQ号`、`AppID`、`Token`、`AppSecret` 同页展示） | 须长期保密，"不要对外传播"；`AppSecret` 即验签 secret；老 `Token` 鉴权已废弃（getting-started 接入票据节逐字："Token 的鉴权方式已废弃，请使用更安全的 Access Token 鉴权方式"，2026-09-10 复核直抓；存量兼容性见 §7.9） | wiki 首页 §8.1 + getting-started 页全文 |
 | 调用传参 | `Authorization: QQBot {ACCESS_TOKEN}`；`Content-Type: application/json; charset=utf-8` | 不要在前端使用凭证，服务端发起 | access-token/api-call-guide 页全文 |
-| 身份隔离 | 不同 bot 取到的 `user_openid`/`group_openid` 均不同；群内用户另有 `member_openid`；跨 App 关联靠后续类 unionid 机制（`union_openid`/`union_user_account` 字段已存在，部分为空） | — | api-call-guide 唯一身份节 + C2C/群事件 User 表全文 |
+| 身份隔离 | 不同 bot 取到的 `user_openid`/`group_openid` 均不同；群内用户另有 `member_openid`；跨 App 关联靠后续类 unionid 机制（api-call-guide"唯一身份机制"节逐字："若跨业务有关联用户身份需求，后续提供跨 AppID 绑定后，使用类似 unionid 的机制打通身份"；`union_openid`/`union_user_account` 字段已存在，C2C/群全量页 User 表逐字"跨应用统一用户 OpenID/账号（可能为空）"，2026-09-10 复核直抓） | — | api-call-guide 唯一身份节 + C2C/群事件 User 表全文 |
 | 发送去重 | `msg_id + msg_seq`（默认 1；递增实现多次回复；重复发送失败 `40054005`） | 接收侧按 `msg_seq`/`msg_idx` 去重（§3.5） | overview + 单聊/群发送页全文 |
 | 频控（已核验） | 单聊主动：认证（企业/个人）Bot 10/qps、未认证 5/qps & 30/qpm；单关系 20/qpm；1000 条/天/用户。群主动：认证 Bot 60/qpm、未认证 30/qpm；单关系 20/qpm；1000 条/天/群。接口级：单聊/群发送页各标 100 QPS。被动窗口：单聊 60 分钟×4 次（发送页另写 msg_id 5 分钟，双口径见 §7.4）、群 5 分钟×5 次、频道 5 分钟。频道：子频道 5 条/秒、主动 20 条/天/子频道且每天至多 2 个子频道、发消息要求 WS 在线；私信：每用户每天 2 条主动、累计 200 条。 | — | overview 频率节 + 单聊/群发送页全文 |
 | 频控错误 | HTTP `429` 频率限制；`40034100` 主动消息超频控；`1100100` 安全打击限频；`20028` 子频道写限频；`304045/304049/304050` 主动消息数限频；`AT@全体 304019` | 按 `err_code` 判定失败，不看 `message` | api-call-guide 错误码表全文 + 发送页错误码表全文 |
@@ -381,18 +390,18 @@ Identify `{"op":2,"d":{"token":"token string","intents":513,"shard":[0,4],"prope
 
 ## 7. 待核验清单（统一标待核验(09-27)）
 
-1. **Webhook 正常 Dispatch 应答体**：op12 `HTTP Callback ACK` 仅定义为"http 回调模式的回包"，正常事件回包体格式（空 200 / `{"op":12}` / 其他）官方页未给 → 待核验(09-27)。
-2. **Webhook 超时与重试策略**：超时秒数、重试间隔/次数、是否至少一次投递，文档无口径 → 待核验(09-27)。
-3. **事件有序性（单聊/群）**：仅频道事件明示"尽量有序"；单聊/群是否有序无口径 → 待核验(09-27)。
-4. **被动窗口双口径**：单聊发送页 `msg_id` "5 分钟内有效" vs 概述页/同页头"被动 60 分钟、每条 4 次" → 待核验(09-27)（模拟器按概述页 60min×4 实现，发送页 5min 另注）。
-5. **域名关系**：`api.bot.qq.com`（统一地址/取凭证）vs `api.sgroup.qq.com`（正式）vs `bots.qq.com/app/getAppAccessToken`（白名单节）三者关系/迁移状态 → 待核验(09-27)。
-6. **其余事件体**：`FRIEND_DEL`、`C2C_MSG_RECEIVE/REJECT`、`GROUP_DEL_ROBOT`、`GROUP_MSG_RECEIVE/REJECT`、`GROUP_MESSAGE_CREATE` 全文、`group_member_add/remove`、`group_join_request`、`DIRECT_MESSAGE_DELETE`、`MESSAGE_DELETE/PUBLIC_MESSAGE_DELETE` → 待核验(09-27)（本库仅 Intent+语义级）。
-7. **全量群消息开通条件**："接收所有消息"开关位置/权限/审核要求 → 待核验(09-27)。
-8. **`union_openid` 跨应用打通状态**：文档称"后续提供跨 AppID 绑定"，当前可用性 → 待核验(09-27)。
-9. **老 Token 鉴权下线状态**：getting-started 称"Token 鉴权已废弃"，存量兼容性 → 待核验(09-27)。
-10. **频道发送消息接口细节**：子频道发送/私信/DMS 与 `SESSION_NOT_EXIST`（要求 WS 在线）原文页未直抓 → 待核验(09-27)。
-11. **官方 SDK 仓库直验**：`tencent-connect/botgo|botpy|bot-node-sdk` 本体内容未取（包名与安装命令出自官方文档）→ 待核验(09-27)。
-12. **准入审核时效与企业/个人能力差异**：企业打款验证、个人实名、公域↔私域（公域转私域不可逆已核验）、提审材料等细则以管理端与运营规范页为准 → 待核验(09-27)。
+1. **Webhook 正常 Dispatch 应答体**：op12 定义已坐实（payload 页逐字"仅用于 http 回调模式的回包，代表机器人收到了平台推送的数据"，2026-09-10 复核直抓）；正常事件回包体具体格式（空 200 / `{"op":12}` / 其他）webhook 页全文无口径 → 待核验(09-27)（残：回包体格式）。
+2. **Webhook 超时与重试策略**：webhook 页/各事件页全文无超时秒数、重试间隔/次数口径（仅 WS 侧 Resume/seq 补发已核验）→ 待核验(09-27)。
+3. **事件有序性（单聊/群）**：频道侧已坐实（频道事件页 AT/MESSAGE 两节同句"尽量有序…基于 Message.seq 排序"，2026-09-10 复核直抓）；单聊/群页（C2C 页全文）无有序口径、仅去重口径 → 待核验(09-27)（残：单聊/群是否有序）。
+4. **被动窗口双口径（已坐实双写，模拟器口径不变）**：单聊发送页同页双写已坐实——页头"被动消息有效时间 60 分钟，每个消息最多回复 4 次" vs 请求体 `msg_id` 行"5 分钟内有效"（2026-09-10 复核直抓）；概述页被动表为单聊 60min×4/群 5min×5/频道 5min → 双口径照录，模拟器按概述页 60min×4 实现（已定稿不动）。
+5. **域名关系**：三址并存已坐实——api-call-guide"统一请求地址 https://api.bot.qq.com"（2026-09-10 复核直抓）vs wiki 首页 §8.5"取凭证 https://bots.qq.com/app/getAppAccessToken（不区分正式/沙箱）/正式 https://api.sgroup.qq.com/沙箱 https://sandbox.api.sgroup.qq.com"；三者迁移/等价状态官方无口径 → 待核验(09-27)（残：迁移状态）。
+6. **其余事件体**：`GROUP_MESSAGE_CREATE` 全文已落定（§5.12，2026-09-10 复核直抓）；`FRIEND_DEL`、`C2C_MSG_RECEIVE/REJECT`、`GROUP_DEL_ROBOT`、`GROUP_MSG_RECEIVE/REJECT`、`group_member_add/remove`、`group_join_request`、`DIRECT_MESSAGE_DELETE`、`MESSAGE_DELETE/PUBLIC_MESSAGE_DELETE` 仍仅 Intent+语义级 → 待核验(09-27)（残：上述事件体）。
+7. **全量群消息开通条件**：触发语义已坐实（group_message_create 页首句"开启'接收所有消息'功能后…"，2026-09-10 复核直抓）；开关位置/权限/审核要求官方页无口径 → 待核验(09-27)（残：开通条件）。
+8. **`union_openid` 跨应用打通状态**：字段存在已坐实（C2C/群全量页 User 表"跨应用统一用户 OpenID/账号（可能为空）"，2026-09-10 复核直抓）+ api-call-guide"唯一身份机制"节"后续提供跨 AppID 绑定后，使用类似 unionid 的机制打通" → 当前可用性（可能为空/后续提供）照录 → 待核验(09-27)（残：实际打通可用性）。
+9. **老 Token 鉴权下线状态**：废弃声明已坐实（getting-started 接入票据节"Token 的鉴权方式已废弃，请使用更安全的 Access Token 鉴权方式"，2026-09-10 复核直抓）；存量兼容性官方无口径 → 待核验(09-27)（残：存量兼容）。
+10. **频道发送消息接口细节**：子频道发送（send 页）与私信/DMS（dms 页）已落定（§5.12：接口/频控/WS 在线/`304018 SESSION_NOT_EXIST`/审核码/私信额度，2026-09-10 复核直抓）→ 本项消项。
+11. **官方 SDK 仓库直验**：仓库地址+免责已坐实（getting-started"SDK DEMO"节：botgo/botpy/bot-node-sdk 三仓库链接+"SDK 仅提供接入参考，详情能力以官方文档能力描述为准"，2026-09-10 复核直抓）；仓库本体内容未取 → 待核验(09-27)（残：本体直验）。
+12. **准入审核时效与企业/个人能力差异**：入驻链路已坐实（wiki 首页：企业工商+对公打款验证/个人实名绑定管理员/公域转私域不可逆/使用范围白名单各 20 条/基础信息每月改 5 次，2026-09-10 复核直抓）；审核时效数字、提审材料细则以管理端与运营规范页为准 → 待核验(09-27)（残：时效数字）。
 
 ---
 

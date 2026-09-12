@@ -10,7 +10,7 @@
 
 - 门户：https://open.dingtalk.com/ ；开发者后台：https://open-dev.dingtalk.com/ ；API Explorer：https://open-dev.dingtalk.com/apiExplorer
 - 事件订阅总览（企业内部应用，全部事件目录）：https://open.dingtalk.com/document/orgapp/org-event-overview.md
-- 事件订阅总览（第三方企业应用）：https://open.dingtalk.com/document/isvapp/event-subscription-overview （正文未直抓，全文待核验(09-27)；目录结构同 org 版，见 §2.7）
+- 事件订阅总览（第三方企业应用，全文已直抓）：https://open.dingtalk.com/document/isvapp/event-subscription-overview.md （`.md` 直抓全文，2026-09-10 复核；授权 4 事件/通讯录 18 事件/会话 11 事件/审批广播+定向 4 事件/考勤 11/待办 3/日程 1/存储 3/AI 助理 2/项目 7/钉工牌 3/直播 4/会议 4/服务群 3/应用管理 4/应用市场 5/人事 6/招聘 5/财务 10/机器人 2/CRM 2/荣誉 2/专属 2/教育 10/医疗 2/行业通用 4，见 §2 各节）
 - 事件订阅概述（新版 development 树，Stream vs HTTP 一页讲清）：https://open.dingtalk.com/document/development/event-subscription-overview.md
 - 服务端 Stream 模式（原理/五零优势/50 连接限制/三 topic）：https://open.dingtalk.com/document/resourcedownload/introduction-to-stream-mode.md
 - 新版 accessToken（`api.dingtalk.com`）：https://open.dingtalk.com/document/development/obtain-the-access-token-of-an-internal-app.md ；旧版 access_token（`oapi.dingtalk.com/gettoken`）：https://open.dingtalk.com/document/development/obtain-orgapp-token.md
@@ -44,7 +44,7 @@
 | 旧回调审批事件（type start/finish/terminate/cancel 语义） | https://open.dingtalk.com/document/isvapp/approval-events-2 | `[摘录]`（2026-09-10 复核：更新于 2024-01-11；实例 `type` start/finish/terminate，任务 `type` finish/cancel；`result` agree/refuse） |
 | 旧回调通讯录事件（15 类 call_back_tag 字典） | https://open.dingtalk.com/document/app/tvgq1n | WebFetch 全文（2026-09-10 复核升级；15 行：user_add/modify/leave/active + org_admin_add/remove + org_dept_create/modify/remove + org_remove/org_change + label_user_change/conf_add/conf_del/conf_modify） |
 | API 调用步骤详解（准入：建应用→配权限→取 Token→调 API） | https://open.dingtalk.com/document/development/server-api-calling-guide.md | `[摘录]`（2026-09-10 复核：`server-api-calling-guide` 全流程页；敏感权限走 authCode 换 user token） |
-| 新 HTTP 回调握手（1500ms 回 success 加密包） | https://open.dingtalk.com/document/development/configure-event-subscription （镜像 https://help.dingtalk.io/open/development/configure-event-subscription） | `[摘录]`（2026-09-10 复核：`{"encrypt":"…"}` 握手，1500ms 内回 `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`） |
+| 新 HTTP 回调握手（1500ms 回 success 加密包） | https://open.dingtalk.com/document/development/configure-event-subscription （镜像英文版全文 https://help.dingtalk.io/open/development/configure-event-subscription） | `[镜像]`全文（2026-09-10 复核：握手 `{"encrypt":"…"}` + 1500ms 内回 `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`；运行时同 1500ms；OWNER_KEY 控制台订阅=APP_KEY/注册API=组织维度；`getEncryptedMap("success")`；解密后通讯录示例；FAQ 调试向量，见 §3.2/§5.10） |
 
 每种事件消息的文档地址（§1 必备：代表事件 → 文档 URL，同一目录 pattern 类推；全量目录见 org-event-overview 页正文）：
 
@@ -73,10 +73,16 @@
 | `storage-dentry-create/update/delete` | 存储文件系 | https://open.dingtalk.com/document/orgapp/event-storage-dentry-create.md （update/delete 类推；须配订阅文件变更接口） |
 | `suite_ticket` | 套件票据（第三方） | https://open.dingtalk.com/document/isvapp/event-suite-ticket.md |
 | `check_url` / `check_create_suite_url` / `check_update_suite_url` / `suite_ticket` / `tmp_auth_code` | 通用回调/握手系 | https://open.dingtalk.com/document/development/event-subscription-callback-test-url-event.md |
+| `tmp_auth_code`（企业授权开通应用/推送授权码） | 第三方授权开通，解密后 `{TimeStamp,AuthCode,AuthCorpId,EventType:tmp_auth_code,SuiteKey}`，须回 success 加密包 | https://open.dingtalk.com/document/isvapp/enterprise-authorized-application-activation-event-1.md （全文，2026-09-10 复核直抓，见 §5.10） |
+| `org_suite_auth`（套件授权/企业授权最新状态） | 第三方 Stream+SyncHTTP/RDS（HTTP 不支持）；RDS 高优表 `open_sync_biz_data`，`biz_type=4`（snake_case 字段） | https://open.dingtalk.com/document/isvapp/event-org-suite-auth.md （全文，2026-09-10 复核直抓，见 §5.10） |
+| `user_add_org` / `user_modify_org`（第三方版） | 第三方 Stream+SyncHTTP/RDS（HTTP 不支持）；用户详情字段体；RDS `open_sync_biz_data_medium`，`biz_type=13`（add/modify 同值） | https://open.dingtalk.com/document/isvapp/event-user-add-org.md ；https://open.dingtalk.com/document/isvapp/event-user-modify-org.md （全文，2026-09-10 复核直抓，见 §5.10） |
+| `chat_remove_member`（第三方版） | 企业内部 Stream+HTTP / 第三方 Stream+SyncHTTP/RDS；RDS `biz_type=178`（add=177） | https://open.dingtalk.com/document/isvapp/event-chat-remove-member.md （全文，2026-09-10 复核直抓，见 §5.10） |
+| `robot_msg_read` / `robot_msg_recall`（isvapp 版三信封） | 企业内部 Stream+HTTP / 第三方 Stream+SyncHTTP/RDS；RDS `biz_type=260/261` | https://open.dingtalk.com/document/isvapp/event-robot-msg-read.md ；https://open.dingtalk.com/document/isvapp/event-robot-msg-recall.md （全文，2026-09-10 复核直抓，见 §5.10） |
+| `workflow_instance_change_broadcast` / `workflow_task_change_directed` | 第三方 Stream+SyncHTTP/RDS（HTTP 不支持）；RDS `biz_type=245`（广播实例）/`248`（定向任务，实例定向=247） | https://open.dingtalk.com/document/isvapp/event-workflow-instance-change-broadcast.md ；https://open.dingtalk.com/document/isvapp/event-workflow-task-change-directed.md （全文，2026-09-10 复核直抓，见 §5.10） |
 
 官方 SDK（包名/坐标出自官方文档正文）：
 
-- Stream Java：`com.dingtalk.open:dingtalk-stream`（新）/ 旧示例工程 `app-stream-client`；示例工程 https://github.com/open-dingtalk/dingtalk-stream-sdk-java-quick-start ；仓库 https://github.com/open-dingtalk/dingtalk-stream-sdk-java — 来源 https://open.dingtalk.com/document/resourcedownload/introduction-to-stream-mode.md + `[摘录]` WebSearch 仓库 README
+- Stream Java：`com.dingtalk.open:dingtalk-stream`（新）/ 旧示例工程 `app-stream-client`；示例工程 https://github.com/open-dingtalk/dingtalk-stream-sdk-java-quick-start ；仓库 https://github.com/open-dingtalk/dingtalk-stream-sdk-java — 来源 https://open.dingtalk.com/document/resourcedownload/introduction-to-stream-mode.md + `[摘录]` WebSearch 仓库 README + 2026-09-10 复核直抓仓库页（模块 `app-stream-api/app-stream-client/app-stream-network/app-stream-protocol/dingtalk-stream`，README "Java SDK for DingTalk Stream Mode API"，教程指 https://opensource.dingtalk.com/developerpedia/docs/explore/tutorials/stream/overview；版本号未取，见 §7.12）
 - Stream Go：`go get github.com/open-dingtalk/dingtalk-stream-sdk-go`（orgapp 开发页示例为 `/v0.0.5` 后缀）— 来源同上 + `[摘录]` https://open.dingtalk.com/document/orgapp/develop-stream-mode-push-server.md
 - Stream Python：`pip install dingtalk-stream`，`dingtalk_stream.DingTalkStreamClient` + `ChatbotHandler`/`Credential(client_id, client_secret)` — 来源 `[摘录]` https://github.com/open-dingtalk/dingtalk-stream-sdk-python
 - Stream Node：`dingtalk-stream`（npm，周下载 26k 量级为镜像站数据仅参考）— 来源 `[摘录]` https://github.com/open-dingtalk/dingtalk-stream-sdk-nodejs
@@ -102,7 +108,7 @@
 
 | 事件英文名 | 触发语义 | 备注 |
 |---|---|---|
-| `user_add_org` | 通讯录用户增加 | 新事件体 `data:{timeStamp, userId[]}`（leave 页同构，add 全文待核验(09-27)）；旧回调体为 `{CorpId, EventType, UserId[], TimeStamp}`（`[摘录]`非官方镜像，对照用） |
+| `user_add_org` | 通讯录用户增加 | 新事件体 `data:{timeStamp, userId[]}`（leave 页同构，add 全文待核验(09-27)）；旧回调体为 `{CorpId, EventType, UserId[], TimeStamp}`（`[摘录]`非官方镜像，对照用）；第三方版（isvapp）为用户详情字段体（§5.10，biz_type=13） |
 | `user_modify_org` | 通讯录用户更改 | 仅企业内用户信息变更触发，个人头像/昵称/钉钉号不触发；`data` 含 `diffInfo{prev, curr, userid}` + `userId[]`（§5.2 全文） |
 | `user_leave_org` | 通讯录用户离职 | `data:{timeStamp(string), userId[]}`（§5.3 全文） |
 | `user_active_org` | 加入企业后用户激活 | 目录页有链，全文待核验(09-27) |
@@ -118,6 +124,8 @@
 | `bpms_instance_change` | 审批实例开始/结束/终止/删除 | 企业内部应用：Stream+HTTP；SyncHTTP/RDS 不支持 | 全文 https://open.dingtalk.com/document/development/event-bpms-instance-change.md |
 | `bpms_task_change` | 审批任务开始/结束/转交 | 同上 | 全文 https://open.dingtalk.com/document/development/event-bpms-task-change.md |
 | `workflow_instance_change_directed` | 审批定向事件：ISV 建的官方 OA 审批或"ISV 套件"模板的实例/任务变更，定向推给归属 ISV | 第三方企业应用：Stream 支持、HTTP 不支持、SyncHTTP/RDS 支持 | 全文 https://open.dingtalk.com/document/development/event-workflow-instance-change-directed.md（finsh 拼写照录，biz_type=247） |
+| `workflow_instance_change_broadcast` | 审批广播事件：归属某 ISV/官方 OA 的模板经 jsapi 授权后，给所有已授权 ISV 推回调 | 第三方：Stream+SyncHTTP/RDS（HTTP 不支持） | 全文 https://open.dingtalk.com/document/isvapp/event-workflow-instance-change-broadcast.md（2026-09-10 复核直抓；biz_type=245，`finshTime` 拼写照录） |
+| `workflow_task_change_directed` | 审批任务状态变更（定向） | 第三方：Stream+SyncHTTP/RDS（HTTP 不支持） | 全文 https://open.dingtalk.com/document/isvapp/event-workflow-task-change-directed.md（2026-09-10 复核直抓；biz_type=248） |
 | 请假/加班/出差/外出状态变更 | 审批单发起/完成/撤销/删除（考勤视角） | — | 目录有链 `events-attendance-approve-status-change`，全文待核验(09-27) |
 
 - 订阅规则（实例页逐字）：` /v1.0/event/bpms_instance_change/bizCategoryId/{bizCategoryId}/processCode/{processCode}/type/{type}` 或 `/v1.0/event/bpms_instance_change/processCode/{processCode}/type/{type}`；`type` 取 start/finish/terminate（页内示例用 `start`）。常用 `bizCategoryId` 表（打卡 `open.com.dd.at.approveCheck`、外出 `attendance.goout`、出差 `alitrip.business`、离职 `hrm.termination`、报销 `dingtalk.businessFinance.reimbursement` 等 30+ 行）见原文页。
@@ -130,8 +138,8 @@
 |---|---|---|---|
 | 机器人收消息（`msgtype: text/richText/picture/audio/video/file`） | 用户 @群机器人或与机器人单聊发消息 | HTTP（明文 POST + header timestamp/sign）或 Stream（topic `/v1.0/im/bot/messages/get`，零验签）；群 @不支持语音/文件/视频；人与人会话不支持语音/文件/视频；人与机器人会话全支持 | 全文 https://open.dingtalk.com/document/orgapp/receive-message.md |
 | `isw_user_msg_received` | 服务号收到用户单聊消息 | 企业内部应用 Stream+HTTP；`data:{toUser,msgType,fromUser,createTime,fromUserId,sessionWebhook,msgId,tmpPicUrl,senderNick,sessionWebhookExpiredTime,content}` | 全文 https://open.dingtalk.com/document/orgapp/event-isw-user-msg-received.md |
-| `chat_add_member` / `chat_remove_member` / `chat_quit` / `chat_disband` / `chat_update_owner` / `chat_update_title` | 群加人/删人/主动退群/解散/换群主/改群名 | 企业内部：Stream+HTTP；第三方：Stream+SyncHTTP/RDS（HTTP 不支持）；RDS 表 `open_sync_biz_data_medium`，如 add_member 的 `biz_type=177` | 全文（add_member）https://open.dingtalk.com/document/orgapp/event-chat-add-member.md；其余 slug 类推，全文待核验(09-27) |
-| 机器人消息已读/撤回 | 机器人发出的消息被读/被撤回 | 目录有链，全文待核验(09-27) | https://open.dingtalk.com/document/orgapp/event-robot-msg-read.md 等 |
+| `chat_add_member` / `chat_remove_member` / `chat_quit` / `chat_disband` / `chat_update_owner` / `chat_update_title` | 群加人/删人/主动退群/解散/换群主/改群名 | 企业内部：Stream+HTTP；第三方：Stream+SyncHTTP/RDS（HTTP 不支持）；RDS 表 `open_sync_biz_data_medium`，add_member 的 `biz_type=177`、remove_member 的 `biz_type=178`（2026-09-10 复核直抓 isvapp 版全文；remove 体与 add 同构，operator/operatorUnionId 在列） | 全文（add_member）https://open.dingtalk.com/document/orgapp/event-chat-add-member.md；remove 全文 https://open.dingtalk.com/document/isvapp/event-chat-remove-member.md；其余 slug 类推，全文待核验(09-27) |
+| 机器人消息已读/撤回 | 机器人发出的消息被读/被撤回 | 企业内部 Stream+HTTP；第三方 Stream+SyncHTTP/RDS（HTTP 不支持）；RDS `biz_type=260`（read）/`261`（recall），表 `open_sync_biz_data_medium`；三信封字段：`unionId/operatTime(字符串)/robotCode/openConversationId/userId/processQueryKey` | 全文 https://open.dingtalk.com/document/isvapp/event-robot-msg-read.md ；https://open.dingtalk.com/document/isvapp/event-robot-msg-recall.md（2026-09-10 复核直抓，见 §5.10） |
 | 服务号用户交互（菜单点击） `isw_user_event_received` | 服务号收到用户菜单点击 | 目录有链，全文待核验(09-27) | https://open.dingtalk.com/document/orgapp/event-isw-user-event-received.md |
 | 服务窗关注/取关/授权结果 | 用户关注服务窗等 | 全文待核验(09-27) | 总目录 `event-official-account-*` |
 
@@ -166,7 +174,8 @@
 | `check_create_suite_url` / `check_update_suite_url` | 新建/更新应用回调 URL 时验有效性（后台点"验证有效性"） | 须回 `success` 加密包；解密后 `{"EventType","Random"}`（更新版多 `TestSuiteKey`） |
 | `check_update_suite_url`（应用回调地址更新） | 后台改套件回调地址 | 同上 |
 | `suite_ticket` | 套件票据，每 5 小时推一次；换 corp token 的原料 | 第三方：Stream + SyncHTTP/RDS（RDS 高优表 `open_sync_biz_data`，`biz_type=2`）；HTTP 不支持 |
-| `tmp_auth_code`（授权开通企业事件） | 企业授权开通应用 | 代码示例有分支（`EVENT_TMP_AUTH_CODE`），事件体全文待核验(09-27) |
+| `tmp_auth_code`（授权开通企业事件） | 企业开通授权第三方应用后向回调 URL 推临时授权码；解密后 `{"TimeStamp","AuthCode","AuthCorpId","EventType":"tmp_auth_code","SuiteKey"}`；须回 success 加密包否则判推送失败 | 全文 https://open.dingtalk.com/document/isvapp/enterprise-authorized-application-activation-event-1.md（2026-09-10 复核直抓，见 §5.10） |
+| `org_suite_auth`（套件授权） | 企业授权应用最新状态（含 authCorpInfo/authInfo/authUserInfo/permanentCode/authScope） | 第三方：Stream + SyncHTTP/RDS（HTTP 不支持）；RDS 高优表 `open_sync_biz_data`，`biz_type=4`（RDS 体为 snake_case）— 全文 https://open.dingtalk.com/document/isvapp/event-org-suite-auth.md（2026-09-10 复核直抓，见 §5.10） |
 
 ### 2.7 企业内部 vs 第三方通道矩阵（官方原文对照）
 
@@ -195,7 +204,7 @@
 - HTTP 推送"适用于本地部署，以 HTTP POST 加密方式推送"；企业内部应用可用；推送密文，开发者自验签加解密 — 来源 event-subscription-overview.md 全文。
 - 同一事件 Stream 与 HTTP 两套信封（审批/通讯录/群事件页均双示例）：Stream `{eventUnifiedAppId, eventCorpId, eventType, eventId, eventBornTime, data}`；HTTP `{EventType, EventTime, CorpId, BizId, eventId, ...}`（字段首字母大写系）。群事件另有第三套 SyncHTTP/RDS：`{corp_id, biz_id, biz_type, biz_data:{syncAction, eventId, ...}}`，RDS 表 `open_sync_biz_data_medium`（普通）/`open_sync_biz_data`（高优如 suite_ticket）。
 - HTTP 首次订阅握手/加密参数配置页（token 3~32 字符/aes_key/公网 URL）与 SyncHTTP 服务端 2500ms 回包：本次仅 `[摘录]`（`configure-synchttp-event-push` / `develop-synchttp-push-server` 搜索摘要），全文待核验(09-27)。已知逐字：SyncHTTP 示例 `callbackCrypto.getEncryptedMap("success")` 回包、`OWNER_KEY` 传 ClientID（原 appKey）、"收到 POST 验证请求后 2500ms 内响应并返回" — 来源 `[摘录]`。
-- 新 HTTP 推送失败重试间隔：本次未在官方页取到（旧体系见 §3.4；新体系是否沿用未知）→ 待核验(09-27)。
+- 新 HTTP 推送失败重试间隔：镜像全文（help.dingtalk.io 英文版，2026-09-10 复核）只给"1500ms 内未回正确加密信息即判推送失败"，重推次数/间隔未给 → 待核验(09-27)（残：重推次数与间隔；旧体系 10s/30s+失败列表不沿用断言）。
 
 ### 3.3 机器人收消息通道（HTTP vs Stream 二选一）
 
@@ -630,6 +639,17 @@ public class Test {
 - 工作通知：`POST https://oapi.dingtalk.com/topapi/message/corpconversation/asyncsend_v2?access_token=ACCESS_TOKEN` body `{agent_id, userid_list/dept_id_list/to_all_user, msg:{msgtype,text/image/voice/file/link/oa/markdown/action_card}}` → `{errcode:0, errmsg:"ok", task_id:256271667526, request_id:"4jzllmte0wau"}`。
 - 机器人群消息：`POST https://api.dingtalk.com/v1.0/robot/groupMessages/send` header `x-acs-dingtalk-access-token` body `{"msgParam":"{\"content\":\"钉钉，让进步发生\"}","msgKey":"sampleText","openConversationId":"cid6KeBBLoveMJOGXoYKF5x7EeiodoA==","robotCode":"dingue4kfzdxbynxxxxxx","coolAppCode":"COOLAPP-1-10182EEDD1AC0BA600D9000J"}` → `{processQueryKey}`（可查已读/撤回）。
 
+### 5.10 第三方事件/握手补证（2026-09-10 复核直抓逐字）
+
+- `tmp_auth_code` 解密后（enterprise-authorized-application-activation-event-1.md 全文逐字）：`{"TimeStamp":1553709079062,"AuthCode":"xxxxxx","AuthCorpId":"xxxxxx","EventType":"tmp_auth_code","SuiteKey":"xxxxxx"}`；须回 success 加密包 `{"msg_signature","timestamp","nonce","encrypt":enc("success")}`，否则判推送失败。同页另有 `main_data_subscribe` 主数据订阅事件体（targetApp/MainEventModelId/SubAuth/IsCreate）。
+- `org_suite_auth` Stream `data`（event-org-suite-auth.md 全文逐字）：`{authCorpInfo:{authChannel,corpid,corpType,fullCorpName,corpTypeV2,industry,corpName,isAuthenticated,licenseCode,corpLogoUrl,inviteUrl,inviteCode,isEcologicalCorp,authLevel,authChannelType},permanentCode,authUserInfo:{userId},authScope:{errcode,authUserField,authOrgScopes:{authedDept},errmsg},authInfo:{agent:[{agentid,adminList,appid,agentName,logoUrl}]}}`；RDS（高优表 `open_sync_biz_data`，`biz_type=4`）同构 snake_case。
+- `user_add_org` / `user_modify_org` 第三方版 Stream `data`（event-user-add/modify-org.md 全文逐字，用户详情字段）：`{errcode,unionEmpExt:{corpId,unionEmpMapList:[{corpId,staffId}],staffId},unionid,exclusiveAccount,orderInDepts,dingId,active,errmsg,avatar,isAdmin,userid,isHide,jobnumber,isLeaderInDepts,isBoss,isSenior,name,position,department,realAuthed}`；RDS（`open_sync_biz_data_medium`）`biz_type=13`（add/modify 同值）+ `syncAction` + `eventId`。
+- `chat_remove_member`（event-chat-remove-member.md 全文逐字）：Stream/HTTP/RDS 三信封与 add_member 同构（`timeStamp/unionId/chatId/corpId/operatorUnionId/userId/openConversationId/operator`）；RDS `biz_type=178`（add=177）。
+- `robot_msg_read` / `robot_msg_recall`（event-robot-msg-read/recall.md 全文逐字）：三信封 `{unionId,operatTime(字符串型毫秒),robotCode,openConversationId,userId,processQueryKey}`（HTTP 版首字母大写系）；RDS `biz_type=260`（read）/`261`（recall），表 `open_sync_biz_data_medium`。
+- `workflow_instance_change_broadcast`（biz_type=245）/ `workflow_task_change_directed`（biz_type=248）：Stream `data` 与定向实例体同构（含 `finshTime` 原文拼写）；RDS `open_sync_biz_data_medium` + `syncAction`。
+- 新 HTTP 握手/运行时（help.dingtalk.io 镜像英文版全文逐字）：配置 URL 后平台发 `POST {"encrypt":"ajls384kdjx98XX"}`；须 1500ms 内回 JSON `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`；运行时同 1500ms，超时即判推送失败；URL 形 `http://<url>?signature=…&timestamp=…&nonce=…`；`OWNER_KEY`：控制台订阅=App 维度 APP_KEY，注册 API=组织维度（内部 appkey / 第三方 SUITE_KEY）；解密后通讯录示例 `{"EventType":"user_add_org","TimeStamp":43535463645,"UserId":["user1","user2"],"CorpId":"dinge8a56572f80b02a8ffexxxx"}`；FAQ 调试向量 `DingTalkEncryptor("123456","1234567890123456789012345678901234567890123","dingsnotzck6pm5veliw")` + `getDecryptMsg("9a95a004dd16f5c307e849b994173f76aa26e5eb","1614767836","A7Co0cJLMzIDtMMI","YvkvaGe4hQxd3VxRmEty0dVlnCOAqwf56xwTRHDHoOURqhalbmBJQk5FNcRk42Gl5T0YQXZNwpwWSm1xAFJ5ZA==")`。
+- 第三方通道总规则（callback-events-overview.md 搜索摘录，developers 域）：第三方必须注册事件回调收"企业授权开通应用事件"以初始化企业信息；RDS 推送支持第三方，SyncHTTP 强烈建议第三方使用，HTTP 仅历史第三方可用（不推荐）；小程序用 `dd.corpId`、微应用用 `$CORPID$` 占位取 corpId。
+
 ---
 
 ## 6. token / 凭证模型
@@ -661,18 +681,18 @@ public class Test {
 
 ## 7. 待核验清单（统一标待核验(09-27)）
 
-1. **第三方事件总览全文**：`isvapp/event-subscription-overview`（本次仅搜到标题，目录与规则未取；第三方 HTTP 是否全禁、审批定向外还有哪些专属事件未知）。→ 待核验(09-27)
-2. **新 HTTP 推送握手部分落定**：`configure-event-subscription` `[摘录]`已给 `{"encrypt":"…"}` 握手 + 1500ms 内回 `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`（见 §1 新增行）；`configure-http-push` 系页面全文仍未直抓。→ 待核验(09-27)（残：全文页直抓）
-3. **SyncHTTP 服务端全文**：`develop-synchttp-push-server` / `configure-synchttp-event-push`（仅搜索摘录：2500ms、`getEncryptedMap("success")`、OWNER_KEY=ClientID）；RDS 表与 `biz_type` 全表、`SYNC_HTTP_PUSH_HIGH` 语义未取。→ 待核验(09-27)
-4. **新事件重试/幂等原文**：新 Stream `LATER` 重投间隔、HTTP 重推次数、是否有失败列表兜底（旧体系 10s/30s + 失败列表已实锤，新体系未见）。→ 待核验(09-27)
-5. **`tmp_auth_code` 授权事件体**：示例代码有分支，事件字段全文未取。→ 待核验(09-27)
-6. **通讯录 add/active/admin/dept/org/label 全文**：仅 modify/leave 全文实锤；旧回调 12 类 `call_back_tag` 字典已由 `[摘录]` app/tvgq1n 落定（2022-12-09 版）；新事件各 `data` 全文仍为目录链级。→ 待核验(09-27)（残：新事件体全文）
-7. **群事件其余全文**：remove/quit/disband/owner/title/template/cool-app（仅 add_member 全文，其余 slug 类推）。→ 待核验(09-27)
-8. **机器人已读/撤回、待办、考勤、日程、会议、直播、项目、存储、日历订阅接口全文**：目录链级。→ 待核验(09-27)
-9. **加解密调试向量明文**：`1a3NBxmC…` 对应明文官方未给，无法闭环断言。→ 待核验(09-27)
-10. **准入链路全文**：企业注册→管理员建内部应用→取 ClientID/Secret→配权限→选 Stream/HTTP（控制台流程页未直抓；第三方上架审核要求未取）。→ 待核验(09-27)
-11. **RDS `biz_type` 全表**：已知 2（suite_ticket）、177（chat_add_member）、247（定向审批）；其余未知。→ 待核验(09-27)
-12. **官方 SDK 本体版本**：`dingtalk-stream` 各语言最新版与 `DingTalkEncryptor/DingCallbackCrypto` 源码常量（PKCS7/32 字节块）未下载核验。→ 待核验(09-27)
+1. **第三方事件总览全文**：已落定（https://open.dingtalk.com/document/isvapp/event-subscription-overview.md `.md` 直抓全文，2026-09-10 复核；授权 4/通讯录 18/会话 11/审批 4/考勤 11/待办 3/日程 1/存储 3/AI 助理 2/项目 7/钉工牌 3/直播 4/会议 4/服务群 3/应用管理 4/应用市场 5/人事 6/招聘 5/财务 10/机器人 2/CRM 2/荣誉 2/专属 2/教育 10/医疗 2/行业通用 4；第三方通道规则见 §5.10 末）→ 本项消项。
+2. **新 HTTP 推送握手部分落定**：握手+运行时 1500ms、`{"encrypt"}` 信封、`getEncryptedMap("success")` 回包、`OWNER_KEY` 双维度语义、FAQ 调试向量均已由镜像英文版全文落定（见 §1 更新行/§3.2/§5.10，2026-09-10 复核）；中文 `configure-http-push` 系页面全文仍未直抓。→ 待核验(09-27)（残：中文全文页直抓）
+3. **SyncHTTP 服务端全文**：`develop-synchttp-push-server` / `configure-synchttp-event-push` 中文页直抓仍失败（`.md` 变体回"淘宝网"反爬壳；镜像 404）；仅搜索摘录（2500ms、`getEncryptedMap("success")`、OWNER_KEY=ClientID）；RDS 表与 `biz_type` 见本项 §7.11 部分落定。→ 待核验(09-27)（残：SyncHTTP 服务端中文全文）
+4. **新事件重试/幂等原文**：新 Stream `LATER` 重投间隔、HTTP 重推次数、失败列表兜底仍未见（镜像全文仅"1500ms 超时判失败"，重推次数未给；旧体系 10s/30s + 失败列表已实锤）→ 待核验(09-27)
+5. **`tmp_auth_code` 授权事件体**：已落定（enterprise-authorized-application-activation-event-1.md 全文直抓，解密体 5 字段 + success 回包，见 §2.6/§5.10，2026-09-10 复核）→ 本项消项。
+6. **通讯录 add/active/admin/dept/org/label 全文**：第三方版 add/modify 全文已落定（§5.10，biz_type=13）；旧回调 12 类 `call_back_tag` 字典已由 `[摘录]` app/tvgq1n 落定（2022-12-09 版）；active/admin/dept/org/label 新事件体仍为目录链级。→ 待核验(09-27)（残：新事件体全文）
+7. **群事件其余全文**：remove 全文已落定（biz_type=178，2026-09-10 复核直抓）；quit/disband/owner/title/template/cool-app 仍 slug 类推。→ 待核验(09-27)（残：其余全文）
+8. **机器人已读/撤回、待办、考勤、日程、会议、直播、项目、存储、日历订阅接口全文**：已读/撤回已落定（三信封全文，biz_type=260/261，2026-09-10 复核直抓）；待办/考勤/日程/会议/直播/项目/存储仍目录链级。→ 待核验(09-27)（残：其余全文）
+9. **加解密调试向量明文**：`1a3NBxmC…` 对应明文官方仍未给；新增 FAQ 调试向量（`DingTalkEncryptor("123456","1234…0123","dingsnotzck6pm5veliw")` + `getDecryptMsg(…)` 四参，见 §5.10，2026-09-10 复核）可作链路向量。→ 待核验(09-27)（残：明文闭环）
+10. **准入链路全文**：企业注册→管理员建内部应用→取 ClientID/Secret→配权限→选 Stream/HTTP（控制台流程页未直抓；第三方上架审核要求未取；第三方通道选型规则见 §5.10 末搜索摘录）。→ 待核验(09-27)
+11. **RDS `biz_type` 全表**：已知 2（suite_ticket，高优表）/4（org_suite_auth，高优表）/13（user_add/modify）/177（chat_add_member）/178（chat_remove_member）/245（审批广播实例）/247（审批定向实例）/248（审批定向任务）/260（robot_msg_read）/261（robot_msg_recall）（2026-09-10 复核直抓 isvapp 各事件页；其余未知）。→ 待核验(09-27)（残：全表）
+12. **官方 SDK 本体版本**：仓库存在性+模块结构已由仓库页直抓确认（`app-stream-api/client/network/protocol/dingtalk-stream`，README"Java SDK for DingTalk Stream Mode API"，教程指 opensource.dingtalk.com，2026-09-10 复核）；各语言最新版与 `DingTalkEncryptor/DingCallbackCrypto` 源码常量（PKCS7/32 字节块）未下载核验。→ 待核验(09-27)（残：版本与源码常量）
 
 ---
 
