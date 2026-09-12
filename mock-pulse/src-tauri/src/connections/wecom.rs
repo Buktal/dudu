@@ -422,8 +422,13 @@ pub fn dispatch_event(
 
 /// 直发用默认客户端：对齐官方 5 秒应答窗口，本地留 5s 上限。
 pub fn dispatch_client() -> reqwest::blocking::Client {
+    client_with_timeout(Duration::from_secs(5))
+}
+
+/// 指定超时的客户端（执行器/测试共用同一构造，不复制协议）。
+pub fn client_with_timeout(timeout: Duration) -> reqwest::blocking::Client {
     reqwest::blocking::Client::builder()
-        .timeout(Duration::from_secs(5))
+        .timeout(timeout)
         .build()
         .expect("构造 reqwest 客户端失败")
 }

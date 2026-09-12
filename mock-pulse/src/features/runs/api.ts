@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  ConnectionConfig,
   DouyinConnectionConfig,
   WecomConnectionConfig,
 } from "@/features/connections";
 import type { RunRecord } from "./model";
+import type { RunSnapshot } from "./snapshot";
 
 /** 抖音直发的回执（Rust sends_dispatch_douyin 返回，camelCase） */
 export type DispatchOutcome = {
@@ -69,4 +71,15 @@ export function dispatchWecom(
     config,
     body,
   });
+}
+
+/**
+ * 启动剧本运行：把物化好的运行快照（纯数据）与渠道连接交给 Rust 执行器，
+ * 后台串行执行（进度经 run-progress 事件回报），命令立即返回 run id。
+ */
+export function startScenarioRun(
+  snapshot: RunSnapshot,
+  connections: ConnectionConfig[],
+): Promise<string> {
+  return invoke<string>("start_scenario_run", { snapshot, connections });
 }

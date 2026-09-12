@@ -19,6 +19,7 @@ pub fn run() {
             events::events_delete,
             runs::runs_load,
             runs::runs_save,
+            runs::executor::start_scenario_run,
             scenarios::scenarios_load,
             scenarios::scenarios_save,
             scenarios::scenarios_delete,

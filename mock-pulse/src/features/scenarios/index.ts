@@ -1,7 +1,6 @@
-// 模块图说明：本域 slice 运行时依赖 @/features/events（事件删除守卫转发
-// deleteEvent），events 的编辑器又依赖本域守卫——形成 feature 间环。
-// 环安全靠两条不变量：feature 组件只 type-only 引 @/store（项目既有约定）；
-// 跨 feature 的运行时引用一律在回调内惰性使用，不在模块求值期取值。
+// 模块图说明：本域单向依赖 @/features/events（类型 + 装载事件库），
+// 不反向被 events 引用。「先查引用再删事件」的编排在组合根
+// （src/hooks/use-delete-event-guarded.ts），本域只保留引用查询能力。
 
 export { ScenariosView } from "./components/scenarios-view";
 export {
@@ -21,7 +20,6 @@ export {
 } from "./selectors";
 export {
   addScenarioStep,
-  deleteEventGuarded,
   deleteScenario,
   discardScenarioDraft,
   fetchScenarios,

@@ -3,8 +3,17 @@ import { type NavGroup, StudioShell } from "@/components/shell/studio-shell";
 import { Button } from "@/components/ui/button";
 import { ConnectionsView } from "@/features/connections";
 import { EventsView } from "@/features/events";
-import { RunsView } from "@/features/runs";
-import { ScenariosView } from "@/features/scenarios";
+import {
+  DispatchPanel,
+  directDispatch,
+  RunsView,
+  selectPanelPhase,
+} from "@/features/runs";
+import {
+  ScenariosView,
+  scenarioNamesReferencingEvent,
+} from "@/features/scenarios";
+import { useDeleteEventGuarded } from "@/hooks/use-delete-event-guarded";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
   type NavSection,
@@ -29,6 +38,16 @@ function App() {
   const views = useAppSelector((state) => selectViews(state.app));
   const entry = viewEntry(view);
 
+  // 组合根编排：跨 feature 槽位在此装配（feature 间不互相反向引用）
+  const deleteEventGuarded = useDeleteEventGuarded();
+  const draftId = useAppSelector((state) => state.events.draft?.id ?? null);
+  const referencingScenarioNames = useAppSelector((state) =>
+    draftId ? scenarioNamesReferencingEvent(state, draftId) : [],
+  );
+  const dispatchSending = useAppSelector(
+    (state) => selectPanelPhase(state.runs) === "sending",
+  );
+
   const navGroups: NavGroup<ViewId>[] = SECTION_ORDER.map((section) => ({
     label: SECTION_LABEL[section],
     pinnedBottom: section === "bottom",
@@ -47,7 +66,15 @@ function App() {
       {view === "connections" ? (
         <ConnectionsView />
       ) : view === "events" ? (
-        <EventsView />
+        <EventsView
+          slots={{
+            onDirectDispatch: () => void dispatch(directDispatch()),
+            dispatchSending,
+            footer: <DispatchPanel />,
+            referencingScenarioNames,
+            onDeleteEvent: (eventId) => void deleteEventGuarded(eventId),
+          }}
+        />
       ) : view === "runs" ? (
         <RunsView />
       ) : view === "scenarios" ? (

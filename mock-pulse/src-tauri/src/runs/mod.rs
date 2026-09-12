@@ -2,7 +2,9 @@
 //! Run = 一次运行的步骤快照（载荷明文、签名头、回执、比对结论），
 //! 来源事件即使后续被修改，快照也不变。
 
+pub mod executor;
 pub mod store;
+pub mod verdict;
 
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -50,6 +52,9 @@ pub struct RunStep {
     pub timestamp: Option<String>,
     pub receipt: ReceiptSnapshot,
     pub verdict: RunVerdict,
+    /// 剧本运行失败即停：失败步之后的步骤不发送（旧记录缺省 false）
+    #[serde(default)]
+    pub skipped: bool,
 }
 
 /// 一条运行记录。
@@ -59,8 +64,11 @@ pub struct RunRecord {
     pub id: String,
     /// 启动时间（ISO）
     pub started_at: String,
-    /// 来源：direct = 事件直发；剧本/编排运行在后续票扩展
+    /// 来源：direct = 事件直发；scenario = 剧本运行
     pub source: String,
+    /// 来源剧本名快照（直发记录/旧记录为 None）
+    #[serde(default)]
+    pub scenario_name: Option<String>,
     pub steps: Vec<RunStep>,
 }
 
@@ -97,6 +105,7 @@ mod tests {
             id: id.into(),
             started_at: format!("2026-09-12T01:00:0{id}.000Z"),
             source: "direct".into(),
+            scenario_name: None,
             steps: vec![RunStep {
                 event_name: "新客问价".into(),
                 event_id: "evt-001".into(),
@@ -117,6 +126,7 @@ mod tests {
                     passed: true,
                     reason: "HTTP 200，与期望状态一致".into(),
                 },
+                skipped: false,
             }],
         }
     }
@@ -162,5 +172,83 @@ mod tests {
         assert_eq!(record.steps[0].timestamp, None);
         assert_eq!(record.steps[0].receipt.reply, None);
         assert_eq!(record.steps[0].msg_id, "m-1");
+        // 旧记录没有 skipped/scenarioName 字段：默认 false/None
+        assert!(!record.steps[0].skipped);
+        assert_eq!(record.scenario_name, None);
+    }
+
+    /// 剧本运行记录：多步 + 失败步骤后 skipped + 剧本名快照。
+    fn scenario_run(id: &str) -> RunRecord {
+        let failed_step = RunStep {
+            event_name: "进入会话".into(),
+            event_id: "evt-2".into(),
+            channel: "douyin".into(),
+            url: "http://127.0.0.1:8080/webhooks/douyin".into(),
+            payload: r#"{"event":"im_receive_msg"}"#.into(),
+            signature: "b".repeat(40),
+            msg_id: "m-2".into(),
+            timestamp: None,
+            receipt: ReceiptSnapshot {
+                status: 500,
+                elapsed_ms: 20,
+                body: "boom".into(),
+                reply: None,
+                error: None,
+            },
+            verdict: RunVerdict {
+                passed: false,
+                reason: "HTTP 500，期望 HTTP 200".into(),
+            },
+            skipped: false,
+        };
+        let skipped_step = RunStep {
+            event_name: "新客问价".into(),
+            event_id: "evt-3".into(),
+            channel: "douyin".into(),
+            url: "http://127.0.0.1:8080/webhooks/douyin".into(),
+            payload: r#"{"event":"im_message_read"}"#.into(),
+            signature: String::new(),
+            msg_id: String::new(),
+            timestamp: None,
+            receipt: ReceiptSnapshot {
+                status: 0,
+                elapsed_ms: 0,
+                body: String::new(),
+                reply: None,
+                error: None,
+            },
+            verdict: RunVerdict {
+                passed: false,
+                reason: "前序步骤失败，本步骤未执行".into(),
+            },
+            skipped: true,
+        };
+        RunRecord {
+            id: id.into(),
+            started_at: "2026-09-12T02:00:00.000Z".into(),
+            source: "scenario".into(),
+            scenario_name: Some("从进入会话到商品咨询".into()),
+            steps: vec![sample_run(id).steps[0].clone(), failed_step, skipped_step],
+        }
+    }
+
+    #[test]
+    fn scenario_run_record_serializes_camel_case_with_skipped() {
+        let raw = serde_json::to_string(&scenario_run("run-scn")).unwrap();
+        assert!(raw.contains("\"source\":\"scenario\""));
+        assert!(raw.contains("\"scenarioName\":\"从进入会话到商品咨询\""));
+        assert!(raw.contains("\"skipped\":true"));
+        assert!(!raw.contains("scenario_name"));
+    }
+
+    #[test]
+    fn scenario_run_record_roundtrips_multi_step_with_skipped() {
+        let record = scenario_run("run-scn");
+        let raw = serde_json::to_string(&record).unwrap();
+        let back: RunRecord = serde_json::from_str(&raw).unwrap();
+        assert_eq!(back, record);
+        assert_eq!(back.steps.len(), 3);
+        assert!(back.steps[2].skipped);
+        assert_eq!(back.scenario_name.as_deref(), Some("从进入会话到商品咨询"));
     }
 }

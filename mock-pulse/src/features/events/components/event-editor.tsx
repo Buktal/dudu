@@ -17,16 +17,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  clearDispatch,
-  DispatchPanel,
-  directDispatch,
-  selectPanelPhase,
-} from "@/features/runs";
-import {
-  deleteEventGuarded,
-  scenarioNamesReferencingEvent,
-} from "@/features/scenarios";
 import { channelById } from "@/lib/channels";
 import { formatDateTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -186,17 +176,27 @@ function VersionJson({
   );
 }
 
+/** 组合根注入的跨域槽位：直发（runs 域）与事件删除守卫（剧本引用检查）。
+ *  events 域对 runs/scenarios 零感知，编辑器只消费注入的回调与数据。 */
+export type EventEditorSlots = {
+  /** 直发当前草稿（runs 域注入） */
+  onDirectDispatch: () => void;
+  /** 直发进行中（按钮禁用 + spinner） */
+  dispatchSending: boolean;
+  /** 编辑器底部回执面板（runs 域注入） */
+  footer: React.ReactNode;
+  /** 引用当前事件的剧本名（空 = 可删除，UI 据此禁删） */
+  referencingScenarioNames: string[];
+  /** 守卫删除：被剧本引用时拒绝（组合根编排注入） */
+  onDeleteEvent: (eventId: string) => void;
+};
+
 /** 事件编辑器：字段编辑 / 完整报文 / 期望回执 / 版本历史 共享同一份草稿 */
-export function EventEditor() {
+export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
   const dispatch = useDispatch<AppDispatch>();
   const draft = useSelector((state: RootState) => state.events.draft);
   const items = useSelector((state: RootState) => state.events.items);
-  const referencingScenarios = useSelector((state: RootState) =>
-    draft ? scenarioNamesReferencingEvent(state, draft.id) : [],
-  );
-  const dispatchPhase = useSelector((state: RootState) =>
-    selectPanelPhase(state.runs),
-  );
+  const referencingScenarios = slots?.referencingScenarioNames ?? [];
   const [tab, setTab] = useState<TabKey>("form");
   const [fieldQuery, setFieldQuery] = useState("");
   const [rawText, setRawText] = useState("");
@@ -242,7 +242,7 @@ export function EventEditor() {
     }
   }, [tab, wireText]);
 
-  // 切换编辑对象时复位本地编辑态（按 id 触发）+ 清空直发面板
+  // 切换编辑对象时复位本地编辑态（按 id 触发）
   const draftId = draft?.id ?? null;
   useEffect(() => {
     if (!draftId) return;
@@ -250,8 +250,7 @@ export function EventEditor() {
     setFieldQuery("");
     setConfirmDelete(false);
     setViewRevision(null);
-    dispatch(clearDispatch());
-  }, [draftId, dispatch]);
+  }, [draftId]);
 
   const applyRaw = (): boolean => {
     if (!schema) return false;
@@ -351,8 +350,8 @@ export function EventEditor() {
                   variant="destructive"
                   onClick={() => {
                     setConfirmDelete(false);
-                    // 领域层守卫：被剧本引用时拒绝删除（可读错误）
-                    void dispatch(deleteEventGuarded(draft.id));
+                    // 守卫删除：被剧本引用时拒绝（组合根编排注入）
+                    slots?.onDeleteEvent(draft.id);
                   }}
                 >
                   确认删除
@@ -369,7 +368,7 @@ export function EventEditor() {
               <Button
                 variant="ghost"
                 size="sm"
-                disabled={referencingScenarios.length > 0}
+                disabled={referencingScenarios.length > 0 || !slots}
                 title={
                   referencingScenarios.length > 0
                     ? `事件被剧本引用：${referencingScenarios.join("、")}。先删除或调整剧本，再删除事件。`
@@ -402,18 +401,20 @@ export function EventEditor() {
             )}
             保存新版本
           </Button>
-          <Button
-            size="sm"
-            disabled={dispatchPhase === "sending"}
-            onClick={() => void dispatch(directDispatch())}
-          >
-            {dispatchPhase === "sending" ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <Send className="size-4" aria-hidden />
-            )}
-            直接发送
-          </Button>
+          {slots ? (
+            <Button
+              size="sm"
+              disabled={slots.dispatchSending}
+              onClick={slots.onDirectDispatch}
+            >
+              {slots.dispatchSending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Send className="size-4" aria-hidden />
+              )}
+              直接发送
+            </Button>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
           <Badge variant="secondary" className="font-mono text-[9px]">
@@ -757,7 +758,7 @@ export function EventEditor() {
         )}
       </div>
 
-      <DispatchPanel />
+      {slots?.footer ?? null}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import type { WecomDispatchOutcome } from "./api";
 
 /**
  * 运行记录领域模型：一次运行 = 步骤快照数组。
- * 直发 = 单步 Run；剧本/编排运行在后续票扩展（source 增加 kinds）。
+ * 直发 = 单步 Run；剧本运行 = 多步 Run（失败即停，后续步骤 skipped）。
  * 快照不随来源事件修改而变化。
  */
 
@@ -48,14 +48,18 @@ export type RunStep = {
   timestamp?: string;
   receipt: ReceiptSnapshot;
   verdict: RunVerdict;
+  /** 剧本运行失败即停：失败步之后未发送的步骤（旧记录缺省 false） */
+  skipped?: boolean;
 };
 
 export type RunRecord = {
   id: string;
   /** 启动时间（ISO） */
   startedAt: string;
-  /** direct = 事件直发 */
-  source: "direct";
+  /** direct = 事件直发；scenario = 剧本运行 */
+  source: "direct" | "scenario";
+  /** 来源剧本名快照（直发记录/旧记录为空） */
+  scenarioName?: string | null;
   steps: RunStep[];
 };
 

@@ -77,8 +77,18 @@ export function RunStepDetail({ step }: { step: RunStep }) {
   );
 }
 
-/** 运行记录行的状态徽标 */
+/** 运行记录行的状态徽标（未执行步骤显示 skipped 标记） */
 export function StepVerdictBadge({ step }: { step: RunStep }) {
+  if (step.skipped) {
+    return (
+      <Badge
+        variant="outline"
+        className="border-muted-foreground/30 font-mono text-[9px] text-muted-foreground"
+      >
+        未执行
+      </Badge>
+    );
+  }
   return (
     <Badge
       variant="outline"

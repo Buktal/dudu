@@ -6,14 +6,12 @@ import {
   eventsReducer,
   initialEventsState,
 } from "@/features/events";
-import * as eventsApi from "@/features/events/api";
 
 import * as api from "../api";
 import type { Scenario } from "../model";
 import { resolveSteps } from "../selectors";
 import {
   addScenarioStep,
-  deleteEventGuarded,
   deleteScenario,
   discardScenarioDraft,
   fetchScenarios,
@@ -43,14 +41,7 @@ vi.mock("../api", () => ({
   deleteScenarioById: vi.fn(),
 }));
 
-vi.mock("@/features/events/api", () => ({
-  loadEvents: vi.fn(),
-  saveEvent: vi.fn(),
-  deleteEventById: vi.fn(),
-}));
-
 const apiMock = vi.mocked(api, true);
-const eventsApiMock = vi.mocked(eventsApi, true);
 
 function douyinEvent(revisions: number[]): EventItem {
   return {
@@ -375,39 +366,6 @@ describe("步骤调序 / 删除 / 重命名 / 删除剧本", () => {
     await store.dispatch(deleteScenario(savedDouyinScenario.id));
     expect(selectScenarios(store.getState().scenarios)).toEqual([]);
     expect(selectScenarioDraft(store.getState().scenarios)).toBeNull();
-  });
-});
-
-describe("事件删除守卫（禁止删除被引用事件）", () => {
-  async function storeWithSavedScenario() {
-    const store = makeStore([douyinEvent([1]), wecomEvent]);
-    apiMock.loadScenarios.mockResolvedValue([savedDouyinScenario]);
-    await store.dispatch(fetchScenarios());
-    return store;
-  }
-
-  it("被剧本引用的事件删除被拒绝：可读错误含剧本名，不触达持久层", async () => {
-    const store = await storeWithSavedScenario();
-    eventsApiMock.deleteEventById.mockResolvedValue([]);
-
-    await expect(
-      store.dispatch(deleteEventGuarded("evt-dy-1")).unwrap(),
-    ).rejects.toThrow(/事件被剧本引用：「已保存剧本」/);
-    expect(eventsApiMock.deleteEventById).not.toHaveBeenCalled();
-    // 事件与剧本均保持原状
-    expect(store.getState().events.items).toHaveLength(2);
-    expect(selectScenarios(store.getState().scenarios)).toHaveLength(1);
-  });
-
-  it("未被引用的事件正常走事件删除流程", async () => {
-    const store = await storeWithSavedScenario();
-    eventsApiMock.deleteEventById.mockResolvedValue([douyinEvent([1])]);
-
-    await store.dispatch(deleteEventGuarded("evt-wc-1"));
-    expect(eventsApiMock.deleteEventById).toHaveBeenCalledWith("evt-wc-1");
-    expect(store.getState().events.items.map((event) => event.id)).toEqual([
-      "evt-dy-1",
-    ]);
   });
 });
 

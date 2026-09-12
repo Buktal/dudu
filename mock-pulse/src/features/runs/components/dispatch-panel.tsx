@@ -7,17 +7,18 @@ import {
   Plug,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import { Button } from "@/components/ui/button";
-import { selectDraftChannelId } from "@/features/events";
+import { selectDraftChannelId, selectDraftId } from "@/features/events";
 import { channelById } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 import type { AppDispatch, RootState } from "@/store";
 import { setView } from "@/stores/app-slice";
 import { receiptStatusText } from "../model";
 import {
+  clearDispatch,
   directDispatch,
   selectLastDispatch,
   selectPanelMessage,
@@ -29,6 +30,7 @@ import { RunStepDetail } from "./run-step-detail";
  * 回执面板：编辑区底部状态条（默认收起，点击展开详情）。
  * 显示最近一次直发的 HTTP 状态、耗时、原始回执与比对结论；
  * 未配置连接时给出「前往平台连接」指引。
+ * 由组合根注入 events 编辑器底部；随编辑对象切换自行复位。
  */
 export function DispatchPanel() {
   const dispatch = useDispatch<AppDispatch>();
@@ -43,7 +45,15 @@ export function DispatchPanel() {
   const draftChannel = useSelector((state: RootState) =>
     selectDraftChannelId(state),
   );
+  const draftId = useSelector((state: RootState) => selectDraftId(state));
   const [expanded, setExpanded] = useState(false);
+
+  // 切换编辑对象时复位面板（运行记录不受影响）
+  useEffect(() => {
+    if (!draftId) return;
+    dispatch(clearDispatch());
+    setExpanded(false);
+  }, [draftId, dispatch]);
 
   const step = result?.step;
   const channel = step

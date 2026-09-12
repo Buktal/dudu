@@ -1,3 +1,4 @@
+export { EventEditor, type EventEditorSlots } from "./components/event-editor";
 export { EventsView } from "./components/events-view";
 export {
   DEFAULT_EXPECTED,
@@ -39,6 +40,7 @@ export {
   renameEvent,
   saveEvent,
   selectDraftChannelId,
+  selectDraftId,
   setDraftExpected,
   setDraftField,
   setDraftName,

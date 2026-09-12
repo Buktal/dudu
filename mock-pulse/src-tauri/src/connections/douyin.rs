@@ -139,8 +139,13 @@ pub fn verify_handshake(
 /// 生产用默认客户端：抖音连接超过 5s 自动断开，本地留 5s 上限。
 /// 握手与直发共用同一超时上限。
 pub fn handshake_client() -> reqwest::blocking::Client {
+    client_with_timeout(Duration::from_secs(5))
+}
+
+/// 指定超时的客户端（执行器/测试共用同一构造，不复制协议）。
+pub fn client_with_timeout(timeout: Duration) -> reqwest::blocking::Client {
     reqwest::blocking::Client::builder()
-        .timeout(Duration::from_secs(5))
+        .timeout(timeout)
         .build()
         .expect("构造 reqwest 客户端失败")
 }

@@ -31,7 +31,7 @@ import {
   setPage,
   startDraft,
 } from "../stores/events-slice";
-import { EventEditor } from "./event-editor";
+import { EventEditor, type EventEditorSlots } from "./event-editor";
 
 const KIND_TABS = [
   { key: "all", label: "全部" },
@@ -183,8 +183,9 @@ function LibraryRow({
   );
 }
 
-/** 事件调试视图：左侧可筛选素材库（虚拟滚动 + 分页），右侧参数编辑区 */
-export function EventsView() {
+/** 事件调试视图：左侧可筛选素材库（虚拟滚动 + 分页），右侧参数编辑区。
+ *  跨域槽位（直发/删除守卫）由组合根注入，经本视图转发给编辑器。 */
+export function EventsView({ slots }: { slots?: EventEditorSlots }) {
   const dispatch = useDispatch<AppDispatch>();
   const events = useSelector((state: RootState) => state.events);
   const [creating, setCreating] = useState(false);
@@ -357,7 +358,7 @@ export function EventsView() {
             />
           </div>
         ) : events.draft ? (
-          <EventEditor />
+          <EventEditor slots={slots} />
         ) : (
           <EmptyState
             icon={Zap}

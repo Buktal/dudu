@@ -249,3 +249,12 @@ export function selectDraftChannelId(
   const events = "events" in state ? state.events : state;
   return events.draft?.channelId;
 }
+
+/** 当前草稿 id（跨 feature 消费：直发面板随编辑对象切换复位）。
+ *  入参收 RootState 形状（含 events 键即可）。 */
+export function selectDraftId(
+  state: EventsState | { events: EventsState },
+): string | null {
+  const events = "events" in state ? state.events : state;
+  return events.draft?.id ?? null;
+}

@@ -2,8 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ConnectionConfig } from "@/features/connections";
-import { dispatchDouyin, dispatchWecom, loadRuns, saveRun } from "./api";
+import {
+  dispatchDouyin,
+  dispatchWecom,
+  loadRuns,
+  saveRun,
+  startScenarioRun,
+} from "./api";
 import type { RunRecord } from "./model";
+import type { RunSnapshot } from "./snapshot";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -98,6 +105,33 @@ describe("runs api 契约", () => {
     expect(invokeMock).toHaveBeenCalledWith("sends_dispatch_wecom", {
       config: wecom,
       body,
+    });
+  });
+
+  it("startScenarioRun 调用 start_scenario_run，传快照与连接列表，返回 run id", async () => {
+    const snapshot: RunSnapshot = {
+      runId: "run-x1",
+      scenarioId: "scn-1",
+      scenarioName: "抖音接待",
+      startedAt: "2026-09-12T03:00:00.000Z",
+      steps: [
+        {
+          eventName: "新客问价",
+          eventId: "evt-001",
+          channel: "douyin",
+          expected: { status: 200, body: "", bodyMode: "contains" },
+          body: '{"event":"im_receive_msg"}',
+        },
+      ],
+    };
+    invokeMock.mockResolvedValueOnce("run-x1");
+
+    await expect(startScenarioRun(snapshot, [connection])).resolves.toBe(
+      "run-x1",
+    );
+    expect(invokeMock).toHaveBeenCalledWith("start_scenario_run", {
+      snapshot,
+      connections: [connection],
     });
   });
 });

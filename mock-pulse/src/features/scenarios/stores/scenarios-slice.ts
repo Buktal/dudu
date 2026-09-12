@@ -3,12 +3,7 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import {
-  deleteEvent,
-  type EventItem,
-  type EventsState,
-  type EventVersion,
-} from "@/features/events";
+import type { EventItem, EventsState, EventVersion } from "@/features/events";
 import type { ChannelId } from "@/lib/channels";
 
 import {
@@ -153,27 +148,6 @@ export const saveScenario = createAsyncThunk(
 export const deleteScenario = createAsyncThunk(
   "scenarios/delete",
   async (scenarioId: string) => deleteScenarioApi(scenarioId),
-);
-
-/**
- * 事件删除守卫：被剧本引用的事件禁止删除（先删/调整剧本），
- * 未引用则转发事件删除流程。归 scenarios 域：引用关系是剧本侧的事实。
- */
-export const deleteEventGuarded = createAsyncThunk(
-  "scenarios/deleteEventGuarded",
-  async (eventId: string, { getState, dispatch }) => {
-    const { scenarios } = getState() as ScenariosRoot;
-    const referencing = scenariosReferencingEvent(eventId, scenarios.items);
-    if (referencing.length > 0) {
-      const names = referencing
-        .map((scenario) => `「${scenario.name}」`)
-        .join("、");
-      throw new Error(
-        `事件被剧本引用：${names}。先删除或调整剧本，再删除事件。`,
-      );
-    }
-    return dispatch(deleteEvent(eventId)).unwrap();
-  },
 );
 
 const scenariosSlice = createSlice({

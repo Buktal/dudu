@@ -1,4 +1,5 @@
 import {
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Loader2,
@@ -9,6 +10,7 @@ import {
   Save,
   Trash2,
   X,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -17,8 +19,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type EventItem, fetchEvents } from "@/features/events";
+import {
+  selectLiveRun,
+  selectScenarioRunMessage,
+  selectScenarioRunPhase,
+  startScenarioRun,
+} from "@/features/runs";
 import { channelById } from "@/lib/channels";
+import { formatDateTime } from "@/lib/time";
+import { cn } from "@/lib/utils";
 import type { AppDispatch, RootState } from "@/store";
+import { setView } from "@/stores/app-slice";
 import type { Scenario } from "../model";
 import { resolveSteps, type StepRow } from "../selectors";
 import {
@@ -201,13 +212,20 @@ function AddStepPicker({
   );
 }
 
-/** 剧本编辑器：渠道锁定 + 步骤引用版本 + 显式同步（ADR-0004） */
+/** 剧本编辑器：渠道锁定 + 步骤引用版本 + 显式同步（ADR-0004）+ 单发运行 */
 export function ScenarioEditor() {
   const dispatch = useDispatch<AppDispatch>();
   const draft = useSelector((state: RootState) => state.scenarios.draft);
   const items = useSelector((state: RootState) => state.scenarios.items);
   const events = useSelector((state: RootState) => state.events.items);
   const eventsLoaded = useSelector((state: RootState) => state.events.loaded);
+  const runPhase = useSelector((state: RootState) =>
+    selectScenarioRunPhase(state.runs),
+  );
+  const runMessage = useSelector((state: RootState) =>
+    selectScenarioRunMessage(state.runs),
+  );
+  const liveRun = useSelector((state: RootState) => selectLiveRun(state.runs));
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -282,10 +300,26 @@ export function ScenarioEditor() {
             )}
             保存剧本
           </Button>
-          {/* 剧本整体运行归 #20；先给入口占位 */}
-          <Button size="sm" disabled title="剧本运行将在后续版本落地">
-            <Play className="size-4" aria-hidden />
-            运行剧本
+          {/* 单发运行当前选中剧本：启动时固化快照，进度实时回报。
+              启动失败（物化错误/命令异常）由 runPhase=error 区块呈现。 */}
+          <Button
+            size="sm"
+            disabled={
+              runPhase === "starting" ||
+              runPhase === "running" ||
+              draft.steps.length === 0
+            }
+            title={
+              draft.steps.length === 0 ? "先添加已保存事件再运行" : undefined
+            }
+            onClick={() => void dispatch(startScenarioRun())}
+          >
+            {runPhase === "starting" || runPhase === "running" ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Play className="size-4" aria-hidden />
+            )}
+            {runPhase === "running" ? "运行中…" : "运行剧本"}
           </Button>
           {saved ? (
             confirmDelete ? (
@@ -358,6 +392,70 @@ export function ScenarioEditor() {
           <p role="alert" className="text-[10px] text-destructive">
             {actionError}
           </p>
+        ) : null}
+        {runPhase === "error" ? (
+          <p
+            role="alert"
+            className="flex items-center gap-1.5 text-[10px] text-destructive"
+          >
+            <XCircle className="size-3.5 shrink-0" aria-hidden />
+            {runMessage}
+          </p>
+        ) : null}
+        {runPhase === "needConnection" ? (
+          <p className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+            尚未配置{channel?.name ?? draft.channelId}
+            连接：剧本运行需要目标地址与签名密钥。
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-6 px-2 text-[10px]"
+              onClick={() => dispatch(setView("connections"))}
+            >
+              前往平台连接
+            </Button>
+          </p>
+        ) : null}
+        {liveRun ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="flex items-center gap-1 font-mono text-[10px] text-primary">
+              <Loader2 className="size-3 animate-spin" aria-hidden />
+              {liveRun.scenarioName} · 运行中 ·{" "}
+              {formatDateTime(liveRun.startedAt)}
+            </span>
+            {/* 步骤按位置标识（同一事件可多次入本，位置即键语义） */}
+            {liveRun.steps
+              .map((step, index) => ({
+                id: `${index + 1}-${step.eventName}`,
+                step,
+              }))
+              .map((entry, index) => (
+                <span
+                  key={entry.id}
+                  className={cn(
+                    "rounded-md border px-1.5 py-0.5 font-mono text-[9px]",
+                    entry.step.status === "pending" &&
+                      "border-border text-muted-foreground",
+                    entry.step.status === "waiting" &&
+                      "border-primary/40 text-primary",
+                    entry.step.status === "success" &&
+                      "border-success/40 text-success",
+                    entry.step.status === "failed" &&
+                      "border-destructive/40 text-destructive",
+                    entry.step.status === "skipped" &&
+                      "border-muted-foreground/30 text-muted-foreground",
+                  )}
+                >
+                  {`${index + 1} ${entry.step.eventName}`}
+                  {entry.step.status === "success" ? (
+                    <CheckCircle2
+                      className="ml-0.5 inline size-2.5"
+                      aria-hidden
+                    />
+                  ) : null}
+                </span>
+              ))}
+          </div>
         ) : null}
       </header>
 
