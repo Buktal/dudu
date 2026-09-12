@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod connections;
 mod events;
+mod plans;
 mod runs;
 mod scenarios;
 mod sends;
@@ -17,8 +18,12 @@ pub fn run() {
             events::events_load,
             events::events_save,
             events::events_delete,
+            plans::plans_load,
+            plans::plans_save,
+            plans::plans_delete,
             runs::runs_load,
             runs::runs_save,
+            runs::executor::start_plan_run,
             runs::executor::start_scenario_run,
             scenarios::scenarios_load,
             scenarios::scenarios_save,

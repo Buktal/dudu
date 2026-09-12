@@ -50,16 +50,22 @@ export type RunStep = {
   verdict: RunVerdict;
   /** 剧本运行失败即停：失败步之后未发送的步骤（旧记录缺省 false） */
   skipped?: boolean;
+  /** 编排运行：本步骤所属 lane 序号（直发/剧本运行/旧记录缺省为空） */
+  laneIndex?: number | null;
+  /** 编排运行：本步骤所属剧本名快照（直发/剧本运行/旧记录缺省为空） */
+  laneName?: string | null;
 };
 
 export type RunRecord = {
   id: string;
   /** 启动时间（ISO） */
   startedAt: string;
-  /** direct = 事件直发；scenario = 剧本运行 */
-  source: "direct" | "scenario";
+  /** direct = 事件直发；scenario = 剧本运行；plan = 执行编排 */
+  source: "direct" | "scenario" | "plan";
   /** 来源剧本名快照（直发记录/旧记录为空） */
   scenarioName?: string | null;
+  /** 来源编排名快照（编排运行记录才有） */
+  planName?: string | null;
   steps: RunStep[];
 };
 

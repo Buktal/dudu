@@ -14,6 +14,7 @@ import {
   setDraftField,
   startDraft,
 } from "@/features/events";
+import { plansReducer } from "@/features/plans";
 import {
   initialScenariosState,
   type Scenario,
@@ -95,6 +96,7 @@ function makeStore(connection?: ConnectionConfig) {
       runs: runsReducer,
       events: eventsReducer,
       connections: connectionsReducer,
+      plans: plansReducer,
       scenarios: scenariosReducer,
     },
     preloadedState: {
@@ -375,6 +377,7 @@ function makeScenarioStore(connection?: ConnectionConfig) {
       runs: runsReducer,
       events: eventsReducer,
       connections: connectionsReducer,
+      plans: plansReducer,
       scenarios: scenariosReducer,
     },
     preloadedState: {
@@ -450,6 +453,7 @@ describe("runs slice 剧本运行状态流转", () => {
         runs: runsReducer,
         events: eventsReducer,
         connections: connectionsReducer,
+        plans: plansReducer,
         scenarios: scenariosReducer,
       },
       preloadedState: {
@@ -485,6 +489,7 @@ describe("runs slice 剧本运行状态流转", () => {
         runs: runsReducer,
         events: eventsReducer,
         connections: connectionsReducer,
+        plans: plansReducer,
         scenarios: scenariosReducer,
       },
       preloadedState: {

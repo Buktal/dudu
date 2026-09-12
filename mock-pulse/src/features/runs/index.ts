@@ -3,6 +3,7 @@ export type {
   WecomDispatchOutcome,
 } from "./api";
 export { DispatchPanel } from "./components/dispatch-panel";
+export { RunStepDetail, StepVerdictBadge } from "./components/run-step-detail";
 export { RunsView } from "./components/runs-view";
 export type {
   ReceiptSnapshot,
@@ -13,6 +14,8 @@ export type {
 } from "./model";
 export {
   filterRuns,
+  type LaneGroup,
+  laneGroups,
   type RunFilters,
   type RunRow,
   runStatus,

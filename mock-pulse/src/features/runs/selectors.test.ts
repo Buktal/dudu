@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { ChannelId } from "@/lib/channels";
 
 import type { RunRecord, RunStep } from "./model";
-import { filterRuns, type RunFilters, runStatus } from "./selectors";
+import {
+  filterRuns,
+  laneGroups,
+  type RunFilters,
+  runStatus,
+} from "./selectors";
 
 function step(channel: ChannelId, overrides: Partial<RunStep> = {}): RunStep {
   return {
@@ -114,5 +119,69 @@ describe("运行记录筛选 selector", () => {
     expect(runStatus(empty)).toBe("failed");
     const rows = filterRuns([empty], { ...NO_FILTERS, channel: "douyin" });
     expect(rows).toHaveLength(0);
+  });
+});
+
+/** 编排运行记录：两 lane 各两步（lane 归属由 Rust 执行器写入） */
+const planRun: RunRecord = {
+  id: "run-plan",
+  startedAt: "2026-09-12T05:00:00.000Z",
+  source: "plan",
+  planName: "双平台接待回归",
+  steps: [
+    step("douyin", {
+      laneIndex: 0,
+      laneName: "抖音接待",
+      eventName: "进入会话",
+    }),
+    step("douyin", {
+      laneIndex: 0,
+      laneName: "抖音接待",
+      eventName: "新客问价",
+      verdict: { passed: false, reason: "HTTP 500，期望 HTTP 200" },
+      receipt: { status: 500, elapsedMs: 5, body: "boom", error: null },
+    }),
+    step("wecom", {
+      laneIndex: 1,
+      laneName: "企微接待",
+      eventName: "企微文本",
+      skipped: true,
+      verdict: {
+        passed: false,
+        reason: "其他剧本已失败，编排停止，本剧本未执行",
+      },
+      receipt: { status: 0, elapsedMs: 0, body: "", error: null },
+    }),
+  ],
+};
+
+describe("编排运行记录 selector", () => {
+  it("来源标识：plan → 执行编排；meta 携带编排名", () => {
+    const rows = filterRuns([planRun], NO_FILTERS);
+    expect(rows[0].sourceLabel).toBe("执行编排");
+    expect(rows[0].planName).toBe("双平台接待回归");
+    expect(rows[0].scenarioName).toBeUndefined();
+  });
+
+  it("编排运行跨渠道：不用首步渠道代表（渠道筛选不命中）", () => {
+    const rows = filterRuns([planRun], { ...NO_FILTERS, channel: "douyin" });
+    expect(rows).toHaveLength(0);
+  });
+
+  it("laneGroups：按 laneIndex 分组、组间按 lane 序号、组内保序", () => {
+    const groups = laneGroups(planRun);
+    expect(groups).toHaveLength(2);
+    expect(groups?.[0]).toMatchObject({ lane: 0, name: "抖音接待" });
+    expect(groups?.[0].steps.map((s) => s.eventName)).toEqual([
+      "进入会话",
+      "新客问价",
+    ]);
+    expect(groups?.[1]).toMatchObject({ lane: 1, name: "企微接待" });
+    expect(groups?.[1].steps.map((s) => s.eventName)).toEqual(["企微文本"]);
+  });
+
+  it("laneGroups：非编排运行返回 null", () => {
+    expect(laneGroups(directPass)).toBeNull();
+    expect(laneGroups(scenarioFail)).toBeNull();
   });
 });

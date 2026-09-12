@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { connectionsReducer } from "@/features/connections";
 import { eventsReducer } from "@/features/events";
+import { plansReducer } from "@/features/plans";
 import { runsReducer } from "@/features/runs";
 import { scenariosReducer } from "@/features/scenarios";
 import { appReducer } from "@/stores/app-slice";
@@ -14,6 +15,7 @@ export const store = configureStore({
     app: appReducer,
     connections: connectionsReducer,
     events: eventsReducer,
+    plans: plansReducer,
     runs: runsReducer,
     scenarios: scenariosReducer,
   },

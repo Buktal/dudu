@@ -55,6 +55,12 @@ pub struct RunStep {
     /// 剧本运行失败即停：失败步之后的步骤不发送（旧记录缺省 false）
     #[serde(default)]
     pub skipped: bool,
+    /// 编排运行：本步骤所属 lane 序号（直发/剧本运行/旧记录缺省 None）
+    #[serde(default)]
+    pub lane_index: Option<usize>,
+    /// 编排运行：本步骤所属剧本名快照（直发/剧本运行/旧记录缺省 None）
+    #[serde(default)]
+    pub lane_name: Option<String>,
 }
 
 /// 一条运行记录。
@@ -69,6 +75,9 @@ pub struct RunRecord {
     /// 来源剧本名快照（直发记录/旧记录为 None）
     #[serde(default)]
     pub scenario_name: Option<String>,
+    /// 来源编排名快照（编排运行记录才有；直发/剧本运行/旧记录为 None）
+    #[serde(default)]
+    pub plan_name: Option<String>,
     pub steps: Vec<RunStep>,
 }
 
@@ -127,7 +136,10 @@ mod tests {
                     reason: "HTTP 200，与期望状态一致".into(),
                 },
                 skipped: false,
+                lane_index: None,
+                lane_name: None,
             }],
+            plan_name: None,
         }
     }
 
@@ -175,6 +187,10 @@ mod tests {
         // 旧记录没有 skipped/scenarioName 字段：默认 false/None
         assert!(!record.steps[0].skipped);
         assert_eq!(record.scenario_name, None);
+        // 旧记录没有 planName/laneIndex/laneName 字段：默认 None（编排字段向后兼容）
+        assert_eq!(record.plan_name, None);
+        assert_eq!(record.steps[0].lane_index, None);
+        assert_eq!(record.steps[0].lane_name, None);
     }
 
     /// 剧本运行记录：多步 + 失败步骤后 skipped + 剧本名快照。
@@ -200,6 +216,8 @@ mod tests {
                 reason: "HTTP 500，期望 HTTP 200".into(),
             },
             skipped: false,
+            lane_index: None,
+            lane_name: None,
         };
         let skipped_step = RunStep {
             event_name: "新客问价".into(),
@@ -222,12 +240,15 @@ mod tests {
                 reason: "前序步骤失败，本步骤未执行".into(),
             },
             skipped: true,
+            lane_index: None,
+            lane_name: None,
         };
         RunRecord {
             id: id.into(),
             started_at: "2026-09-12T02:00:00.000Z".into(),
             source: "scenario".into(),
             scenario_name: Some("从进入会话到商品咨询".into()),
+            plan_name: None,
             steps: vec![sample_run(id).steps[0].clone(), failed_step, skipped_step],
         }
     }
@@ -250,5 +271,47 @@ mod tests {
         assert_eq!(back.steps.len(), 3);
         assert!(back.steps[2].skipped);
         assert_eq!(back.scenario_name.as_deref(), Some("从进入会话到商品咨询"));
+    }
+
+    /// 编排运行记录：source = plan、planName 快照、步骤带 lane 归属。
+    fn plan_run(id: &str) -> RunRecord {
+        let mut step = sample_run(id).steps[0].clone();
+        step.lane_index = Some(1);
+        step.lane_name = Some("企微接待".into());
+        RunRecord {
+            id: id.into(),
+            started_at: "2026-09-12T03:00:00.000Z".into(),
+            source: "plan".into(),
+            scenario_name: None,
+            plan_name: Some("双平台接待回归".into()),
+            steps: vec![step],
+        }
+    }
+
+    #[test]
+    fn plan_run_record_serializes_camel_case_with_lane_fields() {
+        let raw = serde_json::to_string(&plan_run("run-plan")).unwrap();
+        assert!(raw.contains("\"source\":\"plan\""));
+        assert!(raw.contains("\"planName\":\"双平台接待回归\""));
+        assert!(raw.contains("\"laneIndex\":1"));
+        assert!(raw.contains("\"laneName\":\"企微接待\""));
+        assert!(!raw.contains("lane_index"));
+        assert!(!raw.contains("plan_name"));
+        // 非编排记录：编排字段以 null 序列化（与 skipped=false 同风格，旧前端可忽略）
+        let raw = serde_json::to_string(&sample_run("run-1")).unwrap();
+        assert!(raw.contains("\"planName\":null"));
+        assert!(raw.contains("\"laneIndex\":null"));
+        assert!(raw.contains("\"laneName\":null"));
+    }
+
+    #[test]
+    fn plan_run_record_roundtrips_with_lane_fields() {
+        let record = plan_run("run-plan");
+        let raw = serde_json::to_string(&record).unwrap();
+        let back: RunRecord = serde_json::from_str(&raw).unwrap();
+        assert_eq!(back, record);
+        assert_eq!(back.steps[0].lane_index, Some(1));
+        assert_eq!(back.steps[0].lane_name.as_deref(), Some("企微接待"));
+        assert_eq!(back.plan_name.as_deref(), Some("双平台接待回归"));
     }
 }

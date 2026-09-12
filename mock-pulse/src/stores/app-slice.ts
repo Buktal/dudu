@@ -27,7 +27,7 @@ export type ViewEntry = {
   name: string;
   /** 空态/入口的一句话定位，沿用原型文案 */
   hint: string;
-  /** 事件调试与平台连接已落地，其余视图为明确空态 */
+  /** 视图是否已落地（五视图现已全部实现） */
   implemented: boolean;
   icon: LucideIcon;
   navSection: NavSection;
@@ -56,7 +56,8 @@ export const VIEWS: readonly ViewEntry[] = [
     id: "plans",
     name: "执行编排",
     hint: "让多个剧本一起跑，或依次跑。",
-    implemented: false,
+    // 编排编辑与运行已落地（#21）
+    implemented: true,
     icon: Workflow,
     navSection: "build",
   },

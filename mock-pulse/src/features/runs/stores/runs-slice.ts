@@ -182,6 +182,8 @@ export type RunProgressPayload = {
   runId: string;
   index: number;
   status: "waiting" | "success" | "failed" | "skipped" | "finished";
+  /** 编排运行：进度所属 lane 序号（剧本运行/finished 无此字段） */
+  lane?: number;
   /** 完成态（success/failed）携带完整步骤快照 */
   step?: RunStep;
   /** finished 携带完整运行记录 */
@@ -246,7 +248,9 @@ const runsSlice = createSlice({
       state.message = "";
     },
     /** run-progress 事件驱动：waiting/success/failed/skipped 更新 live，
-     *  finished 把完整记录入列并清 live（组合根订阅一次事件后 dispatch）。 */
+     *  finished 把完整记录入列并清 live（组合根订阅一次事件后 dispatch）。
+     *  编排运行（plans 域监听同一事件）的 finished 也入列历史，
+     *  但不动本域的剧本运行状态。 */
     onRunProgress(state, action: PayloadAction<RunProgressPayload>) {
       const { runId, index, status, step, run } = action.payload;
       if (status === "finished") {
@@ -256,7 +260,11 @@ const runsSlice = createSlice({
         if (state.live?.runId === runId) {
           state.live = null;
         }
-        if (state.scenarioRunPhase === "running") {
+        // 只收束本域运行：编排运行的 finished（runId 不匹配 live）不重置剧本运行阶段
+        if (
+          state.scenarioRunPhase === "running" &&
+          (!state.live || state.live.runId === runId)
+        ) {
           state.scenarioRunPhase = "idle";
         }
         return;

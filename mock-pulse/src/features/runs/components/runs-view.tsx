@@ -13,7 +13,7 @@ import type { AppDispatch, RootState } from "@/store";
 import { setView } from "@/stores/app-slice";
 import type { RunStep } from "../model";
 import type { RunFilters, RunRow } from "../selectors";
-import { filterRuns } from "../selectors";
+import { filterRuns, laneGroups } from "../selectors";
 import {
   fetchRuns,
   type LiveRun,
@@ -85,6 +85,8 @@ function RunRecordRow({ row }: { row: RunRow }) {
   const [expanded, setExpanded] = useState(false);
   const { run } = row;
   const single = run.steps.length === 1 ? run.steps[0] : undefined;
+  // 编排运行：详情按 lane 分组展示（lane 名 + 该 lane 步骤）
+  const lanes = useMemo(() => laneGroups(run), [run]);
 
   return (
     <div className="rounded-lg border border-border">
@@ -93,7 +95,10 @@ function RunRecordRow({ row }: { row: RunRow }) {
           {row.sourceLabel}
         </Badge>
         <span className="text-xs font-semibold text-foreground">
-          {run.scenarioName ?? single?.eventName ?? "（空运行）"}
+          {run.planName ??
+            run.scenarioName ??
+            single?.eventName ??
+            "（空运行）"}
         </span>
         {row.channelName ? (
           <span className="font-mono text-[10px] text-muted-foreground">
@@ -143,8 +148,22 @@ function RunRecordRow({ row }: { row: RunRow }) {
             "没有步骤。")}
       </p>
       {expanded && run.steps.length > 0 ? (
-        <div className="border-t border-border p-3">
-          <StepList steps={run.steps} />
+        <div className="space-y-3 border-t border-border p-3">
+          {lanes ? (
+            lanes.map((lane) => (
+              <div key={lane.lane} className="space-y-1.5">
+                <p className="flex items-center gap-1.5 font-mono text-[9px] text-muted-foreground">
+                  <span className="rounded-sm bg-muted px-1 py-0.5">
+                    {String(lane.lane + 1).padStart(2, "0")}
+                  </span>
+                  {lane.name}
+                </p>
+                <StepList steps={lane.steps} />
+              </div>
+            ))
+          ) : (
+            <StepList steps={run.steps} />
+          )}
         </div>
       ) : null}
     </div>

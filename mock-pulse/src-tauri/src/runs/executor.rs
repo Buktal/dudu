@@ -1,18 +1,26 @@
-//! 剧本执行器：接收前端物化好的「运行快照」（纯数据：每步的渠道、事件名、
+//! 剧本/编排执行器：接收前端物化好的「运行快照」（纯数据：每步的渠道、事件名、
 //! 期望回执、拼装好的明文载荷）+ 各渠道连接配置，串行执行步骤——
 //! 每步按渠道路由到既有协议原语（抖音 sha1 签名 JSON POST / 企微 AES 信封
 //! XML POST，复用 connections::dispatch_event，不复制协议代码），经进度回调
-//! 实时回报每步状态（等待/成功/失败），失败即停（后续步骤记 skipped），
-//! 结束后组装 RunRecord。Rust 不感知素材库/剧本概念，只执行快照。
+//! 实时回报每步状态（等待/成功/失败），结束后组装 RunRecord。Rust 不感知
+//! 素材库/剧本概念，只执行快照。
+//!
+//! 编排（#21）：serial = 逐剧本完整执行（前剧结束才启下一剧，可选失败即停）；
+//! parallel = 每剧本一线程 T+0 同时起跑、剧内严格有序（ADR-0004 并发语义），
+//! 失败即停用共享取消旗标承载——任一剧本失败置位，各剧本每步启动前检查
+//! （在途步骤自然完成）。
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 use crate::connections::douyin;
 use crate::connections::wecom;
 use crate::connections::ConnectionConfig;
+use crate::plans::{PlanFailure, PlanMode};
 
 use super::store;
 use super::verdict::{compare_receipt, ExpectedReceipt};
@@ -43,6 +51,22 @@ pub struct ScenarioRunSnapshot {
     pub steps: Vec<ScenarioStepSnapshot>,
 }
 
+/// 一次编排运行的完整快照：每个 lane = 一个已物化的剧本运行快照
+/// （前端 materializePlanRun 产出，启动时固化）。mode/failure 与编排文档一致。
+#[derive(Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanRunSnapshot {
+    pub run_id: String,
+    pub plan_id: String,
+    pub plan_name: String,
+    pub mode: PlanMode,
+    pub failure: PlanFailure,
+    /// 启动时间（ISO，前端生成）
+    pub started_at: String,
+    /// lanes（有序）：每个剧本一份运行快照
+    pub scenarios: Vec<ScenarioRunSnapshot>,
+}
+
 /// 执行进度（经回调注入：Tauri 命令接 emit，cargo 测试接收集器）。
 #[derive(Clone, Debug, PartialEq)]
 pub enum StepProgress {
@@ -54,6 +78,13 @@ pub enum StepProgress {
     Skipped { index: usize },
 }
 
+/// 编排执行进度：带 lane 归属的步骤进度（lane = 快照内 scenarios 下标）。
+#[derive(Clone, Debug, PartialEq)]
+pub struct LaneProgress {
+    pub lane: usize,
+    pub progress: StepProgress,
+}
+
 /// run-progress 事件载荷（camelCase，与前端 slice 的 onRunProgress 对齐）。
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -62,6 +93,9 @@ pub struct RunProgressEvent {
     pub index: usize,
     /// waiting | success | failed | skipped | finished
     pub status: String,
+    /// 编排运行：进度所属 lane 序号（剧本运行/finished 缺省不序列化）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lane: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub step: Option<RunStep>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -76,13 +110,69 @@ pub fn execute_snapshot<F: FnMut(StepProgress)>(
     timeout: Duration,
     on_progress: &mut F,
 ) -> RunRecord {
+    // 剧本单发没有编排取消旗标：always false，步骤永不因旗标被跳过
+    let cancel = AtomicBool::new(false);
+    let (steps, _) = execute_lane_steps(
+        snapshot,
+        connections,
+        timeout,
+        &cancel,
+        false,
+        on_progress,
+    );
+    RunRecord {
+        id: snapshot.run_id.clone(),
+        started_at: snapshot.started_at.clone(),
+        source: "scenario".into(),
+        scenario_name: Some(snapshot.scenario_name.clone()),
+        plan_name: None,
+        steps,
+    }
+}
+
+/// 单 lane（剧本）执行：每步 waiting → 发送 → 比对 → finished。
+/// - 剧内保持失败即停：本剧本某步失败后，后续步骤记 skipped；
+/// - not_started = 编排失败即停下前序剧本已失败：本剧本整体不启动（全 skipped）；
+/// - 每步启动前检查取消旗标（编排并行 + 失败即停：其他剧本失败后不再启动
+///   后续步骤，在途步骤自然完成）。
+/// 返回（步骤记录, 本剧本是否有失败步骤）。skipped 步骤的结论区分三种来源：
+/// 本剧本前序失败 / 前序剧本失败未启动 / 其他剧本失败编排停止。
+fn execute_lane_steps<F: FnMut(StepProgress)>(
+    snapshot: &ScenarioRunSnapshot,
+    connections: &[ConnectionConfig],
+    timeout: Duration,
+    cancel: &AtomicBool,
+    not_started: bool,
+    on_progress: &mut F,
+) -> (Vec<RunStep>, bool) {
+    const OWN_FAILED: &str = "前序步骤失败，本步骤未执行";
+    const PREVIOUS_SCENARIO_FAILED: &str = "前序剧本失败，本剧本未执行";
+    const ORCHESTRATION_STOPPED: &str = "其他剧本已失败，编排停止，本剧本未执行";
+
     let mut steps: Vec<RunStep> = Vec::with_capacity(snapshot.steps.len());
-    let mut failed_index: Option<usize> = None;
+    let mut own_failed = false;
+    // 非 None 后本剧本不再启动任何步骤（整体未启动 / 编排停止）
+    let mut halt_reason: Option<&'static str> =
+        not_started.then_some(PREVIOUS_SCENARIO_FAILED);
     for (index, step_snapshot) in snapshot.steps.iter().enumerate() {
-        if failed_index.is_some() {
-            // 失败即停（#21 扩展并行与继续策略）：后续步骤不发请求，记 skipped
+        let skip_reason: Option<&'static str> = if own_failed {
+            Some(OWN_FAILED)
+        } else {
+            match halt_reason {
+                Some(reason) => Some(reason),
+                None => {
+                    if cancel.load(Ordering::Relaxed) {
+                        halt_reason = Some(ORCHESTRATION_STOPPED);
+                        halt_reason
+                    } else {
+                        None
+                    }
+                }
+            }
+        };
+        if let Some(reason) = skip_reason {
             on_progress(StepProgress::Skipped { index });
-            steps.push(skipped_step(step_snapshot, connections));
+            steps.push(skipped_step(step_snapshot, connections, reason));
             continue;
         }
         on_progress(StepProgress::Waiting { index });
@@ -94,23 +184,164 @@ pub fn execute_snapshot<F: FnMut(StepProgress)>(
             failed,
         });
         if failed {
-            failed_index = Some(index);
+            own_failed = true;
+            // 失败即停语义在编排内跨剧本传播（并行旗标 / 串行顺序检查）
+            cancel.store(true, Ordering::Relaxed);
         }
         steps.push(step);
     }
+    (steps, own_failed)
+}
+
+/// 给步骤打 lane 归属（编排运行记录：步骤按 lane 顺序拼接，各步携带归属）。
+fn tag_lane(mut step: RunStep, lane: usize, scenario_name: &str) -> RunStep {
+    step.lane_index = Some(lane);
+    step.lane_name = Some(scenario_name.into());
+    step
+}
+
+/// 编排执行（#21）：serial 按序逐剧本完整执行；parallel 每剧本一线程
+/// T+0 同时起跑、剧内严格有序。失败策略：
+/// - stop = 任一剧本失败即停整个编排（后续剧本不启动 / 并行下后续步骤不启动）；
+/// - continue = 记录后继续，全部剧本执行完毕（剧内失败即停语义不变）。
+/// 步骤按 lane 顺序拼接入运行记录。进度回调带 lane 序号。
+pub fn execute_plan<F>(
+    snapshot: &PlanRunSnapshot,
+    connections: &[ConnectionConfig],
+    timeout: Duration,
+    on_progress: &mut F,
+) -> RunRecord
+where
+    F: FnMut(LaneProgress) + Send,
+{
+    let steps = match snapshot.mode {
+        PlanMode::Serial => {
+            execute_plan_serial(snapshot, connections, timeout, on_progress)
+        }
+        PlanMode::Parallel => {
+            execute_plan_parallel(snapshot, connections, timeout, on_progress)
+        }
+    };
     RunRecord {
         id: snapshot.run_id.clone(),
         started_at: snapshot.started_at.clone(),
-        source: "scenario".into(),
-        scenario_name: Some(snapshot.scenario_name.clone()),
+        source: "plan".into(),
+        scenario_name: None,
+        plan_name: Some(snapshot.plan_name.clone()),
         steps,
     }
 }
 
-/// 未执行的步骤快照（保留事件名/载荷等快照事实，标记 skipped）。
+/// 串行编排：前剧完全结束才启下一剧；失败即停下未启动的剧本整体记 skipped。
+fn execute_plan_serial<F: FnMut(LaneProgress)>(
+    snapshot: &PlanRunSnapshot,
+    connections: &[ConnectionConfig],
+    timeout: Duration,
+    on_progress: &mut F,
+) -> Vec<RunStep> {
+    let stop_on_failure = snapshot.failure == PlanFailure::Stop;
+    let mut previous_failed = false;
+    let mut all_steps = Vec::new();
+    for (lane, scenario) in snapshot.scenarios.iter().enumerate() {
+        // 串行的失败传播走 not_started（顺序检查）；旗标每剧独立，
+        // 不把「本剧失败」泄漏成对后续剧本的取消信号
+        let cancel = AtomicBool::new(false);
+        let not_started = previous_failed && stop_on_failure;
+        let (steps, failed) = execute_lane_steps(
+            scenario,
+            connections,
+            timeout,
+            &cancel,
+            not_started,
+            &mut |progress: StepProgress| {
+                on_progress(LaneProgress { lane, progress });
+            },
+        );
+        all_steps.extend(
+            steps
+                .into_iter()
+                .map(|step| tag_lane(step, lane, &scenario.scenario_name)),
+        );
+        if failed {
+            previous_failed = true;
+        }
+    }
+    all_steps
+}
+
+/// 并行编排：每剧本一线程同时启动（T+0 起跑），剧内步骤严格串行；
+/// 失败即停用共享取消旗标——任一剧本失败置位，各剧本每步启动前检查
+/// （在途步骤自然完成）；continue 各剧本各跑到底（旗标不共享、互不影响）。
+fn execute_plan_parallel<F>(
+    snapshot: &PlanRunSnapshot,
+    connections: &[ConnectionConfig],
+    timeout: Duration,
+    on_progress: &mut F,
+) -> Vec<RunStep>
+where
+    F: FnMut(LaneProgress) + Send,
+{
+    let stop_on_failure = snapshot.failure == PlanFailure::Stop;
+    let shared_cancel = Arc::new(AtomicBool::new(false));
+    // 并发 lane 共享一个进度回调（FnMut 需互斥；锁毒化视为不可恢复错误）
+    let sink = Mutex::new(on_progress);
+    // scoped 线程：快照与连接都是本函数栈上借用，无需 'static
+    let outcomes: Vec<(Vec<RunStep>, bool)> = std::thread::scope(|scope| {
+        let handles: Vec<_> = snapshot
+            .scenarios
+            .iter()
+            .enumerate()
+            .map(|(lane, scenario)| {
+                let cancel = Arc::clone(&shared_cancel);
+                let sink = &sink;
+                scope.spawn(move || {
+                    // continue：旗标不共享——失败只影响本剧内，不拦其他剧本
+                    let lane_cancel = if stop_on_failure {
+                        cancel
+                    } else {
+                        Arc::new(AtomicBool::new(false))
+                    };
+                    let mut on_lane = |progress: StepProgress| {
+                        let mut guard = sink
+                            .lock()
+                            .unwrap_or_else(|poisoned| poisoned.into_inner());
+                        guard(LaneProgress { lane, progress });
+                    };
+                    execute_lane_steps(
+                        scenario,
+                        connections,
+                        timeout,
+                        &lane_cancel,
+                        false,
+                        &mut on_lane,
+                    )
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .map(|handle| {
+                handle
+                    .join()
+                    .expect("编排 lane 线程不应 panic")
+            })
+            .collect()
+    });
+    // 记录按 lane 顺序拼接（与完成先后无关）
+    let mut all_steps = Vec::new();
+    for (lane, (steps, _)) in outcomes.into_iter().enumerate() {
+        let name = &snapshot.scenarios[lane].scenario_name;
+        all_steps
+            .extend(steps.into_iter().map(|step| tag_lane(step, lane, name)));
+    }
+    all_steps
+}
+
+/// 未执行的步骤快照（保留事件名/载荷等快照事实，标记 skipped + 未执行原因）。
 fn skipped_step(
     step: &ScenarioStepSnapshot,
     connections: &[ConnectionConfig],
+    reason: &str,
 ) -> RunStep {
     let url = channel_url(&step.channel, connections).unwrap_or_default();
     RunStep {
@@ -131,9 +362,11 @@ fn skipped_step(
         },
         verdict: RunVerdict {
             passed: false,
-            reason: "前序步骤失败，本步骤未执行".into(),
+            reason: reason.into(),
         },
         skipped: true,
+        lane_index: None,
+        lane_name: None,
     }
 }
 
@@ -168,6 +401,8 @@ fn failed_without_send(step: &ScenarioStepSnapshot, error: String) -> RunStep {
         verdict,
         receipt,
         skipped: false,
+        lane_index: None,
+        lane_name: None,
     }
 }
 
@@ -213,6 +448,8 @@ fn execute_step(
                 verdict,
                 receipt,
                 skipped: false,
+                lane_index: None,
+                lane_name: None,
             }
         }
         "wecom" => {
@@ -249,6 +486,8 @@ fn execute_step(
                 verdict,
                 receipt,
                 skipped: false,
+                lane_index: None,
+                lane_name: None,
             }
         }
         other => {
@@ -258,29 +497,31 @@ fn execute_step(
 }
 
 /// 把 StepProgress 转成 run-progress 事件载荷。
-fn progress_event(run_id: &str, progress: &StepProgress) -> RunProgressEvent {
-    match progress {
-        StepProgress::Waiting { index } => RunProgressEvent {
-            run_id: run_id.into(),
-            index: *index,
-            status: "waiting".into(),
-            step: None,
-            run: None,
-        },
-        StepProgress::Finished { index, step, failed } => RunProgressEvent {
-            run_id: run_id.into(),
-            index: *index,
-            status: if *failed { "failed" } else { "success" }.into(),
-            step: Some(step.clone()),
-            run: None,
-        },
-        StepProgress::Skipped { index } => RunProgressEvent {
-            run_id: run_id.into(),
-            index: *index,
-            status: "skipped".into(),
-            step: None,
-            run: None,
-        },
+fn progress_event(
+    run_id: &str,
+    lane: Option<usize>,
+    progress: &StepProgress,
+) -> RunProgressEvent {
+    let base = match progress {
+        StepProgress::Waiting { index } => (index, "waiting", None),
+        StepProgress::Finished {
+            index,
+            step,
+            failed,
+        } => (
+            index,
+            if *failed { "failed" } else { "success" },
+            Some(step.clone()),
+        ),
+        StepProgress::Skipped { index } => (index, "skipped", None),
+    };
+    RunProgressEvent {
+        run_id: run_id.into(),
+        index: *base.0,
+        status: base.1.into(),
+        lane,
+        step: base.2,
+        run: None,
     }
 }
 
@@ -291,19 +532,48 @@ fn run_in_background(
     snapshot: ScenarioRunSnapshot,
     connections: Vec<ConnectionConfig>,
 ) {
-    use tauri::Emitter;
-
-    let run_id = snapshot.run_id.clone();
-    let mut on_progress = |progress: StepProgress| {
-        let _ = app.emit("run-progress", progress_event(&run_id, &progress));
-    };
     let run = execute_snapshot(
         &snapshot,
         &connections,
         Duration::from_secs(5),
-        &mut on_progress,
+        &mut |progress: StepProgress| {
+            let _ = app.emit(
+                "run-progress",
+                progress_event(&snapshot.run_id, None, &progress),
+            );
+        },
     );
-    // 运行记录落盘（失败仅忽略：记录仍随 finished 事件进入前端列表）
+    finish_run(app, snapshot.run_id, run);
+}
+
+/// 编排后台执行：进度带 lane 归属经 run-progress 事件回报，
+/// 完成后运行记录落 runs.json + finished 事件携带完整记录。
+fn run_plan_in_background(
+    app: tauri::AppHandle,
+    snapshot: PlanRunSnapshot,
+    connections: Vec<ConnectionConfig>,
+) {
+    let run = execute_plan(
+        &snapshot,
+        &connections,
+        Duration::from_secs(5),
+        &mut |lane_progress: LaneProgress| {
+            let _ = app.emit(
+                "run-progress",
+                progress_event(
+                    &snapshot.run_id,
+                    Some(lane_progress.lane),
+                    &lane_progress.progress,
+                ),
+            );
+        },
+    );
+    finish_run(app, snapshot.run_id, run);
+}
+
+/// 运行记录落盘（失败仅忽略：记录仍随 finished 事件进入前端列表），
+/// 并发 finished 事件携带完整记录。
+fn finish_run(app: tauri::AppHandle, run_id: String, run: RunRecord) {
     if let Ok(dir) = app.path().app_data_dir() {
         if let Ok(mut list) = store::load_runs(&dir) {
             list.push(run.clone());
@@ -316,6 +586,7 @@ fn run_in_background(
             run_id,
             index: run.steps.len(),
             status: "finished".into(),
+            lane: None,
             step: None,
             run: Some(run),
         },
@@ -333,6 +604,21 @@ pub async fn start_scenario_run(
     let run_id = snapshot.run_id.clone();
     tauri::async_runtime::spawn_blocking(move || {
         run_in_background(app, snapshot, connections);
+    });
+    Ok(run_id)
+}
+
+/// Tauri 命令：后台线程执行编排快照（进度带 lane 经 run-progress 事件回报），
+/// 完成后运行记录落 runs.json；命令立即返回 run id。
+#[tauri::command]
+pub async fn start_plan_run(
+    app: tauri::AppHandle,
+    snapshot: PlanRunSnapshot,
+    connections: Vec<ConnectionConfig>,
+) -> Result<String, String> {
+    let run_id = snapshot.run_id.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        run_plan_in_background(app, snapshot, connections);
     });
     Ok(run_id)
 }
@@ -444,6 +730,50 @@ mod tests {
         std::sync::Arc::new(|_index, _line, _body| {
             ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
         })
+    }
+
+    /// 并发监听：每个连接一线程同时处理（accept → 读全 → delay → 响应），
+    /// 可观测多剧本请求交错到达。请求身份靠 body 区分（index 只是 accept 序）。
+    fn start_concurrent_server(
+        count: usize,
+        responder: std::sync::Arc<
+            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
+        >,
+        delay: Duration,
+    ) -> (SocketAddr, Receiver<RecordedPost>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let (tx, rx) = channel();
+        std::thread::spawn(move || {
+            for index in 0..count {
+                let (mut stream, _) = listener.accept().unwrap();
+                let tx = tx.clone();
+                let responder = responder.clone();
+                std::thread::spawn(move || {
+                    let arrived_at = Instant::now();
+                    let (head, body) = read_head_and_body(&mut stream);
+                    let request_line =
+                        head.lines().next().unwrap_or_default().to_string();
+                    let (status_line, response_body) =
+                        responder(index, &request_line, &body);
+                    std::thread::sleep(delay);
+                    let response = format!(
+                        "{status_line}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}",
+                        response_body.len()
+                    );
+                    stream.write_all(response.as_bytes()).unwrap();
+                    stream.shutdown(Shutdown::Both).unwrap();
+                    tx.send(RecordedPost {
+                        head,
+                        body,
+                        arrived_at,
+                        responded_at: Instant::now(),
+                    })
+                    .unwrap();
+                });
+            }
+        });
+        (addr, rx)
     }
 
     // ---- 快照/配置构造 ----
@@ -831,6 +1161,7 @@ mod tests {
     fn progress_event_serializes_camel_case_for_frontend() {
         let event = progress_event(
             "run-1",
+            None,
             &StepProgress::Finished {
                 index: 2,
                 step: super::super::tests::sample_run("run-1").steps[0].clone(),
@@ -842,16 +1173,497 @@ mod tests {
         assert!(raw.contains("\"status\":\"success\""));
         assert!(raw.contains("\"eventName\""));
         assert!(!raw.contains("run_id"));
+        // 剧本运行没有 lane 归属：字段整体不序列化
+        assert!(!raw.contains("\"lane\""));
+
+        // 编排运行：进度带 lane 序号（camelCase），None 时仍不序列化
+        let lane_event = progress_event(
+            "run-1",
+            Some(1),
+            &StepProgress::Waiting { index: 0 },
+        );
+        let raw = serde_json::to_string(&lane_event).unwrap();
+        assert!(raw.contains("\"lane\":1"));
+        assert!(!raw.contains("\"step\""));
 
         let finished = RunProgressEvent {
             run_id: "run-1".into(),
             index: 1,
             status: "finished".into(),
+            lane: None,
             step: None,
             run: Some(super::super::tests::sample_run("run-1")),
         };
         let raw = serde_json::to_string(&finished).unwrap();
         assert!(raw.contains("\"run\":{\"id\":\"run-1\""));
         assert!(!raw.contains("\"step\""));
+        assert!(!raw.contains("\"lane\""));
+    }
+
+    // ---- 编排执行（#21）：串并行与失败策略 ----
+
+    fn lane_snapshot(
+        id: &str,
+        name: &str,
+        steps: Vec<ScenarioStepSnapshot>,
+    ) -> ScenarioRunSnapshot {
+        ScenarioRunSnapshot {
+            run_id: format!("{id}-lane"),
+            scenario_id: id.into(),
+            scenario_name: name.into(),
+            started_at: "2026-09-12T04:00:00.000Z".into(),
+            steps,
+        }
+    }
+
+    fn plan_snapshot(
+        run_id: &str,
+        mode: PlanMode,
+        failure: PlanFailure,
+        scenarios: Vec<ScenarioRunSnapshot>,
+    ) -> PlanRunSnapshot {
+        PlanRunSnapshot {
+            run_id: run_id.into(),
+            plan_id: "plan-1".into(),
+            plan_name: "双平台接待回归".into(),
+            mode,
+            failure,
+            started_at: "2026-09-12T04:00:00.000Z".into(),
+            scenarios,
+        }
+    }
+
+    /// 从请求 body 提取步骤文本（快照 body = {"event":...,"content":{"text":"xx"}}）。
+    fn request_text(post: &RecordedPost) -> String {
+        let start = post
+            .body
+            .find("\"text\":\"")
+            .map(|index| index + "\"text\":\"".len())
+            .unwrap_or(0);
+        post.body[start..]
+            .split('"')
+            .next()
+            .unwrap_or_default()
+            .to_string()
+    }
+
+    /// two_lanes：A（3 步 a1–a3）+ B（3 步 b1–b3），同走一个抖音连接。
+    fn two_lane_plan() -> PlanRunSnapshot {
+        plan_snapshot(
+            "run-plan",
+            PlanMode::Parallel,
+            PlanFailure::Continue,
+            vec![
+                lane_snapshot(
+                    "scn-a",
+                    "剧本A",
+                    vec![dy_step("a1", "a1"), dy_step("a2", "a2"), dy_step("a3", "a3")],
+                ),
+                lane_snapshot(
+                    "scn-b",
+                    "剧本B",
+                    vec![dy_step("b1", "b1"), dy_step("b2", "b2"), dy_step("b3", "b3")],
+                ),
+            ],
+        )
+    }
+
+    #[test]
+    fn parallel_plan_interleaves_scenarios_and_keeps_each_ordered() {
+        let (addr, rx) = start_concurrent_server(
+            6,
+            ok_responder(),
+            Duration::from_millis(120),
+        );
+        let snap = two_lane_plan();
+
+        let mut progress = Vec::new();
+        let run = execute_plan(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(3),
+            &mut |p| progress.push(p),
+        );
+
+        let mut requests = Vec::new();
+        for _ in 0..6 {
+            requests.push(rx.recv_timeout(Duration::from_secs(3)).unwrap());
+        }
+
+        // 各剧本内部 body 到达顺序 = 步骤顺序，且剧内串行（等上一步响应再发下一步）
+        for (tag, expected) in [
+            ("a", vec!["a1", "a2", "a3"]),
+            ("b", vec!["b1", "b2", "b3"]),
+        ] {
+            let mut lane_requests: Vec<&RecordedPost> = requests
+                .iter()
+                .filter(|post| request_text(post).starts_with(tag))
+                .collect();
+            lane_requests.sort_by_key(|post| post.arrived_at);
+            let texts: Vec<String> =
+                lane_requests.iter().map(|post| request_text(post)).collect();
+            assert_eq!(texts, expected, "剧本 {tag} 内应按步骤顺序到达");
+            for pair in lane_requests.windows(2) {
+                assert!(
+                    pair[1].arrived_at >= pair[0].responded_at,
+                    "剧本 {tag} 第 2 步应等第 1 步响应后再发（剧内严格有序）"
+                );
+            }
+        }
+
+        // 并行交错：B 的第 1 步到达早于 A 的第 1 步响应写出
+        let a_first = requests
+            .iter()
+            .filter(|post| request_text(post) == "a1")
+            .next()
+            .unwrap();
+        let b_first = requests
+            .iter()
+            .filter(|post| request_text(post) == "b1")
+            .next()
+            .unwrap();
+        assert!(
+            b_first.arrived_at < a_first.responded_at,
+            "并行模式下两剧本应 T+0 同时起跑（交错到达）"
+        );
+
+        // 运行记录：source plan + planName 快照 + 步骤按 lane 顺序拼接、携带归属
+        assert_eq!(run.id, "run-plan");
+        assert_eq!(run.source, "plan");
+        assert_eq!(run.scenario_name, None);
+        assert_eq!(run.plan_name.as_deref(), Some("双平台接待回归"));
+        assert_eq!(run.steps.len(), 6);
+        for (index, step) in run.steps.iter().enumerate() {
+            let expected_lane = if index < 3 { 0 } else { 1 };
+            assert_eq!(step.lane_index, Some(expected_lane));
+            assert_eq!(
+                step.lane_name.as_deref(),
+                Some(if expected_lane == 0 { "剧本A" } else { "剧本B" })
+            );
+            assert!(step.verdict.passed, "步骤 {index} 应通过");
+            assert_eq!(step.event_name, snap.scenarios[expected_lane].steps[index % 3].event_name);
+        }
+
+        // 进度事件：全部带 lane 归属，无 skipped
+        assert_eq!(progress.len(), 12);
+        assert!(progress
+            .iter()
+            .all(|p| matches!(p.progress, StepProgress::Skipped { .. }) == false));
+        assert!(progress.iter().all(|p| p.lane <= 1));
+    }
+
+    #[test]
+    fn serial_plan_runs_scenarios_strictly_in_order() {
+        let (addr, rx) = start_concurrent_server(
+            6,
+            ok_responder(),
+            Duration::from_millis(40),
+        );
+        let mut snap = two_lane_plan();
+        snap.mode = PlanMode::Serial;
+
+        let mut progress = Vec::new();
+        let run = execute_plan(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(3),
+            &mut |p| progress.push(p),
+        );
+
+        let mut requests = Vec::new();
+        for _ in 0..6 {
+            requests.push(rx.recv_timeout(Duration::from_secs(3)).unwrap());
+        }
+        let mut by_arrival = requests.clone();
+        by_arrival.sort_by_key(|post| post.arrived_at);
+        let order: Vec<String> =
+            by_arrival.iter().map(|post| request_text(post)).collect();
+        assert_eq!(
+            order,
+            vec!["a1", "a2", "a3", "b1", "b2", "b3"],
+            "串行编排整体到达顺序 = 编排顺序"
+        );
+        // 严格顺序：前剧末步响应写出后，后剧第 1 步才到达
+        let a_last = requests
+            .iter()
+            .find(|post| request_text(post) == "a3")
+            .unwrap();
+        let b_first = requests
+            .iter()
+            .find(|post| request_text(post) == "b1")
+            .unwrap();
+        assert!(
+            b_first.arrived_at >= a_last.responded_at,
+            "串行模式：前一剧本完全结束后才启动下一个"
+        );
+
+        assert_eq!(run.source, "plan");
+        assert_eq!(run.steps.len(), 6);
+        assert!(run.steps.iter().all(|step| step.verdict.passed));
+        // 进度：lane 0 的全部事件先于 lane 1 的事件（串行无交错）
+        let last_lane0 = progress
+            .iter()
+            .rposition(|p| p.lane == 0)
+            .unwrap();
+        assert!(progress[..last_lane0].iter().all(|p| p.lane == 0));
+        assert!(progress[last_lane0 + 1..].iter().all(|p| p.lane == 1));
+    }
+
+    #[test]
+    fn serial_plan_stop_skips_whole_scenarios_after_failure() {
+        // A 第 2 步 500 → 失败即停：B 整体不启动，无请求发出，全 skipped
+        let responder: std::sync::Arc<
+            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
+        > = std::sync::Arc::new(|_index, _line, body| {
+            if body.contains("\"text\":\"boom\"") {
+                (
+                    "HTTP/1.1 500 Internal Server Error".to_string(),
+                    "boom".to_string(),
+                )
+            } else {
+                ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
+            }
+        });
+        let (addr, rx) =
+            start_concurrent_server(2, responder, Duration::ZERO);
+        let snap = plan_snapshot(
+            "run-plan-stop",
+            PlanMode::Serial,
+            PlanFailure::Stop,
+            vec![
+                lane_snapshot(
+                    "scn-a",
+                    "剧本A",
+                    vec![dy_step("a1", "ok"), dy_step("a2", "boom")],
+                ),
+                lane_snapshot(
+                    "scn-b",
+                    "剧本B",
+                    vec![dy_step("b1", "b1"), dy_step("b2", "b2")],
+                ),
+            ],
+        );
+
+        let mut progress = Vec::new();
+        let run = execute_plan(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(2),
+            &mut |p| progress.push(p),
+        );
+
+        // 失败剧本之后的剧本不发请求（只有 A 的两步到达）
+        let mut seen = 0;
+        while let Ok(_post) = rx.recv_timeout(Duration::from_millis(300)) {
+            seen += 1;
+        }
+        assert_eq!(seen, 2, "失败即停：后续剧本不应发请求");
+
+        // 记录：步骤按 lane 拼接，B 的步骤全 skipped + 剧本级原因
+        assert_eq!(run.steps.len(), 4);
+        assert!(run.steps[0].verdict.passed);
+        assert!(!run.steps[1].verdict.passed);
+        assert!(!run.steps[1].skipped);
+        for step in &run.steps[2..] {
+            assert!(step.skipped);
+            assert!(
+                step.verdict.reason.contains("前序剧本失败"),
+                "未启动剧本的结论应指明原因：{}",
+                step.verdict.reason
+            );
+            assert_eq!(step.receipt.status, 0);
+            assert_eq!(step.signature, "");
+            assert_eq!(step.lane_index, Some(1));
+            assert_eq!(step.lane_name.as_deref(), Some("剧本B"));
+        }
+
+        // 进度：lane 1 只发 skipped 事件
+        let lane1: Vec<&LaneProgress> =
+            progress.iter().filter(|p| p.lane == 1).collect();
+        assert_eq!(lane1.len(), 2);
+        assert!(lane1
+            .iter()
+            .all(|p| matches!(p.progress, StepProgress::Skipped { .. })));
+    }
+
+    #[test]
+    fn serial_plan_continue_finishes_all_scenarios() {
+        // A 首步即失败；failure=continue → B 仍完整执行（剧内失败即停语义不变）
+        let responder: std::sync::Arc<
+            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
+        > = std::sync::Arc::new(|_index, _line, body| {
+            if body.contains("\"text\":\"boom\"") {
+                (
+                    "HTTP/1.1 500 Internal Server Error".to_string(),
+                    "boom".to_string(),
+                )
+            } else {
+                ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
+            }
+        });
+        let (addr, rx) =
+            start_concurrent_server(3, responder, Duration::ZERO);
+        let snap = plan_snapshot(
+            "run-plan-continue",
+            PlanMode::Serial,
+            PlanFailure::Continue,
+            vec![
+                lane_snapshot("scn-a", "剧本A", vec![dy_step("a1", "boom")]),
+                lane_snapshot(
+                    "scn-b",
+                    "剧本B",
+                    vec![dy_step("b1", "b1"), dy_step("b2", "b2")],
+                ),
+            ],
+        );
+
+        let mut progress = Vec::new();
+        let run = execute_plan(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(2),
+            &mut |p| progress.push(p),
+        );
+
+        // 全部剧本执行完毕：3 个请求都到达
+        let mut seen = 0;
+        while let Ok(_post) = rx.recv_timeout(Duration::from_millis(300)) {
+            seen += 1;
+        }
+        assert_eq!(seen, 3, "记录后继续：失败后其余剧本仍全部执行");
+
+        assert_eq!(run.steps.len(), 3);
+        assert!(!run.steps[0].verdict.passed);
+        assert_eq!(run.steps[0].lane_index, Some(0));
+        assert!(run.steps[1].verdict.passed && !run.steps[1].skipped);
+        assert!(run.steps[2].verdict.passed && !run.steps[2].skipped);
+        assert_eq!(run.steps[1].lane_index, Some(1));
+        assert_eq!(run.steps[2].lane_index, Some(1));
+    }
+
+    #[test]
+    fn parallel_plan_stop_halts_other_scenarios_after_failure() {
+        // A 首步快返回 500；B 长链路（每步慢响应）→ B 除在途步外后续 skipped
+        let responder: std::sync::Arc<
+            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
+        > = std::sync::Arc::new(|_index, _line, body| {
+            if body.contains("\"text\":\"boom\"") {
+                (
+                    "HTTP/1.1 500 Internal Server Error".to_string(),
+                    "boom".to_string(),
+                )
+            } else {
+                // 慢响应：为 B 制造在途窗口（A 在此期间失败置位取消旗标）
+                std::thread::sleep(Duration::from_millis(150));
+                ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
+            }
+        });
+        let (addr, rx) =
+            start_concurrent_server(2, responder, Duration::ZERO);
+        let snap = plan_snapshot(
+            "run-plan-parallel-stop",
+            PlanMode::Parallel,
+            PlanFailure::Stop,
+            vec![
+                lane_snapshot("scn-a", "剧本A", vec![dy_step("a1", "boom")]),
+                lane_snapshot(
+                    "scn-b",
+                    "剧本B",
+                    vec![dy_step("b1", "b1"), dy_step("b2", "b2"), dy_step("b3", "b3")],
+                ),
+            ],
+        );
+
+        let mut progress = Vec::new();
+        let run = execute_plan(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(3),
+            &mut |p| progress.push(p),
+        );
+
+        // 只有 A 的失败步与 B 的在途步发出请求
+        let mut seen = Vec::new();
+        while let Ok(post) = rx.recv_timeout(Duration::from_millis(300)) {
+            seen.push(request_text(&post));
+        }
+        seen.sort();
+        assert_eq!(
+            seen,
+            vec!["b1", "boom"],
+            "取消旗标后不应再启动 B 的后续步骤"
+        );
+
+        // B 的在途步自然完成（通过），后续步骤 skipped
+        assert_eq!(run.steps.len(), 4);
+        assert!(!run.steps[0].verdict.passed, "A 失败步");
+        assert_eq!(run.steps[0].lane_index, Some(0));
+        assert!(run.steps[1].verdict.passed, "B 的在途步应自然完成");
+        assert!(!run.steps[1].skipped);
+        assert_eq!(run.steps[1].lane_index, Some(1));
+        for step in &run.steps[2..] {
+            assert!(step.skipped);
+            assert!(
+                step.verdict.reason.contains("编排停止"),
+                "并行取消的结论应指明编排停止：{}",
+                step.verdict.reason
+            );
+            assert_eq!(step.lane_index, Some(1));
+            assert_eq!(step.lane_name.as_deref(), Some("剧本B"));
+        }
+    }
+
+    #[test]
+    fn parallel_plan_continue_ignores_other_lane_failures() {
+        // failure=continue：A 快失败不拦 B——B 长链路应跑完所有步骤
+        let responder: std::sync::Arc<
+            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
+        > = std::sync::Arc::new(|_index, _line, body| {
+            if body.contains("\"text\":\"boom\"") {
+                (
+                    "HTTP/1.1 500 Internal Server Error".to_string(),
+                    "boom".to_string(),
+                )
+            } else {
+                std::thread::sleep(Duration::from_millis(30));
+                ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
+            }
+        });
+        let (addr, rx) =
+            start_concurrent_server(4, responder, Duration::ZERO);
+        let snap = plan_snapshot(
+            "run-plan-parallel-continue",
+            PlanMode::Parallel,
+            PlanFailure::Continue,
+            vec![
+                lane_snapshot("scn-a", "剧本A", vec![dy_step("a1", "boom")]),
+                lane_snapshot(
+                    "scn-b",
+                    "剧本B",
+                    vec![dy_step("b1", "b1"), dy_step("b2", "b2"), dy_step("b3", "b3")],
+                ),
+            ],
+        );
+
+        let mut progress = Vec::new();
+        let run = execute_plan(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(3),
+            &mut |p| progress.push(p),
+        );
+
+        // A 1 个请求（文本 boom）+ B 全部 3 个请求
+        let mut seen = Vec::new();
+        while let Ok(post) = rx.recv_timeout(Duration::from_millis(300)) {
+            seen.push(request_text(&post));
+        }
+        seen.sort();
+        assert_eq!(seen, vec!["b1", "b2", "b3", "boom"]);
+
+        assert_eq!(run.steps.len(), 4);
+        assert!(!run.steps[0].verdict.passed);
+        assert!(run.steps[1..].iter().all(|step| step.verdict.passed));
+        assert!(run.steps[1..].iter().all(|step| !step.skipped));
     }
 }

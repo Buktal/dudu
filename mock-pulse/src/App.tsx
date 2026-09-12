@@ -1,8 +1,7 @@
-import { EmptyState } from "@/components/empty-state";
 import { type NavGroup, StudioShell } from "@/components/shell/studio-shell";
-import { Button } from "@/components/ui/button";
 import { ConnectionsView } from "@/features/connections";
 import { EventsView } from "@/features/events";
+import { PlansView } from "@/features/plans";
 import {
   DispatchPanel,
   directDispatch,
@@ -80,22 +79,7 @@ function App() {
       ) : view === "scenarios" ? (
         <ScenariosView />
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <EmptyState
-            icon={entry.icon}
-            title={`${entry.name} · 未实现`}
-            description={`${entry.hint} 该视图在后续版本落地，当前先到事件调试与平台连接。`}
-          />
-          <div className="flex justify-center pb-10">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => dispatch(setView("events"))}
-            >
-              前往事件调试
-            </Button>
-          </div>
-        </div>
+        <PlansView />
       )}
     </StudioShell>
   );
