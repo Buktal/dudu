@@ -33,7 +33,7 @@ export type ViewEntry = {
   navSection: NavSection;
 };
 
-/** 五视图唯一注册表：名称/文案/图标/侧栏分组都在这里，视图侧只消费 */
+/** 静态视图注册表：包含 React 图标，不进入 Redux state；state 只保存当前视图 id。 */
 export const VIEWS: readonly ViewEntry[] = [
   {
     id: "events",
@@ -84,12 +84,10 @@ const VIEW_ID_SET = new Set<string>(VIEW_IDS);
 
 export type AppState = {
   view: ViewId;
-  views: readonly ViewEntry[];
 };
 
 export const initialAppState: AppState = {
   view: "events",
-  views: VIEWS,
 };
 
 function isViewId(value: unknown): value is ViewId {
@@ -114,9 +112,6 @@ export const { setView } = appSlice.actions;
 export const appReducer = appSlice.reducer;
 
 export const selectView = (state: AppState): ViewId => state.view;
-
-export const selectViews = (state: AppState): readonly ViewEntry[] =>
-  state.views;
 
 /** 注册表必命中：view 只能来自受校验的 setView 或初始态 */
 export function viewEntry(view: ViewId): ViewEntry {

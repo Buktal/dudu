@@ -6,7 +6,7 @@ import App from "@/App";
 import { store } from "@/store";
 
 // 冒烟：证明 jsdom + testing-library + jest-dom matcher 接线可用。
-// 业务测试按 CLAUDE.md 约定落在被测文件同目录，不在此堆叠。
+// 业务测试按 AGENTS.md 约定落在被测文件同目录，不在此堆叠。
 function Hello() {
   return <h1>hi</h1>;
 }
@@ -20,8 +20,8 @@ describe("test setup smoke", () => {
   });
 
   it("renders the app shell with the real store (full module graph)", () => {
-    // 覆盖组合根装配全部 feature reducer + events/scenarios 互相引用的
-    // 模块环：任一求值期取值错误（TDZ）都会在此炸掉。
+    // 验证真实 reducer 与应用壳体的装配。Vitest 的模块求值与浏览器不同，
+    // 原生 ESM 的循环依赖由 Biome noImportCycles 在 lint 阶段拦截。
     render(
       <Provider store={store}>
         <App />

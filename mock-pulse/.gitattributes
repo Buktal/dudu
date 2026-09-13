@@ -1,0 +1,5 @@
+# Match Biome's LF output even when Git core.autocrlf is enabled on Windows.
+/src/** text=auto eol=lf
+/*.html text eol=lf
+/*.json text eol=lf
+/*.ts text eol=lf

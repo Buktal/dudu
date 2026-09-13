@@ -4,10 +4,11 @@ import { useStore } from "react-redux";
 import { deleteEvent } from "@/features/events";
 import { scenarioNamesReferencingEvent } from "@/features/scenarios";
 import type { RootState } from "@/store";
-import { useAppDispatch } from "@/store";
+
+import { useAppDispatch } from "./use-app-store";
 
 /**
- * 组合根编排 hook（性质同 store.ts：允许跨 feature 组合，feature 间不互相反向引用）。
+ * 组合根编排 hook：仅由 App 调用，再把回调注入 events；feature 不导入本模块。
  * 「先查剧本引用再删事件」的用例编排在组合根完成：
  * 被「平台剧本」引用的事件拒绝删除（可读错误），未引用则转发 events 域删除流程。
  * events 域对 scenarios 零感知——event-editor 只接收注入的守卫回调。

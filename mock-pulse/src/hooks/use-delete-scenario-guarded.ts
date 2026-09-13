@@ -4,14 +4,15 @@ import { useStore } from "react-redux";
 import { fetchPlans, planNamesReferencingScenario } from "@/features/plans";
 import { deleteScenario } from "@/features/scenarios";
 import type { RootState } from "@/store";
-import { useAppDispatch } from "@/store";
+
+import { useAppDispatch } from "./use-app-store";
 
 /**
- * 组合根编排 hook（性质同 store.ts：允许跨 feature 组合，feature 间不互相反向引用）。
+ * 组合根编排 hook：仅由 App 调用，再把回调注入 scenarios；feature 不导入本模块。
  * 「先查编排引用再删剧本」的用例编排在组合根完成：
  * 被「执行编排」引用的剧本拒绝删除（可读错误），未引用则转发 scenarios 域删除流程。
  * 编排库未装载时先拉一次（本会话没打开过编排视图时内存列表为空，直接查会漏拦）。
- * scenarios 域对 plans 零感知——scenario-editor 只消费本 hook 的守卫回调。
+ * scenarios 域对 plans 零感知——scenario-editor 只消费注入的删除回调。
  */
 export function useDeleteScenarioGuarded(): (
   scenarioId: string,

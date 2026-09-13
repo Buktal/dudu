@@ -12,13 +12,14 @@ import {
   ScenariosView,
   scenarioNamesReferencingEvent,
 } from "@/features/scenarios";
+import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { useDeleteEventGuarded } from "@/hooks/use-delete-event-guarded";
-import { useAppDispatch, useAppSelector } from "@/store";
+import { useDeleteScenarioGuarded } from "@/hooks/use-delete-scenario-guarded";
 import {
   type NavSection,
   selectView,
-  selectViews,
   setView,
+  VIEWS,
   type ViewId,
   viewEntry,
 } from "@/stores/app-slice";
@@ -34,11 +35,11 @@ const SECTION_LABEL: Record<NavSection, string | undefined> = {
 function App() {
   const dispatch = useAppDispatch();
   const view = useAppSelector((state) => selectView(state.app));
-  const views = useAppSelector((state) => selectViews(state.app));
   const entry = viewEntry(view);
 
   // 组合根编排：跨 feature 槽位在此装配（feature 间不互相反向引用）
   const deleteEventGuarded = useDeleteEventGuarded();
+  const deleteScenarioGuarded = useDeleteScenarioGuarded();
   const draftId = useAppSelector((state) => state.events.draft?.id ?? null);
   const referencingScenarioNames = useAppSelector((state) =>
     draftId ? scenarioNamesReferencingEvent(state, draftId) : [],
@@ -50,9 +51,9 @@ function App() {
   const navGroups: NavGroup<ViewId>[] = SECTION_ORDER.map((section) => ({
     label: SECTION_LABEL[section],
     pinnedBottom: section === "bottom",
-    entries: views
-      .filter((item) => item.navSection === section)
-      .map((item) => ({ id: item.id, name: item.name, icon: item.icon })),
+    entries: VIEWS.filter((item) => item.navSection === section).map(
+      (item) => ({ id: item.id, name: item.name, icon: item.icon }),
+    ),
   }));
 
   return (
@@ -77,7 +78,7 @@ function App() {
       ) : view === "runs" ? (
         <RunsView />
       ) : view === "scenarios" ? (
-        <ScenariosView />
+        <ScenariosView onDeleteScenario={deleteScenarioGuarded} />
       ) : (
         <PlansView />
       )}

@@ -131,7 +131,11 @@ function LibraryRow({
 }
 
 /** 平台剧本视图：左侧剧本库（筛选分页），右侧步骤编排编辑区 */
-export function ScenariosView() {
+export function ScenariosView({
+  onDeleteScenario,
+}: {
+  onDeleteScenario: (scenarioId: string) => Promise<void>;
+}) {
   const dispatch = useDispatch<AppDispatch>();
   const scenarios = useSelector((state: RootState) => state.scenarios);
   const [creating, setCreating] = useState(false);
@@ -275,7 +279,7 @@ export function ScenariosView() {
             />
           </div>
         ) : scenarios.draft ? (
-          <ScenarioEditor />
+          <ScenarioEditor onDeleteScenario={onDeleteScenario} />
         ) : (
           <EmptyState
             icon={ListVideo}

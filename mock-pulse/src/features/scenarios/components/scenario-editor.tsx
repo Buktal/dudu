@@ -25,7 +25,6 @@ import {
   selectScenarioRunPhase,
   startScenarioRun,
 } from "@/features/runs";
-import { useDeleteScenarioGuarded } from "@/hooks/use-delete-scenario-guarded";
 import { channelById } from "@/lib/channels";
 import { formatDateTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -213,7 +212,11 @@ function AddStepPicker({
 }
 
 /** 剧本编辑器：渠道锁定 + 步骤引用版本 + 显式同步（ADR-0004）+ 单发运行 */
-export function ScenarioEditor() {
+export function ScenarioEditor({
+  onDeleteScenario,
+}: {
+  onDeleteScenario: (scenarioId: string) => Promise<void>;
+}) {
   const dispatch = useDispatch<AppDispatch>();
   const draft = useSelector((state: RootState) => state.scenarios.draft);
   const items = useSelector((state: RootState) => state.scenarios.items);
@@ -230,8 +233,6 @@ export function ScenarioEditor() {
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionError, setActionError] = useState("");
-  // 删除剧本走组合根守卫：被编排引用的剧本拒绝删除（hook 内抛可读错误）
-  const deleteScenarioGuarded = useDeleteScenarioGuarded();
 
   const saved = useMemo(
     () => (draft ? (items.find((item) => item.id === draft.id) ?? null) : null),
@@ -331,7 +332,7 @@ export function ScenarioEditor() {
                   variant="destructive"
                   onClick={() => {
                     setConfirmDelete(false);
-                    void runAction(() => deleteScenarioGuarded(draft.id));
+                    void runAction(() => onDeleteScenario(draft.id));
                   }}
                 >
                   确认删除
