@@ -26,6 +26,7 @@ import {
 } from "../selectors";
 import {
   fetchEvents,
+  fetchFieldDefinitions,
   openEvent,
   setFilters,
   setPage,
@@ -192,6 +193,8 @@ export function EventsView({ slots }: { slots?: EventEditorSlots }) {
 
   useEffect(() => {
     dispatch(fetchEvents());
+    // 用户编辑的字段说明随视图进入时装载（字典弹窗与表单合并的覆写源）
+    dispatch(fetchFieldDefinitions());
     // 直发需要读取连接配置：未保存过连接时给「前往平台连接」指引
     dispatch(fetchConnections());
   }, [dispatch]);

@@ -7,8 +7,12 @@ import {
 import type { ChannelId } from "@/lib/channels";
 
 import {
+  type DefinitionsDoc,
   deleteEventById as deleteEventApi,
+  loadDefinitions,
   loadEvents,
+  type StoredSchemaDefinition,
+  saveDefinition,
   saveEvent as saveEventApi,
 } from "../api";
 import {
@@ -21,8 +25,15 @@ import {
   type ExpectedReceipt,
 } from "../model";
 import { editorPayload, setPayloadField, syncSenderIdentity } from "../payload";
+import type { FieldDescriptor } from "../schemas";
 import { schemaById, type WirePayload } from "../schemas";
 import type { EventFilters } from "../selectors";
+
+/** 用户编辑的字段定义（#22）：按 schemaId 覆写随应用分发的渠道描述文件基线 */
+export type FieldDefinitionsState = {
+  loaded: boolean;
+  bySchemaId: Record<string, StoredSchemaDefinition>;
+};
 
 export type EventsState = {
   /** 已保存的素材库事件（含全部版本） */
@@ -33,6 +44,8 @@ export type EventsState = {
   draft: EventDraft | null;
   filters: EventFilters;
   page: number;
+  /** 字段说明：用户定义覆写（字典「应用说明」落库） */
+  definitions: FieldDefinitionsState;
 };
 
 export const initialEventsState: EventsState = {
@@ -42,6 +55,7 @@ export const initialEventsState: EventsState = {
   draft: null,
   filters: { query: "", channel: "all", kind: "all" },
   page: 1,
+  definitions: { loaded: false, bySchemaId: {} },
 };
 
 type EventsRoot = { events: EventsState };
@@ -81,6 +95,26 @@ export const renameEvent = createAsyncThunk(
 export const deleteEvent = createAsyncThunk(
   "events/delete",
   async (id: string) => deleteEventApi(id),
+);
+
+/** 装载用户字段定义（启动时随事件视图拉取） */
+export const fetchFieldDefinitions = createAsyncThunk(
+  "events/fetchDefinitions",
+  async () => loadDefinitions(),
+);
+
+/** 字典「应用说明」：把生效字段写成该 schemaId 的用户定义并持久化 */
+export const applyFieldDefinitions = createAsyncThunk(
+  "events/applyDefinitions",
+  async ({
+    schemaId,
+    version,
+    fields,
+  }: {
+    schemaId: string;
+    version: string;
+    fields: FieldDescriptor[];
+  }) => saveDefinition(schemaId, { schemaId, version, fields }),
 );
 
 const eventsSlice = createSlice({
@@ -197,10 +231,18 @@ const eventsSlice = createSlice({
           state.draft = null;
           state.selectedId = null;
         }
+      })
+      .addCase(fetchFieldDefinitions.fulfilled, (state, action) => {
+        state.definitions = definitionsFromDoc(action.payload);
+      })
+      .addCase(applyFieldDefinitions.fulfilled, (state, action) => {
+        state.definitions = definitionsFromDoc(action.payload);
       });
   },
 });
 
+// 注：fetchFieldDefinitions / applyFieldDefinitions 是上方导出的 thunk，
+// 不是 slice action creator，不参与此处解构。
 export const {
   discardDraft,
   duplicateCurrentDraft,
@@ -216,6 +258,11 @@ export const {
 } = eventsSlice.actions;
 
 export const eventsReducer = eventsSlice.reducer;
+
+/** 持久化文档 → slice 内 definitions 状态 */
+function definitionsFromDoc(doc: DefinitionsDoc): FieldDefinitionsState {
+  return { loaded: true, bySchemaId: doc.schemas };
+}
 
 export function selectEvents(state: EventsState): EventItem[] {
   return state.items;
@@ -239,6 +286,21 @@ export function selectSelectedId(state: EventsState): string | null {
 
 export function selectLoaded(state: EventsState): boolean {
   return state.loaded;
+}
+
+/** 全部用户字段定义 */
+export function selectFieldDefinitions(
+  state: EventsState,
+): FieldDefinitionsState {
+  return state.definitions;
+}
+
+/** 指定模板的用户字段定义（表单合并与字典弹窗的读取入口） */
+export function selectSchemaUserDefinition(
+  state: EventsState,
+  schemaId: string,
+): StoredSchemaDefinition | undefined {
+  return state.definitions.bySchemaId[schemaId];
 }
 
 /** 当前草稿渠道（跨 feature 消费：直发面板的未配置指引按渠道呈现）。

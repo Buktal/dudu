@@ -12,7 +12,6 @@ import {
   flattenPayload,
   getAt,
   parseWirePayload,
-  resolveEditorFields,
   setAt,
   setPayloadField,
   syncSenderIdentity,
@@ -101,84 +100,6 @@ describe("表单/线上载荷转换", () => {
     expect(() => parseWirePayload("[1,2]")).toThrow("对象");
     expect(() => parseWirePayload('{"__proto__":{"x":1}}')).toThrow(
       "保留字段名",
-    );
-  });
-});
-
-describe("resolveEditorFields", () => {
-  it("已知字段按描述符顺序展示官方说明与当前值", () => {
-    const fields = resolveEditorFields(dyText, dyText.payload);
-    // 描述符字段在前（声明序）；黄金样本里第二份 user_infos 无描述符，落入未知组殿后
-    expect(
-      fields.slice(0, dyText.fields.length).map((field) => field.path),
-    ).toEqual(dyText.fields.map((field) => field.path));
-    expect(
-      fields.slice(dyText.fields.length).map((field) => field.path),
-    ).toEqual([
-      "content.user_infos[1].avatar",
-      "content.user_infos[1].nick_name",
-      "content.user_infos[1].open_id",
-    ]);
-    const sender = fields[0];
-    expect(sender).toMatchObject({
-      title: "发送用户 ID",
-      group: "用户与身份",
-      required: true,
-      unknown: false,
-      value: "aaa-ae9b-4dbf-add1-bf67e4093fab",
-    });
-    const text = fields.find((field) => field.path === "content.text");
-    expect(text).toMatchObject({ multiline: true, value: "捷途70" });
-  });
-
-  it("载荷中的未知字段进入「待补充说明」分组并原样保留", () => {
-    const payload = structuredClone(dyText.payload) as Record<string, unknown>;
-    (payload.content as Record<string, unknown>).guest_id = "g-001";
-    (payload as Record<string, unknown>).extra_top = { nested: [1, 2] };
-
-    const fields = resolveEditorFields(dyText, payload);
-    const unknowns = fields.filter((field) => field.unknown);
-    expect(unknowns.map((field) => field.path)).toEqual([
-      "content.guest_id",
-      "content.user_infos[1].avatar",
-      "content.user_infos[1].nick_name",
-      "content.user_infos[1].open_id",
-      "extra_top.nested[0]",
-      "extra_top.nested[1]",
-    ]);
-    for (const field of unknowns) {
-      expect(field.group).toBe("待补充说明");
-      expect(field.description).toContain("原样保留");
-    }
-    // 载荷本身未被修改
-    expect((payload.content as Record<string, unknown>).guest_id).toBe("g-001");
-  });
-
-  it("描述符存在但载荷缺失的字段以空值占位（编辑时写入）", () => {
-    const fields = resolveEditorFields(dyText, {
-      event: "im_receive_msg",
-      content: { text: "hi" },
-    });
-    const logId = fields.find((field) => field.path === "log_id");
-    expect(logId).toMatchObject({ unknown: false, value: undefined });
-    const text = fields.find((field) => field.path === "content.text");
-    expect(text?.value).toBe("hi");
-  });
-
-  it("contentString 模板按解析后的 content 解析字段", () => {
-    const fields = resolveEditorFields(dyEnter, dyEnter.payload);
-    const scene = fields.find((field) => field.path === "content.scene_type");
-    expect(scene?.value).toBe(4);
-    // 黄金样本里的 data-im-extra / query / path 是描述符未覆盖的官方字段
-    const unknownPaths = fields
-      .filter((field) => field.unknown)
-      .map((field) => field.path);
-    expect(unknownPaths).toEqual(
-      expect.arrayContaining([
-        "content.data-im-extra",
-        "content.query",
-        "content.path",
-      ]),
     );
   });
 });

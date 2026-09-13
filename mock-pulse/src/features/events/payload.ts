@@ -4,9 +4,10 @@ import { buildXmlBody, parseXmlBody } from "./xml";
 
 /**
  * 报文载荷领域逻辑：路径读写、叶子展开、表单/线上双向转换、
- * 未知字段标注与发送者 ID 同步。全部为纯函数。
+ * 发送者 ID 同步。全部为纯函数。
  * 线上形态按 schema.wire 分发：抖音 JSON（紧凑序列化）、企微 XML（确定性拼装）。
- * 路径工具（keyParts/safePath）见 ./paths，各模块直接导入。
+ * 路径工具（keyParts/safePath）见 ./paths，各模块直接导入；
+ * 表单字段解析（描述符 ∪ 载荷叶子 + 用户定义合并）见 ./definitions/resolve。
  */
 
 /**
@@ -215,76 +216,6 @@ export function setPayloadField(
   const draft = cloneJson(payload);
   setAt(draft, path, value);
   return draft;
-}
-
-export type EditorField = {
-  path: string;
-  title: string;
-  type: "string" | "number" | "boolean" | "json" | "numberString";
-  group: string;
-  description: string;
-  required?: boolean;
-  format?: "url";
-  multiline?: boolean;
-  /** 描述符未定义的未知字段：原样保留，表单标注待补充说明 */
-  unknown: boolean;
-  /** 载荷里尚未设置的描述符字段：编辑后写入 */
-  value: unknown;
-};
-
-const UNKNOWN_GROUP = "待补充说明";
-
-/**
- * 描述符 ∪ 载荷叶子 生成表单字段：
- * - 描述符命中 → 官方说明 + 载荷当前值
- * - 载荷叶子无描述符 → 未知字段（待补充说明），原样保留
- * - 描述符路径载荷缺失 → 空值占位，编辑时写入
- * 排序：描述符声明序在前，未知字段按路径序殿后。
- */
-export function resolveEditorFields(
-  schema: EventSchema,
-  payload: WirePayload,
-): EditorField[] {
-  const leafByPath = new Map(
-    flattenPayload(editorPayload(schema, payload)).map((leaf) => [
-      leaf.path,
-      leaf,
-    ]),
-  );
-  const fields: EditorField[] = [];
-
-  for (const descriptor of schema.fields) {
-    fields.push({
-      ...descriptor,
-      value: leafByPath.get(descriptor.path)?.value,
-      unknown: false,
-    });
-    leafByPath.delete(descriptor.path);
-  }
-
-  const extras = [...leafByPath.values()].sort((a, b) =>
-    a.path.localeCompare(b.path),
-  );
-  for (const leaf of extras) {
-    const parts = keyParts(leaf.path);
-    const lastKey = parts[parts.length - 1] || leaf.path;
-    const typeOf = typeof leaf.value;
-    const type: EditorField["type"] =
-      typeOf === "string" || typeOf === "number" || typeOf === "boolean"
-        ? typeOf
-        : "json";
-    fields.push({
-      path: leaf.path,
-      title: lastKey,
-      type,
-      group: UNKNOWN_GROUP,
-      description:
-        "模板未定义的未知字段：将按报文原文原样保留发送，可补充说明后纳入字段库。",
-      unknown: true,
-      value: leaf.value,
-    });
-  }
-  return fields;
 }
 
 /**

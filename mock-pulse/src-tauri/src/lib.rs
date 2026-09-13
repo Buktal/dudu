@@ -1,5 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod connections;
+mod definitions;
 mod events;
 mod plans;
 mod runs;
@@ -15,6 +16,8 @@ pub fn run() {
             connections::connections_save,
             connections::connections_test_douyin,
             connections::connections_test_wecom,
+            definitions::definitions_load,
+            definitions::definitions_save,
             events::events_load,
             events::events_save,
             events::events_delete,

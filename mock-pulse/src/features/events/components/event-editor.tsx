@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Copy,
   Eye,
   Info,
@@ -21,19 +22,14 @@ import { channelById } from "@/lib/channels";
 import { formatDateTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { AppDispatch, RootState } from "@/store";
+import { type EditorField, resolveEditorFields } from "../definitions/resolve";
 import {
   type EventItem,
   type EventVersion,
   isDraftDirty,
   latestVersion,
 } from "../model";
-import {
-  type EditorField,
-  getAt,
-  parseWireDraft,
-  resolveEditorFields,
-  wireDraftText,
-} from "../payload";
+import { getAt, parseWireDraft, wireDraftText } from "../payload";
 import { describeExpected, RECEIPT_BODY_MODES } from "../receipt";
 import { type EventSchema, schemaById } from "../schemas";
 import {
@@ -41,12 +37,14 @@ import {
   duplicateCurrentDraft,
   renameEvent,
   saveEvent,
+  selectSchemaUserDefinition,
   setDraftExpected,
   setDraftField,
   setDraftName,
   setDraftPayload,
   toggleSenderSync,
 } from "../stores/events-slice";
+import { DictionaryDialog } from "./dictionary-dialog";
 
 type TabKey = "form" | "raw" | "expect" | "versions";
 
@@ -116,9 +114,11 @@ function fieldControl(
 function FieldRows({
   fields,
   onEdit,
+  onExplain,
 }: {
   fields: EditorField[];
   onEdit: (path: string, value: unknown) => void;
+  onExplain: (path: string) => void;
 }) {
   return (
     <div className="grid grid-cols-[minmax(120px,220px)_minmax(0,1fr)_minmax(140px,260px)] gap-x-4 gap-y-1">
@@ -151,6 +151,18 @@ function FieldRows({
           </div>
           <p className="py-1.5 text-[10px] leading-relaxed text-muted-foreground">
             {field.description}
+            {field.unknown ? (
+              <>
+                <br />
+                <button
+                  type="button"
+                  onClick={() => onExplain(field.path)}
+                  className="text-[10px] text-primary underline decoration-dotted underline-offset-2 hover:text-foreground"
+                >
+                  补充说明
+                </button>
+              </>
+            ) : null}
           </p>
         </div>
       ))}
@@ -205,6 +217,9 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [viewRevision, setViewRevision] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  // 字典弹窗：open + 打开时选中的字段路径（未知字段「补充说明」入口会带 path）
+  const [dictOpen, setDictOpen] = useState(false);
+  const [dictPath, setDictPath] = useState<string | null>(null);
 
   const event: EventItem | null = useMemo(
     () => (draft ? (items.find((item) => item.id === draft.id) ?? null) : null),
@@ -223,6 +238,11 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
 
   const latest = event ? latestVersion(event) : undefined;
   const channel = draft ? channelById(draft.channelId) : undefined;
+  const userDefinition = useSelector((state: RootState) =>
+    draft
+      ? selectSchemaUserDefinition(state.events, draft.schemaId)
+      : undefined,
+  );
   const senderProfileExists =
     draft && schema
       ? getAt(draft.payload, "content.user_infos[0].open_id") !== undefined
@@ -250,6 +270,8 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
     setFieldQuery("");
     setConfirmDelete(false);
     setViewRevision(null);
+    setDictOpen(false);
+    setDictPath(null);
   }, [draftId]);
 
   const applyRaw = (): boolean => {
@@ -288,7 +310,12 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
 
   if (!draft || !schema) return null;
 
-  const fields = resolveEditorFields(schema, draft.payload);
+  // 表单字段 = 描述文件基线 + 用户定义覆写 + 未知叶子回退（改动即时反映）
+  const fields = resolveEditorFields(
+    schema,
+    userDefinition?.fields,
+    draft.payload,
+  );
   const query = fieldQuery.trim().toLowerCase();
   const visibleFields = query
     ? fields.filter((field) =>
@@ -451,33 +478,43 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
         </div>
       </header>
 
-      <div
-        role="tablist"
-        aria-label="编辑方式"
-        className="flex flex-none gap-1 border-b border-border px-6"
-      >
-        {TABS.map((entry) => (
-          <button
-            key={entry.key}
-            type="button"
-            role="tab"
-            aria-selected={tab === entry.key}
-            onClick={() => switchTab(entry.key)}
-            className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
-              tab === entry.key
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {entry.label}
-            {entry.key === "form" ? (
-              <span className="ml-1.5 font-mono text-[9px] text-muted-foreground">
-                {fields.length}
-              </span>
-            ) : null}
-          </button>
-        ))}
+      <div className="flex flex-none items-center gap-1 border-b border-border px-6">
+        <div role="tablist" aria-label="编辑方式" className="flex gap-1">
+          {TABS.map((entry) => (
+            <button
+              key={entry.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === entry.key}
+              onClick={() => switchTab(entry.key)}
+              className={cn(
+                "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
+                tab === entry.key
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {entry.label}
+              {entry.key === "form" ? (
+                <span className="ml-1.5 font-mono text-[9px] text-muted-foreground">
+                  {fields.length}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+        <span className="grow" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setDictPath(null);
+            setDictOpen(true);
+          }}
+        >
+          <BookOpen className="size-3.5" aria-hidden />
+          管理字段说明
+        </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
@@ -498,6 +535,21 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                 />
               </div>
               <span className="grow" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[10px] text-muted-foreground"
+                onClick={() => {
+                  setDictPath(null);
+                  setDictOpen(true);
+                }}
+              >
+                <BookOpen className="size-3.5" aria-hidden />
+                字段说明
+                <span className="ml-1 font-mono text-[9px]">
+                  v{schema.version}
+                </span>
+              </Button>
               <a
                 href={schema.source}
                 target="_blank"
@@ -561,6 +613,10 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                       (field) => field.group === group,
                     )}
                     onEdit={onEdit}
+                    onExplain={(path) => {
+                      setDictPath(path);
+                      setDictOpen(true);
+                    }}
                   />
                 </section>
               ))
@@ -757,6 +813,16 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
           </div>
         )}
       </div>
+
+      {dictOpen && draft ? (
+        <DictionaryDialog
+          schema={schema}
+          payload={draft.payload}
+          userDefinition={userDefinition}
+          initialPath={dictPath}
+          onClose={() => setDictOpen(false)}
+        />
+      ) : null}
 
       {slots?.footer ?? null}
     </div>
