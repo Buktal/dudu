@@ -38,8 +38,8 @@ pub fn save_events(dir: &Path, events: &[StoredEvent]) -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::{ExpectedReceipt, StoredVersion};
+    use super::*;
     use serde_json::json;
 
     fn temp_dir(tag: &str) -> PathBuf {
@@ -52,6 +52,7 @@ mod tests {
 
     fn sample_event() -> StoredEvent {
         StoredEvent {
+            favorite: false,
             id: "evt-001".into(),
             name: "新客问价".into(),
             channel_id: "douyin".into(),
@@ -144,8 +145,7 @@ mod tests {
         // 不被字母序重排——前端「逐字节确定拼装」跨重启成立的前提。
         let dir = temp_dir("order");
         let mut event = sample_event();
-        event.versions[0].payload =
-            json!({ "zebra": 1, "alpha": { "m": 2, "a": 1 } });
+        event.versions[0].payload = json!({ "zebra": 1, "alpha": { "m": 2, "a": 1 } });
         save_events(&dir, &[event]).unwrap();
 
         let raw = fs::read_to_string(events_file(&dir)).unwrap();

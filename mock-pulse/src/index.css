@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./studio.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -70,6 +71,7 @@
 
 /* 原版雾蓝：墨蓝 #26364D、信号蓝 #315DE8、画布 #F4F7FB、白 #FFFFFF、边线 #DFE6F0、青绿 #16776B */
 :root {
+  color-scheme: light;
   --background: #f4f7fb;
   --foreground: #26364d;
   --card: #ffffff;
@@ -95,7 +97,7 @@
   --chart-3: #59718e;
   --chart-4: #809bd4;
   --chart-5: #26364d;
-  --radius: 0.5625rem;
+  --radius: 0.5rem;
   --sidebar: #edf2f9;
   --sidebar-foreground: #6b7a90;
   --sidebar-primary: #315de8;
@@ -104,43 +106,6 @@
   --sidebar-accent-foreground: #315de8;
   --sidebar-border: #dfe6f0;
   --sidebar-ring: #315de8;
-}
-
-/* 深色雾蓝：原型 night 配色（雾蓝同族的暗派生） */
-.dark {
-  --background: #0f1823;
-  --foreground: #e5edf4;
-  --card: #16212f;
-  --card-foreground: #e5edf4;
-  --popover: #16212f;
-  --popover-foreground: #e5edf4;
-  --primary: #8dbbe0;
-  --primary-foreground: #112339;
-  --secondary: #21374c;
-  --secondary-foreground: #e5edf4;
-  --muted: #21374c;
-  --muted-foreground: #9eafbf;
-  --accent: #1d2e3f;
-  --accent-foreground: #e5edf4;
-  --destructive: #f293a0;
-  --success: #78c8ab;
-  --success-foreground: #112339;
-  --border: #304050;
-  --input: #304050;
-  --ring: #8dbbe0;
-  --chart-1: #8dbbe0;
-  --chart-2: #78c8ab;
-  --chart-3: #b1c6da;
-  --chart-4: #94c8f4;
-  --chart-5: #e5edf4;
-  --sidebar: #101b27;
-  --sidebar-foreground: #a5b7c7;
-  --sidebar-primary: #8dbbe0;
-  --sidebar-primary-foreground: #112339;
-  --sidebar-accent: #213245;
-  --sidebar-accent-foreground: #b4d4ef;
-  --sidebar-border: #304050;
-  --sidebar-ring: #8dbbe0;
 }
 
 @layer base {
@@ -157,4 +122,161 @@
   html {
     @apply font-sans;
   }
+}
+
+/* 已选原型的细节色；保留独立命名，避免影响通用组件 token。 */
+:root {
+  --studio-body:
+    "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  --studio-display: "Bahnschrift", "Segoe UI", sans-serif;
+  --studio-mono: "Cascadia Code", "Consolas", monospace;
+  --studio-radius: 9px;
+  color-scheme: light;
+  --studio-ink: #26364d;
+  --studio-blue: #315de8;
+  --studio-paper: #f4f7fb;
+  --studio-white: #ffffff;
+  --studio-line: #dfe6f0;
+  --studio-green: #16776b;
+  --studio-muted: #7b879b;
+  --studio-soft-blue: #edf2ff;
+  --studio-red: #b6434e;
+  --studio-amber: #996520;
+  --studio-on-primary: #ffffff;
+  --studio-nav-bg: #edf2f9;
+  --studio-nav-fg: #6b7a90;
+  --studio-nav-primary: #315de8;
+  --studio-nav-active-bg: #ffffff;
+  --studio-nav-hover: #e4ebf6;
+  --studio-library-bg: #fbfcfe;
+  --studio-input-bg: #ffffff;
+  --studio-input-border: #dfe6f0;
+  --studio-input-hover: #b8c6dc;
+  --studio-accent-hover: #244ecc;
+  --studio-selected-bg: #edf2ff;
+  --studio-selected-border: #e2eaff;
+  --studio-selected-text: #234aba;
+  --studio-code-bg: #edf2f9;
+  --studio-code-fg: #59718e;
+  --studio-raw-bg: #f8faff;
+  --studio-raw-fg: #415b82;
+  --studio-toast-bg: #26364d;
+  --studio-toast-fg: #ffffff;
+  --studio-palette-bar: #edf2f9;
+  --studio-shadow: #26364d;
+  --studio-platform-dy-bg: #26364d;
+  --studio-platform-dy-fg: #ffffff;
+  --studio-platform-wc-bg: #ecf3ff;
+  --studio-platform-wc-border: #deebfb;
+  --studio-platform-wc-fg: #3479d1;
+  --studio-paint-17283b30: #17283b30;
+  --studio-paint-234aba: #234aba;
+  --studio-paint-244ecc: #244ecc;
+  --studio-paint-26364d: #26364d;
+  --studio-paint-26364d05: #26364d05;
+  --studio-paint-26364d08: #26364d08;
+  --studio-paint-26364d0a: #26364d0a;
+  --studio-paint-26364d22: #26364d22;
+  --studio-paint-26364d47: #26364d47;
+  --studio-paint-315de821: #315de821;
+  --studio-paint-315de84a: #315de84a;
+  --studio-paint-3479d1: #3479d1;
+  --studio-paint-415b82: #415b82;
+  --studio-paint-59718e: #59718e;
+  --studio-paint-5c6f8a: #5c6f8a;
+  --studio-paint-687b96: #687b96;
+  --studio-paint-6b7a90: #6b7a90;
+  --studio-paint-70839f: #70839f;
+  --studio-paint-72839c: #72839c;
+  --studio-paint-788aa3: #788aa3;
+  --studio-paint-7b8ca4: #7b8ca4;
+  --studio-paint-7c8ba1: #7c8ba1;
+  --studio-paint-7f95b7: #7f95b7;
+  --studio-paint-809bd4: #809bd4;
+  --studio-paint-8190a7: #8190a7;
+  --studio-paint-8291a7: #8291a7;
+  --studio-paint-829cc4: #829cc4;
+  --studio-paint-8694a8: #8694a8;
+  --studio-paint-8a96a7: #8a96a7;
+  --studio-paint-8a97aa: #8a97aa;
+  --studio-paint-8b99ad: #8b99ad;
+  --studio-paint-8b9aaf: #8b9aaf;
+  --studio-paint-8c98a8: #8c98a8;
+  --studio-paint-8e9bad: #8e9bad;
+  --studio-paint-8ea0bb: #8ea0bb;
+  --studio-paint-91a0b7: #91a0b7;
+  --studio-paint-93a3ba: #93a3ba;
+  --studio-paint-98a3b3: #98a3b3;
+  --studio-paint-9ba7b7: #9ba7b7;
+  --studio-paint-9ba8bb: #9ba8bb;
+  --studio-paint-9ca9bb: #9ca9bb;
+  --studio-paint-9eb4f9: #9eb4f9;
+  --studio-paint-a2adbc: #a2adbc;
+  --studio-paint-a2adbd: #a2adbd;
+  --studio-paint-a2aebe: #a2aebe;
+  --studio-paint-a4adbb: #a4adbb;
+  --studio-paint-a4b0c0: #a4b0c0;
+  --studio-paint-a5b6d0: #a5b6d0;
+  --studio-paint-aab7ca: #aab7ca;
+  --studio-paint-b0c0d7: #b0c0d7;
+  --studio-paint-b8c6dc: #b8c6dc;
+  --studio-paint-bac4d3: #bac4d3;
+  --studio-paint-bac8dc: #bac8dc;
+  --studio-paint-bcc6d4: #bcc6d4;
+  --studio-paint-bfdfd4: #bfdfd4;
+  --studio-paint-c6d4e9: #c6d4e9;
+  --studio-paint-c6d6ec: #c6d6ec;
+  --studio-paint-ced8e7: #ced8e7;
+  --studio-paint-d4dff1: #d4dff1;
+  --studio-paint-d8ebe3: #d8ebe3;
+  --studio-paint-dae4f3: #dae4f3;
+  --studio-paint-dae4ff: #dae4ff;
+  --studio-paint-dbe3ef: #dbe3ef;
+  --studio-paint-dce4ef: #dce4ef;
+  --studio-paint-dce4f1: #dce4f1;
+  --studio-paint-dce5f4: #dce5f4;
+  --studio-paint-dce6f7: #dce6f7;
+  --studio-paint-deebfb: #deebfb;
+  --studio-paint-dfe6f0: #dfe6f0;
+  --studio-paint-e1e8f3: #e1e8f3;
+  --studio-paint-e2eaff: #e2eaff;
+  --studio-paint-e4ebf6: #e4ebf6;
+  --studio-paint-e4ebf7: #e4ebf7;
+  --studio-paint-e5ebf5: #e5ebf5;
+  --studio-paint-e5ebf6: #e5ebf6;
+  --studio-paint-e7edf7: #e7edf7;
+  --studio-paint-e9eef5: #e9eef5;
+  --studio-paint-e9eef6: #e9eef6;
+  --studio-paint-eaf0f8: #eaf0f8;
+  --studio-paint-ecc7ce: #ecc7ce;
+  --studio-paint-ecf3ff: #ecf3ff;
+  --studio-paint-edccd1: #edccd1;
+  --studio-paint-edf1f6: #edf1f6;
+  --studio-paint-edf1f7: #edf1f7;
+  --studio-paint-edf2f9: #edf2f9;
+  --studio-paint-edf2ff: #edf2ff;
+  --studio-paint-edf8f4: #edf8f4;
+  --studio-paint-eef2f7: #eef2f7;
+  --studio-paint-efd9dd: #efd9dd;
+  --studio-paint-efdfc1: #efdfc1;
+  --studio-paint-f0f3f8: #f0f3f8;
+  --studio-paint-f0f4fb: #f0f4fb;
+  --studio-paint-f0f9f5: #f0f9f5;
+  --studio-paint-f1f5fd: #f1f5fd;
+  --studio-paint-f3f7fe: #f3f7fe;
+  --studio-paint-f4f7fd: #f4f7fd;
+  --studio-paint-f5f8fc: #f5f8fc;
+  --studio-paint-f5f8fd: #f5f8fd;
+  --studio-paint-f6f8fc: #f6f8fc;
+  --studio-paint-f7faff: #f7faff;
+  --studio-paint-f8faff: #f8faff;
+  --studio-paint-f9fbfe: #f9fbfe;
+  --studio-paint-fafbfd: #fafbfd;
+  --studio-paint-fafcfe: #fafcfe;
+  --studio-paint-fafcff: #fafcff;
+  --studio-paint-fbfcfe: #fbfcfe;
+  --studio-paint-fff1f3: #fff1f3;
+  --studio-paint-fff5f6: #fff5f6;
+  --studio-paint-fff7e9: #fff7e9;
+  --studio-paint-ffffff: #ffffff;
 }

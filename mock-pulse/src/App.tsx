@@ -1,20 +1,53 @@
+import { Activity, useEffect, useRef, useState } from "react";
+import { shallowEqual } from "react-redux";
+import { DraftGuard } from "@/components/draft-guard";
+import { MaterialPicker } from "@/components/material-picker";
+import { LibraryProvider } from "@/components/resource-workspace";
 import { type NavGroup, StudioShell } from "@/components/shell/studio-shell";
-import { ConnectionsView } from "@/features/connections";
-import { EventsView } from "@/features/events";
-import { PlansView } from "@/features/plans";
+import {
+  ConnectionsView,
+  discardConnectionDraft,
+  fetchConnections,
+  saveConnection,
+} from "@/features/connections";
+import {
+  discardDraft,
+  EventsView,
+  fetchEvents,
+  fetchFieldDefinitions,
+  openEvent,
+  saveEvent,
+  selectDraftDirty,
+} from "@/features/events";
+import {
+  addPlanLane,
+  discardPlanDraft,
+  fetchPlans,
+  openPlan,
+  PlansView,
+  savePlan,
+  selectPlanDirty,
+} from "@/features/plans";
 import {
   DispatchPanel,
   directDispatch,
+  fetchRuns,
   RunsView,
   selectPanelPhase,
+  stopRun,
 } from "@/features/runs";
 import {
+  discardScenarioDraft,
+  fetchScenarios,
   ScenariosView,
+  saveScenario,
   scenarioNamesReferencingEvent,
+  selectScenarioDirty,
 } from "@/features/scenarios";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { useDeleteEventGuarded } from "@/hooks/use-delete-event-guarded";
 import { useDeleteScenarioGuarded } from "@/hooks/use-delete-scenario-guarded";
+import { errorMessage } from "@/lib/errors";
 import {
   type NavSection,
   selectView,
@@ -24,66 +57,237 @@ import {
   viewEntry,
 } from "@/stores/app-slice";
 
-/** 侧栏分组渲染顺序与固定文案（分组数据本身来自 VIEWS 注册表） */
 const SECTION_ORDER: readonly NavSection[] = ["build", "monitor", "bottom"];
-const SECTION_LABEL: Record<NavSection, string | undefined> = {
-  build: "构建与调试",
-  monitor: undefined,
-  bottom: undefined,
-};
 
-function App() {
+export default function App() {
   const dispatch = useAppDispatch();
   const view = useAppSelector((state) => selectView(state.app));
-  const entry = viewEntry(view);
-
-  // 组合根编排：跨 feature 槽位在此装配（feature 间不互相反向引用）
-  const deleteEventGuarded = useDeleteEventGuarded();
-  const deleteScenarioGuarded = useDeleteScenarioGuarded();
-  const draftId = useAppSelector((state) => state.events.draft?.id ?? null);
-  const referencingScenarioNames = useAppSelector((state) =>
-    draftId ? scenarioNamesReferencingEvent(state, draftId) : [],
+  const state = useAppSelector(
+    (root) => ({
+      events: root.events,
+      scenarios: root.scenarios,
+      plans: root.plans,
+      runs: root.runs,
+      connections: root.connections,
+    }),
+    shallowEqual,
   );
-  const dispatchSending = useAppSelector(
-    (state) => selectPanelPhase(state.runs) === "sending",
+  const booted = useRef(false);
+  const [loadError, setLoadError] = useState("");
+  const [parentScenarioId, setParentScenarioId] = useState<string | null>(null);
+  const deleteEvent = useDeleteEventGuarded();
+  const deleteScenario = useDeleteScenarioGuarded();
+  useEffect(() => {
+    if (booted.current) return;
+    booted.current = true;
+    void Promise.allSettled([
+      dispatch(fetchEvents()).unwrap(),
+      dispatch(fetchFieldDefinitions()).unwrap(),
+      dispatch(fetchScenarios()).unwrap(),
+      dispatch(fetchPlans()).unwrap(),
+      dispatch(fetchRuns()).unwrap(),
+      dispatch(fetchConnections()).unwrap(),
+    ]).then((results) => {
+      setLoadError(
+        results
+          .filter((result) => result.status === "rejected")
+          .map((result) => errorMessage(result.reason))
+          .join("；"),
+      );
+    });
+  }, [dispatch]);
+  const counts = {
+    events: state.events.items.length,
+    scenarios: state.scenarios.items.length,
+    plans: state.plans.items.length,
+    runs: state.runs.items.length,
+  };
+  const draftId = state.events.draft?.id;
+  const referencing = useAppSelector(
+    (root) => (draftId ? scenarioNamesReferencingEvent(root, draftId) : []),
+    shallowEqual,
   );
-
-  const navGroups: NavGroup<ViewId>[] = SECTION_ORDER.map((section) => ({
-    label: SECTION_LABEL[section],
+  const connectionDraft =
+    state.connections.drafts?.[state.connections.selectedChannel];
+  const current =
+    view === "events"
+      ? state.events.draft
+      : view === "scenarios"
+        ? state.scenarios.draft
+        : view === "plans"
+          ? state.plans.draft
+          : null;
+  const dirty =
+    view === "events"
+      ? selectDraftDirty(state.events)
+      : view === "scenarios"
+        ? selectScenarioDirty(state.scenarios)
+        : view === "plans"
+          ? selectPlanDirty(state.plans)
+          : view === "connections" &&
+            !!connectionDraft &&
+            JSON.stringify(connectionDraft) !==
+              JSON.stringify(
+                state.connections.items[state.connections.selectedChannel],
+              );
+  const saveCurrent = (): Promise<unknown> =>
+    view === "events"
+      ? dispatch(saveEvent()).unwrap()
+      : view === "scenarios"
+        ? dispatch(saveScenario()).unwrap()
+        : view === "plans"
+          ? dispatch(savePlan()).unwrap()
+          : connectionDraft
+            ? dispatch(saveConnection(connectionDraft)).unwrap()
+            : Promise.resolve();
+  const discardCurrent = () => {
+    if (view === "events") dispatch(discardDraft());
+    else if (view === "scenarios") dispatch(discardScenarioDraft());
+    else if (view === "plans") dispatch(discardPlanDraft());
+    else if (view === "connections")
+      dispatch(discardConnectionDraft(state.connections.selectedChannel));
+  };
+  const groups: NavGroup<ViewId>[] = SECTION_ORDER.map((section) => ({
+    label: section === "build" ? "构建与调试" : undefined,
     pinnedBottom: section === "bottom",
     entries: VIEWS.filter((item) => item.navSection === section).map(
-      (item) => ({ id: item.id, name: item.name, icon: item.icon }),
+      (item) => ({
+        ...item,
+        count: item.id === "connections" ? undefined : counts[item.id],
+      }),
     ),
   }));
-
   return (
-    <StudioShell
-      navGroups={navGroups}
-      currentView={view}
-      currentTitle={entry.name}
-      onSelectView={(next) => dispatch(setView(next))}
-    >
-      {view === "connections" ? (
-        <ConnectionsView />
-      ) : view === "events" ? (
-        <EventsView
-          slots={{
-            onDirectDispatch: () => void dispatch(directDispatch()),
-            dispatchSending,
-            footer: <DispatchPanel />,
-            referencingScenarioNames,
-            onDeleteEvent: (eventId) => void deleteEventGuarded(eventId),
-          }}
-        />
-      ) : view === "runs" ? (
-        <RunsView />
-      ) : view === "scenarios" ? (
-        <ScenariosView onDeleteScenario={deleteScenarioGuarded} />
-      ) : (
-        <PlansView />
-      )}
-    </StudioShell>
+    <LibraryProvider>
+      <DraftGuard
+        dirty={dirty}
+        name={current?.name ?? "平台连接"}
+        onSave={saveCurrent}
+        onDiscard={discardCurrent}
+      >
+        {(navigate) => (
+          <DraftGuard
+            dirty={selectDraftDirty(state.events)}
+            name={state.events.draft?.name ?? ""}
+            onSave={() => dispatch(saveEvent()).unwrap()}
+            onDiscard={() => dispatch(discardDraft())}
+          >
+            {(replaceEvent) => (
+              <DraftGuard
+                dirty={selectPlanDirty(state.plans)}
+                name={state.plans.draft?.name ?? ""}
+                onSave={() => dispatch(savePlan()).unwrap()}
+                onDiscard={() => dispatch(discardPlanDraft())}
+              >
+                {(replacePlan) => (
+                  <>
+                    <StudioShell
+                      navGroups={groups}
+                      currentView={view}
+                      currentTitle={viewEntry(view).name}
+                      onSelectView={(next) => {
+                        if (next !== view)
+                          navigate(() => dispatch(setView(next)));
+                      }}
+                    >
+                      {loadError ? (
+                        <div role="alert" className="editor-error">
+                          载入本地数据失败：{loadError}
+                        </div>
+                      ) : null}
+                      <Activity mode={view === "events" ? "visible" : "hidden"}>
+                        <EventsView
+                          slots={{
+                            onDirectDispatch: () =>
+                              void dispatch(directDispatch()),
+                            dispatchSending:
+                              selectPanelPhase(state.runs) === "sending" &&
+                              state.runs.directLive?.eventId === draftId,
+                            dispatchDisabled:
+                              selectPanelPhase(state.runs) === "sending" ||
+                              ["starting", "running"].includes(
+                                state.runs.scenarioRunPhase,
+                              ) ||
+                              ["starting", "running"].includes(
+                                state.plans.planRunPhase,
+                              ),
+                            dispatchStopping:
+                              !!state.runs.directLive &&
+                              state.runs.stoppingRunId ===
+                                state.runs.directLive.runId,
+                            onStopDispatch: () => {
+                              if (state.runs.directLive)
+                                void dispatch(
+                                  stopRun(state.runs.directLive.runId),
+                                );
+                            },
+                            footer: <DispatchPanel />,
+                            referencingScenarioNames: referencing,
+                            onDeleteEvent: deleteEvent,
+                          }}
+                        />
+                      </Activity>
+                      <Activity
+                        mode={view === "scenarios" ? "visible" : "hidden"}
+                      >
+                        <ScenariosView
+                          onDeleteScenario={deleteScenario}
+                          onEditEvent={(id) =>
+                            navigate(() => {
+                              const open = () => {
+                                if (id !== state.events.draft?.id)
+                                  dispatch(openEvent(id));
+                                dispatch(setView("events"));
+                              };
+                              if (id === state.events.draft?.id) open();
+                              else replaceEvent(open);
+                            })
+                          }
+                          onAddToPlan={(scenario) =>
+                            navigate(() => setParentScenarioId(scenario.id))
+                          }
+                        />
+                      </Activity>
+                      <Activity mode={view === "plans" ? "visible" : "hidden"}>
+                        <PlansView />
+                      </Activity>
+                      <Activity mode={view === "runs" ? "visible" : "hidden"}>
+                        <RunsView />
+                      </Activity>
+                      <Activity
+                        mode={view === "connections" ? "visible" : "hidden"}
+                      >
+                        <ConnectionsView />
+                      </Activity>
+                    </StudioShell>
+                    {parentScenarioId ? (
+                      <MaterialPicker
+                        title="把剧本加入哪个编排？"
+                        description="选择后加入目标草稿，保存目标后生效。"
+                        items={state.plans.items.map((plan) => ({
+                          id: plan.id,
+                          name: plan.name,
+                          description: `${plan.items.length} 个剧本 · ${plan.mode === "parallel" ? "并行" : "串行"}`,
+                        }))}
+                        onClose={() => setParentScenarioId(null)}
+                        onSelect={(id) => {
+                          replacePlan(() => {
+                            dispatch(openPlan(id));
+                            void dispatch(
+                              addPlanLane({ scenarioId: parentScenarioId }),
+                            );
+                            dispatch(setView("plans"));
+                          });
+                        }}
+                      />
+                    ) : null}
+                  </>
+                )}
+              </DraftGuard>
+            )}
+          </DraftGuard>
+        )}
+      </DraftGuard>
+    </LibraryProvider>
   );
 }
-
-export default App;

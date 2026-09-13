@@ -1,10 +1,8 @@
-import { Check, Download, Loader2, Upload, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { StudioButton, StudioDialog } from "@/components/studio-controls";
+import { StudioIcon } from "@/components/studio-icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,17 +63,6 @@ export function DictionaryDialog({
   );
   const [error, setError] = useState("");
   const [applying, setApplying] = useState(false);
-
-  // Esc 关闭
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
 
   const selected = useMemo(() => {
     const found = fields.find((field) => field.path === selectedPath);
@@ -164,197 +151,122 @@ export function DictionaryDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-      <button
-        type="button"
-        aria-label="关闭字段说明"
-        onClick={onClose}
-        className="absolute inset-0 cursor-default bg-foreground/50"
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="字段说明"
-        className="relative flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border bg-background shadow-lg"
-      >
-        <header className="flex flex-none items-start gap-3 border-b border-border px-5 pt-4 pb-3">
-          <div className="space-y-0.5">
-            <h2 className="font-heading text-base font-semibold text-foreground">
-              字段说明
-            </h2>
-            <p className="text-[10px] leading-relaxed text-muted-foreground">
-              修改名称、含义和分组，同一类事件都会更新。参数值不会因此改变。
-            </p>
-          </div>
-          <span className="grow" />
-          <Button variant="ghost" size="sm" aria-label="关闭" onClick={onClose}>
-            <X className="size-4" aria-hidden />
-          </Button>
-        </header>
-
-        <div className="flex min-h-0 flex-1">
-          <nav
-            aria-label="字段列表"
-            className="w-56 flex-none overflow-y-auto border-r border-border bg-muted/40 p-2"
-          >
-            {fields.map((field) => (
-              <button
-                key={field.path}
-                type="button"
-                onClick={() => setSelectedPath(field.path)}
-                aria-current={
-                  selected?.path === field.path ? "true" : undefined
-                }
-                className={cn(
-                  "mb-0.5 flex w-full flex-col rounded-lg px-2.5 py-1.5 text-left transition-colors",
-                  selected?.path === field.path
-                    ? "bg-secondary text-secondary-foreground"
-                    : "hover:bg-accent",
-                )}
-              >
-                <span className="truncate text-[11px] font-medium">
-                  {field.title}
-                </span>
-                <span className="truncate font-mono text-[9px] text-muted-foreground">
-                  {field.path}
-                </span>
-              </button>
-            ))}
-          </nav>
-
-          <div className="min-w-0 flex-1 overflow-y-auto px-5 py-4">
-            {selected ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="secondary"
-                    className="font-mono text-[9px] uppercase"
-                  >
-                    {selected.type}
-                  </Badge>
-                  {selected.required ? (
-                    <Badge variant="outline" className="text-[9px]">
-                      必填
-                    </Badge>
-                  ) : null}
-                  <code
-                    className="truncate font-mono text-[10px] text-muted-foreground"
-                    title={selected.path}
-                  >
-                    {selected.path}
-                  </code>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dict-title">显示名称</Label>
-                  <Input
-                    id="dict-title"
-                    className="h-8 text-xs"
-                    value={selected.title}
-                    onChange={(change) =>
-                      update({ title: change.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dict-description">字段含义</Label>
-                  <Textarea
-                    id="dict-description"
-                    rows={4}
-                    className="text-xs"
-                    value={selected.description}
-                    onChange={(change) =>
-                      update({ description: change.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dict-group">所属分组</Label>
-                  <Input
-                    id="dict-group"
-                    className="h-8 text-xs"
-                    value={selected.group}
-                    onChange={(change) =>
-                      update({ group: change.target.value })
-                    }
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="dict-required"
-                    checked={selected.required === true}
-                    onCheckedChange={(checked) =>
-                      update({ required: checked === true })
-                    }
-                  />
-                  <Label
-                    htmlFor="dict-required"
-                    className="cursor-pointer text-xs"
-                  >
-                    必填字段
-                  </Label>
-                </div>
-                <p className="border-t border-border pt-3 font-mono text-[9px] leading-relaxed text-muted-foreground">
-                  说明范围：{schema.name} · {schema.version}
-                  <br />
-                  资料来源：
-                  <a
-                    href={schema.source}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline decoration-dotted underline-offset-2 hover:text-foreground"
-                  >
-                    平台字段文档 ↗
-                  </a>
-                </p>
-              </div>
-            ) : (
-              <p className="py-6 text-center text-xs text-muted-foreground">
-                没有可编辑的字段。
-              </p>
-            )}
-          </div>
-        </div>
-
-        <footer className="flex flex-none items-center gap-2 border-t border-border px-5 py-3">
+    <StudioDialog
+      open
+      wide
+      title="字段说明"
+      description="修改名称、含义和分组，同一类事件都会更新。参数值不会因此改变。"
+      onClose={onClose}
+      footer={
+        <>
           <input
             ref={fileInputRef}
             type="file"
             accept="application/json,.json"
-            className="hidden"
-            onChange={(change) => {
-              const file = change.target.files?.[0];
-              change.target.value = "";
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
               if (file) void onImportFile(file);
             }}
           />
-          <Button
-            variant="ghost"
-            size="sm"
+          <StudioButton
+            tone="quiet"
+            small
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload className="size-3.5" aria-hidden />
+            <StudioIcon name="upload" />
             导入字段定义
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onExport}>
-            <Download className="size-3.5" aria-hidden />
+          </StudioButton>
+          <StudioButton tone="quiet" small onClick={onExport}>
+            <StudioIcon name="download" />
             导出字段定义
-          </Button>
+          </StudioButton>
           <span className="grow" />
-          {error ? (
-            <p role="alert" className="mr-2 text-[10px] text-destructive">
-              {error}
-            </p>
-          ) : null}
-          <Button size="sm" disabled={applying} onClick={() => void onApply()}>
-            {applying ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <Check className="size-4" aria-hidden />
-            )}
-            应用说明
-          </Button>
-        </footer>
+          <StudioButton
+            tone="primary"
+            disabled={applying}
+            onClick={() => void onApply()}
+          >
+            <StudioIcon
+              name={applying ? "refresh" : "check"}
+              className={applying ? "spin" : undefined}
+            />
+            {applying ? "正在应用…" : "应用说明"}
+          </StudioButton>
+        </>
+      }
+    >
+      <div className="dict-layout">
+        <nav className="dict-fields" aria-label="字段列表">
+          {fields.map((field) => (
+            <button
+              key={field.path}
+              type="button"
+              className={cn(
+                "dict-field",
+                selected?.path === field.path && "active",
+              )}
+              aria-current={selected?.path === field.path ? "true" : undefined}
+              onClick={() => setSelectedPath(field.path)}
+            >
+              {field.title}
+              <small>{field.path}</small>
+            </button>
+          ))}
+        </nav>
+        <div className="dict-edit">
+          {selected ? (
+            <>
+              <div className="row dict-field-meta">
+                <span className="pill">{selected.type}</span>
+                <code className="muted">{selected.path}</code>
+              </div>
+              <Label htmlFor="dict-title">
+                显示名称
+                <Input
+                  id="dict-title"
+                  value={selected.title}
+                  onChange={(event) => update({ title: event.target.value })}
+                />
+              </Label>
+              <Label htmlFor="dict-description">
+                字段含义
+                <Textarea
+                  id="dict-description"
+                  value={selected.description}
+                  onChange={(event) =>
+                    update({ description: event.target.value })
+                  }
+                />
+              </Label>
+              <Label htmlFor="dict-group">
+                所属分组
+                <Input
+                  id="dict-group"
+                  value={selected.group}
+                  onChange={(event) => update({ group: event.target.value })}
+                />
+              </Label>
+            </>
+          ) : (
+            <p>没有可编辑的字段。</p>
+          )}
+          <div className="dict-source">
+            说明范围：{schema.name} · {schema.version}
+            <br />
+            资料来源：
+            <a href={schema.source} target="_blank" rel="noreferrer">
+              平台字段文档 ↗
+            </a>
+          </div>
+        </div>
       </div>
-    </div>
+      {error ? (
+        <p role="alert" className="modal-inline-error">
+          {error}
+        </p>
+      ) : null}
+    </StudioDialog>
   );
 }

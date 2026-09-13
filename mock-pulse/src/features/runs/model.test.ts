@@ -42,6 +42,8 @@ describe("buildDirectRun", () => {
       channel: "douyin",
       url: "http://127.0.0.1:8080/webhooks/douyin",
       payload: body,
+      requestBody: body,
+      expected: draft.expected,
       signature: "a".repeat(40),
       msgId: "0f8c1b2a-3d4e-4f5a-9b8c-7d6e5f4a3b2c",
       receipt: {

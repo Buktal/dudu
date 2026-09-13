@@ -6,6 +6,7 @@ import {
 import type { ConnectionConfig } from "@/features/connections";
 import { isConnectionReady } from "@/features/connections";
 import type { RunProgressPayload, RunStep } from "@/features/runs";
+import type { Scenario } from "@/features/scenarios";
 import type { ChannelId } from "@/lib/channels";
 import type { RootState } from "@/store";
 
@@ -64,12 +65,14 @@ export type LivePlanStep = {
 /** 进行中编排的一条 lane（= 一个剧本） */
 export type LivePlanLane = {
   scenarioName: string;
+  channel?: ChannelId;
   steps: LivePlanStep[];
 };
 
 /** 进行中的编排运行（Rust 执行器经 run-progress 事件实时回报，带 lane） */
 export type LivePlanRun = {
   runId: string;
+  sourceId?: string;
   planName: string;
   mode: PlanMode;
   failure: PlanFailure;
@@ -112,7 +115,7 @@ export const initialPlansState: PlansState = {
 /** 保存/编辑链路需要读取剧本库与连接配置（RootState 局部形状，避免全量耦合） */
 type PlansRoot = {
   plans: PlansState;
-  scenarios: { items: { id: string }[] };
+  scenarios: { items: Scenario[] };
   connections: { items: Record<string, ConnectionConfig> };
 };
 
@@ -137,13 +140,33 @@ export const addPlanLane = createAsyncThunk(
     if (!draft) {
       throw new Error("没有正在编辑的编排。");
     }
-    const exists = scenarios.items.some(
+    const scenario = scenarios.items.find(
       (scenario) => scenario.id === scenarioId,
     );
-    if (!exists) {
+    if (!scenario) {
       throw new Error(`剧本不存在：${scenarioId}。`);
     }
-    return addLane(draft, scenarioId);
+    return addLane(draft, scenarioId, scenario);
+  },
+);
+
+export const syncPlanLane = createAsyncThunk(
+  "plans/syncLane",
+  async (index: number, { getState }) => {
+    const { plans, scenarios } = getState() as PlansRoot;
+    const draft = plans.draft;
+    const item = draft?.items[index];
+    const scenario = scenarios.items.find(
+      (entry) => entry.id === item?.scenarioId,
+    );
+    if (!draft || !item || !scenario)
+      throw new Error("找不到该剧本，无法同步。");
+    return {
+      ...draft,
+      items: draft.items.map((lane, i) =>
+        i === index ? { ...lane, snapshot: structuredClone(scenario) } : lane,
+      ),
+    };
   },
 );
 
@@ -157,25 +180,50 @@ export const savePlan = createAsyncThunk(
       throw new Error("没有可保存的编排草稿。");
     }
     validatePlan(draft, scenarios.items);
-    return savePlanApi(draft);
+    const saved = pinPlanScenarios(draft, scenarios.items);
+    return {
+      items: await savePlanApi(saved),
+      draft: saved,
+      source: JSON.stringify(draft),
+    };
   },
 );
 
 /** 另存为：当前草稿以新 id 复制保存，草稿切换为新副本 */
 export const savePlanAs = createAsyncThunk(
   "plans/saveAs",
-  async (_, { getState }) => {
+  async (name: string | undefined, { getState }) => {
     const { plans, scenarios } = getState() as PlansRoot;
     const draft = plans.draft;
     if (!draft) {
       throw new Error("没有可保存的编排草稿。");
     }
     validatePlan(draft, scenarios.items);
-    const copy: Plan = { ...draft, id: newPlanId() };
+    const copy: Plan = {
+      ...pinPlanScenarios(draft, scenarios.items),
+      id: newPlanId(),
+      name: name?.trim() || `${draft.name} · 副本`,
+    };
     const items = await savePlanApi(copy);
-    return { items, draft: copy };
+    return { items, draft: copy, source: JSON.stringify(draft) };
   },
 );
+
+function pinPlanScenarios(draft: Plan, scenarios: Scenario[]): Plan {
+  return {
+    ...draft,
+    items: draft.items.map((item) =>
+      item.snapshot
+        ? item
+        : {
+            ...item,
+            snapshot: scenarios.find(
+              (scenario) => scenario.id === item.scenarioId,
+            ),
+          },
+    ),
+  };
+}
 
 export const deletePlan = createAsyncThunk(
   "plans/delete",
@@ -205,12 +253,14 @@ type PlanRunResult =
 function liveFromSnapshot(snapshot: PlanRunSnapshot): LivePlanRun {
   return {
     runId: snapshot.runId,
+    sourceId: snapshot.planId,
     planName: snapshot.planName,
     mode: snapshot.mode,
     failure: snapshot.failure,
     startedAt: snapshot.startedAt,
     lanes: snapshot.scenarios.map((scenario) => ({
       scenarioName: scenario.scenarioName,
+      channel: scenario.steps[0]?.channel,
       steps: scenario.steps.map((step) => ({
         eventName: step.eventName,
         status: "pending" as const,
@@ -226,51 +276,73 @@ export const startPlanRun = createAsyncThunk<
   PlanRunResult,
   void,
   { state: RootState }
->("plans/start", async (_, { getState }) => {
-  const state = getState();
-  const plan = state.plans.draft;
-  if (!plan) {
-    return { kind: "noop" as const };
-  }
-  validatePlan(plan, state.scenarios.items);
-  const laneScenarios = plan.items.map((item) => {
-    const scenario = state.scenarios.items.find(
-      (candidate) => candidate.id === item.scenarioId,
-    );
-    if (!scenario) {
-      throw new Error(`编排引用的剧本不存在：${item.scenarioId}。`);
+>(
+  "plans/start",
+  async (_, { getState, dispatch }) => {
+    const state = getState();
+    const plan = state.plans.draft;
+    if (!plan) {
+      return { kind: "noop" as const };
     }
-    return scenario;
-  });
-  // 连接就绪检查：去重后的渠道逐一确认（未配置给「前往平台连接」指引）
-  const channels = [
-    ...new Set(laneScenarios.map((scenario) => scenario.channelId)),
-  ];
-  const missing = channels.filter((channel) => {
-    const connection = state.connections.items[channel];
-    return !isConnectionReady(connection);
-  });
-  if (missing.length > 0) {
-    return { kind: "needConnection" as const, channels: missing };
-  }
-  const snapshot = materializePlanRun({
-    plan,
-    scenarios: state.scenarios.items,
-    events: state.events.items,
-    startedAt: new Date().toISOString(),
-  });
-  const connections = channels.map(
-    (channel) => state.connections.items[channel],
-  );
-  // 命令立即返回（run id 即 snapshot.runId）；进度由 run-progress 事件驱动
-  await startPlanRunApi(snapshot, connections);
-  return { kind: "started" as const, live: liveFromSnapshot(snapshot) };
-});
+    validatePlan(plan, state.scenarios.items);
+    const laneScenarios = plan.items.map((item) => {
+      const scenario =
+        item.snapshot ??
+        state.scenarios.items.find(
+          (candidate) => candidate.id === item.scenarioId,
+        );
+      if (!scenario) {
+        throw new Error(`编排引用的剧本不存在：${item.scenarioId}。`);
+      }
+      return scenario;
+    });
+    // 连接就绪检查：去重后的渠道逐一确认（未配置给「前往平台连接」指引）
+    const channels = [
+      ...new Set(laneScenarios.map((scenario) => scenario.channelId)),
+    ];
+    const missing = channels.filter((channel) => {
+      const connection = state.connections.items[channel];
+      return !isConnectionReady(connection);
+    });
+    if (missing.length > 0) {
+      return { kind: "needConnection" as const, channels: missing };
+    }
+    const snapshot = materializePlanRun({
+      plan,
+      scenarios: state.scenarios.items,
+      events: state.events.items,
+      startedAt: new Date().toISOString(),
+    });
+    const connections = channels.map(
+      (channel) => state.connections.items[channel],
+    );
+    // 命令立即返回（run id 即 snapshot.runId）；进度由 run-progress 事件驱动
+    const live = liveFromSnapshot(snapshot);
+    dispatch(planStarted(live));
+    await startPlanRunApi(snapshot, connections);
+    return { kind: "started" as const, live };
+  },
+  {
+    condition: (_, { getState }) => {
+      const { runs, plans } = getState();
+      return (
+        runs.phase !== "sending" &&
+        !["starting", "running"].includes(runs.scenarioRunPhase) &&
+        !["starting", "running"].includes(plans.planRunPhase)
+      );
+    },
+  },
+);
 
 const plansSlice = createSlice({
   name: "plans",
   initialState: initialPlansState,
   reducers: {
+    planStarted(state, action: PayloadAction<LivePlanRun>) {
+      state.live = action.payload;
+      state.planRunPhase = "running";
+      state.needConnectionChannels = [];
+    },
     /** 新建编排草稿：名称 + 执行方式，lanes 为空 */
     startPlanDraft(
       state,
@@ -295,6 +367,9 @@ const plansSlice = createSlice({
     setPlanDraftName(state, action: PayloadAction<string>) {
       if (!state.draft) return;
       state.draft.name = action.payload;
+    },
+    toggleDraftFavorite(state) {
+      if (state.draft) state.draft.favorite = !state.draft.favorite;
     },
     setPlanDraftMode(state, action: PayloadAction<PlanMode>) {
       if (!state.draft) return;
@@ -333,9 +408,8 @@ const plansSlice = createSlice({
     onPlanProgress(state, action: PayloadAction<RunProgressPayload>) {
       const { runId, index, status, step, lane } = action.payload;
       if (status === "finished") {
-        if (state.live?.runId === runId) {
-          state.live = null;
-        }
+        if (state.live?.runId !== runId) return;
+        state.live = null;
         if (state.planRunPhase === "running") {
           state.planRunPhase = "idle";
         }
@@ -354,14 +428,6 @@ const plansSlice = createSlice({
         targetStep.step = step;
       }
     },
-    /** 停止运行实况（后台执行不可中断：仅停止实时视图，
-     *  完整记录完成后仍会写入运行记录） */
-    stopWatchPlanRun(state) {
-      state.live = null;
-      if (state.planRunPhase === "running") {
-        state.planRunPhase = "idle";
-      }
-    },
   },
   extraReducers: (builder) => {
     builder
@@ -372,21 +438,24 @@ const plansSlice = createSlice({
       .addCase(addPlanLane.fulfilled, (state, action) => {
         state.draft = action.payload;
       })
+      .addCase(syncPlanLane.fulfilled, (state, action) => {
+        if (state.draft?.id === action.payload.id) state.draft = action.payload;
+      })
       .addCase(savePlan.fulfilled, (state, action) => {
-        state.items = action.payload;
-        state.selectedId = state.draft?.id ?? state.selectedId;
+        state.items = action.payload.items;
+        if (JSON.stringify(state.draft) !== action.payload.source) return;
+        state.draft = draftFromPlan(action.payload.draft);
+        state.selectedId = action.payload.draft.id;
       })
       .addCase(savePlanAs.fulfilled, (state, action) => {
         state.items = action.payload.items;
+        if (JSON.stringify(state.draft) !== action.payload.source) return;
         state.draft = action.payload.draft;
         state.selectedId = action.payload.draft.id;
       })
       .addCase(deletePlan.fulfilled, (state, action) => {
         state.items = action.payload;
-        if (
-          state.draft &&
-          !action.payload.some((item) => item.id === state.draft?.id)
-        ) {
+        if (state.draft?.id === action.meta.arg) {
           state.draft = null;
           state.selectedId = null;
         }
@@ -415,11 +484,12 @@ const plansSlice = createSlice({
           state.needConnectionChannels = action.payload.channels;
           return;
         }
-        state.planRunPhase = "running";
-        state.needConnectionChannels = [];
-        state.live = action.payload.live;
+        if (state.live?.runId === action.payload.live.runId)
+          state.planRunPhase = "running";
       })
       .addCase(startPlanRun.rejected, (state, action) => {
+        if (action.meta.condition) return;
+        state.live = null;
         state.planRunPhase = "error";
         state.planRunMessage = action.error.message ?? "启动编排运行失败";
       });
@@ -430,6 +500,7 @@ export const {
   discardPlanDraft,
   moveDraftLane,
   onPlanProgress,
+  planStarted,
   openPlan,
   removeDraftLane,
   setFilters,
@@ -438,10 +509,23 @@ export const {
   setPlanDraftMode,
   setPlanDraftName,
   startPlanDraft,
-  stopWatchPlanRun,
+  toggleDraftFavorite,
 } = plansSlice.actions;
 
 export const plansReducer = plansSlice.reducer;
+
+export function selectPlanDirty(state: PlansState): boolean {
+  if (!state.draft) return false;
+  const saved = state.items.find((item) => item.id === state.draft?.id);
+  return (
+    !saved ||
+    saved.name !== state.draft.name ||
+    saved.mode !== state.draft.mode ||
+    saved.failure !== state.draft.failure ||
+    saved.favorite !== state.draft.favorite ||
+    JSON.stringify(saved.items) !== JSON.stringify(state.draft.items)
+  );
+}
 
 export function selectPlans(state: PlansState): Plan[] {
   return state.items;
@@ -485,4 +569,18 @@ export function planNamesReferencingScenario(
   return plansReferencingScenario(scenarioId, plans.items).map(
     (plan) => plan.name,
   );
+}
+
+/** 即使来源剧本已经改动，编排的固定快照仍持有事件版本。 */
+export function planNamesReferencingEvent(
+  state: PlansState,
+  eventId: string,
+): string[] {
+  return state.items
+    .filter((plan) =>
+      plan.items.some((lane) =>
+        lane.snapshot?.steps.some((step) => step.eventId === eventId),
+      ),
+    )
+    .map((plan) => plan.name);
 }

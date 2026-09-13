@@ -6,6 +6,8 @@
  * items 只存剧本引用（scenarioId），运行时经引用解析物化（与剧本步骤同一引用哲学）。
  */
 
+import type { Scenario } from "@/features/scenarios";
+
 export type PlanMode = "parallel" | "serial";
 /** 失败策略：stop = 任一剧本失败即停整个编排；continue = 记录后继续其余剧本 */
 export type PlanFailure = "stop" | "continue";
@@ -13,6 +15,8 @@ export type PlanFailure = "stop" | "continue";
 /** 编排项：引用一个已保存剧本 */
 export type PlanItem = {
   scenarioId: string;
+  /** 选入时的剧本版本；旧文件未提供时按现有引用读取，保存时补齐。 */
+  snapshot?: Scenario;
 };
 
 export type Plan = {
@@ -56,8 +60,20 @@ export function planModeLabel(mode: PlanMode): "并行" | "串行" {
 }
 
 /** 添加剧本（lane 追加到末尾）；同一剧本可重复入编排（如制造并发线）。 */
-export function addLane(plan: Plan, scenarioId: string): Plan {
-  return { ...plan, items: [...plan.items, { scenarioId }] };
+export function addLane(
+  plan: Plan,
+  scenarioId: string,
+  snapshot?: Scenario,
+): Plan {
+  return {
+    ...plan,
+    items: [
+      ...plan.items,
+      snapshot
+        ? { scenarioId, snapshot: structuredClone(snapshot) }
+        : { scenarioId },
+    ],
+  };
 }
 
 /** 上移 / 下移 lane：越界（首条上移、末条下移）为无操作，原样返回。 */
@@ -111,6 +127,7 @@ export function validatePlan(
   plan: Plan,
   scenarios: readonly { id: string }[],
 ): void {
+  if (!plan.name.trim()) throw new Error("请填写编排名称。");
   for (const [index, item] of plan.items.entries()) {
     const exists = scenarios.some(
       (scenario) => scenario.id === item.scenarioId,

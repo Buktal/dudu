@@ -4,18 +4,23 @@ import { describe, expect, it, vi } from "vitest";
 import * as api from "../api";
 import { resolveEditorFields } from "../definitions/resolve";
 import type { EventItem } from "../model";
-import { getAt } from "../payload";
+import { getAt, wireDraftText } from "../payload";
 import { schemaById } from "../schemas";
 import {
   applyFieldDefinitions,
   deleteEvent,
+  duplicateCurrentDraft,
+  editFieldText,
   eventsReducer,
   fetchEvents,
   fetchFieldDefinitions,
   renameEvent,
+  resolveCurrentDraft,
   saveEvent,
+  saveEventAs,
   selectDraft,
   selectDraftChannelId,
+  selectDraftDirty,
   selectEvents,
   selectFieldDefinitions,
   selectFilters,
@@ -24,9 +29,11 @@ import {
   setDraftExpected,
   setDraftField,
   setDraftName,
+  setDraftRawText,
   setFilters,
   setPage,
   startDraft,
+  toggleEventFavorite,
   toggleSenderSync,
 } from "./events-slice";
 
@@ -384,5 +391,85 @@ describe("selectDraftChannelId（跨 feature 窄 selector）", () => {
 
     store.dispatch(startDraft({ name: "抖音文本", schemaId: "dy-text" }));
     expect(selectDraftChannelId(store.getState())).toBe("douyin");
+  });
+});
+
+describe("可见草稿与异步保存回归", () => {
+  it("格式化后修改表单，保存与复制使用最新字段并保留收藏", async () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "原文往返", schemaId: "dy-text" }));
+    const original = store.getState().events.draft;
+    if (!original) throw new Error("新建草稿失败");
+    store.dispatch(
+      setDraftRawText(
+        wireDraftText(schemaById(original.schemaId), original.payload),
+      ),
+    );
+    store.dispatch(
+      setDraftField({ path: "content.text", value: "表单里的最新消息" }),
+    );
+    store.dispatch(toggleEventFavorite());
+    expect(selectDraftDirty(store.getState().events)).toBe(true);
+    expect(
+      getAt(
+        resolveCurrentDraft(store.getState().events)?.payload,
+        "content.text",
+      ),
+    ).toBe("表单里的最新消息");
+    apiMock.saveEvent.mockImplementationOnce(async (event) => [event]);
+    await store.dispatch(saveEvent()).unwrap();
+    const saved = store.getState().events.items[0];
+    expect(
+      getAt(saved.versions[saved.versions.length - 1]?.payload, "content.text"),
+    ).toBe("表单里的最新消息");
+    expect(saved.favorite).toBe(true);
+    store.dispatch(duplicateCurrentDraft());
+    expect(getAt(store.getState().events.draft?.payload, "content.text")).toBe(
+      "表单里的最新消息",
+    );
+  });
+
+  it("非法 JSON 字段和非法完整报文均阻止保存旧值", async () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "无效字段", schemaId: "dy-text" }));
+    store.dispatch(
+      editFieldText({ path: "content.custom", type: "json", text: "{" }),
+    );
+    await expect(store.dispatch(saveEvent()).unwrap()).rejects.toMatchObject({
+      message: expect.stringContaining("请先修正参数"),
+    });
+    store.dispatch(startDraft({ name: "无效报文", schemaId: "dy-text" }));
+    store.dispatch(setDraftRawText("{"));
+    await expect(store.dispatch(saveEvent()).unwrap()).rejects.toBeDefined();
+    expect(apiMock.saveEvent).not.toHaveBeenCalled();
+  });
+
+  it("删除其他事件不清空新草稿与其完整报文", () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "未保存", schemaId: "dy-text" }));
+    store.dispatch(setDraftRawText("{未完成"));
+    const before = store.getState().events.draft;
+    store.dispatch(deleteEvent.fulfilled([], "delete-request", "old-event"));
+    expect(store.getState().events.draft).toEqual(before);
+    expect(store.getState().events.rawText).toBe("{未完成");
+  });
+
+  it("另存为回包不覆盖后来新建的草稿", async () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "A", schemaId: "dy-text" }));
+    let finish!: (events: EventItem[]) => void;
+    let copy!: EventItem;
+    apiMock.saveEvent.mockImplementationOnce((event) => {
+      copy = event;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    const pending = store.dispatch(saveEventAs("副本 A"));
+    store.dispatch(startDraft({ name: "新草稿 B", schemaId: "wc-text" }));
+    finish([copy]);
+    await pending;
+    expect(store.getState().events.draft?.name).toBe("新草稿 B");
+    expect(store.getState().events.draft?.schemaId).toBe("wc-text");
   });
 });

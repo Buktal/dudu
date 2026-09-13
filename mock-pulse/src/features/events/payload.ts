@@ -28,6 +28,40 @@ export function getAt(obj: unknown, path: string): unknown {
   );
 }
 
+/** 剧本卡片展示消息内容，完整载荷仍由版本与运行快照保存。 */
+export function payloadPreview(
+  schema: EventSchema,
+  payload: WirePayload,
+): string {
+  const fields = editorPayload(schema, payload);
+  for (const path of ["content.text", "Content", "message"]) {
+    const value = getAt(fields, path);
+    if (typeof value === "string" && value) return value;
+  }
+  if (fields.Event === "click") return `点击菜单 ${fields.EventKey ?? ""}`;
+  if (fields.event === "im_enter_direct_msg") return "用户从主页进入私信会话";
+  if (getAt(fields, "content.message_type") === "image") return "[图片消息]";
+  return schema.name;
+}
+
+export function withCustomField(
+  schema: EventSchema,
+  payload: WirePayload,
+  path: string,
+  value: unknown,
+): WirePayload {
+  const key = path.trim();
+  if (!key || !safePath(key)) throw new Error("请填写有效的字段路径。");
+  if (schema.wire === "xml") {
+    if (!/^[A-Za-z_][\w.-]*$/.test(key))
+      throw new Error("XML 参数名须为单个元素名。");
+    if (value == null || typeof value === "object")
+      throw new Error("XML 参数值须为文本、数字或布尔值。");
+    return { ...cloneJson(payload), [key]: String(value) };
+  }
+  return setPayloadField(payload, key, value);
+}
+
 /** 沿路径写入值；中间层缺失时按下一键是否数字创建数组或对象。 */
 export function setAt(
   obj: Record<string, unknown>,

@@ -11,7 +11,6 @@ import {
   type DouyinConnectionConfig,
   loadConnections,
   saveConnection as saveConnectionApi,
-  type TestOutcome,
   testDouyinConnection as testDouyinApi,
   testWecomConnection as testWecomApi,
   type WecomConnectionConfig,
@@ -28,6 +27,9 @@ export type ConnectionsState = {
   items: Record<string, ConnectionConfig>;
   loaded: boolean;
   test: TestState;
+  testsByChannel: Partial<Record<ChannelId, TestState>>;
+  selectedChannel: ChannelId;
+  drafts?: Partial<Record<ChannelId, ConnectionConfig>>;
 };
 
 /** 原型默认值：本地联调回调地址，凭据留空 */
@@ -59,6 +61,9 @@ export const initialConnectionsState: ConnectionsState = {
   },
   loaded: false,
   test: { status: "idle", message: "" },
+  testsByChannel: {},
+  selectedChannel: "douyin",
+  drafts: {},
 };
 
 export const fetchConnections = createAsyncThunk(
@@ -96,7 +101,18 @@ export const testConnection = createAsyncThunk(
 export const connectionsSlice = createSlice({
   name: "connections",
   initialState: initialConnectionsState,
-  reducers: {},
+  reducers: {
+    setConnectionChannel(state, action: PayloadAction<ChannelId>) {
+      state.selectedChannel = action.payload;
+    },
+    setConnectionDraft(state, action: PayloadAction<ConnectionConfig>) {
+      state.drafts ??= {};
+      state.drafts[action.payload.channel] = action.payload;
+    },
+    discardConnectionDraft(state, action: PayloadAction<ChannelId>) {
+      if (state.drafts) delete state.drafts[action.payload];
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchConnections.fulfilled, (state, action) => {
@@ -105,29 +121,40 @@ export const connectionsSlice = createSlice({
       })
       .addCase(saveConnection.fulfilled, (state, action) => {
         state.items = itemsFrom(action.payload);
+        if (
+          state.drafts &&
+          JSON.stringify(state.drafts[action.meta.arg.channel]) ===
+            JSON.stringify(action.meta.arg)
+        )
+          delete state.drafts[action.meta.arg.channel];
       })
-      .addCase(testConnection.pending, (state) => {
+      .addCase(testConnection.pending, (state, action) => {
         state.test = { status: "testing", message: "" };
+        state.testsByChannel[action.meta.arg.channel] = state.test;
       })
-      .addCase(
-        testConnection.fulfilled,
-        (state, action: PayloadAction<TestOutcome>) => {
-          state.test = {
-            status: action.payload.ok ? "success" : "failed",
-            message: action.payload.message,
-          };
-        },
-      )
+      .addCase(testConnection.fulfilled, (state, action) => {
+        state.test = {
+          status: action.payload.ok ? "success" : "failed",
+          message: action.payload.message,
+        };
+        state.testsByChannel[action.meta.arg.channel] = state.test;
+      })
       .addCase(testConnection.rejected, (state, action) => {
         state.test = {
           status: "failed",
           message: action.error.message ?? "测试连接失败",
         };
+        state.testsByChannel[action.meta.arg.channel] = state.test;
       });
   },
 });
 
 export const connectionsReducer = connectionsSlice.reducer;
+export const {
+  setConnectionChannel,
+  setConnectionDraft,
+  discardConnectionDraft,
+} = connectionsSlice.actions;
 
 /**
  * 「已配置」的内容判定：直发前置条件，发送入口与指引展示共用。
@@ -175,6 +202,11 @@ export function selectConnection<C extends ChannelId>(
   return state.items[channel] as ConfigOfChannel<C> | undefined;
 }
 
-export function selectTestState(state: ConnectionsState): TestState {
-  return state.test;
+const idleTest: TestState = { status: "idle", message: "" };
+
+export function selectTestState(
+  state: ConnectionsState,
+  channel?: ChannelId,
+): TestState {
+  return channel ? (state.testsByChannel[channel] ?? idleTest) : state.test;
 }

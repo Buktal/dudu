@@ -11,6 +11,7 @@ import {
   setPayloadField,
   wireBodyText,
   wireDraftText,
+  withCustomField,
 } from "./payload";
 import type { XmlLayout } from "./schemas";
 import { schemaById } from "./schemas";
@@ -261,5 +262,83 @@ describe("schema 驱动的线上拼装与解析", () => {
     // 拼装线上明文：数字串原样输出，不经 Number
     const xml = wireBodyText(schema, reloaded.payload);
     expect(xml).toContain(`<MsgId>${bigId}</MsgId>`);
+  });
+});
+
+describe("XML 编辑往返回归", () => {
+  it("紧凑 XML 按文本语义解码实体、数字引用和相邻 CDATA", () => {
+    const payload = parseXmlBody(
+      TEXT_TAGS,
+      "<xml><Content>a &amp; b &#x4e2d; &#25991; &lt;tag&gt; &quot; &apos;<![CDATA[ &amp; ]]><![CDATA[后续]]></Content><MsgId>7151772163216742434</MsgId></xml>",
+    );
+    expect(payload.Content).toBe("a & b 中 文 <tag> \" ' &amp; 后续");
+    expect(payload.MsgId).toBe("7151772163216742434");
+    expect(
+      parseXmlBody(TEXT_TAGS, buildXmlBody(MESSAGE_LAYOUT, TEXT_TAGS, payload)),
+    ).toEqual(payload);
+  });
+
+  it("CDATA 内的完整结束标签不会提前结束字段", () => {
+    const payload = {
+      Content: "第一行\n</Content>\n<Extra>文本</Extra>\n最后一行",
+    };
+    expect(
+      parseXmlBody(TEXT_TAGS, buildXmlBody(MESSAGE_LAYOUT, TEXT_TAGS, payload)),
+    ).toEqual(payload);
+  });
+
+  it("未知元素保留嵌套、实体、属性引号和自闭合元素原文", () => {
+    const fragment =
+      "<Extra note='x > y'><Inner/><!-- </Extra> --><![CDATA[</Extra>]]>&amp;</Extra>";
+    const payload = parseXmlBody(TEXT_TAGS, `<xml>${fragment}<Empty /></xml>`);
+    expect(payload).toEqual({ Extra: fragment, Empty: "<Empty />" });
+    const raw = buildXmlBody(EVENT_LAYOUT, TEXT_TAGS, payload);
+    expect(raw).toContain(fragment);
+    expect(parseXmlBody(TEXT_TAGS, raw)).toEqual(payload);
+  });
+
+  it("非 CDATA 字段同样正确转义 XML 文本", () => {
+    const payload = { AgentID: "a & b < c > d" };
+    const raw = buildXmlBody(MESSAGE_LAYOUT, TEXT_TAGS, payload);
+    expect(raw).toContain("<AgentID>a &amp; b &lt; c &gt; d</AgentID>");
+    expect(parseXmlBody(TEXT_TAGS, raw)).toEqual(payload);
+  });
+
+  it("拒绝重复元素、畸形 XML 和无法保真编辑的已知字段结构", () => {
+    expect(() =>
+      parseXmlBody(TEXT_TAGS, "<xml><Content/><Content/></xml>"),
+    ).toThrow("重复");
+    expect(() =>
+      parseXmlBody(TEXT_TAGS, "<xml><Content>&wrong;</Content></xml>"),
+    ).toThrow("XML");
+    expect(() =>
+      parseXmlBody(TEXT_TAGS, "<xml><Content><Inner/></Content></xml>"),
+    ).toThrow("文本");
+    expect(() =>
+      parseXmlBody(TEXT_TAGS, '<xml><Content key="x">text</Content></xml>'),
+    ).toThrow("属性");
+  });
+
+  it("多行 CDATA 保留空行、缩进和结束符文本", () => {
+    const payload = { Content: "第一行\n\n  第三行与 ]]> 文本" };
+    const raw = buildXmlBody(MESSAGE_LAYOUT, TEXT_TAGS, payload);
+    expect(parseXmlBody(TEXT_TAGS, raw)).toEqual(payload);
+    expect(
+      buildXmlBody(MESSAGE_LAYOUT, TEXT_TAGS, parseXmlBody(TEXT_TAGS, raw)),
+    ).toBe(raw);
+  });
+
+  it("自定义文本编码为 XML 元素，拒绝对象值和嵌套路径", () => {
+    const schema = schemaById("wc-text");
+    const payload = withCustomField(schema, {}, "Extra", "甲 & <乙>");
+    const raw = wireBodyText(schema, payload);
+    expect(raw).toContain("<Extra><![CDATA[甲 & <乙>]]></Extra>");
+    expect(wireBodyText(schema, parseWireDraft(schema, raw))).toBe(raw);
+    expect(() =>
+      withCustomField(schema, {}, "Extra", { nested: true }),
+    ).toThrow("文本");
+    expect(() => withCustomField(schema, {}, "Extra[0]", "abc")).toThrow(
+      "元素名",
+    );
   });
 });

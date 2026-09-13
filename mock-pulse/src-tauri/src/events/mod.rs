@@ -37,6 +37,8 @@ pub struct StoredVersion {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredEvent {
+    #[serde(default)]
+    pub favorite: bool,
     pub id: String,
     pub name: String,
     pub channel_id: String,
@@ -57,10 +59,7 @@ pub fn events_load(app: tauri::AppHandle) -> Result<Vec<StoredEvent>, String> {
 
 /// 保存单条事件（按 id 覆盖），返回保存后的完整列表。
 #[tauri::command]
-pub fn events_save(
-    app: tauri::AppHandle,
-    event: StoredEvent,
-) -> Result<Vec<StoredEvent>, String> {
+pub fn events_save(app: tauri::AppHandle, event: StoredEvent) -> Result<Vec<StoredEvent>, String> {
     let dir = app_data_dir(&app)?;
     let mut list = store::load_events(&dir).map_err(|err| err.to_string())?;
     upsert_event(&mut list, event);
@@ -70,10 +69,7 @@ pub fn events_save(
 
 /// 按 id 删除事件，返回删除后的完整列表。
 #[tauri::command]
-pub fn events_delete(
-    app: tauri::AppHandle,
-    event_id: String,
-) -> Result<Vec<StoredEvent>, String> {
+pub fn events_delete(app: tauri::AppHandle, event_id: String) -> Result<Vec<StoredEvent>, String> {
     let dir = app_data_dir(&app)?;
     let mut list = store::load_events(&dir).map_err(|err| err.to_string())?;
     remove_event(&mut list, &event_id);
@@ -113,6 +109,7 @@ mod tests {
 
     fn event(id: &str) -> StoredEvent {
         StoredEvent {
+            favorite: false,
             id: id.into(),
             name: format!("事件 {id}"),
             channel_id: "douyin".into(),

@@ -19,6 +19,7 @@ import {
   moveDraftStep,
   openScenario,
   removeDraftStep,
+  replaceScenarioStep,
   type ScenariosState,
   saveScenario,
   scenariosReducer,
@@ -30,9 +31,12 @@ import {
   setDraftName,
   setFilters,
   setPage,
+  setScenarioFailure,
+  setStepWait,
   startScenarioDraft,
   syncAllScenarioSteps,
   syncScenarioStep,
+  toggleScenarioFavorite,
 } from "./scenarios-slice";
 
 vi.mock("../api", () => ({
@@ -116,12 +120,12 @@ describe("剧本编辑状态流转", () => {
 
     await store.dispatch(addScenarioStep({ eventId: "evt-dy-1" }));
     expect(selectScenarioDraft(store.getState().scenarios)?.steps).toEqual([
-      { eventId: "evt-dy-1", revision: 2 },
+      { eventId: "evt-dy-1", revision: 2, wait: 0 },
     ]);
 
     await store.dispatch(saveScenario());
     expect(captured.scenario?.steps).toEqual([
-      { eventId: "evt-dy-1", revision: 2 },
+      { eventId: "evt-dy-1", revision: 2, wait: 0 },
     ]);
     expect(selectScenarios(store.getState().scenarios)).toHaveLength(1);
   });
@@ -318,8 +322,8 @@ describe("步骤调序 / 删除 / 重命名 / 删除剧本", () => {
 
     await store.dispatch(saveScenario());
     expect(selectScenarios(store.getState().scenarios)[0]?.steps).toEqual([
-      { eventId: "evt-dy-2", revision: 1 },
-      { eventId: "evt-dy-1", revision: 1 },
+      { eventId: "evt-dy-2", revision: 1, wait: 0.6 },
+      { eventId: "evt-dy-1", revision: 1, wait: 0 },
     ]);
   });
 
@@ -337,7 +341,7 @@ describe("步骤调序 / 删除 / 重命名 / 删除剧本", () => {
     ).toEqual(["evt-dy-2"]);
     await store.dispatch(saveScenario());
     expect(selectScenarios(store.getState().scenarios)[0]?.steps).toEqual([
-      { eventId: "evt-dy-2", revision: 1 },
+      { eventId: "evt-dy-2", revision: 1, wait: 0.6 },
     ]);
   });
 
@@ -408,5 +412,45 @@ describe("打开 / 放弃草稿 / 筛选分页", () => {
       channel: "douyin",
     });
     expect(selectScenarioPage(store.getState().scenarios)).toBe(1);
+  });
+});
+
+describe("剧本编辑回归", () => {
+  it("替换步骤保留等待并拒绝跨渠道，收藏和策略随保存保留", async () => {
+    const next = { ...douyinEvent([2]), id: "evt-next" };
+    const store = makeStore([douyinEvent([1]), next, wecomEvent]);
+    store.dispatch(startScenarioDraft({ name: "回归", channelId: "douyin" }));
+    await store.dispatch(addScenarioStep({ eventId: "evt-dy-1" }));
+    store.dispatch(setStepWait({ index: 0, wait: 2.5 }));
+    await store
+      .dispatch(replaceScenarioStep({ index: 0, eventId: "evt-next" }))
+      .unwrap();
+    expect(store.getState().scenarios.draft?.steps).toEqual([
+      { eventId: "evt-next", revision: 2, wait: 2.5 },
+    ]);
+    await expect(
+      store
+        .dispatch(replaceScenarioStep({ index: 0, eventId: wecomEvent.id }))
+        .unwrap(),
+    ).rejects.toBeDefined();
+    store.dispatch(toggleScenarioFavorite());
+    store.dispatch(setScenarioFailure("continue"));
+    apiMock.saveScenario.mockImplementationOnce(async (scenario) => [scenario]);
+    await store.dispatch(saveScenario()).unwrap();
+    expect(store.getState().scenarios.items[0]).toMatchObject({
+      favorite: true,
+      failure: "continue",
+      steps: [{ eventId: "evt-next", wait: 2.5 }],
+    });
+  });
+
+  it("删除库内其他剧本不清空未保存的新草稿", () => {
+    const store = makeStore();
+    store.dispatch(startScenarioDraft({ name: "新草稿", channelId: "douyin" }));
+    const before = store.getState().scenarios.draft;
+    store.dispatch(
+      deleteScenario.fulfilled([], "delete-request", "old-scenario"),
+    );
+    expect(store.getState().scenarios.draft).toEqual(before);
   });
 });

@@ -45,6 +45,7 @@ export type EventItem = {
   name: string;
   channelId: ChannelId;
   schemaId: string;
+  favorite?: boolean;
   /** 只追加，不修改：旧版本内容不变 */
   versions: EventVersion[];
 };
@@ -55,6 +56,7 @@ export type EventDraft = {
   name: string;
   channelId: ChannelId;
   schemaId: string;
+  favorite?: boolean;
   payload: WirePayload;
   /** 发送者 ID 显式同步开关 */
   senderSync: boolean;
@@ -105,6 +107,7 @@ export function draftFromItem(event: EventItem): EventDraft {
     name: event.name,
     channelId: event.channelId,
     schemaId: event.schemaId,
+    favorite: event.favorite ?? false,
     payload: latest
       ? editorPayload(schema, latest.payload)
       : cloneJson(schema.payload),
@@ -120,6 +123,7 @@ export function isDraftDirty(
 ): boolean {
   if (!event) return true;
   if (event.name !== draft.name) return true;
+  if (!!event.favorite !== !!draft.favorite) return true;
   const schema = schemaById(event.schemaId);
   const latest = latestVersion(event);
   if (!latest) return true;
@@ -154,6 +158,7 @@ export function appendVersion(
     name: draft.name,
     channelId: draft.channelId,
     schemaId: draft.schemaId,
+    favorite: draft.favorite ?? false,
     versions: [...(event?.versions ?? []), version],
   };
 }

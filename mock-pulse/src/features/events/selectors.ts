@@ -7,7 +7,7 @@ import { type EventSchema, schemaById } from "./schemas";
 export type EventFilters = {
   query: string;
   channel: ChannelId | "all";
-  kind: "all" | "message" | "event";
+  kind: "all" | "message" | "event" | "favorite";
 };
 
 export const PAGE_SIZE = 10;
@@ -59,10 +59,12 @@ export function filterEvents(
     }
     if (
       filters.kind !== "all" &&
+      filters.kind !== "favorite" &&
       (row.schema?.kind ?? "message") !== filters.kind
     ) {
       return false;
     }
+    if (filters.kind === "favorite" && !row.item.favorite) return false;
     return query === "" || searchableText(row).includes(query);
   });
   return matched.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

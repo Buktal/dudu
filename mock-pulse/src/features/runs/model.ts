@@ -1,4 +1,4 @@
-import type { EventDraft } from "@/features/events";
+import type { EventDraft, ExpectedReceipt } from "@/features/events";
 import type { ChannelId } from "@/lib/channels";
 import type { WecomDispatchOutcome } from "./api";
 
@@ -40,6 +40,8 @@ export type RunStep = {
   url: string;
   /** 发出的明文载荷快照（逐字节与发送一致；企微为加密前的明文 XML） */
   payload: string;
+  requestBody?: string | null;
+  expected?: ExpectedReceipt | null;
   /** 签名快照：抖音 X-Douyin-Signature 头 / 企微 msg_signature 查询参数 */
   signature: string;
   /** 发送唯一标识快照：抖音 Msg-Id 头 / 企微 nonce */
@@ -67,6 +69,9 @@ export type RunRecord = {
   /** 来源编排名快照（编排运行记录才有） */
   planName?: string | null;
   steps: RunStep[];
+  mode?: "serial" | "parallel" | null;
+  sourceId?: string | null;
+  cancelled?: boolean;
 };
 
 let idCounter = 0;
@@ -78,6 +83,7 @@ export function newRunId(): string {
 
 /** 渠道直发结果的公共形态（抖音/企微命令返回值归一后落记录） */
 export type SendOutcome = {
+  requestBody?: string | null;
   signature: string;
   msgId: string;
   timestamp?: string;
@@ -99,6 +105,7 @@ export function wecomSendOutcome(outcome: WecomDispatchOutcome): SendOutcome {
     body: outcome.body,
     reply: outcome.reply,
     error: outcome.error,
+    requestBody: outcome.requestBody,
   };
 }
 
@@ -106,6 +113,7 @@ export function wecomSendOutcome(outcome: WecomDispatchOutcome): SendOutcome {
  *  outcome 为渠道命令返回值的公共形态（抖音 DispatchOutcome 结构可直传：
  *  timestamp/reply 为可选字段，缺省即 undefined）。 */
 export function buildDirectRun(input: {
+  runId?: string;
   draft: EventDraft;
   url: string;
   body: string;
@@ -115,9 +123,10 @@ export function buildDirectRun(input: {
 }): RunRecord {
   const { draft, url, body, outcome, verdict, startedAt } = input;
   return {
-    id: newRunId(),
+    id: input.runId ?? newRunId(),
     startedAt,
     source: "direct",
+    sourceId: draft.id,
     steps: [
       {
         eventName: draft.name,
@@ -125,6 +134,8 @@ export function buildDirectRun(input: {
         channel: draft.channelId,
         url,
         payload: body,
+        requestBody: outcome.requestBody ?? body,
+        expected: { ...draft.expected },
         signature: outcome.signature,
         msgId: outcome.msgId,
         timestamp: outcome.timestamp,

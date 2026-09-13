@@ -13,12 +13,20 @@ use tauri::Manager;
 pub struct StoredStep {
     pub event_id: String,
     pub revision: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wait: Option<f64>,
 }
 
 /// 与前端交换的剧本形态（camelCase 契约）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredScenario {
+    #[serde(default)]
+    pub favorite: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<String>,
     pub id: String,
     pub name: String,
     pub channel_id: String,
@@ -29,6 +37,12 @@ pub struct StoredScenario {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct ScenarioFile {
+    #[serde(default)]
+    favorite: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    failure: Option<String>,
     id: String,
     name: String,
     steps: Vec<StoredStep>,
@@ -37,6 +51,9 @@ struct ScenarioFile {
 impl From<&StoredScenario> for ScenarioFile {
     fn from(scenario: &StoredScenario) -> Self {
         ScenarioFile {
+            favorite: scenario.favorite,
+            revision: scenario.revision,
+            failure: scenario.failure.clone(),
             id: scenario.id.clone(),
             name: scenario.name.clone(),
             steps: scenario.steps.clone(),
@@ -48,6 +65,9 @@ impl ScenarioFile {
     /// 文件级归属的反向：渠道从所在子目录名回填。
     fn with_channel(self, channel_id: String) -> StoredScenario {
         StoredScenario {
+            favorite: self.favorite,
+            revision: self.revision,
+            failure: self.failure,
             id: self.id,
             name: self.name,
             channel_id,
@@ -62,9 +82,7 @@ fn app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
 
 /// 读取全部剧本（无 scenarios 目录时返回空列表；渠道由子目录回填）。
 #[tauri::command]
-pub fn scenarios_load(
-    app: tauri::AppHandle,
-) -> Result<Vec<StoredScenario>, String> {
+pub fn scenarios_load(app: tauri::AppHandle) -> Result<Vec<StoredScenario>, String> {
     let dir = app_data_dir(&app)?;
     store::load_scenarios(&dir).map_err(|err| err.to_string())
 }

@@ -21,6 +21,7 @@ export type DispatchOutcome = {
 
 /** 企微直发的回执（Rust sends_dispatch_wecom 返回，camelCase） */
 export type WecomDispatchOutcome = {
+  requestBody?: string | null;
   /** msg_signature 查询参数（token/timestamp/nonce/密文 四值字典序 sha1） */
   signature: string;
   /** 参与签名的时间戳（秒级字符串） */
@@ -54,8 +55,13 @@ export function saveRun(run: RunRecord): Promise<RunRecord[]> {
 export function dispatchDouyin(
   config: DouyinConnectionConfig,
   body: string,
+  runId?: string,
 ): Promise<DispatchOutcome> {
-  return invoke<DispatchOutcome>("sends_dispatch_douyin", { config, body });
+  return invoke<DispatchOutcome>("sends_dispatch_douyin", {
+    config,
+    body,
+    ...(runId ? { runId } : {}),
+  });
 }
 
 /**
@@ -66,10 +72,12 @@ export function dispatchDouyin(
 export function dispatchWecom(
   config: WecomConnectionConfig,
   body: string,
+  runId?: string,
 ): Promise<WecomDispatchOutcome> {
   return invoke<WecomDispatchOutcome>("sends_dispatch_wecom", {
     config,
     body,
+    ...(runId ? { runId } : {}),
   });
 }
 
@@ -82,4 +90,8 @@ export function startScenarioRun(
   connections: ConnectionConfig[],
 ): Promise<string> {
   return invoke<string>("start_scenario_run", { snapshot, connections });
+}
+
+export function stopRun(runId: string): Promise<void> {
+  return invoke<void>("stop_run", { runId });
 }

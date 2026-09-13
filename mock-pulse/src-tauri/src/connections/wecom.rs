@@ -82,7 +82,9 @@ pub fn aes_decrypt(key: &[u8; 32], data: &[u8]) -> Result<Vec<u8>, String> {
     let raw = decryptor
         .decrypt_padded_mut::<NoPadding>(&mut buf)
         .map_err(|_| format!("密文长度 {} 不是 16 字节块的整数倍", data.len()))?;
-    pkcs7_unpad_32(raw).map_err(|err| format!("AES 解密失败：{err}")).map(|slice| slice.to_vec())
+    pkcs7_unpad_32(raw)
+        .map_err(|err| format!("AES 解密失败：{err}"))
+        .map(|slice| slice.to_vec())
 }
 
 /// 解密结果：明文字节 + 尾部 receiveid（企业应用回调即 corpid）。
@@ -103,8 +105,8 @@ pub fn decrypt_msg(encoding_aes_key: &str, msg_encrypt: &str) -> Result<Decrypte
     if unpadded.len() < 16 + 4 {
         return Err("解密结果过短，缺少 random(16B) + msg_len(4B) 结构".into());
     }
-    let msg_len = u32::from_be_bytes([unpadded[16], unpadded[17], unpadded[18], unpadded[19]])
-        as usize;
+    let msg_len =
+        u32::from_be_bytes([unpadded[16], unpadded[17], unpadded[18], unpadded[19]]) as usize;
     if 16 + 4 + msg_len > unpadded.len() {
         return Err(format!(
             "msg_len（{msg_len}）超出解密结果长度（{}）",
@@ -211,8 +213,12 @@ pub fn verify_handshake(
     };
 
     let plaintext = random_plaintext();
-    let echostr = match encrypt_msg(encoding_aes_key, &random_16(), plaintext.as_bytes(), corp_id)
-    {
+    let echostr = match encrypt_msg(
+        encoding_aes_key,
+        &random_16(),
+        plaintext.as_bytes(),
+        corp_id,
+    ) {
         Ok(value) => value,
         Err(reason) => {
             return HandshakeOutcome {
@@ -264,7 +270,8 @@ pub fn verify_handshake(
     if body.as_ref() == plaintext.as_bytes() {
         HandshakeOutcome {
             ok: true,
-            message: "echostr 握手成功：随机明文经 AES 加密签名 GET，解密明文原样回显（HTTP 200）".into(),
+            message: "echostr 握手成功：随机明文经 AES 加密签名 GET，解密明文原样回显（HTTP 200）"
+                .into(),
         }
     } else {
         let echoed = String::from_utf8_lossy(&body).to_string();
@@ -289,6 +296,8 @@ pub fn handshake_client() -> reqwest::blocking::Client {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WecomDispatchOutcome {
+    #[serde(default)]
+    pub request_body: Option<String>,
     pub signature: String,
     pub timestamp: String,
     pub nonce: String,
@@ -320,6 +329,7 @@ fn extract_reply_encrypt(body: &str) -> Option<&str> {
 /// 未发出请求即失败（配置不匹配/加密失败）的空回执：不携带任何随机值。
 fn failed_outcome(error: String) -> WecomDispatchOutcome {
     WecomDispatchOutcome {
+        request_body: None,
         signature: String::new(),
         timestamp: String::new(),
         nonce: String::new(),
@@ -374,7 +384,7 @@ pub fn dispatch_event(
             ("nonce", nonce.as_str()),
         ])
         .header("Content-Type", "text/xml")
-        .body(envelope)
+        .body(envelope.clone())
         .send();
 
     let elapsed_ms = started.elapsed().as_millis() as u64;
@@ -388,6 +398,7 @@ pub fn dispatch_event(
                     .map(|decrypted| String::from_utf8_lossy(&decrypted.msg).to_string())
             });
             WecomDispatchOutcome {
+                request_body: Some(envelope),
                 signature,
                 timestamp,
                 nonce,
@@ -407,6 +418,7 @@ pub fn dispatch_event(
                 "请求发送失败"
             };
             WecomDispatchOutcome {
+                request_body: Some(envelope),
                 signature,
                 timestamp,
                 nonce,
@@ -496,13 +508,8 @@ mod tests {
             let msg: Vec<u8> = (0..msg_len).map(|i| (i % 251) as u8).collect();
             for receiveid in ["", "ww_roundtrip_corp"] {
                 let random16 = [7u8; 16];
-                let encrypt = encrypt_msg(
-                    GOLDEN_ENCODING_AES_KEY,
-                    &random16,
-                    &msg,
-                    receiveid,
-                )
-                .unwrap();
+                let encrypt =
+                    encrypt_msg(GOLDEN_ENCODING_AES_KEY, &random16, &msg, receiveid).unwrap();
                 let decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, &encrypt).unwrap();
 
                 assert_eq!(decrypted.msg, msg, "msg_len={msg_len} rid={receiveid}");
@@ -650,12 +657,10 @@ mod tests {
 
     /// 忠实实现官方四步：① urldecode（query_of 已做）② 重算签名比对
     /// ③ 解密 echostr 取 msg ④ 回显明文（无引号/无换行）。
-    fn wecom_echo_ok(
-        _request_line: &str,
-        query: &HashMap<String, String>,
-    ) -> (String, String) {
+    fn wecom_echo_ok(_request_line: &str, query: &HashMap<String, String>) -> (String, String) {
         let echostr = &query["echostr"];
-        let expect_sig = build_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"], echostr);
+        let expect_sig =
+            build_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"], echostr);
         assert_eq!(expect_sig, query["msg_signature"], "签名应可复算");
         let decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, echostr).unwrap();
         assert_eq!(decrypted.receiveid, GOLDEN_CORP_ID, "receiveid 应为 corpid");
@@ -693,7 +698,10 @@ mod tests {
 
         // 请求侧逐项核对官方协议要素
         let (request_line, query) = rx.recv_timeout(Duration::from_secs(2)).unwrap();
-        assert!(request_line.starts_with("GET /webhooks/wecom"), "{request_line}");
+        assert!(
+            request_line.starts_with("GET /webhooks/wecom"),
+            "{request_line}"
+        );
         for key in ["msg_signature", "timestamp", "nonce", "echostr"] {
             assert!(query.contains_key(key), "缺少 {key} 参数：{query:?}");
         }
@@ -718,8 +726,7 @@ mod tests {
         // 官方明确「不能加引号」——回显带引号即逐字节不一致
         let quoted: fn(&str, &HashMap<String, String>) -> (String, String) =
             |_request_line, query| {
-                let decrypted =
-                    decrypt_msg(GOLDEN_ENCODING_AES_KEY, &query["echostr"]).unwrap();
+                let decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, &query["echostr"]).unwrap();
                 (
                     "HTTP/1.1 200 OK".into(),
                     format!("\"{}\"", String::from_utf8(decrypted.msg).unwrap()),
@@ -759,12 +766,8 @@ mod tests {
     #[test]
     fn golden_signature_recomputes_official_value() {
         // 官方示例：sort_str = "13726231491409659813QDG6eK" + 密文全串 → sha1 小写 hex
-        let signature = build_signature(
-            GOLDEN_TOKEN,
-            GOLDEN_TIMESTAMP,
-            GOLDEN_NONCE,
-            GOLDEN_ENCRYPT,
-        );
+        let signature =
+            build_signature(GOLDEN_TOKEN, GOLDEN_TIMESTAMP, GOLDEN_NONCE, GOLDEN_ENCRYPT);
         assert_eq!(signature, GOLDEN_SIGNATURE);
     }
 
@@ -851,7 +854,10 @@ mod tests {
     fn naive_extract_encrypt(envelope: &str) -> &str {
         let open = "<Encrypt><![CDATA[";
         let start = envelope.find(open).expect("信封应含 Encrypt 元素") + open.len();
-        let end = start + envelope[start..].find("]]>").expect("Encrypt 应有 CDATA 闭合");
+        let end = start
+            + envelope[start..]
+                .find("]]>")
+                .expect("Encrypt 应有 CDATA 闭合");
         &envelope[start..end]
     }
 
@@ -868,9 +874,13 @@ mod tests {
 
     /// 目标按官方 §3.5 构造加密被动回复包（固定随机数，便于逐字断言）。
     fn passive_reply_envelope() -> String {
-        let encrypt =
-            encrypt_msg(GOLDEN_ENCODING_AES_KEY, &[3u8; 16], REPLY_PLAINTEXT.as_bytes(), GOLDEN_CORP_ID)
-                .unwrap();
+        let encrypt = encrypt_msg(
+            GOLDEN_ENCODING_AES_KEY,
+            &[3u8; 16],
+            REPLY_PLAINTEXT.as_bytes(),
+            GOLDEN_CORP_ID,
+        )
+        .unwrap();
         let signature = build_signature(GOLDEN_TOKEN, "1409659813", "1372623149", &encrypt);
         format!(
             "<xml>\n   <Encrypt><![CDATA[{encrypt}]]></Encrypt>\n   <MsgSignature><![CDATA[{signature}]]></MsgSignature>\n   <TimeStamp>1409659813</TimeStamp>\n   <Nonce><![CDATA[1372623149]]></Nonce>\n</xml>"
@@ -886,8 +896,7 @@ mod tests {
         // 前端确定性拼装的明文 XML（含非 ASCII，验证 UTF-8 字节透传）
         let plaintext = "<xml>\n   <ToUserName><![CDATA[wx5823bf96d3bd56c7]]></ToUserName>\n   <MsgType><![CDATA[text]]></MsgType>\n   <Content><![CDATA[你好，企业微信]]></Content>\n</xml>";
 
-        let outcome =
-            dispatch_event(&quick_client(Duration::from_secs(2)), &config, plaintext);
+        let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, plaintext);
 
         assert_eq!(outcome.status, 200);
         assert_eq!(outcome.body, "");
@@ -896,7 +905,11 @@ mod tests {
 
         let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
         // 请求行：POST + msg_signature/timestamp/nonce 查询参数
-        assert!(request.request_line.starts_with("POST /hook?"), "{}", request.request_line);
+        assert!(
+            request.request_line.starts_with("POST /hook?"),
+            "{}",
+            request.request_line
+        );
         let query = query_of(&request.request_line);
         for key in ["msg_signature", "timestamp", "nonce"] {
             assert!(query.contains_key(key), "缺少 {key} 参数：{query:?}");
@@ -915,7 +928,12 @@ mod tests {
         // msg_signature = sha1(token/timestamp/nonce/密文 四值字典序)，与快照一致
         assert_eq!(
             query["msg_signature"],
-            build_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"], ciphertext)
+            build_signature(
+                GOLDEN_TOKEN,
+                &query["timestamp"],
+                &query["nonce"],
+                ciphertext
+            )
         );
         assert_eq!(outcome.signature, query["msg_signature"]);
         assert_eq!(outcome.timestamp, query["timestamp"]);
@@ -1015,6 +1033,7 @@ mod tests {
     #[test]
     fn wecom_dispatch_outcome_serializes_camel_case_for_frontend() {
         let outcome = WecomDispatchOutcome {
+            request_body: Some("<xml/>".into()),
             signature: "a".repeat(40),
             timestamp: "1409659813".into(),
             nonce: "1372623149".into(),

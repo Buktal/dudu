@@ -7,6 +7,7 @@ import type { Scenario, ScenarioStep } from "./model";
 export type ScenarioFilters = {
   query: string;
   channel: ChannelId | "all";
+  kind?: "all" | "favorite";
 };
 
 export const PAGE_SIZE = 10;
@@ -34,6 +35,7 @@ export function filterScenarios(
   }));
   const query = filters.query.trim().toLowerCase();
   return rows.filter((row) => {
+    if (filters.kind === "favorite" && !row.scenario.favorite) return false;
     if (
       filters.channel !== "all" &&
       row.scenario.channelId !== filters.channel

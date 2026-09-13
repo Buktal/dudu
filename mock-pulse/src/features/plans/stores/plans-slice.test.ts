@@ -13,6 +13,7 @@ import {
 } from "@/features/events";
 import { runsReducer } from "@/features/runs";
 import {
+  fetchScenarios,
   initialScenariosState,
   type Scenario,
   scenariosReducer,
@@ -29,17 +30,20 @@ import {
   moveDraftLane,
   onPlanProgress,
   openPlan,
+  planNamesReferencingEvent,
   planNamesReferencingScenario,
   plansReducer,
   savePlan,
   savePlanAs,
   selectLivePlanRun,
+  selectPlanDirty,
   selectPlanRunPhase,
   setPlanDraftFailure,
   setPlanDraftMode,
+  setPlanDraftName,
   startPlanDraft,
   startPlanRun,
-  stopWatchPlanRun,
+  syncPlanLane,
   togglePlanFavorite,
 } from "./plans-slice";
 
@@ -192,7 +196,9 @@ describe("plans slice 素材库契约", () => {
     const saved = apiMock.savePlan.mock.calls[0]?.[0];
     expect(saved.name).toBe("新编排");
     expect(saved.mode).toBe("serial");
-    expect(saved.items).toEqual([{ scenarioId: "scn-dy" }]);
+    expect(saved.items).toEqual([
+      { scenarioId: "scn-dy", snapshot: SCENARIO_ITEMS[0] },
+    ]);
 
     // 引用失效：validatePlan 拒绝，命令不被调用（剧本库中无 scn-gone）
     const broken = makeStore(
@@ -209,7 +215,7 @@ describe("plans slice 素材库契约", () => {
     store.dispatch(startPlanDraft({ name: "编排", mode: "parallel" }));
     await store.dispatch(addPlanLane({ scenarioId: "scn-dy" }));
     expect(store.getState().plans.draft?.items).toEqual([
-      { scenarioId: "scn-dy" },
+      { scenarioId: "scn-dy", snapshot: SCENARIO_ITEMS[0] },
     ]);
 
     const action = await store.dispatch(
@@ -217,7 +223,7 @@ describe("plans slice 素材库契约", () => {
     );
     expect(addPlanLane.rejected.match(action)).toBe(true);
     expect(store.getState().plans.draft?.items).toEqual([
-      { scenarioId: "scn-dy" },
+      { scenarioId: "scn-dy", snapshot: SCENARIO_ITEMS[0] },
     ]);
   });
 
@@ -433,17 +439,6 @@ describe("plans slice 编排运行状态流转", () => {
     // plans 域不收纳历史记录（runs 域监听同一事件入列）
     expect(store.getState().plans.items).toEqual([SAVED_PLAN]);
   });
-
-  it("stopWatchPlanRun：停止实况视图（后台执行不可中断）", async () => {
-    const store = makeStore({ douyin: DY_CONNECTION, wecom: WC_CONNECTION });
-    store.dispatch(openPlan(SAVED_PLAN.id));
-    apiMock.startPlanRun.mockResolvedValueOnce("run-x1");
-    await store.dispatch(startPlanRun());
-
-    store.dispatch(stopWatchPlanRun());
-    expect(selectLivePlanRun(store.getState().plans)).toBeNull();
-    expect(selectPlanRunPhase(store.getState().plans)).toBe("idle");
-  });
 });
 
 describe("跨 feature 窄 selector", () => {
@@ -458,5 +453,83 @@ describe("跨 feature 窄 selector", () => {
     expect(planNamesReferencingScenario(store.getState(), "scn-gone")).toEqual(
       [],
     );
+  });
+});
+
+describe("编排快照与异步草稿回归", () => {
+  it("保存旧编排补齐剧本快照并清除脏状态", async () => {
+    const store = makeStore();
+    store.dispatch(openPlan(SAVED_PLAN.id));
+    apiMock.savePlan.mockImplementationOnce(async (plan) => [plan]);
+    await store.dispatch(savePlan()).unwrap();
+    expect(store.getState().plans.draft?.items[0].snapshot).toEqual(
+      SCENARIO_ITEMS[0],
+    );
+    expect(selectPlanDirty(store.getState().plans)).toBe(false);
+  });
+
+  it("来源修改后保持旧快照，只有显式同步才更新", async () => {
+    const store = makeStore();
+    store.dispatch(startPlanDraft({ name: "固定版本", mode: "serial" }));
+    await store.dispatch(addPlanLane({ scenarioId: "scn-dy" }));
+    const changed = {
+      ...SCENARIO_ITEMS[0],
+      name: "来源已经修改",
+      revision: 2,
+      steps: [],
+    };
+    store.dispatch(fetchScenarios.fulfilled([changed], "refetch"));
+    expect(store.getState().plans.draft?.items[0].snapshot).toEqual(
+      SCENARIO_ITEMS[0],
+    );
+    apiMock.savePlan.mockImplementationOnce(async (plan) => [plan]);
+    await store.dispatch(savePlan()).unwrap();
+    expect(
+      planNamesReferencingEvent(store.getState().plans, "evt-dy-1"),
+    ).toEqual(["固定版本"]);
+    await store.dispatch(syncPlanLane(0)).unwrap();
+    expect(store.getState().plans.draft?.items[0].snapshot).toEqual(changed);
+  });
+
+  it("另存为返回不覆盖其间编辑的草稿", async () => {
+    const store = makeStore();
+    store.dispatch(openPlan(SAVED_PLAN.id));
+    let finish!: (plans: Plan[]) => void;
+    let copy!: Plan;
+    apiMock.savePlan.mockImplementationOnce((plan) => {
+      copy = plan;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    const pending = store.dispatch(savePlanAs("副本"));
+    store.dispatch(setPlanDraftName("尚未保存的后续修改"));
+    finish([SAVED_PLAN, copy]);
+    await pending;
+    expect(store.getState().plans.draft?.name).toBe("尚未保存的后续修改");
+    expect(store.getState().plans.draft?.id).toBe(SAVED_PLAN.id);
+  });
+
+  it("删除其他编排保留新草稿", () => {
+    const store = makeStore();
+    store.dispatch(startPlanDraft({ name: "未保存", mode: "parallel" }));
+    const before = store.getState().plans.draft;
+    store.dispatch(deletePlan.fulfilled([], "delete-request", SAVED_PLAN.id));
+    expect(store.getState().plans.draft).toEqual(before);
+  });
+
+  it("完成事件先于启动命令返回时不复活运行", async () => {
+    const store = makeStore({ douyin: DY_CONNECTION, wecom: WC_CONNECTION });
+    store.dispatch(openPlan(SAVED_PLAN.id));
+    apiMock.startPlanRun.mockImplementationOnce(async (snapshot) => {
+      expect(store.getState().plans.live?.runId).toBe(snapshot.runId);
+      store.dispatch(
+        onPlanProgress({ runId: snapshot.runId, index: 0, status: "finished" }),
+      );
+      return snapshot.runId;
+    });
+    await store.dispatch(startPlanRun()).unwrap();
+    expect(store.getState().plans.live).toBeNull();
+    expect(store.getState().plans.planRunPhase).toBe("idle");
   });
 });

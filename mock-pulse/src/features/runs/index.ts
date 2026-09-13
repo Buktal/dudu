@@ -3,7 +3,15 @@ export type {
   WecomDispatchOutcome,
 } from "./api";
 export { DispatchPanel } from "./components/dispatch-panel";
+export { RunPersistenceNotice } from "./components/run-persistence-notice";
 export { RunStepDetail, StepVerdictBadge } from "./components/run-step-detail";
+export {
+  RunLanes,
+  RunSummary,
+  recordLanes,
+  StatusBadge,
+  type TimelineLane,
+} from "./components/run-visualization";
 export { RunsView } from "./components/runs-view";
 export type {
   ReceiptSnapshot,
@@ -39,14 +47,17 @@ export {
   onRunProgress,
   type RunProgressPayload,
   type RunsState,
+  retrySaveRun,
   runsReducer,
   type ScenarioRunPhase,
   selectLastDispatch,
   selectLiveRun,
   selectPanelMessage,
   selectPanelPhase,
+  selectRun,
   selectRuns,
   selectScenarioRunMessage,
   selectScenarioRunPhase,
   startScenarioRun,
+  stopRun,
 } from "./stores/runs-slice";

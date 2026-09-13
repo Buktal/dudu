@@ -9,13 +9,13 @@ import {
   initialEventsState,
 } from "@/features/events";
 import * as eventsApi from "@/features/events/api";
+import { initialPlansState, plansReducer } from "@/features/plans";
 import {
   initialScenariosState,
   type Scenario,
   scenariosReducer,
 } from "@/features/scenarios";
 import * as scenariosApi from "@/features/scenarios/api";
-
 import { useDeleteEventGuarded } from "./use-delete-event-guarded";
 
 vi.mock("@/features/events/api", () => ({
@@ -57,8 +57,13 @@ const wecomEvent: EventItem = {
 /** 组合根级 store：真实 events/scenarios reducer + mock 持久层 */
 function makeStore(steps: Scenario["steps"]) {
   return configureStore({
-    reducer: { events: eventsReducer, scenarios: scenariosReducer },
+    reducer: {
+      events: eventsReducer,
+      scenarios: scenariosReducer,
+      plans: plansReducer,
+    },
     preloadedState: {
+      plans: { ...initialPlansState, loaded: true },
       events: {
         ...initialEventsState,
         items: [douyinEvent, wecomEvent],

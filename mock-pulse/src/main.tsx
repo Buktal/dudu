@@ -3,7 +3,6 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 
-import { ThemeProvider } from "@/components/theme-provider";
 import { onPlanProgress } from "@/features/plans";
 import { onRunProgress, type RunProgressPayload } from "@/features/runs";
 import { store } from "@/store";
@@ -22,9 +21,7 @@ listen<RunProgressPayload>("run-progress", (event) => {
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <Provider store={store}>
-      <ThemeProvider>
-        <App />
-      </ThemeProvider>
+      <App />
     </Provider>
   </React.StrictMode>,
 );

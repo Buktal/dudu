@@ -30,6 +30,7 @@ import {
   fetchRuns,
   initialRunsState,
   onRunProgress,
+  retrySaveRun,
   runsReducer,
   selectLastDispatch,
   selectLiveRun,
@@ -37,6 +38,7 @@ import {
   selectRuns,
   selectScenarioRunPhase,
   startScenarioRun,
+  stopRun,
 } from "./runs-slice";
 
 vi.mock("../api", () => ({
@@ -45,6 +47,7 @@ vi.mock("../api", () => ({
   dispatchDouyin: vi.fn(),
   dispatchWecom: vi.fn(),
   startScenarioRun: vi.fn(),
+  stopRun: vi.fn(),
 }));
 
 const apiMock = vi.mocked(api, true);
@@ -591,5 +594,95 @@ describe("runs slice 剧本运行状态流转", () => {
   it("runs 初始态含剧本运行字段", () => {
     expect(initialRunsState.scenarioRunPhase).toBe("idle");
     expect(initialRunsState.live).toBeNull();
+  });
+});
+
+describe("运行取消、快速完成与保存失败回归", () => {
+  it("完成事件先于启动 IPC 返回不会复活 live，重复完成事件不重复入列", async () => {
+    const store = makeScenarioStore(CONNECTION);
+    apiMock.startScenarioRun.mockImplementationOnce(async (snapshot) => {
+      expect(store.getState().runs.live?.runId).toBe(snapshot.runId);
+      store.dispatch(
+        onRunProgress({ runId: snapshot.runId, index: 0, status: "waiting" }),
+      );
+      expect(store.getState().runs.live?.steps[0].status).toBe("waiting");
+      const event = {
+        runId: snapshot.runId,
+        index: 2,
+        status: "finished" as const,
+        run: finishedRun(snapshot.runId),
+      };
+      store.dispatch(onRunProgress(event));
+      store.dispatch(onRunProgress(event));
+      return snapshot.runId;
+    });
+    await store.dispatch(startScenarioRun()).unwrap();
+    expect(store.getState().runs.live).toBeNull();
+    expect(store.getState().runs.scenarioRunPhase).toBe("idle");
+    expect(store.getState().runs.items).toHaveLength(1);
+  });
+
+  it("直发落盘失败保留完整回执，重试只保存同一记录", async () => {
+    const store = makeStore(CONNECTION);
+    store.dispatch(startDraft({ name: "保存失败", schemaId: "dy-text" }));
+    apiMock.dispatchDouyin.mockResolvedValueOnce(OUTCOME);
+    apiMock.saveRun.mockRejectedValueOnce("磁盘暂不可写");
+    await store.dispatch(directDispatch()).unwrap();
+    const run = store.getState().runs.items[0];
+    expect(run.steps[0].receipt.status).toBe(200);
+    expect(run.steps[0].expected?.status).toBe(200);
+    expect(store.getState().runs.persistenceErrors?.[run.id]).toBe(
+      "磁盘暂不可写",
+    );
+    apiMock.saveRun.mockResolvedValueOnce([run]);
+    await store.dispatch(retrySaveRun(run.id)).unwrap();
+    expect(store.getState().runs.persistenceErrors?.[run.id]).toBeUndefined();
+    expect(store.getState().runs.items).toHaveLength(1);
+    expect(apiMock.dispatchDouyin).toHaveBeenCalledTimes(1);
+  });
+
+  it("停止当前直发使用同一个 runId，保留已发请求的真实回执", async () => {
+    const store = makeStore(CONNECTION);
+    store.dispatch(startDraft({ name: "停止当前请求", schemaId: "dy-text" }));
+    let finish!: (outcome: typeof OUTCOME) => void;
+    apiMock.dispatchDouyin.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    apiMock.saveRun.mockImplementationOnce(async (run) => [run]);
+    apiMock.stopRun.mockResolvedValueOnce();
+    const pending = store.dispatch(directDispatch());
+    const live = store.getState().runs.directLive;
+    if (!live) throw new Error("直发未建立运行状态");
+    expect(apiMock.dispatchDouyin.mock.calls[0]?.[2]).toBe(live.runId);
+    await store.dispatch(stopRun(live.runId)).unwrap();
+    finish(OUTCOME);
+    await pending;
+    expect(apiMock.stopRun).toHaveBeenCalledWith(live.runId);
+    expect(store.getState().runs.items[0]).toMatchObject({
+      id: live.runId,
+      cancelled: true,
+      steps: [{ receipt: { status: 200 } }],
+    });
+    expect(store.getState().runs.stoppingRunId).toBeNull();
+  });
+
+  it("后台完成时写入失败的快照不会被重新载入覆盖", () => {
+    const store = makeScenarioStore(CONNECTION);
+    const run = finishedRun("unsaved-run");
+    store.dispatch(
+      onRunProgress({
+        runId: run.id,
+        index: 2,
+        status: "finished",
+        run,
+        error: "空间不足",
+      }),
+    );
+    store.dispatch(fetchRuns.fulfilled([], "refetch"));
+    expect(store.getState().runs.items).toEqual([run]);
+    expect(store.getState().runs.persistenceErrors?.[run.id]).toBe("空间不足");
   });
 });

@@ -112,8 +112,8 @@ fn find_scenario_files(root: &Path, scenario_id: &str) -> Vec<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::StoredStep;
+    use super::*;
     use serde_json::Value;
 
     fn temp_dir(tag: &str) -> PathBuf {
@@ -126,15 +126,20 @@ mod tests {
 
     fn douyin_scenario() -> StoredScenario {
         StoredScenario {
+            favorite: true,
+            revision: Some(3),
+            failure: Some("continue".into()),
             id: "scn-dy-001".into(),
             name: "从进入到咨询".into(),
             channel_id: "douyin".into(),
             steps: vec![
                 StoredStep {
+                    wait: Some(0.6),
                     event_id: "evt-dy-1".into(),
                     revision: 1,
                 },
                 StoredStep {
+                    wait: Some(0.6),
                     event_id: "evt-dy-2".into(),
                     revision: 3,
                 },
@@ -144,10 +149,14 @@ mod tests {
 
     fn wecom_scenario() -> StoredScenario {
         StoredScenario {
+            favorite: true,
+            revision: Some(3),
+            failure: Some("continue".into()),
             id: "scn-wc-001".into(),
             name: "企微接待".into(),
             channel_id: "wecom".into(),
             steps: vec![StoredStep {
+                wait: Some(0.6),
                 event_id: "evt-wc-1".into(),
                 revision: 2,
             }],
@@ -181,16 +190,27 @@ mod tests {
         let raw = fs::read_to_string(&path).unwrap();
         let doc: Value = serde_json::from_str(&raw).unwrap();
 
-        // 文档顶层键：id/name/steps——渠道由路径承载，不写进文件
-        let top_keys: Vec<&str> =
-            doc.as_object().unwrap().keys().map(String::as_str).collect();
-        assert_eq!(top_keys, vec!["id", "name", "steps"]);
+        // 顶层保留编辑元数据；渠道仍由路径承载，不写进文件
+        let top_keys: Vec<&str> = doc
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            top_keys,
+            vec!["favorite", "revision", "failure", "id", "name", "steps"]
+        );
 
-        // 步骤键：eventId/revision（camelCase），不含 group / channel
+        // 步骤键：eventId/revision/wait（camelCase），不含 group / channel
         for step in doc["steps"].as_array().unwrap() {
-            let keys: Vec<&str> =
-                step.as_object().unwrap().keys().map(String::as_str).collect();
-            assert_eq!(keys, vec!["eventId", "revision"]);
+            let keys: Vec<&str> = step
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect();
+            assert_eq!(keys, vec!["eventId", "revision", "wait"]);
         }
         assert!(!raw.contains("group"));
         fs::remove_dir_all(&dir).unwrap();

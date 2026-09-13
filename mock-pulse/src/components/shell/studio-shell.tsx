@@ -1,124 +1,161 @@
 import type { LucideIcon } from "lucide-react";
-import { Activity } from "lucide-react";
-
+import { type ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useLibraryDisclosure } from "../resource-workspace";
+import { IconButton, StudioButton, StudioDialog } from "../studio-controls";
+import { StudioIcon, type StudioIconName } from "../studio-icon";
 
 export type NavEntry<T extends string = string> = {
   id: T;
   name: string;
   icon: LucideIcon;
+  count?: number;
 };
-
-/** 侧栏导航分组：构建与调试在前，运行记录居后，平台连接固定底部 */
 export type NavGroup<T extends string = string> = {
   label?: string;
   entries: NavEntry<T>[];
   pinnedBottom?: boolean;
 };
 
-type StudioShellProps<T extends string> = {
-  navGroups: NavGroup<T>[];
-  currentView: T;
-  onSelectView: (view: T) => void;
-  currentTitle: string;
-  children: React.ReactNode;
+const navIcons: Record<string, StudioIconName> = {
+  events: "event",
+  scenarios: "scenario",
+  plans: "plan",
+  runs: "history",
+  connections: "settings",
 };
 
-/** 参数工作台外壳：固定功能导航 + 右侧内容区（纯展示，状态由组合根注入） */
 export function StudioShell<T extends string>({
   navGroups,
   currentView,
   onSelectView,
   currentTitle,
   children,
-}: StudioShellProps<T>) {
-  const mainGroups = navGroups.filter((group) => !group.pinnedBottom);
-  const bottomGroups = navGroups.filter((group) => group.pinnedBottom);
-
-  const renderNavButton = (entry: NavEntry<T>) => {
-    const Icon = entry.icon;
-    const active = currentView === entry.id;
-    return (
-      <button
-        key={entry.id}
-        type="button"
-        onClick={() => onSelectView(entry.id)}
-        aria-current={active ? "page" : undefined}
-        className={cn(
-          "relative flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-left text-xs text-sidebar-foreground transition-colors",
-          "hover:bg-accent hover:text-foreground",
-          active &&
-            "bg-sidebar-accent font-semibold text-sidebar-accent-foreground shadow-sm before:absolute before:-left-3.5 before:top-2.5 before:bottom-2.5 before:w-[3px] before:rounded-r before:bg-sidebar-primary",
-        )}
-      >
-        <Icon className="size-4 shrink-0" aria-hidden />
-        <span>{entry.name}</span>
-      </button>
-    );
-  };
-
+}: {
+  navGroups: NavGroup<T>[];
+  currentView: T;
+  onSelectView: (view: T) => void;
+  currentTitle: string;
+  children: ReactNode;
+}) {
+  const [help, setHelp] = useState(false);
+  const { request } = useLibraryDisclosure();
+  const entries = navGroups.flatMap((group) => group.entries);
+  const connection = entries.find((entry) => entry.id === "connections");
+  const navButton = (entry: NavEntry<T>) => (
+    <button
+      key={entry.id}
+      type="button"
+      className={cn("nav-button", currentView === entry.id && "active")}
+      aria-current={currentView === entry.id ? "page" : undefined}
+      title={entry.name}
+      onClick={() => onSelectView(entry.id)}
+    >
+      <StudioIcon name={navIcons[entry.id] ?? "event"} />
+      <span>{entry.name}</span>
+      {entry.count !== undefined ? (
+        <span className="nav-count">{entry.count}</span>
+      ) : null}
+    </button>
+  );
   return (
-    <div className="grid h-svh grid-cols-[184px_minmax(0,1fr)] overflow-hidden bg-background">
-      <nav
-        aria-label="主导航"
-        className="flex min-w-0 flex-col gap-5 border-r border-sidebar-border bg-sidebar p-4 pt-7"
-      >
-        <div className="px-2.5">
-          <div className="flex items-center gap-2.5">
-            <Activity className="size-7 text-sidebar-primary" aria-hidden />
-            <span className="font-heading text-xl font-semibold tracking-tight text-foreground">
-              MockPulse
-            </span>
+    <div className="mockpulse-studio studio-app">
+      <div className="shell-a">
+        <nav className="sidebar" aria-label="主导航">
+          <div className="brand">
+            <StudioIcon name="pulse" className="brand-symbol" />
+            <div className="brand-text">
+              <div className="brand-name">MockPulse</div>
+            </div>
           </div>
-          <p className="mt-2 font-mono text-[8px] tracking-[0.125em] text-muted-foreground">
-            PLATFORM EVENT LAB
-          </p>
-        </div>
-
-        {mainGroups.map((group, index) => (
-          <div
-            key={group.entries.map((entry) => entry.id).join("-")}
-            className={cn("flex flex-col gap-1.5", index > 0 && "mt-1")}
-          >
-            {group.label ? (
-              <p className="px-3 pb-1 text-[10px] font-medium text-muted-foreground">
-                {group.label}
-              </p>
+          <div className="brand-caption">PLATFORM EVENT LAB</div>
+          <div className="nav-section-label">构建与调试</div>
+          <div className="nav-list">
+            {entries
+              .filter((entry) => entry.id !== "connections")
+              .map((entry) =>
+                entry.id === "runs" ? (
+                  <div key={entry.id} className="nav-history">
+                    <div className="nav-spacer" />
+                    {navButton(entry)}
+                  </div>
+                ) : (
+                  navButton(entry)
+                ),
+              )}
+          </div>
+          <div className="sidebar-bottom">
+            {connection ? navButton(connection) : null}
+            <div className="local-note">
+              <span className="dot" /> 本地工作空间
+              <br />
+              数据保存于本机
+            </div>
+          </div>
+        </nav>
+        <section className="workspace" aria-label="工作区">
+          <header className="workspace-bar">
+            <div className="crumb">
+              工作空间<span className="slash">/</span>
+              <strong>{currentTitle}</strong>
+            </div>
+            <span className="grow" />
+            <StudioButton
+              tone="quiet"
+              small
+              className="browse-mobile"
+              onClick={() => request(currentView)}
+            >
+              <StudioIcon name="folder" />
+              素材库
+            </StudioButton>
+            <span className="pill">本地联调 · 回调模拟</span>
+            {connection ? (
+              <StudioButton
+                tone="quiet"
+                small
+                onClick={() => onSelectView(connection.id)}
+              >
+                <StudioIcon name="settings" />
+                本地开发
+              </StudioButton>
             ) : null}
-            {group.entries.map(renderNavButton)}
-          </div>
-        ))}
-
-        {bottomGroups.map((group) => (
-          <div
-            key={group.entries.map((entry) => entry.id).join("-")}
-            className="mt-auto flex flex-col gap-1.5 border-t border-sidebar-border pt-4"
-          >
-            {group.entries.map(renderNavButton)}
-            <p className="px-3 pt-2 text-[10px] leading-relaxed text-muted-foreground">
-              本地联调工具 · 回调模拟
-            </p>
-          </div>
-        ))}
-      </nav>
-
-      <section aria-label="工作区" className="flex min-w-0 flex-col">
-        <header className="flex h-14 flex-none items-center gap-2.5 border-b border-border bg-card px-6">
-          <p className="text-[11px] text-muted-foreground">
-            工作空间 <span className="px-1">/</span>
-            <strong className="font-semibold text-foreground">
-              {currentTitle}
-            </strong>
-          </p>
-          <span className="grow" />
-          <span className="font-mono text-[10px] text-muted-foreground">
-            按 d 切换深浅色
-          </span>
-        </header>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <IconButton label="使用说明" onClick={() => setHelp(true)}>
+              <StudioIcon name="info" />
+            </IconButton>
+          </header>
           {children}
+        </section>
+      </div>
+      <StudioDialog
+        open={help}
+        title="从一条事件开始"
+        description="调好参数，保存复用，再组织完整测试流程。"
+        onClose={() => setHelp(false)}
+      >
+        <div className="help-steps">
+          <div className="help-step">
+            <div>
+              <strong>调试并保存事件</strong>
+              <p>
+                编辑用户、消息与完整报文，发送一次检查回执。保存后进入事件素材库。
+              </p>
+            </div>
+          </div>
+          <div className="help-step">
+            <div>
+              <strong>组装平台剧本</strong>
+              <p>只添加同平台的已保存事件，用上下按钮调整步骤顺序。</p>
+            </div>
+          </div>
+          <div className="help-step">
+            <div>
+              <strong>串行或并行运行</strong>
+              <p>把多个剧本加入执行编排，运行记录保留当时的参数与回执。</p>
+            </div>
+          </div>
         </div>
-      </section>
+      </StudioDialog>
     </div>
   );
 }

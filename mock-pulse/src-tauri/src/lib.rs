@@ -28,6 +28,7 @@ pub fn run() {
             runs::runs_save,
             runs::executor::start_plan_run,
             runs::executor::start_scenario_run,
+            runs::control::stop_run,
             scenarios::scenarios_load,
             scenarios::scenarios_save,
             scenarios::scenarios_delete,

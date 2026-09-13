@@ -31,6 +31,7 @@ export {
   saveScenario,
   scenarioNamesReferencingEvent,
   scenariosReducer,
+  selectScenarioDirty,
   selectScenarioDraft,
   selectScenarioFilters,
   selectScenarioPage,

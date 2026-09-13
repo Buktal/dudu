@@ -11,6 +11,8 @@ import {
   saveConnection,
   selectConnection,
   selectTestState,
+  setConnectionChannel,
+  setConnectionDraft,
   testConnection,
 } from "./connections-slice";
 
@@ -223,5 +225,35 @@ describe("isConnectionReady（企微按加密必填集判定）", () => {
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "wecom")),
     ).toBe(false);
+  });
+});
+
+describe("连接草稿回归", () => {
+  it("切换平台与重新载入不会覆盖草稿，旧保存回包也不会覆盖继续编辑", async () => {
+    const store = makeStore();
+    const submitted = {
+      ...savedDouyin,
+      url: "http://localhost:9090/submitted",
+    };
+    store.dispatch(setConnectionDraft(submitted));
+    store.dispatch(setConnectionChannel("wecom"));
+    store.dispatch(
+      fetchConnections.fulfilled([savedDouyin, savedWecom], "refetch"),
+    );
+    expect(stateOf(store).drafts?.douyin).toEqual(submitted);
+    let finish!: (configs: ConnectionConfig[]) => void;
+    vi.mocked(saveApi).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const pending = store.dispatch(saveConnection(submitted));
+    const edited = { ...submitted, url: "http://localhost:9090/later" };
+    store.dispatch(setConnectionDraft(edited));
+    finish([submitted, savedWecom]);
+    await pending;
+    expect(stateOf(store).drafts?.douyin).toEqual(edited);
+    expect(stateOf(store).items.douyin).toEqual(submitted);
   });
 });

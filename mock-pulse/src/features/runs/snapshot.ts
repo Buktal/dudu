@@ -21,7 +21,8 @@ export type SnapshotSource = {
   id: string;
   name: string;
   channelId: ChannelId;
-  steps: readonly { eventId: string; revision: number }[];
+  steps: readonly { eventId: string; revision: number; wait?: number }[];
+  failure?: "stop" | "continue";
 };
 
 /** 物化后的单个步骤（纯数据，与 Rust ScenarioStepSnapshot 对齐） */
@@ -31,6 +32,7 @@ export type RunStepSnapshot = {
   channel: ChannelId;
   expected: ExpectedReceipt;
   body: string;
+  wait?: number;
 };
 
 /** 物化后的运行快照（与 Rust ScenarioRunSnapshot 对齐，camelCase IPC） */
@@ -40,6 +42,7 @@ export type RunSnapshot = {
   scenarioName: string;
   startedAt: string;
   steps: RunStepSnapshot[];
+  failure?: "stop" | "continue";
 };
 
 function channelName(channelId: ChannelId): string {
@@ -86,6 +89,7 @@ export function materializeRunSnapshot(input: {
       channel: event.channelId,
       expected: { ...referenced.expected },
       body: wireBodyText(schema, referenced.payload),
+      ...(step.wait === undefined ? {} : { wait: step.wait }),
     };
   });
   return {
@@ -94,5 +98,6 @@ export function materializeRunSnapshot(input: {
     scenarioName: scenario.name,
     startedAt,
     steps,
+    ...(scenario.failure === undefined ? {} : { failure: scenario.failure }),
   };
 }

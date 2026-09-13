@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "mock-pulse",
-        "width": 800,
-        "height": 600
+        "title": "MockPulse",
+        "width": 1440,
+        "height": 960
       }
     ],
     "security": {

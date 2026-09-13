@@ -2,6 +2,7 @@
 //! Run = 一次运行的步骤快照（载荷明文、签名头、回执、比对结论），
 //! 来源事件即使后续被修改，快照也不变。
 
+pub mod control;
 pub mod executor;
 pub mod store;
 pub mod verdict;
@@ -34,6 +35,10 @@ pub struct RunVerdict {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RunStep {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected: Option<verdict::ExpectedReceipt>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_body: Option<String>,
     /// 来源事件的名称快照
     pub event_name: String,
     /// 来源事件 id（草稿未保存时也保留其 id）
@@ -67,6 +72,12 @@ pub struct RunStep {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RunRecord {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<crate::plans::PlanMode>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_id: Option<String>,
+    #[serde(default)]
+    pub cancelled: bool,
     pub id: String,
     /// 启动时间（ISO）
     pub started_at: String,
@@ -94,15 +105,9 @@ pub fn runs_load(app: tauri::AppHandle) -> Result<Vec<RunRecord>, String> {
 
 /// 追加一条运行记录并持久化，返回保存后的完整列表（时间升序）。
 #[tauri::command]
-pub fn runs_save(
-    app: tauri::AppHandle,
-    run: RunRecord,
-) -> Result<Vec<RunRecord>, String> {
+pub fn runs_save(app: tauri::AppHandle, run: RunRecord) -> Result<Vec<RunRecord>, String> {
     let dir = app_data_dir(&app)?;
-    let mut list = store::load_runs(&dir).map_err(|err| err.to_string())?;
-    list.push(run);
-    store::save_runs(&dir, &list).map_err(|err| err.to_string())?;
-    Ok(list)
+    store::upsert_run(&dir, run).map_err(|err| err.to_string())
 }
 
 #[cfg(test)]
@@ -111,11 +116,16 @@ mod tests {
 
     pub(super) fn sample_run(id: &str) -> RunRecord {
         RunRecord {
+            mode: None,
+            source_id: None,
+            cancelled: false,
             id: id.into(),
             started_at: format!("2026-09-12T01:00:0{id}.000Z"),
             source: "direct".into(),
             scenario_name: None,
             steps: vec![RunStep {
+                expected: None,
+                request_body: None,
                 event_name: "新客问价".into(),
                 event_id: "evt-001".into(),
                 channel: "douyin".into(),
@@ -196,6 +206,8 @@ mod tests {
     /// 剧本运行记录：多步 + 失败步骤后 skipped + 剧本名快照。
     fn scenario_run(id: &str) -> RunRecord {
         let failed_step = RunStep {
+            expected: None,
+            request_body: None,
             event_name: "进入会话".into(),
             event_id: "evt-2".into(),
             channel: "douyin".into(),
@@ -220,6 +232,8 @@ mod tests {
             lane_name: None,
         };
         let skipped_step = RunStep {
+            expected: None,
+            request_body: None,
             event_name: "新客问价".into(),
             event_id: "evt-3".into(),
             channel: "douyin".into(),
@@ -244,6 +258,9 @@ mod tests {
             lane_name: None,
         };
         RunRecord {
+            mode: None,
+            source_id: None,
+            cancelled: false,
             id: id.into(),
             started_at: "2026-09-12T02:00:00.000Z".into(),
             source: "scenario".into(),
@@ -279,6 +296,9 @@ mod tests {
         step.lane_index = Some(1);
         step.lane_name = Some("企微接待".into());
         RunRecord {
+            mode: None,
+            source_id: None,
+            cancelled: false,
             id: id.into(),
             started_at: "2026-09-12T03:00:00.000Z".into(),
             source: "plan".into(),

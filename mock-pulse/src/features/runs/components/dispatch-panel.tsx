@@ -1,176 +1,93 @@
-import {
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  History,
-  Loader2,
-  Plug,
-  XCircle,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-
-import { Button } from "@/components/ui/button";
-import { selectDraftChannelId, selectDraftId } from "@/features/events";
-import { channelById } from "@/lib/channels";
-import { cn } from "@/lib/utils";
-import type { AppDispatch, RootState } from "@/store";
+import { useState } from "react";
+import { StudioButton } from "@/components/studio-controls";
+import { StudioIcon } from "@/components/studio-icon";
+import { setConnectionChannel } from "@/features/connections";
+import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { setView } from "@/stores/app-slice";
-import { receiptStatusText } from "../model";
-import {
-  clearDispatch,
-  directDispatch,
-  selectLastDispatch,
-  selectPanelMessage,
-  selectPanelPhase,
-} from "../stores/runs-slice";
+import { RunPersistenceNotice } from "./run-persistence-notice";
 import { RunStepDetail } from "./run-step-detail";
 
-/**
- * 回执面板：编辑区底部状态条（默认收起，点击展开详情）。
- * 显示最近一次直发的 HTTP 状态、耗时、原始回执与比对结论；
- * 未配置连接时给出「前往平台连接」指引。
- * 由组合根注入 events 编辑器底部；随编辑对象切换自行复位。
- */
 export function DispatchPanel() {
-  const dispatch = useDispatch<AppDispatch>();
-  const phase = useSelector((state: RootState) => selectPanelPhase(state.runs));
-  const message = useSelector((state: RootState) =>
-    selectPanelMessage(state.runs),
-  );
-  const result = useSelector((state: RootState) =>
-    selectLastDispatch(state.runs),
-  );
-  // 未配置指引按草稿渠道呈现（抖音/企微必填集不同；窄 selector 走 events index.ts）
-  const draftChannel = useSelector((state: RootState) =>
-    selectDraftChannelId(state),
-  );
-  const draftId = useSelector((state: RootState) => selectDraftId(state));
+  const dispatch = useAppDispatch();
+  const state = useAppSelector((root) => root.runs);
+  const draft = useAppSelector((root) => root.events.draft);
   const [expanded, setExpanded] = useState(false);
-
-  // 切换编辑对象时复位面板（运行记录不受影响）
-  useEffect(() => {
-    if (!draftId) return;
-    dispatch(clearDispatch());
-    setExpanded(false);
-  }, [draftId, dispatch]);
-
-  const step = result?.step;
-  const channel = step
-    ? channelById(step.channel)
-    : draftChannel
-      ? channelById(draftChannel)
-      : undefined;
-
+  const result = state.result?.eventId === draft?.id ? state.result : null;
   return (
     <>
-      {expanded && step ? (
-        <div className="max-h-64 flex-none overflow-y-auto border-t border-border bg-muted/20 px-6 py-4">
-          <RunStepDetail step={step} />
+      <RunPersistenceNotice runId={result?.runId} />
+      {expanded && result ? (
+        <div className="receipt-detail">
+          <RunStepDetail step={result.step} />
         </div>
       ) : null}
-      <footer
-        role="status"
-        className="flex min-h-11 flex-none flex-wrap items-center gap-2.5 border-t border-border bg-muted/30 px-6 py-2.5 text-[10px]"
-      >
-        {phase === "sending" ? (
+      <footer className="receipt-bar">
+        {state.phase === "sending" &&
+        state.directLive?.eventId === draft?.id ? (
           <>
-            <Loader2
-              className="size-3.5 animate-spin text-primary"
-              aria-hidden
-            />
-            <span className="text-primary">正在发送…</span>
+            <StudioIcon name="refresh" className="spin" />
+            <span className="blue">
+              {state.stoppingRunId
+                ? "正在停止，等待当前请求结束…"
+                : "正在发送…"}
+            </span>
             <span className="grow" />
           </>
-        ) : phase === "needConnection" ? (
+        ) : state.phase === "needConnection" ? (
           <>
-            <Plug className="size-3.5 text-muted-foreground" aria-hidden />
-            <span className="font-medium text-foreground">
-              尚未配置{channel?.name ?? "平台"}连接
-            </span>
-            <span className="text-muted-foreground">
-              直发需要目标地址与签名密钥，先到平台连接完成配置。
-            </span>
+            <StudioIcon name="info" />
+            <span>请先配置该平台的回调地址和凭据</span>
             <span className="grow" />
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => dispatch(setView("connections"))}
+            <StudioButton
+              small
+              tone="quiet"
+              onClick={() => {
+                if (draft) dispatch(setConnectionChannel(draft.channelId));
+                dispatch(setView("connections"));
+              }}
             >
-              <Plug className="size-3.5" aria-hidden />
               前往平台连接
-            </Button>
+            </StudioButton>
           </>
-        ) : phase === "error" ? (
+        ) : state.phase === "error" ? (
           <>
-            <XCircle className="size-3.5 text-destructive" aria-hidden />
-            <span className="font-medium text-destructive">发送失败</span>
-            <span className="truncate text-muted-foreground">{message}</span>
-            <span className="grow" />
+            <StudioIcon name="info" />
+            <span role="alert" className="red">
+              {state.message}
+            </span>
           </>
-        ) : phase === "done" && step ? (
+        ) : result ? (
           <>
-            {step.verdict.passed ? (
-              <CheckCircle2 className="size-3.5 text-success" aria-hidden />
-            ) : (
-              <XCircle className="size-3.5 text-destructive" aria-hidden />
-            )}
-            <span
-              className={cn(
-                "font-mono font-medium",
-                step.verdict.passed ? "text-success" : "text-destructive",
-              )}
-            >
-              {receiptStatusText(step.receipt)}
+            <StudioIcon name={result.step.verdict.passed ? "check" : "info"} />
+            <span className={result.step.verdict.passed ? "green" : "red"}>
+              {result.step.receipt.status
+                ? `HTTP ${result.step.receipt.status}`
+                : "未收到响应"}
             </span>
-            <span
-              className={cn(
-                step.verdict.passed ? "text-success" : "text-destructive",
-              )}
-            >
-              {step.verdict.passed ? "符合期望" : "与期望不符"}
+            <span className="muted">
+              {result.step.verdict.passed ? "符合期望" : "与期望不符"}
             </span>
-            <span className="font-mono text-muted-foreground">
-              {step.receipt.elapsedMs} ms
+            <span className="mono muted">
+              {result.step.receipt.elapsedMs} ms
             </span>
-            {channel ? (
-              <span className="text-muted-foreground/80">
-                {channel.name} · {step.eventName}
-              </span>
-            ) : null}
             <span className="grow" />
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
+              className="text-btn"
               aria-expanded={expanded}
               onClick={() => setExpanded(!expanded)}
             >
-              {expanded ? (
-                <ChevronDown className="size-3.5" aria-hidden />
-              ) : (
-                <ChevronUp className="size-3.5" aria-hidden />
-              )}
-              {expanded ? "收起回执" : "查看回执"}
-            </Button>
+              {expanded ? "收起" : "查看回执"}
+              <StudioIcon name={expanded ? "down" : "up"} />
+            </button>
           </>
         ) : (
           <>
-            <History className="size-3.5 text-muted-foreground" aria-hidden />
-            <span className="text-muted-foreground">
-              尚未发送 · 直发把当前草稿原样发到目标服务，无需先保存
-            </span>
+            <StudioIcon name="history" />
+            <span className="muted">尚未发送</span>
             <span className="grow" />
+            <span className="muted">保存后可在平台剧本中选择</span>
           </>
-        )}
-        {phase !== "done" && phase !== "sending" ? null : (
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={phase === "sending"}
-            onClick={() => void dispatch(directDispatch())}
-          >
-            再发一次
-          </Button>
         )}
       </footer>
     </>

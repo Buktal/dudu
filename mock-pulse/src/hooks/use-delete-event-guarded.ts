@@ -2,7 +2,11 @@ import { useCallback } from "react";
 import { useStore } from "react-redux";
 
 import { deleteEvent } from "@/features/events";
-import { scenarioNamesReferencingEvent } from "@/features/scenarios";
+import { fetchPlans, planNamesReferencingEvent } from "@/features/plans";
+import {
+  fetchScenarios,
+  scenarioNamesReferencingEvent,
+} from "@/features/scenarios";
 import type { RootState } from "@/store";
 
 import { useAppDispatch } from "./use-app-store";
@@ -19,6 +23,18 @@ export function useDeleteEventGuarded(): (eventId: string) => Promise<void> {
 
   return useCallback(
     async (eventId: string) => {
+      if (!store.getState().scenarios.loaded) {
+        await dispatch(fetchScenarios()).unwrap();
+      }
+      if (!store.getState().plans.loaded) await dispatch(fetchPlans()).unwrap();
+      const pinnedPlans = planNamesReferencingEvent(
+        store.getState().plans,
+        eventId,
+      );
+      if (pinnedPlans.length)
+        throw new Error(
+          `事件仍被编排快照引用：${pinnedPlans.map((name) => `「${name}」`).join("、")}。先同步或移除对应剧本，再删除事件。`,
+        );
       const referencing = scenarioNamesReferencingEvent(
         store.getState(),
         eventId,

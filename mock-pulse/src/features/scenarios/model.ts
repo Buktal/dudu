@@ -11,6 +11,8 @@ export type ScenarioStep = {
   eventId: string;
   /** 选入时引用的事件版本号 */
   revision: number;
+  /** 发送前等待秒数；旧素材缺省为 0。 */
+  wait?: number;
 };
 
 export type Scenario = {
@@ -18,6 +20,9 @@ export type Scenario = {
   name: string;
   channelId: ChannelId;
   steps: ScenarioStep[];
+  favorite?: boolean;
+  revision?: number;
+  failure?: "stop" | "continue";
 };
 
 /** 添加步骤时需要的最小事件事实：渠道一致性与最新版本号。 */
@@ -78,7 +83,14 @@ export function addStep(scenario: Scenario, event: StepEventRef): Scenario {
   assertSameChannel(scenario.channelId, event.channelId);
   return {
     ...scenario,
-    steps: [...scenario.steps, { eventId: event.id, revision: event.revision }],
+    steps: [
+      ...scenario.steps,
+      {
+        eventId: event.id,
+        revision: event.revision,
+        wait: scenario.steps.length ? 0.6 : 0,
+      },
+    ],
   };
 }
 
@@ -139,7 +151,13 @@ export function validateScenario(
   scenario: Scenario,
   events: readonly { id: string; channelId: ChannelId }[],
 ): void {
+  if (!scenario.name.trim()) throw new Error("请填写剧本名称。");
   for (const step of scenario.steps) {
+    if (
+      step.wait !== undefined &&
+      (!Number.isFinite(step.wait) || step.wait < 0 || step.wait > 60)
+    )
+      throw new Error("发送前等待须为 0 到 60 秒。");
     const event = events.find((item) => item.id === step.eventId);
     if (!event) {
       throw new Error(`步骤引用的事件不存在：${step.eventId}。`);

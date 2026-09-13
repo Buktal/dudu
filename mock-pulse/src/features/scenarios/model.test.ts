@@ -86,7 +86,7 @@ describe("渠道锁定（ADR-0004 禁混写）", () => {
     expect(kept).toBe(scenario);
 
     const next = addStep(scenario, { ...douyinEvent, revision: 2 });
-    expect(next.steps).toEqual([{ eventId: "evt-dy-1", revision: 2 }]);
+    expect(next.steps).toEqual([{ eventId: "evt-dy-1", revision: 2, wait: 0 }]);
   });
 
   it("无步骤时可换渠道；添加第一步后渠道锁定", () => {
@@ -104,8 +104,16 @@ describe("渠道锁定（ADR-0004 禁混写）", () => {
     scenario = addStep(scenario, { ...douyinEvent, revision: 1 });
     scenario = addStep(scenario, { ...douyinEvent, revision: 2 });
     expect(scenario.steps).toHaveLength(2);
-    expect(scenario.steps[0]).toEqual({ eventId: "evt-dy-1", revision: 1 });
-    expect(scenario.steps[1]).toEqual({ eventId: "evt-dy-1", revision: 2 });
+    expect(scenario.steps[0]).toEqual({
+      eventId: "evt-dy-1",
+      revision: 1,
+      wait: 0,
+    });
+    expect(scenario.steps[1]).toEqual({
+      eventId: "evt-dy-1",
+      revision: 2,
+      wait: 0.6,
+    });
   });
 });
 
@@ -155,7 +163,11 @@ describe("版本引用与显式同步", () => {
   it("步骤只存引用（事件 id + 版本号），不复制载荷与渠道", () => {
     let scenario = createScenario("引用", "douyin");
     scenario = addStep(scenario, { ...douyinEvent, revision: 1 });
-    expect(scenario.steps[0]).toEqual({ eventId: "evt-dy-1", revision: 1 });
+    expect(scenario.steps[0]).toEqual({
+      eventId: "evt-dy-1",
+      revision: 1,
+      wait: 0,
+    });
     expect("payload" in (scenario.steps[0] as object)).toBe(false);
     expect("group" in (scenario.steps[0] as object)).toBe(false);
   });

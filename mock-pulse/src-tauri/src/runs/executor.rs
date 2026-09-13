@@ -12,7 +12,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use tauri::{Emitter, Manager};
@@ -30,6 +30,8 @@ use super::{ReceiptSnapshot, RunRecord, RunStep, RunVerdict};
 #[derive(Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScenarioStepSnapshot {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wait: Option<f64>,
     pub event_name: String,
     pub event_id: String,
     /// 抖音 | 企微对应的渠道标识（douyin/wecom）
@@ -43,6 +45,8 @@ pub struct ScenarioStepSnapshot {
 #[derive(Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScenarioRunSnapshot {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<String>,
     pub run_id: String,
     pub scenario_id: String,
     pub scenario_name: String,
@@ -73,7 +77,11 @@ pub enum StepProgress {
     /// 步骤开始发送
     Waiting { index: usize },
     /// 步骤发送完成（failed = 发送错误或与期望不符）
-    Finished { index: usize, step: RunStep, failed: bool },
+    Finished {
+        index: usize,
+        step: RunStep,
+        failed: bool,
+    },
     /// 前序失败，本步骤不发送
     Skipped { index: usize },
 }
@@ -89,6 +97,8 @@ pub struct LaneProgress {
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RunProgressEvent {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
     pub run_id: String,
     pub index: usize,
     /// waiting | success | failed | skipped | finished
@@ -104,19 +114,37 @@ pub struct RunProgressEvent {
 
 /// 串行执行快照：每步 waiting → 按渠道路由发送 → 比对期望 → finished；
 /// 失败即停，后续步骤 skipped。返回组装好的运行记录（不落盘）。
+#[cfg(test)]
 pub fn execute_snapshot<F: FnMut(StepProgress)>(
     snapshot: &ScenarioRunSnapshot,
     connections: &[ConnectionConfig],
     timeout: Duration,
     on_progress: &mut F,
 ) -> RunRecord {
-    // 剧本单发没有编排取消旗标：always false，步骤永不因旗标被跳过
+    execute_snapshot_cancellable(
+        snapshot,
+        connections,
+        timeout,
+        &AtomicBool::new(false),
+        on_progress,
+    )
+}
+
+fn execute_snapshot_cancellable<F: FnMut(StepProgress)>(
+    snapshot: &ScenarioRunSnapshot,
+    connections: &[ConnectionConfig],
+    timeout: Duration,
+    user_cancel: &AtomicBool,
+    on_progress: &mut F,
+) -> RunRecord {
     let cancel = AtomicBool::new(false);
     let (steps, _) = execute_lane_steps(
         snapshot,
         connections,
         timeout,
         &cancel,
+        false,
+        user_cancel,
         false,
         on_progress,
     );
@@ -126,6 +154,9 @@ pub fn execute_snapshot<F: FnMut(StepProgress)>(
         source: "scenario".into(),
         scenario_name: Some(snapshot.scenario_name.clone()),
         plan_name: None,
+        mode: Some(PlanMode::Serial),
+        source_id: Some(snapshot.scenario_id.clone()),
+        cancelled: user_cancel.load(Ordering::SeqCst),
         steps,
     }
 }
@@ -143,6 +174,8 @@ fn execute_lane_steps<F: FnMut(StepProgress)>(
     timeout: Duration,
     cancel: &AtomicBool,
     not_started: bool,
+    user_cancel: &AtomicBool,
+    propagate_failure: bool,
     on_progress: &mut F,
 ) -> (Vec<RunStep>, bool) {
     const OWN_FAILED: &str = "前序步骤失败，本步骤未执行";
@@ -152,10 +185,13 @@ fn execute_lane_steps<F: FnMut(StepProgress)>(
     let mut steps: Vec<RunStep> = Vec::with_capacity(snapshot.steps.len());
     let mut own_failed = false;
     // 非 None 后本剧本不再启动任何步骤（整体未启动 / 编排停止）
-    let mut halt_reason: Option<&'static str> =
-        not_started.then_some(PREVIOUS_SCENARIO_FAILED);
+    let mut halt_reason: Option<&'static str> = not_started.then_some(PREVIOUS_SCENARIO_FAILED);
     for (index, step_snapshot) in snapshot.steps.iter().enumerate() {
-        let skip_reason: Option<&'static str> = if own_failed {
+        let skip_reason: Option<&'static str> = if user_cancel.load(Ordering::SeqCst) {
+            Some("用户已停止运行，本步骤未执行")
+        } else if own_failed
+            && (propagate_failure || snapshot.failure.as_deref().unwrap_or("stop") != "continue")
+        {
             Some(OWN_FAILED)
         } else {
             match halt_reason {
@@ -176,6 +212,32 @@ fn execute_lane_steps<F: FnMut(StepProgress)>(
             continue;
         }
         on_progress(StepProgress::Waiting { index });
+        let seconds = step_snapshot.wait.unwrap_or(0.0);
+        let seconds = if seconds.is_finite() {
+            seconds.clamp(0.0, 60.0)
+        } else {
+            0.0
+        };
+        let until = Instant::now() + Duration::from_secs_f64(seconds);
+        while Instant::now() < until
+            && !user_cancel.load(Ordering::SeqCst)
+            && !cancel.load(Ordering::Relaxed)
+        {
+            std::thread::sleep(
+                until
+                    .saturating_duration_since(Instant::now())
+                    .min(Duration::from_millis(10)),
+            );
+        }
+        if user_cancel.load(Ordering::SeqCst) || cancel.load(Ordering::Relaxed) {
+            on_progress(StepProgress::Skipped { index });
+            steps.push(skipped_step(
+                step_snapshot,
+                connections,
+                "运行已停止，本步骤未执行",
+            ));
+            continue;
+        }
         let step = execute_step(step_snapshot, connections, timeout);
         let failed = step.receipt.error.is_some() || !step.verdict.passed;
         on_progress(StepProgress::Finished {
@@ -186,7 +248,9 @@ fn execute_lane_steps<F: FnMut(StepProgress)>(
         if failed {
             own_failed = true;
             // 失败即停语义在编排内跨剧本传播（并行旗标 / 串行顺序检查）
-            cancel.store(true, Ordering::Relaxed);
+            if propagate_failure {
+                cancel.store(true, Ordering::Relaxed);
+            }
         }
         steps.push(step);
     }
@@ -205,6 +269,7 @@ fn tag_lane(mut step: RunStep, lane: usize, scenario_name: &str) -> RunStep {
 /// - stop = 任一剧本失败即停整个编排（后续剧本不启动 / 并行下后续步骤不启动）；
 /// - continue = 记录后继续，全部剧本执行完毕（剧内失败即停语义不变）。
 /// 步骤按 lane 顺序拼接入运行记录。进度回调带 lane 序号。
+#[cfg(test)]
 pub fn execute_plan<F>(
     snapshot: &PlanRunSnapshot,
     connections: &[ConnectionConfig],
@@ -214,12 +279,31 @@ pub fn execute_plan<F>(
 where
     F: FnMut(LaneProgress) + Send,
 {
+    execute_plan_cancellable(
+        snapshot,
+        connections,
+        timeout,
+        &AtomicBool::new(false),
+        on_progress,
+    )
+}
+
+fn execute_plan_cancellable<F>(
+    snapshot: &PlanRunSnapshot,
+    connections: &[ConnectionConfig],
+    timeout: Duration,
+    user_cancel: &AtomicBool,
+    on_progress: &mut F,
+) -> RunRecord
+where
+    F: FnMut(LaneProgress) + Send,
+{
     let steps = match snapshot.mode {
         PlanMode::Serial => {
-            execute_plan_serial(snapshot, connections, timeout, on_progress)
+            execute_plan_serial(snapshot, connections, timeout, user_cancel, on_progress)
         }
         PlanMode::Parallel => {
-            execute_plan_parallel(snapshot, connections, timeout, on_progress)
+            execute_plan_parallel(snapshot, connections, timeout, user_cancel, on_progress)
         }
     };
     RunRecord {
@@ -228,6 +312,9 @@ where
         source: "plan".into(),
         scenario_name: None,
         plan_name: Some(snapshot.plan_name.clone()),
+        mode: Some(snapshot.mode),
+        source_id: Some(snapshot.plan_id.clone()),
+        cancelled: user_cancel.load(Ordering::SeqCst),
         steps,
     }
 }
@@ -237,6 +324,7 @@ fn execute_plan_serial<F: FnMut(LaneProgress)>(
     snapshot: &PlanRunSnapshot,
     connections: &[ConnectionConfig],
     timeout: Duration,
+    user_cancel: &AtomicBool,
     on_progress: &mut F,
 ) -> Vec<RunStep> {
     let stop_on_failure = snapshot.failure == PlanFailure::Stop;
@@ -253,6 +341,8 @@ fn execute_plan_serial<F: FnMut(LaneProgress)>(
             timeout,
             &cancel,
             not_started,
+            user_cancel,
+            stop_on_failure,
             &mut |progress: StepProgress| {
                 on_progress(LaneProgress { lane, progress });
             },
@@ -276,6 +366,7 @@ fn execute_plan_parallel<F>(
     snapshot: &PlanRunSnapshot,
     connections: &[ConnectionConfig],
     timeout: Duration,
+    user_cancel: &AtomicBool,
     on_progress: &mut F,
 ) -> Vec<RunStep>
 where
@@ -302,9 +393,8 @@ where
                         Arc::new(AtomicBool::new(false))
                     };
                     let mut on_lane = |progress: StepProgress| {
-                        let mut guard = sink
-                            .lock()
-                            .unwrap_or_else(|poisoned| poisoned.into_inner());
+                        let mut guard =
+                            sink.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
                         guard(LaneProgress { lane, progress });
                     };
                     execute_lane_steps(
@@ -313,6 +403,8 @@ where
                         timeout,
                         &lane_cancel,
                         false,
+                        user_cancel,
+                        stop_on_failure,
                         &mut on_lane,
                     )
                 })
@@ -320,19 +412,14 @@ where
             .collect();
         handles
             .into_iter()
-            .map(|handle| {
-                handle
-                    .join()
-                    .expect("编排 lane 线程不应 panic")
-            })
+            .map(|handle| handle.join().expect("编排 lane 线程不应 panic"))
             .collect()
     });
     // 记录按 lane 顺序拼接（与完成先后无关）
     let mut all_steps = Vec::new();
     for (lane, (steps, _)) in outcomes.into_iter().enumerate() {
         let name = &snapshot.scenarios[lane].scenario_name;
-        all_steps
-            .extend(steps.into_iter().map(|step| tag_lane(step, lane, name)));
+        all_steps.extend(steps.into_iter().map(|step| tag_lane(step, lane, name)));
     }
     all_steps
 }
@@ -345,6 +432,8 @@ fn skipped_step(
 ) -> RunStep {
     let url = channel_url(&step.channel, connections).unwrap_or_default();
     RunStep {
+        expected: Some(step.expected.clone()),
+        request_body: None,
         event_name: step.event_name.clone(),
         event_id: step.event_id.clone(),
         channel: step.channel.clone(),
@@ -390,6 +479,8 @@ fn failed_without_send(step: &ScenarioStepSnapshot, error: String) -> RunStep {
     };
     let verdict = compare_receipt(&step.expected, &receipt);
     RunStep {
+        expected: Some(step.expected.clone()),
+        request_body: None,
         event_name: step.event_name.clone(),
         event_id: step.event_id.clone(),
         channel: step.channel.clone(),
@@ -415,19 +506,14 @@ fn execute_step(
 ) -> RunStep {
     match step.channel.as_str() {
         "douyin" => {
-            let Some(config) = connections.iter().find(|config| {
-                matches!(config, ConnectionConfig::Douyin { .. })
-            }) else {
-                return failed_without_send(
-                    step,
-                    "缺少抖音渠道连接配置，无法执行步骤".into(),
-                );
+            let Some(config) = connections
+                .iter()
+                .find(|config| matches!(config, ConnectionConfig::Douyin { .. }))
+            else {
+                return failed_without_send(step, "缺少抖音渠道连接配置，无法执行步骤".into());
             };
-            let outcome = douyin::dispatch_event(
-                &douyin::client_with_timeout(timeout),
-                config,
-                &step.body,
-            );
+            let outcome =
+                douyin::dispatch_event(&douyin::client_with_timeout(timeout), config, &step.body);
             let receipt = ReceiptSnapshot {
                 status: outcome.status,
                 elapsed_ms: outcome.elapsed_ms,
@@ -437,6 +523,8 @@ fn execute_step(
             };
             let verdict = compare_receipt(&step.expected, &receipt);
             RunStep {
+                expected: Some(step.expected.clone()),
+                request_body: Some(step.body.clone()),
                 event_name: step.event_name.clone(),
                 event_id: step.event_id.clone(),
                 channel: step.channel.clone(),
@@ -453,19 +541,14 @@ fn execute_step(
             }
         }
         "wecom" => {
-            let Some(config) = connections.iter().find(|config| {
-                matches!(config, ConnectionConfig::Wecom { .. })
-            }) else {
-                return failed_without_send(
-                    step,
-                    "缺少企业微信渠道连接配置，无法执行步骤".into(),
-                );
+            let Some(config) = connections
+                .iter()
+                .find(|config| matches!(config, ConnectionConfig::Wecom { .. }))
+            else {
+                return failed_without_send(step, "缺少企业微信渠道连接配置，无法执行步骤".into());
             };
-            let outcome = wecom::dispatch_event(
-                &wecom::client_with_timeout(timeout),
-                config,
-                &step.body,
-            );
+            let outcome =
+                wecom::dispatch_event(&wecom::client_with_timeout(timeout), config, &step.body);
             let receipt = ReceiptSnapshot {
                 status: outcome.status,
                 elapsed_ms: outcome.elapsed_ms,
@@ -475,6 +558,8 @@ fn execute_step(
             };
             let verdict = compare_receipt(&step.expected, &receipt);
             RunStep {
+                expected: Some(step.expected.clone()),
+                request_body: outcome.request_body,
                 event_name: step.event_name.clone(),
                 event_id: step.event_id.clone(),
                 channel: step.channel.clone(),
@@ -490,18 +575,12 @@ fn execute_step(
                 lane_name: None,
             }
         }
-        other => {
-            failed_without_send(step, format!("未知渠道：{other}，无法执行步骤"))
-        }
+        other => failed_without_send(step, format!("未知渠道：{other}，无法执行步骤")),
     }
 }
 
 /// 把 StepProgress 转成 run-progress 事件载荷。
-fn progress_event(
-    run_id: &str,
-    lane: Option<usize>,
-    progress: &StepProgress,
-) -> RunProgressEvent {
+fn progress_event(run_id: &str, lane: Option<usize>, progress: &StepProgress) -> RunProgressEvent {
     let base = match progress {
         StepProgress::Waiting { index } => (index, "waiting", None),
         StepProgress::Finished {
@@ -516,6 +595,7 @@ fn progress_event(
         StepProgress::Skipped { index } => (index, "skipped", None),
     };
     RunProgressEvent {
+        error: None,
         run_id: run_id.into(),
         index: *base.0,
         status: base.1.into(),
@@ -531,18 +611,27 @@ fn run_in_background(
     app: tauri::AppHandle,
     snapshot: ScenarioRunSnapshot,
     connections: Vec<ConnectionConfig>,
+    active: super::control::ActiveRun,
+    dir: std::path::PathBuf,
+    mut checkpoint: RunRecord,
 ) {
-    let run = execute_snapshot(
+    let run = execute_snapshot_cancellable(
         &snapshot,
         &connections,
         Duration::from_secs(5),
+        &active.cancelled,
         &mut |progress: StepProgress| {
-            let _ = app.emit(
-                "run-progress",
-                progress_event(&snapshot.run_id, None, &progress),
-            );
+            let mut event = progress_event(&snapshot.run_id, None, &progress);
+            if let StepProgress::Finished { index, step, .. } = &progress {
+                checkpoint.steps[*index] = step.clone();
+                event.error = store::upsert_run(&dir, checkpoint.clone())
+                    .err()
+                    .map(|error| error.to_string());
+            }
+            let _ = app.emit("run-progress", event);
         },
     );
+    drop(active);
     finish_run(app, snapshot.run_id, run);
 }
 
@@ -552,37 +641,57 @@ fn run_plan_in_background(
     app: tauri::AppHandle,
     snapshot: PlanRunSnapshot,
     connections: Vec<ConnectionConfig>,
+    active: super::control::ActiveRun,
+    dir: std::path::PathBuf,
+    mut checkpoint: RunRecord,
 ) {
-    let run = execute_plan(
+    let run = execute_plan_cancellable(
         &snapshot,
         &connections,
         Duration::from_secs(5),
+        &active.cancelled,
         &mut |lane_progress: LaneProgress| {
-            let _ = app.emit(
-                "run-progress",
-                progress_event(
-                    &snapshot.run_id,
-                    Some(lane_progress.lane),
-                    &lane_progress.progress,
-                ),
+            let mut event = progress_event(
+                &snapshot.run_id,
+                Some(lane_progress.lane),
+                &lane_progress.progress,
             );
+            if let StepProgress::Finished { index, step, .. } = &lane_progress.progress {
+                let offset: usize = snapshot.scenarios[..lane_progress.lane]
+                    .iter()
+                    .map(|scenario| scenario.steps.len())
+                    .sum();
+                checkpoint.steps[offset + index] = tag_lane(
+                    step.clone(),
+                    lane_progress.lane,
+                    &snapshot.scenarios[lane_progress.lane].scenario_name,
+                );
+                event.error = store::upsert_run(&dir, checkpoint.clone())
+                    .err()
+                    .map(|error| error.to_string());
+            }
+            let _ = app.emit("run-progress", event);
         },
     );
+    drop(active);
     finish_run(app, snapshot.run_id, run);
 }
 
-/// 运行记录落盘（失败仅忽略：记录仍随 finished 事件进入前端列表），
-/// 并发 finished 事件携带完整记录。
+/// 运行记录落盘失败会随完成事件返回，前端保留快照并提供重试。
 fn finish_run(app: tauri::AppHandle, run_id: String, run: RunRecord) {
-    if let Ok(dir) = app.path().app_data_dir() {
-        if let Ok(mut list) = store::load_runs(&dir) {
-            list.push(run.clone());
-            let _ = store::save_runs(&dir, &list);
-        }
-    }
+    let saved = (|| -> Result<(), String> {
+        let dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|error| error.to_string())?;
+        store::upsert_run(&dir, run.clone())
+            .map(|_| ())
+            .map_err(|error| error.to_string())
+    })();
     let _ = app.emit(
         "run-progress",
         RunProgressEvent {
+            error: saved.err(),
             run_id,
             index: run.steps.len(),
             status: "finished".into(),
@@ -601,9 +710,18 @@ pub async fn start_scenario_run(
     snapshot: ScenarioRunSnapshot,
     connections: Vec<ConnectionConfig>,
 ) -> Result<String, String> {
+    validate_snapshot(&snapshot)?;
     let run_id = snapshot.run_id.clone();
+    let active = super::control::register(&run_id)?;
+    let checkpoint = interrupted_scenario_record(&snapshot, &connections);
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
+    store::upsert_run(&dir, checkpoint.clone())
+        .map_err(|error| format!("无法保存运行快照：{error}"))?;
     tauri::async_runtime::spawn_blocking(move || {
-        run_in_background(app, snapshot, connections);
+        run_in_background(app, snapshot, connections, active, dir, checkpoint);
     });
     Ok(run_id)
 }
@@ -616,11 +734,92 @@ pub async fn start_plan_run(
     snapshot: PlanRunSnapshot,
     connections: Vec<ConnectionConfig>,
 ) -> Result<String, String> {
+    for scenario in &snapshot.scenarios {
+        validate_snapshot(scenario)?;
+    }
     let run_id = snapshot.run_id.clone();
+    let active = super::control::register(&run_id)?;
+    let checkpoint = interrupted_plan_record(&snapshot, &connections);
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
+    store::upsert_run(&dir, checkpoint.clone())
+        .map_err(|error| format!("无法保存运行快照：{error}"))?;
     tauri::async_runtime::spawn_blocking(move || {
-        run_plan_in_background(app, snapshot, connections);
+        run_plan_in_background(app, snapshot, connections, active, dir, checkpoint);
     });
     Ok(run_id)
+}
+
+/// 启动前先保存中断态；每步回执覆盖对应步骤，正常结束再写最终状态。
+/// 若进程退出，重启可追溯已完成的步骤且不会自动续发。
+fn interrupted_scenario_record(
+    snapshot: &ScenarioRunSnapshot,
+    connections: &[ConnectionConfig],
+) -> RunRecord {
+    RunRecord {
+        id: snapshot.run_id.clone(),
+        started_at: snapshot.started_at.clone(),
+        source: "scenario".into(),
+        scenario_name: Some(snapshot.scenario_name.clone()),
+        plan_name: None,
+        source_id: Some(snapshot.scenario_id.clone()),
+        mode: Some(PlanMode::Serial),
+        cancelled: true,
+        steps: snapshot
+            .steps
+            .iter()
+            .map(|step| skipped_step(step, connections, "运行中断，本步骤未完成"))
+            .collect(),
+    }
+}
+
+fn interrupted_plan_record(
+    snapshot: &PlanRunSnapshot,
+    connections: &[ConnectionConfig],
+) -> RunRecord {
+    RunRecord {
+        id: snapshot.run_id.clone(),
+        started_at: snapshot.started_at.clone(),
+        source: "plan".into(),
+        scenario_name: None,
+        plan_name: Some(snapshot.plan_name.clone()),
+        source_id: Some(snapshot.plan_id.clone()),
+        mode: Some(snapshot.mode),
+        cancelled: true,
+        steps: snapshot
+            .scenarios
+            .iter()
+            .enumerate()
+            .flat_map(|(lane, scenario)| {
+                interrupted_scenario_record(scenario, connections)
+                    .steps
+                    .into_iter()
+                    .map(move |step| tag_lane(step, lane, &scenario.scenario_name))
+            })
+            .collect(),
+    }
+}
+
+fn validate_snapshot(snapshot: &ScenarioRunSnapshot) -> Result<(), String> {
+    if snapshot.steps.is_empty() {
+        return Err("剧本还没有步骤。".into());
+    }
+    if snapshot.steps.iter().any(|step| {
+        step.wait
+            .is_some_and(|wait| !wait.is_finite() || !(0.0..=60.0).contains(&wait))
+    }) {
+        return Err("发送前等待须为 0 到 60 秒。".into());
+    }
+    if snapshot
+        .failure
+        .as_deref()
+        .is_some_and(|failure| failure != "stop" && failure != "continue")
+    {
+        return Err("无效的步骤失败策略。".into());
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -630,8 +829,8 @@ mod tests {
     use std::sync::mpsc::{channel, Receiver};
     use std::time::{Duration, Instant};
 
-    use super::*;
     use super::super::verdict::ReceiptBodyMode;
+    use super::*;
 
     // ---- 测试基建：串行多请求 TcpListener（一个线程顺序 accept） ----
 
@@ -677,10 +876,8 @@ mod tests {
                     })
                     .unwrap_or(0);
                 if buf.len() >= split + 4 + content_length {
-                    let body = String::from_utf8_lossy(
-                        &buf[split + 4..split + 4 + content_length],
-                    )
-                    .to_string();
+                    let body = String::from_utf8_lossy(&buf[split + 4..split + 4 + content_length])
+                        .to_string();
                     return (head, body);
                 }
             }
@@ -725,8 +922,8 @@ mod tests {
         (addr, rx)
     }
 
-    fn ok_responder(
-    ) -> std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync> {
+    fn ok_responder() -> std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync>
+    {
         std::sync::Arc::new(|_index, _line, _body| {
             ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
         })
@@ -736,9 +933,7 @@ mod tests {
     /// 可观测多剧本请求交错到达。请求身份靠 body 区分（index 只是 accept 序）。
     fn start_concurrent_server(
         count: usize,
-        responder: std::sync::Arc<
-            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
-        >,
+        responder: std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync>,
         delay: Duration,
     ) -> (SocketAddr, Receiver<RecordedPost>) {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -752,10 +947,8 @@ mod tests {
                 std::thread::spawn(move || {
                     let arrived_at = Instant::now();
                     let (head, body) = read_head_and_body(&mut stream);
-                    let request_line =
-                        head.lines().next().unwrap_or_default().to_string();
-                    let (status_line, response_body) =
-                        responder(index, &request_line, &body);
+                    let request_line = head.lines().next().unwrap_or_default().to_string();
+                    let (status_line, response_body) = responder(index, &request_line, &body);
                     std::thread::sleep(delay);
                     let response = format!(
                         "{status_line}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}",
@@ -804,6 +997,7 @@ mod tests {
 
     fn dy_step(name: &str, text: &str) -> ScenarioStepSnapshot {
         ScenarioStepSnapshot {
+            wait: None,
             event_name: name.into(),
             event_id: format!("evt-{name}"),
             channel: "douyin".into(),
@@ -818,6 +1012,7 @@ mod tests {
 
     fn snapshot(id: &str, steps: Vec<ScenarioStepSnapshot>) -> ScenarioRunSnapshot {
         ScenarioRunSnapshot {
+            failure: None,
             run_id: id.into(),
             scenario_id: "scn-1".into(),
             scenario_name: "从进入会话到商品咨询".into(),
@@ -841,14 +1036,16 @@ mod tests {
         let (addr, rx) = start_serial_server(3, ok_responder(), Duration::ZERO);
         let snap = snapshot(
             "run-serial",
-            bodies
-                .iter()
-                .map(|text| dy_step(text, text))
-                .collect(),
+            bodies.iter().map(|text| dy_step(text, text)).collect(),
         );
 
         let mut progress = Vec::new();
-        let run = run_all(&snap, &[douyin_connection(format!("http://{addr}/hook"))], Duration::from_secs(2), &mut |p| progress.push(p));
+        let run = run_all(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(2),
+            &mut |p| progress.push(p),
+        );
 
         // 请求到达顺序 = 步骤顺序，且串行：第 k 个请求的到达晚于第 k-1 个响应的写出
         let mut requests = Vec::new();
@@ -874,7 +1071,11 @@ mod tests {
             .map(|p| match p {
                 StepProgress::Waiting { .. } => "waiting",
                 StepProgress::Finished { failed, .. } => {
-                    if *failed { "failed" } else { "success" }
+                    if *failed {
+                        "failed"
+                    } else {
+                        "success"
+                    }
                 }
                 StepProgress::Skipped { .. } => "skipped",
             })
@@ -903,15 +1104,17 @@ mod tests {
     #[test]
     fn stops_after_failed_step_and_marks_rest_skipped() {
         // 步骤 2 返回 500（期望 200 → 与期望不符）→ 失败即停，步骤 3 skipped
-        let responder: std::sync::Arc<
-            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
-        > = std::sync::Arc::new(|index, _line, _body| {
-            if index == 1 {
-                ("HTTP/1.1 500 Internal Server Error".to_string(), "boom".to_string())
-            } else {
-                ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
-            }
-        });
+        let responder: std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync> =
+            std::sync::Arc::new(|index, _line, _body| {
+                if index == 1 {
+                    (
+                        "HTTP/1.1 500 Internal Server Error".to_string(),
+                        "boom".to_string(),
+                    )
+                } else {
+                    ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
+                }
+            });
         let (addr, rx) = start_serial_server(2, responder, Duration::ZERO);
         let snap = snapshot(
             "run-stop",
@@ -919,7 +1122,12 @@ mod tests {
         );
 
         let mut progress = Vec::new();
-        let run = run_all(&snap, &[douyin_connection(format!("http://{addr}/hook"))], Duration::from_secs(2), &mut |p| progress.push(p));
+        let run = run_all(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(2),
+            &mut |p| progress.push(p),
+        );
 
         // 只有前两步发出请求
         let mut seen = 0;
@@ -930,9 +1138,23 @@ mod tests {
 
         // 进度：waiting(0) success(0) → waiting(1) failed(1) → skipped(2)
         assert!(matches!(progress[0], StepProgress::Waiting { index: 0 }));
-        assert!(matches!(&progress[1], StepProgress::Finished { index: 0, failed: false, .. }));
+        assert!(matches!(
+            &progress[1],
+            StepProgress::Finished {
+                index: 0,
+                failed: false,
+                ..
+            }
+        ));
         assert!(matches!(progress[2], StepProgress::Waiting { index: 1 }));
-        assert!(matches!(&progress[3], StepProgress::Finished { index: 1, failed: true, .. }));
+        assert!(matches!(
+            &progress[3],
+            StepProgress::Finished {
+                index: 1,
+                failed: true,
+                ..
+            }
+        ));
         assert!(matches!(progress[4], StepProgress::Skipped { index: 2 }));
 
         // 记录：步骤 2 未通过，步骤 3 skipped 且未发送
@@ -948,16 +1170,21 @@ mod tests {
     fn timeout_step_fails_the_run() {
         // 服务器延迟 1s，执行器超时 200ms：第一步超时记失败，第二步 skipped
         let (addr, _rx) = start_serial_server(1, ok_responder(), Duration::from_secs(1));
-        let snap = snapshot(
-            "run-timeout",
-            vec![dy_step("a", "a"), dy_step("b", "b")],
-        );
+        let snap = snapshot("run-timeout", vec![dy_step("a", "a"), dy_step("b", "b")]);
 
         let started = Instant::now();
         let mut progress = Vec::new();
-        let run = run_all(&snap, &[douyin_connection(format!("http://{addr}/hook"))], Duration::from_millis(200), &mut |p| progress.push(p));
+        let run = run_all(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_millis(200),
+            &mut |p| progress.push(p),
+        );
 
-        assert!(started.elapsed() < Duration::from_secs(1), "应按超时上限提前结束");
+        assert!(
+            started.elapsed() < Duration::from_secs(1),
+            "应按超时上限提前结束"
+        );
         assert_eq!(run.steps[0].receipt.status, 0, "未收到响应");
         assert!(run.steps[0]
             .receipt
@@ -967,16 +1194,31 @@ mod tests {
             .contains("超时"));
         assert!(!run.steps[0].verdict.passed);
         assert!(run.steps[1].skipped);
-        assert!(matches!(&progress[1], StepProgress::Finished { index: 0, failed: true, .. }));
+        assert!(matches!(
+            &progress[1],
+            StepProgress::Finished {
+                index: 0,
+                failed: true,
+                ..
+            }
+        ));
     }
 
     #[test]
     fn douyin_run_signs_each_request_officially() {
         let (addr, rx) = start_serial_server(2, ok_responder(), Duration::ZERO);
-        let snap = snapshot("run-dy", vec![dy_step("a", "你好，抖音"), dy_step("b", "再见")]);
+        let snap = snapshot(
+            "run-dy",
+            vec![dy_step("a", "你好，抖音"), dy_step("b", "再见")],
+        );
 
         let mut progress = Vec::new();
-        let run = run_all(&snap, &[douyin_connection(format!("http://{addr}/webhooks/douyin"))], Duration::from_secs(2), &mut |p| progress.push(p));
+        let run = run_all(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/webhooks/douyin"))],
+            Duration::from_secs(2),
+            &mut |p| progress.push(p),
+        );
 
         for index in 0..2 {
             let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
@@ -998,7 +1240,10 @@ mod tests {
                 vec![8, 4, 4, 4, 12],
                 "Msg-Id 应为 uuid：{msg_id}"
             );
-            assert_eq!(msg_id, run.steps[index].msg_id, "记录中的 Msg-Id 与请求一致");
+            assert_eq!(
+                msg_id, run.steps[index].msg_id,
+                "记录中的 Msg-Id 与请求一致"
+            );
             assert_eq!(run.steps[index].signature, douyin::sign(DY_SECRET, body));
             assert_eq!(run.steps[index].timestamp, None);
         }
@@ -1008,7 +1253,10 @@ mod tests {
     fn naive_extract_encrypt(envelope: &str) -> &str {
         let open = "<Encrypt><![CDATA[";
         let start = envelope.find(open).expect("信封应含 Encrypt 元素") + open.len();
-        let end = start + envelope[start..].find("]]>").expect("Encrypt 应有 CDATA 闭合");
+        let end = start
+            + envelope[start..]
+                .find("]]>")
+                .expect("Encrypt 应有 CDATA 闭合");
         &envelope[start..end]
     }
 
@@ -1029,35 +1277,44 @@ mod tests {
     fn wecom_run_sends_decryptable_envelopes_and_records_reply() {
         // 目标按官方语义处理：解密信封取明文、复算签名，回一个可解密的加密被动回复包
         let reply_plaintext = "<xml><Content><![CDATA[你好呀]]></Content></xml>";
-        let reply_encrypt =
-            wecom::encrypt_msg(WC_AES_KEY, &[3u8; 16], reply_plaintext.as_bytes(), WC_CORP_ID)
-                .unwrap();
+        let reply_encrypt = wecom::encrypt_msg(
+            WC_AES_KEY,
+            &[3u8; 16],
+            reply_plaintext.as_bytes(),
+            WC_CORP_ID,
+        )
+        .unwrap();
         let expected_bodies: Vec<String> = vec![
             "<xml><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[你好，企业微信]]></Content></xml>".into(),
             "<xml><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[再见]]></Content></xml>".into(),
         ];
-        let responder: std::sync::Arc<
-            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
-        > = std::sync::Arc::new(move |index, line, body| {
-            let ciphertext = naive_extract_encrypt(body);
-            let decrypted = wecom::decrypt_msg(WC_AES_KEY, ciphertext).unwrap();
-            assert_eq!(decrypted.receiveid, WC_CORP_ID, "receiveid 应为 corpid");
-            assert_eq!(
-                String::from_utf8(decrypted.msg).unwrap(),
-                expected_bodies[index],
-                "信封应解密回快照明文"
-            );
-            let query = query_map(line);
-            let signature =
-                wecom::build_signature(WC_TOKEN, &query["timestamp"], &query["nonce"], ciphertext);
-            assert_eq!(signature, query["msg_signature"], "签名应可复算");
-            (
-                "HTTP/1.1 200 OK".to_string(),
-                format!("<xml><Encrypt><![CDATA[{reply_encrypt}]]></Encrypt></xml>"),
-            )
-        });
+        let responder: std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync> =
+            std::sync::Arc::new(move |index, line, body| {
+                let ciphertext = naive_extract_encrypt(body);
+                let decrypted = wecom::decrypt_msg(WC_AES_KEY, ciphertext).unwrap();
+                assert_eq!(decrypted.receiveid, WC_CORP_ID, "receiveid 应为 corpid");
+                assert_eq!(
+                    String::from_utf8(decrypted.msg).unwrap(),
+                    expected_bodies[index],
+                    "信封应解密回快照明文"
+                );
+                let query = query_map(line);
+                let signature = wecom::build_signature(
+                    WC_TOKEN,
+                    &query["timestamp"],
+                    &query["nonce"],
+                    ciphertext,
+                );
+                assert_eq!(signature, query["msg_signature"], "签名应可复算");
+                (
+                    "HTTP/1.1 200 OK".to_string(),
+                    format!("<xml><Encrypt><![CDATA[{reply_encrypt}]]></Encrypt></xml>"),
+                )
+            });
         let (addr, rx) = start_serial_server(2, responder, Duration::ZERO);
-        let wc_step = |name: &str, text: &str| ScenarioStepSnapshot {
+        let wc_step = |name: &str, text: &str| {
+            ScenarioStepSnapshot {
+            wait: None,
             event_name: name.into(),
             event_id: format!("evt-{name}"),
             channel: "wecom".into(),
@@ -1069,22 +1326,36 @@ mod tests {
             body: format!(
                 "<xml><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[{text}]]></Content></xml>"
             ),
+        }
         };
-        let snap = snapshot("run-wc", vec![wc_step("a", "你好，企业微信"), wc_step("b", "再见")]);
+        let snap = snapshot(
+            "run-wc",
+            vec![wc_step("a", "你好，企业微信"), wc_step("b", "再见")],
+        );
 
         let mut progress = Vec::new();
-        let run = run_all(&snap, &[wecom_connection(format!("http://{addr}/hook"))], Duration::from_secs(2), &mut |p| progress.push(p));
+        let run = run_all(
+            &snap,
+            &[wecom_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(2),
+            &mut |p| progress.push(p),
+        );
 
         for index in 0..2 {
             let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
             // 信封可独立解密回快照明文（加解密已由官方黄金例独立验证）
             let ciphertext = naive_extract_encrypt(&request.body);
             let decrypted = wecom::decrypt_msg(WC_AES_KEY, ciphertext).unwrap();
-            assert_eq!(String::from_utf8(decrypted.msg).unwrap(), snap.steps[index].body);
+            assert_eq!(
+                String::from_utf8(decrypted.msg).unwrap(),
+                snap.steps[index].body
+            );
             assert_eq!(request.header("Content-Type").as_deref(), Some("text/xml"));
             // 记录快照：签名/时间戳/nonce + 解密被动回复明文 + 企微语义结论通过
             let step = &run.steps[index];
             assert_eq!(step.channel, "wecom");
+            assert_eq!(step.request_body.as_deref(), Some(request.body.as_str()));
+            assert_eq!(step.expected.as_ref(), Some(&snap.steps[index].expected));
             assert!(!step.signature.is_empty());
             assert!(step.timestamp.is_some());
             assert_eq!(step.receipt.reply.as_deref(), Some(reply_plaintext));
@@ -1098,6 +1369,7 @@ mod tests {
             "run-unknown",
             vec![
                 ScenarioStepSnapshot {
+                    wait: None,
                     event_name: "外星渠道".into(),
                     event_id: "evt-x".into(),
                     channel: "telegram".into(),
@@ -1113,7 +1385,9 @@ mod tests {
         );
 
         let mut progress = Vec::new();
-        let run = run_all(&snap, &[], Duration::from_secs(1), &mut |p| progress.push(p));
+        let run = run_all(&snap, &[], Duration::from_secs(1), &mut |p| {
+            progress.push(p)
+        });
 
         assert_eq!(run.steps[0].receipt.status, 0);
         let error = run.steps[0].receipt.error.clone().unwrap();
@@ -1126,7 +1400,9 @@ mod tests {
         let snap = snapshot("run-noconn", vec![dy_step("a", "a"), dy_step("b", "b")]);
 
         let mut progress = Vec::new();
-        let run = run_all(&snap, &[], Duration::from_secs(1), &mut |p| progress.push(p));
+        let run = run_all(&snap, &[], Duration::from_secs(1), &mut |p| {
+            progress.push(p)
+        });
 
         let error = run.steps[0].receipt.error.clone().unwrap();
         assert!(error.contains("连接"), "应提示缺少连接配置：{error}");
@@ -1136,16 +1412,23 @@ mod tests {
     #[test]
     fn executor_output_roundtrips_through_runs_store() {
         // 步骤 1 得 500（期望 200）→ 失败即停：多步 + skipped 落盘往返
-        let responder: std::sync::Arc<
-            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
-        > = std::sync::Arc::new(|_index, _line, _body| {
-            ("HTTP/1.1 500 Internal Server Error".to_string(), "boom".to_string())
-        });
+        let responder: std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync> =
+            std::sync::Arc::new(|_index, _line, _body| {
+                (
+                    "HTTP/1.1 500 Internal Server Error".to_string(),
+                    "boom".to_string(),
+                )
+            });
         let (addr, _rx) = start_serial_server(1, responder, Duration::ZERO);
         let snap = snapshot("run-persist", vec![dy_step("a", "a"), dy_step("b", "b")]);
 
         let mut progress = Vec::new();
-        let run = run_all(&snap, &[douyin_connection(format!("http://{addr}/hook"))], Duration::from_secs(2), &mut |p| progress.push(p));
+        let run = run_all(
+            &snap,
+            &[douyin_connection(format!("http://{addr}/hook"))],
+            Duration::from_secs(2),
+            &mut |p| progress.push(p),
+        );
 
         let dir = std::env::temp_dir()
             .join("mock-pulse-executor-test")
@@ -1177,16 +1460,13 @@ mod tests {
         assert!(!raw.contains("\"lane\""));
 
         // 编排运行：进度带 lane 序号（camelCase），None 时仍不序列化
-        let lane_event = progress_event(
-            "run-1",
-            Some(1),
-            &StepProgress::Waiting { index: 0 },
-        );
+        let lane_event = progress_event("run-1", Some(1), &StepProgress::Waiting { index: 0 });
         let raw = serde_json::to_string(&lane_event).unwrap();
         assert!(raw.contains("\"lane\":1"));
         assert!(!raw.contains("\"step\""));
 
         let finished = RunProgressEvent {
+            error: None,
             run_id: "run-1".into(),
             index: 1,
             status: "finished".into(),
@@ -1195,7 +1475,10 @@ mod tests {
             run: Some(super::super::tests::sample_run("run-1")),
         };
         let raw = serde_json::to_string(&finished).unwrap();
-        assert!(raw.contains("\"run\":{\"id\":\"run-1\""));
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&raw).unwrap()["run"]["id"],
+            "run-1"
+        );
         assert!(!raw.contains("\"step\""));
         assert!(!raw.contains("\"lane\""));
     }
@@ -1208,6 +1491,7 @@ mod tests {
         steps: Vec<ScenarioStepSnapshot>,
     ) -> ScenarioRunSnapshot {
         ScenarioRunSnapshot {
+            failure: None,
             run_id: format!("{id}-lane"),
             scenario_id: id.into(),
             scenario_name: name.into(),
@@ -1257,12 +1541,20 @@ mod tests {
                 lane_snapshot(
                     "scn-a",
                     "剧本A",
-                    vec![dy_step("a1", "a1"), dy_step("a2", "a2"), dy_step("a3", "a3")],
+                    vec![
+                        dy_step("a1", "a1"),
+                        dy_step("a2", "a2"),
+                        dy_step("a3", "a3"),
+                    ],
                 ),
                 lane_snapshot(
                     "scn-b",
                     "剧本B",
-                    vec![dy_step("b1", "b1"), dy_step("b2", "b2"), dy_step("b3", "b3")],
+                    vec![
+                        dy_step("b1", "b1"),
+                        dy_step("b2", "b2"),
+                        dy_step("b3", "b3"),
+                    ],
                 ),
             ],
         )
@@ -1270,11 +1562,7 @@ mod tests {
 
     #[test]
     fn parallel_plan_interleaves_scenarios_and_keeps_each_ordered() {
-        let (addr, rx) = start_concurrent_server(
-            6,
-            ok_responder(),
-            Duration::from_millis(120),
-        );
+        let (addr, rx) = start_concurrent_server(6, ok_responder(), Duration::from_millis(120));
         let snap = two_lane_plan();
 
         let mut progress = Vec::new();
@@ -1291,17 +1579,16 @@ mod tests {
         }
 
         // 各剧本内部 body 到达顺序 = 步骤顺序，且剧内串行（等上一步响应再发下一步）
-        for (tag, expected) in [
-            ("a", vec!["a1", "a2", "a3"]),
-            ("b", vec!["b1", "b2", "b3"]),
-        ] {
+        for (tag, expected) in [("a", vec!["a1", "a2", "a3"]), ("b", vec!["b1", "b2", "b3"])] {
             let mut lane_requests: Vec<&RecordedPost> = requests
                 .iter()
                 .filter(|post| request_text(post).starts_with(tag))
                 .collect();
             lane_requests.sort_by_key(|post| post.arrived_at);
-            let texts: Vec<String> =
-                lane_requests.iter().map(|post| request_text(post)).collect();
+            let texts: Vec<String> = lane_requests
+                .iter()
+                .map(|post| request_text(post))
+                .collect();
             assert_eq!(texts, expected, "剧本 {tag} 内应按步骤顺序到达");
             for pair in lane_requests.windows(2) {
                 assert!(
@@ -1338,10 +1625,17 @@ mod tests {
             assert_eq!(step.lane_index, Some(expected_lane));
             assert_eq!(
                 step.lane_name.as_deref(),
-                Some(if expected_lane == 0 { "剧本A" } else { "剧本B" })
+                Some(if expected_lane == 0 {
+                    "剧本A"
+                } else {
+                    "剧本B"
+                })
             );
             assert!(step.verdict.passed, "步骤 {index} 应通过");
-            assert_eq!(step.event_name, snap.scenarios[expected_lane].steps[index % 3].event_name);
+            assert_eq!(
+                step.event_name,
+                snap.scenarios[expected_lane].steps[index % 3].event_name
+            );
         }
 
         // 进度事件：全部带 lane 归属，无 skipped
@@ -1354,11 +1648,7 @@ mod tests {
 
     #[test]
     fn serial_plan_runs_scenarios_strictly_in_order() {
-        let (addr, rx) = start_concurrent_server(
-            6,
-            ok_responder(),
-            Duration::from_millis(40),
-        );
+        let (addr, rx) = start_concurrent_server(6, ok_responder(), Duration::from_millis(40));
         let mut snap = two_lane_plan();
         snap.mode = PlanMode::Serial;
 
@@ -1376,8 +1666,7 @@ mod tests {
         }
         let mut by_arrival = requests.clone();
         by_arrival.sort_by_key(|post| post.arrived_at);
-        let order: Vec<String> =
-            by_arrival.iter().map(|post| request_text(post)).collect();
+        let order: Vec<String> = by_arrival.iter().map(|post| request_text(post)).collect();
         assert_eq!(
             order,
             vec!["a1", "a2", "a3", "b1", "b2", "b3"],
@@ -1401,10 +1690,7 @@ mod tests {
         assert_eq!(run.steps.len(), 6);
         assert!(run.steps.iter().all(|step| step.verdict.passed));
         // 进度：lane 0 的全部事件先于 lane 1 的事件（串行无交错）
-        let last_lane0 = progress
-            .iter()
-            .rposition(|p| p.lane == 0)
-            .unwrap();
+        let last_lane0 = progress.iter().rposition(|p| p.lane == 0).unwrap();
         assert!(progress[..last_lane0].iter().all(|p| p.lane == 0));
         assert!(progress[last_lane0 + 1..].iter().all(|p| p.lane == 1));
     }
@@ -1412,20 +1698,18 @@ mod tests {
     #[test]
     fn serial_plan_stop_skips_whole_scenarios_after_failure() {
         // A 第 2 步 500 → 失败即停：B 整体不启动，无请求发出，全 skipped
-        let responder: std::sync::Arc<
-            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
-        > = std::sync::Arc::new(|_index, _line, body| {
-            if body.contains("\"text\":\"boom\"") {
-                (
-                    "HTTP/1.1 500 Internal Server Error".to_string(),
-                    "boom".to_string(),
-                )
-            } else {
-                ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
-            }
-        });
-        let (addr, rx) =
-            start_concurrent_server(2, responder, Duration::ZERO);
+        let responder: std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync> =
+            std::sync::Arc::new(|_index, _line, body| {
+                if body.contains("\"text\":\"boom\"") {
+                    (
+                        "HTTP/1.1 500 Internal Server Error".to_string(),
+                        "boom".to_string(),
+                    )
+                } else {
+                    ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
+                }
+            });
+        let (addr, rx) = start_concurrent_server(2, responder, Duration::ZERO);
         let snap = plan_snapshot(
             "run-plan-stop",
             PlanMode::Serial,
@@ -1478,8 +1762,7 @@ mod tests {
         }
 
         // 进度：lane 1 只发 skipped 事件
-        let lane1: Vec<&LaneProgress> =
-            progress.iter().filter(|p| p.lane == 1).collect();
+        let lane1: Vec<&LaneProgress> = progress.iter().filter(|p| p.lane == 1).collect();
         assert_eq!(lane1.len(), 2);
         assert!(lane1
             .iter()
@@ -1489,20 +1772,18 @@ mod tests {
     #[test]
     fn serial_plan_continue_finishes_all_scenarios() {
         // A 首步即失败；failure=continue → B 仍完整执行（剧内失败即停语义不变）
-        let responder: std::sync::Arc<
-            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
-        > = std::sync::Arc::new(|_index, _line, body| {
-            if body.contains("\"text\":\"boom\"") {
-                (
-                    "HTTP/1.1 500 Internal Server Error".to_string(),
-                    "boom".to_string(),
-                )
-            } else {
-                ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
-            }
-        });
-        let (addr, rx) =
-            start_concurrent_server(3, responder, Duration::ZERO);
+        let responder: std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync> =
+            std::sync::Arc::new(|_index, _line, body| {
+                if body.contains("\"text\":\"boom\"") {
+                    (
+                        "HTTP/1.1 500 Internal Server Error".to_string(),
+                        "boom".to_string(),
+                    )
+                } else {
+                    ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
+                }
+            });
+        let (addr, rx) = start_concurrent_server(3, responder, Duration::ZERO);
         let snap = plan_snapshot(
             "run-plan-continue",
             PlanMode::Serial,
@@ -1544,22 +1825,20 @@ mod tests {
     #[test]
     fn parallel_plan_stop_halts_other_scenarios_after_failure() {
         // A 首步快返回 500；B 长链路（每步慢响应）→ B 除在途步外后续 skipped
-        let responder: std::sync::Arc<
-            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
-        > = std::sync::Arc::new(|_index, _line, body| {
-            if body.contains("\"text\":\"boom\"") {
-                (
-                    "HTTP/1.1 500 Internal Server Error".to_string(),
-                    "boom".to_string(),
-                )
-            } else {
-                // 慢响应：为 B 制造在途窗口（A 在此期间失败置位取消旗标）
-                std::thread::sleep(Duration::from_millis(150));
-                ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
-            }
-        });
-        let (addr, rx) =
-            start_concurrent_server(2, responder, Duration::ZERO);
+        let responder: std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync> =
+            std::sync::Arc::new(|_index, _line, body| {
+                if body.contains("\"text\":\"boom\"") {
+                    (
+                        "HTTP/1.1 500 Internal Server Error".to_string(),
+                        "boom".to_string(),
+                    )
+                } else {
+                    // 慢响应：为 B 制造在途窗口（A 在此期间失败置位取消旗标）
+                    std::thread::sleep(Duration::from_millis(150));
+                    ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
+                }
+            });
+        let (addr, rx) = start_concurrent_server(2, responder, Duration::ZERO);
         let snap = plan_snapshot(
             "run-plan-parallel-stop",
             PlanMode::Parallel,
@@ -1569,7 +1848,11 @@ mod tests {
                 lane_snapshot(
                     "scn-b",
                     "剧本B",
-                    vec![dy_step("b1", "b1"), dy_step("b2", "b2"), dy_step("b3", "b3")],
+                    vec![
+                        dy_step("b1", "b1"),
+                        dy_step("b2", "b2"),
+                        dy_step("b3", "b3"),
+                    ],
                 ),
             ],
         );
@@ -1616,21 +1899,19 @@ mod tests {
     #[test]
     fn parallel_plan_continue_ignores_other_lane_failures() {
         // failure=continue：A 快失败不拦 B——B 长链路应跑完所有步骤
-        let responder: std::sync::Arc<
-            dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync,
-        > = std::sync::Arc::new(|_index, _line, body| {
-            if body.contains("\"text\":\"boom\"") {
-                (
-                    "HTTP/1.1 500 Internal Server Error".to_string(),
-                    "boom".to_string(),
-                )
-            } else {
-                std::thread::sleep(Duration::from_millis(30));
-                ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
-            }
-        });
-        let (addr, rx) =
-            start_concurrent_server(4, responder, Duration::ZERO);
+        let responder: std::sync::Arc<dyn Fn(usize, &str, &str) -> (String, String) + Send + Sync> =
+            std::sync::Arc::new(|_index, _line, body| {
+                if body.contains("\"text\":\"boom\"") {
+                    (
+                        "HTTP/1.1 500 Internal Server Error".to_string(),
+                        "boom".to_string(),
+                    )
+                } else {
+                    std::thread::sleep(Duration::from_millis(30));
+                    ("HTTP/1.1 200 OK".to_string(), "ok".to_string())
+                }
+            });
+        let (addr, rx) = start_concurrent_server(4, responder, Duration::ZERO);
         let snap = plan_snapshot(
             "run-plan-parallel-continue",
             PlanMode::Parallel,
@@ -1640,7 +1921,11 @@ mod tests {
                 lane_snapshot(
                     "scn-b",
                     "剧本B",
-                    vec![dy_step("b1", "b1"), dy_step("b2", "b2"), dy_step("b3", "b3")],
+                    vec![
+                        dy_step("b1", "b1"),
+                        dy_step("b2", "b2"),
+                        dy_step("b3", "b3"),
+                    ],
                 ),
             ],
         );
@@ -1665,5 +1950,132 @@ mod tests {
         assert!(!run.steps[0].verdict.passed);
         assert!(run.steps[1..].iter().all(|step| step.verdict.passed));
         assert!(run.steps[1..].iter().all(|step| !step.skipped));
+    }
+
+    #[test]
+    fn cancellation_during_wait_skips_all_remaining_requests() {
+        let cancelled = AtomicBool::new(false);
+        let mut first = dy_step("first", "first");
+        first.wait = Some(60.0);
+        let snap = snapshot("cancel-wait", vec![first, dy_step("next", "next")]);
+        let started = Instant::now();
+        let run = execute_snapshot_cancellable(
+            &snap,
+            &[],
+            Duration::from_secs(1),
+            &cancelled,
+            &mut |progress| {
+                if matches!(progress, StepProgress::Waiting { index: 0 }) {
+                    cancelled.store(true, Ordering::SeqCst);
+                }
+            },
+        );
+        assert!(started.elapsed() < Duration::from_secs(1));
+        assert!(run.cancelled);
+        assert!(run
+            .steps
+            .iter()
+            .all(|step| step.skipped && step.signature.is_empty()));
+    }
+
+    #[test]
+    fn scenario_continue_attempts_later_steps_after_failure() {
+        let mut snap = snapshot("continue", vec![dy_step("a", "a"), dy_step("b", "b")]);
+        snap.failure = Some("continue".into());
+        let mut attempted = Vec::new();
+        let run = execute_snapshot(&snap, &[], Duration::from_secs(1), &mut |progress| {
+            if let StepProgress::Waiting { index } = progress {
+                attempted.push(index);
+            }
+        });
+        assert_eq!(attempted, vec![0, 1]);
+        assert!(run
+            .steps
+            .iter()
+            .all(|step| !step.skipped && !step.verdict.passed));
+    }
+
+    #[test]
+    fn plan_stop_overrides_scenario_continue_in_both_modes() {
+        for mode in [PlanMode::Serial, PlanMode::Parallel] {
+            let mut scene = lane_snapshot("a", "A", vec![dy_step("a1", "a1"), dy_step("a2", "a2")]);
+            scene.failure = Some("continue".into());
+            let snap = plan_snapshot("plan-stop", mode, PlanFailure::Stop, vec![scene]);
+            let run = execute_plan(&snap, &[], Duration::from_secs(1), &mut |_| {});
+            assert!(!run.steps[0].skipped);
+            assert!(
+                run.steps[1].skipped,
+                "Plan stop must stop its failed lane too: {mode:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn user_stop_cancels_serial_and_parallel_plan_even_with_continue_policy() {
+        for mode in [PlanMode::Serial, PlanMode::Parallel] {
+            let cancelled = AtomicBool::new(false);
+            let mut step = dy_step("a", "a");
+            step.wait = Some(60.0);
+            let snap = plan_snapshot(
+                "cancel-plan",
+                mode,
+                PlanFailure::Continue,
+                vec![
+                    lane_snapshot("a", "A", vec![step.clone()]),
+                    lane_snapshot("b", "B", vec![step]),
+                ],
+            );
+            let run = execute_plan_cancellable(
+                &snap,
+                &[],
+                Duration::from_secs(1),
+                &cancelled,
+                &mut |progress| {
+                    if matches!(progress.progress, StepProgress::Waiting { .. }) {
+                        cancelled.store(true, Ordering::SeqCst);
+                    }
+                },
+            );
+            assert!(run.cancelled);
+            assert!(run.steps.iter().all(|step| step.skipped));
+        }
+    }
+
+    #[test]
+    fn interrupted_checkpoint_retains_completed_receipts_and_unfinished_payloads() {
+        let dir =
+            std::env::temp_dir().join(format!("mockpulse-checkpoint-{}", uuid::Uuid::new_v4()));
+        let snap = plan_snapshot(
+            "checkpoint",
+            PlanMode::Parallel,
+            PlanFailure::Continue,
+            vec![lane_snapshot(
+                "a",
+                "A",
+                vec![dy_step("one", "one"), dy_step("two", "two")],
+            )],
+        );
+        let mut checkpoint = interrupted_plan_record(&snap, &[]);
+        store::upsert_run(&dir, checkpoint.clone()).unwrap();
+        let initial = store::load_runs(&dir).unwrap();
+        assert!(initial[0].cancelled);
+        assert!(initial[0].steps.iter().all(|step| step.skipped));
+        assert_eq!(initial[0].steps[1].payload, snap.scenarios[0].steps[1].body);
+        checkpoint.steps[0] = tag_lane(
+            failed_without_send(&snap.scenarios[0].steps[0], "no connection".into()),
+            0,
+            "A",
+        );
+        store::upsert_run(&dir, checkpoint).unwrap();
+        let reloaded = store::load_runs(&dir).unwrap();
+        assert_eq!(reloaded.len(), 1);
+        assert!(!reloaded[0].steps[0].skipped);
+        assert_eq!(
+            reloaded[0].steps[0].receipt.error.as_deref(),
+            Some("no connection")
+        );
+        assert!(reloaded[0].steps[1].skipped);
+        assert_eq!(reloaded[0].steps[1].lane_index, Some(0));
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

@@ -13,9 +13,11 @@ import {
 } from "../api";
 import {
   addStep,
+  assertSameChannel,
   changeChannel,
   createScenario,
   moveStep,
+  newScenarioId,
   removeStep,
   type Scenario,
   scenariosReferencingEvent,
@@ -95,6 +97,47 @@ export const addScenarioStep = createAsyncThunk(
   },
 );
 
+export const replaceScenarioStep = createAsyncThunk(
+  "scenarios/replaceStep",
+  async (
+    { index, eventId }: { index: number; eventId: string },
+    { getState },
+  ) => {
+    const { scenarios, events } = getState() as ScenariosRoot;
+    const draft = scenarios.draft;
+    if (!draft?.steps[index]) throw new Error("找不到要替换的步骤。");
+    const { event, version } = latestVersionOf(events.items, eventId);
+    assertSameChannel(draft.channelId, event.channelId);
+    return {
+      ...draft,
+      steps: draft.steps.map((step, i) =>
+        i === index ? { ...step, eventId, revision: version.revision } : step,
+      ),
+    };
+  },
+);
+
+export const saveScenarioAs = createAsyncThunk(
+  "scenarios/saveAs",
+  async (name: string, { getState }) => {
+    const { scenarios, events } = getState() as ScenariosRoot;
+    if (!scenarios.draft) throw new Error("没有可保存的剧本草稿。");
+    const copy = {
+      ...draftFromScenario(scenarios.draft),
+      id: newScenarioId(),
+      name: name.trim(),
+      revision: 1,
+      favorite: false,
+    };
+    validateScenario(copy, events.items);
+    return {
+      items: await saveScenarioApi(copy),
+      copy,
+      source: JSON.stringify(scenarios.draft),
+    };
+  },
+);
+
 /** 显式同步单个步骤的引用到事件最新版本。 */
 export const syncScenarioStep = createAsyncThunk(
   "scenarios/syncStep",
@@ -141,7 +184,11 @@ export const saveScenario = createAsyncThunk(
       throw new Error("没有可保存的剧本草稿。");
     }
     validateScenario(draft, events.items);
-    return saveScenarioApi(draft);
+    const previous = scenarios.items.find((item) => item.id === draft.id);
+    return saveScenarioApi({
+      ...draft,
+      revision: (previous?.revision ?? (previous ? 1 : 0)) + 1,
+    });
   },
 );
 
@@ -182,6 +229,17 @@ const scenariosSlice = createSlice({
       if (!state.draft) return;
       state.draft.name = action.payload;
     },
+    toggleScenarioFavorite(state) {
+      if (state.draft) state.draft.favorite = !state.draft.favorite;
+    },
+    setScenarioFailure(state, action: PayloadAction<"stop" | "continue">) {
+      if (state.draft) state.draft.failure = action.payload;
+    },
+    setStepWait(state, action: PayloadAction<{ index: number; wait: number }>) {
+      const step = state.draft?.steps[action.payload.index];
+      if (step && Number.isFinite(action.payload.wait))
+        step.wait = Math.min(60, Math.max(0, action.payload.wait));
+    },
     /** 换渠道：仅无步骤时允许（领域层拒绝带步骤的换渠道） */
     setDraftChannel(state, action: PayloadAction<ChannelId>) {
       if (!state.draft) return;
@@ -221,6 +279,9 @@ const scenariosSlice = createSlice({
       .addCase(addScenarioStep.fulfilled, (state, action) => {
         state.draft = action.payload;
       })
+      .addCase(replaceScenarioStep.fulfilled, (state, action) => {
+        if (state.draft?.id === action.payload.id) state.draft = action.payload;
+      })
       .addCase(syncScenarioStep.fulfilled, (state, action) => {
         state.draft = action.payload;
       })
@@ -229,14 +290,23 @@ const scenariosSlice = createSlice({
       })
       .addCase(saveScenario.fulfilled, (state, action) => {
         state.items = action.payload;
-        state.selectedId = state.draft?.id ?? state.selectedId;
+        const saved = action.payload.find(
+          (item) => item.id === state.draft?.id,
+        );
+        if (saved && state.draft) {
+          state.selectedId = saved.id;
+          state.draft.revision = saved.revision;
+        }
+      })
+      .addCase(saveScenarioAs.fulfilled, (state, action) => {
+        state.items = action.payload.items;
+        if (JSON.stringify(state.draft) !== action.payload.source) return;
+        state.draft = action.payload.copy;
+        state.selectedId = action.payload.copy.id;
       })
       .addCase(deleteScenario.fulfilled, (state, action) => {
         state.items = action.payload;
-        if (
-          state.draft &&
-          !action.payload.some((item) => item.id === state.draft?.id)
-        ) {
+        if (state.draft?.id === action.meta.arg) {
           state.draft = null;
           state.selectedId = null;
         }
@@ -254,9 +324,25 @@ export const {
   setFilters,
   setPage,
   startScenarioDraft,
+  toggleScenarioFavorite,
+  setScenarioFailure,
+  setStepWait,
 } = scenariosSlice.actions;
 
 export const scenariosReducer = scenariosSlice.reducer;
+
+export function selectScenarioDirty(state: ScenariosState): boolean {
+  if (!state.draft) return false;
+  const saved = state.items.find((item) => item.id === state.draft?.id);
+  return (
+    !saved ||
+    saved.name !== state.draft.name ||
+    saved.channelId !== state.draft.channelId ||
+    !!saved.favorite !== !!state.draft.favorite ||
+    (saved.failure ?? "stop") !== (state.draft.failure ?? "stop") ||
+    JSON.stringify(saved.steps) !== JSON.stringify(state.draft.steps)
+  );
+}
 
 export function selectScenarios(state: ScenariosState): Scenario[] {
   return state.items;
