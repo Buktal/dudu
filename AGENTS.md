@@ -1,17 +1,12 @@
 # DUDU
 
-Monorepo。口语别名 → 目录对照见根 `CONTEXT.md`。规范唯一入口在本文件——子目录不建 AGENTS.md / CLAUDE.md。
+Monorepo。规范唯一入口为本文件，子目录不建 AGENTS.md / CLAUDE.md；口语别名与目录对照见根 `CONTEXT.md`。
 
 ## Agent skills
 
 - Issue tracker：GitHub Issues（`gh` CLI）→ `docs/agents/issue-tracker.md`。
-- Triage labels：五个规范 label 原样沿用 → `docs/agents/triage-labels.md`。
+- Triage labels：既有 label 原样沿用 → `docs/agents/triage-labels.md`。
 - Domain docs：单 context 布局（根 `CONTEXT.md` + `docs/adr/`）→ `docs/agents/domain.md`。
-
-## 输出落点
-
-- Research → `docs/research/<主题>/`。
-- Prototype → `docs/prototype/`，只新增文件，不改业务代码。
 
 ## 子项目
 
@@ -23,15 +18,21 @@ Monorepo。口语别名 → 目录对照见根 `CONTEXT.md`。规范唯一入口
 | dudu-console | 纯 Web | 控制台 |
 | dudu-server | Spring Boot | 消息聚合后端：渠道消息进 → 客服工作台，回复转发回渠道 |
 
+## 输出落点
+
+- Research → `docs/research/<主题>/`。
+- Prototype → `docs/prototype/`，只新增文件，不改业务代码。
+
 ## 前端规范 — React 19 + Vite 家族
 
-适用子项目表中全部前端项目，路径相对各项目根；Tauri 项目另配 `src-tauri` Rust 后端：`tauri:dev` / `tauri:build`，Rust 改动跑 `check:rust`。
+适用子项目表中全部前端项目，路径相对各项目根。Tauri 项目含 `src-tauri` Rust 后端，Rust 改动跑 `check:rust`。
 
 ### Architecture — 单向依赖
 
 - 纵切 `features/<domain>/{components,hooks,stores,api.ts,index.ts}`；共享 `components/|hooks/|stores/|lib/`。
 - 依赖方向：`features → components|hooks|stores|lib`，`components → lib`；跨 feature 走对方 `index.ts`。
 - `components/ui/` 为 CLI 生成物，只经 CLI 变更。
+- 单文件 ≤ 300 行，超限拆分子组件或按职责拆模块。
 
 ### Reuse-first — canonical stack（同场景唯一选型）
 
@@ -48,10 +49,10 @@ Monorepo。口语别名 → 目录对照见根 `CONTEXT.md`。规范唯一入口
 
 新依赖 workflow：
 
-1. `search` — 搜 `components/`、`hooks/`、`lib/` + 已装依赖，报已搜路径 + 不满足点。
-2. `evaluate` — 给候选 + 取舍。
-3. `gate` — 报 `yarn add <包>` + 理由 + 备选，明示同意后装。
-4. `wrap` — 最薄封装：定最小输入/输出/边界，沉入对应分层。
+1. `search` — 搜 `components/`、`hooks/`、`lib/` 与已装依赖，报已搜路径与不满足点。
+2. `evaluate` — 给候选与取舍。
+3. `gate` — 报 `yarn add <包>` + 理由 + 备选，明示同意后安装。
+4. `wrap` — 最薄封装：定最小输入/输出/边界，落对应分层。
 
 Done gate：分层落位 ✓、新增依赖已批准 ✓、`yarn lint` ✓。
 
@@ -59,7 +60,7 @@ Done gate：分层落位 ✓、新增依赖已批准 ✓、`yarn lint` ✓。
 
 - Colocate：与被测同目录 `.test.ts(x)`，显式 `import { describe, expect, it } from "vitest"`（未开 globals）。
 - 仅测三类：`lib/` 纯函数、`stores/` slice、`features/<domain>/` 非展示逻辑（数据整形、状态机、`api.ts` 契约）。
-- 全局 smoke 仅 `src/test/smoke.test.tsx`；E2E 待完整用户流程再议。
+- 全局 smoke 仅 `src/test/smoke.test.tsx`。
 
 ### Toolchain
 
@@ -69,11 +70,11 @@ Done gate：分层落位 ✓、新增依赖已批准 ✓、`yarn lint` ✓。
 
 ## 后端规范 — dudu-server（Spring Boot，Java 21）
 
-路径相对 `dudu-server/`。选型以 `pom.xml` 为准（分区注释即清单，版本号只在 `<properties>` 管理）。单实例、无 Redis/MQ；跨实例方案（连接路由、token 集中缓存）到量级再引入。
+路径相对 `dudu-server/`。选型以 `pom.xml` 为准（分区注释即清单，版本号只在 `<properties>` 管理）。单实例，无 Redis/MQ；跨实例方案（连接路由、token 集中缓存）到量级再引入。
 
 ### Reuse-first
 
-按序取用，每层先证明"没有"再自建：
+按序取用，先确认各层内置无法满足再自建：
 
 1. 通用工具（日期、加密、IO、Bean 转换、XML）→ Hutool；微信回调 XML 用 `XmlUtil`。
 2. JSON → Jackson（`ObjectMapper` + `JsonNode`），全仓库唯一 JSON 栈；Hutool 的 `JSONUtil`/`JSONObject` 禁用，防两库序列化漂移。调平台 OpenAPI → `RestClient`。
@@ -81,11 +82,11 @@ Done gate：分层落位 ✓、新增依赖已批准 ✓、`yarn lint` ✓。
 4. 参数校验 → jakarta validation（`@Valid`/`@NotBlank`）在 Controller 入参完成；service 里手写 if 判空视为未校验。
 5. 健康检查 → `/actuator/health`；自建 health 端点视为重复实现。
 
-新增第三方依赖先审批：报"已搜 pom 分区 + 上述内置为何不满足"，同意后引入并落位对应分区；到节点再加，不预防性堆。
+新增第三方依赖先审批：报"已搜 pom 分区 + 内置为何不满足"，同意后引入并落位对应分区。
 
 ### Null-safety
 
-可能为 null 的取值与导航一律走 `Optional`，不手写 null/空串 if 链：
+可能为 null 的取值与导航统一走 `Optional`：
 
 - 包装 `Optional.ofNullable(...)`；字符串判空用 `.filter(s -> !s.isBlank())`。
 - 链式 `map`/`flatMap`/`filter` 完成取值与转换，终结用 `orElse`/`orElseGet`/`orElseThrow`，不用裸 `get()`。
@@ -96,16 +97,16 @@ Done gate：分层落位 ✓、新增依赖已批准 ✓、`yarn lint` ✓。
 ### Flyway — 表结构唯一入口
 
 - 改表 = 新增迁移 `src/main/resources/db/migration/V<N>__<desc>.sql`，启动自动执行。
-- 迁移一旦提交不可变：后续变更、回滚都靠新增迁移。
-- 本地手动 DDL 仅限排障；要留下的结构变更必须回到迁移文件。
+- 迁移一旦提交不可变，后续变更与回滚均靠新增迁移。
+- 本地手动 DDL 仅限排障；留存的结构变更必须回到迁移文件。
 
-Done gate：删库重启，Flyway 能从零建出全部表结构。
+Done gate：删库重启，Flyway 从零建出全部表结构。
 
-### 既有骨架约定（wayfinder #6 落地，细节见 ADR 0006/0007）
+### 骨架约定
 
-- 分层：`com.dudu.duduserver.{controller,service,mapper,config,exception,util,constant}` + `common`（跨层载体，如 R、JwtUser）；枚举进 `constant` 包；认证组件在 `config/auth/`、校验分组在 `config/validate/`。
-- 统一返回：`common/R<T>` record，HTTP 恒 200，业务语义全靠 code；错误码 `constant/ApiEnum` 五位分段（0 成功、10001 未知、101xx 认证、11xxx 参数、13xxx 数据、14xxx 第三方），业务码随业务生长。
-- 业务异常：`exception/BizException` sealed 家族（Param/Data/Third/Auth），service 抛子类、不另建错误类型；全局处理器分流。
-- 表约定：所有表 `create_time`/`update_time`（DB 默认 CURRENT_TIMESTAMP + MP 自动填充兜底）、主键 bigint 自增；逻辑删除按表需要，不全局约定。
-- 认证：Hutool JWT 只签验、payload 走 Jackson；`Authorization: Bearer`；`/api/**` 默认全拦、白名单 `dudu.auth.whitelist`；Controller 用 `@CurrentUser JwtUser` 注入当前用户；`dudu.auth.dev-token-enabled` 控制仅开发用的假登录端点（默认关）。
-
+- 分层：`com.dudu.duduserver.{controller,service,mapper,config,exception,util,constant}` + `common`（跨层载体）；枚举进 `constant` 包；认证组件在 `config/auth/`，校验分组在 `config/validate/`。
+- 统一返回：`common/R<T>` record，HTTP 恒 200，业务语义全靠 code；错误码走 `constant/ApiEnum`，新码按既有分段扩展。
+- 业务异常只用 `exception/BizException` sealed 家族，service 抛子类，全局处理器分流。
+- 表约定：所有表 `create_time`/`update_time`（DB 默认 CURRENT_TIMESTAMP + MP 自动填充）、主键 bigint 自增；逻辑删除按表需要。
+- 认证：Hutool JWT 只签验，payload 走 Jackson；`Authorization: Bearer`；`/api/**` 默认全拦，白名单 `dudu.auth.whitelist`；Controller 用 `@CurrentUser JwtUser` 注入当前用户；`dudu.auth.dev-token-enabled` 控制开发用登录端点，默认关。
+- 单文件 ≤ 500 行，超限按职责拆分。
