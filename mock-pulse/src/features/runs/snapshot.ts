@@ -1,6 +1,7 @@
 import {
   type EventItem,
   type ExpectedReceipt,
+  resolveEventVersion,
   schemaById,
   wireBodyText,
 } from "@/features/events";
@@ -63,7 +64,9 @@ export function materializeRunSnapshot(input: {
     throw new Error("剧本还没有步骤，先添加已保存事件再运行。");
   }
   const steps = scenario.steps.map((step, index) => {
-    const event = events.find((item) => item.id === step.eventId);
+    // 引用解析核心共用（events 域 resolveEventVersion）；缺失语义（抛错
+    // 拒绝启动、不产半成品快照）留在本运行时钟。
+    const { event, version: referenced } = resolveEventVersion(events, step);
     if (!event) {
       throw new Error(
         `第 ${index + 1} 步引用的事件不存在：${step.eventId}。先删除该步骤或调整素材库。`,
@@ -74,9 +77,6 @@ export function materializeRunSnapshot(input: {
         `第 ${index + 1} 步引用了${channelName(event.channelId)}的事件：${event.name}（剧本渠道为${channelName(scenario.channelId)}）。`,
       );
     }
-    const referenced = event.versions.find(
-      (version) => version.revision === step.revision,
-    );
     if (!referenced) {
       throw new Error(
         `第 ${index + 1} 步引用的版本不存在：${event.name} v${step.revision}。`,

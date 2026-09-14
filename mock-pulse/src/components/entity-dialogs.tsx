@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { Notice } from "@/components/notice";
+import { Button } from "@/components/ui/button";
+import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { errorMessage } from "@/lib/errors";
-import { StudioButton, StudioDialog } from "./studio-controls";
+
 import { StudioIcon } from "./studio-icon";
 import { Field, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
@@ -36,7 +39,7 @@ export function SaveAsDialog({
     }
   };
   return (
-    <StudioDialog
+    <WorkspaceDialog
       open
       title={`另存${label}`}
       description="建立独立素材，原来的版本和引用保持不变。"
@@ -45,21 +48,21 @@ export function SaveAsDialog({
       }}
       footer={
         <>
-          <StudioButton disabled={saving} onClick={onClose}>
+          <Button disabled={saving} onClick={onClose} variant="outline">
             取消
-          </StudioButton>
-          <StudioButton
-            tone="primary"
+          </Button>
+          <Button
+            variant="default"
             disabled={saving}
             onClick={() => void save()}
           >
-            <StudioIcon name="save" />
+            <StudioIcon name="save" data-icon="inline-start" />
             保存副本
-          </StudioButton>
+          </Button>
         </>
       }
     >
-      <FieldGroup className="modal-fields">
+      <FieldGroup className="gap-4">
         <Field>
           <FieldLabel htmlFor="copy-name">新名称</FieldLabel>
           <Input
@@ -75,11 +78,11 @@ export function SaveAsDialog({
         </Field>
       </FieldGroup>
       {error ? (
-        <p role="alert" className="modal-inline-error">
+        <Notice role="alert" className="mb-4" variant="destructive">
           {error}
-        </p>
+        </Notice>
       ) : null}
-    </StudioDialog>
+    </WorkspaceDialog>
   );
 }
 
@@ -97,7 +100,7 @@ export function DeleteEntityDialog({
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
   return (
-    <StudioDialog
+    <WorkspaceDialog
       open
       title={`删除${label}`}
       description={`删除「${name}」后，无法撤销。被其他素材引用时会保留。`}
@@ -106,11 +109,11 @@ export function DeleteEntityDialog({
       }}
       footer={
         <>
-          <StudioButton disabled={deleting} onClick={onClose}>
+          <Button disabled={deleting} onClick={onClose} variant="outline">
             取消
-          </StudioButton>
-          <StudioButton
-            tone="danger"
+          </Button>
+          <Button
+            variant="destructive"
             disabled={deleting}
             onClick={async () => {
               setDeleting(true);
@@ -126,16 +129,16 @@ export function DeleteEntityDialog({
             }}
           >
             确认删除
-          </StudioButton>
+          </Button>
         </>
       }
     >
       <p>此操作只删除这份{label}，已经生成的运行记录会保留。</p>
       {error ? (
-        <p role="alert" className="modal-inline-error">
+        <Notice role="alert" className="mb-4" variant="destructive">
           {error}
-        </p>
+        </Notice>
       ) : null}
-    </StudioDialog>
+    </WorkspaceDialog>
   );
 }

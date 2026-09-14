@@ -1,11 +1,20 @@
 import { forwardRef, type ReactNode } from "react";
 import { type ListProps, Virtuoso } from "react-virtuoso";
+import { IconButton } from "@/components/icon-button";
+import { SearchInput } from "@/components/search-input";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import type { ChannelId } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 import { ChannelMark } from "./channel-mark";
-import { IconButton, StudioButton } from "./studio-controls";
+
 import { StudioIcon } from "./studio-icon";
-import { Input } from "./ui/input";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 
 export type ResourceEntry = {
@@ -18,7 +27,7 @@ export type ResourceEntry = {
 };
 
 const ResourceList = forwardRef<HTMLDivElement, ListProps>((props, ref) => (
-  <div {...props} ref={ref} className="resource-virtual-list" />
+  <div {...props} ref={ref} className="flex flex-col gap-1 px-2 pb-2" />
 ));
 
 export function ResourceFilters<T extends string>({
@@ -32,7 +41,7 @@ export function ResourceFilters<T extends string>({
 }) {
   return (
     <ToggleGroup
-      className="filter-tabs"
+      className="w-full"
       value={[value]}
       onValueChange={(values) => {
         if (values[0]) onChange(values[0] as T);
@@ -43,7 +52,7 @@ export function ResourceFilters<T extends string>({
         <ToggleGroupItem
           key={option.value}
           value={option.value}
-          className={cn("filter-tab", value === option.value && "active")}
+          className={cn("flex-1", value === option.value && "")}
         >
           {option.label}
         </ToggleGroupItem>
@@ -91,10 +100,12 @@ export function ResourceLibrary({
 }) {
   return (
     <>
-      <div className="library-heading">
+      <div className="flex shrink-0 items-center justify-between gap-2 px-4 pt-5 pb-3">
         <h2>
           {title}
-          <span className="count-inline">{total}</span>
+          <span className="ml-1 font-mono text-xs text-muted-foreground">
+            {total}
+          </span>
         </h2>
         {onCreate ? (
           <IconButton label={`新建${singular}`} onClick={onCreate}>
@@ -102,10 +113,9 @@ export function ResourceLibrary({
           </IconButton>
         ) : null}
       </div>
-      <div className="library-tools">
-        <div className="search">
-          <StudioIcon name="search" />
-          <Input
+      <div className="flex shrink-0 flex-col gap-2 px-3 pb-3">
+        <div className="min-w-0 flex-1">
+          <SearchInput
             aria-label={`搜索${singular}`}
             placeholder="搜索名称、平台或事件类型"
             value={query}
@@ -114,13 +124,17 @@ export function ResourceLibrary({
         </div>
         {filters}
       </div>
-      <div className="library-list">
+      <div className="min-h-0 flex-1">
         {error ? (
-          <div className="empty" role="alert">
-            <StudioIcon name="info" />
-            <h3>读取素材失败</h3>
-            <p>{error}</p>
-          </div>
+          <Empty role="alert">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <StudioIcon name="info" />
+              </EmptyMedia>
+              <EmptyTitle>读取素材失败</EmptyTitle>
+              <EmptyDescription>{error}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : entries.length ? (
           <Virtuoso
             components={{ List: ResourceList }}
@@ -131,8 +145,9 @@ export function ResourceLibrary({
               <button
                 type="button"
                 className={cn(
-                  "resource-item",
-                  selectedId === item.id && "selected",
+                  "flex w-full min-w-0 items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  selectedId === item.id &&
+                    "bg-secondary text-secondary-foreground",
                 )}
                 aria-current={selectedId === item.id ? "true" : undefined}
                 onClick={() => onSelect(item.id)}
@@ -148,18 +163,20 @@ export function ResourceLibrary({
                 {item.channel ? (
                   <ChannelMark channel={item.channel} />
                 ) : (
-                  <span className="platform-logo">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                     {item.icon ?? <StudioIcon name="plan" />}
                   </span>
                 )}
-                <span className="grow">
-                  <span className="resource-title truncate resource-name">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium truncate">
                     {item.name}
                   </span>
-                  <span className="resource-sub">{item.description}</span>
+                  <span className="mt-1 block truncate text-xs text-muted-foreground">
+                    {item.description}
+                  </span>
                 </span>
                 {item.favorite ? (
-                  <span className="resource-mark">
+                  <span className="ml-auto text-primary">
                     <StudioIcon name="star" />
                   </span>
                 ) : null}
@@ -167,27 +184,31 @@ export function ResourceLibrary({
             )}
           />
         ) : (
-          <div className="empty">
-            <StudioIcon name="search" />
-            <h3>
-              {singular === "运行" ? "还没有运行记录" : "没有找到匹配的素材"}
-            </h3>
-            <p>
-              {singular === "运行"
-                ? "发送一条事件，或运行一个剧本后，快照与回执会出现在这里。"
-                : "换一个关键词，或清除筛选条件。"}
-            </p>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <StudioIcon name="search" />
+              </EmptyMedia>
+              <EmptyTitle>
+                {singular === "运行" ? "还没有运行记录" : "没有找到匹配的素材"}
+              </EmptyTitle>
+              <EmptyDescription>
+                {singular === "运行"
+                  ? "发送一条事件，或运行一个剧本后，快照与回执会出现在这里。"
+                  : "换一个关键词，或清除筛选条件。"}
+              </EmptyDescription>
+            </EmptyHeader>
             {onClear ? (
-              <StudioButton small onClick={onClear}>
+              <Button size="sm" onClick={onClear} variant="outline">
                 清除筛选
-              </StudioButton>
+              </Button>
             ) : null}
-          </div>
+          </Empty>
         )}
       </div>
-      <footer className="library-footer">
+      <footer className="flex shrink-0 items-center justify-between gap-2 border-t px-3 py-2 text-xs text-muted-foreground">
         <span>共 {filteredTotal} 项</span>
-        <div className="pagination">
+        <div className="flex items-center gap-2">
           <IconButton
             label="上一页"
             disabled={page <= 1}
@@ -195,7 +216,7 @@ export function ResourceLibrary({
           >
             <StudioIcon name="left" />
           </IconButton>
-          <span className="page-number">
+          <span className="font-mono tabular-nums">
             {page} / {pages}
           </span>
           <IconButton

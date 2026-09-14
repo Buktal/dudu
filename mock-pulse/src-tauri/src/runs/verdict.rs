@@ -1,6 +1,7 @@
-//! 期望回执比对（执行器侧）：语义与前端 features/events/receipt.ts 的
-//! compareReceipt 逐条镜像——Rust 执行器需要在步骤完成时判定成败
-//! （失败即停），并把结论写进运行记录；两端口径必须一致。
+//! 期望回执比对（唯一实现）：直发命令（sends）与执行器（executor）在步骤
+//! 完成时判定成败（失败即停），并把结论写进运行记录——两条产路共用本模块，
+//! 口径天然一致。（原与前端 features/events/receipt.ts 逐条镜像；直发收编后
+//! 前端实现已删除，前端仅保留期望的展示辅助。）
 
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +17,7 @@ pub enum ReceiptBodyMode {
     WecomReply,
 }
 
-/// 步骤期望（快照物化时由前端从引用的事件版本带出）。
+/// 步骤期望（快照物化/直发请求由前端从事件版本或草稿带出）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ExpectedReceipt {
@@ -115,11 +116,7 @@ fn first_json_mismatch(
 }
 
 /// 企微回执三形态比对（官方 §3.3：空串 / success 不带引号 / 加密被动回复包）。
-fn compare_wecom_reply(
-    expected_body: &str,
-    receipt: &ReceiptSnapshot,
-    label: &str,
-) -> RunVerdict {
+fn compare_wecom_reply(expected_body: &str, receipt: &ReceiptSnapshot, label: &str) -> RunVerdict {
     if expected_body.is_empty() {
         return if receipt.body.is_empty() {
             RunVerdict {
@@ -239,7 +236,7 @@ fn compare_body(expected: &ExpectedReceipt, receipt: &ReceiptSnapshot) -> RunVer
     }
 }
 
-/// 期望回执比对：状态码优先，正文按形态（语义对齐前端 compareReceipt）。
+/// 期望回执比对：状态码优先，正文按形态。
 pub fn compare_receipt(expected: &ExpectedReceipt, receipt: &ReceiptSnapshot) -> RunVerdict {
     if receipt.status != expected.status {
         return RunVerdict {
@@ -256,8 +253,8 @@ pub fn compare_receipt(expected: &ExpectedReceipt, receipt: &ReceiptSnapshot) ->
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::ReceiptBodyMode::{Contains, Equals, JsonField, WecomReply};
+    use super::*;
 
     fn expected(status: u16, body: &str, mode: ReceiptBodyMode) -> ExpectedReceipt {
         ExpectedReceipt {
@@ -290,7 +287,10 @@ mod tests {
 
     #[test]
     fn empty_body_expectation_passes_on_status_match() {
-        let verdict = compare_receipt(&expected(200, "", Contains), &receipt(200, "anything", None));
+        let verdict = compare_receipt(
+            &expected(200, "", Contains),
+            &receipt(200, "anything", None),
+        );
         assert!(verdict.passed);
         assert_eq!(verdict.reason, "HTTP 200，与期望状态一致");
     }
@@ -376,8 +376,11 @@ mod tests {
 
         // success = 逐字相等（不带引号）
         assert!(
-            compare_receipt(&expected(200, "success", WecomReply), &receipt(200, "success", None))
-                .passed
+            compare_receipt(
+                &expected(200, "success", WecomReply),
+                &receipt(200, "success", None)
+            )
+            .passed
         );
         let quoted = compare_receipt(
             &expected(200, "success", WecomReply),
@@ -391,14 +394,15 @@ mod tests {
         // 其他内容 = 加密被动回复的解密明文包含该片段
         let pass = compare_receipt(
             &expected(200, "hi", WecomReply),
-            &receipt(200, "<xml><Encrypt>…</Encrypt></xml>", Some("hello hi there")),
+            &receipt(
+                200,
+                "<xml><Encrypt>…</Encrypt></xml>",
+                Some("hello hi there"),
+            ),
         );
         assert_eq!(pass.reason, "HTTP 200，解密被动回复包含「hi」");
 
-        let no_reply = compare_receipt(
-            &expected(200, "hi", WecomReply),
-            &receipt(200, "", None),
-        );
+        let no_reply = compare_receipt(&expected(200, "hi", WecomReply), &receipt(200, "", None));
         assert_eq!(
             no_reply.reason,
             "HTTP 200，期望加密被动回复，但目标未回可解密的加密包"

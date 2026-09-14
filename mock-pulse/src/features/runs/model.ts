@@ -1,6 +1,5 @@
-import type { EventDraft, ExpectedReceipt } from "@/features/events";
+import type { ExpectedReceipt } from "@/features/events";
 import type { ChannelId } from "@/lib/channels";
-import type { WecomDispatchOutcome } from "./api";
 
 /**
  * 运行记录领域模型：一次运行 = 步骤快照数组。
@@ -81,73 +80,19 @@ export function newRunId(): string {
   return `run-${Date.now().toString(36)}-${idCounter.toString(36)}`;
 }
 
-/** 渠道直发结果的公共形态（抖音/企微命令返回值归一后落记录） */
-export type SendOutcome = {
-  requestBody?: string | null;
-  signature: string;
-  msgId: string;
-  timestamp?: string;
-  status: number;
-  elapsedMs: number;
-  body: string;
-  reply?: string | null;
-  error: string | null;
-};
-
-/** 企微命令返回值 → 公共形态（nonce 充当发送唯一标识快照） */
-export function wecomSendOutcome(outcome: WecomDispatchOutcome): SendOutcome {
-  return {
-    signature: outcome.signature,
-    msgId: outcome.nonce,
-    timestamp: outcome.timestamp,
-    status: outcome.status,
-    elapsedMs: outcome.elapsedMs,
-    body: outcome.body,
-    reply: outcome.reply,
-    error: outcome.error,
-    requestBody: outcome.requestBody,
-  };
-}
-
-/** 直发 = 单步运行记录：载荷、签名与回执全部落快照。
- *  outcome 为渠道命令返回值的公共形态（抖音 DispatchOutcome 结构可直传：
- *  timestamp/reply 为可选字段，缺省即 undefined）。 */
-export function buildDirectRun(input: {
-  runId?: string;
-  draft: EventDraft;
-  url: string;
-  body: string;
-  outcome: SendOutcome;
-  verdict: RunVerdict;
+/** 直发 = 单步运行记录：Rust 直发命令已产出成品步骤快照，这里只补运行信封 */
+export function directRunRecord(input: {
+  runId: string;
   startedAt: string;
+  cancelled: boolean;
+  step: RunStep;
 }): RunRecord {
-  const { draft, url, body, outcome, verdict, startedAt } = input;
   return {
-    id: input.runId ?? newRunId(),
-    startedAt,
+    id: input.runId,
+    startedAt: input.startedAt,
     source: "direct",
-    sourceId: draft.id,
-    steps: [
-      {
-        eventName: draft.name,
-        eventId: draft.id,
-        channel: draft.channelId,
-        url,
-        payload: body,
-        requestBody: outcome.requestBody ?? body,
-        expected: { ...draft.expected },
-        signature: outcome.signature,
-        msgId: outcome.msgId,
-        timestamp: outcome.timestamp,
-        receipt: {
-          status: outcome.status,
-          elapsedMs: outcome.elapsedMs,
-          body: outcome.body,
-          reply: outcome.reply,
-          error: outcome.error,
-        },
-        verdict,
-      },
-    ],
+    sourceId: input.step.eventId,
+    cancelled: input.cancelled,
+    steps: [input.step],
   };
 }

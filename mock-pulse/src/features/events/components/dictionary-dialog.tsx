@@ -1,11 +1,13 @@
 import { useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-
-import { StudioButton, StudioDialog } from "@/components/studio-controls";
+import { Notice } from "@/components/notice";
 import { StudioIcon } from "@/components/studio-icon";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { cn } from "@/lib/utils";
 import type { AppDispatch } from "@/store";
 import type { StoredSchemaDefinition } from "../api";
@@ -151,7 +153,7 @@ export function DictionaryDialog({
   };
 
   return (
-    <StudioDialog
+    <WorkspaceDialog
       open
       wide
       title="字段说明"
@@ -170,42 +172,46 @@ export function DictionaryDialog({
               if (file) void onImportFile(file);
             }}
           />
-          <StudioButton
-            tone="quiet"
-            small
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => fileInputRef.current?.click()}
           >
-            <StudioIcon name="upload" />
+            <StudioIcon name="upload" data-icon="inline-start" />
             导入字段定义
-          </StudioButton>
-          <StudioButton tone="quiet" small onClick={onExport}>
-            <StudioIcon name="download" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onExport}>
+            <StudioIcon name="download" data-icon="inline-start" />
             导出字段定义
-          </StudioButton>
-          <span className="grow" />
-          <StudioButton
-            tone="primary"
+          </Button>
+          <span className="min-w-0 flex-1" />
+          <Button
+            variant="default"
             disabled={applying}
             onClick={() => void onApply()}
           >
             <StudioIcon
               name={applying ? "refresh" : "check"}
-              className={applying ? "spin" : undefined}
+              className={applying ? "motion-safe:animate-spin" : undefined}
+              data-icon="inline-start"
             />
             {applying ? "正在应用…" : "应用说明"}
-          </StudioButton>
+          </Button>
         </>
       }
     >
-      <div className="dict-layout">
-        <nav className="dict-fields" aria-label="字段列表">
+      <div className="grid gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
+        <nav
+          className="flex max-h-40 flex-col gap-1 overflow-auto sm:max-h-[55dvh] sm:border-r sm:pr-3"
+          aria-label="字段列表"
+        >
           {fields.map((field) => (
             <button
               key={field.path}
               type="button"
               className={cn(
-                "dict-field",
-                selected?.path === field.path && "active",
+                "flex w-full flex-col items-start gap-1 rounded-lg px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                selected?.path === field.path && "",
               )}
               aria-current={selected?.path === field.path ? "true" : undefined}
               onClick={() => setSelectedPath(field.path)}
@@ -215,12 +221,12 @@ export function DictionaryDialog({
             </button>
           ))}
         </nav>
-        <div className="dict-edit">
+        <div className="flex min-w-0 flex-col gap-4">
           {selected ? (
             <>
-              <div className="row dict-field-meta">
-                <span className="pill">{selected.type}</span>
-                <code className="muted">{selected.path}</code>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary">{selected.type}</Badge>
+                <code className="text-muted-foreground">{selected.path}</code>
               </div>
               <Label htmlFor="dict-title">
                 显示名称
@@ -252,7 +258,7 @@ export function DictionaryDialog({
           ) : (
             <p>没有可编辑的字段。</p>
           )}
-          <div className="dict-source">
+          <div className="text-xs leading-relaxed text-muted-foreground wrap-anywhere">
             说明范围：{schema.name} · {schema.version}
             <br />
             资料来源：
@@ -263,10 +269,10 @@ export function DictionaryDialog({
         </div>
       </div>
       {error ? (
-        <p role="alert" className="modal-inline-error">
+        <Notice role="alert" className="mb-4" variant="destructive">
           {error}
-        </p>
+        </Notice>
       ) : null}
-    </StudioDialog>
+    </WorkspaceDialog>
   );
 }

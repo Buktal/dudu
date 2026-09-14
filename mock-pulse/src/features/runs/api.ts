@@ -1,41 +1,24 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type {
-  ConnectionConfig,
-  DouyinConnectionConfig,
-  WecomConnectionConfig,
-} from "@/features/connections";
-import type { RunRecord } from "./model";
+import type { ConnectionConfig } from "@/features/connections";
+import type { ExpectedReceipt } from "@/features/events";
+import type { RunRecord, RunStep } from "./model";
 import type { RunSnapshot } from "./snapshot";
 
-/** 抖音直发的回执（Rust sends_dispatch_douyin 返回，camelCase） */
-export type DispatchOutcome = {
-  msgId: string;
-  signature: string;
-  /** 0 = 未收到响应（超时/连接失败） */
-  status: number;
-  elapsedMs: number;
+/** 直发请求载荷：事件快照字段 + 确定性拼装好的明文（Rust 不重排 body） */
+export type DirectDispatchPayload = {
   body: string;
-  error: string | null;
+  eventName: string;
+  eventId: string;
+  expected: ExpectedReceipt;
+  runId: string;
 };
 
-/** 企微直发的回执（Rust sends_dispatch_wecom 返回，camelCase） */
-export type WecomDispatchOutcome = {
-  requestBody?: string | null;
-  /** msg_signature 查询参数（token/timestamp/nonce/密文 四值字典序 sha1） */
-  signature: string;
-  /** 参与签名的时间戳（秒级字符串） */
-  timestamp: string;
-  /** 参与签名的随机串（一次发送的唯一标识） */
-  nonce: string;
-  /** 0 = 未收到响应（超时/连接失败） */
-  status: number;
-  elapsedMs: number;
-  /** 原始回执文本：空串 / success / 加密被动回复包 */
-  body: string;
-  /** 加密被动回复解密后的明文（目标未回加密包时为 null） */
-  reply: string | null;
-  error: string | null;
+/** 直发结果：成品单步快照（Rust 已完成期望比对）+ 用户是否请求过停止 */
+export type DirectSendOutcome = {
+  step: RunStep;
+  /** 停止先于发送：请求未发出；停止发生在在途：保留真实回执并标记停止 */
+  cancelled: boolean;
 };
 
 /** 读取本地持久化的全部运行记录（Rust 端 runs.json，时间升序） */
@@ -49,35 +32,17 @@ export function saveRun(run: RunRecord): Promise<RunRecord[]> {
 }
 
 /**
- * 抖音直发：把前端逐字节拼装的明文交给 Rust 签名（X-Douyin-Signature、
- * Msg-Id）并真实 POST 到连接配置的目标地址；字节透传不重排。
+ * 直发：把明文、事件快照与期望回执一次交给 Rust——按连接渠道路由协议
+ * 原语（抖音签名 JSON POST / 企微加密信封 XML POST）、比对期望、组装
+ * 成品单步快照（sends_dispatch_direct，ADR-0005：Rust 做重活）。
  */
-export function dispatchDouyin(
-  config: DouyinConnectionConfig,
-  body: string,
-  runId?: string,
-): Promise<DispatchOutcome> {
-  return invoke<DispatchOutcome>("sends_dispatch_douyin", {
+export function dispatchDirect(
+  config: ConnectionConfig,
+  payload: DirectDispatchPayload,
+): Promise<DirectSendOutcome> {
+  return invoke<DirectSendOutcome>("sends_dispatch_direct", {
     config,
-    body,
-    ...(runId ? { runId } : {}),
-  });
-}
-
-/**
- * 企微直发：把前端确定性拼装的明文 XML 交给 Rust 加密成官方信封
- * （外层 ToUserName/Encrypt/AgentID + msg_signature 查询参数），
- * 以 text/xml POST 到目标地址；回执按企微语义解密被动回复。
- */
-export function dispatchWecom(
-  config: WecomConnectionConfig,
-  body: string,
-  runId?: string,
-): Promise<WecomDispatchOutcome> {
-  return invoke<WecomDispatchOutcome>("sends_dispatch_wecom", {
-    config,
-    body,
-    ...(runId ? { runId } : {}),
+    ...payload,
   });
 }
 

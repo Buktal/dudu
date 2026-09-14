@@ -15,7 +15,7 @@ export function ChannelMark({
       title={channelById(channel)?.name}
       aria-hidden
       className={cn(
-        "platform-logo",
+        "flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground",
         channel === "douyin" ? "dy" : "wc",
         small && "mini",
         className,

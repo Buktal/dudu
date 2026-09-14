@@ -7,6 +7,7 @@ import {
   type Plan,
   type PlanFailure,
   type PlanMode,
+  resolveLaneScenario,
 } from "./model";
 
 /**
@@ -45,9 +46,7 @@ export function materializePlanRun(input: {
     throw new Error("编排还没有剧本，先添加已保存剧本再运行。");
   }
   const lanes = plan.items.map((item, lane) => {
-    const scenario =
-      item.snapshot ??
-      scenarios.find((candidate) => candidate.id === item.scenarioId);
+    const scenario = resolveLaneScenario(item, scenarios);
     if (!scenario) {
       throw new Error(
         `编排第 ${lane + 1} 条引用的剧本不存在：${item.scenarioId}。先移除该剧本或调整剧本库。`,

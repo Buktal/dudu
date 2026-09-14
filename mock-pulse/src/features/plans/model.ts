@@ -129,15 +129,33 @@ export function validatePlan(
 ): void {
   if (!plan.name.trim()) throw new Error("请填写编排名称。");
   for (const [index, item] of plan.items.entries()) {
-    const exists = scenarios.some(
-      (scenario) => scenario.id === item.scenarioId,
-    );
-    if (!exists) {
+    if (!scenarioById(scenarios, item.scenarioId)) {
       throw new Error(
         `第 ${index + 1} 条引用的剧本不存在：${item.scenarioId}。`,
       );
     }
   }
+}
+
+/** 库内按 id 查剧本（lane 解析 / 同步快照 / 校验共用的底层查找原语）。 */
+export function scenarioById<T extends { id: string }>(
+  scenarios: readonly T[],
+  scenarioId: string,
+): T | undefined {
+  return scenarios.find((scenario) => scenario.id === scenarioId);
+}
+
+/**
+ * lane 引用解析单点：「快照优先、库内兜底、双缺 undefined」。
+ * 运行物化（materialize / plan-run）、编辑器展示、保存钉快照共用。
+ * 同步 lane 快照（syncPlanLane）不走它——同步的语义就是用库内最新
+ * 版本覆盖过期快照，那里直接走 scenarioById 的库内查找。
+ */
+export function resolveLaneScenario(
+  item: PlanItem,
+  scenarios: readonly Scenario[],
+): Scenario | undefined {
+  return item.snapshot ?? scenarioById(scenarios, item.scenarioId);
 }
 
 /** 引用了该剧本的编排列表（剧本删除守卫：非空则拒绝删除）。 */

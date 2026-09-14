@@ -2,8 +2,12 @@ import { Activity, useEffect, useRef, useState } from "react";
 import { shallowEqual } from "react-redux";
 import { DraftGuard } from "@/components/draft-guard";
 import { MaterialPicker } from "@/components/material-picker";
+import { Notice } from "@/components/notice";
 import { LibraryProvider } from "@/components/resource-workspace";
-import { type NavGroup, StudioShell } from "@/components/shell/studio-shell";
+import {
+  type NavGroup,
+  WorkspaceShell,
+} from "@/components/shell/workspace-shell";
 import {
   ConnectionsView,
   discardConnectionDraft,
@@ -32,6 +36,8 @@ import {
   DispatchPanel,
   directDispatch,
   fetchRuns,
+  isRunBusy,
+  isStoppingRun,
   RunsView,
   selectPanelPhase,
   stopRun,
@@ -181,7 +187,7 @@ export default function App() {
               >
                 {(replacePlan) => (
                   <>
-                    <StudioShell
+                    <WorkspaceShell
                       navGroups={groups}
                       currentView={view}
                       currentTitle={viewEntry(view).name}
@@ -191,9 +197,13 @@ export default function App() {
                       }}
                     >
                       {loadError ? (
-                        <div role="alert" className="editor-error">
+                        <Notice
+                          role="alert"
+                          className="mb-4"
+                          variant="destructive"
+                        >
                           载入本地数据失败：{loadError}
-                        </div>
+                        </Notice>
                       ) : null}
                       <Activity mode={view === "events" ? "visible" : "hidden"}>
                         <EventsView
@@ -203,18 +213,13 @@ export default function App() {
                             dispatchSending:
                               selectPanelPhase(state.runs) === "sending" &&
                               state.runs.directLive?.eventId === draftId,
-                            dispatchDisabled:
-                              selectPanelPhase(state.runs) === "sending" ||
-                              ["starting", "running"].includes(
-                                state.runs.scenarioRunPhase,
-                              ) ||
-                              ["starting", "running"].includes(
-                                state.plans.planRunPhase,
-                              ),
+                            dispatchDisabled: isRunBusy(state),
                             dispatchStopping:
                               !!state.runs.directLive &&
-                              state.runs.stoppingRunId ===
+                              isStoppingRun(
+                                state.runs,
                                 state.runs.directLive.runId,
+                              ),
                             onStopDispatch: () => {
                               if (state.runs.directLive)
                                 void dispatch(
@@ -259,7 +264,7 @@ export default function App() {
                       >
                         <ConnectionsView />
                       </Activity>
-                    </StudioShell>
+                    </WorkspaceShell>
                     {parentScenarioId ? (
                       <MaterialPicker
                         title="把剧本加入哪个编排？"

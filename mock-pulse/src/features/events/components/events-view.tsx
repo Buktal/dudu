@@ -2,15 +2,27 @@ import { useMemo, useState } from "react";
 import { ChannelPicker } from "@/components/channel-picker";
 import { DraftGuard } from "@/components/draft-guard";
 import { DeleteEntityDialog } from "@/components/entity-dialogs";
+import { Notice } from "@/components/notice";
 import {
   ResourceFilters,
   ResourceLibrary,
 } from "@/components/resource-library";
 import { ResourceWorkspace } from "@/components/resource-workspace";
-import { StudioButton, StudioDialog } from "@/components/studio-controls";
 import { StudioIcon } from "@/components/studio-icon";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { latestVersion } from "../model";
@@ -42,22 +54,24 @@ function CreateEventDialog({
     onClose();
   };
   return (
-    <StudioDialog
+    <WorkspaceDialog
       open
       title="新建事件"
       description="平台决定可用事件类型，保存后可在平台剧本中选择。"
       onClose={onClose}
       footer={
         <>
-          <StudioButton onClick={onClose}>取消</StudioButton>
-          <StudioButton tone="primary" onClick={create}>
-            <StudioIcon name="arrow" />
+          <Button onClick={onClose} variant="outline">
+            取消
+          </Button>
+          <Button variant="default" onClick={create}>
+            <StudioIcon name="arrow" data-icon="inline-start" />
             开始编辑
-          </StudioButton>
+          </Button>
         </>
       }
     >
-      <FieldGroup className="modal-fields">
+      <FieldGroup className="gap-4">
         <Field>
           <FieldLabel htmlFor="new-name">事件名称</FieldLabel>
           <Input
@@ -72,10 +86,10 @@ function CreateEventDialog({
             }}
           />
         </Field>
-        <div className="row gap16">
+        <div className="flex items-center gap-2 gap-4">
           <Field>
             <FieldLabel htmlFor="new-platform">所属平台</FieldLabel>
-            <select
+            <NativeSelect
               id="new-platform"
               value={channel}
               onChange={(event) => {
@@ -89,34 +103,34 @@ function CreateEventDialog({
               }}
             >
               {CHANNELS.map((item) => (
-                <option key={item.id} value={item.id}>
+                <NativeSelectOption key={item.id} value={item.id}>
                   {item.name}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
           </Field>
           <Field>
             <FieldLabel htmlFor="new-schema">事件类型</FieldLabel>
-            <select
+            <NativeSelect
               id="new-schema"
               value={schemaId}
               onChange={(event) => setSchema(event.target.value)}
             >
               {templates.map((schema) => (
-                <option key={schema.id} value={schema.id}>
+                <NativeSelectOption key={schema.id} value={schema.id}>
                   {schema.name}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
           </Field>
         </div>
       </FieldGroup>
       {error ? (
-        <p className="modal-inline-error" role="alert">
+        <Notice className="mb-4" role="alert" variant="destructive">
           {error}
-        </p>
+        </Notice>
       ) : null}
-    </StudioDialog>
+    </WorkspaceDialog>
   );
 }
 
@@ -206,14 +220,18 @@ export function EventsView({ slots }: { slots?: EventEditorSlots }) {
           {events.draft ? (
             <EventEditor key={events.draft.id} slots={slots} />
           ) : (
-            <div className="empty workspace-empty">
-              <StudioIcon name="event" />
-              <h3>选择一个事件开始</h3>
-              <StudioButton tone="soft" onClick={() => setCreating(true)}>
-                <StudioIcon name="plus" />
+            <Empty className="min-h-60">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <StudioIcon name="event" />
+                </EmptyMedia>
+                <EmptyTitle>选择一个事件开始</EmptyTitle>
+              </EmptyHeader>
+              <Button variant="secondary" onClick={() => setCreating(true)}>
+                <StudioIcon name="plus" data-icon="inline-start" />
                 新建
-              </StudioButton>
-            </div>
+              </Button>
+            </Empty>
           )}
           {creating ? (
             <CreateEventDialog

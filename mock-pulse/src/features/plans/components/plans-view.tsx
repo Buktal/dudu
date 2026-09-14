@@ -1,18 +1,31 @@
 import { useState } from "react";
 import { DraftGuard } from "@/components/draft-guard";
 import { DeleteEntityDialog } from "@/components/entity-dialogs";
+import { Notice } from "@/components/notice";
 import {
   ResourceFilters,
   ResourceLibrary,
 } from "@/components/resource-library";
 import { ResourceWorkspace } from "@/components/resource-workspace";
-import { StudioButton, StudioDialog } from "@/components/studio-controls";
 import { StudioIcon } from "@/components/studio-icon";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { type PlanMode, planModeLabel } from "../model";
 import { filterPlans, paginatePlans } from "../selectors";
+import { deletePlan, savePlan } from "../stores/plan-library";
 import * as actions from "../stores/plans-slice";
 import { PlanEditor } from "./plan-editor";
 
@@ -46,7 +59,7 @@ export function PlansView() {
     <DraftGuard
       dirty={actions.selectPlanDirty(state)}
       name={state.draft?.name ?? ""}
-      onSave={() => dispatch(actions.savePlan()).unwrap()}
+      onSave={() => dispatch(savePlan()).unwrap()}
       onDiscard={() => dispatch(actions.discardPlanDraft())}
     >
       {(request) => (
@@ -100,34 +113,38 @@ export function PlansView() {
           {state.draft ? (
             <PlanEditor key={state.draft.id} />
           ) : (
-            <div className="empty workspace-empty">
-              <StudioIcon name="plan" />
-              <h3>选择一个编排开始</h3>
-              <StudioButton tone="soft" onClick={openCreate}>
-                <StudioIcon name="plus" />
+            <Empty className="min-h-60">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <StudioIcon name="plan" />
+                </EmptyMedia>
+                <EmptyTitle>选择一个编排开始</EmptyTitle>
+              </EmptyHeader>
+              <Button variant="secondary" onClick={openCreate}>
+                <StudioIcon name="plus" data-icon="inline-start" />
                 新建
-              </StudioButton>
-            </div>
+              </Button>
+            </Empty>
           )}
           {creating ? (
-            <StudioDialog
+            <WorkspaceDialog
               open
               title="新建编排"
               description="从已保存剧本开始，选择串行或并行执行。"
               onClose={() => setCreating(false)}
               footer={
                 <>
-                  <StudioButton onClick={() => setCreating(false)}>
+                  <Button onClick={() => setCreating(false)} variant="outline">
                     取消
-                  </StudioButton>
-                  <StudioButton tone="primary" onClick={create}>
-                    <StudioIcon name="arrow" />
+                  </Button>
+                  <Button variant="default" onClick={create}>
+                    <StudioIcon name="arrow" data-icon="inline-start" />
                     开始编辑
-                  </StudioButton>
+                  </Button>
                 </>
               }
             >
-              <FieldGroup className="modal-fields">
+              <FieldGroup className="gap-4">
                 <Field>
                   <FieldLabel htmlFor="new-plan-name">编排名称</FieldLabel>
                   <Input
@@ -144,24 +161,28 @@ export function PlansView() {
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="new-plan-mode">执行方式</FieldLabel>
-                  <select
+                  <NativeSelect
                     id="new-plan-mode"
                     value={mode}
                     onChange={(event) =>
                       setMode(event.target.value as PlanMode)
                     }
                   >
-                    <option value="parallel">并行执行</option>
-                    <option value="serial">串行执行</option>
-                  </select>
+                    <NativeSelectOption value="parallel">
+                      并行执行
+                    </NativeSelectOption>
+                    <NativeSelectOption value="serial">
+                      串行执行
+                    </NativeSelectOption>
+                  </NativeSelect>
                 </Field>
               </FieldGroup>
               {error ? (
-                <p className="modal-inline-error" role="alert">
+                <Notice className="mb-4" role="alert" variant="destructive">
                   {error}
-                </p>
+                </Notice>
               ) : null}
-            </StudioDialog>
+            </WorkspaceDialog>
           ) : null}
           {deleting ? (
             <DeleteEntityDialog
@@ -169,7 +190,7 @@ export function PlansView() {
               name={
                 state.items.find((item) => item.id === deleting)?.name ?? ""
               }
-              onDelete={() => dispatch(actions.deletePlan(deleting)).unwrap()}
+              onDelete={() => dispatch(deletePlan(deleting)).unwrap()}
               onClose={() => setDeleting(null)}
             />
           ) : null}

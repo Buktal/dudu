@@ -4,6 +4,7 @@
 
 pub mod control;
 pub mod executor;
+pub mod policy;
 pub mod store;
 pub mod verdict;
 
@@ -92,6 +93,71 @@ pub struct RunRecord {
     #[serde(default)]
     pub plan_name: Option<String>,
     pub steps: Vec<RunStep>,
+}
+
+/// 渠道协议发送结果 → 回执快照（抖音无解密被动回复，reply 恒空）。
+pub(crate) fn receipt_from_douyin(outcome: &douyin::DispatchOutcome) -> ReceiptSnapshot {
+    ReceiptSnapshot {
+        status: outcome.status,
+        elapsed_ms: outcome.elapsed_ms,
+        body: outcome.body.clone(),
+        reply: None,
+        error: outcome.error.clone(),
+    }
+}
+
+/// 企微协议发送结果 → 回执快照（reply = 加密被动回复解密后的明文）。
+pub(crate) fn receipt_from_wecom(outcome: &wecom::WecomDispatchOutcome) -> ReceiptSnapshot {
+    ReceiptSnapshot {
+        status: outcome.status,
+        elapsed_ms: outcome.elapsed_ms,
+        body: outcome.body.clone(),
+        reply: outcome.reply.clone(),
+        error: outcome.error.clone(),
+    }
+}
+
+/// 已发送（或已尝试发送）步骤的唯一构造入口：回执经期望比对出结论，
+/// 渠道协议要素与载荷快照一次成形——执行器（executor）与直发命令（sends）
+/// 共用，保证两条产路的字段落点一致。expected 为 None（UI 不会产生，
+/// 契约兜底）时不做比对，仅记录回执。
+pub(crate) fn sent_step(
+    expected: Option<&verdict::ExpectedReceipt>,
+    event_name: String,
+    event_id: String,
+    channel: &str,
+    url: String,
+    payload: String,
+    request_body: Option<String>,
+    signature: String,
+    msg_id: String,
+    timestamp: Option<String>,
+    receipt: ReceiptSnapshot,
+) -> RunStep {
+    let verdict = match expected {
+        Some(expected) => verdict::compare_receipt(expected, &receipt),
+        None => RunVerdict {
+            passed: true,
+            reason: "未设期望，仅记录回执".into(),
+        },
+    };
+    RunStep {
+        expected: expected.cloned(),
+        request_body,
+        event_name,
+        event_id,
+        channel: channel.into(),
+        url,
+        payload,
+        signature,
+        msg_id,
+        timestamp,
+        receipt,
+        verdict,
+        skipped: false,
+        lane_index: None,
+        lane_name: None,
+    }
 }
 
 fn app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {

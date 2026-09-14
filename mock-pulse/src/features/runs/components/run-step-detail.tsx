@@ -12,15 +12,21 @@ function requestSnapshot(step: RunStep): string {
 
 export function RunStepDetail({ step }: { step: RunStep }) {
   return (
-    <div className="receipt-grid">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div>
-        <span className="receipt-label">发送时的请求快照</span>
-        <pre className="code-block">{requestSnapshot(step)}</pre>
+        <span className="mb-2 text-xs font-medium text-muted-foreground">
+          发送时的请求快照
+        </span>
+        <pre className="max-h-72 overflow-auto rounded-lg bg-muted p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap wrap-anywhere">
+          {requestSnapshot(step)}
+        </pre>
       </div>
       <div>
-        <span className="receipt-label">HTTP 回执</span>
-        <pre className="code-block">{`${receiptStatusText(step.receipt)}\n${step.receipt.body || "（空响应正文）"}${step.receipt.reply ? `\n\n解密后的回复：\n${step.receipt.reply}` : ""}`}</pre>
-        <p className="raw-note">
+        <span className="mb-2 text-xs font-medium text-muted-foreground">
+          HTTP 回执
+        </span>
+        <pre className="max-h-72 overflow-auto rounded-lg bg-muted p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap wrap-anywhere">{`${receiptStatusText(step.receipt)}\n${step.receipt.body || "（空响应正文）"}${step.receipt.reply ? `\n\n解密后的回复：\n${step.receipt.reply}` : ""}`}</pre>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           {step.verdict.passed ? "符合期望" : "与期望不符"} ·{" "}
           {step.verdict.reason}
           <br />

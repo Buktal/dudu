@@ -9,6 +9,8 @@
 //! parallel = 每剧本一线程 T+0 同时起跑、剧内严格有序（ADR-0004 并发语义），
 //! 失败即停用共享取消旗标承载——任一剧本失败置位，各剧本每步启动前检查
 //! （在途步骤自然完成）。
+//! 失败策略显式化（批 3a）：「跳不跳、为何跳」收敛为 `policy::LanePolicy`
+//! 决策表单点裁决，serial/parallel 编织函数只负责喂策略，不再各自解读旗标。
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -22,9 +24,13 @@ use crate::connections::wecom;
 use crate::connections::ConnectionConfig;
 use crate::plans::{PlanFailure, PlanMode};
 
+use super::policy::{LanePolicy, SkipReason, StepDecision};
 use super::store;
-use super::verdict::{compare_receipt, ExpectedReceipt};
-use super::{ReceiptSnapshot, RunRecord, RunStep, RunVerdict};
+use super::verdict::ExpectedReceipt;
+use super::{
+    receipt_from_douyin, receipt_from_wecom, sent_step, ReceiptSnapshot, RunRecord, RunStep,
+    RunVerdict,
+};
 
 /// 快照中的一个步骤（前端 materializeRunSnapshot 产出）。
 #[derive(Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
@@ -137,17 +143,8 @@ fn execute_snapshot_cancellable<F: FnMut(StepProgress)>(
     user_cancel: &AtomicBool,
     on_progress: &mut F,
 ) -> RunRecord {
-    let cancel = AtomicBool::new(false);
-    let (steps, _) = execute_lane_steps(
-        snapshot,
-        connections,
-        timeout,
-        &cancel,
-        false,
-        user_cancel,
-        false,
-        on_progress,
-    );
+    let policy = LanePolicy::scenario(snapshot, user_cancel);
+    let (steps, _) = execute_lane_steps(snapshot, connections, timeout, policy, on_progress);
     RunRecord {
         id: snapshot.run_id.clone(),
         started_at: snapshot.started_at.clone(),
@@ -162,53 +159,20 @@ fn execute_snapshot_cancellable<F: FnMut(StepProgress)>(
 }
 
 /// 单 lane（剧本）执行：每步 waiting → 发送 → 比对 → finished。
-/// - 剧内保持失败即停：本剧本某步失败后，后续步骤记 skipped；
-/// - not_started = 编排失败即停下前序剧本已失败：本剧本整体不启动（全 skipped）；
-/// - 每步启动前检查取消旗标（编排并行 + 失败即停：其他剧本失败后不再启动
-///   后续步骤，在途步骤自然完成）。
-/// 返回（步骤记录, 本剧本是否有失败步骤）。skipped 步骤的结论区分三种来源：
-/// 本剧本前序失败 / 前序剧本失败未启动 / 其他剧本失败编排停止。
+/// 「跳不跳、为何跳」全部交由 [`LanePolicy`] 决策表裁决（见 `super::policy`）：
+/// 本函数只负责喂停止信号、执行与记账。返回（步骤记录, 本剧本是否有失败步骤）。
 fn execute_lane_steps<F: FnMut(StepProgress)>(
     snapshot: &ScenarioRunSnapshot,
     connections: &[ConnectionConfig],
     timeout: Duration,
-    cancel: &AtomicBool,
-    not_started: bool,
-    user_cancel: &AtomicBool,
-    propagate_failure: bool,
+    mut policy: LanePolicy<'_>,
     on_progress: &mut F,
 ) -> (Vec<RunStep>, bool) {
-    const OWN_FAILED: &str = "前序步骤失败，本步骤未执行";
-    const PREVIOUS_SCENARIO_FAILED: &str = "前序剧本失败，本剧本未执行";
-    const ORCHESTRATION_STOPPED: &str = "其他剧本已失败，编排停止，本剧本未执行";
-
     let mut steps: Vec<RunStep> = Vec::with_capacity(snapshot.steps.len());
-    let mut own_failed = false;
-    // 非 None 后本剧本不再启动任何步骤（整体未启动 / 编排停止）
-    let mut halt_reason: Option<&'static str> = not_started.then_some(PREVIOUS_SCENARIO_FAILED);
     for (index, step_snapshot) in snapshot.steps.iter().enumerate() {
-        let skip_reason: Option<&'static str> = if user_cancel.load(Ordering::SeqCst) {
-            Some("用户已停止运行，本步骤未执行")
-        } else if own_failed
-            && (propagate_failure || snapshot.failure.as_deref().unwrap_or("stop") != "continue")
-        {
-            Some(OWN_FAILED)
-        } else {
-            match halt_reason {
-                Some(reason) => Some(reason),
-                None => {
-                    if cancel.load(Ordering::Relaxed) {
-                        halt_reason = Some(ORCHESTRATION_STOPPED);
-                        halt_reason
-                    } else {
-                        None
-                    }
-                }
-            }
-        };
-        if let Some(reason) = skip_reason {
+        if let StepDecision::Skip(reason) = policy.decide() {
             on_progress(StepProgress::Skipped { index });
-            steps.push(skipped_step(step_snapshot, connections, reason));
+            steps.push(skipped_step(step_snapshot, connections, reason.text()));
             continue;
         }
         on_progress(StepProgress::Waiting { index });
@@ -219,22 +183,19 @@ fn execute_lane_steps<F: FnMut(StepProgress)>(
             0.0
         };
         let until = Instant::now() + Duration::from_secs_f64(seconds);
-        while Instant::now() < until
-            && !user_cancel.load(Ordering::SeqCst)
-            && !cancel.load(Ordering::Relaxed)
-        {
+        while Instant::now() < until && !policy.stopped_during_wait() {
             std::thread::sleep(
                 until
                     .saturating_duration_since(Instant::now())
                     .min(Duration::from_millis(10)),
             );
         }
-        if user_cancel.load(Ordering::SeqCst) || cancel.load(Ordering::Relaxed) {
+        if policy.stopped_during_wait() {
             on_progress(StepProgress::Skipped { index });
             steps.push(skipped_step(
                 step_snapshot,
                 connections,
-                "运行已停止，本步骤未执行",
+                SkipReason::RunStopped.text(),
             ));
             continue;
         }
@@ -246,15 +207,11 @@ fn execute_lane_steps<F: FnMut(StepProgress)>(
             failed,
         });
         if failed {
-            own_failed = true;
-            // 失败即停语义在编排内跨剧本传播（并行旗标 / 串行顺序检查）
-            if propagate_failure {
-                cancel.store(true, Ordering::Relaxed);
-            }
+            policy.note_failure();
         }
         steps.push(step);
     }
-    (steps, own_failed)
+    (steps, policy.own_failed())
 }
 
 /// 给步骤打 lane 归属（编排运行记录：步骤按 lane 顺序拼接，各步携带归属）。
@@ -319,7 +276,10 @@ where
     }
 }
 
-/// 串行编排：前剧完全结束才启下一剧；失败即停下未启动的剧本整体记 skipped。
+/// 串行编排：前剧完全结束才启下一剧；失败即停下未启动的剧本以
+/// [`LanePolicy::serial`] 的 halt 种子整体记 skipped（前序剧本失败）。
+/// 失败传播走 execute_lane_steps 返回的 own_failed → 下一剧的
+/// previous_failed——不设取消旗标，本剧失败不泄漏为后续剧本的取消信号。
 fn execute_plan_serial<F: FnMut(LaneProgress)>(
     snapshot: &PlanRunSnapshot,
     connections: &[ConnectionConfig],
@@ -327,22 +287,15 @@ fn execute_plan_serial<F: FnMut(LaneProgress)>(
     user_cancel: &AtomicBool,
     on_progress: &mut F,
 ) -> Vec<RunStep> {
-    let stop_on_failure = snapshot.failure == PlanFailure::Stop;
     let mut previous_failed = false;
     let mut all_steps = Vec::new();
     for (lane, scenario) in snapshot.scenarios.iter().enumerate() {
-        // 串行的失败传播走 not_started（顺序检查）；旗标每剧独立，
-        // 不把「本剧失败」泄漏成对后续剧本的取消信号
-        let cancel = AtomicBool::new(false);
-        let not_started = previous_failed && stop_on_failure;
+        let policy = LanePolicy::serial(snapshot.failure, scenario, user_cancel, previous_failed);
         let (steps, failed) = execute_lane_steps(
             scenario,
             connections,
             timeout,
-            &cancel,
-            not_started,
-            user_cancel,
-            stop_on_failure,
+            policy,
             &mut |progress: StepProgress| {
                 on_progress(LaneProgress { lane, progress });
             },
@@ -352,16 +305,16 @@ fn execute_plan_serial<F: FnMut(LaneProgress)>(
                 .into_iter()
                 .map(|step| tag_lane(step, lane, &scenario.scenario_name)),
         );
-        if failed {
-            previous_failed = true;
-        }
+        previous_failed |= failed;
     }
     all_steps
 }
 
-/// 并行编排：每剧本一线程同时启动（T+0 起跑），剧内步骤严格串行；
-/// 失败即停用共享取消旗标——任一剧本失败置位，各剧本每步启动前检查
-/// （在途步骤自然完成）；continue 各剧本各跑到底（旗标不共享、互不影响）。
+/// 并行编排：每剧本一线程同时启动（T+0 起跑），剧内步骤严格串行。
+/// 失败即停的编排停止由共享取消旗标承载——本剧失败经
+/// [`LanePolicy::note_failure`] 置位（Relaxed），其余剧本经决策表锁存
+/// 「编排停止」（在途步骤自然完成）；continue 时策略不持旗标，
+/// 各剧各跑到底（剧内失败即停语义不变）。
 fn execute_plan_parallel<F>(
     snapshot: &PlanRunSnapshot,
     connections: &[ConnectionConfig],
@@ -372,8 +325,8 @@ fn execute_plan_parallel<F>(
 where
     F: FnMut(LaneProgress) + Send,
 {
-    let stop_on_failure = snapshot.failure == PlanFailure::Stop;
-    let shared_cancel = Arc::new(AtomicBool::new(false));
+    let shared_cancel =
+        (snapshot.failure == PlanFailure::Stop).then(|| Arc::new(AtomicBool::new(false)));
     // 并发 lane 共享一个进度回调（FnMut 需互斥；锁毒化视为不可恢复错误）
     let sink = Mutex::new(on_progress);
     // scoped 线程：快照与连接都是本函数栈上借用，无需 'static
@@ -383,30 +336,17 @@ where
             .iter()
             .enumerate()
             .map(|(lane, scenario)| {
-                let cancel = Arc::clone(&shared_cancel);
+                let shared = shared_cancel.as_deref();
                 let sink = &sink;
                 scope.spawn(move || {
-                    // continue：旗标不共享——失败只影响本剧内，不拦其他剧本
-                    let lane_cancel = if stop_on_failure {
-                        cancel
-                    } else {
-                        Arc::new(AtomicBool::new(false))
-                    };
                     let mut on_lane = |progress: StepProgress| {
                         let mut guard =
                             sink.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
                         guard(LaneProgress { lane, progress });
                     };
-                    execute_lane_steps(
-                        scenario,
-                        connections,
-                        timeout,
-                        &lane_cancel,
-                        false,
-                        user_cancel,
-                        stop_on_failure,
-                        &mut on_lane,
-                    )
+                    let policy =
+                        LanePolicy::parallel(snapshot.failure, scenario, user_cancel, shared);
+                    execute_lane_steps(scenario, connections, timeout, policy, &mut on_lane)
                 })
             })
             .collect();
@@ -470,31 +410,25 @@ fn channel_url(channel: &str, connections: &[ConnectionConfig]) -> Option<String
 
 /// 未发出请求即失败的步骤（连接缺失/未知渠道）：结论按期望回执比对推导。
 fn failed_without_send(step: &ScenarioStepSnapshot, error: String) -> RunStep {
-    let receipt = ReceiptSnapshot {
-        status: 0,
-        elapsed_ms: 0,
-        body: String::new(),
-        reply: None,
-        error: Some(error),
-    };
-    let verdict = compare_receipt(&step.expected, &receipt);
-    RunStep {
-        expected: Some(step.expected.clone()),
-        request_body: None,
-        event_name: step.event_name.clone(),
-        event_id: step.event_id.clone(),
-        channel: step.channel.clone(),
-        url: String::new(),
-        payload: step.body.clone(),
-        signature: String::new(),
-        msg_id: String::new(),
-        timestamp: None,
-        verdict,
-        receipt,
-        skipped: false,
-        lane_index: None,
-        lane_name: None,
-    }
+    sent_step(
+        Some(&step.expected),
+        step.event_name.clone(),
+        step.event_id.clone(),
+        &step.channel,
+        String::new(),
+        step.body.clone(),
+        None,
+        String::new(),
+        String::new(),
+        None,
+        ReceiptSnapshot {
+            status: 0,
+            elapsed_ms: 0,
+            body: String::new(),
+            reply: None,
+            error: Some(error),
+        },
+    )
 }
 
 /// 单步执行：按渠道路由到协议原语（复用 connections::dispatch_event）；
@@ -514,31 +448,20 @@ fn execute_step(
             };
             let outcome =
                 douyin::dispatch_event(&douyin::client_with_timeout(timeout), config, &step.body);
-            let receipt = ReceiptSnapshot {
-                status: outcome.status,
-                elapsed_ms: outcome.elapsed_ms,
-                body: outcome.body,
-                reply: None,
-                error: outcome.error,
-            };
-            let verdict = compare_receipt(&step.expected, &receipt);
-            RunStep {
-                expected: Some(step.expected.clone()),
-                request_body: Some(step.body.clone()),
-                event_name: step.event_name.clone(),
-                event_id: step.event_id.clone(),
-                channel: step.channel.clone(),
-                url: channel_url("douyin", connections).unwrap_or_default(),
-                payload: step.body.clone(),
-                signature: outcome.signature,
-                msg_id: outcome.msg_id,
-                timestamp: None,
-                verdict,
+            let receipt = receipt_from_douyin(&outcome);
+            sent_step(
+                Some(&step.expected),
+                step.event_name.clone(),
+                step.event_id.clone(),
+                "douyin",
+                channel_url("douyin", connections).unwrap_or_default(),
+                step.body.clone(),
+                Some(step.body.clone()),
+                outcome.signature,
+                outcome.msg_id,
+                None,
                 receipt,
-                skipped: false,
-                lane_index: None,
-                lane_name: None,
-            }
+            )
         }
         "wecom" => {
             let Some(config) = connections
@@ -549,31 +472,20 @@ fn execute_step(
             };
             let outcome =
                 wecom::dispatch_event(&wecom::client_with_timeout(timeout), config, &step.body);
-            let receipt = ReceiptSnapshot {
-                status: outcome.status,
-                elapsed_ms: outcome.elapsed_ms,
-                body: outcome.body,
-                reply: outcome.reply,
-                error: outcome.error,
-            };
-            let verdict = compare_receipt(&step.expected, &receipt);
-            RunStep {
-                expected: Some(step.expected.clone()),
-                request_body: outcome.request_body,
-                event_name: step.event_name.clone(),
-                event_id: step.event_id.clone(),
-                channel: step.channel.clone(),
-                url: channel_url("wecom", connections).unwrap_or_default(),
-                payload: step.body.clone(),
-                signature: outcome.signature,
-                msg_id: outcome.nonce,
-                timestamp: Some(outcome.timestamp),
-                verdict,
+            let receipt = receipt_from_wecom(&outcome);
+            sent_step(
+                Some(&step.expected),
+                step.event_name.clone(),
+                step.event_id.clone(),
+                "wecom",
+                channel_url("wecom", connections).unwrap_or_default(),
+                step.body.clone(),
+                outcome.request_body,
+                outcome.signature,
+                outcome.nonce,
+                Some(outcome.timestamp),
                 receipt,
-                skipped: false,
-                lane_index: None,
-                lane_name: None,
-            }
+            )
         }
         other => failed_without_send(step, format!("未知渠道：{other}，无法执行步骤")),
     }

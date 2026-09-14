@@ -1,16 +1,28 @@
 import { Fragment, type ReactNode, useState } from "react";
 import { SaveAsDialog } from "@/components/entity-dialogs";
-import {
-  EntityHeader,
-  IconButton,
-  StudioButton,
-  StudioDialog,
-} from "@/components/studio-controls";
+import { EntityHeader } from "@/components/entity-header";
+import { IconButton } from "@/components/icon-button";
+import { Notice } from "@/components/notice";
+import { SearchInput } from "@/components/search-input";
 import { StudioIcon, type StudioIconName } from "@/components/studio-icon";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { selectConnection, setConnectionChannel } from "@/features/connections";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { errorMessage } from "@/lib/errors";
@@ -132,7 +144,7 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
     <Tabs
       value={tab}
       onValueChange={(value) => changeTab(value as TabKey)}
-      className="event-editor"
+      className="flex min-h-0 flex-1 flex-col gap-0"
     >
       <EntityHeader
         name={draft.name}
@@ -147,20 +159,20 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
         onFavorite={() => dispatch(actions.toggleEventFavorite())}
         actions={
           <>
-            <StudioButton tone="quiet" onClick={() => setCopying(true)}>
+            <Button variant="ghost" onClick={() => setCopying(true)}>
               另存为
-            </StudioButton>
-            <StudioButton
-              tone={dirty ? "soft" : undefined}
+            </Button>
+            <Button
+              variant={dirty ? "secondary" : "outline"}
               disabled={saving}
               onClick={() => void save()}
             >
-              <StudioIcon name="save" />
+              <StudioIcon name="save" data-icon="inline-start" />
               保存事件
-            </StudioButton>
+            </Button>
             {slots ? (
-              <StudioButton
-                tone={slots.dispatchSending ? "danger" : "primary"}
+              <Button
+                variant={slots.dispatchSending ? "destructive" : "default"}
                 disabled={
                   slots.dispatchSending
                     ? slots.dispatchStopping || !slots.onStopDispatch
@@ -178,26 +190,29 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                   slots.onDirectDispatch();
                 }}
               >
-                <StudioIcon name={slots.dispatchSending ? "stop" : "play"} />
+                <StudioIcon
+                  name={slots.dispatchSending ? "stop" : "play"}
+                  data-icon="inline-start"
+                />
                 {slots.dispatchStopping
                   ? "正在停止…"
                   : slots.dispatchSending
                     ? "停止运行"
                     : "发送一次"}
-              </StudioButton>
+              </Button>
             ) : null}
           </>
         }
       />
-      <div className="route-strip">
-        <span className="route-method">POST</span>
-        <div className="route-line">
+      <div className="mx-4 mb-4 flex items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2 lg:mx-6">
+        <span className="font-mono text-xs font-medium text-success">POST</span>
+        <div className="flex min-w-0 flex-1 items-center gap-2 font-mono text-xs text-muted-foreground">
           <StudioIcon name="arrow" />
-          <span className="route-target" title={connection?.url}>
+          <span className="truncate" title={connection?.url}>
             {connection?.url || "尚未设置回调地址"}
           </span>
         </div>
-        <span className="route-extra">
+        <span className="hidden text-xs text-muted-foreground xl:inline">
           {schema.wire === "xml" ? "XML · 加密前编辑" : "JSON · 原始平台字段"}
         </span>
         <IconButton
@@ -212,89 +227,100 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
       </div>
       <TabsList
         variant="line"
-        className="editor-tabs"
+        className="flex shrink-0 items-center gap-3 border-b px-4 py-2 lg:px-6"
         aria-label="参数编辑方式"
       >
         <TabsTrigger
           value="form"
-          className={cn("tab", tab === "form" && "active")}
+          className={cn("flex items-center gap-2", tab === "form" && "")}
         >
-          字段编辑 <span className="count-inline">{fields.length}</span>
+          字段编辑{" "}
+          <span className="ml-1 font-mono text-xs text-muted-foreground">
+            {fields.length}
+          </span>
         </TabsTrigger>
         <TabsTrigger
           value="raw"
-          className={cn("tab", tab === "raw" && "active")}
+          className={cn("flex items-center gap-2", tab === "raw" && "")}
         >
           完整报文{" "}
-          <span className="count-inline">{schema.wire.toUpperCase()}</span>
+          <span className="ml-1 font-mono text-xs text-muted-foreground">
+            {schema.wire.toUpperCase()}
+          </span>
         </TabsTrigger>
         <TabsTrigger
           value="expect"
-          className={cn("tab", tab === "expect" && "active")}
+          className={cn("flex items-center gap-2", tab === "expect" && "")}
         >
           期望回执
         </TabsTrigger>
-        <span className="grow" />
+        <span className="min-w-0 flex-1" />
         <IconButton label="管理字段说明" onClick={() => setDictionary("")}>
           <StudioIcon name="book" />
         </IconButton>
       </TabsList>
       {error ? (
-        <div role="alert" className="editor-error">
+        <Notice role="alert" className="mb-4" variant="destructive">
           {error}
-        </div>
+        </Notice>
       ) : null}
-      <TabsContent value="form" className="editor-scroll">
-        <div className="parameters-toolbar">
-          <div className="search">
-            <StudioIcon name="search" />
-            <Input
+      <TabsContent
+        value="form"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-5 lg:px-6"
+      >
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <SearchInput
               aria-label="查找参数"
               placeholder="查找参数名称或路径"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
-          <button
+          <Button
             type="button"
-            className="text-btn"
+            className="h-auto p-0 "
             onClick={() => setDictionary("")}
+            variant="link"
           >
             <StudioIcon name="book" />
-            字段说明 <span className="type-hint">{schema.version}</span>
-          </button>
+            字段说明{" "}
+            <span className="font-mono text-xs text-muted-foreground">
+              {schema.version}
+            </span>
+          </Button>
         </div>
         {schema.wire === "xml" ? (
-          <div className="info-line">
+          <Notice className="mb-4">
             <StudioIcon name="info" />
             <span>
               正在编辑加密前的 XML
               字段。此类自建应用回调没有昵称和头像字段，成员身份由 UserID 表示。
             </span>
-          </div>
+          </Notice>
         ) : schema.contentString ? (
-          <div className="info-line">
+          <Notice className="mb-4">
             <StudioIcon name="info" />
             <span>
               表单展开 content 便于编辑；完整报文仍保留该事件规定的字符串格式。
             </span>
-          </div>
+          </Notice>
         ) : null}
         {groups.map((group) => (
-          <section key={group} className="field-group">
-            <div className="group-heading">
+          <section key={group} className="mb-6 flex flex-col gap-3">
+            <div className="flex items-center gap-2 border-b pb-3">
               <StudioIcon name={groupIcon(group)} />
               <h3>{group}</h3>
-              <span className="group-count">
+              <span className="font-mono text-xs text-muted-foreground">
                 {visible.filter((field) => field.group === group).length}
               </span>
               {group.includes("用户") &&
               draft.channelId === "douyin" &&
               getAt(draft.payload, "content.user_infos[0].open_id") !==
                 undefined ? (
-                <button
+                <Button
                   type="button"
-                  className="text-btn group-aside"
+                  className="h-auto p-0 ml-auto"
                   onClick={() =>
                     dispatch(
                       actions.setDraftField({
@@ -303,12 +329,13 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                       }),
                     )
                   }
+                  variant="link"
                 >
                   同步两处用户 ID
-                </button>
+                </Button>
               ) : null}
             </div>
-            <div className="field-grid-labels">
+            <div className="hidden grid-cols-[10rem_minmax(0,1.2fr)_minmax(0,1fr)] gap-4 text-xs text-muted-foreground @3xl/workspace:grid">
               <span>参数</span>
               <span>值</span>
               <span>字段含义</span>
@@ -334,26 +361,33 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                 return (
                   <Field
                     key={field.path}
-                    className="field-row"
+                    className="grid grid-cols-1 gap-3 border-b py-4 @md/workspace:grid-cols-[9rem_minmax(0,1fr)] @3xl/workspace:grid-cols-[10rem_minmax(0,1.2fr)_minmax(0,1fr)]"
                     data-invalid={!!input?.error}
                   >
                     <FieldLabel htmlFor={control.id}>
-                      <span className="field-title">
+                      <span className="flex items-center gap-1">
                         {field.title}
                         {field.required ? (
-                          <span className="required">*</span>
+                          <span className="text-muted-foreground">*</span>
                         ) : null}
                       </span>
-                      <span className="field-path" title={field.path}>
+                      <span
+                        className="block font-mono text-xs leading-relaxed text-muted-foreground wrap-anywhere"
+                        title={field.path}
+                      >
                         <FieldPath path={field.path} />
                       </span>
                     </FieldLabel>
-                    <div className="field-value">
+                    <div className="flex min-w-0 flex-col gap-2">
                       {field.type === "boolean" ? (
-                        <select {...control}>
-                          <option value="true">true</option>
-                          <option value="false">false</option>
-                        </select>
+                        <NativeSelect {...control}>
+                          <NativeSelectOption value="true">
+                            true
+                          </NativeSelectOption>
+                          <NativeSelectOption value="false">
+                            false
+                          </NativeSelectOption>
+                        </NativeSelect>
                       ) : field.multiline || field.type === "json" ? (
                         <Textarea {...control} rows={field.multiline ? 2 : 3} />
                       ) : (
@@ -363,7 +397,7 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                             (field.format === "url" ||
                               field.path.toLowerCase().includes("id") ||
                               field.type === "number") &&
-                              "path-value",
+                              "",
                           )}
                           type={field.type === "number" ? "number" : "text"}
                           step={field.type === "number" ? "any" : undefined}
@@ -371,24 +405,27 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                         />
                       )}
                       {input?.error ? (
-                        <span className="field-error">{input.error}</span>
+                        <span className="text-sm text-destructive">
+                          {input.error}
+                        </span>
                       ) : null}
                     </div>
                     <div
-                      className="field-description"
+                      className="text-sm leading-relaxed text-muted-foreground @md/workspace:col-start-2 @3xl/workspace:col-start-auto"
                       id={`desc-${field.path}`}
                     >
                       {field.description}
                       {field.unknown ? (
                         <>
                           <br />
-                          <button
+                          <Button
                             type="button"
-                            className="text-btn"
+                            className="h-auto p-0 "
                             onClick={() => setDictionary(field.path)}
+                            variant="link"
                           >
                             补充说明
-                          </button>
+                          </Button>
                         </>
                       ) : null}
                     </div>
@@ -398,34 +435,42 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
           </section>
         ))}
         {!groups.length ? (
-          <div className="empty">
-            <StudioIcon name="search" />
-            <h3>没有找到这个字段</h3>
-            <p>试试字段路径或中文名称。</p>
-          </div>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <StudioIcon name="search" />
+              </EmptyMedia>
+              <EmptyTitle>没有找到这个字段</EmptyTitle>
+              <EmptyDescription>试试字段路径或中文名称。</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : null}
-        <button
+        <Button
           type="button"
-          className="text-btn"
+          className="h-auto p-0 "
           onClick={() => {
             setCustomPath("");
             setCustomValue("");
             setCustomField(true);
           }}
+          variant="link"
         >
           <StudioIcon name="plus" />
           添加自定义参数
-        </button>
+        </Button>
       </TabsContent>
-      <TabsContent value="raw" className="editor-scroll">
-        <div className="raw-toolbar">
-          <span className="pill">
+      <TabsContent
+        value="raw"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-5 lg:px-6"
+      >
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">
             {schema.wire === "xml" ? "加密前的 XML" : "平台原始 JSON"}
-          </span>
-          <span className="grow" />
-          <StudioButton
-            small
-            tone="quiet"
+          </Badge>
+          <span className="min-w-0 flex-1" />
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={() => {
               try {
                 dispatch(
@@ -440,14 +485,14 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
             }}
           >
             格式化
-          </StudioButton>
-          <StudioButton small tone="soft" onClick={applyRaw}>
-            <StudioIcon name="check" />
+          </Button>
+          <Button size="sm" variant="secondary" onClick={applyRaw}>
+            <StudioIcon name="check" data-icon="inline-start" />
             应用到字段
-          </StudioButton>
+          </Button>
         </div>
         <Textarea
-          className="raw-editor"
+          className="min-h-80 resize-y"
           aria-label={`完整${schema.wire.toUpperCase()}报文`}
           spellCheck={false}
           value={raw}
@@ -455,20 +500,23 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
             dispatch(actions.setDraftRawText(event.target.value))
           }
         />
-        <div className="raw-note">
+        <div className="mt-3 text-sm leading-relaxed text-muted-foreground">
           字段编辑与完整报文共享同一份参数。新增字段会保留，已有说明的字段自动显示中文含义。
         </div>
       </TabsContent>
-      <TabsContent value="expect" className="editor-scroll">
-        <div className="stack">
-          <div className="info-line">
+      <TabsContent
+        value="expect"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-5 lg:px-6"
+      >
+        <div className="flex flex-col gap-4">
+          <Notice className="mb-4">
             <StudioIcon name="info" />
             <span>
               发送时，将回执与这里的期望对照。空白响应正文表示只检查 HTTP 状态。
             </span>
-          </div>
-          <FieldGroup className="settings-grid">
-            <Field className="settings-field">
+          </Notice>
+          <FieldGroup className="grid grid-cols-1 gap-5 @xl/workspace:grid-cols-2">
+            <Field className="min-w-0">
               <FieldLabel htmlFor="expected-status">期望 HTTP 状态</FieldLabel>
               <Input
                 id="expected-status"
@@ -485,7 +533,7 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                 }
               />
             </Field>
-            <Field className="settings-field full-width">
+            <Field className="min-w-0 col-span-full">
               <FieldLabel htmlFor="expected-body">期望响应正文</FieldLabel>
               <Textarea
                 id="expected-body"
@@ -500,9 +548,9 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
               />
               <small>留空时只检查 HTTP 状态，正文按下方方式比对。</small>
             </Field>
-            <Field className="settings-field">
+            <Field className="min-w-0">
               <FieldLabel htmlFor="expected-mode">正文比对方式</FieldLabel>
-              <select
+              <NativeSelect
                 id="expected-mode"
                 value={draft.expected.bodyMode}
                 onChange={(event) =>
@@ -514,11 +562,11 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                 }
               >
                 {RECEIPT_BODY_MODES.map((mode) => (
-                  <option key={mode.id} value={mode.id}>
+                  <NativeSelectOption key={mode.id} value={mode.id}>
                     {mode.label}
-                  </option>
+                  </NativeSelectOption>
                 ))}
-              </select>
+              </NativeSelect>
               <small>
                 {
                   RECEIPT_BODY_MODES.find(
@@ -549,18 +597,18 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
         />
       ) : null}
       {customField ? (
-        <StudioDialog
+        <WorkspaceDialog
           open
           title="添加自定义参数"
           description="新增字段会保留在完整报文中，也可以补充字段说明。"
           onClose={() => setCustomField(false)}
           footer={
             <>
-              <StudioButton onClick={() => setCustomField(false)}>
+              <Button onClick={() => setCustomField(false)} variant="outline">
                 取消
-              </StudioButton>
-              <StudioButton
-                tone="primary"
+              </Button>
+              <Button
+                variant="default"
                 onClick={() => {
                   try {
                     const value =
@@ -584,13 +632,13 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
                   }
                 }}
               >
-                <StudioIcon name="plus" />
+                <StudioIcon name="plus" data-icon="inline-start" />
                 添加参数
-              </StudioButton>
+              </Button>
             </>
           }
         >
-          <FieldGroup className="modal-fields">
+          <FieldGroup className="gap-4">
             <Field>
               <FieldLabel htmlFor="custom-path">字段路径</FieldLabel>
               <Input
@@ -602,14 +650,14 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
             </Field>
             <Field>
               <FieldLabel htmlFor="custom-type">值类型</FieldLabel>
-              <select
+              <NativeSelect
                 id="custom-type"
                 value={customType}
                 onChange={(event) => setCustomType(event.target.value)}
               >
-                <option value="string">文本</option>
-                <option value="json">JSON 值</option>
-              </select>
+                <NativeSelectOption value="string">文本</NativeSelectOption>
+                <NativeSelectOption value="json">JSON 值</NativeSelectOption>
+              </NativeSelect>
             </Field>
             <Field>
               <FieldLabel htmlFor="custom-value">参数值</FieldLabel>
@@ -621,11 +669,11 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
             </Field>
           </FieldGroup>
           {error ? (
-            <p role="alert" className="modal-inline-error">
+            <Notice role="alert" className="mb-4" variant="destructive">
               {error}
-            </p>
+            </Notice>
           ) : null}
-        </StudioDialog>
+        </WorkspaceDialog>
       ) : null}
     </Tabs>
   );

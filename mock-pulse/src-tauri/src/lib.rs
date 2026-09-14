@@ -32,8 +32,7 @@ pub fn run() {
             scenarios::scenarios_load,
             scenarios::scenarios_save,
             scenarios::scenarios_delete,
-            sends::sends_dispatch_douyin,
-            sends::sends_dispatch_wecom,
+            sends::sends_dispatch_direct,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

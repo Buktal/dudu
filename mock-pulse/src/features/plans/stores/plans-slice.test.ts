@@ -11,7 +11,12 @@ import {
   eventsReducer,
   initialEventsState,
 } from "@/features/events";
-import { runsReducer } from "@/features/runs";
+import {
+  runProgress,
+  runsReducer,
+  selectLiveRun,
+  selectRuns,
+} from "@/features/runs";
 import {
   fetchScenarios,
   initialScenariosState,
@@ -22,29 +27,31 @@ import { appReducer } from "@/stores/app-slice";
 import * as api from "../api";
 import { addLane, createPlan, type Plan } from "../model";
 import {
-  addPlanLane,
-  deletePlan,
-  discardPlanDraft,
-  fetchPlans,
-  initialPlansState,
-  moveDraftLane,
-  onPlanProgress,
-  openPlan,
   planNamesReferencingEvent,
   planNamesReferencingScenario,
-  plansReducer,
+} from "../selectors";
+import {
+  addPlanLane,
+  deletePlan,
+  fetchPlans,
   savePlan,
   savePlanAs,
-  selectLivePlanRun,
+  syncPlanLane,
+  togglePlanFavorite,
+} from "./plan-library";
+import { selectPlanLiveRun, startPlanRun } from "./plan-run";
+import {
+  discardPlanDraft,
+  initialPlansState,
+  moveDraftLane,
+  openPlan,
+  plansReducer,
   selectPlanDirty,
   selectPlanRunPhase,
   setPlanDraftFailure,
   setPlanDraftMode,
   setPlanDraftName,
   startPlanDraft,
-  startPlanRun,
-  syncPlanLane,
-  togglePlanFavorite,
 } from "./plans-slice";
 
 vi.mock("../api", () => ({
@@ -294,7 +301,7 @@ describe("plans slice 素材库契约", () => {
 });
 
 describe("plans slice 编排运行状态流转", () => {
-  it("startPlanRun：物化编排快照→调 Rust 命令→live 就绪（每 lane 每步 pending）", async () => {
+  it("startPlanRun：物化编排快照→调 Rust 命令→runs 域投影实况（每 lane 每步 pending）", async () => {
     const store = makeStore({ douyin: DY_CONNECTION, wecom: WC_CONNECTION });
     store.dispatch(openPlan(SAVED_PLAN.id));
     apiMock.startPlanRun.mockResolvedValueOnce("run-x1");
@@ -314,10 +321,12 @@ describe("plans slice 编排运行状态流转", () => {
     expect(call?.[1]).toEqual([DY_CONNECTION, WC_CONNECTION]);
 
     expect(selectPlanRunPhase(store.getState().plans)).toBe("running");
-    const live = selectLivePlanRun(store.getState().plans);
+    const planId = store.getState().plans.draft?.id as string;
+    const live = selectPlanLiveRun(store.getState(), planId);
     expect(live?.runId).toBe(snapshot.runId);
+    expect(live?.kind).toBe("plan");
     expect(live?.lanes).toHaveLength(2);
-    expect(live?.lanes[0].scenarioName).toBe("抖音接待");
+    expect(live?.lanes[0].name).toBe("抖音接待");
     expect(live?.lanes[0].steps.map((step) => step.status)).toEqual([
       "pending",
       "pending",
@@ -332,7 +341,7 @@ describe("plans slice 编排运行状态流转", () => {
 
     expect(apiMock.startPlanRun).not.toHaveBeenCalled();
     expect(selectPlanRunPhase(store.getState().plans)).toBe("needConnection");
-    expect(selectLivePlanRun(store.getState().plans)).toBeNull();
+    expect(selectLiveRun(store.getState().runs)).toBeNull();
   });
 
   it("物化失败（引用剧本不在库）：rejected 且给可读错误，不调命令", async () => {
@@ -355,19 +364,20 @@ describe("plans slice 编排运行状态流转", () => {
     expect(selectPlanRunPhase(store.getState().plans)).toBe("idle");
   });
 
-  it("onPlanProgress：按 runId 过滤、按 lane 路由步骤实况", async () => {
+  it("runProgress 投影 + selectPlanLiveRun 派生：按 runId 过滤、按 lane 路由步骤实况", async () => {
     const store = makeStore({ douyin: DY_CONNECTION, wecom: WC_CONNECTION });
     store.dispatch(openPlan(SAVED_PLAN.id));
     apiMock.startPlanRun.mockResolvedValueOnce("run-x1");
     await store.dispatch(startPlanRun());
-    const runId = selectLivePlanRun(store.getState().plans)?.runId as string;
+    const planId = store.getState().plans.draft?.id as string;
+    const runId = selectLiveRun(store.getState().runs)?.runId as string;
 
     // lane 0 第 1 步 waiting → success（带步骤快照）
     store.dispatch(
-      onPlanProgress({ runId, index: 0, status: "waiting", lane: 0 }),
+      runProgress({ runId, index: 0, status: "waiting", lane: 0 }),
     );
     store.dispatch(
-      onPlanProgress({
+      runProgress({
         runId,
         index: 0,
         status: "success",
@@ -387,10 +397,10 @@ describe("plans slice 编排运行状态流转", () => {
     );
     // lane 1 第 1 步 skipped（串行失败即停的未启动剧本）
     store.dispatch(
-      onPlanProgress({ runId, index: 0, status: "skipped", lane: 1 }),
+      runProgress({ runId, index: 0, status: "skipped", lane: 1 }),
     );
 
-    const live = selectLivePlanRun(store.getState().plans);
+    const live = selectPlanLiveRun(store.getState(), planId);
     expect(live?.lanes[0].steps[0]).toMatchObject({
       status: "success",
       step: { msgId: "m-1" },
@@ -398,26 +408,27 @@ describe("plans slice 编排运行状态流转", () => {
     expect(live?.lanes[0].steps[1].status).toBe("pending");
     expect(live?.lanes[1].steps[0].status).toBe("skipped");
 
-    // runId 不匹配（其他运行）与 lane 缺失（剧本运行）都不影响本域
+    // runId 不匹配（其他运行）与 lane 缺失（剧本事件）都不影响本编排实况
     store.dispatch(
-      onPlanProgress({
+      runProgress({
         runId: "run-other",
         index: 0,
         status: "failed",
         lane: 0,
       }),
     );
-    store.dispatch(onPlanProgress({ runId, index: 1, status: "failed" }));
+    store.dispatch(runProgress({ runId, index: 1, status: "failed" }));
     expect(live?.lanes[0].steps[1].status).toBe("pending");
     expect(live?.lanes[0].steps[0].status).toBe("success");
   });
 
-  it("onPlanProgress finished：清空实况并收束阶段（历史入列由 runs 域负责）", async () => {
+  it("runProgress finished：清空实况并收束阶段（历史入列在 runs 域）", async () => {
     const store = makeStore({ douyin: DY_CONNECTION, wecom: WC_CONNECTION });
     store.dispatch(openPlan(SAVED_PLAN.id));
     apiMock.startPlanRun.mockResolvedValueOnce("run-x1");
     await store.dispatch(startPlanRun());
-    const runId = selectLivePlanRun(store.getState().plans)?.runId as string;
+    const planId = store.getState().plans.draft?.id as string;
+    const runId = selectLiveRun(store.getState().runs)?.runId as string;
 
     const finishedRecord = {
       id: runId,
@@ -427,17 +438,19 @@ describe("plans slice 编排运行状态流转", () => {
       steps: [],
     };
     store.dispatch(
-      onPlanProgress({
+      runProgress({
         runId,
         index: 0,
         status: "finished",
         run: finishedRecord,
       }),
     );
-    expect(selectLivePlanRun(store.getState().plans)).toBeNull();
+    expect(selectPlanLiveRun(store.getState(), planId)).toBeNull();
     expect(selectPlanRunPhase(store.getState().plans)).toBe("idle");
-    // plans 域不收纳历史记录（runs 域监听同一事件入列）
+    expect(store.getState().plans.activeRunId).toBeNull();
+    // plans 域不收纳历史记录（runs 域消费同一事件入列）
     expect(store.getState().plans.items).toEqual([SAVED_PLAN]);
+    expect(selectRuns(store.getState().runs)).toEqual([finishedRecord]);
   });
 });
 
@@ -522,14 +535,15 @@ describe("编排快照与异步草稿回归", () => {
     const store = makeStore({ douyin: DY_CONNECTION, wecom: WC_CONNECTION });
     store.dispatch(openPlan(SAVED_PLAN.id));
     apiMock.startPlanRun.mockImplementationOnce(async (snapshot) => {
-      expect(store.getState().plans.live?.runId).toBe(snapshot.runId);
+      expect(store.getState().runs.live?.runId).toBe(snapshot.runId);
       store.dispatch(
-        onPlanProgress({ runId: snapshot.runId, index: 0, status: "finished" }),
+        runProgress({ runId: snapshot.runId, index: 0, status: "finished" }),
       );
       return snapshot.runId;
     });
     await store.dispatch(startPlanRun()).unwrap();
-    expect(store.getState().plans.live).toBeNull();
+    expect(store.getState().runs.live).toBeNull();
     expect(store.getState().plans.planRunPhase).toBe("idle");
+    expect(store.getState().plans.activeRunId).toBeNull();
   });
 });

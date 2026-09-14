@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import type { Scenario } from "@/features/scenarios";
+
 import {
   addLane,
   createPlan,
@@ -7,9 +9,12 @@ import {
   newPlanId,
   newPlanRunId,
   type Plan,
+  type PlanItem,
   planModeLabel,
   plansReferencingScenario,
   removeLane,
+  resolveLaneScenario,
+  scenarioById,
   validatePlan,
   withFavorite,
   withPlanFailure,
@@ -131,5 +136,52 @@ describe("编排领域模型", () => {
     const referencing = plansReferencingScenario("scn-1", [a, b]);
     expect(referencing.map((plan) => plan.name)).toEqual(["A", "B"]);
     expect(plansReferencingScenario("scn-gone", [a, b])).toEqual([]);
+  });
+});
+
+/** lane 解析测试用的最小剧本工厂 */
+function scn(id: string, name: string): Scenario {
+  return { id, name, channelId: "douyin", steps: [] };
+}
+
+describe("resolveLaneScenario（lane 引用解析单点：快照优先、库内兜底）", () => {
+  const library = [scn("scn-1", "库里剧本")];
+
+  it("快照优先：有快照时返回快照本体（即使库内同 id 剧本内容不同）", () => {
+    const snapshot = scn("scn-1", "选入时的旧快照");
+    const item: PlanItem = { scenarioId: "scn-1", snapshot };
+    expect(resolveLaneScenario(item, library)).toBe(snapshot);
+  });
+
+  it("库内兜底：无快照时按 scenarioId 回剧本库解析", () => {
+    expect(resolveLaneScenario({ scenarioId: "scn-1" }, library)?.name).toBe(
+      "库里剧本",
+    );
+  });
+
+  it("双缺：无快照且库内找不到 → undefined", () => {
+    expect(
+      resolveLaneScenario({ scenarioId: "scn-gone" }, library),
+    ).toBeUndefined();
+  });
+
+  it("快照存在但库已删：仍返回快照（运行可用启动时快照，编辑器另有提示）", () => {
+    const snapshot = scn("scn-gone", "已删剧本的遗留快照");
+    const item: PlanItem = { scenarioId: "scn-gone", snapshot };
+    expect(resolveLaneScenario(item, library)).toBe(snapshot);
+  });
+});
+
+describe("scenarioById（库内按 id 查找原语）", () => {
+  const library = [scn("scn-1", "甲"), scn("scn-2", "乙")];
+
+  it("命中返回库内条目本体；未命中 undefined", () => {
+    expect(scenarioById(library, "scn-2")?.name).toBe("乙");
+    expect(scenarioById(library, "scn-gone")).toBeUndefined();
+  });
+
+  it("结构化最小形状也可查找（planStats 等消费结构子集）", () => {
+    const minimal = [{ id: "scn-1", steps: [1, 2] }];
+    expect(scenarioById(minimal, "scn-1")?.steps).toEqual([1, 2]);
   });
 });

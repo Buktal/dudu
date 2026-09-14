@@ -1,10 +1,25 @@
 import { useState } from "react";
+import { IconButton } from "@/components/icon-button";
+import { Notice } from "@/components/notice";
+import { SearchInput } from "@/components/search-input";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { CHANNELS, type ChannelId } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
 import { ChannelMark } from "./channel-mark";
-import { IconButton, StudioButton, StudioDialog } from "./studio-controls";
+
 import { StudioIcon } from "./studio-icon";
-import { Input } from "./ui/input";
 
 export type PickerItem = {
   id: string;
@@ -59,7 +74,7 @@ export function MaterialPicker({
     }
   };
   return (
-    <StudioDialog
+    <WorkspaceDialog
       open
       title={title}
       description={description}
@@ -67,15 +82,14 @@ export function MaterialPicker({
         if (!pending) onClose();
       }}
       footer={
-        <StudioButton onClick={onClose} disabled={pending}>
+        <Button onClick={onClose} disabled={pending} variant="outline">
           取消
-        </StudioButton>
+        </Button>
       }
     >
-      <div className="row">
-        <div className="search grow">
-          <StudioIcon name="search" />
-          <Input
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <SearchInput
             autoFocus
             value={query}
             placeholder={platforms ? "搜索平台名称" : "搜索名称或类型"}
@@ -87,7 +101,7 @@ export function MaterialPicker({
           />
         </div>
         {filterByChannel ? (
-          <select
+          <NativeSelect
             aria-label="筛选剧本平台"
             value={channel}
             onChange={(event) => {
@@ -95,49 +109,56 @@ export function MaterialPicker({
               setPage(1);
             }}
           >
-            <option value="all">全部平台</option>
+            <NativeSelectOption value="all">全部平台</NativeSelectOption>
             {CHANNELS.map((item) => (
-              <option key={item.id} value={item.id}>
+              <NativeSelectOption key={item.id} value={item.id}>
                 {item.name}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         ) : null}
       </div>
-      <div className="modal-list">
+      <div className="my-4 flex flex-col gap-2">
         {matches.slice((currentPage - 1) * 8, currentPage * 8).map((item) => (
-          <button
+          <Button
             key={item.id}
             type="button"
-            className="modal-item"
+            className="h-auto w-full justify-start gap-3 p-3 text-left "
             disabled={pending}
             onClick={() => void choose(item.id)}
+            variant="outline"
           >
             {item.channel ? (
               <ChannelMark channel={item.channel} />
             ) : (
-              <span className="platform-logo">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                 <StudioIcon name={platforms ? "globe" : "plan"} />
               </span>
             )}
-            <div className="grow">
+            <div className="min-w-0 flex-1">
               <h3>{item.name}</h3>
               <p>{item.description}</p>
             </div>
             <StudioIcon name="plus" />
-          </button>
+          </Button>
         ))}
       </div>
       {matches.length === 0 ? (
-        <div className="empty">
-          <StudioIcon name="search" />
-          <h3>没有可选择的素材</h3>
-          <p>换一个关键词，或先保存对应平台的素材。</p>
-        </div>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <StudioIcon name="search" />
+            </EmptyMedia>
+            <EmptyTitle>没有可选择的素材</EmptyTitle>
+            <EmptyDescription>
+              换一个关键词，或先保存对应平台的素材。
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : null}
-      <div className="modal-list-footer">
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>共 {matches.length} 项</span>
-        <div className="pagination">
+        <div className="flex items-center gap-2">
           <IconButton
             label="选择列表上一页"
             disabled={currentPage === 1}
@@ -158,10 +179,10 @@ export function MaterialPicker({
         </div>
       </div>
       {error ? (
-        <p role="alert" className="modal-inline-error">
+        <Notice role="alert" className="mb-4" variant="destructive">
           {error}
-        </p>
+        </Notice>
       ) : null}
-    </StudioDialog>
+    </WorkspaceDialog>
   );
 }

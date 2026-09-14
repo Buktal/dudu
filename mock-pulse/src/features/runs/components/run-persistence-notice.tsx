@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { StudioButton } from "@/components/studio-controls";
+import { Notice } from "@/components/notice";
 import { StudioIcon } from "@/components/studio-icon";
+import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { retrySaveRun } from "../stores/runs-slice";
 
@@ -12,19 +13,20 @@ export function RunPersistenceNotice({ runId }: { runId?: string }) {
   const [saving, setSaving] = useState(false);
   if (!runId || !error) return null;
   return (
-    <div className="info-line" role="alert">
+    <Notice className="mb-4" role="alert">
       <StudioIcon name="info" />
-      <span className="grow">运行已完成，记录尚未保存：{error}</span>
-      <StudioButton
-        small
+      <span className="min-w-0 flex-1">运行已完成，记录尚未保存：{error}</span>
+      <Button
+        size="sm"
         disabled={saving}
         onClick={() => {
           setSaving(true);
           void dispatch(retrySaveRun(runId)).finally(() => setSaving(false));
         }}
+        variant="outline"
       >
         {saving ? "正在保存…" : "重试保存"}
-      </StudioButton>
-    </div>
+      </Button>
+    </Notice>
   );
 }

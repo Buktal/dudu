@@ -1,4 +1,8 @@
-import type { EventItem, EventVersion } from "@/features/events";
+import {
+  type EventItem,
+  type EventVersion,
+  resolveEventVersion,
+} from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
 
 import type { Scenario, ScenarioStep } from "./model";
@@ -93,12 +97,11 @@ export function resolveSteps(
   events: EventItem[],
 ): StepRow[] {
   return steps.map((step, index) => {
-    const event = events.find((item) => item.id === step.eventId);
+    // 引用解析核心共用（events 域 resolveEventVersion）；展示时钟特有的
+    // missing / outdated 标记与最新版本号留在本侧。
+    const { event, version: referenced } = resolveEventVersion(events, step);
     const latest = event?.versions[event.versions.length - 1];
     const latestRevision = latest?.revision ?? 0;
-    const referenced = event?.versions.find(
-      (version) => version.revision === step.revision,
-    );
     return {
       index,
       step,

@@ -1,12 +1,13 @@
 import { Fragment } from "react";
 import { ChannelMark } from "@/components/channel-mark";
-import { StudioButton } from "@/components/studio-controls";
 import { StudioIcon } from "@/components/studio-icon";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { ChannelId } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 import type { RunRecord } from "../model";
 import { laneGroups } from "../selectors";
+import type { LiveRun } from "../stores/live";
 
 export type TimelineStep = { name: string; status: string; detail?: string };
 export type TimelineLane = {
@@ -28,9 +29,12 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <Badge
       variant="outline"
-      className={cn("result-state", status === "waiting" ? "running" : status)}
+      className={cn(
+        "inline-flex items-center gap-2 text-xs",
+        status === "waiting" ? "running" : status,
+      )}
     >
-      <span className="dot" />
+      <span className="inline-block size-1.5 shrink-0 rounded-full bg-current" />
       {labels[status] ?? status}
     </Badge>
   );
@@ -61,6 +65,24 @@ export function recordLanes(run: RunRecord): TimelineLane[] {
   }));
 }
 
+/**
+ * 实况 → 展示轨道（剧本/编排统一的 lane 适配出口）。渠道缺省回退
+ * 已完成步骤的快照，再回退抖音（live 阶段渠道尚未经事件确认时兜底）。
+ */
+export function liveLanes(run: LiveRun): TimelineLane[] {
+  return run.lanes.map((lane) => ({
+    name: lane.name,
+    channel:
+      lane.channel ??
+      lane.steps.find((step) => step.step)?.step?.channel ??
+      "douyin",
+    steps: lane.steps.map((step) => ({
+      name: step.eventName,
+      status: step.status,
+    })),
+  }));
+}
+
 export function RunSummary({
   lanes,
   mode = "serial",
@@ -81,9 +103,11 @@ export function RunSummary({
     (step) => !["pending", "waiting"].includes(step.status),
   ).length;
   return (
-    <div className="run-summary">
-      <div className="row">
-        <h3 className="grow">{active ? "正在执行" : "最近一次运行"}</h3>
+    <div className="mb-5 flex flex-col gap-3 rounded-xl border bg-muted/30 p-4">
+      <div className="flex items-center gap-2">
+        <h3 className="min-w-0 flex-1">
+          {active ? "正在执行" : "最近一次运行"}
+        </h3>
         <StatusBadge
           status={
             active
@@ -96,32 +120,34 @@ export function RunSummary({
           }
         />
         {active && onStop ? (
-          <StudioButton small tone="quiet" onClick={onStop}>
-            <StudioIcon name="stop" />
+          <Button size="sm" variant="ghost" onClick={onStop}>
+            <StudioIcon name="stop" data-icon="inline-start" />
             停止
-          </StudioButton>
+          </Button>
         ) : onOpen ? (
-          <StudioButton small tone="quiet" onClick={onOpen}>
-            <StudioIcon name="history" />
+          <Button size="sm" variant="ghost" onClick={onOpen}>
+            <StudioIcon name="history" data-icon="inline-start" />
             查看记录
-          </StudioButton>
+          </Button>
         ) : null}
       </div>
-      <div className="run-stats">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span>
           {mode === "parallel" ? "并行" : "串行"} · {lanes.length} 个剧本
         </span>
-        <span className="mono">
+        <span className="font-mono">
           {completed} / {steps.length}
         </span>
-        <span className="green">{passed} 通过</span>
-        {failed ? <span className="red">{failed} 未通过</span> : null}
-        <span className="grow" />
+        <span className="text-success">{passed} 通过</span>
+        {failed ? (
+          <span className="text-destructive">{failed} 未通过</span>
+        ) : null}
+        <span className="min-w-0 flex-1" />
         <span>HTTP 回执</span>
       </div>
-      <div className="progress-track">
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
         <div
-          className="progress-fill"
+          className="h-full rounded-full bg-primary"
           style={{
             width: `${steps.length ? (100 * completed) / steps.length : 0}%`,
           }}
@@ -139,7 +165,7 @@ export function RunLanes({
   mode?: "serial" | "parallel";
 }) {
   return (
-    <div className="run-lanes">
+    <div className="flex min-w-0 flex-col gap-3">
       {lanes.map((lane, index) => {
         const status = lane.steps.some((step) => step.status === "waiting")
           ? "waiting"
@@ -154,15 +180,15 @@ export function RunLanes({
           // biome-ignore lint/suspicious/noArrayIndexKey: 运行快照中的轨道顺序不可变，同名剧本可重复出现。
           <Fragment key={`${index}-${lane.name}`}>
             {mode === "serial" && index > 0 ? (
-              <div className="serial-join">
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <StudioIcon name="down" />
                 等待前一剧本结束
               </div>
             ) : null}
-            <article className="lane">
-              <header className="lane-head">
+            <article className="min-w-0 rounded-xl border bg-card p-4">
+              <header className="mb-3 flex flex-wrap items-center gap-2">
                 <ChannelMark channel={lane.channel} small />
-                <div className="grow">
+                <div className="min-w-0 flex-1">
                   <h3>{lane.name}</h3>
                   <p>
                     {lane.timing ??
@@ -175,18 +201,20 @@ export function RunLanes({
                 </div>
                 <StatusBadge status={status} />
               </header>
-              <div className="lane-track">
+              <div className="flex min-w-0 items-center gap-3 overflow-x-auto pb-2">
                 {lane.steps.map((step, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: 运行快照中的步骤位置不可变，事件可重复出现。
                   <Fragment key={`${i}-${step.name}`}>
-                    {i ? <span className="track-arrow">→</span> : null}
+                    {i ? (
+                      <span className="shrink-0 text-muted-foreground">→</span>
+                    ) : null}
                     <div
                       className={cn(
-                        "lane-node",
+                        "min-w-28 shrink-0 rounded-lg border bg-background p-3 text-sm text-muted-foreground",
                         step.status === "success"
                           ? "done"
                           : step.status === "waiting"
-                            ? "active"
+                            ? ""
                             : step.status,
                       )}
                     >

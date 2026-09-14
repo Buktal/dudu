@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useContext, useState } from "react";
-import { StudioButton, StudioDialog } from "./studio-controls";
+import { Button } from "@/components/ui/button";
+import { WorkspaceDialog } from "@/components/workspace-dialog";
 
 const LibraryContext = createContext({
   requested: "",
@@ -31,27 +32,36 @@ export function ResourceWorkspace({
   const { requested, request } = useLibraryDisclosure();
   const closeLibrary = () => request("");
   return (
-    <div className="workspace-body">
-      <aside aria-label={libraryLabel} className="library">
+    <div className="flex min-h-0 flex-1">
+      <aside
+        aria-label={libraryLabel}
+        className="hidden w-64 shrink-0 flex-col border-r bg-background xl:w-72 min-[900px]:flex"
+      >
         {library(closeLibrary)}
       </aside>
       <section
         aria-label="编辑工作区"
-        className="main-content @container/workspace"
+        className="flex min-h-0 min-w-0 flex-1 flex-col bg-card @container/workspace"
       >
         {children}
       </section>
-      <StudioDialog
+      <WorkspaceDialog
         open={requested === viewId}
         title={libraryLabel}
         description="搜索并打开一项素材，继续编辑。"
         onClose={closeLibrary}
-        footer={<StudioButton onClick={closeLibrary}>关闭</StudioButton>}
+        footer={
+          <Button onClick={closeLibrary} variant="outline">
+            关闭
+          </Button>
+        }
       >
-        <div className="browse-modal">
-          <div className="library">{library(closeLibrary)}</div>
+        <div className="flex h-[65dvh] min-h-0 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col">
+            {library(closeLibrary)}
+          </div>
         </div>
-      </StudioDialog>
+      </WorkspaceDialog>
     </div>
   );
 }

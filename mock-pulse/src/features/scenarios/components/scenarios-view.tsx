@@ -2,15 +2,27 @@ import { useState } from "react";
 import { ChannelPicker } from "@/components/channel-picker";
 import { DraftGuard } from "@/components/draft-guard";
 import { DeleteEntityDialog } from "@/components/entity-dialogs";
+import { Notice } from "@/components/notice";
 import {
   ResourceFilters,
   ResourceLibrary,
 } from "@/components/resource-library";
 import { ResourceWorkspace } from "@/components/resource-workspace";
-import { StudioButton, StudioDialog } from "@/components/studio-controls";
 import { StudioIcon } from "@/components/studio-icon";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId } from "@/lib/channels";
 import { filterScenarios, paginateScenarios } from "../selectors";
@@ -122,34 +134,38 @@ export function ScenariosView({
           {state.draft ? (
             <ScenarioEditor key={state.draft.id} {...slots} />
           ) : (
-            <div className="empty workspace-empty">
-              <StudioIcon name="scenario" />
-              <h3>选择一个剧本开始</h3>
-              <StudioButton tone="soft" onClick={openCreate}>
-                <StudioIcon name="plus" />
+            <Empty className="min-h-60">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <StudioIcon name="scenario" />
+                </EmptyMedia>
+                <EmptyTitle>选择一个剧本开始</EmptyTitle>
+              </EmptyHeader>
+              <Button variant="secondary" onClick={openCreate}>
+                <StudioIcon name="plus" data-icon="inline-start" />
                 新建
-              </StudioButton>
-            </div>
+              </Button>
+            </Empty>
           )}
           {creating ? (
-            <StudioDialog
+            <WorkspaceDialog
               open
               title="新建剧本"
               description="先选平台。添加第一步后，平台锁定。"
               onClose={() => setCreating(false)}
               footer={
                 <>
-                  <StudioButton onClick={() => setCreating(false)}>
+                  <Button onClick={() => setCreating(false)} variant="outline">
                     取消
-                  </StudioButton>
-                  <StudioButton tone="primary" onClick={create}>
-                    <StudioIcon name="arrow" />
+                  </Button>
+                  <Button variant="default" onClick={create}>
+                    <StudioIcon name="arrow" data-icon="inline-start" />
                     开始编辑
-                  </StudioButton>
+                  </Button>
                 </>
               }
             >
-              <FieldGroup className="modal-fields">
+              <FieldGroup className="gap-4">
                 <Field>
                   <FieldLabel htmlFor="new-scenario-name">剧本名称</FieldLabel>
                   <Input
@@ -168,7 +184,7 @@ export function ScenariosView({
                   <FieldLabel htmlFor="new-scenario-platform">
                     所属平台
                   </FieldLabel>
-                  <select
+                  <NativeSelect
                     id="new-scenario-platform"
                     value={channel}
                     onChange={(event) =>
@@ -176,19 +192,19 @@ export function ScenariosView({
                     }
                   >
                     {CHANNELS.map((item) => (
-                      <option key={item.id} value={item.id}>
+                      <NativeSelectOption key={item.id} value={item.id}>
                         {item.name}
-                      </option>
+                      </NativeSelectOption>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </Field>
               </FieldGroup>
               {error ? (
-                <p className="modal-inline-error" role="alert">
+                <Notice className="mb-4" role="alert" variant="destructive">
                   {error}
-                </p>
+                </Notice>
               ) : null}
-            </StudioDialog>
+            </WorkspaceDialog>
           ) : null}
           {deleting ? (
             <DeleteEntityDialog

@@ -1,11 +1,17 @@
+// 模块图说明：本域单向依赖 events | connections（经对方 index.ts，类型 +
+// 连接就绪判定）→ lib；不反向被它们引用。运行实况投影（live.ts）与运行
+// 会话（session.ts，互斥/在途/连接门/停止态的唯一出口）都在本域，plans 域
+// 经本入口消费它们。
+
 export type {
-  DispatchOutcome,
-  WecomDispatchOutcome,
+  DirectDispatchPayload,
+  DirectSendOutcome,
 } from "./api";
 export { DispatchPanel } from "./components/dispatch-panel";
 export { RunPersistenceNotice } from "./components/run-persistence-notice";
 export { RunStepDetail, StepVerdictBadge } from "./components/run-step-detail";
 export {
+  liveLanes,
   RunLanes,
   RunSummary,
   recordLanes,
@@ -18,7 +24,6 @@ export type {
   RunRecord,
   RunStep,
   RunVerdict,
-  SendOutcome,
 } from "./model";
 export {
   filterRuns,
@@ -35,29 +40,57 @@ export {
   type SnapshotSource,
 } from "./snapshot";
 export {
-  clearDispatch,
   type DispatchPanelPhase,
   type DispatchResult,
   directDispatch,
+} from "./stores/direct-dispatch";
+export {
+  applyLiveProgress,
+  type LiveLane,
+  type LiveRun,
+  type LiveRunKind,
+  type LiveRunSeed,
+  type LiveStep,
+  type LiveStepStatus,
+  liveCleared,
+  liveRunFromLanes,
+  liveStarted,
+  type RunProgressPayload,
+  runProgress,
+  selectLiveRun,
+  selectLiveRunFor,
+} from "./stores/live";
+export {
+  clearDispatch,
   fetchRuns,
   initialRunsState,
-  type LiveRun,
-  type LiveRunStep,
-  type LiveStepStatus,
-  onRunProgress,
-  type RunProgressPayload,
-  type RunsState,
   retrySaveRun,
   runsReducer,
-  type ScenarioRunPhase,
   selectLastDispatch,
-  selectLiveRun,
   selectPanelMessage,
   selectPanelPhase,
   selectRun,
   selectRuns,
   selectScenarioRunMessage,
   selectScenarioRunPhase,
-  startScenarioRun,
   stopRun,
 } from "./stores/runs-slice";
+export {
+  type ScenarioRunPhase,
+  type StartScenarioRunPayload,
+  startScenarioRun,
+} from "./stores/scenario-run";
+export {
+  type ActiveRun,
+  activeRun,
+  canStartRun,
+  isRunBusy,
+  isStoppingRun,
+  missingConnections,
+  type PlanRunSliceLike,
+  type RunKind,
+  type RunPhase,
+  type RunSessionState,
+  type RunStartCheck,
+  stoppingRunId,
+} from "./stores/session";

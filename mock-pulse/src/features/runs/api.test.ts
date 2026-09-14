@@ -2,13 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ConnectionConfig } from "@/features/connections";
-import {
-  dispatchDouyin,
-  dispatchWecom,
-  loadRuns,
-  saveRun,
-  startScenarioRun,
-} from "./api";
+import type { ExpectedReceipt } from "@/features/events";
+import { dispatchDirect, loadRuns, saveRun, startScenarioRun } from "./api";
 import type { RunRecord } from "./model";
 import type { RunSnapshot } from "./snapshot";
 
@@ -62,49 +57,46 @@ describe("runs api 契约", () => {
     expect(invokeMock).toHaveBeenCalledWith("runs_save", { run });
   });
 
-  it("dispatchDouyin 调用 sends_dispatch_douyin，传连接配置与明文 body", async () => {
+  it("dispatchDirect 调用 sends_dispatch_direct，传连接、明文与事件/期望快照", async () => {
     const body = '{"event":"im_receive_msg"}';
-    const outcome = {
-      msgId: "0f8c1b2a-3d4e-4f5a-9b8c-7d6e5f4a3b2c",
-      signature: "a".repeat(40),
+    const expected: ExpectedReceipt = {
       status: 200,
-      elapsedMs: 8,
-      body: "ok",
-      error: null,
+      body: "",
+      bodyMode: "contains",
+    };
+    const outcome = {
+      step: {
+        eventName: "新客问价",
+        eventId: "evt-001",
+        channel: "douyin" as const,
+        url: connection.url,
+        payload: body,
+        requestBody: body,
+        expected,
+        signature: "a".repeat(40),
+        msgId: "0f8c1b2a-3d4e-4f5a-9b8c-7d6e5f4a3b2c",
+        receipt: { status: 200, elapsedMs: 8, body: "ok", error: null },
+        verdict: { passed: true, reason: "HTTP 200，正文包含「ok」" },
+      },
+      cancelled: false,
     };
     invokeMock.mockResolvedValueOnce(outcome);
-    await expect(dispatchDouyin(connection, body)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("sends_dispatch_douyin", {
+    await expect(
+      dispatchDirect(connection, {
+        body,
+        eventName: "新客问价",
+        eventId: "evt-001",
+        expected,
+        runId: "run-1",
+      }),
+    ).resolves.toEqual(outcome);
+    expect(invokeMock).toHaveBeenCalledWith("sends_dispatch_direct", {
       config: connection,
       body,
-    });
-  });
-
-  it("dispatchWecom 调用 sends_dispatch_wecom，传企微连接配置与明文 XML", async () => {
-    const wecom: ConnectionConfig = {
-      channel: "wecom",
-      url: "http://127.0.0.1:8080/webhooks/wecom",
-      corpId: "ww_corp",
-      token: "QDG6eK",
-      encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
-      agentId: "218",
-    };
-    const body = "<xml><ToUserName><![CDATA[ww_corp]]></ToUserName></xml>";
-    const outcome = {
-      signature: "a".repeat(40),
-      timestamp: "1409659813",
-      nonce: "1372623149",
-      status: 200,
-      elapsedMs: 9,
-      body: "success",
-      reply: null,
-      error: null,
-    };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(dispatchWecom(wecom, body)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("sends_dispatch_wecom", {
-      config: wecom,
-      body,
+      eventName: "新客问价",
+      eventId: "evt-001",
+      expected,
+      runId: "run-1",
     });
   });
 

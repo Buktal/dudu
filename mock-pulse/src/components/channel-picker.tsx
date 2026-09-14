@@ -36,7 +36,7 @@ export function ChannelPicker(props: Props) {
           {props.value === "all" ? "全部平台" : channelById(props.value)?.name}
         </span>
         {props.value === "all" ? (
-          <span className="muted">{CHANNELS.length}</span>
+          <span className="text-muted-foreground">{CHANNELS.length}</span>
         ) : null}
         <StudioIcon name="chevron" />
       </button>

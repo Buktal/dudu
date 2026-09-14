@@ -7,6 +7,7 @@ export {
   type EventVersion,
   type ExpectedReceipt,
   type ReceiptBodyMode,
+  resolveEventVersion,
 } from "./model";
 export {
   parseWireDraft,
@@ -15,11 +16,8 @@ export {
   wireDraftText,
 } from "./payload";
 export {
-  compareReceipt,
   describeExpected,
   RECEIPT_BODY_MODES,
-  type ReceiptFact,
-  type ReceiptVerdict,
 } from "./receipt";
 export {
   DOUYIN_EVENT_SCHEMAS,

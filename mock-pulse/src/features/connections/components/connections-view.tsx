@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { EntityHeader } from "@/components/entity-header";
+import { Notice } from "@/components/notice";
 import { ResourceLibrary } from "@/components/resource-library";
 import { ResourceWorkspace } from "@/components/resource-workspace";
-import { EntityHeader, StudioButton } from "@/components/studio-controls";
 import { StudioIcon } from "@/components/studio-icon";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
@@ -140,30 +143,30 @@ export function ConnectionsView() {
         dirty={dirty}
         saved={!!saved}
         actions={
-          <StudioButton
-            tone={dirty ? "soft" : undefined}
+          <Button
+            variant={dirty ? "secondary" : "outline"}
             disabled={saving}
             onClick={() => void save()}
           >
-            <StudioIcon name="save" />
+            <StudioIcon name="save" data-icon="inline-start" />
             保存连接
-          </StudioButton>
+          </Button>
         }
       />
-      <div className="editor-tabs">
-        <span className="tab active">目标服务</span>
-        <span className="grow" />
-        <span className="pill">本地开发</span>
+      <div className="flex shrink-0 items-center gap-3 border-b px-4 py-2 lg:px-6">
+        <span className="flex items-center gap-2">目标服务</span>
+        <span className="min-w-0 flex-1" />
+        <Badge variant="secondary">本地开发</Badge>
       </div>
-      <div className="editor-scroll">
-        <div className="info-line">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 lg:px-6">
+        <Notice className="mb-4">
           <StudioIcon name="info" />
           <span>
             填写你的服务接收回调的地址。发送时使用该平台的凭据进行签名或加密。
           </span>
-        </div>
-        <FieldGroup className="settings-grid">
-          <Field className="settings-field full-width">
+        </Notice>
+        <FieldGroup className="grid grid-cols-1 gap-5 @xl/workspace:grid-cols-2">
+          <Field className="min-w-0 col-span-full">
             <FieldLabel htmlFor="connection-url">回调目标地址</FieldLabel>
             <Input
               id="connection-url"
@@ -176,7 +179,7 @@ export function ConnectionsView() {
           {fields.map((field) => (
             <Field
               key={`${channel}-${field.key}`}
-              className={`settings-field${field.key === "encodingAesKey" ? " full-width" : ""}`}
+              className={`settings-field${field.key === "encodingAesKey" ? "col-span-full" : ""}`}
             >
               <FieldLabel htmlFor={`connection-${field.key}`}>
                 {field.label}
@@ -193,7 +196,7 @@ export function ConnectionsView() {
             </Field>
           ))}
         </FieldGroup>
-        <div className="connection-line">
+        <div className="flex flex-wrap items-center gap-3">
           <StudioIcon name="info" />
           <span>
             {channel === "douyin"
@@ -201,40 +204,49 @@ export function ConnectionsView() {
               : "企业微信自建应用 · XML 回调"}
           </span>
         </div>
-        <section className="connection-test">
-          <h3 className="section-title">连接测试</h3>
-          <p className="raw-note">
+        <section className="mt-8 flex flex-col gap-3">
+          <h3 className="text-sm font-semibold">连接测试</h3>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {channel === "douyin"
               ? "发送 verify_webhook challenge，检查目标服务是否原样回显。"
               : "发送加密 echostr，检查目标服务是否正确解密并回显。"}
           </p>
-          <div className="row">
-            <StudioButton
+          <div className="flex items-center gap-2">
+            <Button
               disabled={test.status === "testing"}
               onClick={() => void dispatch(actions.testConnection(draft))}
+              variant="outline"
             >
               <StudioIcon
                 name={test.status === "testing" ? "refresh" : "link"}
-                className={test.status === "testing" ? "spin" : undefined}
+                className={
+                  test.status === "testing"
+                    ? "motion-safe:animate-spin"
+                    : undefined
+                }
+                data-icon="inline-start"
               />
               {test.status === "testing" ? "正在测试…" : "测试连接"}
-            </StudioButton>
+            </Button>
             {test.status === "success" ? (
-              <span className="pill success">连接正常</span>
+              <Badge variant="secondary">连接正常</Badge>
             ) : test.status === "failed" ? (
-              <span className="pill error">测试未通过</span>
+              <Badge variant="destructive">测试未通过</Badge>
             ) : null}
           </div>
           {test.message ? (
-            <p className="raw-note" role="status">
+            <p
+              className="mt-3 text-sm leading-relaxed text-muted-foreground"
+              role="status"
+            >
               {test.message}
             </p>
           ) : null}
         </section>
         {error ? (
-          <p role="alert" className="modal-inline-error">
+          <Notice role="alert" className="mb-4" variant="destructive">
             {error}
-          </p>
+          </Notice>
         ) : null}
       </div>
     </ResourceWorkspace>

@@ -32,7 +32,7 @@ Monorepo。规范唯一入口为本文件，子目录不建 AGENTS.md / CLAUDE.m
 - 纵切 `features/<domain>/{components,hooks,stores,api.ts,index.ts}`；共享 `components/|hooks/|stores/|lib/`。
 - 依赖方向：`features → components|hooks|stores|lib`，`components → lib`；跨 feature 走对方 `index.ts`。
 - `components/ui/` 为 CLI 生成物，只经 CLI 变更。
-- 单文件 ≤ 300 行，超限拆分子组件或按职责拆模块。
+- 单文件 ≤ 500 行，超限拆分子组件或按职责拆模块。
 
 ### Reuse-first — canonical stack（同场景唯一选型）
 
