@@ -54,8 +54,12 @@ mod tests {
         let configs = vec![
             ConnectionConfig::Douyin {
                 url: "http://127.0.0.1:8080/webhooks/douyin".into(),
+                system: super::super::DouyinSystem::Dop,
                 client_key: "tt_key".into(),
                 client_secret: "tt_secret".into(),
+                mini_game_token: String::new(),
+                isv_token: String::new(),
+                isv_key: String::new(),
             },
             ConnectionConfig::Wecom {
                 url: "http://127.0.0.1:8080/webhooks/wecom".into(),
@@ -73,7 +77,8 @@ mod tests {
 
     #[test]
     fn deserializes_legacy_douyin_only_file() {
-        // #14–#16 旧版写盘形状（平铺 struct + channel 字段）必须原样可读（向后兼容）
+        // #14–#16 旧版写盘形状（平铺 struct + channel 字段）必须原样可读（向后兼容）；
+        // #30 体系字段缺省：无 system 时按 dop、体系凭据按空串落位
         let dir = temp_dir("legacy");
         let legacy = r#"[{"channel":"douyin","url":"http://localhost/hook","clientKey":"k","clientSecret":"s"}]"#;
         fs::write(
@@ -85,8 +90,33 @@ mod tests {
             load_connections(&dir).unwrap(),
             vec![ConnectionConfig::Douyin {
                 url: "http://localhost/hook".into(),
+                system: super::super::DouyinSystem::Dop,
                 client_key: "k".into(),
                 client_secret: "s".into(),
+                mini_game_token: String::new(),
+                isv_token: String::new(),
+                isv_key: String::new(),
+            }]
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn deserializes_douyin_system_tag_and_system_credentials() {
+        // #30 体系内标：snake_case 序列化（dop/mini_game/isv）与体系凭据各自落位
+        let dir = temp_dir("system");
+        let raw = r#"[{"channel":"douyin","url":"http://localhost/push","system":"mini_game","clientKey":"tt12321","clientSecret":"","miniGameToken":"mg_token","isvToken":"","isvKey":""}]"#;
+        fs::write(connections_file(&dir), raw).unwrap();
+        assert_eq!(
+            load_connections(&dir).unwrap(),
+            vec![ConnectionConfig::Douyin {
+                url: "http://localhost/push".into(),
+                system: super::super::DouyinSystem::MiniGame,
+                client_key: "tt12321".into(),
+                client_secret: String::new(),
+                mini_game_token: "mg_token".into(),
+                isv_token: String::new(),
+                isv_key: String::new(),
             }]
         );
         fs::remove_dir_all(&dir).unwrap();
@@ -105,8 +135,12 @@ mod tests {
         let configs = vec![
             ConnectionConfig::Douyin {
                 url: "http://localhost/hook".into(),
+                system: super::super::DouyinSystem::LifeService,
                 client_key: "k".into(),
                 client_secret: "s".into(),
+                mini_game_token: String::new(),
+                isv_token: String::new(),
+                isv_key: String::new(),
             },
             ConnectionConfig::Wecom {
                 url: "http://localhost/wecom".into(),
@@ -120,6 +154,7 @@ mod tests {
         let raw = fs::read_to_string(connections_file(&dir)).unwrap();
         assert!(raw.contains("\"channel\": \"douyin\""));
         assert!(raw.contains("\"channel\": \"wecom\""));
+        assert!(raw.contains("\"system\": \"life_service\""));
         assert!(raw.contains("\"clientKey\""));
         assert!(raw.contains("\"clientSecret\""));
         assert!(raw.contains("\"corpId\""));

@@ -127,8 +127,12 @@ mod tests {
     fn douyin_config(url: String) -> ConnectionConfig {
         ConnectionConfig::Douyin {
             url,
+            system: crate::connections::DouyinSystem::Dop,
             client_key: "tt_key".into(),
             client_secret: "tt_secret".into(),
+            mini_game_token: String::new(),
+            isv_token: String::new(),
+            isv_key: String::new(),
         }
     }
 

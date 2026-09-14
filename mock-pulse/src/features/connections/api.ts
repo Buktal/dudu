@@ -1,6 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 
 /**
+ * 抖音推送体系（与 Rust 端 DouyinSystem 内标一致，snake_case）：
+ * 四套并行推送体系，验签与信封完全不同（事实库 §2）。
+ */
+export type DouyinSystem = "dop" | "life_service" | "mini_game" | "isv";
+
+/**
  * 连接配置按渠道区分形状（与 Rust 端 ConnectionConfig 内标枚举一致，
  * 以 channel 字段判别；持久化与 IPC 透传均为 camelCase）。
  */
@@ -8,8 +14,18 @@ export type DouyinConnectionConfig = {
   channel: "douyin";
   /** 回调目标地址，事件与剧本共享 */
   url: string;
+  /** 推送体系：决定握手与直发的验签/信封协议 */
+  system: DouyinSystem;
+  /** 应用标识：dop/生活服务 client_key；小游戏 AppID（x-appid 头） */
   clientKey: string;
+  /** 签名密钥：dop client_secret / 生活服务 AppSecret */
   clientSecret: string;
+  /** 小游戏消息推送 Token（官方 3~32 字符，参与 x-signature） */
+  miniGameToken: string;
+  /** 服务商 消息验证 TOKEN（参与 MsgSignature） */
+  isvToken: string;
+  /** 服务商 消息加密解密 KEY（官方 AES 参数待核验，暂随配置保存） */
+  isvKey: string;
 };
 
 export type WecomConnectionConfig = {
@@ -45,7 +61,8 @@ export function saveConnection(
   return invoke<ConnectionConfig[]>("connections_save", { config });
 }
 
-/** 按抖音 verify_webhook 协议向目标发起 challenge 握手 */
+/** 按抖音连接的推送体系测试连接：dop/生活服务 challenge 握手、
+ *  小游戏 verify_request 握手、服务商授权推送（目标回 success） */
 export function testDouyinConnection(
   config: DouyinConnectionConfig,
 ): Promise<TestOutcome> {

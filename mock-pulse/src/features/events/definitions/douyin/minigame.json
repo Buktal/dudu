@@ -1,0 +1,130 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "douyin",
+  "version": "2026.09",
+  "schemas": {
+    "dy-mg-verify": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/message-push/msg-push-config-guide",
+      "fields": []
+    },
+    "dy-mg-gift": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/message-push/msg-push-config-guide",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "接收方（小游戏 AppID）",
+          "type": "string",
+          "group": "推送信封",
+          "description": "游戏站的小游戏 AppID（对应推送头 x-appid）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 openId",
+          "type": "string",
+          "group": "推送信封",
+          "description": "触发礼包推送的用户 openId。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "推送时间",
+          "type": "number",
+          "group": "推送信封",
+          "description": "10 位 Unix 秒级时间戳。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "推送信封",
+          "description": "礼包推送占位值 gift_delivery（官方未公开礼包推送报文明细，待核验；适配器按此派生 x-msg-type 头）。"
+        }
+      ]
+    },
+    "dy-mg-im-text": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/message-push-customer-service",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "接收方（小游戏 AppID）",
+          "type": "string",
+          "group": "推送信封",
+          "description": "游戏站的小游戏 AppID（对应推送头 x-appid）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 openId",
+          "type": "string",
+          "group": "推送信封",
+          "description": "发客服消息的用户 openId。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "推送时间",
+          "type": "number",
+          "group": "推送信封",
+          "description": "10 位 Unix 秒级时间戳。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "推送信封",
+          "description": "文本为 text；适配器据此派生 x-msg-type=douyin_microgame_im 头。"
+        },
+        {
+          "path": "Content",
+          "title": "消息内容",
+          "type": "string",
+          "group": "推送信封",
+          "description": "用户发来的客服消息文本。",
+          "multiline": true
+        }
+      ]
+    },
+    "dy-mg-im-image": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/message-push-customer-service",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "接收方（小游戏 AppID）",
+          "type": "string",
+          "group": "推送信封",
+          "description": "游戏站的小游戏 AppID（对应推送头 x-appid）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 openId",
+          "type": "string",
+          "group": "推送信封",
+          "description": "发客服消息的用户 openId。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "推送时间",
+          "type": "number",
+          "group": "推送信封",
+          "description": "10 位 Unix 秒级时间戳。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "推送信封",
+          "description": "图片为 image。"
+        },
+        {
+          "path": "PicUrl",
+          "title": "图片地址",
+          "type": "string",
+          "group": "推送信封",
+          "description": "图片资源地址，可检查服务下载与兜底逻辑。",
+          "format": "url"
+        }
+      ]
+    }
+  }
+}

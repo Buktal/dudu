@@ -73,8 +73,8 @@ export type ChannelRow = {
 export const CHANNEL_REGISTRY = {
   douyin: {
     name: "抖音",
-    protocol: "dop · JSON 回调",
-    note: "抖音开放平台 Webhooks：JSON 报文，X-Douyin-Signature = sha1(client_secret + body)",
+    protocol: "四套推送体系 · JSON 回调",
+    note: "dop/生活服务 X-Douyin-Signature=sha1(secret+body)，小游戏 x-signature=base64(md5)，服务商 MsgSignature 信封，按连接推送体系路由",
     icon: "Music2",
     implemented: true,
   },

@@ -6,6 +6,7 @@
 
 pub mod douyin;
 pub mod store;
+pub(crate) mod util;
 pub mod wecom;
 
 use std::time::Duration;
@@ -138,16 +139,47 @@ pub(crate) fn request_error_reason(err: &reqwest::Error, timeout_note: &str) -> 
     }
 }
 
+/// 抖音推送体系（事实库 §2：四套并行推送体系，验签与载荷完全不同）。
+/// 连接配置按体系路由协议原语；序列化 snake_case，缺省 dop（旧版数据形状不变）。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DouyinSystem {
+    /// dop Webhooks：移动/网站应用 + IM 私信，X-Douyin-Signature = sha1(client_secret + body)
+    #[default]
+    Dop,
+    /// 生活服务 WebHooks：X-Douyin-Signature = sha1(AppSecret + 去换行 body)，2.5 秒应答窗口
+    LifeService,
+    /// 小游戏消息推送：x-signature = base64(md5(排序四头 + body + token))
+    MiniGame,
+    /// 服务商（第三方小程序）：{Nonce, TimeStamp, Encrypt, MsgSignature} 信封
+    Isv,
+}
+
 /// 平台连接配置：持久化（store）与协议握手（douyin/wecom）共用的域类型。
-/// 按渠道存不同凭据形状，以 channel 内标序列化（旧版抖音数据形状不变）。
+/// 按渠道存不同凭据形状，以 channel 内标序列化（旧版抖音数据形状不变，
+/// 新增体系字段全部 serde default 缺省）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "channel")]
 pub enum ConnectionConfig {
     #[serde(rename = "douyin", rename_all = "camelCase")]
     Douyin {
         url: String,
+        /// 推送体系：决定握手与直发的验签/信封协议（缺省 dop）
+        #[serde(default)]
+        system: DouyinSystem,
+        /// 应用标识：dop/生活服务 client_key；小游戏 AppID（x-appid 头）
         client_key: String,
+        /// 签名密钥：dop client_secret / 生活服务 AppSecret
         client_secret: String,
+        /// 小游戏消息推送 Token（官方配置项，3~32 字符，参与 x-signature）
+        #[serde(default)]
+        mini_game_token: String,
+        /// 服务商 消息验证 TOKEN（参与 MsgSignature）
+        #[serde(default)]
+        isv_token: String,
+        /// 服务商 消息加密解密 KEY（官方 AES 参数待核验(09-27)，暂随配置保存）
+        #[serde(default)]
+        isv_key: String,
     },
     #[serde(rename = "wecom", rename_all = "camelCase")]
     Wecom {
@@ -194,7 +226,8 @@ async fn run_handshake(
     .map_err(|err| err.to_string())
 }
 
-/// 按抖音 verify_webhook 协议测试连接（challenge 握手）。
+/// 按抖音连接配置的推送体系测试连接：dop/生活服务 verify_webhook challenge 握手、
+/// 小游戏 verify_request x-signature 握手、服务商授权推送（回 success）。
 #[tauri::command]
 pub async fn connections_test_douyin(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
     run_handshake(&douyin::Adapter, config).await
@@ -246,8 +279,12 @@ mod tests {
     fn adapter_registry_covers_every_config_variant() {
         let douyin_config = ConnectionConfig::Douyin {
             url: String::new(),
+            system: DouyinSystem::Dop,
             client_key: String::new(),
             client_secret: String::new(),
+            mini_game_token: String::new(),
+            isv_token: String::new(),
+            isv_key: String::new(),
         };
         let wecom_config = ConnectionConfig::Wecom {
             url: String::new(),

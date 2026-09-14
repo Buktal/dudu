@@ -356,8 +356,12 @@ fn dispatch_reports_timeout_without_response() {
 fn dispatch_rejects_non_wecom_config() {
     let config = ConnectionConfig::Douyin {
         url: "http://127.0.0.1:1/hook".into(),
+        system: crate::connections::DouyinSystem::Dop,
         client_key: "tt_key".into(),
         client_secret: "tt_secret".into(),
+        mini_game_token: String::new(),
+        isv_token: String::new(),
+        isv_key: String::new(),
     };
     let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, "<xml/>");
     assert_eq!(outcome.status, 0);

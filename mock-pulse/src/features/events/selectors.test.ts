@@ -214,12 +214,13 @@ function userEvent(overrides: Partial<EventItem> = {}): EventItem {
 describe("templatesForChannel（目录模板源）", () => {
   it("all = 全渠道已接入模板；指定渠道 = 该渠道全部模板", () => {
     expect(templatesForChannel("all")).toHaveLength(EVENT_SCHEMAS.length);
-    expect(templatesForChannel("douyin").map((schema) => schema.id)).toEqual([
-      "dy-text",
-      "dy-image",
-      "dy-enter",
-      "dy-read",
-    ]);
+    expect(templatesForChannel("douyin")).toHaveLength(33);
+    expect(templatesForChannel("douyin")[0]?.id).toBe("dy-create-video");
+    expect(templatesForChannel("douyin")[13]?.id).toBe(
+      "dy-service-market-order",
+    );
+    expect(templatesForChannel("douyin")[14]?.id).toBe("dy-text");
+    expect(templatesForChannel("douyin")[32]?.id).toBe("dy-isv-authorized");
     expect(templatesForChannel("wecom").map((schema) => schema.id)).toEqual([
       "wc-text",
       "wc-enter",
@@ -238,21 +239,30 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
       ...NO_FILTERS,
       channel: "douyin",
     });
-    // 16 条 douyin 用户素材 + 4 条抖音内置模板
-    expect(rows).toHaveLength(20);
-    expect(rows.slice(0, 4).map((row) => row.region)).toEqual([
-      "template",
-      "template",
-      "template",
-      "template",
-    ]);
-    // 分组固定消息在前：dy-text/dy-image（消息）→ dy-enter/dy-read（事件）
+    // 16 条 douyin 用户素材 + 33 条抖音内置模板
+    expect(rows).toHaveLength(49);
+    const templateRows = rows.slice(0, 33);
+    expect(templateRows.every((row) => row.region === "template")).toBe(true);
+    // 分组固定消息在前（12 条消息模板）→ 事件模板按声明序
     expect(
-      rows
-        .slice(0, 4)
+      templateRows
+        .slice(0, 12)
         .map((row) => (row.region === "template" ? row.schema.id : "")),
-    ).toEqual(["dy-text", "dy-image", "dy-enter", "dy-read"]);
-    const users = rows.slice(4);
+    ).toEqual([
+      "dy-im-group-receive",
+      "dy-im-group-send",
+      "dy-text",
+      "dy-image",
+      "dy-emoji",
+      "dy-video",
+      "dy-local-image",
+      "dy-retain-card",
+      "dy-leads-phone-card",
+      "dy-send-text",
+      "dy-mg-im-text",
+      "dy-mg-im-image",
+    ]);
+    const users = rows.slice(33);
     expect(users.every((row) => row.region === "user")).toBe(true);
     for (let i = 1; i < users.length; i += 1) {
       const previous = users[i - 1];
@@ -270,7 +280,20 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
     });
     expect(
       messages.map((row) => (row.region === "template" ? row.schema.id : "")),
-    ).toEqual(["dy-text", "dy-image"]);
+    ).toEqual([
+      "dy-im-group-receive",
+      "dy-im-group-send",
+      "dy-text",
+      "dy-image",
+      "dy-emoji",
+      "dy-video",
+      "dy-local-image",
+      "dy-retain-card",
+      "dy-leads-phone-card",
+      "dy-send-text",
+      "dy-mg-im-text",
+      "dy-mg-im-image",
+    ]);
 
     const favorites = libraryRows(
       [
@@ -332,19 +355,27 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
       }),
     );
     const rows = libraryRows(items, schemasByChannel("douyin"), NO_FILTERS);
-    expect(rows).toHaveLength(13);
+    // 33 条内置模板 + 9 条用户素材
+    expect(rows).toHaveLength(42);
 
     const first = paginateEvents(rows, 1);
-    expect(first.total).toBe(13);
-    expect(first.pages).toBe(2);
+    expect(first.total).toBe(42);
+    expect(first.pages).toBe(5);
     expect(first.items.filter((row) => row.region === "template")).toHaveLength(
-      4,
+      10,
     );
-    expect(first.items.filter((row) => row.region === "user")).toHaveLength(6);
+    expect(first.items.filter((row) => row.region === "user")).toHaveLength(0);
 
-    const second = paginateEvents(rows, 2);
-    expect(second.items).toHaveLength(3);
-    expect(second.items.every((row) => row.region === "user")).toBe(true);
+    // 第 4 页收尾模板区并混入用户素材（模板区在前不跨页切换语义）
+    const fourth = paginateEvents(rows, 4);
+    expect(
+      fourth.items.filter((row) => row.region === "template"),
+    ).toHaveLength(3);
+    expect(fourth.items.filter((row) => row.region === "user")).toHaveLength(7);
+
+    const fifth = paginateEvents(rows, 5);
+    expect(fifth.items).toHaveLength(2);
+    expect(fifth.items.every((row) => row.region === "user")).toBe(true);
   });
 
   it("模板区不因用户素材为空而消失，点击目标始终可解析回模板", () => {

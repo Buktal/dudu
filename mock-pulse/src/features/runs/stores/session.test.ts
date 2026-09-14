@@ -152,8 +152,12 @@ describe("运行会话：missingConnections 连接就绪门", () => {
         douyin: {
           channel: "douyin",
           url: "http://x",
+          system: "dop",
           clientKey: "k",
           clientSecret: "s",
+          miniGameToken: "",
+          isvToken: "",
+          isvKey: "",
         },
       } as Record<string, ConnectionConfig>,
     },

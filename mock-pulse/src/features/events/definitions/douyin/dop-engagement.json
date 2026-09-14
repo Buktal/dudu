@@ -1,0 +1,329 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "douyin",
+  "version": "2026.09",
+  "schemas": {
+    "dy-new-video-digg": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 new_video_digg。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "点赞用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "点赞的用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "to_user_id",
+          "title": "视频作者 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "被点赞视频作者的 open_id。"
+        },
+        {
+          "path": "content.action_type",
+          "title": "行为类型",
+          "type": "number",
+          "group": "事件内容",
+          "description": "点赞行为类型，官方样本取值 1。"
+        },
+        {
+          "path": "content.action_time",
+          "title": "行为时间",
+          "type": "number",
+          "group": "事件内容",
+          "description": "点赞发生的秒级时间戳。"
+        },
+        {
+          "path": "content.item_id",
+          "title": "视频 ID",
+          "type": "string",
+          "group": "事件内容",
+          "description": "被点赞的视频 ID，@ 开头加密串形态（content 为 JSON 字符串内字段）。"
+        },
+        {
+          "path": "log_id",
+          "title": "推送日志 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台推送的追踪标识，重放同一条时可保留原值。"
+        }
+      ]
+    },
+    "dy-new-follow": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 new_follow_action。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "关注用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "发起关注的用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "to_user_id",
+          "title": "被关注用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "被关注的账号 open_id。"
+        },
+        {
+          "path": "content.action_type",
+          "title": "行为类型",
+          "type": "number",
+          "group": "事件内容",
+          "description": "关注行为类型，官方样本取值 1。"
+        },
+        {
+          "path": "content.action_time",
+          "title": "行为时间",
+          "type": "number",
+          "group": "事件内容",
+          "description": "关注发生的秒级时间戳。"
+        },
+        {
+          "path": "log_id",
+          "title": "推送日志 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台推送的追踪标识，重放同一条时可保留原值。"
+        }
+      ]
+    },
+    "dy-group-audit": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 enter_group_audit_change（用户加群申请；官方仅给空 content，字段明细待核验）。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "申请用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "发起加群申请的用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "to_user_id",
+          "title": "群主/接收用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "接收申请通知的用户 open_id。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        }
+      ]
+    },
+    "dy-group-fans": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 group_fans_event（用户加群成功；官方仅给空 content，字段明细待核验）。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "入群用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "加群成功的用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "to_user_id",
+          "title": "群主/接收用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "接收入群通知的用户 open_id。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        }
+      ]
+    },
+    "dy-im-group-receive": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 im_group_receive_msg（群聊收消息；官方仅给空 content，字段明细待核验）。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "发送用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "在群里发消息的用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "to_user_id",
+          "title": "接收用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "接收群消息的用户 open_id。"
+        }
+      ]
+    },
+    "dy-im-group-send": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 im_group_send_msg（群聊发消息；官方仅给空 content，字段明细待核验）。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "发送用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "发送群消息的用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "to_user_id",
+          "title": "接收用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "接收群消息的用户 open_id。"
+        }
+      ]
+    },
+    "dy-service-market-order": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/service-market-order",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 service_market_order。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "下单用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "触发订单事件的用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "content.order_id",
+          "title": "订单 ID",
+          "type": "string",
+          "group": "订单内容",
+          "description": "服务市场订单号，可与订单快照对照检查幂等。"
+        },
+        {
+          "path": "content.order_event",
+          "title": "订单事件类型",
+          "type": "number",
+          "group": "订单内容",
+          "description": "1=用户支付订单 2=服务商接单 3=服务商确认实施订单 4=用户确认订单 5=取消订单。"
+        },
+        {
+          "path": "content.order_snapshot",
+          "title": "订单快照",
+          "type": "json",
+          "group": "订单内容",
+          "description": "订单下单时刻的完整快照（服务 ID、规格、时间等）。"
+        },
+        {
+          "path": "content.purchase_info",
+          "title": "购买信息",
+          "type": "json",
+          "group": "订单内容",
+          "description": "购买生效与到期信息（effective_time/expire_time）。"
+        },
+        {
+          "path": "log_id",
+          "title": "推送日志 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台推送的追踪标识，重放同一条时可保留原值。"
+        }
+      ]
+    }
+  }
+}

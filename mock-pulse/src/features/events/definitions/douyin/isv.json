@@ -1,0 +1,75 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "douyin",
+  "version": "2026.09",
+  "schemas": {
+    "dy-isv-ticket": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/thirdparty/overview-guide/smallprogram/encryption/",
+      "fields": [
+        {
+          "path": "Nonce",
+          "title": "随机数 Nonce",
+          "type": "string",
+          "group": "服务商信封",
+          "description": "每次推送重生成的随机数；适配器直发时会自动重生成并重签。"
+        },
+        {
+          "path": "TimeStamp",
+          "title": "时间戳",
+          "type": "string",
+          "group": "服务商信封",
+          "description": "秒级时间戳字符串；适配器直发时会自动重生成并重签。"
+        },
+        {
+          "path": "Encrypt",
+          "title": "加密明文 Encrypt",
+          "type": "string",
+          "group": "服务商信封",
+          "description": "用【消息加密解密 KEY】加密的事件密文，原样透传（官方 AES 参数待核验，暂不本地加解密）。"
+        },
+        {
+          "path": "MsgSignature",
+          "title": "消息签名",
+          "type": "string",
+          "group": "服务商信封",
+          "description": "按 TOKEN/Nonce/TimeStamp/Encrypt 计算的签名；适配器直发时会按连接配置的 TOKEN 重算。"
+        }
+      ]
+    },
+    "dy-isv-authorized": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/thirdparty/overview-guide/smallprogram/encryption/",
+      "fields": [
+        {
+          "path": "Nonce",
+          "title": "随机数 Nonce",
+          "type": "string",
+          "group": "服务商信封",
+          "description": "每次推送重生成的随机数；适配器直发时会自动重生成并重签。"
+        },
+        {
+          "path": "TimeStamp",
+          "title": "时间戳",
+          "type": "string",
+          "group": "服务商信封",
+          "description": "秒级时间戳字符串；适配器直发时会自动重生成并重签。"
+        },
+        {
+          "path": "Encrypt",
+          "title": "加密明文 Encrypt",
+          "type": "string",
+          "group": "服务商信封",
+          "description": "授权事件密文（事件名在密文内，官方未公开授权类事件名明细），原样透传。"
+        },
+        {
+          "path": "MsgSignature",
+          "title": "消息签名",
+          "type": "string",
+          "group": "服务商信封",
+          "description": "按 TOKEN/Nonce/TimeStamp/Encrypt 计算的签名；适配器直发时会按连接配置的 TOKEN 重算。"
+        }
+      ]
+    }
+  }
+}

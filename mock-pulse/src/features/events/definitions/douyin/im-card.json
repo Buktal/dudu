@@ -1,0 +1,339 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "douyin",
+  "version": "2026.09",
+  "schemas": {
+    "dy-retain-card": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/instant-message/private-message/private-msg-webhook",
+      "fields": [
+        {
+          "path": "from_user_id",
+          "title": "发送用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "发送方的 open_id。用它区分新客、老客，或模拟不同用户。",
+          "required": true
+        },
+        {
+          "path": "content.card_id",
+          "title": "卡片 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "留资卡片的加密串 ID。"
+        },
+        {
+          "path": "content.card_status",
+          "title": "卡片状态",
+          "type": "number",
+          "group": "消息内容",
+          "description": "1 空白态、2 完成态；完成态时 card_data 携带用户填写内容。"
+        },
+        {
+          "path": "content.card_data",
+          "title": "留资内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "用户填写的 label/value 数组（姓名、手机号、城市等），可验证线索落库。"
+        },
+        {
+          "path": "content.message_type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "留资卡片固定为 retain_consult_card。"
+        },
+        {
+          "path": "content.conversation_short_id",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "同一个会话保持相同 ID，便于模拟连续对话。"
+        },
+        {
+          "path": "content.server_message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "这条消息的唯一标识。使用同值可构造重复消息。"
+        },
+        {
+          "path": "content.conversation_type",
+          "title": "会话类型",
+          "type": "number",
+          "group": "会话与时序",
+          "description": "1 表示私聊；按平台文档设置对应类型。"
+        },
+        {
+          "path": "content.create_time",
+          "title": "消息时间",
+          "type": "number",
+          "group": "会话与时序",
+          "description": "13 位 Unix 毫秒时间戳；与企业微信的秒级时间不同。"
+        },
+        {
+          "path": "content.index",
+          "title": "消息序号",
+          "type": "number",
+          "group": "会话与时序",
+          "description": "同会话内逐条递增，用于与已读事件对齐。"
+        },
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 im_receive_msg。"
+        },
+        {
+          "path": "to_user_id",
+          "title": "接收用户 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "接收私信的企业号 open_id。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "接收该回调的抖音应用 client_key。"
+        }
+      ]
+    },
+    "dy-leads-phone-card": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/ability/enterprise-account-open-ability/leads-b2c-im-ability/clue-component-open",
+      "fields": [
+        {
+          "path": "from_user_id",
+          "title": "发送用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "发送方的 open_id（企业号线索私信场景）。",
+          "required": true
+        },
+        {
+          "path": "content.user_infos[0].open_id",
+          "title": "资料对应的用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "这份昵称与头像属于谁。通常与发送用户 ID 一致；也可独立修改以测试异常。"
+        },
+        {
+          "path": "content.user_infos[0].nick_name",
+          "title": "用户昵称",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "对方的展示名称；修改后可检查你的服务如何更新用户资料。"
+        },
+        {
+          "path": "content.leads_phone_card",
+          "title": "电话卡片内容",
+          "type": "string",
+          "group": "消息内容",
+          "description": "一键收集电话卡片的内容（JSON 字符串：title/button_text/bottom_text）。",
+          "multiline": true
+        },
+        {
+          "path": "content.im_mode",
+          "title": "私信模式",
+          "type": "string",
+          "group": "消息内容",
+          "description": "线索能力新增字段，官方样本为 Unset。"
+        },
+        {
+          "path": "content.message_type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "一键收集电话卡片固定为 leads_phone_card（发送侧 msgType=20）。"
+        },
+        {
+          "path": "content.group_info",
+          "title": "群信息",
+          "type": "json",
+          "group": "消息内容",
+          "description": "线索能力新增字段；私聊场景官方样本为空对象。"
+        },
+        {
+          "path": "content.conversation_short_id",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "同一个会话保持相同 ID，便于模拟连续对话。"
+        },
+        {
+          "path": "content.server_message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "这条消息的唯一标识。使用同值可构造重复消息。"
+        },
+        {
+          "path": "content.create_time",
+          "title": "消息时间",
+          "type": "number",
+          "group": "会话与时序",
+          "description": "13 位 Unix 毫秒时间戳；与企业微信的秒级时间不同。"
+        },
+        {
+          "path": "content.source",
+          "title": "消息来源",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "客户端主动发送时为空；通过接口发送时是相应应用标识。"
+        },
+        {
+          "path": "content.index",
+          "title": "消息序号",
+          "type": "number",
+          "group": "会话与时序",
+          "description": "同会话内逐条递增，用于与已读事件对齐（官方样本为数字形态）。"
+        },
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 im_receive_msg。"
+        },
+        {
+          "path": "to_user_id",
+          "title": "接收用户 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "接收私信的企业号 open_id。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "接收该回调的抖音应用 client_key。"
+        }
+      ]
+    },
+    "dy-send-text": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/instant-message/private-message/private-msg-webhook",
+      "fields": [
+        {
+          "path": "from_user_id",
+          "title": "发送用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "发送方的 open_id（im_send_msg：用户主动发送私信时触发）。",
+          "required": true
+        },
+        {
+          "path": "content.user_infos[0].nick_name",
+          "title": "用户昵称",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "对方的展示名称；修改后可检查你的服务如何更新用户资料。"
+        },
+        {
+          "path": "content.user_infos[0].avatar",
+          "title": "用户头像",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "头像地址。改变此值可模拟头像变更，或填写无效地址检查兜底。",
+          "format": "url"
+        },
+        {
+          "path": "content.user_infos[0].open_id",
+          "title": "资料对应的用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "这份昵称与头像属于谁。通常与发送用户 ID 一致；也可独立修改以测试异常。"
+        },
+        {
+          "path": "content.text",
+          "title": "消息正文",
+          "type": "string",
+          "group": "消息内容",
+          "description": "用户发出的完整文本。换行、表情和特殊字符都会保留。",
+          "multiline": true
+        },
+        {
+          "path": "content.message_type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "文本为 text；发送侧其余类型可参照接收侧变体新建素材。"
+        },
+        {
+          "path": "content.conversation_short_id",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "同一个会话保持相同 ID，便于模拟连续对话。"
+        },
+        {
+          "path": "content.server_message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "这条消息的唯一标识。使用同值可构造重复消息。"
+        },
+        {
+          "path": "content.conversation_type",
+          "title": "会话类型",
+          "type": "number",
+          "group": "会话与时序",
+          "description": "1 表示私聊；按平台文档设置对应类型。"
+        },
+        {
+          "path": "content.create_time",
+          "title": "消息时间",
+          "type": "number",
+          "group": "会话与时序",
+          "description": "13 位 Unix 毫秒时间戳；与企业微信的秒级时间不同。"
+        },
+        {
+          "path": "content.index",
+          "title": "消息序号",
+          "type": "number",
+          "group": "会话与时序",
+          "description": "同会话内逐条递增，用于与已读事件对齐。"
+        },
+        {
+          "path": "content.source",
+          "title": "消息来源",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "端上主动发送为空；通过发送私信消息接口发送时显示具体 client_key。"
+        },
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 im_send_msg。"
+        },
+        {
+          "path": "to_user_id",
+          "title": "接收用户 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "接收私信的企业号 open_id。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "接收该回调的抖音应用 client_key。"
+        },
+        {
+          "path": "log_id",
+          "title": "推送日志 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台推送的追踪标识。重放同一条时可保留原值。"
+        }
+      ]
+    }
+  }
+}

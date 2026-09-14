@@ -20,8 +20,12 @@ const invokeMock = vi.mocked(invoke);
 const douyinConfig: DouyinConnectionConfig = {
   channel: "douyin",
   url: "http://127.0.0.1:8080/webhooks/douyin",
+  system: "dop",
   clientKey: "mock_client_key",
   clientSecret: "mock_client_secret",
+  miniGameToken: "",
+  isvToken: "",
+  isvKey: "",
 };
 
 const wecomConfig: WecomConnectionConfig = {

@@ -10,7 +10,6 @@ use aes::cipher::{block_padding::NoPadding, BlockDecryptMut, BlockEncryptMut, Ke
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use base64::Engine;
-use sha1::{Digest, Sha1};
 
 // 官方 90968 黄金例常量（研究文档 §5.1 逐字拷贝）：crypto 黄金例测试与
 // 握手/直发全链路测试（super::tests）共用这一份， golden_signature 黄金例
@@ -49,14 +48,10 @@ type Aes256CbcDec = cbc::Decryptor<aes::Aes256>;
 const PAD_BLOCK: usize = 32;
 
 /// 官方签名算法：token/timestamp/nonce/msg_encrypt 四个值按字典序排序拼接后
-/// sha1，结果编码为 40 位小写 hex。
+/// sha1，结果编码为 40 位小写 hex（原语单点在 crate::connections::util，与
+/// 抖音服务商 MsgSignature 同族复用）。
 pub fn build_signature(token: &str, timestamp: &str, nonce: &str, msg_encrypt: &str) -> String {
-    let mut values = [token, timestamp, nonce, msg_encrypt];
-    values.sort_unstable();
-    let joined = values.concat();
-    let mut hasher = Sha1::new();
-    hasher.update(joined.as_bytes());
-    hex::encode(hasher.finalize())
+    crate::connections::util::sha1_sorted_hex(&[token, timestamp, nonce, msg_encrypt])
 }
 
 /// 从 43 位 EncodingAESKey 派生 32 字节 AESKey：Base64_Decode(key + "=")。

@@ -33,8 +33,12 @@ import {
 const savedDouyin: ConnectionConfig = {
   channel: "douyin",
   url: "http://127.0.0.1:9099/hook",
+  system: "dop",
   clientKey: "tt_key",
   clientSecret: "tt_secret",
+  miniGameToken: "",
+  isvToken: "",
+  isvKey: "",
 };
 
 const savedWecom: ConnectionConfig = {
@@ -196,6 +200,35 @@ describe("isConnectionReady（直发前置的内容判定）", () => {
     expect(isConnectionReady({ ...savedDouyin, url: "" })).toBe(false);
     expect(isConnectionReady({ ...savedDouyin, url: "   " })).toBe(false);
     expect(isConnectionReady({ ...savedDouyin, clientSecret: "" })).toBe(false);
+  });
+
+  it("小游戏按 miniGameToken 判定，dop 凭据不参与", () => {
+    const miniGame = {
+      ...savedDouyin,
+      system: "mini_game" as const,
+      clientSecret: "",
+      miniGameToken: "mg_token",
+    };
+    expect(isConnectionReady(miniGame)).toBe(true);
+    expect(isConnectionReady({ ...miniGame, miniGameToken: "" })).toBe(false);
+  });
+
+  it("服务商按 isvToken 判定（isvKey 暂不参与验签，可空）", () => {
+    const isv = {
+      ...savedDouyin,
+      system: "isv" as const,
+      clientSecret: "",
+      isvToken: "tk",
+      isvKey: "",
+    };
+    expect(isConnectionReady(isv)).toBe(true);
+    expect(isConnectionReady({ ...isv, isvToken: "" })).toBe(false);
+  });
+
+  it("生活服务与 dop 同按 clientSecret 判定", () => {
+    const life = { ...savedDouyin, system: "life_service" as const };
+    expect(isConnectionReady(life)).toBe(true);
+    expect(isConnectionReady({ ...life, clientSecret: "" })).toBe(false);
   });
 
   it("无条目（undefined）不算已配置；初始默认占位连接凭据为空，也不算", () => {

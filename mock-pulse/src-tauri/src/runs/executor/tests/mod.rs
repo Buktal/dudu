@@ -24,8 +24,12 @@ const DY_SECRET: &str = "tt_secret";
 pub(super) fn douyin_connection(url: String) -> ConnectionConfig {
     ConnectionConfig::Douyin {
         url,
+        system: crate::connections::DouyinSystem::Dop,
         client_key: "tt_key".into(),
         client_secret: DY_SECRET.into(),
+        mini_game_token: String::new(),
+        isv_token: String::new(),
+        isv_key: String::new(),
     }
 }
 

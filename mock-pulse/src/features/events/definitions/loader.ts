@@ -159,3 +159,37 @@ export function parseChannelDefinition(raw: unknown): ChannelDefinition {
     schemas,
   };
 }
+
+/**
+ * 多份同渠道描述文件合并（按推送体系分文件分发的渠道，如抖音 #30）：
+ * format/channelId/version 必须一致，schema 条目按文件序合并、id 不得重复
+ * （重复说明分文件间脱节，装载即炸）。
+ */
+export function mergeChannelDefinitions(
+  parts: readonly ChannelDefinition[],
+): ChannelDefinition {
+  const [first] = parts;
+  if (!first) {
+    throw new Error("渠道字段定义至少需要一份分文件。");
+  }
+  const schemas: Record<string, SchemaDefinition> = {};
+  for (const part of parts) {
+    if (part.format !== first.format || part.channelId !== first.channelId) {
+      throw new Error(
+        `渠道字段定义分文件的 format/channelId 不一致：${part.channelId} 与 ${first.channelId}。`,
+      );
+    }
+    if (part.version !== first.version) {
+      throw new Error(
+        `渠道字段定义分文件的版本不一致：${part.version} 与 ${first.version}。`,
+      );
+    }
+    for (const [schemaId, entry] of Object.entries(part.schemas)) {
+      if (schemas[schemaId]) {
+        throw new Error(`模板 ${schemaId} 在描述文件分文件中重复定义。`);
+      }
+      schemas[schemaId] = entry;
+    }
+  }
+  return { ...first, schemas };
+}

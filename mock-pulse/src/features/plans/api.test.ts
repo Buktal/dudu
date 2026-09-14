@@ -45,6 +45,10 @@ const connection: ConnectionConfig = {
   url: "http://127.0.0.1:8080/webhooks/douyin",
   clientKey: "tt_key",
   clientSecret: "tt_secret",
+  system: "dop",
+  miniGameToken: "",
+  isvToken: "",
+  isvKey: "",
 };
 
 describe("plans api 契约", () => {

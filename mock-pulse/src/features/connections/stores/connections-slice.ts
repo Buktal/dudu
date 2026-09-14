@@ -32,12 +32,16 @@ export type ConnectionsState = {
   drafts?: Partial<Record<ChannelId, ConnectionConfig>>;
 };
 
-/** 原型默认值：本地联调回调地址，凭据留空 */
+/** 原型默认值：本地联调回调地址，凭据留空（dop 体系起步） */
 export const defaultDouyinConnection: DouyinConnectionConfig = {
   channel: "douyin",
   url: "http://127.0.0.1:8080/webhooks/douyin",
+  system: "dop",
   clientKey: "",
   clientSecret: "",
+  miniGameToken: "",
+  isvToken: "",
+  isvKey: "",
 };
 
 /** 原型默认值：本地联调回调地址，凭据留空 */
@@ -160,7 +164,10 @@ export const {
  * 「已配置」的内容判定：直发前置条件，发送入口与指引展示共用。
  * 条目存在不等于已配置——按渠道核必填集，缺一即视为未配置
  * （含初始默认占位连接、仅存 url 未存凭据的半成品）。
- * - 抖音：url + clientSecret（签名必需；clientKey 仅标识）
+ * - 抖音按推送体系核（验签密钥是直发前置）：
+ *   dop/生活服务 = url + clientSecret（clientKey 仅标识）；
+ *   小游戏 = url + miniGameToken（x-signature 参与）；
+ *   服务商 = url + isvToken（MsgSignature 参与；isv_key 暂不参与验签，可空）
  * - 企微：url + token + encodingAesKey + corpId（加密/签名/明文结构必需；
  *   agentId 不参与握手加密，可空）
  */
@@ -172,7 +179,7 @@ export function isConnectionReady(
   }
   switch (config.channel) {
     case "douyin":
-      return config.url.trim() !== "" && config.clientSecret !== "";
+      return config.url.trim() !== "" && douyinSystemReady(config);
     case "wecom":
       return (
         config.url.trim() !== "" &&
@@ -183,6 +190,25 @@ export function isConnectionReady(
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
+      void exhaustive;
+      return false;
+    }
+  }
+}
+
+/** 抖音按推送体系核验签密钥（体系内标兜底走 clientSecret，兼容旧数据） */
+function douyinSystemReady(config: DouyinConnectionConfig): boolean {
+  switch (config.system) {
+    case "mini_game":
+      return config.miniGameToken !== "";
+    case "isv":
+      return config.isvToken !== "";
+    case "dop":
+    case "life_service":
+      return config.clientSecret !== "";
+    default: {
+      // 穷尽守卫：新增体系漏配必填集时编译期报错；未知体系视为未配置
+      const exhaustive: never = config.system;
       void exhaustive;
       return false;
     }

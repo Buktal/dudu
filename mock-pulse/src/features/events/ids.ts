@@ -62,6 +62,11 @@ export function generateCreateTimeSec(): string {
   return String(Math.floor(Date.now() / 1000));
 }
 
+/** 10 位 Unix 秒级时间戳（数字形态：小游戏 CreateTime、digg action_time） */
+export function generateCreateTimeSecNumber(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
 /** 企微 MsgId：18 位数字串（首位非零，恒 < 2^63-1） */
 export function generateMsgId64(): string {
   const bytes = randomBytes(18);
@@ -80,6 +85,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   logId: generateLogId,
   createTimeMs: generateCreateTimeMs,
   createTimeSec: generateCreateTimeSec,
+  createTimeSecNumber: generateCreateTimeSecNumber,
   msgId64: generateMsgId64,
 };
 

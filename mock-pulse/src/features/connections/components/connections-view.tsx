@@ -37,9 +37,21 @@ import { toast } from "@/components/ui/toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
-import type { ConnectionConfig } from "../api";
+import type { ConnectionConfig, DouyinSystem } from "../api";
 import * as actions from "../stores/connections-slice";
 import { ConnectionFields } from "./connection-fields";
+
+/** 抖音握手文案按推送体系呈现（事实库 §3.1/§3.4：四套体系握手形态不同） */
+function douyinTestNote(system: DouyinSystem): string {
+  switch (system) {
+    case "mini_game":
+      return "发送 verify_request（x-signature 五头），检查服务是否验签通过并回 HTTP 200。";
+    case "isv":
+      return "按授权推送形态发送 TOKEN 重签信封，检查服务是否直接返回 success（不带引号）。";
+    default:
+      return "发送 challenge，检查服务是否原样返回验证内容。";
+  }
+}
 
 export function ConnectionsView() {
   const dispatch = useAppDispatch();
@@ -231,7 +243,9 @@ export function ConnectionsView() {
               <CardTitle>验证连接</CardTitle>
               <CardDescription>
                 {channel === "douyin"
-                  ? "发送 challenge，检查服务是否原样返回验证内容。"
+                  ? douyinTestNote(
+                      draft.channel === "douyin" ? draft.system : "dop",
+                    )
                   : "发送加密 echostr，检查服务是否正确解密并回显。"}
               </CardDescription>
               <CardAction>

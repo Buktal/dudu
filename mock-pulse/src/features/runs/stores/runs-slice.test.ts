@@ -41,6 +41,10 @@ const CONNECTION: ConnectionConfig = {
   url: "http://127.0.0.1:9999/webhooks/douyin",
   clientKey: "tt_key",
   clientSecret: "tt_secret",
+  system: "dop",
+  miniGameToken: "",
+  isvToken: "",
+  isvKey: "",
 };
 
 /** Rust 直发命令返回的成品单步快照（期望比对已在 Rust 完成） */

@@ -1,0 +1,273 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "douyin",
+  "version": "2026.09",
+  "schemas": {
+    "dy-create-video": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 create_video。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "事件发起用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "分享视频的抖音用户 open_id。用它模拟不同用户触发分享。",
+          "required": true
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        },
+        {
+          "path": "content.item_id",
+          "title": "视频 ID",
+          "type": "string",
+          "group": "事件内容",
+          "description": "创建的视频 ID。官方形态为 @ 开头的加密串；可检查服务如何拉取视频信息。"
+        },
+        {
+          "path": "content.share_id",
+          "title": "分享标识",
+          "type": "string",
+          "group": "事件内容",
+          "description": "标识本次分享的 share_id，可用于归因。"
+        }
+      ]
+    },
+    "dy-authorize": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 authorize。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "事件发起用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "授权给开发者 App 的抖音用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        },
+        {
+          "path": "content.scopes",
+          "title": "授权 scope 列表",
+          "type": "json",
+          "group": "事件内容",
+          "description": "本次授权的 scope 数组，可检查服务按 scope 开通能力的逻辑。"
+        }
+      ]
+    },
+    "dy-unauthorize": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 unauthorize。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "事件发起用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "解除授权的抖音用户 open_id。解除后其 access_token 应立即失效。",
+          "required": true
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        },
+        {
+          "path": "content.scopes",
+          "title": "解除授权 scope 列表",
+          "type": "json",
+          "group": "事件内容",
+          "description": "被解除的 scope 数组，可检查服务是否正确回收能力。"
+        }
+      ]
+    },
+    "dy-contract-authorize": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 contract_authorize。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "事件发起用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "给应用授予经营关系的用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件应用的 client_key。"
+        },
+        {
+          "path": "content.scopes",
+          "title": "授权经营 Scope",
+          "type": "json",
+          "group": "事件内容",
+          "description": "用户授权的经营 Scope 数组（scope 名为 xxx.bind 或私信相关能力）。"
+        },
+        {
+          "path": "content.timestamp",
+          "title": "事件时间戳",
+          "type": "number",
+          "group": "事件内容",
+          "description": "授权事件的秒级时间戳。"
+        }
+      ]
+    },
+    "dy-contract-unauthorize": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 contract_unauthorize。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "事件发起用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "解除应用经营关系的用户 open_id。",
+          "required": true
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件应用的 client_key。"
+        },
+        {
+          "path": "content.scopes",
+          "title": "解除授权经营 Scope",
+          "type": "json",
+          "group": "事件内容",
+          "description": "被解除的经营 Scope 数组，可检查服务是否正确回收经营能力。"
+        },
+        {
+          "path": "content.timestamp",
+          "title": "事件时间戳",
+          "type": "number",
+          "group": "事件内容",
+          "description": "解除授权事件的秒级时间戳。"
+        }
+      ]
+    },
+    "dy-union-auth-c": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 union_auth_info_for_c（官方未公开事件 content 明细）。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "事件发起用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "完成联合授权的用户 open_id（c 端通知）。",
+          "required": true
+        },
+        {
+          "path": "to_user_id",
+          "title": "事件接收用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "接收事件的用户 open_id。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        }
+      ]
+    },
+    "dy-union-auth-b": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 union_auth_info_for_b（官方未公开事件 content 明细）。"
+        },
+        {
+          "path": "from_user_id",
+          "title": "事件发起用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "完成联合授权的用户 open_id（b 端通知）。",
+          "required": true
+        },
+        {
+          "path": "to_user_id",
+          "title": "事件接收用户 ID",
+          "type": "string",
+          "group": "用户与身份",
+          "description": "接收事件的用户 open_id。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "使用应用的 client_key。"
+        }
+      ]
+    }
+  }
+}

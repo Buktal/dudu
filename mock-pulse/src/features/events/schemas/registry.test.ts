@@ -8,8 +8,8 @@ import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
 import { WECOM_DEFINITIONS } from "./wecom";
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 4 + 企微 3 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(7);
+  it("抖音 33 + 企微 3 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(36);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -55,10 +55,44 @@ describe("事件模板聚合注册表", () => {
 
   it("schemasByChannel：已接入渠道返回模板，其余 17 渠道返回空表", () => {
     expect(schemasByChannel("douyin").map((schema) => schema.id)).toEqual([
+      // dop 主体系
+      "dy-create-video",
+      "dy-authorize",
+      "dy-unauthorize",
+      "dy-contract-authorize",
+      "dy-contract-unauthorize",
+      "dy-union-auth-c",
+      "dy-union-auth-b",
+      "dy-new-video-digg",
+      "dy-new-follow",
+      "dy-group-audit",
+      "dy-group-fans",
+      "dy-im-group-receive",
+      "dy-im-group-send",
+      "dy-service-market-order",
+      // IM 私信明细
       "dy-text",
       "dy-image",
+      "dy-emoji",
+      "dy-video",
+      "dy-local-image",
+      "dy-retain-card",
+      "dy-leads-phone-card",
+      "dy-send-text",
       "dy-enter",
+      "dy-recall",
       "dy-read",
+      // 生活服务
+      "dy-verify-webhook",
+      "dy-life-order",
+      // 小游戏
+      "dy-mg-verify",
+      "dy-mg-gift",
+      "dy-mg-im-text",
+      "dy-mg-im-image",
+      // 服务商
+      "dy-isv-ticket",
+      "dy-isv-authorized",
     ]);
     expect(schemasByChannel("wecom").map((schema) => schema.id)).toEqual([
       "wc-text",

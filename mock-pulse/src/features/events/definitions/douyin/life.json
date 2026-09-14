@@ -1,0 +1,104 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "douyin",
+  "version": "2026.09",
+  "schemas": {
+    "dy-verify-webhook": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/summarize",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 verify_webhook（首次配置回调 URL 的验证请求）。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "官方验证示例为空串；可填应用 client_key 供接收方记录。"
+        },
+        {
+          "path": "content.challenge",
+          "title": "验证值 challenge",
+          "type": "number",
+          "group": "事件内容",
+          "description": "接收服务必须立即把该值作为 text 格式 JSON（{\"challenge\":同值}）放回 ResponseBody。",
+          "required": true
+        }
+      ]
+    },
+    "dy-life-order": {
+      "version": "2026.09",
+      "source": "https://developer.open-douyin.com/docs/resource/zh-CN/local-life/develop/preparation/webhooks",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名称",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台原始事件名，固定为 life_trade_order_notify。"
+        },
+        {
+          "path": "client_key",
+          "title": "应用标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "生活服务应用的 client_key。"
+        },
+        {
+          "path": "content.action",
+          "title": "订单动作",
+          "type": "string",
+          "group": "订单内容",
+          "description": "订单状态动作，官方样本为 pay_success。"
+        },
+        {
+          "path": "content.msg_time",
+          "title": "消息时间",
+          "type": "number",
+          "group": "订单内容",
+          "description": "通知发出的秒级时间戳。"
+        },
+        {
+          "path": "content.order.order_id",
+          "title": "订单 ID",
+          "type": "string",
+          "group": "订单内容",
+          "description": "生活服务订单号；webhook 不保证必达、有序、不重复，建议按此键去重。"
+        },
+        {
+          "path": "content.order.pay_amount",
+          "title": "支付金额",
+          "type": "number",
+          "group": "订单内容",
+          "description": "实际支付金额。"
+        },
+        {
+          "path": "content.order.original_amount",
+          "title": "原价金额",
+          "type": "number",
+          "group": "订单内容",
+          "description": "订单原价金额，可与支付金额对照检查优惠逻辑。"
+        },
+        {
+          "path": "content.order.account_id",
+          "title": "账户 ID",
+          "type": "string",
+          "group": "订单内容",
+          "description": "商家账户标识。"
+        },
+        {
+          "path": "log_id",
+          "title": "推送日志 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台推送的追踪标识，重放同一条时可保留原值。"
+        }
+      ]
+    }
+  }
+}

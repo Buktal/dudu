@@ -38,6 +38,10 @@ const CONNECTION: ConnectionConfig = {
   url: "http://127.0.0.1:9999/webhooks/douyin",
   clientKey: "tt_key",
   clientSecret: "tt_secret",
+  system: "dop",
+  miniGameToken: "",
+  isvToken: "",
+  isvKey: "",
 };
 
 /** 已保存的抖音事件（dy-text 模板线上形态，两个版本） */
