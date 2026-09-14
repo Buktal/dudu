@@ -1,8 +1,8 @@
 # MockPulse：从可复用事件出发的界面原型
 
-入口：[mockpulse-studio-prototype.html](./mockpulse-studio-prototype.html)。双击打开，无依赖、无构建、无服务。所有请求、回执、计时均为演示；保存的数据只存在该浏览器的原型存储中，可导出备份。
+入口：[mockpulse-studio-prototype.html](mockpulse-studio-prototype.html)。双击打开，无依赖、无构建、无服务。所有请求、回执、计时均为演示；保存的数据只存在该浏览器的原型存储中，可导出备份。
 
-预览：[七套配色总览](./mockpulse-studio-colors.png) · [原版雾蓝界面](./mockpulse-studio-preview.png)。
+预览：[七套配色总览](mockpulse-studio-colors.png) · [原版雾蓝界面](mockpulse-studio-preview.png)。
 
 ## 这份原型回答什么
 
@@ -23,7 +23,7 @@
 | 配色 | 链接参数 | 来源与取舍 |
 | --- | --- | --- |
 | 原版雾蓝 | `theme=blue` | 用户已选定。保留原来的蓝灰配色，首次打开默认使用。 |
-| 项目浅色 | `theme=project-light` | 提取 `mock-pulse/src/index.css` 的 `:root` 主题：白底、中性灰、黑色主按钮。 |
+| 项目浅色 | `theme=project-light` | 提取 `../../../mock-pulse/src/index.css` 的 `:root` 主题：白底、中性灰、黑色主按钮。 |
 | 项目深色 | `theme=project-dark` | 提取同文件的 `.dark` 主题：深灰底、浅色主按钮，保留侧栏原有蓝色主色。 |
 | 青瓷绿 | `theme=celadon` | 比选浅色。低饱和青绿、清透灰白。 |
 | 鸢尾紫 | `theme=iris` | 新增冷调。克制的紫色操作色和雾灰背景。 |
@@ -63,7 +63,7 @@
 
 这是可丢弃的交互草稿，用户已选定“参数工作台 + 原版雾蓝”，布局和配色均已确认。不修改业务代码、不提交或发布。模拟运行不产生网络请求，不实现真实验签、加密及重试协议。保存、搜索、平台约束、版本引用、顺序执行和并发执行均可在本地体验。
 
-资料依据：交接文档 `E:\Temp\opencode\handoff-dudu-2026-09-10.md`；`docs/adr/0001-high-fidelity-mock.md`、`0004-script-per-platform.md`、`0005-monorepo-tauri-boundary.md`；`docs/research/channels/douyin.md`、`wecom.md`。交接中已明确平台隔离及并行；本轮补上可复用事件单元、完整参数、串行编排和大容量浏览。
+资料依据：交接文档 `E:\Temp\opencode\handoff-dudu-2026-09-10.md`；`../../adr/0001-high-fidelity-mock.md`、`0004-script-per-platform.md`、`0005-monorepo-tauri-boundary.md`；`../../research/channels/douyin.md`、`wecom.md`。交接中已明确平台隔离及并行；本轮补上可复用事件单元、完整参数、串行编排和大容量浏览。
 
 ## 原型检查
 
