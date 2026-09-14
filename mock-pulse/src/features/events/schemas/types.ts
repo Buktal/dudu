@@ -27,7 +27,13 @@ export type IdKind =
   | "createTimeSec" // 企微 10 位秒级时间戳（字符串）
   | "createTimeSecNumber" // 10 位秒级时间戳（数字形态：小游戏 CreateTime 等）
   | "msgId64" // 企微 MsgId：64 位整型数字串（18 位，恒在 int64 内）
-  | "aibotMsgId"; // 企微智能机器人 msgid：base64 风格串（官方样本 31 字符 + "="）
+  | "aibotMsgId" // 企微智能机器人 msgid：base64 风格串（官方样本 31 字符 + "="）
+  | "hexId32" // 飞书 event_id：32 位小写十六进制串
+  | "createTimeMsString" // 飞书 create_time：13 位毫秒时间戳（字符串形态）
+  | "larkOpenId" // 飞书 open_id：ou_ + 32 位十六进制
+  | "larkUnionId" // 飞书 union_id：on_ + 32 位十六进制
+  | "larkMessageId" // 飞书 message_id：om_ + 32 位十六进制
+  | "larkChatId"; // 飞书 chat_id：oc_ + 32 位十六进制
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */

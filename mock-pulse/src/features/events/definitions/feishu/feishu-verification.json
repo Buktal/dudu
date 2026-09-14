@@ -1,0 +1,35 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "feishu",
+  "version": "2026.09",
+  "schemas": {
+    "fs-url-verification": {
+      "version": "2026.09",
+      "source": "https://open.feishu.cn/document/ukTMukTMukTM/uYDNxYjL2QTM24iN0EjN/event-subscription-configure-/choose-a-subscription-mode/send-notifications-to-developers-server",
+      "fields": [
+        {
+          "path": "challenge",
+          "title": "验证串",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台保存回调地址时推送的验证串；你的服务须 1 秒内原样回显 {\"challenge\":\"<同值>\"}。改此值可验证回显逻辑。",
+          "required": true
+        },
+        {
+          "path": "token",
+          "title": "Verification Token",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件与回调 > 加密策略页的 Verification Token；明文模式下随请求传输，供服务做基础校验。"
+        },
+        {
+          "path": "type",
+          "title": "请求类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 url_verification；服务按此识别首次验证握手。"
+        }
+      ]
+    }
+  }
+}

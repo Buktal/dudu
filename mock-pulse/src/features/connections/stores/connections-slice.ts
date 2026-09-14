@@ -9,9 +9,11 @@ import type { ChannelId } from "@/lib/channels";
 import {
   type ConnectionConfig,
   type DouyinConnectionConfig,
+  type FeishuConnectionConfig,
   loadConnections,
   saveConnection as saveConnectionApi,
   testDouyinConnection as testDouyinApi,
+  testFeishuConnection as testFeishuApi,
   testWechatMiniConnection as testWechatMiniApi,
   testWechatMpConnection as testWechatMpApi,
   testWecomConnection as testWecomApi,
@@ -80,6 +82,15 @@ export const defaultWechatMiniConnection: WechatMiniConnectionConfig = {
   dataFormat: "xml",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（Encrypt Key 留空 = 明文直发起步） */
+export const defaultFeishuConnection: FeishuConnectionConfig = {
+  channel: "feishu",
+  url: "http://127.0.0.1:8080/webhooks/feishu",
+  appId: "",
+  verificationToken: "",
+  encryptKey: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -90,6 +101,7 @@ export const initialConnectionsState: ConnectionsState = {
     wecom: defaultWecomConnection,
     "wechat-mp": defaultWechatMpConnection,
     "wechat-mini": defaultWechatMiniConnection,
+    feishu: defaultFeishuConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -113,8 +125,8 @@ export const saveConnection = createAsyncThunk(
 );
 
 /** 测试连接按渠道路由到对应协议命令（抖音 challenge / 企微 echostr /
- *  公众号与小程序三参签名 GET）。switch 穷尽：新增渠道漏配路由时编译期报错；
- *  运行时未知渠道 fail-safe 拒绝。 */
+ *  公众号与小程序三参签名 GET / 飞书 url_verification POST challenge）。
+ *  switch 穷尽：新增渠道漏配路由时编译期报错；运行时未知渠道 fail-safe 拒绝。 */
 export const testConnection = createAsyncThunk(
   "connections/test",
   async (config: ConnectionConfig) => {
@@ -127,6 +139,8 @@ export const testConnection = createAsyncThunk(
         return testWechatMpApi(config);
       case "wechat-mini":
         return testWechatMiniApi(config);
+      case "feishu":
+        return testFeishuApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
@@ -207,6 +221,9 @@ export const {
  *   encodingAesKey 仅兼容/安全模式必填（明文模式官方无需配置）
  * - 小程序核：同公众号族——url + appId + token；encodingAesKey 仅兼容/安全
  *   模式必填（dataFormat 随连接记录，不参与必填集）
+ * - 飞书核：url + verificationToken 必填（官方 §4.1 默认校验方式，握手三参与
+ *   事件 header 都带）；encryptKey 选填（空 = 明文直发，非空 = 签名 + AES
+ *   信封）；appId 仅随连接记录
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -223,6 +240,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && wechatMpReady(config);
     case "wechat-mini":
       return config.url.trim() !== "" && wechatMiniReady(config);
+    case "feishu":
+      return config.url.trim() !== "" && feishuReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -305,6 +324,15 @@ function wechatMiniReady(config: WechatMiniConnectionConfig): boolean {
       return false;
     }
   }
+}
+
+/**
+ * 飞书核：url + verificationToken 必填（官方 §4.1 默认校验方式的三参之一，
+ * 握手与事件 header 都带）；encryptKey 选填——留空 = 明文直发，填写 = 签名
+ * + 加密信封（appId 仅随连接记录，不参与验签）。
+ */
+function feishuReady(config: FeishuConnectionConfig): boolean {
+  return config.url.trim() !== "" && config.verificationToken.trim() !== "";
 }
 
 /** 按渠道字面量取对应形状的连接配置类型 */

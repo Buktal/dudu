@@ -17,6 +17,10 @@ import type { EventSchema, IdKind } from "./schemas";
  * - msgId64：64 位整型消息 ID（企微 MsgId；18 位数字串，恒在 int64 内，
  *   全程字符串不经 number，防 2^53 精度丢失）
  * - aibotMsgId：企微智能机器人 msgid（官方样本 31 字符 base64 风格 + "="）
+ * - hexId32：32 位小写十六进制（飞书 event_id）
+ * - createTimeMsString：13 位毫秒时间戳字符串（飞书 create_time 字符串形态）
+ * - larkOpenId/larkUnionId/larkMessageId/larkChatId：飞书 ou_/on_/om_/oc_ 前缀
+ *   + 32 位十六进制（事实库「对 MockPulse 模拟的直接含义」ID 形态速查）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -88,6 +92,44 @@ export function generateAibotMsgId(): string {
   return `${body}=`;
 }
 
+const HEX_CHARS = "0123456789abcdef";
+
+function hexChars(length: number): string {
+  return Array.from(randomBytes(length), (byte) => HEX_CHARS[byte % 16]).join(
+    "",
+  );
+}
+
+/** 飞书 event_id：32 位小写十六进制串（官方样本形态） */
+export function generateHexId32(): string {
+  return hexChars(32);
+}
+
+/** 飞书 create_time：13 位毫秒时间戳（字符串形态，JSON 内带引号） */
+export function generateCreateTimeMsString(): string {
+  return String(Date.now());
+}
+
+/** 飞书 open_id：ou_ + 32 位十六进制（官方样本 ou_84aad35d084aa403a838cf73ee18467） */
+export function generateLarkOpenId(): string {
+  return `ou_${hexChars(32)}`;
+}
+
+/** 飞书 union_id：on_ + 32 位十六进制（官方样本 on_8ed6aa67826108097d9ee143816345） */
+export function generateLarkUnionId(): string {
+  return `on_${hexChars(32)}`;
+}
+
+/** 飞书 message_id：om_ + 32 位十六进制（幂等键，官方样本 om_dc132645…） */
+export function generateLarkMessageId(): string {
+  return `om_${hexChars(32)}`;
+}
+
+/** 飞书 chat_id：oc_ + 32 位十六进制（单聊/群共用，官方样本 oc_5ad11d72…） */
+export function generateLarkChatId(): string {
+  return `oc_${hexChars(32)}`;
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -99,6 +141,12 @@ const GENERATORS: Record<IdKind, Generator> = {
   createTimeSecNumber: generateCreateTimeSecNumber,
   msgId64: generateMsgId64,
   aibotMsgId: generateAibotMsgId,
+  hexId32: generateHexId32,
+  createTimeMsString: generateCreateTimeMsString,
+  larkOpenId: generateLarkOpenId,
+  larkUnionId: generateLarkUnionId,
+  larkMessageId: generateLarkMessageId,
+  larkChatId: generateLarkChatId,
 };
 
 /**

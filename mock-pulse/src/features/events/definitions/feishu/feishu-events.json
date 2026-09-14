@@ -1,0 +1,336 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "feishu",
+  "version": "2026.09",
+  "schemas": {
+    "fs-bot-added": {
+      "version": "2026.09",
+      "source": "https://open.feishu.cn/document/server-docs/group/chat-member/event/added-2",
+      "fields": [
+        {
+          "path": "header.event_id",
+          "title": "事件 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件的唯一标识（32 位十六进制）。"
+        },
+        {
+          "path": "header.event_type",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 im.chat.member.bot.added_v1：机器人被用户拉进群。"
+        },
+        {
+          "path": "header.create_time",
+          "title": "事件时间",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件产生的毫秒时间戳（字符串形态）。"
+        },
+        {
+          "path": "event.chat_id",
+          "title": "群 ID",
+          "type": "string",
+          "group": "群信息",
+          "description": "机器人加入的群会话 ID（oc_ 开头）；后续向该群发消息用它作 receive_id。",
+          "required": true
+        },
+        {
+          "path": "event.name",
+          "title": "群名称",
+          "type": "string",
+          "group": "群信息",
+          "description": "拉 bot 进群时的群名称（官方样本 Group name testing）。"
+        },
+        {
+          "path": "event.external",
+          "title": "是否外部群",
+          "type": "boolean",
+          "group": "群信息",
+          "description": "false 表示内部群；外部群（含组织外用户）为 true。"
+        },
+        {
+          "path": "event.operator_id.open_id",
+          "title": "操作者 Open ID",
+          "type": "string",
+          "group": "操作者身份",
+          "description": "把机器人拉进群的用户 open_id（ou_ 开头）。",
+          "required": true
+        },
+        {
+          "path": "event.operator_id.union_id",
+          "title": "操作者 Union ID",
+          "type": "string",
+          "group": "操作者身份",
+          "description": "操作者的 union_id（on_ 开头）。"
+        },
+        {
+          "path": "event.operator_id.user_id",
+          "title": "操作者 User ID",
+          "type": "string",
+          "group": "操作者身份",
+          "description": "租户内唯一用户标识。"
+        },
+        {
+          "path": "event.operator_tenant_key",
+          "title": "操作者租户 Key",
+          "type": "string",
+          "group": "操作者身份",
+          "description": "操作者所属租户标识（官方样本 72ud6639）。"
+        },
+        {
+          "path": "event.i18n_names.zh_cn",
+          "title": "群名（中文）",
+          "type": "string",
+          "group": "国际化群名",
+          "description": "群的中文名（官方样本 群聊）。"
+        },
+        {
+          "path": "event.i18n_names.en_us",
+          "title": "群名（英文）",
+          "type": "string",
+          "group": "国际化群名",
+          "description": "群的英文名（官方样本 group chat）。"
+        },
+        {
+          "path": "event.i18n_names.ja_jp",
+          "title": "群名（日文）",
+          "type": "string",
+          "group": "国际化群名",
+          "description": "群的日文名（官方样本 グループチャット）。"
+        }
+      ]
+    },
+    "fs-contact-deleted": {
+      "version": "2026.09",
+      "source": "https://open.feishu.cn/document/server-docs/contact-v3/user/events/deleted",
+      "fields": [
+        {
+          "path": "header.event_id",
+          "title": "事件 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件的唯一标识（32 位十六进制）。"
+        },
+        {
+          "path": "header.event_type",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 contact.user.deleted_v3：员工离职（通讯录用户被删除）。"
+        },
+        {
+          "path": "header.create_time",
+          "title": "事件时间",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件产生的毫秒时间戳（字符串形态）。"
+        },
+        {
+          "path": "event.object.open_id",
+          "title": "离职成员 Open ID",
+          "type": "string",
+          "group": "离职成员",
+          "description": "被删除用户的 open_id（ou_ 开头）；据此清理该用户的会话与订阅关系。",
+          "required": true
+        },
+        {
+          "path": "event.object.union_id",
+          "title": "离职成员 Union ID",
+          "type": "string",
+          "group": "离职成员",
+          "description": "被删除用户的 union_id（on_ 开头）。"
+        },
+        {
+          "path": "event.object.user_id",
+          "title": "离职成员 User ID",
+          "type": "string",
+          "group": "离职成员",
+          "description": "租户内唯一用户标识（官方样本 e33ggbyz）。"
+        },
+        {
+          "path": "event.object.name",
+          "title": "姓名",
+          "type": "string",
+          "group": "离职成员",
+          "description": "用户中文名（官方样本 John）。"
+        },
+        {
+          "path": "event.object.en_name",
+          "title": "英文名",
+          "type": "string",
+          "group": "离职成员",
+          "description": "用户英文名（官方样本 San Zhang）。"
+        },
+        {
+          "path": "event.object.nickname",
+          "title": "昵称",
+          "type": "string",
+          "group": "离职成员",
+          "description": "用户昵称（官方样本 Sunny Zhang）。"
+        },
+        {
+          "path": "event.object.email",
+          "title": "邮箱",
+          "type": "string",
+          "group": "离职成员",
+          "description": "用户邮箱（官方样本 zhangsan@gmail.com）。"
+        },
+        {
+          "path": "event.object.mobile",
+          "title": "手机号",
+          "type": "string",
+          "group": "离职成员",
+          "description": "用户手机号（官方样本 12345678910）。"
+        },
+        {
+          "path": "event.object.job_title",
+          "title": "职务",
+          "type": "string",
+          "group": "离职成员",
+          "description": "用户职务（官方样本 software engineer）。"
+        },
+        {
+          "path": "event.object.employee_no",
+          "title": "工号",
+          "type": "string",
+          "group": "离职成员",
+          "description": "员工工号（官方样本与 user_id 同值 e33ggbyz）。"
+        },
+        {
+          "path": "event.object.status.is_resigned",
+          "title": "是否离职",
+          "type": "boolean",
+          "group": "状态与部门",
+          "description": "删除事件样本中该值为 false（快照语义）；用离职状态判断时以事件语义为准。"
+        },
+        {
+          "path": "event.object.department_ids[0]",
+          "title": "部门 ID（快照）",
+          "type": "string",
+          "group": "状态与部门",
+          "description": "官方注明 deleted 事件该字段不返回值，请以 old_object.department_ids 为准。"
+        },
+        {
+          "path": "event.old_object.department_ids[0]",
+          "title": "原部门 ID",
+          "type": "string",
+          "group": "状态与部门",
+          "description": "删除前的部门 ID（官方注明以这里为准）。"
+        },
+        {
+          "path": "event.old_object.open_id",
+          "title": "原 Open ID",
+          "type": "string",
+          "group": "状态与部门",
+          "description": "删除前的 open_id（官方样本为占位串 ou_xxxxxxxxxx）。"
+        }
+      ]
+    },
+    "fs-approval-updated": {
+      "version": "2026.09",
+      "source": "https://open.feishu.cn/document/server-docs/approval-v4/event/common-event/custom-approval-event",
+      "fields": [
+        {
+          "path": "header.event_id",
+          "title": "事件 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件的唯一标识（32 位十六进制）。"
+        },
+        {
+          "path": "header.event_type",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 approval.approval.updated_v4：审批定义更新。"
+        },
+        {
+          "path": "header.token",
+          "title": "Verification Token",
+          "type": "string",
+          "group": "回调信封",
+          "description": "与应用加密策略页的 Token 明文比对（官方页示例为示意填充）。"
+        },
+        {
+          "path": "header.event_create_time",
+          "title": "事件时间",
+          "type": "string",
+          "group": "回调信封",
+          "description": "秒级浮点字符串（如 1502199207.7171419）；注意本事件 header 用 event_create_time，与 im 系的 create_time 不同。"
+        },
+        {
+          "path": "header.app_id",
+          "title": "应用 AppID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "订阅该审批事件的应用 AppID。"
+        },
+        {
+          "path": "header.tenant_key",
+          "title": "租户 Key",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件所属租户标识。"
+        },
+        {
+          "path": "event.object.approval_id",
+          "title": "审批定义 ID",
+          "type": "string",
+          "group": "审批定义",
+          "description": "审批定义的唯一 ID（官方页示例为示意填充）。"
+        },
+        {
+          "path": "event.object.approval_code",
+          "title": "审批定义 Code",
+          "type": "string",
+          "group": "审批定义",
+          "description": "订阅审批事件所需的 approval_code（POST /approval/v4/approvals/:code/subscribe）。"
+        },
+        {
+          "path": "event.object.version_id",
+          "title": "版本 ID",
+          "type": "string",
+          "group": "审批定义",
+          "description": "本次更新产出的定义版本 ID。"
+        },
+        {
+          "path": "event.object.form_definition_id",
+          "title": "表单定义 ID",
+          "type": "string",
+          "group": "审批定义",
+          "description": "审批表单定义 ID。"
+        },
+        {
+          "path": "event.object.widget_group_type",
+          "title": "控件分组类型",
+          "type": "number",
+          "group": "审批定义",
+          "description": "官方示例为 0。"
+        },
+        {
+          "path": "event.object.process_obj",
+          "title": "流程配置",
+          "type": "string",
+          "group": "审批定义",
+          "description": "流程线配置的序列化字符串（官方示例 {\"lineList\": xxx}）。"
+        },
+        {
+          "path": "event.object.timestamp",
+          "title": "更新时间戳",
+          "type": "string",
+          "group": "审批定义",
+          "description": "定义更新的秒级时间戳（字符串形态，官方示例 1736763698）。"
+        },
+        {
+          "path": "event.object.extra",
+          "title": "附加信息",
+          "type": "string",
+          "group": "审批定义",
+          "description": "开发者自定义附加数据；官方示例为空串。"
+        }
+      ]
+    }
+  }
+}

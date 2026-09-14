@@ -36,6 +36,24 @@ export type WechatMiniMode = "plain" | "compatible" | "secure";
 export type WechatMiniDataFormat = "xml" | "json";
 
 /**
+ * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
+ * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
+ * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
+ * （key = sha256(encrypt_key)，官方 §4）。
+ */
+export type FeishuConnectionConfig = {
+  channel: "feishu";
+  /** 回调目标地址，事件与剧本共享 */
+  url: string;
+  /** 应用 AppID（cli_ 开头，事件 header 的 app_id；随连接记录） */
+  appId: string;
+  /** Verification Token（事件与回调 > 加密策略；握手三参与事件 header 校验） */
+  verificationToken: string;
+  /** Encrypt Key：留空 = 明文直发；填写 = 签名 + 加密信封 */
+  encryptKey: string;
+};
+
+/**
  * 连接配置按渠道区分形状（与 Rust 端 ConnectionConfig 内标枚举一致，
  * 以 channel 字段判别；持久化与 IPC 透传均为 camelCase）。
  */
@@ -106,7 +124,8 @@ export type ConnectionConfig =
   | DouyinConnectionConfig
   | WecomConnectionConfig
   | WechatMpConnectionConfig
-  | WechatMiniConnectionConfig;
+  | WechatMiniConnectionConfig
+  | FeishuConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -155,4 +174,12 @@ export function testWechatMiniConnection(
   config: WechatMiniConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_wechat_mini", { config });
+}
+
+/** 按飞书 POST url_verification 协议测试连接（1 秒内原样回显 challenge；
+ *  配 Encrypt Key 时发加密信封 + X-Lark-Signature 签名） */
+export function testFeishuConnection(
+  config: FeishuConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_feishu", { config });
 }

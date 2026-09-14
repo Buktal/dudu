@@ -94,10 +94,10 @@ export const CHANNEL_REGISTRY = {
   },
   feishu: {
     name: "飞书",
-    protocol: "Webhook · JSON 回调",
-    note: "事件订阅 Webhook：JSON 报文，握手回 challenge，X-Lark-Signature = sha256(timestamp+nonce+encrypt_key+body)",
+    protocol: "Webhook · JSON 回调（JSON v2.0 信封）",
+    note: "事件订阅 Webhook：POST challenge 握手原样回显（1s），X-Lark-Signature = sha256(timestamp+nonce+encrypt_key+body)，AES-256-CBC 加密信封（key=sha256(encrypt_key)）",
     icon: "Bird",
-    implemented: false,
+    implemented: true,
   },
   weibo: {
     name: "微博",

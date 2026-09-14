@@ -5,6 +5,7 @@
 //! 留在 adapter 实现内部（ADR-0001）。
 
 pub mod douyin;
+pub mod feishu;
 pub mod store;
 pub(crate) mod util;
 pub mod wechat_mini;
@@ -102,6 +103,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &wecom::Adapter,
     &wechat_mp::Adapter,
     &wechat_mini::Adapter,
+    &feishu::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -286,6 +288,19 @@ pub enum ConnectionConfig {
         #[serde(default)]
         data_format: WechatMiniDataFormat,
     },
+    #[serde(rename = "feishu", rename_all = "camelCase")]
+    Feishu {
+        url: String,
+        /// 应用 AppID（cli_ 开头，事件 header 的 app_id；随连接记录）
+        app_id: String,
+        /// Verification Token（事件与回调 > 加密策略）：url_verification 明文
+        /// 三参之一与事件 header 的 token（官方 §4.1 默认校验方式）
+        verification_token: String,
+        /// Encrypt Key（官方 §4）：空 = 明文事件直发；非空 = X-Lark-Signature
+        /// 签名 + AES-256-CBC 加密信封（key = sha256(encrypt_key)）
+        #[serde(default)]
+        encrypt_key: String,
+    },
 }
 
 /// 读取全部持久化连接（无文件时返回空列表）。
@@ -352,6 +367,13 @@ pub async fn connections_test_wechat_mini(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&wechat_mini::Adapter, config).await
+}
+
+/// 按飞书 POST url_verification 协议测试连接（官方要求 1 秒内回显
+/// challenge；配 Encrypt Key 时发加密信封 + X-Lark-Signature 签名）。
+#[tauri::command]
+pub async fn connections_test_feishu(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
+    run_handshake(&feishu::Adapter, config).await
 }
 
 #[cfg(test)]
@@ -424,10 +446,17 @@ mod tests {
             mode: WechatMiniMode::Plain,
             data_format: WechatMiniDataFormat::Xml,
         };
+        let feishu_config = ConnectionConfig::Feishu {
+            url: String::new(),
+            app_id: String::new(),
+            verification_token: String::new(),
+            encrypt_key: String::new(),
+        };
         assert_eq!(adapter_of(&douyin_config).id(), "douyin");
         assert_eq!(adapter_of(&wecom_config).id(), "wecom");
         assert_eq!(adapter_of(&wechat_mp_config).id(), "wechat-mp");
         assert_eq!(adapter_of(&wechat_mini_config).id(), "wechat-mini");
+        assert_eq!(adapter_of(&feishu_config).id(), "feishu");
         assert_eq!(
             adapter_by_channel("douyin").map(|adapter| adapter.id()),
             Some("douyin")
@@ -443,6 +472,10 @@ mod tests {
         assert_eq!(
             adapter_by_channel("wechat-mini").map(|adapter| adapter.id()),
             Some("wechat-mini")
+        );
+        assert_eq!(
+            adapter_by_channel("feishu").map(|adapter| adapter.id()),
+            Some("feishu")
         );
         assert!(adapter_by_channel("telegram").is_none());
         // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
@@ -462,6 +495,10 @@ mod tests {
             assert_eq!(
                 adapter.url(&wechat_mini_config).is_some(),
                 adapter.matches(&wechat_mini_config)
+            );
+            assert_eq!(
+                adapter.url(&feishu_config).is_some(),
+                adapter.matches(&feishu_config)
             );
         }
     }

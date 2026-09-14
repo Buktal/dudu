@@ -4,9 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type ConnectionConfig,
   type DouyinConnectionConfig,
+  type FeishuConnectionConfig,
   loadConnections,
   saveConnection,
   testDouyinConnection,
+  testFeishuConnection,
   testWechatMiniConnection,
   testWechatMpConnection,
   testWecomConnection,
@@ -59,6 +61,14 @@ const wechatMiniConfig: WechatMiniConnectionConfig = {
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   mode: "secure",
   dataFormat: "xml",
+};
+
+const feishuConfig: FeishuConnectionConfig = {
+  channel: "feishu",
+  url: "http://127.0.0.1:8080/webhooks/feishu",
+  appId: "cli_mock_appid",
+  verificationToken: "mock_verification_token",
+  encryptKey: "mock_encrypt_key",
 };
 
 describe("connections api 契约", () => {
@@ -116,12 +126,22 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/公众号/小程序（按 channel 区分形状）", async () => {
+  it("testFeishuConnection 调用 connections_test_feishu 并透传配置", async () => {
+    const outcome = { ok: true, message: "challenge 原样回显" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testFeishuConnection(feishuConfig)).resolves.toEqual(outcome);
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_feishu", {
+      config: feishuConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/公众号/小程序/飞书（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
       wechatMpConfig,
       wechatMiniConfig,
+      feishuConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

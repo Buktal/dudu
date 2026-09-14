@@ -30,6 +30,7 @@ pub fn run() {
             connections::connections_test_wecom,
             connections::connections_test_wechat_mp,
             connections::connections_test_wechat_mini,
+            connections::connections_test_feishu,
             definitions::definitions_load,
             definitions::definitions_save,
             events::events_load,

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ConnectionConfig } from "../api";
 import {
   connectionsReducer,
+  defaultFeishuConnection,
   defaultWechatMiniConnection,
   defaultWechatMpConnection,
   defaultWecomConnection,
@@ -22,6 +23,7 @@ vi.mock("../api", () => ({
   loadConnections: vi.fn(),
   saveConnection: vi.fn(),
   testDouyinConnection: vi.fn(),
+  testFeishuConnection: vi.fn(),
   testWechatMiniConnection: vi.fn(),
   testWechatMpConnection: vi.fn(),
   testWecomConnection: vi.fn(),
@@ -31,6 +33,7 @@ import {
   loadConnections,
   saveConnection as saveApi,
   testDouyinConnection,
+  testFeishuConnection,
   testWechatMiniConnection,
   testWechatMpConnection,
   testWecomConnection,
@@ -74,6 +77,14 @@ const savedWechatMini: ConnectionConfig = {
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   mode: "secure",
   dataFormat: "xml",
+};
+
+const savedFeishu: ConnectionConfig = {
+  channel: "feishu",
+  url: "http://127.0.0.1:9099/feishu",
+  appId: "cli_mock_appid",
+  verificationToken: "rvaYgkND1GOiu5MM0E1rncYC6PLtF7JV",
+  encryptKey: "test key",
 };
 
 function makeStore() {
@@ -241,6 +252,26 @@ describe("connections slice", () => {
     });
   });
 
+  it("飞书配置走 connections_test_feishu（按渠道路由测试命令）", async () => {
+    vi.mocked(testFeishuConnection).mockResolvedValue({
+      ok: true,
+      message: "url_verification 握手成功",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedFeishu));
+
+    expect(vi.mocked(testFeishuConnection)).toHaveBeenCalledWith(savedFeishu);
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "url_verification 握手成功",
+    });
+  });
+
   it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
     // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
     // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
@@ -256,6 +287,7 @@ describe("connections slice", () => {
     expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store)).status).toBe("failed");
   });
 });
@@ -423,6 +455,33 @@ describe("isConnectionReady（小程序按消息加解密方式核必填集）",
       isConnectionReady(
         selectConnection(initialConnectionsState, "wechat-mini"),
       ),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（飞书核必填集）", () => {
+  it("url/verificationToken 齐全才算已配置（appId/encryptKey 不参与必填集）", () => {
+    expect(isConnectionReady(savedFeishu)).toBe(true);
+    expect(isConnectionReady({ ...savedFeishu, appId: "" })).toBe(true);
+    expect(isConnectionReady({ ...savedFeishu, encryptKey: "" })).toBe(true);
+  });
+
+  it("缺 url 或缺 verificationToken 都不算已配置", () => {
+    expect(isConnectionReady({ ...savedFeishu, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedFeishu, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedFeishu, verificationToken: "" })).toBe(
+      false,
+    );
+  });
+
+  it("初始飞书占位连接（凭据全空、明文直发起步）不算已配置", () => {
+    expect(defaultFeishuConnection.channel).toBe("feishu");
+    expect(defaultFeishuConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/feishu",
+    );
+    expect(defaultFeishuConnection.encryptKey).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "feishu")),
     ).toBe(false);
   });
 });

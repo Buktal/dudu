@@ -233,8 +233,8 @@ describe("templatesForChannel（目录模板源）", () => {
     );
   });
 
-  it("未接入模板的渠道返回空表", () => {
-    expect(templatesForChannel("feishu")).toEqual([]);
+  it("未接入模板的渠道返回空表（飞书已接入 #35，改用未接入的钉钉）", () => {
+    expect(templatesForChannel("dingtalk")).toEqual([]);
   });
 });
 

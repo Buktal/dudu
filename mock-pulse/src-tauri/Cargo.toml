@@ -27,6 +27,8 @@ reqwest = { version = "0.12", features = ["blocking"] }
 sha1 = "0.10"
 # 抖音小游戏 x-signature（#30）：base64(md5(...)) 验签，与 sha1 同族（RustCrypto digest 0.10）
 md-5 = "0.10"
+# 飞书渠道（#35）：X-Lark-Signature 验签 + AES key 派生（sha256(encrypt_key)），同族 digest 0.10
+sha2 = "0.10"
 hex = "0.4"
 uuid = { version = "1", features = ["v4"] }
 # 企微回调加解密（#17）：AES-256-CBC 底层块运算（补位按官方 PKCS#7-32 自实现）+ Base64

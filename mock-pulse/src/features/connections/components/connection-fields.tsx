@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import type {
   ConnectionConfig,
   DouyinSystem,
+  FeishuConnectionConfig,
   WechatMiniDataFormat,
   WechatMiniMode,
   WechatMpMode,
@@ -247,6 +248,33 @@ function wechatMiniFields(
   return fields;
 }
 
+/** 飞书凭证字段（事实库 §4）：Encrypt Key 留空 = 明文直发，填写 = 签名 + 加密信封 */
+function feishuFields(draft: FeishuConnectionConfig) {
+  return [
+    {
+      key: "appId",
+      label: "App ID",
+      note: "应用 AppID（cli_ 开头），事件 header 的 app_id；仅随连接记录。",
+      value: draft.appId,
+      secret: false,
+    },
+    {
+      key: "verificationToken",
+      label: "Verification Token",
+      note: "事件与回调 > 加密策略页获取；url_verification 三参之一与事件 header 的 token。",
+      value: draft.verificationToken,
+      secret: true,
+    },
+    {
+      key: "encryptKey",
+      label: "Encrypt Key",
+      note: "留空 = 明文直发；填写后走 X-Lark-Signature 签名 + AES 加密信封（key=sha256(encrypt_key)）。",
+      value: draft.encryptKey,
+      secret: true,
+    },
+  ];
+}
+
 export function ConnectionFields({
   draft,
   onEdit,
@@ -261,7 +289,9 @@ export function ConnectionFields({
         ? wechatMpFields(draft)
         : draft.channel === "wechat-mini"
           ? wechatMiniFields(draft)
-          : wecomFields(draft);
+          : draft.channel === "feishu"
+            ? feishuFields(draft)
+            : wecomFields(draft);
   const systemSelector =
     draft.channel === "douyin" ? (
       <Field className="col-span-full">

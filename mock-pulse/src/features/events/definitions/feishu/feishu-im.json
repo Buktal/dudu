@@ -1,0 +1,303 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "feishu",
+  "version": "2026.09",
+  "schemas": {
+    "fs-message-receive": {
+      "version": "2026.09",
+      "source": "https://open.feishu.cn/document/server-docs/im-v1/message/events/receive",
+      "fields": [
+        {
+          "path": "header.event_id",
+          "title": "事件 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件的唯一标识；普通事件用它做幂等，但消息类请用 message_id 去重（官方口径）。"
+        },
+        {
+          "path": "header.event_type",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 im.message.receive_v1：机器人收到用户或机器人发来的消息。"
+        },
+        {
+          "path": "header.create_time",
+          "title": "事件时间",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件产生的毫秒时间戳（字符串形态）。"
+        },
+        {
+          "path": "header.token",
+          "title": "Verification Token",
+          "type": "string",
+          "group": "回调信封",
+          "description": "与应用加密策略页的 Token 明文比对，做基础来源校验。"
+        },
+        {
+          "path": "header.app_id",
+          "title": "应用 AppID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "接收事件的飞书应用 AppID（cli_ 开头）。"
+        },
+        {
+          "path": "header.tenant_key",
+          "title": "租户 Key",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件所属租户标识（十六进制短串）。"
+        },
+        {
+          "path": "event.sender.sender_id.open_id",
+          "title": "发送者 Open ID",
+          "type": "string",
+          "group": "发送者身份",
+          "description": "发送方的 open_id（ou_ 开头），应用内用户标识。回复消息时用它定位收件人。",
+          "required": true
+        },
+        {
+          "path": "event.sender.sender_id.union_id",
+          "title": "发送者 Union ID",
+          "type": "string",
+          "group": "发送者身份",
+          "description": "发送方的 union_id（on_ 开头），同一用户在开发者账号下多个应用间一致。"
+        },
+        {
+          "path": "event.sender.sender_id.user_id",
+          "title": "发送者 User ID",
+          "type": "string",
+          "group": "发送者身份",
+          "description": "租户内唯一用户标识；需要 contact:user.employee_id 权限才会返回。"
+        },
+        {
+          "path": "event.sender.sender_type",
+          "title": "发送者类型",
+          "type": "string",
+          "group": "发送者身份",
+          "description": "user 表示用户发送，bot 表示机器人发送。"
+        },
+        {
+          "path": "event.message.message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "这条消息的唯一标识（om_ 开头）；消息去重请使用它而非 event_id（官方口径）。"
+        },
+        {
+          "path": "event.message.message_type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "文本为 text；其他类型（post/image 等）可新建相应素材模拟。"
+        },
+        {
+          "path": "event.message.content",
+          "title": "消息内容",
+          "type": "string",
+          "group": "消息内容",
+          "description": "JSON 序列化字符串（如 {\"text\":\"...\"}）；@用户的占位与 mentions[].key 对应。",
+          "multiline": true,
+          "required": true
+        },
+        {
+          "path": "event.message.chat_type",
+          "title": "会话类型",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "p2p 单聊 / group 群聊；决定你的服务如何区分私聊与群 @ 场景。"
+        },
+        {
+          "path": "event.message.chat_id",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "消息所属会话（oc_ 开头，单聊/群共用）。"
+        },
+        {
+          "path": "event.message.root_id",
+          "title": "根消息 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "话题首层消息 ID；官方样本含占位段，可整串替换为合法 om_ 串。"
+        },
+        {
+          "path": "event.message.parent_id",
+          "title": "父消息 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "引用/回复的父消息 ID；官方样本含占位段。"
+        },
+        {
+          "path": "event.message.thread_id",
+          "title": "话题 ID",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "消息所属话题（omt_ 开头），非话题消息可不返回。"
+        },
+        {
+          "path": "event.message.create_time",
+          "title": "消息发送时间",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "消息发送的毫秒时间戳（字符串形态）。"
+        },
+        {
+          "path": "event.message.update_time",
+          "title": "消息更新时间",
+          "type": "string",
+          "group": "会话与时序",
+          "description": "消息最近更新的毫秒时间戳（字符串形态）。"
+        },
+        {
+          "path": "event.mentions[0].key",
+          "title": "@占位符",
+          "type": "string",
+          "group": "提及与客户端",
+          "description": "content 文本中的 @占位（如 @_user_1），与被提及人一一对应。"
+        },
+        {
+          "path": "event.mentions[0].name",
+          "title": "被提及人姓名",
+          "type": "string",
+          "group": "提及与客户端",
+          "description": "被提及用户的展示名（官方样本 Tom）。"
+        },
+        {
+          "path": "event.mentions[0].id.open_id",
+          "title": "被提及人 Open ID",
+          "type": "string",
+          "group": "提及与客户端",
+          "description": "被提及用户的 open_id；默认与发送者同值生成，可独立修改。"
+        },
+        {
+          "path": "event.message.user_agent",
+          "title": "客户端 UA",
+          "type": "string",
+          "group": "提及与客户端",
+          "description": "发送方客户端标识；需要 im:user_agent:read 权限才会返回。"
+        }
+      ]
+    },
+    "fs-message-read": {
+      "version": "2026.09",
+      "source": "https://open.feishu.cn/document/server-docs/im-v1/message/events/message_read",
+      "fields": [
+        {
+          "path": "header.event_id",
+          "title": "事件 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件的唯一标识（32 位十六进制）。"
+        },
+        {
+          "path": "header.event_type",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 im.message.message_read_v1：用户已读机器人发的单聊消息（官方真名 message_read，无 im.message.read_v1）。"
+        },
+        {
+          "path": "header.create_time",
+          "title": "事件时间",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件产生的毫秒时间戳（字符串形态）。"
+        },
+        {
+          "path": "event.reader.reader_id.open_id",
+          "title": "已读者 Open ID",
+          "type": "string",
+          "group": "已读者身份",
+          "description": "已读回执归属用户的 open_id（ou_ 开头）。",
+          "required": true
+        },
+        {
+          "path": "event.reader.reader_id.union_id",
+          "title": "已读者 Union ID",
+          "type": "string",
+          "group": "已读者身份",
+          "description": "已读回执归属用户的 union_id（on_ 开头）。"
+        },
+        {
+          "path": "event.reader.reader_id.user_id",
+          "title": "已读者 User ID",
+          "type": "string",
+          "group": "已读者身份",
+          "description": "租户内唯一用户标识。"
+        },
+        {
+          "path": "event.reader.read_time",
+          "title": "已读时间",
+          "type": "string",
+          "group": "已读者身份",
+          "description": "已读发生的毫秒时间戳（字符串形态）。"
+        },
+        {
+          "path": "event.message_id_list[0]",
+          "title": "已读消息 ID",
+          "type": "string",
+          "group": "消息列表",
+          "description": "被已读的消息 ID（om_ 开头）；与接收消息事件的 message_id 对齐即可串起已读链路。"
+        }
+      ]
+    },
+    "fs-message-recalled": {
+      "version": "2026.09",
+      "source": "https://open.feishu.cn/document/server-docs/im-v1/message/events/recalled",
+      "fields": [
+        {
+          "path": "header.event_id",
+          "title": "事件 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件的唯一标识（32 位十六进制）。"
+        },
+        {
+          "path": "header.event_type",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 im.message.recalled_v1：机器人所在会话有消息被撤回（官方真名 recalled，无 recall_v1）。"
+        },
+        {
+          "path": "header.create_time",
+          "title": "事件时间",
+          "type": "string",
+          "group": "回调信封",
+          "description": "事件产生的毫秒时间戳（字符串形态）。"
+        },
+        {
+          "path": "event.message_id",
+          "title": "被撤回消息 ID",
+          "type": "string",
+          "group": "撤回详情",
+          "description": "被撤回消息的 ID（om_ 开头）；与接收事件的 message_id 同值即可模拟撤回链路。",
+          "required": true
+        },
+        {
+          "path": "event.chat_id",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "撤回详情",
+          "description": "撤回发生的会话（oc_ 开头）。"
+        },
+        {
+          "path": "event.recall_time",
+          "title": "撤回时间",
+          "type": "string",
+          "group": "撤回详情",
+          "description": "撤回发生的毫秒时间戳（字符串形态）。"
+        },
+        {
+          "path": "event.recall_type",
+          "title": "撤回者类型",
+          "type": "string",
+          "group": "撤回详情",
+          "description": "message_owner 本人 / group_owner 群主 / group_manager 管理员 / enterprise_manager 企业管理员。"
+        }
+      ]
+    }
+  }
+}
