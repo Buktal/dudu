@@ -79,7 +79,7 @@ export function DraftGuard({
               onClick={() => void save()}
             >
               {saving ? (
-                <Spinner data-icon="inline-start" />
+                <Spinner aria-hidden="true" data-icon="inline-start" />
               ) : (
                 <SaveIcon aria-hidden="true" data-icon="inline-start" />
               )}

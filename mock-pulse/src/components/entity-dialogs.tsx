@@ -73,7 +73,7 @@ export function SaveAsDialog({
           </Button>
           <Button disabled={saving} onClick={() => void save()}>
             {saving ? (
-              <Spinner data-icon="inline-start" />
+              <Spinner aria-hidden="true" data-icon="inline-start" />
             ) : (
               <SaveIcon data-icon="inline-start" />
             )}
@@ -169,7 +169,7 @@ export function DeleteEntityDialog({
             }}
           >
             {deleting ? (
-              <Spinner data-icon="inline-start" />
+              <Spinner aria-hidden="true" data-icon="inline-start" />
             ) : (
               <Trash2Icon data-icon="inline-start" />
             )}

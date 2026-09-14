@@ -165,7 +165,7 @@ export function MaterialPicker({
               </p>
             </div>
             {pending === item.id ? (
-              <Spinner data-icon="inline-end" />
+              <Spinner aria-hidden="true" data-icon="inline-end" />
             ) : (
               <PlusIcon aria-hidden="true" data-icon="inline-end" />
             )}

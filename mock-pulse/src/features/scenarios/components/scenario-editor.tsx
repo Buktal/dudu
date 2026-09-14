@@ -99,7 +99,7 @@ export function ScenarioEditor({
               }}
             >
               {saving ? (
-                <Spinner data-icon="inline-start" />
+                <Spinner aria-hidden="true" data-icon="inline-start" />
               ) : (
                 <SaveIcon data-icon="inline-start" />
               )}
@@ -213,7 +213,7 @@ export function ScenarioEditor({
             添加已保存事件
           </Button>
           <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
-            <FieldGroup className="w-auto">
+            <FieldGroup className="w-full sm:w-80">
               <Field>
                 <FieldLabel>步骤失败时</FieldLabel>
                 <ToggleGroup

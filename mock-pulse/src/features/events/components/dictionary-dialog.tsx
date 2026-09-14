@@ -209,7 +209,7 @@ export function DictionaryDialog({
             onClick={() => void onApply()}
           >
             {applying ? (
-              <Spinner data-icon="inline-start" />
+              <Spinner aria-hidden="true" data-icon="inline-start" />
             ) : (
               <CheckIcon aria-hidden="true" data-icon="inline-start" />
             )}

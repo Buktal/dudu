@@ -165,7 +165,6 @@ export function ResourceLibrary({
             components={{ List: ResourceList }}
             style={{ height: "100%" }}
             data={entries}
-            initialItemCount={entries.length}
             computeItemKey={(_index, item) => item.id}
             itemContent={(_index, item) => (
               <div className="group/resource relative">

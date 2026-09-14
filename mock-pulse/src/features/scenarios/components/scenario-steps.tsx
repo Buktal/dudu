@@ -131,7 +131,7 @@ export function ScenarioSteps({
                 </p>
               </CardContent>
               <CardFooter className="flex-wrap gap-3">
-                <FieldGroup className="w-auto">
+                <FieldGroup className="w-52 max-w-full shrink-0">
                   <Field orientation="horizontal" className="items-center">
                     <FieldLabel
                       htmlFor={`step-wait-${row.index}`}
@@ -141,7 +141,7 @@ export function ScenarioSteps({
                     </FieldLabel>
                     <Input
                       id={`step-wait-${row.index}`}
-                      className="w-20"
+                      className="w-20 shrink-0"
                       type="number"
                       min={0}
                       max={60}

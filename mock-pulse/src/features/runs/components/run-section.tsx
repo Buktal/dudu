@@ -77,7 +77,7 @@ export function RunButton({
       }
     >
       {stopping ? (
-        <Spinner data-icon="inline-start" />
+        <Spinner aria-hidden="true" data-icon="inline-start" />
       ) : active ? (
         <SquareIcon aria-hidden="true" data-icon="inline-start" />
       ) : (
@@ -135,9 +135,27 @@ export function RunSection({
   const last = lastRunFor(runs, kind, sourceId);
   const lanes = active ? liveLanes(active) : last ? recordLanes(last) : [];
   const resolvedMode = active?.mode ?? last?.mode ?? mode;
+  const summary = (
+    <RunSummary
+      lanes={lanes}
+      mode={resolvedMode}
+      active={!!active}
+      stopping={!!active && isStoppingRun(runs, active.runId)}
+      source={kind}
+      cancelled={last?.cancelled}
+      onStop={() =>
+        active && void perform(() => dispatch(stopRun(active.runId)).unwrap())
+      }
+      onOpen={() => {
+        if (last) dispatch(selectRun(last.id));
+        dispatch(setView("runs"));
+      }}
+    />
+  );
   return (
     <>
       <RunPersistenceNotice runId={last?.id} />
+      {active ? summary : null}
       {children}
       {lanes.length ? (
         <Collapsible
@@ -152,7 +170,7 @@ export function RunSection({
           >
             <span className="flex items-center gap-2">
               <HistoryIcon />
-              {active ? "正在执行" : "最近一次运行"}
+              {active ? "执行轨迹" : "最近一次运行"}
             </span>
             <ChevronDownIcon
               className={cn(
@@ -162,22 +180,7 @@ export function RunSection({
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-4">
-            <RunSummary
-              lanes={lanes}
-              mode={resolvedMode}
-              active={!!active}
-              stopping={!!active && isStoppingRun(runs, active.runId)}
-              source={kind}
-              cancelled={last?.cancelled}
-              onStop={() =>
-                active &&
-                void perform(() => dispatch(stopRun(active.runId)).unwrap())
-              }
-              onOpen={() => {
-                if (last) dispatch(selectRun(last.id));
-                dispatch(setView("runs"));
-              }}
-            />
+            {!active ? summary : null}
             {lanesHeading ? (
               <h3 className="mb-3 text-sm font-semibold">
                 本次运行 · {resolvedMode === "parallel" ? "并行" : "串行"}快照

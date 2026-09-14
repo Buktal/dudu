@@ -176,7 +176,7 @@ export function RunSummary({
               disabled={stopping}
             >
               {stopping ? (
-                <Spinner data-icon="inline-start" />
+                <Spinner aria-hidden="true" data-icon="inline-start" />
               ) : (
                 <SquareIcon data-icon="inline-start" />
               )}

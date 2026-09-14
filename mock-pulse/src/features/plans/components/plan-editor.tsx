@@ -93,7 +93,7 @@ export function PlanEditor() {
               }}
             >
               {saving ? (
-                <Spinner data-icon="inline-start" />
+                <Spinner aria-hidden="true" data-icon="inline-start" />
               ) : (
                 <SaveIcon data-icon="inline-start" />
               )}
@@ -200,7 +200,7 @@ export function PlanEditor() {
             添加已保存剧本
           </Button>
           <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
-            <FieldGroup className="w-auto">
+            <FieldGroup className="w-full sm:w-80">
               <Field>
                 <FieldLabel>剧本失败时</FieldLabel>
                 <ToggleGroup

@@ -151,7 +151,7 @@ export function ConnectionsView() {
         actions={
           <Button disabled={saving || !dirty} onClick={() => void save()}>
             {saving ? (
-              <Spinner data-icon="inline-start" />
+              <Spinner aria-hidden="true" data-icon="inline-start" />
             ) : (
               <SaveIcon data-icon="inline-start" />
             )}
@@ -245,7 +245,7 @@ export function ConnectionsView() {
                   }}
                 >
                   {testing ? (
-                    <Spinner data-icon="inline-start" />
+                    <Spinner aria-hidden="true" data-icon="inline-start" />
                   ) : (
                     <LinkIcon data-icon="inline-start" />
                   )}
