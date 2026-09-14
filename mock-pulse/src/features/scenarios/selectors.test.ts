@@ -1,7 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 
-import type { EventItem } from "@/features/events";
+import {
+  type EventItem,
+  type EventSchema,
+  schemaById,
+} from "@/features/events";
 
 import type { Scenario, ScenarioStep } from "./model";
 import {
@@ -134,5 +138,77 @@ describe("resolveSteps（版本引用解析与「有新版本」提示）", () =
     );
     expect(rows.map((row) => row.referenced?.revision)).toEqual([1, 2]);
     expect(rows.map((row) => row.outdated)).toEqual([true, false]);
+  });
+});
+
+describe("resolveSteps 模板步骤（ADR-0009 纯引用、版本钉住）", () => {
+  const V1 = schemaById("dy-text");
+
+  /** 构造升版条目：同一模板的 v2（注册表并存多版本，载荷可辨） */
+  const V2: EventSchema = {
+    ...V1,
+    version: "2026.10",
+    payload: {
+      ...V1.payload,
+      content: { ...(V1.payload.content as object), text: "模板v2文本" },
+    },
+  };
+
+  it("模板步骤解析出钉住版本的模板：注册表并存 v1/v2 仍命中 v1，恒不提示 outdated", () => {
+    const rows = resolveSteps(
+      [{ templateId: "dy-text", templateVersion: V1.version }],
+      [],
+      [V1, V2],
+    );
+    const row = rows[0];
+    expect(row?.kind).toBe("template");
+    expect(row?.template?.version).toBe(V1.version);
+    expect(row?.template?.payload).toEqual(V1.payload);
+    expect(row?.missing).toBe(false);
+    expect(row?.outdated).toBe(false);
+  });
+
+  it("未注册 id → missing，template 为 undefined", () => {
+    const rows = resolveSteps(
+      [{ templateId: "dy-gone", templateVersion: V1.version }],
+      [],
+      [V1],
+    );
+    expect(rows[0]?.kind).toBe("template");
+    expect(rows[0]?.missing).toBe(true);
+    expect(rows[0]?.template).toBeUndefined();
+  });
+
+  it("钉住版本超前（注册表没有该版本）→ missing", () => {
+    const rows = resolveSteps(
+      [{ templateId: "dy-text", templateVersion: "2026.10" }],
+      [],
+      [V1],
+    );
+    expect(rows[0]?.missing).toBe(true);
+    expect(rows[0]?.template).toBeUndefined();
+  });
+
+  it("缺省注册表（第三参不传）时模板步骤按缺失处理（防御）", () => {
+    const rows = resolveSteps(
+      [{ templateId: "dy-text", templateVersion: V1.version }],
+      [],
+    );
+    expect(rows[0]?.missing).toBe(true);
+  });
+
+  it("混合步骤：事件步骤与模板步骤互不干扰，各自解析", () => {
+    const rows = resolveSteps(
+      [
+        { eventId: "evt-a", revision: 1 },
+        { templateId: "dy-text", templateVersion: V1.version },
+      ],
+      [eventWithVersions("evt-a", [1, 2])],
+      [V1],
+    );
+    expect(rows[0]?.kind).toBe("event");
+    expect(rows[0]?.referenced?.revision).toBe(1);
+    expect(rows[1]?.kind).toBe("template");
+    expect(rows[1]?.template?.id).toBe("dy-text");
   });
 });

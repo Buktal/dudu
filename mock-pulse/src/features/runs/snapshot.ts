@@ -1,7 +1,10 @@
 import {
+  EVENT_SCHEMAS,
   type EventItem,
+  type EventSchema,
   type ExpectedReceipt,
   resolveEventVersion,
+  resolveTemplateVersion,
   schemaById,
   wireBodyText,
 } from "@/features/events";
@@ -17,12 +20,17 @@ import { newRunId } from "./model";
  * 输入用结构化类型（不引 scenarios 域，保持 runs 单向依赖）。
  */
 
+/** 快照物化所需的步骤引用（ScenarioStep 的结构子集：两种形态并列） */
+export type SnapshotStep =
+  | { eventId: string; revision: number; wait?: number }
+  | { templateId: string; templateVersion: string; wait?: number };
+
 /** 快照物化所需的剧本形状（Scenario 的结构子集） */
 export type SnapshotSource = {
   id: string;
   name: string;
   channelId: ChannelId;
-  steps: readonly { eventId: string; revision: number; wait?: number }[];
+  steps: readonly SnapshotStep[];
   failure?: "stop" | "continue";
 };
 
@@ -50,20 +58,60 @@ function channelName(channelId: ChannelId): string {
   return channelById(channelId)?.name ?? channelId;
 }
 
+/** 注册表内同 id 模板的展示名（缺失语义错误文案用） */
+function templateName(templates: readonly EventSchema[], id: string): string {
+  return templates.find((item) => item.id === id)?.name ?? id;
+}
+
 /**
- * 物化剧本步骤为运行快照。解析失败（空步骤/悬空引用/缺版本/跨渠道）
- * 抛可读错误，不产出半成品快照。
+ * 物化剧本步骤为运行快照。解析失败（空步骤/悬空引用/缺版本/跨渠道/
+ * 模板未注册或钉住版本不在注册表）抛可读错误，不产出半成品快照。
  */
 export function materializeRunSnapshot(input: {
   scenario: SnapshotSource;
   events: readonly EventItem[];
+  /** 模板注册表（模板步骤的解析事实源）；缺省用内置注册表 */
+  templates?: readonly EventSchema[];
   startedAt: string;
 }): RunSnapshot {
   const { scenario, events, startedAt } = input;
+  const templates = input.templates ?? EVENT_SCHEMAS;
   if (scenario.steps.length === 0) {
-    throw new Error("剧本还没有步骤，先添加已保存事件再运行。");
+    throw new Error("剧本还没有步骤，先添加已保存事件或内置模板再运行。");
   }
   const steps = scenario.steps.map((step, index) => {
+    if ("templateId" in step) {
+      // 模板引用解析核心共用（events 域 resolveTemplateVersion）；钉住的
+      // 版本不在注册表（未注册 id / 超前或已更替）按缺失抛可读错误，拒绝启动。
+      const { template } = resolveTemplateVersion(templates, step);
+      if (!template) {
+        const registered = templates.some(
+          (item) => item.id === step.templateId,
+        );
+        if (!registered) {
+          throw new Error(
+            `第 ${index + 1} 步引用的内置模板不存在：${step.templateId}。先删除该步骤或更新剧本。`,
+          );
+        }
+        throw new Error(
+          `第 ${index + 1} 步引用的模板版本不存在：${templateName(templates, step.templateId)} v${step.templateVersion}。`,
+        );
+      }
+      if (template.channelId !== scenario.channelId) {
+        throw new Error(
+          `第 ${index + 1} 步引用了${channelName(template.channelId)}的内置模板：${template.id}（剧本渠道为${channelName(scenario.channelId)}）。`,
+        );
+      }
+      return {
+        eventName: template.name,
+        eventId: template.id,
+        channel: template.channelId,
+        expected: { ...template.expected },
+        // 纯引用（ADR-0009）：钉住版本的默认载荷原样发送，不重生成 ID
+        body: wireBodyText(template, template.payload),
+        ...(step.wait === undefined ? {} : { wait: step.wait }),
+      };
+    }
     // 引用解析核心共用（events 域 resolveEventVersion）；缺失语义（抛错
     // 拒绝启动、不产半成品快照）留在本运行时钟。
     const { event, version: referenced } = resolveEventVersion(events, step);

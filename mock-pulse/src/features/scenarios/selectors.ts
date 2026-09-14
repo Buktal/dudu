@@ -1,12 +1,14 @@
 import {
   type EventItem,
+  type EventSchema,
   type EventVersion,
   resolveEventVersion,
+  resolveTemplateVersion,
 } from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
 import { type Page, paginate as paginateList } from "@/lib/paginate";
 
-import type { Scenario, ScenarioStep } from "./model";
+import { isTemplateStep, type Scenario, type ScenarioStep } from "./model";
 
 /** 剧本筛选：搜索 + 渠道（纯 selector，列表渲染交给 react-virtuoso） */
 export type ScenarioFilters = {
@@ -58,27 +60,48 @@ export const paginateScenarios = paginateList;
 export type StepRow = {
   index: number;
   step: ScenarioStep;
-  /** 引用的事件（missing 时为 undefined） */
+  /** 引用形态：event = 事件素材版本引用；template = 内置模板纯引用（ADR-0009） */
+  kind: "event" | "template";
+  /** 引用的事件（事件步骤 missing 时为 undefined） */
   event: EventItem | undefined;
   /** 引用的版本（事件缺该版本号时为 undefined） */
   referenced: EventVersion | undefined;
-  /** 事件最新版本号（无版本事件为 0） */
+  /** 模板步骤解析出的钉住版本模板（未注册 id / 版本不在注册表时为 undefined） */
+  template: EventSchema | undefined;
+  /** 事件步骤：事件最新版本号（无版本事件为 0）；模板步骤恒 0（钉住，无同步语义） */
   latestRevision: number;
-  /** 引用落后于最新版本 → UI 提示「有新版本」 */
+  /** 事件步骤：引用落后于最新版本 → UI 提示「有新版本」；模板步骤恒 false（钉住） */
   outdated: boolean;
-  /** 事件库中已不存在该事件（删除被拒的正常流程不会出现，防御显示） */
+  /** 引用缺失：事件不存在 / 模板未注册或钉住版本不在注册表 */
   missing: boolean;
 };
 
 /**
- * 把步骤的 {eventId, revision} 引用解析为展示行：
- * 「有新版本」= 事件最新版本号 > 步骤引用的版本号。
+ * 把步骤引用解析为展示行：事件步骤按 {eventId, revision}，模板步骤按
+ * {templateId, templateVersion}（版本钉住，无「有新版本」同步语义）。
  */
 export function resolveSteps(
   steps: ScenarioStep[],
   events: EventItem[],
+  templates: readonly EventSchema[] = [],
 ): StepRow[] {
   return steps.map((step, index) => {
+    if (isTemplateStep(step)) {
+      // 模板引用解析核心共用（events 域 resolveTemplateVersion）；钉住
+      // 语义：只按步骤存下的 id + 版本精确解析，缺失留给本侧标记
+      const { template } = resolveTemplateVersion(templates, step);
+      return {
+        index,
+        step,
+        kind: "template",
+        event: undefined,
+        referenced: undefined,
+        template,
+        latestRevision: 0,
+        outdated: false,
+        missing: !template,
+      };
+    }
     // 引用解析核心共用（events 域 resolveEventVersion）；展示时钟特有的
     // missing / outdated 标记与最新版本号留在本侧。
     const { event, version: referenced } = resolveEventVersion(events, step);
@@ -87,8 +110,10 @@ export function resolveSteps(
     return {
       index,
       step,
+      kind: "event",
       event,
       referenced,
+      template: undefined,
       latestRevision,
       outdated: Boolean(referenced) && latestRevision > step.revision,
       missing: !event,

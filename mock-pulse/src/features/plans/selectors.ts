@@ -1,3 +1,4 @@
+import { isTemplateStep } from "@/features/scenarios";
 import type { ChannelId } from "@/lib/channels";
 import { type Page, paginate as paginateList } from "@/lib/paginate";
 
@@ -70,7 +71,7 @@ export function planNamesReferencingScenario(
   );
 }
 
-/** 即使来源剧本已经改动，编排的固定快照仍持有事件版本。 */
+/** 即使来源剧本已经改动，编排的固定快照仍持有事件版本（模板步骤不引用素材）。 */
 export function planNamesReferencingEvent(
   state: { items: Plan[] },
   eventId: string,
@@ -78,7 +79,9 @@ export function planNamesReferencingEvent(
   return state.items
     .filter((plan) =>
       plan.items.some((lane) =>
-        lane.snapshot?.steps.some((step) => step.eventId === eventId),
+        lane.snapshot?.steps.some(
+          (step) => !isTemplateStep(step) && step.eventId === eventId,
+        ),
       ),
     )
     .map((plan) => plan.name);

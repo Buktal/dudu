@@ -4,9 +4,13 @@
 
 export { ScenariosView } from "./components/scenarios-view";
 export {
+  addTemplateStep,
+  type EventStep,
+  isTemplateStep,
   type Scenario,
   type ScenarioStep,
   scenariosReferencingEvent,
+  type TemplateStep,
 } from "./model";
 export {
   filterScenarios,
@@ -19,6 +23,7 @@ export {
 } from "./selectors";
 export {
   addScenarioStep,
+  addScenarioTemplateStep,
   deleteScenario,
   discardScenarioDraft,
   fetchScenarios,
@@ -26,6 +31,7 @@ export {
   moveDraftStep,
   openScenario,
   removeDraftStep,
+  replaceScenarioTemplateStep,
   type ScenariosState,
   saveScenario,
   scenarioNamesReferencingEvent,

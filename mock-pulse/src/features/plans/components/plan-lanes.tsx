@@ -18,6 +18,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EVENT_SCHEMAS } from "@/features/events";
+import { isTemplateStep } from "@/features/scenarios";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { channelById } from "@/lib/channels";
 import { cn } from "@/lib/utils";
@@ -127,27 +129,33 @@ export function PlanLanes({
                   aria-label={`${scene?.name ?? "剧本"}的步骤`}
                 >
                   {scene?.steps.length ? (
-                    scene.steps.map((step, stepIndex) => (
-                      <li
-                        // biome-ignore lint/suspicious/noArrayIndexKey: 固定剧本快照允许重复事件，步骤位置是快照标识。
-                        key={`${stepIndex}-${step.eventId}`}
-                        className="flex shrink-0 items-center gap-3"
-                      >
-                        {stepIndex ? (
-                          <ArrowRightIcon className="size-4 text-muted-foreground" />
-                        ) : null}
-                        <div className="flex min-w-32 max-w-60 flex-col gap-2 rounded-lg bg-muted/50 p-3">
-                          <span className="truncate">
-                            {events.find((event) => event.id === step.eventId)
-                              ?.name ?? "来源事件不存在"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {String(stepIndex + 1).padStart(2, "0")} ·{" "}
-                            {step.wait ? `等待 ${step.wait}s` : "立即发送"}
-                          </span>
-                        </div>
-                      </li>
-                    ))
+                    scene.steps.map((step, stepIndex) => {
+                      // 模板步骤显示模板名（纯引用不指向素材，事件表里查不到）
+                      const name = isTemplateStep(step)
+                        ? (EVENT_SCHEMAS.find(
+                            (item) => item.id === step.templateId,
+                          )?.name ?? "内置模板缺失")
+                        : (events.find((event) => event.id === step.eventId)
+                            ?.name ?? "来源事件不存在");
+                      return (
+                        <li
+                          // biome-ignore lint/suspicious/noArrayIndexKey: 固定剧本快照允许重复事件，步骤位置是快照标识。
+                          key={`${stepIndex}-${isTemplateStep(step) ? step.templateId : step.eventId}`}
+                          className="flex shrink-0 items-center gap-3"
+                        >
+                          {stepIndex ? (
+                            <ArrowRightIcon className="size-4 text-muted-foreground" />
+                          ) : null}
+                          <div className="flex min-w-32 max-w-60 flex-col gap-2 rounded-lg bg-muted/50 p-3">
+                            <span className="truncate">{name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {String(stepIndex + 1).padStart(2, "0")} ·{" "}
+                              {step.wait ? `等待 ${step.wait}s` : "立即发送"}
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })
                   ) : (
                     <li className="text-sm text-muted-foreground">
                       这个剧本还没有步骤

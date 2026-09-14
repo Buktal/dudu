@@ -135,13 +135,15 @@ mod tests {
             steps: vec![
                 StoredStep {
                     wait: Some(0.6),
-                    event_id: "evt-dy-1".into(),
-                    revision: 1,
+                    event_id: Some("evt-dy-1".into()),
+                    revision: Some(1),
+                    ..Default::default()
                 },
                 StoredStep {
                     wait: Some(0.6),
-                    event_id: "evt-dy-2".into(),
-                    revision: 3,
+                    event_id: Some("evt-dy-2".into()),
+                    revision: Some(3),
+                    ..Default::default()
                 },
             ],
         }
@@ -157,8 +159,26 @@ mod tests {
             channel_id: "wecom".into(),
             steps: vec![StoredStep {
                 wait: Some(0.6),
-                event_id: "evt-wc-1".into(),
-                revision: 2,
+                event_id: Some("evt-wc-1".into()),
+                revision: Some(2),
+                ..Default::default()
+            }],
+        }
+    }
+
+    fn template_scenario() -> StoredScenario {
+        StoredScenario {
+            favorite: false,
+            revision: Some(1),
+            failure: None,
+            id: "scn-tpl-001".into(),
+            name: "模板接待".into(),
+            channel_id: "douyin".into(),
+            steps: vec![StoredStep {
+                wait: Some(0.6),
+                template_id: Some("dy-text".into()),
+                template_version: Some("2026.09".into()),
+                ..Default::default()
             }],
         }
     }
@@ -235,6 +255,30 @@ mod tests {
             .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
             .collect();
         assert_eq!(entries, vec!["scn-dy-001.json".to_string()]);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn template_step_roundtrips_with_pinned_version_document() {
+        let dir = temp_dir("template-step");
+        save_scenario(&dir, &template_scenario()).unwrap();
+
+        let path = scenario_file(&scenarios_dir(&dir).join("douyin"), "scn-tpl-001");
+        let raw = fs::read_to_string(&path).unwrap();
+        let doc: Value = serde_json::from_str(&raw).unwrap();
+        let step = &doc["steps"].as_array().unwrap()[0];
+        let keys: Vec<&str> = step
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        // 模板纯引用文档：templateId/templateVersion/wait，不写事件引用键
+        assert_eq!(keys, vec!["templateId", "templateVersion", "wait"]);
+
+        // 读取回填渠道后与保存形态一致（透传持久化，不解释引用语义）
+        let loaded = load_scenarios(&dir).unwrap();
+        assert_eq!(loaded, vec![template_scenario()]);
         fs::remove_dir_all(&dir).unwrap();
     }
 

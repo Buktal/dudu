@@ -8,6 +8,7 @@ export {
   type ExpectedReceipt,
   type ReceiptBodyMode,
   resolveEventVersion,
+  resolveTemplateVersion,
 } from "./model";
 export {
   parseWireDraft,
@@ -20,6 +21,7 @@ export {
   RECEIPT_BODY_MODES,
 } from "./receipt";
 export {
+  EVENT_SCHEMAS,
   type EventSchema,
   schemaById,
   schemasByChannel,
@@ -29,6 +31,7 @@ export {
 export {
   selectDraftChannelId,
   selectDraftId,
+  templatesForChannel,
 } from "./selectors";
 export {
   deleteEvent,

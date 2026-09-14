@@ -12,9 +12,10 @@ import {
   latestVersion,
   newEventId,
   resolveEventVersion,
+  resolveTemplateVersion,
 } from "./model";
 import { editorPayload, setPayloadField } from "./payload";
-import { schemaById } from "./schemas";
+import { type EventSchema, schemaById } from "./schemas";
 
 const dyText = schemaById("dy-text");
 const dyEnter = schemaById("dy-enter");
@@ -248,5 +249,60 @@ describe("resolveEventVersion（步骤引用解析核心：eventId + revision �
     });
     expect(found).toBeUndefined();
     expect(version).toBeUndefined();
+  });
+});
+
+describe("resolveTemplateVersion（模板引用解析核心：templateId + templateVersion 下钻）", () => {
+  const V1 = schemaById("dy-text");
+
+  /** 构造升版条目：同一模板的 v2（注册表并存多版本是钉住语义的数据基础） */
+  const V2: EventSchema = {
+    ...V1,
+    version: "2026.10",
+    payload: {
+      ...V1.payload,
+      content: { ...(V1.payload.content as object), text: "模板v2文本" },
+    },
+  };
+
+  it("版本命中：返回钉住版本的模板本体，载荷原样", () => {
+    const { template } = resolveTemplateVersion([V1, V2], {
+      templateId: "dy-text",
+      templateVersion: V1.version,
+    });
+    expect(template?.id).toBe("dy-text");
+    expect(template?.version).toBe(V1.version);
+    expect(template?.payload).toEqual(V1.payload);
+  });
+
+  it("版本钉住（构造升版数据）：注册表并存 v1/v2 时，钉 v1 的引用仍命中 v1", () => {
+    const pinned = resolveTemplateVersion([V1, V2], {
+      templateId: "dy-text",
+      templateVersion: V1.version,
+    }).template;
+    expect(pinned?.version).toBe(V1.version);
+    expect(pinned?.payload).not.toEqual(V2.payload);
+
+    const latest = resolveTemplateVersion([V1, V2], {
+      templateId: "dy-text",
+      templateVersion: V2.version,
+    }).template;
+    expect(latest?.version).toBe(V2.version);
+  });
+
+  it("超前版本：注册表没有该版本时 undefined（缺失语义由调用时钟决定）", () => {
+    const { template } = resolveTemplateVersion([V1], {
+      templateId: "dy-text",
+      templateVersion: "2026.10",
+    });
+    expect(template).toBeUndefined();
+  });
+
+  it("未注册 id：模板 undefined", () => {
+    const { template } = resolveTemplateVersion([V1], {
+      templateId: "dy-gone",
+      templateVersion: V1.version,
+    });
+    expect(template).toBeUndefined();
   });
 });

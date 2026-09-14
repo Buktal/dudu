@@ -1,4 +1,10 @@
-import { LinkIcon, PlusIcon, SaveIcon, WorkflowIcon } from "lucide-react";
+import {
+  LinkIcon,
+  PlusIcon,
+  SaveIcon,
+  SparklesIcon,
+  WorkflowIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { ChannelMark } from "@/components/channel-mark";
 import { ChannelPicker } from "@/components/channel-picker";
@@ -19,7 +25,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { schemaById } from "@/features/events";
+import { schemaById, templatesForChannel } from "@/features/events";
 import {
   isRunBusy,
   RunButton,
@@ -30,7 +36,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { channelById } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
-import type { Scenario } from "../model";
+import { isTemplateStep, type Scenario } from "../model";
 import { resolveSteps } from "../selectors";
 import * as actions from "../stores/scenarios-slice";
 
@@ -39,6 +45,12 @@ import { ScenarioSteps } from "./scenario-steps";
 export type ScenarioEditorSlots = {
   onEditEvent?: (id: string) => void;
   onAddToPlan?: (scenario: Scenario) => void;
+};
+
+/** 步骤选择弹窗的打开状态：来源形态（事件素材 / 内置模板）+ 目标（新增或替换位） */
+type PickerState = {
+  kind: "event" | "template";
+  target: number | "add";
 };
 
 export function ScenarioEditor({
@@ -51,7 +63,7 @@ export function ScenarioEditor({
   // 任一运行（直发/剧本/编排）进行中即 busy——运行会话统一口径
   const busy = useAppSelector((root) => isRunBusy(root));
   const runs = useAppSelector((root) => root.runs);
-  const [picker, setPicker] = useState<number | "add" | null>(null);
+  const [picker, setPicker] = useState<PickerState | null>(null);
   const [copying, setCopying] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -154,8 +166,7 @@ export function ScenarioEditor({
                 </Badge>
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                只能选择{channel?.name}
-                下的已保存事件。每个步骤保留选入时的版本。
+                已保存事件保留选入时版本；内置模板纯引用、内容只读并钉住选入时版本。
               </p>
             </div>
             {!draft.steps.length ? (
@@ -173,7 +184,8 @@ export function ScenarioEditor({
                 </EmptyMedia>
                 <EmptyTitle>添加第一步</EmptyTitle>
                 <EmptyDescription>
-                  选择已保存的{channel?.name}事件，串起一段完整的会话流程。
+                  选择已保存的{channel?.name}
+                  事件或内置模板，串起一段完整的会话流程。
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -181,7 +193,12 @@ export function ScenarioEditor({
           <ScenarioSteps
             steps={steps}
             busy={busy}
-            onReplace={setPicker}
+            onReplace={(index) =>
+              setPicker({
+                kind: isTemplateStep(draft.steps[index]) ? "template" : "event",
+                target: index,
+              })
+            }
             onMove={(index, delta) =>
               dispatch(actions.moveDraftStep({ index, delta }))
             }
@@ -203,15 +220,24 @@ export function ScenarioEditor({
               )
             }
           />
-          <Button
-            type="button"
-            className="my-4 w-full"
-            onClick={() => setPicker("add")}
-            variant="outline"
-          >
-            <PlusIcon aria-hidden="true" data-icon="inline-start" />
-            添加已保存事件
-          </Button>
+          <div className="my-4 grid gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              onClick={() => setPicker({ kind: "event", target: "add" })}
+              variant="outline"
+            >
+              <PlusIcon aria-hidden="true" data-icon="inline-start" />
+              添加已保存事件
+            </Button>
+            <Button
+              type="button"
+              onClick={() => setPicker({ kind: "template", target: "add" })}
+              variant="outline"
+            >
+              <SparklesIcon aria-hidden="true" data-icon="inline-start" />
+              添加内置模板
+            </Button>
+          </div>
           <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
             <FieldGroup className="w-full sm:w-80">
               <Field>
@@ -248,7 +274,7 @@ export function ScenarioEditor({
       <footer className="flex shrink-0 flex-wrap items-center gap-2 border-t bg-card px-5 py-3 text-xs text-muted-foreground lg:px-7">
         <LinkIcon aria-hidden="true" className="size-4 shrink-0" />
         <span className="text-muted-foreground">
-          从已保存事件组装，编辑来源后可主动同步版本
+          从已保存事件或内置模板组装；事件步骤可主动同步版本，模板步骤钉住创建时的版本
         </span>
         <span className="min-w-0 flex-1" />
         {saved && onAddToPlan ? (
@@ -258,7 +284,7 @@ export function ScenarioEditor({
           </Button>
         ) : null}
       </footer>
-      {picker !== null ? (
+      {picker !== null && picker.kind === "event" ? (
         <MaterialPicker
           title={`选择${channel?.name}事件`}
           description={`仅显示${channel?.name}的已保存事件；选入后保留当前版本。`}
@@ -275,10 +301,38 @@ export function ScenarioEditor({
             }))}
           onClose={() => setPicker(null)}
           onSelect={(eventId) =>
-            picker === "add"
+            picker.target === "add"
               ? dispatch(actions.addScenarioStep({ eventId })).unwrap()
               : dispatch(
-                  actions.replaceScenarioStep({ index: picker, eventId }),
+                  actions.replaceScenarioStep({
+                    index: picker.target,
+                    eventId,
+                  }),
+                ).unwrap()
+          }
+        />
+      ) : null}
+      {picker !== null && picker.kind === "template" ? (
+        <MaterialPicker
+          title={`选择${channel?.name}内置模板`}
+          description={`仅显示${channel?.name}的内置事件模板；选入即钉住当前版本，内容只读不可定制。`}
+          items={templatesForChannel(draft.channelId).map((schema) => ({
+            id: schema.id,
+            name: schema.name,
+            channel: schema.channelId,
+            description: `${schema.eventName} · 内置 v${schema.version}`,
+          }))}
+          onClose={() => setPicker(null)}
+          onSelect={(templateId) =>
+            picker.target === "add"
+              ? dispatch(
+                  actions.addScenarioTemplateStep({ templateId }),
+                ).unwrap()
+              : dispatch(
+                  actions.replaceScenarioTemplateStep({
+                    index: picker.target,
+                    templateId,
+                  }),
                 ).unwrap()
           }
         />

@@ -7,13 +7,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::app_data_dir;
 
-/// 剧本步骤：引用素材库事件的一个版本。渠道由剧本（文件所在子目录）承载，
+/// 剧本步骤（透传持久化，Rust 不解释引用语义）。两种形态并列（ADR-0004/0009）：
+/// 事件素材引用 {eventId, revision} 或内置模板纯引用 {templateId, templateVersion}；
+/// 字段按存在性区分、向后兼容旧数据。渠道由剧本（文件所在子目录）承载，
 /// 步骤不冗余 group/channel 字段。
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredStep {
-    pub event_id: String,
-    pub revision: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_version: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wait: Option<f64>,
 }

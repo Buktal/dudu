@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { EventItem } from "@/features/events";
+import {
+  type EventItem,
+  type EventSchema,
+  schemaById,
+  wireBodyText,
+} from "@/features/events";
 
 import { materializeRunSnapshot } from "./snapshot";
 
@@ -229,5 +234,137 @@ describe("快照物化 materializeRunSnapshot", () => {
         startedAt: STARTED_AT,
       }),
     ).toThrow(/第 1 步引用了企业微信的事件/);
+  });
+});
+
+describe("快照物化：内置模板步骤（ADR-0009 纯引用、版本钉住）", () => {
+  const V1 = schemaById("dy-text");
+
+  /** 构造升版条目：同一模板的 v2（注册表并存多版本，载荷可辨） */
+  const V2: EventSchema = {
+    ...V1,
+    version: "2026.10",
+    payload: {
+      ...V1.payload,
+      content: { ...(V1.payload.content as object), text: "模板v2文本" },
+    },
+  };
+
+  function templateScenario(steps: object[]) {
+    return {
+      id: "scn-tpl",
+      name: "模板剧本",
+      channelId: "douyin" as const,
+      steps: steps as never[],
+    };
+  }
+
+  it("模板步骤原样发送该版本默认载荷，期望取模板默认（不重生成 ID）", () => {
+    const snapshot = materializeRunSnapshot({
+      scenario: templateScenario([
+        { templateId: "dy-text", templateVersion: V1.version, wait: 1.5 },
+      ]),
+      events: [],
+      templates: [V1],
+      startedAt: STARTED_AT,
+    });
+
+    const step = snapshot.steps[0];
+    expect(step.eventName).toBe(V1.name);
+    expect(step.eventId).toBe("dy-text");
+    expect(step.channel).toBe("douyin");
+    expect(step.body).toBe(wireBodyText(V1, V1.payload));
+    expect(step.expected).toEqual(V1.expected);
+    expect(step.wait).toBe(1.5);
+  });
+
+  it("版本钉住（构造升版数据）：注册表并存 v1/v2，钉 v1 的步骤仍发 v1 载荷", () => {
+    const snapshot = materializeRunSnapshot({
+      scenario: templateScenario([
+        { templateId: "dy-text", templateVersion: V1.version },
+      ]),
+      events: [],
+      templates: [V1, V2],
+      startedAt: STARTED_AT,
+    });
+
+    expect(snapshot.steps[0].body).toBe(wireBodyText(V1, V1.payload));
+    expect(snapshot.steps[0].body).not.toContain("模板v2文本");
+  });
+
+  it("未注册模板 id 拒绝并指明步骤序号（可读错误）", () => {
+    expect(() =>
+      materializeRunSnapshot({
+        scenario: templateScenario([
+          { templateId: "dy-gone", templateVersion: V1.version },
+        ]),
+        events: [],
+        templates: [V1],
+        startedAt: STARTED_AT,
+      }),
+    ).toThrow(/第 1 步引用的内置模板不存在：dy-gone/);
+  });
+
+  it("钉住版本超前（注册表没有该版本）拒绝并指明模板与版本", () => {
+    expect(() =>
+      materializeRunSnapshot({
+        scenario: templateScenario([
+          { templateId: "dy-text", templateVersion: "2026.10" },
+        ]),
+        events: [],
+        templates: [V1],
+        startedAt: STARTED_AT,
+      }),
+    ).toThrow(/第 1 步引用的模板版本不存在：接收私信 · 文本 v2026\.10/);
+  });
+
+  it("跨渠道模板防御性拒绝（错误含双方渠道名）", () => {
+    expect(() =>
+      materializeRunSnapshot({
+        scenario: templateScenario([
+          { templateId: "wc-text", templateVersion: "2026.09" },
+        ]),
+        events: [],
+        templates: [schemaById("wc-text")],
+        startedAt: STARTED_AT,
+      }),
+    ).toThrow(/第 1 步引用了企业微信的内置模板/);
+  });
+
+  it("坏步骤只拒绝本次启动：合法步骤照常物化，链路其余部分不受影响", () => {
+    const good = {
+      id: "scn-mixed",
+      name: "混合剧本",
+      channelId: "douyin" as const,
+      steps: [
+        { eventId: "evt-dy-1", revision: 1 },
+        { templateId: "dy-text", templateVersion: V1.version },
+      ] as never[],
+    };
+    const mixed = materializeRunSnapshot({
+      scenario: good,
+      events: [douyinEvent([1])],
+      templates: [V1],
+      startedAt: STARTED_AT,
+    });
+    expect(mixed.steps).toHaveLength(2);
+    expect(mixed.steps[1].eventName).toBe(V1.name);
+
+    // 同一剧本把模板步骤换成悬空引用：第 2 步拒绝，错误只指向该步
+    const broken = {
+      ...good,
+      steps: [
+        { eventId: "evt-dy-1", revision: 1 },
+        { templateId: "dy-gone", templateVersion: V1.version },
+      ] as never[],
+    };
+    expect(() =>
+      materializeRunSnapshot({
+        scenario: broken,
+        events: [douyinEvent([1])],
+        templates: [V1],
+        startedAt: STARTED_AT,
+      }),
+    ).toThrow(/第 2 步引用的内置模板不存在：dy-gone/);
   });
 });

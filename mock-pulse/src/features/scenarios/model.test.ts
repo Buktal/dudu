@@ -4,12 +4,15 @@ import type { EventItem } from "@/features/events";
 
 import {
   addStep,
+  addTemplateStep,
   assertChannelEditable,
   changeChannel,
   createScenario,
+  isTemplateStep,
   moveStep,
   removeStep,
   type Scenario,
+  type ScenarioStep,
   scenariosReferencingEvent,
   validateScenario,
   withStepRevision,
@@ -24,6 +27,18 @@ const wecomEvent: Pick<EventItem, "id" | "channelId"> = {
   id: "evt-wc-1",
   channelId: "wecom",
 };
+
+/** 测试辅助：步骤序列里的 eventId（本文件剧本只含事件步骤，模板步骤不存在） */
+function eventIds(steps: ScenarioStep[]): (string | undefined)[] {
+  return steps.map((step) => (isTemplateStep(step) ? undefined : step.eventId));
+}
+
+/** 测试辅助：事件步骤的 revision（模板步骤无版本号语义） */
+function eventRevisions(steps: ScenarioStep[]): (number | undefined)[] {
+  return steps.map((step) =>
+    isTemplateStep(step) ? undefined : step.revision,
+  );
+}
 
 /** 两渠道各一条带版本的事件（引用解析的独立事实源） */
 function library(): EventItem[] {
@@ -130,20 +145,11 @@ describe("步骤调序与删除", () => {
   }
 
   it("下移第一步与上移第二步都交换为 [2,1]", () => {
-    expect(twoSteps().steps.map((step) => step.eventId)).toEqual([
-      "evt-dy-1",
-      "evt-dy-2",
-    ]);
+    expect(eventIds(twoSteps().steps)).toEqual(["evt-dy-1", "evt-dy-2"]);
     const movedDown = moveStep(twoSteps(), 0, 1);
-    expect(movedDown.steps.map((step) => step.eventId)).toEqual([
-      "evt-dy-2",
-      "evt-dy-1",
-    ]);
+    expect(eventIds(movedDown.steps)).toEqual(["evt-dy-2", "evt-dy-1"]);
     const movedUp = moveStep(movedDown, 1, -1);
-    expect(movedUp.steps.map((step) => step.eventId)).toEqual([
-      "evt-dy-1",
-      "evt-dy-2",
-    ]);
+    expect(eventIds(movedUp.steps)).toEqual(["evt-dy-1", "evt-dy-2"]);
   });
 
   it("首步上移与末步下移为无操作（原样返回）", () => {
@@ -154,7 +160,7 @@ describe("步骤调序与删除", () => {
 
   it("按位置删除步骤，其余保持顺序", () => {
     const removed = removeStep(twoSteps(), 0);
-    expect(removed.steps.map((step) => step.eventId)).toEqual(["evt-dy-2"]);
+    expect(eventIds(removed.steps)).toEqual(["evt-dy-2"]);
     expect(removeStep(removed, 5)).toBe(removed);
   });
 });
@@ -181,8 +187,7 @@ describe("版本引用与显式同步", () => {
       revision: 1,
     });
     const synced = withStepRevision(scenario, 0, 2);
-    expect(synced.steps[0]?.revision).toBe(2);
-    expect(synced.steps[1]?.revision).toBe(1);
+    expect(eventRevisions(synced.steps)).toEqual([2, 1]);
   });
 });
 
@@ -228,5 +233,133 @@ describe("事件删除守卫", () => {
     expect(referencing.map((scenario) => scenario.id)).toEqual([quoting.id]);
 
     expect(scenariosReferencingEvent("evt-wc-1", [quoting, other])).toEqual([]);
+  });
+
+  it("模板步骤不算引用事件素材：不阻挡事件删除", () => {
+    let scenario = createScenario("模板剧本", "douyin");
+    scenario = addTemplateStep(scenario, DOUYIN_TEMPLATE);
+    expect(scenariosReferencingEvent("evt-dy-1", [scenario])).toEqual([]);
+  });
+});
+
+/** 内置模板事实（与注册表条目同构的最小形态） */
+const DOUYIN_TEMPLATE = {
+  id: "dy-text",
+  channelId: "douyin",
+  version: "2026.09",
+} as const;
+
+describe("内置模板步骤（ADR-0009 纯引用、版本钉住）", () => {
+  it("addTemplateStep 钉住选入时的模板版本，不复制载荷与期望", () => {
+    let scenario = createScenario("模板接待", "douyin");
+    scenario = addTemplateStep(scenario, DOUYIN_TEMPLATE);
+    expect(scenario.steps[0]).toEqual({
+      templateId: "dy-text",
+      templateVersion: "2026.09",
+      wait: 0,
+    });
+    expect("payload" in (scenario.steps[0] as object)).toBe(false);
+    expect("expected" in (scenario.steps[0] as object)).toBe(false);
+  });
+
+  it("添加他渠道模板在领域层被拒绝，错误可读且包含双方渠道名", () => {
+    const scenario = createScenario("抖音接待", "douyin");
+    expect(() =>
+      addTemplateStep(scenario, {
+        id: "wc-text",
+        channelId: "wecom",
+        version: "2026.09",
+      }),
+    ).toThrow(/剧本渠道已锁定为抖音.*企业微信/);
+  });
+
+  it("isTemplateStep 区分两种引用形态；事件步骤旧数据不受影响（向后兼容）", () => {
+    let scenario = createScenario("混合", "douyin");
+    scenario = addStep(scenario, { ...douyinEvent, revision: 1 });
+    scenario = addTemplateStep(scenario, DOUYIN_TEMPLATE);
+    expect(isTemplateStep(scenario.steps[0])).toBe(false);
+    expect(isTemplateStep(scenario.steps[1])).toBe(true);
+  });
+
+  it("withStepRevision 对模板步骤为无操作（版本钉住，不误写 revision 字段）", () => {
+    let scenario = createScenario("钉住", "douyin");
+    scenario = addTemplateStep(scenario, DOUYIN_TEMPLATE);
+    const untouched = withStepRevision(scenario, 0, 9);
+    expect(untouched.steps[0]).toEqual({
+      templateId: "dy-text",
+      templateVersion: "2026.09",
+      wait: 0,
+    });
+    expect("revision" in (untouched.steps[0] as object)).toBe(false);
+  });
+
+  it("模板步骤同样参与等待与调序删除（按位置操作不感知形态）", () => {
+    let scenario = createScenario("混合操作", "douyin");
+    scenario = addStep(scenario, { ...douyinEvent, revision: 1 });
+    scenario = addTemplateStep(scenario, DOUYIN_TEMPLATE);
+    const moved = moveStep(scenario, 1, -1);
+    expect(eventIds(moved.steps)).toEqual([undefined, "evt-dy-1"]);
+    expect(isTemplateStep(moved.steps[0])).toBe(true);
+  });
+
+  describe("validateScenario 模板步骤（缺失语义：未注册 id / 超前版本 / 跨渠道）", () => {
+    function scenarioWithPinned(version: string): Scenario {
+      let scenario = createScenario("模板剧本", "douyin");
+      scenario = addTemplateStep(scenario, {
+        id: "dy-text",
+        channelId: "douyin",
+        version,
+      });
+      return scenario;
+    }
+
+    it("注册表含该 id 与钉住版本时通过", () => {
+      expect(() =>
+        validateScenario(scenarioWithPinned("2026.09"), library(), [
+          DOUYIN_TEMPLATE,
+        ]),
+      ).not.toThrow();
+    });
+
+    it("未注册模板 id 被拒绝（可读错误）", () => {
+      const dangling: Scenario = {
+        id: "scn-tpl",
+        name: "悬空模板",
+        channelId: "douyin",
+        steps: [{ templateId: "dy-gone", templateVersion: "2026.09" }],
+      };
+      expect(() =>
+        validateScenario(dangling, library(), [DOUYIN_TEMPLATE]),
+      ).toThrow(/步骤引用的内置模板不存在：dy-gone/);
+    });
+
+    it("钉住版本超前（注册表没有该版本）被拒绝", () => {
+      expect(() =>
+        validateScenario(scenarioWithPinned("2026.10"), library(), [
+          DOUYIN_TEMPLATE,
+        ]),
+      ).toThrow(/步骤引用的内置模板版本不存在：dy-text v2026\.10/);
+    });
+
+    it("跨渠道模板被拒绝（错误含双方渠道名）", () => {
+      const smuggled: Scenario = {
+        id: "scn-tpl",
+        name: "走私模板",
+        channelId: "douyin",
+        steps: [{ templateId: "wc-text", templateVersion: "2026.09" }],
+      };
+      expect(() =>
+        validateScenario(smuggled, library(), [
+          DOUYIN_TEMPLATE,
+          { id: "wc-text", channelId: "wecom", version: "2026.09" },
+        ]),
+      ).toThrow(/剧本渠道为抖音，步骤引用了企业微信的内置模板/);
+    });
+
+    it("不传注册表时模板步骤按未注册拒绝（防御缺省）", () => {
+      expect(() =>
+        validateScenario(scenarioWithPinned("2026.09"), library()),
+      ).toThrow(/步骤引用的内置模板不存在：dy-text/);
+    });
   });
 });

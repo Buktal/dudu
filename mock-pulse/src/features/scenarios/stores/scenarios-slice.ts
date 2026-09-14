@@ -3,7 +3,13 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import type { EventItem, EventsState, EventVersion } from "@/features/events";
+import {
+  EVENT_SCHEMAS,
+  type EventItem,
+  type EventsState,
+  type EventVersion,
+  schemaById,
+} from "@/features/events";
 import type { ChannelId } from "@/lib/channels";
 
 import {
@@ -13,9 +19,11 @@ import {
 } from "../api";
 import {
   addStep,
+  addTemplateStep,
   assertSameChannel,
   changeChannel,
   createScenario,
+  isTemplateStep,
   moveStep,
   newScenarioId,
   removeStep,
@@ -111,7 +119,61 @@ export const replaceScenarioStep = createAsyncThunk(
     return {
       ...draft,
       steps: draft.steps.map((step, i) =>
-        i === index ? { ...step, eventId, revision: version.revision } : step,
+        i === index
+          ? {
+              eventId,
+              revision: version.revision,
+              ...(step.wait === undefined ? {} : { wait: step.wait }),
+            }
+          : step,
+      ),
+    };
+  },
+);
+
+/**
+ * 添加内置模板步骤（ADR-0009 纯引用）：从注册表取模板并钉住其当前版本；
+ * 领域层校验渠道一致，违例拒绝并给可读错误。
+ */
+export const addScenarioTemplateStep = createAsyncThunk(
+  "scenarios/addTemplateStep",
+  async ({ templateId }: { templateId: string }, { getState }) => {
+    const { scenarios } = getState() as ScenariosRoot;
+    const draft = scenarios.draft;
+    if (!draft) {
+      throw new Error("没有正在编辑的剧本。");
+    }
+    const template = schemaById(templateId);
+    return addTemplateStep(draft, {
+      id: template.id,
+      channelId: template.channelId,
+      version: template.version,
+    });
+  },
+);
+
+/** 替换为内置模板步骤：保留等待秒数，钉住模板当前版本（不残留事件引用）。 */
+export const replaceScenarioTemplateStep = createAsyncThunk(
+  "scenarios/replaceTemplateStep",
+  async (
+    { index, templateId }: { index: number; templateId: string },
+    { getState },
+  ) => {
+    const { scenarios } = getState() as ScenariosRoot;
+    const draft = scenarios.draft;
+    if (!draft?.steps[index]) throw new Error("找不到要替换的步骤。");
+    const template = schemaById(templateId);
+    assertSameChannel(draft.channelId, template.channelId);
+    return {
+      ...draft,
+      steps: draft.steps.map((step, i) =>
+        i === index
+          ? {
+              templateId: template.id,
+              templateVersion: template.version,
+              ...(step.wait === undefined ? {} : { wait: step.wait }),
+            }
+          : step,
       ),
     };
   },
@@ -129,7 +191,7 @@ export const saveScenarioAs = createAsyncThunk(
       revision: 1,
       favorite: false,
     };
-    validateScenario(copy, events.items);
+    validateScenario(copy, events.items, EVENT_SCHEMAS);
     return {
       items: await saveScenarioApi(copy),
       copy,
@@ -138,7 +200,7 @@ export const saveScenarioAs = createAsyncThunk(
   },
 );
 
-/** 显式同步单个步骤的引用到事件最新版本。 */
+/** 显式同步单个事件步骤的引用到事件最新版本（模板步骤钉住，原样返回）。 */
 export const syncScenarioStep = createAsyncThunk(
   "scenarios/syncStep",
   async ({ index }: { index: number }, { getState }) => {
@@ -151,12 +213,16 @@ export const syncScenarioStep = createAsyncThunk(
     if (!step) {
       throw new Error(`步骤不存在：第 ${index + 1} 步。`);
     }
+    // 模板步骤为版本钉住（ADR-0009），无「同步到最新」语义
+    if (isTemplateStep(step)) {
+      return draft;
+    }
     const { version } = latestVersionOf(events.items, step.eventId);
     return withStepRevision(draft, index, version.revision);
   },
 );
 
-/** 整体同步：把所有步骤引用更新到各事件最新版本。 */
+/** 整体同步：把所有事件步骤引用更新到最新版本（模板步骤钉住不动）。 */
 export const syncAllScenarioSteps = createAsyncThunk(
   "scenarios/syncAll",
   async (_, { getState }) => {
@@ -167,6 +233,7 @@ export const syncAllScenarioSteps = createAsyncThunk(
     }
     let updated = draft;
     for (const [index, step] of draft.steps.entries()) {
+      if (isTemplateStep(step)) continue;
       const { version } = latestVersionOf(events.items, step.eventId);
       updated = withStepRevision(updated, index, version.revision);
     }
@@ -174,7 +241,7 @@ export const syncAllScenarioSteps = createAsyncThunk(
   },
 );
 
-/** 保存草稿：整体校验（防绕过 addStep 的走私步骤）后持久化，返回完整列表 */
+/** 保存草稿：整体校验（防绕过 addStep 的走私步骤，模板步骤对照内置注册表）后持久化 */
 export const saveScenario = createAsyncThunk(
   "scenarios/save",
   async (_, { getState }) => {
@@ -183,7 +250,7 @@ export const saveScenario = createAsyncThunk(
     if (!draft) {
       throw new Error("没有可保存的剧本草稿。");
     }
-    validateScenario(draft, events.items);
+    validateScenario(draft, events.items, EVENT_SCHEMAS);
     const previous = scenarios.items.find((item) => item.id === draft.id);
     return saveScenarioApi({
       ...draft,
@@ -279,7 +346,13 @@ const scenariosSlice = createSlice({
       .addCase(addScenarioStep.fulfilled, (state, action) => {
         state.draft = action.payload;
       })
+      .addCase(addScenarioTemplateStep.fulfilled, (state, action) => {
+        state.draft = action.payload;
+      })
       .addCase(replaceScenarioStep.fulfilled, (state, action) => {
+        if (state.draft?.id === action.payload.id) state.draft = action.payload;
+      })
+      .addCase(replaceScenarioTemplateStep.fulfilled, (state, action) => {
         if (state.draft?.id === action.payload.id) state.draft = action.payload;
       })
       .addCase(syncScenarioStep.fulfilled, (state, action) => {

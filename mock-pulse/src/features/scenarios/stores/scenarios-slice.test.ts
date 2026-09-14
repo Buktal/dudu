@@ -8,7 +8,7 @@ import {
 } from "@/features/events";
 
 import * as api from "../api";
-import type { Scenario } from "../model";
+import { isTemplateStep, type Scenario } from "../model";
 import { resolveSteps } from "../selectors";
 import {
   addScenarioStep,
@@ -100,6 +100,21 @@ const savedDouyinScenario: Scenario = {
   channelId: "douyin",
   steps: [{ eventId: "evt-dy-1", revision: 1 }],
 };
+
+/** 测试辅助：当前草稿步骤的 eventId（本文件剧本只含事件步骤处使用） */
+function stepEventIds(store: { getState: () => unknown }): string[] {
+  const steps = selectScenarioDraft(
+    (store.getState() as { scenarios: ScenariosState }).scenarios,
+  )?.steps;
+  return (steps ?? []).map((step) =>
+    isTemplateStep(step) ? "<template>" : step.eventId,
+  );
+}
+
+/** 测试辅助：事件步骤的 revision（模板步骤无版本号语义） */
+function stepRevision(step: Scenario["steps"][number] | undefined) {
+  return step && !isTemplateStep(step) ? step.revision : undefined;
+}
 
 describe("剧本编辑状态流转", () => {
   it("新建先选渠道 → 添加同渠道步骤（引用最新版本）→ 保存进剧本库", async () => {
@@ -221,7 +236,7 @@ describe("版本引用与显式同步", () => {
 
     store.dispatch(openScenario(saved.id));
     let draft = selectScenarioDraft(store.getState().scenarios);
-    expect(draft?.steps[0]?.revision).toBe(1);
+    expect(stepRevision(draft?.steps[0])).toBe(1);
     // 提示计算：引用 v1 落后于最新 v2
     const events = store.getState().events.items;
     expect(resolveSteps(draft?.steps ?? [], events)[0]?.outdated).toBe(true);
@@ -229,7 +244,7 @@ describe("版本引用与显式同步", () => {
     // 显式同步到最新版本
     await store.dispatch(syncScenarioStep({ index: 0 }));
     draft = selectScenarioDraft(store.getState().scenarios);
-    expect(draft?.steps[0]?.revision).toBe(2);
+    expect(stepRevision(draft?.steps[0])).toBe(2);
     expect(
       resolveSteps(draft?.steps ?? [], store.getState().events.items)[0]
         ?.outdated,
@@ -306,19 +321,11 @@ describe("步骤调序 / 删除 / 重命名 / 删除剧本", () => {
     ]);
 
     store.dispatch(moveDraftStep({ index: 0, delta: 1 }));
-    expect(
-      selectScenarioDraft(store.getState().scenarios)?.steps.map(
-        (step) => step.eventId,
-      ),
-    ).toEqual(["evt-dy-2", "evt-dy-1"]);
+    expect(stepEventIds(store)).toEqual(["evt-dy-2", "evt-dy-1"]);
 
     // 首步上移为无操作
     store.dispatch(moveDraftStep({ index: 0, delta: -1 }));
-    expect(
-      selectScenarioDraft(store.getState().scenarios)?.steps.map(
-        (step) => step.eventId,
-      ),
-    ).toEqual(["evt-dy-2", "evt-dy-1"]);
+    expect(stepEventIds(store)).toEqual(["evt-dy-2", "evt-dy-1"]);
 
     await store.dispatch(saveScenario());
     expect(selectScenarios(store.getState().scenarios)[0]?.steps).toEqual([
@@ -334,11 +341,7 @@ describe("步骤调序 / 删除 / 重命名 / 删除剧本", () => {
     ]);
 
     store.dispatch(removeDraftStep(0));
-    expect(
-      selectScenarioDraft(store.getState().scenarios)?.steps.map(
-        (step) => step.eventId,
-      ),
-    ).toEqual(["evt-dy-2"]);
+    expect(stepEventIds(store)).toEqual(["evt-dy-2"]);
     await store.dispatch(saveScenario());
     expect(selectScenarios(store.getState().scenarios)[0]?.steps).toEqual([
       { eventId: "evt-dy-2", revision: 1, wait: 0.6 },
