@@ -69,23 +69,23 @@
   }
 }
 
-/* 原版雾蓝：墨蓝 #26364D、信号蓝 #315DE8、画布 #F4F7FB、白 #FFFFFF、边线 #DFE6F0、青绿 #16776B */
+/* 雾蓝主题：深墨蓝正文、蓝灰次要文字与辅助灰，保留信号蓝和浅色画布。 */
 :root {
   color-scheme: light;
   --background: #f4f7fb;
-  --foreground: #26364d;
+  --foreground: #1d2b40;
   --card: #ffffff;
-  --card-foreground: #26364d;
+  --card-foreground: var(--foreground);
   --popover: #ffffff;
-  --popover-foreground: #26364d;
+  --popover-foreground: var(--foreground);
   --primary: #315de8;
   --primary-foreground: #ffffff;
   --secondary: #edf2ff;
-  --secondary-foreground: #26364d;
+  --secondary-foreground: var(--foreground);
   --muted: #edf2f9;
-  --muted-foreground: #7b879b;
+  --muted-foreground: #5b6a80;
   --accent: #e4ebf6;
-  --accent-foreground: #26364d;
+  --accent-foreground: var(--foreground);
   --destructive: #b6434e;
   --success: #16776b;
   --success-foreground: #ffffff;
@@ -99,7 +99,7 @@
   --chart-5: #26364d;
   --radius: 0.5rem;
   --sidebar: #edf2f9;
-  --sidebar-foreground: #6b7a90;
+  --sidebar-foreground: #42546c;
   --sidebar-primary: #315de8;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #ffffff;
@@ -114,6 +114,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -132,19 +137,20 @@
   --studio-mono: "Cascadia Code", "Consolas", monospace;
   --studio-radius: 9px;
   color-scheme: light;
-  --studio-ink: #26364d;
+  --studio-ink: var(--foreground);
+  --studio-text-secondary: var(--sidebar-foreground);
   --studio-blue: #315de8;
   --studio-paper: #f4f7fb;
   --studio-white: #ffffff;
   --studio-line: #dfe6f0;
   --studio-green: #16776b;
-  --studio-muted: #7b879b;
+  --studio-muted: var(--muted-foreground);
   --studio-soft-blue: #edf2ff;
   --studio-red: #b6434e;
   --studio-amber: #996520;
   --studio-on-primary: #ffffff;
   --studio-nav-bg: #edf2f9;
-  --studio-nav-fg: #6b7a90;
+  --studio-nav-fg: var(--sidebar-foreground);
   --studio-nav-primary: #315de8;
   --studio-nav-active-bg: #ffffff;
   --studio-nav-hover: #e4ebf6;
@@ -157,9 +163,9 @@
   --studio-selected-border: #e2eaff;
   --studio-selected-text: #234aba;
   --studio-code-bg: #edf2f9;
-  --studio-code-fg: #59718e;
+  --studio-code-fg: var(--studio-text-secondary);
   --studio-raw-bg: #f8faff;
-  --studio-raw-fg: #415b82;
+  --studio-raw-fg: var(--studio-text-secondary);
   --studio-toast-bg: #26364d;
   --studio-toast-fg: #ffffff;
   --studio-palette-bar: #edf2f9;
@@ -181,43 +187,44 @@
   --studio-paint-315de821: #315de821;
   --studio-paint-315de84a: #315de84a;
   --studio-paint-3479d1: #3479d1;
-  --studio-paint-415b82: #415b82;
-  --studio-paint-59718e: #59718e;
-  --studio-paint-5c6f8a: #5c6f8a;
-  --studio-paint-687b96: #687b96;
-  --studio-paint-6b7a90: #6b7a90;
-  --studio-paint-70839f: #70839f;
-  --studio-paint-72839c: #72839c;
-  --studio-paint-788aa3: #788aa3;
-  --studio-paint-7b8ca4: #7b8ca4;
-  --studio-paint-7c8ba1: #7c8ba1;
-  --studio-paint-7f95b7: #7f95b7;
+  /* 兼容原型色名：文字色统一接入次要 / 辅助层级，装饰色保持独立。 */
+  --studio-paint-415b82: var(--studio-text-secondary);
+  --studio-paint-59718e: var(--studio-text-secondary);
+  --studio-paint-5c6f8a: var(--studio-text-secondary);
+  --studio-paint-687b96: var(--studio-text-secondary);
+  --studio-paint-6b7a90: var(--studio-text-secondary);
+  --studio-paint-70839f: var(--studio-text-secondary);
+  --studio-paint-72839c: var(--studio-text-secondary);
+  --studio-paint-788aa3: var(--studio-text-secondary);
+  --studio-paint-7b8ca4: var(--studio-text-secondary);
+  --studio-paint-7c8ba1: var(--studio-muted);
+  --studio-paint-7f95b7: var(--studio-text-secondary);
   --studio-paint-809bd4: #809bd4;
-  --studio-paint-8190a7: #8190a7;
-  --studio-paint-8291a7: #8291a7;
-  --studio-paint-829cc4: #829cc4;
-  --studio-paint-8694a8: #8694a8;
-  --studio-paint-8a96a7: #8a96a7;
-  --studio-paint-8a97aa: #8a97aa;
-  --studio-paint-8b99ad: #8b99ad;
-  --studio-paint-8b9aaf: #8b9aaf;
-  --studio-paint-8c98a8: #8c98a8;
-  --studio-paint-8e9bad: #8e9bad;
-  --studio-paint-8ea0bb: #8ea0bb;
-  --studio-paint-91a0b7: #91a0b7;
-  --studio-paint-93a3ba: #93a3ba;
-  --studio-paint-98a3b3: #98a3b3;
-  --studio-paint-9ba7b7: #9ba7b7;
-  --studio-paint-9ba8bb: #9ba8bb;
-  --studio-paint-9ca9bb: #9ca9bb;
+  --studio-paint-8190a7: var(--studio-muted);
+  --studio-paint-8291a7: var(--studio-muted);
+  --studio-paint-829cc4: var(--studio-text-secondary);
+  --studio-paint-8694a8: var(--studio-muted);
+  --studio-paint-8a96a7: var(--studio-text-secondary);
+  --studio-paint-8a97aa: var(--studio-text-secondary);
+  --studio-paint-8b99ad: var(--studio-muted);
+  --studio-paint-8b9aaf: var(--studio-muted);
+  --studio-paint-8c98a8: var(--studio-muted);
+  --studio-paint-8e9bad: var(--studio-muted);
+  --studio-paint-8ea0bb: var(--studio-muted);
+  --studio-paint-91a0b7: var(--studio-muted);
+  --studio-paint-93a3ba: var(--studio-muted);
+  --studio-paint-98a3b3: var(--studio-muted);
+  --studio-paint-9ba7b7: var(--studio-muted);
+  --studio-paint-9ba8bb: var(--studio-muted);
+  --studio-paint-9ca9bb: var(--studio-muted);
   --studio-paint-9eb4f9: #9eb4f9;
-  --studio-paint-a2adbc: #a2adbc;
-  --studio-paint-a2adbd: #a2adbd;
-  --studio-paint-a2aebe: #a2aebe;
-  --studio-paint-a4adbb: #a4adbb;
-  --studio-paint-a4b0c0: #a4b0c0;
+  --studio-paint-a2adbc: var(--studio-muted);
+  --studio-paint-a2adbd: var(--studio-muted);
+  --studio-paint-a2aebe: var(--studio-muted);
+  --studio-paint-a4adbb: var(--studio-muted);
+  --studio-paint-a4b0c0: var(--studio-muted);
   --studio-paint-a5b6d0: #a5b6d0;
-  --studio-paint-aab7ca: #aab7ca;
+  --studio-paint-aab7ca: var(--studio-muted);
   --studio-paint-b0c0d7: #b0c0d7;
   --studio-paint-b8c6dc: #b8c6dc;
   --studio-paint-bac4d3: #bac4d3;

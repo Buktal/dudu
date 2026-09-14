@@ -63,7 +63,14 @@ export function StudioShell<T extends string>({
       <div className="shell-a">
         <nav className="sidebar" aria-label="主导航">
           <div className="brand">
-            <StudioIcon name="pulse" className="brand-symbol" />
+            <img
+              src={`${import.meta.env.BASE_URL}logo.svg`}
+              className="brand-symbol"
+              width={30}
+              height={30}
+              alt="MockPulse 标志"
+              draggable={false}
+            />
             <div className="brand-text">
               <div className="brand-name">MockPulse</div>
             </div>

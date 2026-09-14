@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>MockPulse</title>
+  <path fill="#315DE8" d="M18 4h28a14 14 0 0 1 14 14v24a14 14 0 0 1-14 14H28L14 62v-7.3A14 14 0 0 1 4 42V18A14 14 0 0 1 18 4Z"/>
+  <path d="M13 33h6l6-13 7 21 8-21 6 13h5" stroke="#FFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

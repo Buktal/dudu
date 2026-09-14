@@ -33,6 +33,12 @@ yarn lint        # 代码检查
 yarn test        # 单元测试
 ```
 
+## 品牌图标
+
+Logo 以消息气泡包裹 M 形脉冲线，代表本地模拟渠道消息与回调。矢量源文件为 `public/logo.svg`，侧栏与网页 SVG 图标共用此文件。
+
+修改 SVG 后运行 `yarn icons:generate`，通过已安装的 Tauri CLI 同步桌面应用图标与 `public/favicon.ico`。
+
 ## 目录结构
 
 ```text

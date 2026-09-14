@@ -10,6 +10,8 @@ pub mod verdict;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
+use crate::connections::{douyin, wecom};
+
 /// 回执事实：HTTP 状态（0 = 未收到响应）、耗时与原始回执文本。
 /// reply = 企微加密被动回复解密后的明文（旧记录/其他渠道为 None）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

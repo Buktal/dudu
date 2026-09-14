@@ -7,6 +7,7 @@
     "dev": "yarn web:dev",
     "build": "yarn web:build",
     "preview": "yarn web:preview",
+    "icons:generate": "node scripts/generate-icons.mjs",
     "web:dev": "vite",
     "web:build": "yarn check:type && vite build",
     "web:preview": "vite preview",
