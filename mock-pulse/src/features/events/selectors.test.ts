@@ -221,11 +221,14 @@ describe("templatesForChannel（目录模板源）", () => {
     );
     expect(templatesForChannel("douyin")[14]?.id).toBe("dy-text");
     expect(templatesForChannel("douyin")[32]?.id).toBe("dy-isv-authorized");
-    expect(templatesForChannel("wecom")).toHaveLength(43);
+    expect(templatesForChannel("wecom")).toHaveLength(89);
     expect(templatesForChannel("wecom")[0]?.id).toBe("wc-text");
     expect(templatesForChannel("wecom")[31]?.id).toBe("wc-active-restored");
-    expect(templatesForChannel("wecom")[32]?.id).toBe("wb-text");
-    expect(templatesForChannel("wecom")[42]?.id).toBe(
+    expect(templatesForChannel("wecom")[77]?.id).toBe(
+      "wc-public-email-receive",
+    );
+    expect(templatesForChannel("wecom")[78]?.id).toBe("wb-text");
+    expect(templatesForChannel("wecom")[88]?.id).toBe(
       "wb-event-template-card-menu",
     );
   });
@@ -327,7 +330,7 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
     const channelRows = byChannelName.map((row) =>
       row.region === "template" ? row.schema : undefined,
     );
-    expect(channelRows).toHaveLength(43);
+    expect(channelRows).toHaveLength(89);
     expect(channelRows.every((schema) => schema?.channelId === "wecom")).toBe(
       true,
     );
@@ -384,7 +387,7 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
 
   it("模板区不因用户素材为空而消失，点击目标始终可解析回模板", () => {
     const rows = libraryRows([], schemasByChannel("wecom"), NO_FILTERS);
-    expect(rows).toHaveLength(43);
+    expect(rows).toHaveLength(89);
     expect(rows.every((row) => row.region === "template")).toBe(true);
     expect(rows[0]?.region === "template" && rows[0].schema.id).toBe("wc-text");
   });

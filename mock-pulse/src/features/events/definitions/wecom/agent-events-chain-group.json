@@ -1,0 +1,247 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-chain-create-group": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/95796",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "上下游变更固定为 sys（系统生成）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_chain = 上下游变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "create_group = 创建企业分组（字段明细官方未收录，可在完整报文页增补）。"
+        }
+      ]
+    },
+    "wc-chain-update-group": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/95796",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "上下游变更固定为 sys（系统生成）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_chain = 上下游变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "update_group = 变更企业分组（字段明细官方未收录，可在完整报文页增补）。"
+        }
+      ]
+    },
+    "wc-chain-delete-group": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/95796",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "上下游变更固定为 sys（系统生成）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_chain = 上下游变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "delete_group = 删除企业分组（字段明细官方未收录，可在完整报文页增补）。"
+        }
+      ]
+    },
+    "wc-chain-remove-corp": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/95796",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "上下游变更固定为 sys（系统生成）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_chain = 上下游变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "remove_corp = 移除企业（字段明细官方未收录，可在完整报文页增补）。"
+        }
+      ]
+    },
+    "wc-chain-update-corp": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/95796",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "上下游变更固定为 sys（系统生成）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_chain = 上下游变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "update_corp = 变更企业分组归属（字段明细官方未收录，可在完整报文页增补）。"
+        }
+      ]
+    }
+  }
+}

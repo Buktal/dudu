@@ -1,0 +1,90 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-sys-approval-change": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/91815",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "触发成员",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发审批状态变化的成员账号（可改成实际申请人）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "sys_approval_change = OA 审批申请状态变化（区别于流程引擎的 open_approval_change）。状态变化包括催办/撤销/同意/驳回/转审/添加备注等。"
+        },
+        {
+          "path": "SpNo",
+          "title": "审批单号",
+          "type": "numberString",
+          "group": "审批单",
+          "description": "审批申请单号（数值，裸文本输出）。"
+        },
+        {
+          "path": "SpNoStr",
+          "title": "审批单号字符串",
+          "type": "string",
+          "group": "审批单",
+          "description": "审批申请单号的字符串形态。"
+        },
+        {
+          "path": "SpName",
+          "title": "审批申请名",
+          "type": "string",
+          "group": "审批单",
+          "description": "审批申请类型名称。"
+        },
+        {
+          "path": "SpStatus",
+          "title": "审批状态",
+          "type": "numberString",
+          "group": "审批单",
+          "description": "1 审批中 / 2 已通过 / 3 已驳回 / 4 已撤销 / 6 通过后撤销 / 7 已删除 / 10 已支付（裸文本输出）。"
+        },
+        {
+          "path": "StatuChangeEvent",
+          "title": "状态变化事件",
+          "type": "string",
+          "group": "审批单",
+          "description": "本次通知的状态变化类型（审批事件原文拼写即 StatuChangeEvent）。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    }
+  }
+}

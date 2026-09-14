@@ -1,23 +1,27 @@
 import { describe, expect, it } from "vitest";
 
+import { parseWireDraft, wireBodyText } from "../payload";
 import { WECOM_DEFINITIONS, WECOM_EVENT_SCHEMAS } from "./wecom";
 
 describe("企业微信事件 schema 聚合（XML + 机器人 JSON 两条通道）", () => {
-  it("自建应用 6 消息 + 26 事件 + 机器人 11 共 43 个模板，id 全仓库唯一", () => {
-    expect(WECOM_EVENT_SCHEMAS).toHaveLength(43);
+  it("自建应用 6 消息 + 72 事件 + 机器人 11 共 89 个模板，id 全仓库唯一", () => {
+    expect(WECOM_EVENT_SCHEMAS).toHaveLength(89);
     const ids = WECOM_EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
-    // 自建应用 XML 通道：成员消息 6 MsgType（事实库 §2.1）+ 事件字典 26 Event（§2.2）
+    // 自建应用 XML 通道：成员消息 6 MsgType（事实库 §2.1）+ 事件字典 72 模板
+    // （§2.2 26 Event + §2.3/§2.4 通讯录与家校 17 + §2.5 客户联系 13
+    //  + §2.9 获客助手 1 + §2.7 审批 1 + §2.6 微信客服 1 + §2.8 上下游 9
+    //  + §2.11 会议室 2 + 域名 IP/公共邮箱 2）
     const agentSchemas = WECOM_EVENT_SCHEMAS.filter((schema) =>
       schema.id.startsWith("wc-"),
     );
-    expect(agentSchemas).toHaveLength(32);
+    expect(agentSchemas).toHaveLength(78);
     expect(
       agentSchemas.filter((schema) => schema.kind === "message"),
     ).toHaveLength(6);
     expect(
       agentSchemas.filter((schema) => schema.kind === "event"),
-    ).toHaveLength(26);
+    ).toHaveLength(72);
     // 机器人 JSON 通道：7 msgtype 收消息 + 4 种收事件（事实库 §2.10）
     expect(
       WECOM_EVENT_SCHEMAS.filter((schema) => schema.id.startsWith("wb-")),
@@ -64,7 +68,7 @@ describe("企业微信事件 schema 聚合（XML + 机器人 JSON 两条通道�
     }
   });
 
-  it("事件字典 26 Event 与官方目录逐一对应（含 LOCATION 全大写）", () => {
+  it("事件字典 72 模板与官方目录逐一对应（含 LOCATION 全大写、deparmtment 官方笔误）", () => {
     const eventNames = WECOM_EVENT_SCHEMAS.filter(
       (schema) => schema.id.startsWith("wc-") && schema.kind === "event",
     ).map((schema) => schema.eventName);
@@ -95,6 +99,58 @@ describe("企业微信事件 schema 聚合（XML + 机器人 JSON 两条通道�
       "low_active_alert",
       "low_active",
       "active_restored",
+      // §2.3 通讯录变更（change_contact 补全 6 + 黄金样本 create_user）
+      "change_contact",
+      "change_contact",
+      "change_contact",
+      "change_contact",
+      "change_contact",
+      "change_contact",
+      // §2.4 家校通讯录（11 变更类型）
+      "change_school_contact",
+      "change_school_contact",
+      "change_school_contact",
+      "change_school_contact",
+      "change_school_contact",
+      "change_school_contact",
+      "change_school_contact",
+      "change_school_contact",
+      "change_school_contact",
+      "change_school_contact",
+      "change_school_contact",
+      // §2.5 客户联系（外部联系人 6 + 客户群 3 + 客户标签 4）
+      "change_external_contact",
+      "change_external_contact",
+      "change_external_contact",
+      "change_external_contact",
+      "change_external_contact",
+      "change_external_contact",
+      "change_external_chat",
+      "change_external_chat",
+      "change_external_chat",
+      "change_external_tag",
+      "change_external_tag",
+      "change_external_tag",
+      "change_external_tag",
+      // §2.9 获客助手 / §2.7 审批 / §2.6 微信客服
+      "customer_acquisition",
+      "sys_approval_change",
+      "kf_msg_or_event",
+      // §2.8 上下游（9 变更类型）
+      "change_chain",
+      "change_chain",
+      "change_chain",
+      "change_chain",
+      "change_chain",
+      "change_chain",
+      "change_chain",
+      "change_chain",
+      "change_chain",
+      // §2.11 会议室 / 域名 IP / 公共邮箱
+      "book_meeting_room",
+      "cancel_meeting_room",
+      "security",
+      "public_email_change",
     ]);
   });
 
@@ -108,6 +164,49 @@ describe("企业微信事件 schema 聚合（XML + 机器人 JSON 两条通道�
       "wc-low-active-alert",
       "wc-low-active",
       "wc-active-restored",
+      // 通讯录/家校/客户联系/获客/上下游/域名 IP/公共邮箱均为系统生成
+      "wc-update-user",
+      "wc-delete-user",
+      "wc-create-party",
+      "wc-update-party",
+      "wc-delete-party",
+      "wc-update-tag",
+      "wc-school-create-student",
+      "wc-school-update-student",
+      "wc-school-delete-student",
+      "wc-school-create-parent",
+      "wc-school-update-parent",
+      "wc-school-delete-parent",
+      "wc-school-subscribe",
+      "wc-school-unsubscribe",
+      "wc-school-create-deparmtment",
+      "wc-school-update-deparmtment",
+      "wc-school-delete-deparmtment",
+      "wc-add-external-contact",
+      "wc-edit-external-contact",
+      "wc-add-half-external-contact",
+      "wc-del-external-contact",
+      "wc-del-follow-user",
+      "wc-transfer-fail",
+      "wc-external-chat-create",
+      "wc-external-chat-update",
+      "wc-external-chat-dismiss",
+      "wc-external-tag-create",
+      "wc-external-tag-update",
+      "wc-external-tag-delete",
+      "wc-external-tag-shuffle",
+      "wc-customer-acquisition",
+      "wc-chain-corp-join",
+      "wc-chain-create-chain",
+      "wc-chain-update-chain",
+      "wc-chain-delete-chain",
+      "wc-chain-create-group",
+      "wc-chain-update-group",
+      "wc-chain-delete-group",
+      "wc-chain-remove-corp",
+      "wc-chain-update-corp",
+      "wc-security-change-domain-ip",
+      "wc-public-email-receive",
     ];
     for (const schema of WECOM_EVENT_SCHEMAS) {
       if (!sysEvents.includes(schema.id)) continue;
@@ -128,6 +227,15 @@ describe("企业微信事件 schema 聚合（XML + 机器人 JSON 两条通道�
         body: "",
         bodyMode: "wecomReply",
       });
+    }
+  });
+
+  it("模板载荷逐字节自反：线上明文 ↔ 载荷解析往返一致（嵌套结构体按原文透传）", () => {
+    for (const schema of WECOM_EVENT_SCHEMAS) {
+      const text = wireBodyText(schema, schema.payload);
+      const parsed = parseWireDraft(schema, text);
+      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
+      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 });

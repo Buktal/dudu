@@ -8,8 +8,8 @@ import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
 import { WECOM_DEFINITIONS } from "./wecom";
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 43 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(76);
+  it("抖音 33 + 企微 89 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(122);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -129,6 +129,57 @@ describe("事件模板聚合注册表", () => {
       "wc-low-active-alert",
       "wc-low-active",
       "wc-active-restored",
+      // 通讯录/家校变更（§2.3/§2.4）
+      "wc-update-user",
+      "wc-delete-user",
+      "wc-create-party",
+      "wc-update-party",
+      "wc-delete-party",
+      "wc-update-tag",
+      "wc-school-create-student",
+      "wc-school-update-student",
+      "wc-school-delete-student",
+      "wc-school-create-parent",
+      "wc-school-update-parent",
+      "wc-school-delete-parent",
+      "wc-school-subscribe",
+      "wc-school-unsubscribe",
+      "wc-school-create-deparmtment",
+      "wc-school-update-deparmtment",
+      "wc-school-delete-deparmtment",
+      // 客户联系（§2.5）
+      "wc-add-external-contact",
+      "wc-edit-external-contact",
+      "wc-add-half-external-contact",
+      "wc-del-external-contact",
+      "wc-del-follow-user",
+      "wc-transfer-fail",
+      "wc-external-chat-create",
+      "wc-external-chat-update",
+      "wc-external-chat-dismiss",
+      "wc-external-tag-create",
+      "wc-external-tag-update",
+      "wc-external-tag-delete",
+      "wc-external-tag-shuffle",
+      // 获客助手（§2.9）/ 审批（§2.7）/ 微信客服（§2.6）
+      "wc-customer-acquisition",
+      "wc-sys-approval-change",
+      "wc-kf-msg-or-event",
+      // 上下游（§2.8）
+      "wc-chain-corp-join",
+      "wc-chain-create-chain",
+      "wc-chain-update-chain",
+      "wc-chain-delete-chain",
+      "wc-chain-create-group",
+      "wc-chain-update-group",
+      "wc-chain-delete-group",
+      "wc-chain-remove-corp",
+      "wc-chain-update-corp",
+      // 会议室 / 域名 IP / 公共邮箱（§2.11）
+      "wc-book-meeting-room",
+      "wc-cancel-meeting-room",
+      "wc-security-change-domain-ip",
+      "wc-public-email-receive",
       // 智能机器人 JSON 通道：收消息 7 msgtype + 收事件 4 种
       "wb-text",
       "wb-quote",

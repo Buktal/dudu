@@ -1,0 +1,172 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-school-create-deparmtment": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/92052",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "家校通讯录变更固定为 sys（系统生成）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_school_contact = 家校通讯录变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "create_deparmtment = 新增部门（官方原文拼写即 deparmtment，非 department，保真照抄）。"
+        },
+        {
+          "path": "Id",
+          "title": "家校部门 Id",
+          "type": "numberString",
+          "group": "事件内容",
+          "description": "新建部门的家校通讯录部门 id，裸文本输出。"
+        }
+      ]
+    },
+    "wc-school-update-deparmtment": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/92052",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "家校通讯录变更固定为 sys（系统生成）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_school_contact = 家校通讯录变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "update_deparmtment = 编辑部门（官方原文拼写即 deparmtment，非 department，保真照抄）。"
+        },
+        {
+          "path": "Id",
+          "title": "家校部门 Id",
+          "type": "numberString",
+          "group": "事件内容",
+          "description": "变更部门的家校通讯录部门 id，裸文本输出。"
+        }
+      ]
+    },
+    "wc-school-delete-deparmtment": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/92052",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "家校通讯录变更固定为 sys（系统生成）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_school_contact = 家校通讯录变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "delete_deparmtment = 删除部门（官方原文拼写即 deparmtment，非 department，保真照抄）。"
+        },
+        {
+          "path": "Id",
+          "title": "家校部门 Id",
+          "type": "numberString",
+          "group": "事件内容",
+          "description": "被删除部门的家校通讯录部门 id，裸文本输出。"
+        }
+      ]
+    }
+  }
+}

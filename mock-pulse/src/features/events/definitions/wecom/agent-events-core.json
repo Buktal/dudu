@@ -440,13 +440,6 @@
           "type": "string",
           "group": "成员属性",
           "description": "成员办公地址。"
-        },
-        {
-          "path": "ExtAttr",
-          "title": "扩展属性",
-          "type": "string",
-          "group": "成员属性",
-          "description": "ExtAttr 结构体原文片段（Item：Type 0 文本 Text.Value / 1 网页 Web.Title+Url），整体按官方 §5.4 原文透传。"
         }
       ]
     }

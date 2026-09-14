@@ -1,0 +1,117 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-security-change-domain-ip": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/100080",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "固定为 sys（系统生成，官方原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "security = 安全类事件（仅自建应用：需在「我的企业-设置-域名IP」配置可调用 API 的应用）。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_domain_ip = 企微域名/IP 变更（官方 100080 黄金样本逐字）。"
+        }
+      ]
+    },
+    "wc-public-email-receive": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/100180",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "固定为 sys（系统生成，官方原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "public_email_change = 公共邮箱变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "receive_email = 公共邮箱收到邮件（官方 100180 黄金样本逐字）。"
+        },
+        {
+          "path": "Id",
+          "title": "公共邮箱 Id",
+          "type": "numberString",
+          "group": "邮件信息",
+          "description": "公共邮箱 id，裸文本输出。"
+        },
+        {
+          "path": "Amount",
+          "title": "新邮件数",
+          "type": "numberString",
+          "group": "邮件信息",
+          "description": "公共邮箱当前新邮件数，裸文本输出。"
+        }
+      ]
+    }
+  }
+}

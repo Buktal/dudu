@@ -1,0 +1,393 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-add-external-contact": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/92130",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "客户联系事件固定为 sys（官方 §5.5 原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_external_contact = 外部联系人变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "add_external_contact = 成员添加外部联系人。"
+        },
+        {
+          "path": "UserID",
+          "title": "服务人员 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "添加该客户的服务人员（成员）账号。"
+        },
+        {
+          "path": "ExternalUserID",
+          "title": "客户 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "外部联系人的 userid（官方样本 wo 开头）。"
+        },
+        {
+          "path": "State",
+          "title": "渠道参数",
+          "type": "string",
+          "group": "客户联系",
+          "description": "添加渠道参数，开发者自定义的渠道标记。"
+        },
+        {
+          "path": "WelcomeCode",
+          "title": "欢迎语凭证",
+          "type": "string",
+          "group": "客户联系",
+          "description": "发送欢迎语用的临时凭证（客户已开始聊天或已用过则不再返回）。"
+        }
+      ]
+    },
+    "wc-edit-external-contact": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/92130",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "客户联系事件固定为 sys（官方 §5.5 原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_external_contact = 外部联系人变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "edit_external_contact = 编辑企业客户信息。"
+        },
+        {
+          "path": "UserID",
+          "title": "服务人员 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "跟进该客户的服务人员（成员）账号。"
+        },
+        {
+          "path": "ExternalUserID",
+          "title": "客户 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "外部联系人的 userid（官方样本 wo 开头）。"
+        }
+      ]
+    },
+    "wc-add-half-external-contact": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/92130",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "客户联系事件固定为 sys（官方 §5.5 原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_external_contact = 外部联系人变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "add_half_external_contact = 外部联系人免验证添加成员。"
+        },
+        {
+          "path": "UserID",
+          "title": "服务人员 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "被免验证添加的成员账号。"
+        },
+        {
+          "path": "ExternalUserID",
+          "title": "客户 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "外部联系人的 userid（官方样本 wo 开头）。"
+        }
+      ]
+    },
+    "wc-del-external-contact": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/92130",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "客户联系事件固定为 sys（官方 §5.5 原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_external_contact = 外部联系人变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "del_external_contact = 删除企业客户（客户删除成员的跟进关系）。"
+        },
+        {
+          "path": "UserID",
+          "title": "服务人员 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "被客户删除的跟进成员账号。"
+        },
+        {
+          "path": "ExternalUserID",
+          "title": "客户 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "外部联系人的 userid（官方样本 wo 开头）。"
+        }
+      ]
+    },
+    "wc-del-follow-user": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/92130",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "客户联系事件固定为 sys（官方 §5.5 原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_external_contact = 外部联系人变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "del_follow_user = 删除跟进成员。"
+        },
+        {
+          "path": "UserID",
+          "title": "服务人员 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "被删除的跟进成员账号。"
+        },
+        {
+          "path": "ExternalUserID",
+          "title": "客户 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "外部联系人的 userid（官方样本 wo 开头）。"
+        }
+      ]
+    },
+    "wc-transfer-fail": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/92130",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "客户联系事件固定为 sys（官方 §5.5 原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_external_contact = 外部联系人变更。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "transfer_fail = 客户接替失败（在职/离职继承）。"
+        },
+        {
+          "path": "UserID",
+          "title": "服务人员 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "接替失败的成员账号。"
+        },
+        {
+          "path": "ExternalUserID",
+          "title": "客户 UserID",
+          "type": "string",
+          "group": "客户联系",
+          "description": "外部联系人的 userid（官方样本 wo 开头）。"
+        }
+      ]
+    }
+  }
+}

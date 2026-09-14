@@ -1,0 +1,414 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-update-user": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90970",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "通讯录变更固定为 sys（系统生成，官方原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_contact = 通讯录变更（推送目标为通讯录同步助手/代开发/上游共享应用）。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "update_user = 更新成员（官方样本此处为裸文本）。仅在部门相关变更或 UserID 变更时触发。"
+        },
+        {
+          "path": "UserID",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "成员属性",
+          "description": "变更成员的账号。"
+        },
+        {
+          "path": "NewUserID",
+          "title": "新成员 UserID",
+          "type": "string",
+          "group": "成员属性",
+          "description": "userid 变更时的新账号（官方 2022-08-15 后精简回调仅 UserID/Department/NewUserID 三字段）。"
+        },
+        {
+          "path": "Department",
+          "title": "所属部门",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员所属部门列表，逗号分隔。"
+        }
+      ]
+    },
+    "wc-delete-user": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90970",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "通讯录变更固定为 sys（系统生成，官方原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_contact = 通讯录变更（推送目标为通讯录同步助手/代开发/上游共享应用）。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "delete_user = 删除成员（官方样本此处为裸文本）。"
+        },
+        {
+          "path": "UserID",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "成员属性",
+          "description": "被删除成员的账号（§2.3：delete_user 仅 UserID）。"
+        }
+      ]
+    },
+    "wc-create-party": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90971",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "通讯录变更固定为 sys（系统生成，官方原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_contact = 通讯录变更（推送目标为通讯录同步助手/代开发/上游共享应用）。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "create_party = 新增部门（官方样本此处为裸文本）。"
+        },
+        {
+          "path": "Id",
+          "title": "部门 Id",
+          "type": "numberString",
+          "group": "部门属性",
+          "description": "新建部门的数字 ID，裸文本输出。"
+        },
+        {
+          "path": "Name",
+          "title": "部门名称",
+          "type": "string",
+          "group": "部门属性",
+          "description": "部门名称。"
+        },
+        {
+          "path": "ParentId",
+          "title": "父部门 Id",
+          "type": "numberString",
+          "group": "部门属性",
+          "description": "父部门数字 ID，裸文本输出。"
+        },
+        {
+          "path": "Order",
+          "title": "排序值",
+          "type": "numberString",
+          "group": "部门属性",
+          "description": "部门在父部门中的次序值，裸文本输出。"
+        }
+      ]
+    },
+    "wc-update-party": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90971",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "通讯录变更固定为 sys（系统生成，官方原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_contact = 通讯录变更（推送目标为通讯录同步助手/代开发/上游共享应用）。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "update_party = 更新部门（官方样本此处为裸文本）。"
+        },
+        {
+          "path": "Id",
+          "title": "部门 Id",
+          "type": "numberString",
+          "group": "部门属性",
+          "description": "变更部门的数字 ID，裸文本输出。"
+        },
+        {
+          "path": "Name",
+          "title": "部门名称",
+          "type": "string",
+          "group": "部门属性",
+          "description": "部门名称（仅名称变更时携带）。"
+        },
+        {
+          "path": "ParentId",
+          "title": "父部门 Id",
+          "type": "numberString",
+          "group": "部门属性",
+          "description": "父部门数字 ID（仅部门迁移时携带），裸文本输出。"
+        }
+      ]
+    },
+    "wc-delete-party": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90971",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "通讯录变更固定为 sys（系统生成，官方原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_contact = 通讯录变更（推送目标为通讯录同步助手/代开发/上游共享应用）。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "delete_party = 删除部门（官方样本此处为裸文本）。"
+        },
+        {
+          "path": "Id",
+          "title": "部门 Id",
+          "type": "numberString",
+          "group": "部门属性",
+          "description": "被删除部门的数字 ID（§2.3：delete_party 仅 Id），裸文本输出。"
+        }
+      ]
+    },
+    "wc-update-tag": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90972",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "通讯录变更固定为 sys（系统生成）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_contact = 通讯录变更（推送目标为通讯录同步助手/代开发/上游共享应用）。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "update_tag = 标签成员变更（官方 90972 页此处走 CDATA）。"
+        },
+        {
+          "path": "TagId",
+          "title": "标签 Id",
+          "type": "string",
+          "group": "标签成员",
+          "description": "发生成员变更的标签 ID。"
+        },
+        {
+          "path": "AddUserItems",
+          "title": "新增成员",
+          "type": "string",
+          "group": "标签成员",
+          "description": "加入标签的成员 UserID 列表，逗号分隔。"
+        },
+        {
+          "path": "DelUserItems",
+          "title": "移除成员",
+          "type": "string",
+          "group": "标签成员",
+          "description": "移出标签的成员 UserID 列表，逗号分隔。"
+        },
+        {
+          "path": "AddPartyItems",
+          "title": "新增部门",
+          "type": "string",
+          "group": "标签成员",
+          "description": "加入标签的部门 ID 列表，逗号分隔。"
+        },
+        {
+          "path": "DelPartyItems",
+          "title": "移除部门",
+          "type": "string",
+          "group": "标签成员",
+          "description": "移出标签的部门 ID 列表，逗号分隔。"
+        }
+      ]
+    }
+  }
+}

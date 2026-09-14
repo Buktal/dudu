@@ -3,6 +3,7 @@ import type { WirePayload, XmlLayout } from "../types";
 import {
   WECOM_DEFINITIONS,
   WECOM_EXPECTED,
+  wcChangeContactLayout,
   wcEventEnvelope,
   wcEventIdGenerations,
   wcEventLayout,
@@ -30,20 +31,6 @@ const goldenWcSubscribe: WirePayload = {
 const wcLocationLayout: XmlLayout = {
   indent: "\t",
   bareTags: ["CreateTime", "Latitude", "Longitude", "Precision", "AgentID"],
-};
-
-/** 通讯录事件排版：§5.4 官方样本（ChangeType/数值字段裸文本 + FromUserName 行尾空格） */
-const wcChangeContactLayout: XmlLayout = {
-  indent: "\t",
-  bareTags: [
-    "CreateTime",
-    "ChangeType",
-    "MainDepartment",
-    "Mobile",
-    "Gender",
-    "Status",
-  ],
-  trailingSpaceTags: ["FromUserName"],
 };
 
 /** 官方黄金样本 §5.4：create_user 通讯录事件（逐字；ExtAttr 为嵌套结构原文片段） */
