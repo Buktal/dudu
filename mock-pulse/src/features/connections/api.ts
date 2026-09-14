@@ -14,6 +14,14 @@ export type DouyinSystem = "dop" | "life_service" | "mini_game" | "isv";
 export type WecomSystem = "agent" | "aibot";
 
 /**
+ * 公众号消息加解密方式（与 Rust 端 WechatMpMode 内标一致，snake_case）：
+ * 明文/兼容/安全三模式（官方服务器配置配套项），差异在直发包与 URL 参数——
+ * 明文仅三参 signature；兼容/安全加 encrypt_type=aes + msg_signature，
+ * 安全模式包体仅密文信封。缺省 plain（官方默认）。
+ */
+export type WechatMpMode = "plain" | "compatible" | "secure";
+
+/**
  * 连接配置按渠道区分形状（与 Rust 端 ConnectionConfig 内标枚举一致，
  * 以 channel 字段判别；持久化与 IPC 透传均为 camelCase）。
  */
@@ -50,7 +58,24 @@ export type WecomConnectionConfig = {
   agentId: string;
 };
 
-export type ConnectionConfig = DouyinConnectionConfig | WecomConnectionConfig;
+export type WechatMpConnectionConfig = {
+  channel: "wechat-mp";
+  /** 回调目标地址，事件与剧本共享 */
+  url: string;
+  /** 公众号 AppID（安全模式密文尾部即它，解密后须校验） */
+  appId: string;
+  /** 服务器配置 Token（GET 三参握手与四参 msg_signature 的签名源） */
+  token: string;
+  /** 43 位 EncodingAESKey（明文模式可不填；兼容/安全的 AES-256-CBC 派生源） */
+  encodingAesKey: string;
+  /** 消息加解密方式：三模式直发路由（缺省 plain，官方默认） */
+  mode: WechatMpMode;
+};
+
+export type ConnectionConfig =
+  | DouyinConnectionConfig
+  | WecomConnectionConfig
+  | WechatMpConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -83,4 +108,12 @@ export function testWecomConnection(
   config: WecomConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_wecom", { config });
+}
+
+/** 按公众号 GET 三参握手协议向目标发起 GET（signature=sha1(字典序三参)，
+ *  目标须原样回显 echostr） */
+export function testWechatMpConnection(
+  config: WechatMpConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_wechat_mp", { config });
 }

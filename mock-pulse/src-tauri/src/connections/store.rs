@@ -158,6 +158,37 @@ mod tests {
     }
 
     #[test]
+    fn wechat_mp_roundtrips_with_mode_tag_and_defaults() {
+        // #33 渠道内标：wechat-mp 序列化（AppID/Token/EncodingAESKey/三模式），
+        // 缺省 mode 按官方默认明文（plain）落位
+        let dir = temp_dir("wechat-mp");
+        let configs = vec![ConnectionConfig::WechatMp {
+            url: "http://127.0.0.1:8080/webhooks/wechat-mp".into(),
+            app_id: "wxba5fad812f8e6fb9".into(),
+            token: "AAAAA".into(),
+            encoding_aes_key: "A".repeat(43),
+            mode: super::super::WechatMpMode::Secure,
+        }];
+        save_connections(&dir, &configs).unwrap();
+        assert_eq!(load_connections(&dir).unwrap(), configs);
+
+        let raw = r#"[{"channel":"wechat-mp","url":"http://localhost/mp","appId":"wx123","token":"tk","encodingAesKey":""}]"#;
+        fs::write(connections_file(&dir), raw).unwrap();
+        assert_eq!(
+            load_connections(&dir).unwrap(),
+            vec![ConnectionConfig::WechatMp {
+                url: "http://localhost/mp".into(),
+                app_id: "wx123".into(),
+                token: "tk".into(),
+                encoding_aes_key: String::new(),
+                // 无 mode 字段：按官方默认 plain 落位
+                mode: super::super::WechatMpMode::Plain,
+            }]
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn missing_file_yields_empty_list() {
         let dir = temp_dir("missing");
         assert!(load_connections(&dir).unwrap().is_empty());

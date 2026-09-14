@@ -29,8 +29,8 @@ export const RECEIPT_BODY_MODES: readonly {
   },
   {
     id: "wecomReply",
-    label: "企微回执",
-    hint: "按企微官方三种回执形态比对：期望留空 = 回执必须是空串；填 success = 逐字相等（不带引号）；填其他内容 = 目标须回加密被动回复，且解密明文包含该片段。",
+    label: "微信系回执",
+    hint: "按微信系官方三种回执形态比对（企微/公众号同语义）：期望留空 = 回执必须是空串；填 success = 逐字相等（不带引号）；填其他内容 = 目标须回加密被动回复，且解密明文包含该片段。",
   },
 ];
 
@@ -43,7 +43,7 @@ const MODE_LABEL: Record<ReceiptBodyMode, string> = {
   contains: "正文包含",
   equals: "正文完全一致",
   jsonField: "正文含 JSON 字段",
-  wecomReply: "企微回执形态",
+  wecomReply: "微信系回执形态",
 };
 
 /** 期望的人类可读描述（回执面板/运行记录展示用） */
@@ -52,10 +52,10 @@ export function describeExpected(expected: ExpectedReceipt): string {
     return `期望 HTTP ${expected.status}，不校验正文`;
   }
   if (expected.bodyMode === "wecomReply" && expected.body === "") {
-    return `期望 HTTP ${expected.status}，企微回执为空串`;
+    return `期望 HTTP ${expected.status}，微信系回执为空串`;
   }
   if (expected.bodyMode === "wecomReply") {
-    return `期望 HTTP ${expected.status}，企微${
+    return `期望 HTTP ${expected.status}，微信系${
       expected.body === "success" ? "回执为 success" : "解密被动回复包含"
     }「${clip(expected.body)}」`;
   }

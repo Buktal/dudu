@@ -1,0 +1,322 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wechat-mp",
+  "version": "2026.09",
+  "schemas": {
+    "wm-subscribe": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_event_pushes.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号（示例占位 toUser）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "关注公众号的粉丝 OpenID（官方黄金样本占位 FromUser，原样保留）。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。事件排重官方推荐 FromUserName+CreateTime。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "subscribe = 关注（含扫码带参场景：EventKey 带 qrscene_ 前缀并附 Ticket）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "场景值 KEY",
+          "type": "string",
+          "group": "事件内容",
+          "description": "仅扫码带参关注携带：qrscene_ 前缀 + 场景值 ID（如 qrscene_123123）。普通关注无此元素。"
+        },
+        {
+          "path": "Ticket",
+          "title": "二维码 Ticket",
+          "type": "string",
+          "group": "事件内容",
+          "description": "仅扫码带参关注携带：扫码推送的二维码 Ticket，可换取二维码图片。"
+        }
+      ]
+    },
+    "wm-unsubscribe": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_event_pushes.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "取消关注的粉丝 OpenID（官方黄金样本占位 FromUser，原样保留）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "unsubscribe = 取消关注（官方要求收到后删除该用户全部信息）。"
+        }
+      ]
+    },
+    "wm-scan": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_event_pushes.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "扫码的已关注粉丝 OpenID。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "SCAN = 已关注用户扫带参二维码（EventKey 无 qrscene_ 前缀）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "场景值 ID",
+          "type": "string",
+          "group": "事件内容",
+          "description": "场景值 ID（无前缀，官方占位 SCENE_VALUE），与带参关注不同。"
+        },
+        {
+          "path": "Ticket",
+          "title": "二维码 Ticket",
+          "type": "string",
+          "group": "事件内容",
+          "description": "扫码推送的二维码 Ticket，可换取二维码图片。"
+        }
+      ]
+    },
+    "wm-location-report": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_event_pushes.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "上报地理位置的粉丝 OpenID。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "LOCATION = 上报地理位置（进入会话或每 5 秒一次，公众平台可配置）。"
+        },
+        {
+          "path": "Latitude",
+          "title": "纬度",
+          "type": "string",
+          "group": "事件内容",
+          "description": "地理位置纬度（官方黄金样本 23.137466，数值为裸文本）。"
+        },
+        {
+          "path": "Longitude",
+          "title": "经度",
+          "type": "string",
+          "group": "事件内容",
+          "description": "地理位置经度（官方黄金样本 113.352425）。"
+        },
+        {
+          "path": "Precision",
+          "title": "精度",
+          "type": "string",
+          "group": "事件内容",
+          "description": "地理位置精度（官方黄金样本 119.385040）。"
+        }
+      ]
+    },
+    "wm-click": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_event_pushes.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "点击菜单的粉丝 OpenID。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "CLICK = 点击菜单拉取消息（点开子菜单不上报）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "菜单 KEY",
+          "type": "string",
+          "group": "事件内容",
+          "description": "自定义菜单接口中 key 值对应的菜单项被点击（官方占位 EVENTKEY）。"
+        }
+      ]
+    },
+    "wm-view": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_event_pushes.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "点击菜单跳转的粉丝 OpenID。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "VIEW = 点击菜单跳转链接（接收事件页样本不携带 MenuId）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "跳转 URL",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单项配置的跳转链接（官方占位 www.qq.com）。"
+        }
+      ]
+    }
+  }
+}

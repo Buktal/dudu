@@ -1,0 +1,308 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wechat-mp",
+  "version": "2026.09",
+  "schemas": {
+    "wm-video": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_standard_messages.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送视频的粉丝 OpenID。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "视频消息固定为 video。"
+        },
+        {
+          "path": "MediaId",
+          "title": "媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "视频消息媒体 ID，可调「获取临时素材」接口拉取。"
+        },
+        {
+          "path": "ThumbMediaId",
+          "title": "缩略图媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "视频消息缩略图的媒体 ID。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID，官方推荐按 msgid 排重。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgDataId",
+          "title": "文章 ID",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时的文章 ID（官方样例占位 xxxx）。"
+        },
+        {
+          "path": "Idx",
+          "title": "文章内序号",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时在文章内的位置序号（官方样例占位 xxxx）。"
+        }
+      ]
+    },
+    "wm-shortvideo": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_standard_messages.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送小视频的粉丝 OpenID。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "小视频消息固定为 shortvideo（与 video 同构）。"
+        },
+        {
+          "path": "MediaId",
+          "title": "媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "小视频消息媒体 ID，可调「获取临时素材」接口拉取。"
+        },
+        {
+          "path": "ThumbMediaId",
+          "title": "缩略图媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "小视频消息缩略图的媒体 ID。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID，官方推荐按 msgid 排重。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgDataId",
+          "title": "文章 ID",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时的文章 ID（官方样例占位 xxxx）。"
+        },
+        {
+          "path": "Idx",
+          "title": "文章内序号",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时在文章内的位置序号（官方样例占位 xxxx）。"
+        }
+      ]
+    },
+    "wm-location": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_standard_messages.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送地理位置的粉丝 OpenID。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "地理位置消息固定为 location。"
+        },
+        {
+          "path": "Location_X",
+          "title": "纬度",
+          "type": "string",
+          "group": "消息内容",
+          "description": "地理位置纬度（官方定义 X=纬度；数值为裸文本）。"
+        },
+        {
+          "path": "Location_Y",
+          "title": "经度",
+          "type": "string",
+          "group": "消息内容",
+          "description": "地理位置经度（官方定义 Y=经度；数值为裸文本）。"
+        },
+        {
+          "path": "Scale",
+          "title": "地图缩放大小",
+          "type": "string",
+          "group": "消息内容",
+          "description": "地图缩放级别（数值为裸文本）。"
+        },
+        {
+          "path": "Label",
+          "title": "位置信息",
+          "type": "string",
+          "group": "消息内容",
+          "description": "地理位置的文字描述。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID，官方推荐按 msgid 排重。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgDataId",
+          "title": "文章 ID",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时的文章 ID（官方样例占位 xxxx）。"
+        },
+        {
+          "path": "Idx",
+          "title": "文章内序号",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时在文章内的位置序号（官方样例占位 xxxx）。"
+        }
+      ]
+    },
+    "wm-link": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_standard_messages.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送链接的粉丝 OpenID。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "链接消息固定为 link。"
+        },
+        {
+          "path": "Title",
+          "title": "标题",
+          "type": "string",
+          "group": "消息内容",
+          "description": "消息链接的标题。"
+        },
+        {
+          "path": "Description",
+          "title": "描述",
+          "type": "string",
+          "group": "消息内容",
+          "description": "消息链接的描述。"
+        },
+        {
+          "path": "Url",
+          "title": "链接地址",
+          "type": "string",
+          "group": "消息内容",
+          "description": "消息链接的 URL。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID，官方推荐按 msgid 排重。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgDataId",
+          "title": "文章 ID",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时的文章 ID（官方样例占位 xxxx）。"
+        },
+        {
+          "path": "Idx",
+          "title": "文章内序号",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时在文章内的位置序号（官方样例占位 xxxx）。"
+        }
+      ]
+    }
+  }
+}

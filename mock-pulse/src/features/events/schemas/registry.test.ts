@@ -5,19 +5,25 @@ import { CHANNELS } from "@/lib/channels";
 import { defineSchema } from "./define";
 import { DOUYIN_DEFINITIONS } from "./douyin";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
+import { MP_DEFINITIONS } from "./wechat-mp";
 import { WECOM_DEFINITIONS } from "./wecom";
 
+const DEFINITIONS_BY_CHANNEL = {
+  douyin: DOUYIN_DEFINITIONS,
+  wecom: WECOM_DEFINITIONS,
+  "wechat-mp": MP_DEFINITIONS,
+} as const;
+
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(122);
+  it("抖音 33 + 企微 89 + 公众号 26 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(148);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("每个模板的 channelId 与所在渠道包一致（协议模块与描述文件同渠道）", () => {
-    for (const channelId of ["douyin", "wecom"] as const) {
-      const definitions =
-        channelId === "douyin" ? DOUYIN_DEFINITIONS : WECOM_DEFINITIONS;
+    for (const channelId of ["douyin", "wecom", "wechat-mp"] as const) {
+      const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
         expect(schema.channelId).toBe(channelId);
         expect(definitions.channelId).toBe(channelId);
@@ -27,10 +33,13 @@ describe("事件模板聚合注册表", () => {
 
   it("模板版本/来源/字段与描述文件同源（装载即校验后的数据契约）", () => {
     for (const schema of EVENT_SCHEMAS) {
+      expect(schema.channelId in DEFINITIONS_BY_CHANNEL, schema.channelId).toBe(
+        true,
+      );
       const entry =
-        schema.channelId === "douyin"
-          ? DOUYIN_DEFINITIONS.schemas[schema.id]
-          : WECOM_DEFINITIONS.schemas[schema.id];
+        DEFINITIONS_BY_CHANNEL[
+          schema.channelId as keyof typeof DEFINITIONS_BY_CHANNEL
+        ].schemas[schema.id];
       expect(entry, `${schema.id} 描述文件条目`).toBeDefined();
       expect(schema.version).toBe(entry?.version);
       expect(schema.source).toBe(entry?.source);
@@ -53,7 +62,7 @@ describe("事件模板聚合注册表", () => {
     }
   });
 
-  it("schemasByChannel：已接入渠道返回模板，其余 17 渠道返回空表", () => {
+  it("schemasByChannel：已接入渠道返回模板，其余 16 渠道返回空表", () => {
     expect(schemasByChannel("douyin").map((schema) => schema.id)).toEqual([
       // dop 主体系
       "dy-create-video",
@@ -193,8 +202,40 @@ describe("事件模板聚合注册表", () => {
       "wb-event-template-card",
       "wb-event-template-card-menu",
     ]);
+    expect(schemasByChannel("wechat-mp").map((schema) => schema.id)).toEqual([
+      // 普通消息 7 MsgType（事实库 §2.1）
+      "wm-text",
+      "wm-image",
+      "wm-voice",
+      "wm-video",
+      "wm-shortvideo",
+      "wm-location",
+      "wm-link",
+      // 基础事件 6 种（事实库 §2.2）
+      "wm-subscribe",
+      "wm-unsubscribe",
+      "wm-scan",
+      "wm-location-report",
+      "wm-click",
+      "wm-view",
+      // 菜单扩展 8 形态（§2.3；CLICK 重申与基础事件共用 wm-click）
+      "wm-scancode-push",
+      "wm-scancode-waitmsg",
+      "wm-pic-sysphoto",
+      "wm-pic-photo-or-album",
+      "wm-pic-weixin",
+      "wm-location-select",
+      "wm-view-menu",
+      "wm-view-miniprogram",
+      // 模板/群发/订阅通知回执（事实库 §2.4/§2.5）
+      "wm-template-send-job-finish",
+      "wm-masssend-job-finish",
+      "wm-subscribe-msg-popup",
+      "wm-subscribe-msg-change",
+      "wm-subscribe-msg-sent",
+    ]);
     for (const channel of CHANNELS) {
-      if (channel.id === "douyin" || channel.id === "wecom") continue;
+      if (["douyin", "wecom", "wechat-mp"].includes(channel.id)) continue;
       expect(schemasByChannel(channel.id), channel.id).toEqual([]);
     }
   });

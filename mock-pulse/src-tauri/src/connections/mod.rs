@@ -7,6 +7,7 @@
 pub mod douyin;
 pub mod store;
 pub(crate) mod util;
+pub mod wechat_mp;
 pub mod wecom;
 
 use std::time::Duration;
@@ -95,7 +96,8 @@ pub(crate) trait ChannelAdapter: Send + Sync {
 }
 
 /// 渠道适配器注册表：全仓唯一的渠道路由点，新渠道在此登记一行。
-pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[&douyin::Adapter, &wecom::Adapter];
+pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] =
+    &[&douyin::Adapter, &wecom::Adapter, &wechat_mp::Adapter];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
 pub(crate) fn adapter_by_channel(channel: &str) -> Option<&'static dyn ChannelAdapter> {
@@ -167,9 +169,23 @@ pub enum WecomSystem {
     Aibot,
 }
 
-/// 平台连接配置：持久化（store）与协议握手（douyin/wecom）共用的域类型。
+/// 公众号消息加解密方式（事实库 §4.1 三模式，官方服务器配置配套项）。
+/// 序列化 snake_case，缺省 plain（官方默认明文模式）。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WechatMpMode {
+    /// 明文模式（官方默认）：明文 XML 直发，URL 仅三参 signature
+    #[default]
+    Plain,
+    /// 兼容模式（调试过渡）：明文与密文并存，URL 加 encrypt_type=aes + msg_signature
+    Compatible,
+    /// 安全模式（官方推荐）：仅密文信封（ToUserName + Encrypt），URL 同兼容
+    Secure,
+}
+
+/// 平台连接配置：持久化（store）与协议握手（douyin/wecom/wechat_mp）共用的域类型。
 /// 按渠道存不同凭据形状，以 channel 内标序列化（旧版抖音/企微数据形状不变，
-/// 新增体系/通道字段全部 serde default 缺省）。
+/// 新增体系/通道/模式字段全部 serde default 缺省）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "channel")]
 pub enum ConnectionConfig {
@@ -207,6 +223,19 @@ pub enum ConnectionConfig {
         encoding_aes_key: String,
         /// 自建应用数字 ID（仅应用相关回调信封携带）
         agent_id: String,
+    },
+    #[serde(rename = "wechat-mp", rename_all = "camelCase")]
+    WechatMp {
+        url: String,
+        /// 公众号 AppID（开发者 ID）：安全模式密文尾部即它，解密后须校验
+        app_id: String,
+        /// 服务器配置 Token（任意填写）：GET 三参握手与四参 msg_signature 签名源
+        token: String,
+        /// 43 位 EncodingAESKey（明文模式可不填；兼容/安全的 AES-256-CBC 派生源）
+        encoding_aes_key: String,
+        /// 消息加解密方式：三模式直发路由（缺省 plain，官方默认）
+        #[serde(default)]
+        mode: WechatMpMode,
     },
 }
 
@@ -256,6 +285,15 @@ pub async fn connections_test_douyin(config: ConnectionConfig) -> Result<Handsha
 #[tauri::command]
 pub async fn connections_test_wecom(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
     run_handshake(&wecom::Adapter, config).await
+}
+
+/// 按公众号 GET 三参握手协议测试连接（signature=sha1(字典序排序三参)，
+/// 目标原样回显 echostr；官方 5 秒应答窗口）。
+#[tauri::command]
+pub async fn connections_test_wechat_mp(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&wechat_mp::Adapter, config).await
 }
 
 #[cfg(test)]
@@ -313,8 +351,16 @@ mod tests {
             encoding_aes_key: String::new(),
             agent_id: String::new(),
         };
+        let wechat_mp_config = ConnectionConfig::WechatMp {
+            url: String::new(),
+            app_id: String::new(),
+            token: String::new(),
+            encoding_aes_key: String::new(),
+            mode: WechatMpMode::Plain,
+        };
         assert_eq!(adapter_of(&douyin_config).id(), "douyin");
         assert_eq!(adapter_of(&wecom_config).id(), "wecom");
+        assert_eq!(adapter_of(&wechat_mp_config).id(), "wechat-mp");
         assert_eq!(
             adapter_by_channel("douyin").map(|adapter| adapter.id()),
             Some("douyin")
@@ -322,6 +368,10 @@ mod tests {
         assert_eq!(
             adapter_by_channel("wecom").map(|adapter| adapter.id()),
             Some("wecom")
+        );
+        assert_eq!(
+            adapter_by_channel("wechat-mp").map(|adapter| adapter.id()),
+            Some("wechat-mp")
         );
         assert!(adapter_by_channel("telegram").is_none());
         // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
@@ -333,6 +383,10 @@ mod tests {
             assert_eq!(
                 adapter.url(&wecom_config).is_some(),
                 adapter.matches(&wecom_config)
+            );
+            assert_eq!(
+                adapter.url(&wechat_mp_config).is_some(),
+                adapter.matches(&wechat_mp_config)
             );
         }
     }

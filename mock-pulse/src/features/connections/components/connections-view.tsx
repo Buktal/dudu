@@ -37,7 +37,12 @@ import { toast } from "@/components/ui/toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
-import type { ConnectionConfig, DouyinSystem, WecomSystem } from "../api";
+import type {
+  ConnectionConfig,
+  DouyinSystem,
+  WechatMpMode,
+  WecomSystem,
+} from "../api";
 import * as actions from "../stores/connections-slice";
 import { ConnectionFields } from "./connection-fields";
 
@@ -61,7 +66,18 @@ function wecomTestNote(system: WecomSystem): string {
   return "发送加密 echostr，检查服务是否正确解密并回显。";
 }
 
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音 JSON */
+/** 公众号握手文案按消息加解密方式呈现（GET 三参握手三模式同一流程） */
+function wechatMpTestNote(mode: WechatMpMode): string {
+  const suffix =
+    mode === "plain"
+      ? "明文模式。"
+      : mode === "compatible"
+        ? "兼容模式。"
+        : "安全模式。";
+  return `发送 GET（signature=sha1(字典序排序(Token,timestamp,nonce)) 与随机 echostr），检查服务是否验签通过并原样回显 echostr。${suffix}`;
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音 JSON、公众号 XML */
 function wireBadgeLabel(
   channel: ChannelId,
   draft: ConnectionConfig,
@@ -91,7 +107,9 @@ export function ConnectionsView() {
     saved ??
     (channel === "douyin"
       ? actions.defaultDouyinConnection
-      : actions.defaultWecomConnection);
+      : channel === "wechat-mp"
+        ? actions.defaultWechatMpConnection
+        : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -266,9 +284,13 @@ export function ConnectionsView() {
                   ? douyinTestNote(
                       draft.channel === "douyin" ? draft.system : "dop",
                     )
-                  : wecomTestNote(
-                      draft.channel === "wecom" ? draft.system : "agent",
-                    )}
+                  : channel === "wechat-mp"
+                    ? wechatMpTestNote(
+                        draft.channel === "wechat-mp" ? draft.mode : "plain",
+                      )
+                    : wecomTestNote(
+                        draft.channel === "wecom" ? draft.system : "agent",
+                      )}
               </CardDescription>
               <CardAction>
                 <Button

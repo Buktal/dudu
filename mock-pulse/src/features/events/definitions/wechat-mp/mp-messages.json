@@ -1,0 +1,219 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wechat-mp",
+  "version": "2026.09",
+  "schemas": {
+    "wm-text": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_standard_messages.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的公众号微信号（示例占位 toUser），推送的接收方。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送消息的粉丝 OpenID（对每个公众号唯一）。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "文本消息固定为 text。"
+        },
+        {
+          "path": "Content",
+          "title": "文本内容",
+          "type": "string",
+          "group": "消息内容",
+          "description": "粉丝发来的文本，支持换行与表情。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID，官方推荐按 msgid 排重。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgDataId",
+          "title": "文章 ID",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时的文章 ID（官方样例占位 xxxx；非文章消息同样携带占位）。"
+        },
+        {
+          "path": "Idx",
+          "title": "文章内序号",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时在文章内的位置序号（官方样例占位 xxxx）。"
+        }
+      ]
+    },
+    "wm-image": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_standard_messages.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送图片的粉丝 OpenID。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "图片消息固定为 image。"
+        },
+        {
+          "path": "PicUrl",
+          "title": "图片链接",
+          "type": "string",
+          "group": "消息内容",
+          "description": "图片的 URL（微信系统生成，可直接拉取）。"
+        },
+        {
+          "path": "MediaId",
+          "title": "媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "图片消息媒体 ID，可调「获取临时素材」接口拉取数据。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID，官方推荐按 msgid 排重。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgDataId",
+          "title": "文章 ID",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时的文章 ID（官方样例占位 xxxx）。"
+        },
+        {
+          "path": "Idx",
+          "title": "文章内序号",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时在文章内的位置序号（官方样例占位 xxxx）。"
+        }
+      ]
+    },
+    "wm-voice": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Receiving_standard_messages.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送语音的粉丝 OpenID。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "语音消息固定为 voice。"
+        },
+        {
+          "path": "MediaId",
+          "title": "媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "语音消息媒体 ID（8K amr），可调「获取临时素材」接口拉取。"
+        },
+        {
+          "path": "Format",
+          "title": "语音格式",
+          "type": "string",
+          "group": "消息内容",
+          "description": "语音格式，如 amr、speex。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID，官方推荐按 msgid 排重。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgDataId",
+          "title": "文章 ID",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时的文章 ID（官方样例占位 xxxx）。"
+        },
+        {
+          "path": "Idx",
+          "title": "文章内序号",
+          "type": "string",
+          "group": "时序与排重",
+          "description": "消息来自文章时在文章内的位置序号（官方样例占位 xxxx）。"
+        },
+        {
+          "path": "MediaId16K",
+          "title": "16K 语音媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "16K 采样的语音媒体 ID（公众号独有），可拉取 16K amr/speex 素材。"
+        }
+      ]
+    }
+  }
+}

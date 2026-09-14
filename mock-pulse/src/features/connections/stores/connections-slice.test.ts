@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ConnectionConfig } from "../api";
 import {
   connectionsReducer,
+  defaultWechatMpConnection,
   defaultWecomConnection,
   fetchConnections,
   initialConnectionsState,
@@ -20,6 +21,7 @@ vi.mock("../api", () => ({
   loadConnections: vi.fn(),
   saveConnection: vi.fn(),
   testDouyinConnection: vi.fn(),
+  testWechatMpConnection: vi.fn(),
   testWecomConnection: vi.fn(),
 }));
 
@@ -27,6 +29,7 @@ import {
   loadConnections,
   saveConnection as saveApi,
   testDouyinConnection,
+  testWechatMpConnection,
   testWecomConnection,
 } from "../api";
 
@@ -49,6 +52,15 @@ const savedWecom: ConnectionConfig = {
   token: "QDG6eK",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   agentId: "1000002",
+};
+
+const savedWechatMp: ConnectionConfig = {
+  channel: "wechat-mp",
+  url: "http://127.0.0.1:9099/wechat-mp",
+  appId: "wx_mock_appid",
+  token: "AAAAA",
+  encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
+  mode: "secure",
 };
 
 function makeStore() {
@@ -175,6 +187,26 @@ describe("connections slice", () => {
     });
   });
 
+  it("公众号配置走 connections_test_wechat_mp（按渠道路由测试命令）", async () => {
+    vi.mocked(testWechatMpConnection).mockResolvedValue({
+      ok: true,
+      message: "echostr 握手成功",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedWechatMp));
+
+    expect(vi.mocked(testWechatMpConnection)).toHaveBeenCalledWith(
+      savedWechatMp,
+    );
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "echostr 握手成功",
+    });
+  });
+
   it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
     // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
     // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
@@ -188,6 +220,7 @@ describe("connections slice", () => {
     expect(action.type).toBe(testConnection.rejected.type);
     expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store)).status).toBe("failed");
   });
 });
@@ -268,6 +301,46 @@ describe("isConnectionReady（企微按通道核加密必填集）", () => {
   it("初始企微占位连接（凭据全空）不算已配置", () => {
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "wecom")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（公众号按消息加解密方式核必填集）", () => {
+  it("安全模式：url/appId/token/encodingAesKey 齐全才算已配置", () => {
+    expect(isConnectionReady(savedWechatMp)).toBe(true);
+    expect(isConnectionReady({ ...savedWechatMp, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWechatMp, appId: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWechatMp, token: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWechatMp, encodingAesKey: "" })).toBe(
+      false,
+    );
+  });
+
+  it("明文模式无需 EncodingAESKey（官方默认项，AESKey 可空）", () => {
+    const plain = {
+      ...savedWechatMp,
+      mode: "plain" as const,
+      encodingAesKey: "",
+    };
+    expect(isConnectionReady(plain)).toBe(true);
+  });
+
+  it("兼容模式与安全模式同按 AESKey 必填判定", () => {
+    const compatible = {
+      ...savedWechatMp,
+      mode: "compatible" as const,
+      encodingAesKey: "",
+    };
+    expect(isConnectionReady(compatible)).toBe(false);
+    expect(
+      isConnectionReady({ ...compatible, encodingAesKey: "A".repeat(43) }),
+    ).toBe(true);
+  });
+
+  it("初始公众号占位连接（凭据全空）不算已配置", () => {
+    expect(defaultWechatMpConnection.mode).toBe("plain");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "wechat-mp")),
     ).toBe(false);
   });
 });

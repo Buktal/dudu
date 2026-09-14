@@ -1,0 +1,292 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wechat-mp",
+  "version": "2026.09",
+  "schemas": {
+    "wm-template-send-job-finish": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/template_message/Template_Message_Interface.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号（官方黄金样本 gh_7f083739789a）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "模板消息接收粉丝的 OpenID（官方黄金样本）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "TEMPLATESENDJOBFINISH = 模板消息发送结果回执。"
+        },
+        {
+          "path": "MsgID",
+          "title": "模板消息 ID",
+          "type": "numberString",
+          "group": "通知与回执",
+          "description": "模板消息 ID（官方黄金样本 200163836，数值为裸文本）。"
+        },
+        {
+          "path": "Status",
+          "title": "发送结果",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "success = 发送成功；failed:user block = 用户拒收；failed: system failed = 其他失败。"
+        }
+      ]
+    },
+    "wm-masssend-job-finish": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/message/Batch_Sends.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方（mphelper）",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "群发回执固定为 mphelper（官方口径），不是粉丝 OpenID。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "MASSSENDJOBFINISH = 群发消息发送结果回执。"
+        },
+        {
+          "path": "MsgID",
+          "title": "群发消息 ID",
+          "type": "numberString",
+          "group": "通知与回执",
+          "description": "群发消息的 ID（数值为裸文本）。"
+        },
+        {
+          "path": "Status",
+          "title": "发送结果",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "send success / send fail / err(num)，err 映射：10001 广告、20001 政治、20004 社会、20002 色情、20006 违法犯罪、20008 欺诈、20013 版权、22000 互推、21000 其他、30001-30003 原创校验、40001 管理员拒绝、40002 管理员 30min 超时、err(93115) 公开地图使用不规范等。"
+        },
+        {
+          "path": "TotalCount",
+          "title": "群发总数",
+          "type": "numberString",
+          "group": "通知与回执",
+          "description": "group_id 下粉丝总数（数值为裸文本）。"
+        },
+        {
+          "path": "FilterCount",
+          "title": "过滤后数",
+          "type": "numberString",
+          "group": "通知与回执",
+          "description": "过滤（filter）后准备发送的粉丝数，即 清理掉异常 user 后的数目（数值为裸文本）。"
+        },
+        {
+          "path": "SentCount",
+          "title": "发送成功数",
+          "type": "numberString",
+          "group": "通知与回执",
+          "description": "发送成功的粉丝数（数值为裸文本）。"
+        },
+        {
+          "path": "ErrorCount",
+          "title": "发送失败数",
+          "type": "numberString",
+          "group": "通知与回执",
+          "description": "发送失败的粉丝数（数值为裸文本）。"
+        }
+      ]
+    },
+    "wm-subscribe-msg-popup": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/subscription_messages/push.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号（官方样本 gh_123456789abc）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "粉丝 OpenID（官方样本 otFpruAK8D-E6EfStSYonYSBZ8_4）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "subscribe_msg_popup_event = 用户在图文等场景内操作订阅通知弹窗。"
+        },
+        {
+          "path": "SubscribeMsgPopupEvent",
+          "title": "订阅弹窗结果",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "嵌套结构：List[](TemplateId/SubscribeStatusString=accept|reject/PopupScene=1 H5|2 图文)；报文内为原文片段。"
+        }
+      ]
+    },
+    "wm-subscribe-msg-change": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/subscription_messages/push.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号（官方样本 gh_123456789abc）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "粉丝 OpenID（官方样本 otFpruAK8D-E6EfStSYonYSBZ8_4）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "subscribe_msg_change_event = 订阅状态变更（官方仅推送拒收 reject）。"
+        },
+        {
+          "path": "SubscribeMsgChangeEvent",
+          "title": "订阅变更结果",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "嵌套结构：List[](TemplateId/SubscribeStatusString=reject)；报文内为原文片段。"
+        }
+      ]
+    },
+    "wm-subscribe-msg-sent": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/subscription_messages/push.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号（官方样本 gh_123456789abc）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "粉丝 OpenID（官方样本 otFpruAK8D-E6EfStSYonYSBZ8_4）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "subscribe_msg_sent_event = 订阅通知下发结果回执。"
+        },
+        {
+          "path": "SubscribeMsgSentEvent",
+          "title": "下发结果",
+          "type": "string",
+          "group": "通知与回执",
+          "description": "嵌套结构：List[](TemplateId/MsgID/ErrorCode 0=成功/ErrorStatus)，官方样本 MsgID=1700827132819554304、ErrorCode=0、ErrorStatus=success；异步系统失败才记失败；报文内为原文片段。"
+        }
+      ]
+    }
+  }
+}

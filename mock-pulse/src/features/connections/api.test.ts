@@ -7,7 +7,9 @@ import {
   loadConnections,
   saveConnection,
   testDouyinConnection,
+  testWechatMpConnection,
   testWecomConnection,
+  type WechatMpConnectionConfig,
   type WecomConnectionConfig,
 } from "./api";
 
@@ -36,6 +38,15 @@ const wecomConfig: WecomConnectionConfig = {
   token: "mock_token",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   agentId: "1000002",
+};
+
+const wechatMpConfig: WechatMpConnectionConfig = {
+  channel: "wechat-mp",
+  url: "http://127.0.0.1:8080/webhooks/wechat-mp",
+  appId: "wx_mock_appid",
+  token: "mock_token",
+  encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
+  mode: "secure",
 };
 
 describe("connections api 契约", () => {
@@ -71,12 +82,27 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音与企微（按 channel 区分形状）", async () => {
-    const list: ConnectionConfig[] = [douyinConfig, wecomConfig];
+  it("testWechatMpConnection 调用 connections_test_wechat_mp 并透传配置", async () => {
+    const outcome = { ok: true, message: "echostr 握手成功" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testWechatMpConnection(wechatMpConfig)).resolves.toEqual(
+      outcome,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_wechat_mp", {
+      config: wechatMpConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/公众号（按 channel 区分形状）", async () => {
+    const list: ConnectionConfig[] = [
+      douyinConfig,
+      wecomConfig,
+      wechatMpConfig,
+    ];
     invokeMock.mockResolvedValueOnce(list);
-    await expect(saveConnection(wecomConfig)).resolves.toEqual(list);
+    await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);
     expect(invokeMock).toHaveBeenCalledWith("connections_save", {
-      config: wecomConfig,
+      config: wechatMpConfig,
     });
   });
 });

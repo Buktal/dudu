@@ -23,7 +23,7 @@ describe("describeExpected", () => {
     ).toBe('期望 HTTP 200，正文含 JSON 字段「{"code":0}」');
     expect(
       describeExpected({ status: 200, body: "", bodyMode: "wecomReply" }),
-    ).toBe("期望 HTTP 200，企微回执为空串");
+    ).toBe("期望 HTTP 200，微信系回执为空串");
     expect(
       describeExpected({
         status: 200,
@@ -31,7 +31,7 @@ describe("describeExpected", () => {
         bodyMode: "wecomReply",
       }),
     ).toBe(
-      "期望 HTTP 200，企微解密被动回复包含「<Content><![CDATA[hi]]></Content>」",
+      "期望 HTTP 200，微信系解密被动回复包含「<Content><![CDATA[hi]]></Content>」",
     );
   });
 });

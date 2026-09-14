@@ -53,11 +53,12 @@ describe("渠道注册表", () => {
     }
   });
 
-  it("只有抖音与企微已实现连接适配器，其余渠道在选择器可见但不可连", () => {
+  it("抖音/企微/公众号已实现连接适配器，其余渠道在选择器可见但不可连", () => {
     const implemented = CHANNELS.filter((channel) => channel.implemented);
     expect(implemented.map((channel) => channel.id)).toEqual([
       "douyin",
       "wecom",
+      "wechat-mp",
     ]);
   });
 

@@ -111,7 +111,7 @@ export const CHANNEL_REGISTRY = {
     protocol: "公众号 · XML 回调",
     note: "公众号推送仅 XML：GET 三参 sha1 校验并原样回 echostr，明文/兼容/安全三模式",
     icon: "Newspaper",
-    implemented: false,
+    implemented: true,
   },
   "wechat-mini": {
     name: "微信小程序",

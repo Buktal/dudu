@@ -11,7 +11,12 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { cn } from "@/lib/utils";
-import type { ConnectionConfig, DouyinSystem, WecomSystem } from "../api";
+import type {
+  ConnectionConfig,
+  DouyinSystem,
+  WechatMpMode,
+  WecomSystem,
+} from "../api";
 
 /** 抖音推送体系（事实库 §2 四套并行体系，验签/信封完全不同） */
 const DOUYIN_SYSTEMS: readonly { value: DouyinSystem; label: string }[] = [
@@ -25,6 +30,13 @@ const DOUYIN_SYSTEMS: readonly { value: DouyinSystem; label: string }[] = [
 const WECOM_SYSTEMS: readonly { value: WecomSystem; label: string }[] = [
   { value: "agent", label: "自建应用（XML 回调）" },
   { value: "aibot", label: "智能机器人（JSON 回调）" },
+];
+
+/** 公众号消息加解密方式（事实库 §4.1 三模式，官方服务器配置配套项） */
+const WECHAT_MP_MODES: readonly { value: WechatMpMode; label: string }[] = [
+  { value: "plain", label: "明文模式（官方默认）" },
+  { value: "compatible", label: "兼容模式（调试过渡）" },
+  { value: "secure", label: "安全模式（官方推荐）" },
 ];
 
 /** 按推送体系取凭证字段：标签随体系语义变化，存储字段保持稳定 */
@@ -153,6 +165,38 @@ function wecomFields(draft: Extract<ConnectionConfig, { channel: "wecom" }>) {
   ];
 }
 
+/** 公众号按消息加解密方式取凭证字段：明文模式无需 EncodingAESKey（可留空） */
+function wechatMpFields(
+  draft: Extract<ConnectionConfig, { channel: "wechat-mp" }>,
+) {
+  const fields = [
+    {
+      key: "appId",
+      label: "AppID",
+      note: "公众号开发者 ID；安全模式密文尾部即它，解密后须校验一致。",
+      value: draft.appId,
+      secret: false,
+    },
+    {
+      key: "token",
+      label: "Token",
+      note: "服务器配置 Token（任意填写），GET 三参握手与 msg_signature 的签名源。",
+      value: draft.token,
+      secret: true,
+    },
+  ];
+  if (draft.mode !== "plain") {
+    fields.push({
+      key: "encodingAesKey",
+      label: "EncodingAESKey",
+      note: "43 位消息加解密密钥；兼容/安全模式的 AES-256-CBC 派生源。",
+      value: draft.encodingAesKey,
+      secret: true,
+    });
+  }
+  return fields;
+}
+
 export function ConnectionFields({
   draft,
   onEdit,
@@ -161,7 +205,11 @@ export function ConnectionFields({
   onEdit: (key: string, value: string) => void;
 }) {
   const fields =
-    draft.channel === "douyin" ? douyinFields(draft) : wecomFields(draft);
+    draft.channel === "douyin"
+      ? douyinFields(draft)
+      : draft.channel === "wechat-mp"
+        ? wechatMpFields(draft)
+        : wecomFields(draft);
   const systemSelector =
     draft.channel === "douyin" ? (
       <Field className="col-span-full">
@@ -204,6 +252,29 @@ export function ConnectionFields({
         <FieldDescription id="connection-system-hint">
           企微 XML 与机器人 JSON 两通道并行，加密 receiveid
           语义不同（应用=CorpID， 机器人=空串）：回调地址与凭证按通道配套填写。
+        </FieldDescription>
+      </Field>
+    ) : draft.channel === "wechat-mp" ? (
+      <Field className="col-span-full">
+        <FieldLabel htmlFor="connection-system">消息加解密方式</FieldLabel>
+        <NativeSelect
+          id="connection-system"
+          className="w-full"
+          autoComplete="off"
+          value={draft.mode}
+          aria-describedby="connection-system-hint"
+          onChange={(event) => onEdit("mode", event.target.value)}
+        >
+          {WECHAT_MP_MODES.map((mode) => (
+            <NativeSelectOption key={mode.value} value={mode.value}>
+              {mode.label}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+        <FieldDescription id="connection-system-hint">
+          公众号仅 XML 推送，三模式直发形态不同：明文仅三参 signature，
+          兼容/安全加 encrypt_type=aes +
+          msg_signature（安全模式包体仅密文信封）。
         </FieldDescription>
       </Field>
     ) : null;

@@ -1,0 +1,455 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wechat-mp",
+  "version": "2026.09",
+  "schemas": {
+    "wm-scancode-push": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/menu/Custom_Menu_Push_Events.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号（官方黄金样本 gh_e136c6e50636）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "扫码的粉丝 OpenID（官方黄金样本）。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "scancode_push = 扫码推事件（客户端版本要求 iPhone 5.4.1+/Android 5.4+）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "菜单 KEY",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单接口中 key 值（官方黄金样本为 6）。"
+        },
+        {
+          "path": "ScanCodeInfo",
+          "title": "扫码信息",
+          "type": "string",
+          "group": "扫码与媒体",
+          "description": "嵌套结构：ScanType（扫码类型，一般 qrcode）+ ScanResult（扫码结果，即二维码对应的字符串信息）；报文内为原文片段。"
+        }
+      ]
+    },
+    "wm-scancode-waitmsg": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/menu/Custom_Menu_Push_Events.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号（官方黄金样本 gh_e136c6e50636）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "扫码的粉丝 OpenID（官方黄金样本）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "scancode_waitmsg = 扫码推事件且弹出「消息接收中」提示框。"
+        },
+        {
+          "path": "EventKey",
+          "title": "菜单 KEY",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单接口中 key 值（官方黄金样本为 6）。"
+        },
+        {
+          "path": "ScanCodeInfo",
+          "title": "扫码信息",
+          "type": "string",
+          "group": "扫码与媒体",
+          "description": "嵌套结构：ScanType + ScanResult（官方黄金样本为 2）；报文内为原文片段。"
+        }
+      ]
+    },
+    "wm-pic-sysphoto": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/menu/Custom_Menu_Push_Events.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号（官方黄金样本 gh_e136c6e50636）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发图的粉丝 OpenID（官方黄金样本）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "pic_sysphoto = 弹出系统拍照发图（弹出的媒体消息不推送，媒体 ID 不入库）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "菜单 KEY",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单接口中 key 值（官方黄金样本为 6）。"
+        },
+        {
+          "path": "SendPicsInfo",
+          "title": "发图信息",
+          "type": "string",
+          "group": "扫码与媒体",
+          "description": "嵌套结构：Count（图片张数）+ PicList>item>PicMd5Sum（图片 MD5）；报文内为原文片段。"
+        }
+      ]
+    },
+    "wm-pic-photo-or-album": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/menu/Custom_Menu_Push_Events.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发图的粉丝 OpenID。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "pic_photo_or_album = 弹出拍照或者相册发图（与 pic_sysphoto 同构）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "菜单 KEY",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单接口中 key 值（官方占位 6）。"
+        },
+        {
+          "path": "SendPicsInfo",
+          "title": "发图信息",
+          "type": "string",
+          "group": "扫码与媒体",
+          "description": "嵌套结构：Count + PicList>item>PicMd5Sum；报文内为原文片段。"
+        }
+      ]
+    },
+    "wm-pic-weixin": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/menu/Custom_Menu_Push_Events.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发图的粉丝 OpenID。修改它可模拟不同粉丝。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "pic_weixin = 弹出微信相册发图器（与 pic_sysphoto 同构）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "菜单 KEY",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单接口中 key 值（官方占位 6）。"
+        },
+        {
+          "path": "SendPicsInfo",
+          "title": "发图信息",
+          "type": "string",
+          "group": "扫码与媒体",
+          "description": "嵌套结构：Count + PicList>item>PicMd5Sum；报文内为原文片段。"
+        }
+      ]
+    },
+    "wm-location-select": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/menu/Custom_Menu_Push_Events.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "选择地理位置的粉丝 OpenID。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "location_select = 弹出地理位置选择器。"
+        },
+        {
+          "path": "EventKey",
+          "title": "菜单 KEY",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单接口中 key 值（官方占位 6）。"
+        },
+        {
+          "path": "SendLocationInfo",
+          "title": "位置信息",
+          "type": "string",
+          "group": "扫码与媒体",
+          "description": "嵌套结构：Location_X/Location_Y/Scale/Label/Poiname，全套 CDATA（与 location 消息的裸文本不同，官方原文如此，Label 首尾空格逐字保留）；报文内为原文片段。"
+        }
+      ]
+    },
+    "wm-view-menu": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/menu/Custom_Menu_Push_Events.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "点击菜单跳转的粉丝 OpenID。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "VIEW = 点击菜单跳转链接（自定义菜单页口径：比接收事件页样本多 MenuId）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "跳转 URL",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单项配置的跳转链接（官方占位 www.qq.com）。"
+        },
+        {
+          "path": "MenuId",
+          "title": "菜单 ID",
+          "type": "string",
+          "group": "菜单与跳转",
+          "description": "菜单 ID（个性化菜单时用于标识规则，官方占位 MENUID）。"
+        }
+      ]
+    },
+    "wm-view-miniprogram": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/doc/service/guide/product/menu/Custom_Menu_Push_Events.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "开发者微信号",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的公众号微信号。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送方 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "点击菜单跳小程序的粉丝 OpenID。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "view_miniprogram = 点击菜单跳转小程序。"
+        },
+        {
+          "path": "EventKey",
+          "title": "小程序路径",
+          "type": "string",
+          "group": "菜单与跳转",
+          "description": "小程序路径（官方占位 pages/index/index）。"
+        },
+        {
+          "path": "MenuId",
+          "title": "菜单 ID",
+          "type": "string",
+          "group": "菜单与跳转",
+          "description": "菜单 ID（官方占位 MENUID）。"
+        }
+      ]
+    }
+  }
+}
