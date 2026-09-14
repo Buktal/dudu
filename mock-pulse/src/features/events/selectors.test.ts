@@ -2,7 +2,14 @@ import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 
 import type { EventItem } from "./model";
-import { type EventFilters, filterEvents } from "./selectors";
+import { EVENT_SCHEMAS, schemasByChannel } from "./schemas";
+import {
+  type EventFilters,
+  filterEvents,
+  libraryRows,
+  paginateEvents,
+  templatesForChannel,
+} from "./selectors";
 
 /** 固定 seed 的数百条样本工厂（验收：筛选分页在数百条样本下可用） */
 function seededEvents(count: number): EventItem[] {
@@ -182,5 +189,170 @@ describe("固定 seed 的确定性", () => {
     const first = seededEvents(300);
     const second = seededEvents(300);
     expect(first).toEqual(second);
+  });
+});
+
+/** 单条用户素材工厂（模板区测试用） */
+function userEvent(overrides: Partial<EventItem> = {}): EventItem {
+  return {
+    id: "evt-user",
+    name: "已保存素材",
+    channelId: "douyin",
+    schemaId: "dy-text",
+    versions: [
+      {
+        revision: 1,
+        savedAt: "2026-09-12T01:00:00.000Z",
+        payload: { event: "stub" },
+        expected: { status: 200, body: "", bodyMode: "contains" },
+      },
+    ],
+    ...overrides,
+  };
+}
+
+describe("templatesForChannel（目录模板源）", () => {
+  it("all = 全渠道已接入模板；指定渠道 = 该渠道全部模板", () => {
+    expect(templatesForChannel("all")).toHaveLength(EVENT_SCHEMAS.length);
+    expect(templatesForChannel("douyin").map((schema) => schema.id)).toEqual([
+      "dy-text",
+      "dy-image",
+      "dy-enter",
+      "dy-read",
+    ]);
+    expect(templatesForChannel("wecom").map((schema) => schema.id)).toEqual([
+      "wc-text",
+      "wc-enter",
+      "wc-click",
+    ]);
+  });
+
+  it("未接入模板的渠道返回空表", () => {
+    expect(templatesForChannel("feishu")).toEqual([]);
+  });
+});
+
+describe("libraryRows（列表即目录：模板区在前，用户素材区在后）", () => {
+  it("选定渠道后模板区在前，按消息 → 事件分组，用户素材区保持倒序", () => {
+    const rows = libraryRows(seededEvents(20), schemasByChannel("douyin"), {
+      ...NO_FILTERS,
+      channel: "douyin",
+    });
+    // 16 条 douyin 用户素材 + 4 条抖音内置模板
+    expect(rows).toHaveLength(20);
+    expect(rows.slice(0, 4).map((row) => row.region)).toEqual([
+      "template",
+      "template",
+      "template",
+      "template",
+    ]);
+    // 分组固定消息在前：dy-text/dy-image（消息）→ dy-enter/dy-read（事件）
+    expect(
+      rows
+        .slice(0, 4)
+        .map((row) => (row.region === "template" ? row.schema.id : "")),
+    ).toEqual(["dy-text", "dy-image", "dy-enter", "dy-read"]);
+    const users = rows.slice(4);
+    expect(users.every((row) => row.region === "user")).toBe(true);
+    for (let i = 1; i < users.length; i += 1) {
+      const previous = users[i - 1];
+      const current = users[i];
+      if (previous.region === "user" && current.region === "user") {
+        expect(previous.updatedAt >= current.updatedAt).toBe(true);
+      }
+    }
+  });
+
+  it("kind 过滤作用于模板区：消息视图只留消息模板；收藏视图不含模板", () => {
+    const messages = libraryRows([], schemasByChannel("douyin"), {
+      ...NO_FILTERS,
+      kind: "message",
+    });
+    expect(
+      messages.map((row) => (row.region === "template" ? row.schema.id : "")),
+    ).toEqual(["dy-text", "dy-image"]);
+
+    const favorites = libraryRows(
+      [
+        userEvent({ id: "evt-fav", favorite: true }),
+        userEvent({ id: "evt-x" }),
+      ],
+      schemasByChannel("douyin"),
+      { ...NO_FILTERS, kind: "favorite" },
+    );
+    expect(favorites.map((row) => row.region)).toEqual(["user"]);
+    expect(
+      favorites.map((row) => (row.region === "user" ? row.item.id : "")),
+    ).toEqual(["evt-fav"]);
+  });
+
+  it("关键词搜索命中模板名称/官方事件名/渠道名，分组序保持消息在前", () => {
+    const byName = libraryRows([], EVENT_SCHEMAS, {
+      ...NO_FILTERS,
+      query: "进入",
+    });
+    expect(
+      byName.map((row) => (row.region === "template" ? row.schema.id : "")),
+    ).toEqual(["dy-enter", "wc-enter"]);
+
+    const byChannelName = libraryRows([], EVENT_SCHEMAS, {
+      ...NO_FILTERS,
+      query: "企业微信",
+    });
+    expect(
+      byChannelName.map((row) =>
+        row.region === "template" ? row.schema.id : "",
+      ),
+    ).toEqual(["wc-text", "wc-enter", "wc-click"]);
+
+    const byEventName = libraryRows([], EVENT_SCHEMAS, {
+      ...NO_FILTERS,
+      query: "im_message_read",
+    });
+    expect(
+      byEventName.map((row) =>
+        row.region === "template" ? row.schema.id : "",
+      ),
+    ).toEqual(["dy-read"]);
+  });
+
+  it("分页选择器扩展覆盖组合列表：模板区计入总页数", () => {
+    const items = Array.from({ length: 9 }, (_, i) =>
+      userEvent({
+        id: `evt-${String(i).padStart(4, "0")}`,
+        name: `素材 ${i}`,
+        versions: [
+          {
+            revision: 1,
+            savedAt: new Date(Date.UTC(2026, 8, 12, 0, i)).toISOString(),
+            payload: { event: "stub" },
+            expected: { status: 200, body: "", bodyMode: "contains" },
+          },
+        ],
+      }),
+    );
+    const rows = libraryRows(items, schemasByChannel("douyin"), NO_FILTERS);
+    expect(rows).toHaveLength(13);
+
+    const first = paginateEvents(rows, 1);
+    expect(first.total).toBe(13);
+    expect(first.pages).toBe(2);
+    expect(first.items.filter((row) => row.region === "template")).toHaveLength(
+      4,
+    );
+    expect(first.items.filter((row) => row.region === "user")).toHaveLength(6);
+
+    const second = paginateEvents(rows, 2);
+    expect(second.items).toHaveLength(3);
+    expect(second.items.every((row) => row.region === "user")).toBe(true);
+  });
+
+  it("模板区不因用户素材为空而消失，点击目标始终可解析回模板", () => {
+    const rows = libraryRows([], schemasByChannel("wecom"), NO_FILTERS);
+    expect(rows).toHaveLength(3);
+    expect(rows.every((row) => row.region === "template")).toBe(true);
+    expect(
+      rows.map((row) => (row.region === "template" ? row.schema.id : "")),
+    ).toEqual(["wc-text", "wc-enter", "wc-click"]);
   });
 });

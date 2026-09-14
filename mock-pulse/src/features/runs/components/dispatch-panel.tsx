@@ -56,14 +56,14 @@ export function DispatchPanel() {
           ) : state.phase === "needConnection" ? (
             <>
               <InfoIcon className="size-4" />
-              <span>先配置该平台的回调地址和凭据</span>
+              <span>先配置该平台的回调地址和凭据，再直发</span>
               <Button
                 variant="link"
                 size="sm"
                 className="ml-auto"
                 onClick={configure}
               >
-                配置连接
+                前往平台连接
               </Button>
             </>
           ) : state.phase === "error" ? (

@@ -31,10 +31,13 @@ import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { latestVersion } from "../model";
-import { schemasByChannel } from "../schemas";
-import { filterEvents, paginateEvents } from "../selectors";
+import { schemaById, schemasByChannel } from "../schemas";
+import { libraryRows, paginateEvents, templatesForChannel } from "../selectors";
 import * as actions from "../stores/events-slice";
 import { EventEditor, type EventEditorSlots } from "./event-editor";
+
+/** 模板条目的列表 id 前缀：与用户素材 id（evt-*）区分命名空间 */
+const TEMPLATE_ID_PREFIX = "template:";
 
 function CreateEventDialog({
   initialChannel,
@@ -157,9 +160,14 @@ export function EventsView({ slots }: { slots?: EventEditorSlots }) {
   const events = useAppSelector((state) => state.events);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  // 列表即目录（ADR-0009）：模板区随渠道筛选收敛，组合列表统一分页
+  const templates = useMemo(
+    () => templatesForChannel(events.filters.channel),
+    [events.filters.channel],
+  );
   const rows = useMemo(
-    () => filterEvents(events.items, events.filters),
-    [events.items, events.filters],
+    () => libraryRows(events.items, templates, events.filters),
+    [events.items, templates, events.filters],
   );
   const page = paginateEvents(rows, events.page);
   return (
@@ -172,12 +180,12 @@ export function EventsView({ slots }: { slots?: EventEditorSlots }) {
       {(request) => (
         <ResourceWorkspace
           viewId="events"
-          libraryLabel="事件样例"
+          libraryLabel="事件素材"
           library={(close) => (
             <ResourceLibrary
-              title="事件样例"
+              title="事件素材"
               singular="事件"
-              total={events.items.length}
+              total={events.items.length + templates.length}
               query={events.filters.query}
               onQuery={(query) => dispatch(actions.setFilters({ query }))}
               onCreate={() => {
@@ -205,16 +213,38 @@ export function EventsView({ slots }: { slots?: EventEditorSlots }) {
                   />
                 </>
               }
-              entries={page.items.map(({ item, schema }) => ({
-                id: item.id,
-                name: item.name,
-                channel: item.channelId,
-                favorite: item.favorite,
-                description: `${channelById(item.channelId)?.name} · ${schema?.name ?? item.schemaId} · v${latestVersion(item)?.revision ?? 1}`,
-              }))}
+              entries={page.items.map((row) =>
+                row.region === "template"
+                  ? {
+                      id: `${TEMPLATE_ID_PREFIX}${row.schema.id}`,
+                      name: row.schema.name,
+                      channel: row.schema.channelId,
+                      badge: "内置",
+                      group: row.schema.kind === "message" ? "消息" : "事件",
+                      locked: true,
+                      description: `${channelById(row.schema.channelId)?.name} · ${row.schema.eventName}`,
+                    }
+                  : {
+                      id: row.item.id,
+                      name: row.item.name,
+                      channel: row.item.channelId,
+                      favorite: row.item.favorite,
+                      group: "已保存素材",
+                      description: `${channelById(row.item.channelId)?.name} · ${row.schema?.name ?? row.item.schemaId} · v${latestVersion(row.item)?.revision ?? 1}`,
+                    },
+              )}
               selectedId={events.selectedId}
               onSelect={(id) => {
                 close();
+                if (id.startsWith(TEMPLATE_ID_PREFIX)) {
+                  // 点模板 = 以模板开草稿（名字默认模板名），不产生落库实体
+                  const schemaId = id.slice(TEMPLATE_ID_PREFIX.length);
+                  const { name } = schemaById(schemaId);
+                  request(() =>
+                    dispatch(actions.startDraft({ name, schemaId })),
+                  );
+                  return;
+                }
                 if (id !== events.draft?.id)
                   request(() => dispatch(actions.openEvent(id)));
               }}
@@ -245,7 +275,7 @@ export function EventsView({ slots }: { slots?: EventEditorSlots }) {
                 </EmptyMedia>
                 <EmptyTitle>选择一个事件开始</EmptyTitle>
                 <EmptyDescription>
-                  从素材库打开已保存的事件，或新建一个样例调试回调参数。
+                  从素材库点开内置模板即改即发，或打开已保存的事件素材继续编辑。
                 </EmptyDescription>
               </EmptyHeader>
               <Button variant="secondary" onClick={() => setCreating(true)}>

@@ -241,4 +241,44 @@ describe("runs 直发状态流转（direct-dispatch）", () => {
     expect(saved.steps).toEqual([step]);
     expect(selectPanelPhase(store.getState().runs)).toBe("done");
   });
+
+  // 模板直发（ADR-0009）：以模板开草稿 → 临时编辑 → 走同一直发链路，不落素材
+  it("模板直发：名字默认取模板名，期望回执默认带模板渠道真实应答，即改即发", async () => {
+    const store = makeStore(WECOM_CONNECTION);
+    store.dispatch(startDraft({ name: "点击菜单按钮", schemaId: "wc-click" }));
+
+    // 草稿名默认取模板名（列表即目录的「点模板 = 以模板开草稿」路径）
+    const draft = store.getState().events.draft;
+    expect(draft?.name).toBe("点击菜单按钮");
+    expect(draft?.schemaId).toBe("wc-click");
+    // 期望回执默认 = 模板渠道真实应答（企微：200 + 企微回执形态、正文留空）
+    expect(draft?.expected).toEqual({
+      status: 200,
+      body: "",
+      bodyMode: "wecomReply",
+    });
+
+    // 临时编辑不落库，直发改动后的字段
+    store.dispatch(setDraftField({ path: "EventKey", value: "CUSTOM_KEY" }));
+    const step = directStep({
+      eventId: store.getState().events.draft?.id,
+      channel: "wecom",
+      url: WECOM_CONNECTION.url,
+    });
+    apiMock.dispatchDirect.mockResolvedValueOnce({ step, cancelled: false });
+    stubSaveRun();
+
+    await store.dispatch(directDispatch());
+
+    const call = apiMock.dispatchDirect.mock.calls[0];
+    expect(call?.[1].eventName).toBe("点击菜单按钮");
+    expect(call?.[1].expected).toEqual(draft?.expected);
+    expect(call?.[1].body).toContain(
+      "<EventKey><![CDATA[CUSTOM_KEY]]></EventKey>",
+    );
+    expect(apiMock.saveRun).toHaveBeenCalledTimes(1);
+    expect(selectPanelPhase(store.getState().runs)).toBe("done");
+    // 模板草稿不落素材库
+    expect(store.getState().events.items).toEqual([]);
+  });
 });

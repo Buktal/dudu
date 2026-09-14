@@ -43,6 +43,12 @@ export type ResourceEntry = {
   channel?: ChannelId;
   icon?: ReactNode;
   favorite?: boolean;
+  /** 名称旁的小徽标（如内置模板的「内置」标记） */
+  badge?: string;
+  /** 分组标题：与上一条不同组时在该条上方渲染组头（模板区按消息/事件分组） */
+  group?: string;
+  /** 只读条目（如内置模板）：不提供删除菜单 */
+  locked?: boolean;
 };
 
 const ResourceList = forwardRef<HTMLDivElement, ListProps>((props, ref) => (
@@ -166,68 +172,89 @@ export function ResourceLibrary({
             style={{ height: "100%" }}
             data={entries}
             computeItemKey={(_index, item) => item.id}
-            itemContent={(_index, item) => (
-              <div className="group/resource relative">
-                <Button
-                  variant={selectedId === item.id ? "secondary" : "ghost"}
-                  className={cn(
-                    "h-auto w-full min-w-0 justify-start gap-3 p-3 text-left",
-                    onContextMenu && "pr-10",
-                  )}
-                  aria-current={selectedId === item.id ? "true" : undefined}
-                  onClick={() => onSelect(item.id)}
-                >
-                  {item.channel ? (
-                    <ChannelMark channel={item.channel} />
-                  ) : (
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                      {item.icon ?? <WorkflowIcon />}
-                    </span>
-                  )}
-                  <span className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate">{item.name}</span>
-                      {item.favorite ? (
-                        <StarIcon aria-label="已收藏" fill="currentColor" />
-                      ) : null}
-                    </span>
-                    <span
-                      className="truncate text-xs font-normal text-muted-foreground"
-                      title={item.description}
+            itemContent={(index, item) => {
+              const heading =
+                item.group && entries[index - 1]?.group !== item.group
+                  ? item.group
+                  : null;
+              return (
+                <>
+                  {heading ? (
+                    <p className="pt-2 pb-1 pr-2 pl-1 text-[11px] font-medium text-muted-foreground">
+                      {heading}
+                    </p>
+                  ) : null}
+                  <div className="group/resource relative">
+                    <Button
+                      variant={selectedId === item.id ? "secondary" : "ghost"}
+                      className={cn(
+                        "h-auto w-full min-w-0 justify-start gap-3 p-3 text-left",
+                        onContextMenu && "pr-10",
+                      )}
+                      aria-current={selectedId === item.id ? "true" : undefined}
+                      onClick={() => onSelect(item.id)}
                     >
-                      {item.description}
-                    </span>
-                  </span>
-                </Button>
-                {onContextMenu ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      className="absolute top-3 right-1.5 sm:opacity-0 sm:group-focus-within/resource:opacity-100 sm:group-hover/resource:opacity-100 data-[popup-open]:opacity-100"
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          aria-label={`更多操作：${item.name}`}
-                        />
-                      }
-                    >
-                      <MoreHorizontalIcon />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => onContextMenu(item.id)}
+                      {item.channel ? (
+                        <ChannelMark channel={item.channel} />
+                      ) : (
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                          {item.icon ?? <WorkflowIcon />}
+                        </span>
+                      )}
+                      <span className="flex min-w-0 flex-1 flex-col gap-1">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate">{item.name}</span>
+                          {item.badge ? (
+                            <Badge
+                              variant="secondary"
+                              className="shrink-0 px-1.5 text-[10px]"
+                            >
+                              {item.badge}
+                            </Badge>
+                          ) : null}
+                          {item.favorite ? (
+                            <StarIcon aria-label="已收藏" fill="currentColor" />
+                          ) : null}
+                        </span>
+                        <span
+                          className="truncate text-xs font-normal text-muted-foreground"
+                          title={item.description}
                         >
-                          <Trash2Icon />
-                          删除{singular}
-                        </DropdownMenuItem>
-                      </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : null}
-              </div>
-            )}
+                          {item.description}
+                        </span>
+                      </span>
+                    </Button>
+                    {onContextMenu && !item.locked ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          className="absolute top-3 right-1.5 sm:opacity-0 sm:group-focus-within/resource:opacity-100 sm:group-hover/resource:opacity-100 data-[popup-open]:opacity-100"
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              aria-label={`更多操作：${item.name}`}
+                            />
+                          }
+                        >
+                          <MoreHorizontalIcon />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          <DropdownMenuGroup>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => onContextMenu(item.id)}
+                            >
+                              <Trash2Icon />
+                              删除{singular}
+                            </DropdownMenuItem>
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null}
+                  </div>
+                </>
+              );
+            }}
           />
         ) : (
           <Empty>

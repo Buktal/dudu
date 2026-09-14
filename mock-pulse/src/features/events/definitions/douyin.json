@@ -50,7 +50,7 @@
           "title": "消息类型",
           "type": "string",
           "group": "消息内容",
-          "description": "文本为 text。选择其他消息类型时，可新建相应的事件样例。"
+          "description": "文本为 text。选择其他消息类型时，可新建相应的事件素材。"
         },
         {
           "path": "content.conversation_short_id",
@@ -163,7 +163,7 @@
           "title": "消息类型",
           "type": "string",
           "group": "消息内容",
-          "description": "此样例为 image。未列出的原始字段可通过完整报文补充。"
+          "description": "此示例为 image。未列出的原始字段可通过完整报文补充。"
         },
         {
           "path": "content.conversation_short_id",
