@@ -10,7 +10,6 @@ export {
 } from "./model";
 export {
   filterScenarios,
-  PAGE_SIZE,
   paginateScenarios,
   resolveSteps,
   type ScenarioFilters,

@@ -30,7 +30,7 @@ import { startPlanRun } from "./plan-run";
  * 库链路 thunk 与运行 thunk 分别见 plan-library / plan-run（按职责拆分）。
  * 运行实况投影在 runs 域（组合根只 dispatch 一次 runProgress）：本域监听
  * 同一组 action 只做编排运行的阶段簿记（activeRunId → phase），实况展示
- * 经 plan-run 的 selectPlanLiveRun 从 runs 域派生，不复制实况状态。
+ * 经 runs 的 selectLiveRunFor 从 runs 域派生，不复制实况状态。
  */
 
 /** 编排运行阶段（RunPhase 的编排别名，同剧本运行语义） */
@@ -210,7 +210,7 @@ const plansSlice = createSlice({
           state.needConnectionChannels = action.payload.channels;
           return;
         }
-        // 完成事件可能早于命令返回，不能在这里复活运行。
+        // 竞态守卫（恒例见 runs 域 live.ts startLiveRun）：完成事件可能早于命令返回
         if (state.activeRunId === action.payload.live.runId)
           state.planRunPhase = "running";
       })

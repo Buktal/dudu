@@ -3,12 +3,8 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { RootState } from "@/store";
 
 import { startScenarioRun as startScenarioRunApi } from "../api";
-import {
-  materializeRunSnapshot,
-  type RunSnapshot,
-  type SnapshotSource,
-} from "../snapshot";
-import { type LiveRun, liveRunFromLanes, liveStarted } from "./live";
+import { materializeRunSnapshot, type SnapshotSource } from "../snapshot";
+import { type LiveRun, liveFromScenarioSnapshot, startLiveRun } from "./live";
 import { canStartRun, missingConnections, type RunPhase } from "./session";
 
 /**
@@ -32,24 +28,6 @@ type ScenarioRunResult =
   | { kind: "noop" }
   | { kind: "needConnection" }
   | { kind: "started"; live: LiveRun };
-
-/** 快照 → 实况（单 lane，每步 pending，携带事件名与渠道供实时展示） */
-function liveFromSnapshot(snapshot: RunSnapshot): LiveRun {
-  return liveRunFromLanes({
-    kind: "scenario",
-    runId: snapshot.runId,
-    sourceId: snapshot.scenarioId,
-    name: snapshot.scenarioName,
-    startedAt: snapshot.startedAt,
-    lanes: [
-      {
-        name: snapshot.scenarioName,
-        channel: snapshot.steps[0]?.channel,
-        eventNames: snapshot.steps.map((step) => step.eventName),
-      },
-    ],
-  });
-}
 
 /** 启动剧本运行（用例数据由调用方传入；无 payload 为空操作）。 */
 export const startScenarioRun = createAsyncThunk<
@@ -83,10 +61,12 @@ export const startScenarioRun = createAsyncThunk<
       events: state.events.items,
       startedAt: new Date().toISOString(),
     });
-    // 命令立即返回（run id 即 snapshot.runId）；进度由 run-progress 事件驱动
-    const live = liveFromSnapshot(snapshot);
-    dispatch(liveStarted(live));
-    await startScenarioRunApi(snapshot, [connection]);
+    // 启动骨架（live.ts）：命令立即返回（run id 即 snapshot.runId），
+    // 进度由 run-progress 事件驱动，IPC 失败由骨架撤回投影
+    const live = liveFromScenarioSnapshot(snapshot);
+    await startLiveRun(live, dispatch, () =>
+      startScenarioRunApi(snapshot, [connection]),
+    );
     return { kind: "started", live };
   },
   {

@@ -4,7 +4,8 @@
 pub mod store;
 
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+
+use crate::app_data_dir;
 
 /// 剧本步骤：引用素材库事件的一个版本。渠道由剧本（文件所在子目录）承载，
 /// 步骤不冗余 group/channel 字段。
@@ -74,10 +75,6 @@ impl ScenarioFile {
             steps: self.steps,
         }
     }
-}
-
-fn app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
-    app.path().app_data_dir().map_err(|err| err.to_string())
 }
 
 /// 读取全部剧本（无 scenarios 目录时返回空列表；渠道由子目录回填）。

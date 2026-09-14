@@ -1,12 +1,28 @@
-import { useState } from "react";
+import { SaveIcon, Trash2Icon } from "lucide-react";
+import { useId, useState } from "react";
 import { Notice } from "@/components/notice";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/toast";
 import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { errorMessage } from "@/lib/errors";
-
-import { StudioIcon } from "./studio-icon";
-import { Field, FieldGroup, FieldLabel } from "./ui/field";
-import { Input } from "./ui/input";
 
 export function SaveAsDialog({
   label,
@@ -19,18 +35,22 @@ export function SaveAsDialog({
   onSave: (name: string) => Promise<unknown>;
   onClose: () => void;
 }) {
+  const nameId = useId();
   const [nextName, setNextName] = useState(`${name} · 副本`);
   const [error, setError] = useState("");
+  const [invalid, setInvalid] = useState(false);
   const [saving, setSaving] = useState(false);
   const save = async () => {
+    if (saving) return;
     if (!nextName.trim()) {
-      setError("请填写新名称。");
+      setInvalid(true);
       return;
     }
     setSaving(true);
     setError("");
     try {
       await onSave(nextName.trim());
+      toast.add({ title: `${label}副本已保存`, type: "success" });
       onClose();
     } catch (cause) {
       setError(errorMessage(cause));
@@ -42,7 +62,7 @@ export function SaveAsDialog({
     <WorkspaceDialog
       open
       title={`另存${label}`}
-      description="建立独立素材，原来的版本和引用保持不变。"
+      description="保存为独立素材，保留原素材的版本和引用。"
       onClose={() => {
         if (!saving) onClose();
       }}
@@ -51,37 +71,46 @@ export function SaveAsDialog({
           <Button disabled={saving} onClick={onClose} variant="outline">
             取消
           </Button>
-          <Button
-            variant="default"
-            disabled={saving}
-            onClick={() => void save()}
-          >
-            <StudioIcon name="save" data-icon="inline-start" />
-            保存副本
+          <Button disabled={saving} onClick={() => void save()}>
+            {saving ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <SaveIcon data-icon="inline-start" />
+            )}
+            {saving ? "正在保存…" : "保存副本"}
           </Button>
         </>
       }
     >
-      <FieldGroup className="gap-4">
-        <Field>
-          <FieldLabel htmlFor="copy-name">新名称</FieldLabel>
+      <FieldGroup>
+        <Field data-invalid={invalid}>
+          <FieldLabel htmlFor={nameId}>新名称</FieldLabel>
           <Input
-            id="copy-name"
+            id={nameId}
             autoFocus
             maxLength={80}
             value={nextName}
-            onChange={(event) => setNextName(event.target.value)}
+            disabled={saving}
+            aria-invalid={invalid}
+            onChange={(event) => {
+              setNextName(event.target.value);
+              setInvalid(false);
+            }}
             onKeyDown={(event) => {
-              if (event.key === "Enter") void save();
+              if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                void save();
+              }
             }}
           />
+          {invalid ? <FieldError>请填写新名称。</FieldError> : null}
         </Field>
+        {error ? (
+          <Notice role="alert" variant="destructive">
+            {error}
+          </Notice>
+        ) : null}
       </FieldGroup>
-      {error ? (
-        <Notice role="alert" className="mb-4" variant="destructive">
-          {error}
-        </Notice>
-      ) : null}
     </WorkspaceDialog>
   );
 }
@@ -100,26 +129,37 @@ export function DeleteEntityDialog({
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
   return (
-    <WorkspaceDialog
+    <AlertDialog
       open
-      title={`删除${label}`}
-      description={`删除「${name}」后，无法撤销。被其他素材引用时会保留。`}
-      onClose={() => {
-        if (!deleting) onClose();
+      onOpenChange={(open) => {
+        if (!open && !deleting) onClose();
       }}
-      footer={
-        <>
-          <Button disabled={deleting} onClick={onClose} variant="outline">
-            取消
-          </Button>
-          <Button
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除{label}？</AlertDialogTitle>
+          <AlertDialogDescription>
+            「{name}
+            」删除后无法恢复。被其他素材引用时会阻止删除，已有运行记录会保留。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {error ? (
+          <Notice role="alert" variant="destructive">
+            {error}
+          </Notice>
+        ) : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>保留{label}</AlertDialogCancel>
+          <AlertDialogAction
             variant="destructive"
             disabled={deleting}
             onClick={async () => {
+              if (deleting) return;
               setDeleting(true);
               setError("");
               try {
                 await onDelete();
+                toast.add({ title: `${label}已删除`, type: "success" });
                 onClose();
               } catch (cause) {
                 setError(errorMessage(cause));
@@ -128,17 +168,15 @@ export function DeleteEntityDialog({
               }
             }}
           >
-            确认删除
-          </Button>
-        </>
-      }
-    >
-      <p>此操作只删除这份{label}，已经生成的运行记录会保留。</p>
-      {error ? (
-        <Notice role="alert" className="mb-4" variant="destructive">
-          {error}
-        </Notice>
-      ) : null}
-    </WorkspaceDialog>
+            {deleting ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <Trash2Icon data-icon="inline-start" />
+            )}
+            {deleting ? "正在删除…" : "确认删除"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

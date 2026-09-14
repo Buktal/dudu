@@ -4,7 +4,8 @@
 pub mod store;
 
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+
+use crate::app_data_dir;
 
 /// 期望回执：状态码 + 正文形态（contains/equals/jsonField）。
 /// bodyMode 在 #16 引入，旧数据缺省按 contains 读入。
@@ -44,10 +45,6 @@ pub struct StoredEvent {
     pub channel_id: String,
     pub schema_id: String,
     pub versions: Vec<StoredVersion>,
-}
-
-fn app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
-    app.path().app_data_dir().map_err(|err| err.to_string())
 }
 
 /// 读取全部持久化事件（无文件时返回空列表）。

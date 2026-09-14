@@ -1,5 +1,6 @@
 import {
   FolderIcon,
+  HardDriveIcon,
   InfoIcon,
   type LucideIcon,
   Settings2Icon,
@@ -7,6 +8,7 @@ import {
 import { type CSSProperties, type ReactNode, useState } from "react";
 import { IconButton } from "@/components/icon-button";
 import { useLibraryDisclosure } from "@/components/resource-workspace";
+import { ThemeMenu } from "@/components/theme-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -28,7 +30,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkspaceDialog } from "@/components/workspace-dialog";
 
 export type NavEntry<T extends string = string> = {
@@ -97,13 +98,13 @@ export function WorkspaceShell<T extends string>({
     .flatMap((group) => group.entries)
     .find((entry) => entry.id === "connections");
   return (
-    <TooltipProvider>
+    <>
       <SidebarProvider
         className="h-dvh min-h-0"
-        style={{ "--sidebar-width": "12rem" } as CSSProperties}
+        style={{ "--sidebar-width": "12.5rem" } as CSSProperties}
       >
         <Sidebar collapsible="icon" aria-label="主导航">
-          <SidebarHeader className="gap-3 py-5">
+          <SidebarHeader className="gap-3 px-3 py-6">
             <div className="flex items-center gap-2 px-2 group-data-[collapsible=icon]:px-0">
               <img
                 src={`${import.meta.env.BASE_URL}logo.svg`}
@@ -113,12 +114,12 @@ export function WorkspaceShell<T extends string>({
                 alt="MockPulse 标志"
                 draggable={false}
               />
-              <span className="font-heading text-xl font-semibold tracking-tight text-foreground group-data-[collapsible=icon]:hidden">
+              <span className="font-heading text-lg font-semibold tracking-tight text-foreground group-data-[collapsible=icon]:hidden">
                 MockPulse
               </span>
             </div>
             <p className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-              渠道消息 · 本地联调
+              消息回调 · 本地联调
             </p>
           </SidebarHeader>
           <SidebarContent>
@@ -150,7 +151,7 @@ export function WorkspaceShell<T extends string>({
             <div className="flex flex-col gap-3 px-2 group-data-[collapsible=icon]:hidden">
               <Separator />
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="size-1.5 rounded-full bg-success" />
+                <HardDriveIcon className="size-3.5" />
                 数据保存在本机
               </p>
             </div>
@@ -158,7 +159,7 @@ export function WorkspaceShell<T extends string>({
           <SidebarRail aria-label="收起或展开主导航" title="收起或展开主导航" />
         </Sidebar>
         <SidebarInset className="h-dvh min-h-0 min-w-0 overflow-hidden">
-          <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card px-4">
+          <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card px-4 lg:px-5">
             <SidebarTrigger aria-label="切换主导航" />
             <Separator orientation="vertical" className="h-4" />
             <div className="flex min-w-0 items-center gap-2 text-sm">
@@ -168,7 +169,7 @@ export function WorkspaceShell<T extends string>({
               <strong className="truncate font-medium">{currentTitle}</strong>
             </div>
             <div className="min-w-0 flex-1" />
-            {currentView !== "connections" ? (
+            {
               <Button
                 variant="outline"
                 size="sm"
@@ -176,9 +177,13 @@ export function WorkspaceShell<T extends string>({
                 onClick={() => request(currentView)}
               >
                 <FolderIcon data-icon="inline-start" />
-                素材库
+                {currentView === "connections"
+                  ? "平台列表"
+                  : currentView === "runs"
+                    ? "运行列表"
+                    : "素材库"}
               </Button>
-            ) : null}
+            }
             <Badge variant="secondary" className="hidden lg:inline-flex">
               本地联调
             </Badge>
@@ -196,6 +201,7 @@ export function WorkspaceShell<T extends string>({
             <IconButton label="使用说明" onClick={() => setHelp(true)}>
               <InfoIcon />
             </IconButton>
+            <ThemeMenu />
           </header>
           {children}
         </SidebarInset>
@@ -227,6 +233,6 @@ export function WorkspaceShell<T extends string>({
           </li>
         </ol>
       </WorkspaceDialog>
-    </TooltipProvider>
+    </>
   );
 }

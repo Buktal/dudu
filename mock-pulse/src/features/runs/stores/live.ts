@@ -3,6 +3,7 @@ import { createAction } from "@reduxjs/toolkit";
 import type { ChannelId } from "@/lib/channels";
 
 import type { RunRecord, RunStep } from "../model";
+import type { RunSnapshot } from "../snapshot";
 
 /**
  * 运行实况投影（单一出口）：Rust 执行器经 run-progress 事件实时回报，
@@ -10,7 +11,8 @@ import type { RunRecord, RunStep } from "../model";
  * LiveRun 状态（runs.live）。剧本运行是 lanes 长度 1 的特例；编排运行
  * 每个 lane 对应一个剧本。finished 由 runs 域收束（历史入列 + 实况清空）；
  * plans 域监听同一组 action 只做编排运行的阶段簿记，实况展示经
- * selectLiveRunFor / selectPlanLiveRun 从本域派生。
+ * selectLiveRunFor 从本域派生。种子构建（liveFromScenarioSnapshot /
+ * liveFromPlanSnapshot）与启动骨架（startLiveRun）也单点在本模块。
  */
 
 /** 进行中运行的步骤状态（run-progress 事件驱动） */
@@ -72,7 +74,7 @@ export type RunProgressPayload = {
 /** 运行启动即投影（live 在 IPC 前初始化，供立即停止与实时进度） */
 export const liveStarted = createAction<LiveRun>("runs/liveStarted");
 
-/** 启动失败撤回投影（runs 侧无法感知 plans 域的 IPC 失败，由 thunk 显式撤回） */
+/** 启动失败撤回投影（runs 侧无法感知各运行域的 IPC 失败，由 startLiveRun 统一撤回） */
 export const liveCleared = createAction<{ runId: string }>("runs/liveCleared");
 
 /** 组合根唯一消费的投影 action：run-progress 事件 → 实况收敛 */
@@ -113,6 +115,84 @@ export function liveRunFromLanes(seed: LiveRunSeed): LiveRun {
       })),
     })),
   };
+}
+
+/** 剧本快照的 lane 事实（RunSnapshot 的结构子集；编排 lane = 每个剧本一份） */
+type ScenarioSnapshotFacts = {
+  scenarioName: string;
+  steps: readonly { channel: ChannelId; eventName: string }[];
+};
+
+/** 编排快照的实况事实（plans 域 PlanRunSnapshot 的结构子集，runs 不依赖 plans） */
+export type PlanRunSnapshotLike = {
+  runId: string;
+  planId: string;
+  planName: string;
+  mode: "serial" | "parallel";
+  failure: "stop" | "continue";
+  startedAt: string;
+  scenarios: readonly ScenarioSnapshotFacts[];
+};
+
+/** 剧本快照 → lane 种子事实（首步渠道 + 每步事件名，两个快照 builder 共用） */
+function laneFacts(scenario: ScenarioSnapshotFacts) {
+  return {
+    name: scenario.scenarioName,
+    channel: scenario.steps[0]?.channel,
+    eventNames: scenario.steps.map((step) => step.eventName),
+  };
+}
+
+/** 剧本运行快照 → 实况（单 lane，kind 固定 scenario） */
+export function liveFromScenarioSnapshot(snapshot: RunSnapshot): LiveRun {
+  return liveRunFromLanes({
+    kind: "scenario",
+    runId: snapshot.runId,
+    sourceId: snapshot.scenarioId,
+    name: snapshot.scenarioName,
+    startedAt: snapshot.startedAt,
+    lanes: [laneFacts(snapshot)],
+  });
+}
+
+/** 编排运行快照 → 实况（每 lane = 一个剧本，kind 固定 plan） */
+export function liveFromPlanSnapshot(snapshot: PlanRunSnapshotLike): LiveRun {
+  return liveRunFromLanes({
+    kind: "plan",
+    runId: snapshot.runId,
+    sourceId: snapshot.planId,
+    name: snapshot.planName,
+    mode: snapshot.mode,
+    failure: snapshot.failure,
+    startedAt: snapshot.startedAt,
+    lanes: snapshot.scenarios.map(laneFacts),
+  });
+}
+
+/** thunk 侧最小 dispatch 形状（启动骨架只发这两种实况 action） */
+type LiveDispatch = (
+  action: ReturnType<typeof liveStarted> | ReturnType<typeof liveCleared>,
+) => unknown;
+
+/**
+ * 启动骨架（剧本/编排 thunk 共用，实况回滚单点）：IPC 前投影实况
+ * （供立即停止与实时进度）；invoke 失败撤回投影后原样抛出——rejected
+ * 分支只负责阶段与错误文案，不再各自清实况。完成事件可能早于命令返回：
+ * 实况按 runId 收敛、finished 先到即清空，fulfilled 分支不得按返回值
+ * 复活运行（runs/plans slice 的 fulfilled 守卫据此编写）。
+ */
+export async function startLiveRun<T>(
+  live: LiveRun,
+  dispatch: LiveDispatch,
+  invoke: () => Promise<T>,
+): Promise<T> {
+  dispatch(liveStarted(live));
+  try {
+    return await invoke();
+  } catch (error) {
+    dispatch(liveCleared({ runId: live.runId }));
+    throw error;
+  }
 }
 
 /**

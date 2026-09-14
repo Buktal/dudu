@@ -4,8 +4,6 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 
-import type { ChannelId } from "@/lib/channels";
-
 import {
   type DefinitionsDoc,
   deleteEventById as deleteEventApi,
@@ -27,6 +25,7 @@ import {
 } from "../model";
 import {
   editorPayload,
+  parseFieldText,
   parseWireDraft,
   setPayloadField,
   syncSenderIdentity,
@@ -214,20 +213,9 @@ const eventsSlice = createSlice({
       state.fieldInputs ??= {};
       state.fieldInputs[path] = { text };
       try {
-        const value =
-          type === "number"
-            ? Number(text)
-            : type === "json" || type === "boolean"
-              ? JSON.parse(text)
-              : text;
-        if (type === "number" && (!text.trim() || !Number.isFinite(value)))
-          throw new Error("请输入有效数字。");
+        // 转换与校验（number 有限性 / JSON / XML 文本约束）单点在 payload.ts
         const schema = schemaById(state.draft.schemaId);
-        if (
-          schema.wire === "xml" &&
-          (value == null || typeof value === "object")
-        )
-          throw new Error("XML 元素的值必须是文本。");
+        const value = parseFieldText(type, text, schema.wire);
         if (state.rawText != null) {
           state.draft.payload = editorPayload(
             schema,
@@ -417,61 +405,4 @@ export function selectDraftDirty(state: EventsState): boolean {
 /** 持久化文档 → slice 内 definitions 状态 */
 function definitionsFromDoc(doc: DefinitionsDoc): FieldDefinitionsState {
   return { loaded: true, bySchemaId: doc.schemas };
-}
-
-export function selectEvents(state: EventsState): EventItem[] {
-  return state.items;
-}
-
-export function selectDraft(state: EventsState): EventDraft | null {
-  return state.draft;
-}
-
-export function selectFilters(state: EventsState): EventFilters {
-  return state.filters;
-}
-
-export function selectPage(state: EventsState): number {
-  return state.page;
-}
-
-export function selectSelectedId(state: EventsState): string | null {
-  return state.selectedId;
-}
-
-export function selectLoaded(state: EventsState): boolean {
-  return state.loaded;
-}
-
-/** 全部用户字段定义 */
-export function selectFieldDefinitions(
-  state: EventsState,
-): FieldDefinitionsState {
-  return state.definitions;
-}
-
-/** 指定模板的用户字段定义（表单合并与字典弹窗的读取入口） */
-export function selectSchemaUserDefinition(
-  state: EventsState,
-  schemaId: string,
-): StoredSchemaDefinition | undefined {
-  return state.definitions.bySchemaId[schemaId];
-}
-
-/** 当前草稿渠道（跨 feature 消费：直发面板的未配置指引按渠道呈现）。
- *  入参收 RootState 形状（含 events 键即可），避免外部直读 draft 形状。 */
-export function selectDraftChannelId(
-  state: EventsState | { events: EventsState },
-): ChannelId | undefined {
-  const events = "events" in state ? state.events : state;
-  return events.draft?.channelId;
-}
-
-/** 当前草稿 id（跨 feature 消费：直发面板随编辑对象切换复位）。
- *  入参收 RootState 形状（含 events 键即可）。 */
-export function selectDraftId(
-  state: EventsState | { events: EventsState },
-): string | null {
-  const events = "events" in state ? state.events : state;
-  return events.draft?.id ?? null;
 }

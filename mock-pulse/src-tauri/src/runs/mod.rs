@@ -5,13 +5,15 @@
 pub mod control;
 pub mod executor;
 pub mod policy;
+pub mod progress;
+pub mod snapshot;
 pub mod store;
 pub mod verdict;
 
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
 
-use crate::connections::{douyin, wecom};
+use crate::app_data_dir;
+use crate::connections::DispatchOutcome;
 
 /// 回执事实：HTTP 状态（0 = 未收到响应）、耗时与原始回执文本。
 /// reply = 企微加密被动回复解密后的明文（旧记录/其他渠道为 None）。
@@ -95,45 +97,36 @@ pub struct RunRecord {
     pub steps: Vec<RunStep>,
 }
 
-/// 渠道协议发送结果 → 回执快照（抖音无解密被动回复，reply 恒空）。
-pub(crate) fn receipt_from_douyin(outcome: &douyin::DispatchOutcome) -> ReceiptSnapshot {
-    ReceiptSnapshot {
-        status: outcome.status,
-        elapsed_ms: outcome.elapsed_ms,
-        body: outcome.body.clone(),
-        reply: None,
-        error: outcome.error.clone(),
-    }
+/// 步骤事实：身份快照（事件来源 + 渠道路由 + 明文载荷）。
+/// 执行器（executor）与直发命令（sends）共用，保证两条产路的字段落点一致。
+pub(crate) struct StepFacts {
+    /// 来源事件的名称快照
+    pub event_name: String,
+    /// 来源事件 id（草稿未保存时也保留其 id）
+    pub event_id: String,
+    pub channel: String,
+    /// 发送目标地址快照
+    pub url: String,
+    /// 发出的明文载荷快照（逐字节与发送一致；企微为加密前的明文 XML）
+    pub payload: String,
 }
 
-/// 企微协议发送结果 → 回执快照（reply = 加密被动回复解密后的明文）。
-pub(crate) fn receipt_from_wecom(outcome: &wecom::WecomDispatchOutcome) -> ReceiptSnapshot {
-    ReceiptSnapshot {
-        status: outcome.status,
-        elapsed_ms: outcome.elapsed_ms,
-        body: outcome.body.clone(),
-        reply: outcome.reply.clone(),
-        error: outcome.error.clone(),
-    }
-}
-
-/// 已发送（或已尝试发送）步骤的唯一构造入口：回执经期望比对出结论，
-/// 渠道协议要素与载荷快照一次成形——执行器（executor）与直发命令（sends）
-/// 共用，保证两条产路的字段落点一致。expected 为 None（UI 不会产生，
-/// 契约兜底）时不做比对，仅记录回执。
+/// 已发送（或已尝试发送）步骤的构造入口之一：回执由统一发送结果
+/// （connections::DispatchOutcome）单点投影，经期望比对出结论——
+/// 执行器与直发共用，渠道协议要素与载荷快照一次成形。
+/// expected 为 None（UI 不会产生，契约兜底）时不做比对，仅记录回执。
 pub(crate) fn sent_step(
     expected: Option<&verdict::ExpectedReceipt>,
-    event_name: String,
-    event_id: String,
-    channel: &str,
-    url: String,
-    payload: String,
-    request_body: Option<String>,
-    signature: String,
-    msg_id: String,
-    timestamp: Option<String>,
-    receipt: ReceiptSnapshot,
+    facts: StepFacts,
+    outcome: DispatchOutcome,
 ) -> RunStep {
+    let receipt = ReceiptSnapshot {
+        status: outcome.status,
+        elapsed_ms: outcome.elapsed_ms,
+        body: outcome.body,
+        reply: outcome.reply,
+        error: outcome.error,
+    };
     let verdict = match expected {
         Some(expected) => verdict::compare_receipt(expected, &receipt),
         None => RunVerdict {
@@ -143,15 +136,15 @@ pub(crate) fn sent_step(
     };
     RunStep {
         expected: expected.cloned(),
-        request_body,
-        event_name,
-        event_id,
-        channel: channel.into(),
-        url,
-        payload,
-        signature,
-        msg_id,
-        timestamp,
+        request_body: outcome.request_body,
+        event_name: facts.event_name,
+        event_id: facts.event_id,
+        channel: facts.channel,
+        url: facts.url,
+        payload: facts.payload,
+        signature: outcome.signature,
+        msg_id: outcome.msg_id,
+        timestamp: outcome.timestamp,
         receipt,
         verdict,
         skipped: false,
@@ -160,8 +153,40 @@ pub(crate) fn sent_step(
     }
 }
 
-fn app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
-    app.path().app_data_dir().map_err(|err| err.to_string())
+/// 未执行步骤的构造入口之二（失败即停/编排停止/中断占位）：与 sent_step
+/// 同一构造模块、同一字段落点——协议要素不落值、回执为零值（未发出请求），
+/// 结论 = 跳过原因；「skipped 必搭配未通过结论」的 RunStep 不变量在此单点保证。
+pub(crate) fn skipped_step(
+    expected: Option<&verdict::ExpectedReceipt>,
+    facts: StepFacts,
+    reason: &str,
+) -> RunStep {
+    RunStep {
+        expected: expected.cloned(),
+        request_body: None,
+        event_name: facts.event_name,
+        event_id: facts.event_id,
+        channel: facts.channel,
+        url: facts.url,
+        payload: facts.payload,
+        signature: String::new(),
+        msg_id: String::new(),
+        timestamp: None,
+        receipt: ReceiptSnapshot {
+            status: 0,
+            elapsed_ms: 0,
+            body: String::new(),
+            reply: None,
+            error: None,
+        },
+        verdict: RunVerdict {
+            passed: false,
+            reason: reason.into(),
+        },
+        skipped: true,
+        lane_index: None,
+        lane_name: None,
+    }
 }
 
 /// 读取全部运行记录（无文件时返回空列表）。

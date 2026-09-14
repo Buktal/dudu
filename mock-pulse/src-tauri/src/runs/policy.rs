@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::plans::PlanFailure;
 
-use super::executor::ScenarioRunSnapshot;
+use super::snapshot::ScenarioRunSnapshot;
 
 /// 跳过原因：策略决策的产出，落盘结论（verdict.reason）文案的唯一来源。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -68,11 +68,13 @@ pub(super) enum StepDecision {
 /// 「本剧失败应截停」（#2 条件）= 编排失败策略为 stop（编排 stop 覆盖剧本
 /// continue），或剧本级 failure ≠ continue（缺省 stop）。
 ///
-/// 三种构造位置（编织 mode 的编码）：
-/// - [`LanePolicy::scenario`]：单剧本运行。无编排语义、不持编排旗标。
+/// 两种构造位置（编织 mode 的编码）：
 /// - [`LanePolicy::serial`]：串行编排 lane。**不持编排旗标**——本剧失败不泄漏
 ///   为取消信号，跨剧传播由 `execute_lane_steps` 返回的 own_failed 经
 ///   previous_failed → 下一剧的 halt 种子（[`SkipReason::PreviousScenarioFailed`]）承载。
+///   单剧本运行 = 编排内核的单 lane 特例：命令边界包装成单 lane 编排后以
+///   `serial(Continue, …, previous_failed = false)` 走同一决策表（见
+///   `executor::commands::solo_plan`），无旗标、无 halt，退化为纯剧内语义。
 /// - [`LanePolicy::parallel`]：并行编排 lane。编排 stop 时持跨 lane 共享旗标，
 ///   本剧失败经 [`LanePolicy::note_failure`] 置位（Relaxed 广播）；continue 时
 ///   不持——失败只影响本剧内，各剧各跑到底。
@@ -93,11 +95,6 @@ pub(super) struct LanePolicy<'a> {
 }
 
 impl<'a> LanePolicy<'a> {
-    /// 单剧本运行：剧内失败策略只由快照 failure 决定（None 缺省 stop）。
-    pub(super) fn scenario(scenario: &ScenarioRunSnapshot, user_cancel: &'a AtomicBool) -> Self {
-        Self::new(scenario, user_cancel, None, false, false, None)
-    }
-
     /// 串行编排 lane：前剧失败且编排 stop 时以 halt 种子整体不启动；
     /// 失败传播走 own_failed 返回值，不设旗标（本剧失败不泄漏为取消信号）。
     pub(super) fn serial(
@@ -280,8 +277,9 @@ mod tests {
     fn scenario_failure_policy_decides_own_failure_handling() {
         let user = AtomicBool::new(false);
         // 剧本级缺省（None）= stop：本剧失败后后续步骤跳过
+        // （单剧本运行以 serial(Continue, …, false) 退化走同一决策表）
         let default_stop = scenario(None);
-        let mut stop = LanePolicy::scenario(&default_stop, &user);
+        let mut stop = LanePolicy::serial(PlanFailure::Continue, &default_stop, &user, false);
         stop.note_failure();
         assert_eq!(
             stop.decide(),
@@ -290,7 +288,7 @@ mod tests {
 
         // 剧本级 continue：失败记录后继续执行后续步骤
         let cont = scenario(Some("continue"));
-        let mut cont_policy = LanePolicy::scenario(&cont, &user);
+        let mut cont_policy = LanePolicy::serial(PlanFailure::Continue, &cont, &user, false);
         cont_policy.note_failure();
         assert_eq!(cont_policy.decide(), StepDecision::Execute);
     }
@@ -395,7 +393,7 @@ mod tests {
         // 用户停止（SeqCst 采样）同样打断等待，且不持编排旗标的 lane 也生效
         user.store(true, Ordering::SeqCst);
         assert!(policy.stopped_during_wait());
-        let solo = LanePolicy::scenario(&snap, &user);
+        let solo = LanePolicy::serial(PlanFailure::Continue, &snap, &user, false);
         assert!(solo.stopped_during_wait());
     }
 }

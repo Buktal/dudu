@@ -1,10 +1,10 @@
+import { FileTextIcon, SaveIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Notice } from "@/components/notice";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { errorMessage } from "@/lib/errors";
-
-import { StudioIcon } from "./studio-icon";
 
 /** 保存成功后再执行切换；失败保留原草稿和待执行操作。 */
 export function DraftGuard({
@@ -78,21 +78,25 @@ export function DraftGuard({
               disabled={saving}
               onClick={() => void save()}
             >
-              <StudioIcon
-                name={saving ? "refresh" : "save"}
-                className={saving ? "motion-safe:animate-spin" : undefined}
-                data-icon="inline-start"
-              />
+              {saving ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <SaveIcon aria-hidden="true" data-icon="inline-start" />
+              )}
               保存并继续
             </Button>
           </>
         }
       >
         <div className="mb-5 flex flex-wrap items-center gap-3">
-          <StudioIcon name="event" />
-          <div>
-            <h3>{name || "未命名草稿"}</h3>
-            <p>已保存的剧本只会选择素材库中的版本。</p>
+          <FileTextIcon aria-hidden="true" className="size-4 shrink-0" />
+          <div className="flex min-w-0 flex-col gap-1">
+            <h3 className="font-medium wrap-anywhere">
+              {name || "未命名草稿"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              保存后，可继续复用这份素材。
+            </p>
           </div>
         </div>
         {error ? (

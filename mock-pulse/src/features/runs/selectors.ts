@@ -1,27 +1,7 @@
-import { type ChannelId, channelById } from "@/lib/channels";
+import { channelById } from "@/lib/channels";
+import { paginate as paginateList } from "@/lib/paginate";
 
 import type { RunRecord, RunStep } from "./model";
-
-/** 运行记录筛选：状态（全部/通过/失败）+ 渠道（纯 selector，列表交给 react-virtuoso） */
-export type RunFilters = {
-  status: "all" | "passed" | "failed";
-  channel: ChannelId | "all";
-};
-
-/** 列表行：运行 + 派生展示事实（渠道/来源标识/步骤计数） */
-export type RunRow = {
-  run: RunRecord;
-  /** 首步渠道（空运行为 undefined；编排运行跨渠道，不用首步代表） */
-  channel: ChannelId | undefined;
-  channelName: string | undefined;
-  status: "passed" | "failed";
-  /** 来源标识：直发 / 剧本 / 执行编排 */
-  sourceLabel: string;
-  scenarioName: string | undefined;
-  planName: string | undefined;
-  stepCount: number;
-  passedCount: number;
-};
 
 /** 运行状态：任一步骤未通过（含 skipped）即失败；空运行无通过事实，视为失败。 */
 export function runStatus(run: RunRecord): "passed" | "failed" {
@@ -66,37 +46,61 @@ export function laneGroups(run: RunRecord): LaneGroup[] | null {
   return groups.sort((a, b) => a.lane - b.lane);
 }
 
-/** 筛选（保持库内时间升序；视图渲染时倒序）。 */
-export function filterRuns(runs: RunRecord[], filters: RunFilters): RunRow[] {
-  return runs
-    .map((run) => {
-      const channel = run.source === "plan" ? undefined : run.steps[0]?.channel;
-      return {
-        run,
-        channel,
-        channelName: channel
-          ? (channelById(channel)?.name ?? channel)
-          : undefined,
-        status: runStatus(run),
-        sourceLabel:
-          run.source === "plan"
-            ? "执行编排"
-            : run.source === "scenario"
-              ? "剧本"
-              : "直发",
-        scenarioName: run.scenarioName ?? undefined,
-        planName: run.planName ?? undefined,
-        stepCount: run.steps.length,
-        passedCount: run.steps.filter((step) => step.verdict.passed).length,
-      };
-    })
-    .filter((row) => {
-      if (filters.status !== "all" && row.status !== filters.status) {
-        return false;
-      }
-      if (filters.channel !== "all" && row.channel !== filters.channel) {
-        return false;
-      }
-      return true;
-    });
+/** 运行记录筛选：搜索查询词（filters + page 与其余域同构，状态在 runs-slice）。 */
+export type RunFilters = { query: string };
+
+/** 分页：转发 lib 泛型实现（页码收敛到 [1, pages]；空列表为第 1 页）。 */
+export const paginateRuns = paginateList;
+
+/** 查询干草堆：id、编排名、剧本名、状态词（成功 通过 / 失败 未通过）、
+ *  各步骤的事件名与渠道名。 */
+function runHaystack(run: RunRecord): string {
+  return `${run.id} ${run.planName ?? ""} ${run.scenarioName ?? ""} ${
+    runStatus(run) === "passed" ? "成功 通过" : "失败 未通过"
+  } ${run.steps
+    .map((step) => `${step.eventName} ${channelById(step.channel)?.name}`)
+    .join(" ")}`;
+}
+
+/**
+ * 筛选：查询按空白分词、全部词命中干草堆才保留（大小写不敏感；
+ * 「未通过」含「通过」，状态词按子串语义匹配）。返回按开始时间
+ * 倒序（新→旧，列表展示即此序）。
+ */
+export function filterRuns(items: RunRecord[], query: string): RunRecord[] {
+  const words = query.trim().toLowerCase().split(/\s+/);
+  return [...items]
+    .reverse()
+    .filter((run) =>
+      words.every((word) => runHaystack(run).toLowerCase().includes(word)),
+    );
+}
+
+/** 当前选中运行：无选中或 id 未命中时回退最新一条（库内时间升序取末条）。 */
+export function selectedRun(state: {
+  items: RunRecord[];
+  selectedId?: string | null;
+}): RunRecord | undefined {
+  return (
+    state.items.find((item) => item.id === state.selectedId) ??
+    state.items[state.items.length - 1]
+  );
+}
+
+/**
+ * 最近一次同源运行记录（编辑器「最近一次运行」快照的唯一查询出口）：
+ * 库内时间升序，从末尾起找同 source + sourceId 的第一条。
+ */
+export function lastRunFor(
+  state: { items: RunRecord[] },
+  kind: RunRecord["source"],
+  sourceId: string,
+): RunRecord | undefined {
+  for (let i = state.items.length - 1; i >= 0; i -= 1) {
+    const run = state.items[i];
+    if (run.source === kind && run.sourceId === sourceId) {
+      return run;
+    }
+  }
+  return undefined;
 }

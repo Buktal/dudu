@@ -5,7 +5,8 @@
 pub mod store;
 
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+
+use crate::app_data_dir;
 
 /// 单个事件模板的用户字段定义。fields 为 FieldDescriptor 数组
 /// （path/title/type/group/description + 可选 required/format/multiline），
@@ -28,10 +29,6 @@ pub struct StoredSchemaDefinition {
 pub struct DefinitionsDoc {
     #[serde(default)]
     pub schemas: std::collections::BTreeMap<String, StoredSchemaDefinition>,
-}
-
-fn app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
-    app.path().app_data_dir().map_err(|err| err.to_string())
 }
 
 /// 读取全部用户字段定义（无文件时返回空文档）。

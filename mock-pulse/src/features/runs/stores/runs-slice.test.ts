@@ -16,14 +16,13 @@ import type { RunRecord, RunStep } from "../model";
 import { directDispatch } from "./direct-dispatch";
 import { runProgress } from "./live";
 import {
-  clearDispatch,
   fetchRuns,
   initialRunsState,
   retrySaveRun,
   runsReducer,
-  selectLastDispatch,
-  selectPanelPhase,
   selectRuns,
+  setFilters,
+  setPage,
   stopRun,
 } from "./runs-slice";
 
@@ -104,6 +103,8 @@ describe("runs slice 初始态、装载与选择器", () => {
 
   it("初始态", () => {
     expect(initialRunsState.items).toEqual([]);
+    expect(initialRunsState.filters).toEqual({ query: "" });
+    expect(initialRunsState.page).toBe(1);
     expect(initialRunsState.loaded).toBe(false);
     expect(initialRunsState.live).toBeNull();
     expect(initialRunsState.scenarioRunPhase).toBe("idle");
@@ -169,23 +170,13 @@ describe("runs slice 面板与记录状态流转", () => {
     expect(apiMock.dispatchDirect).toHaveBeenCalledTimes(1);
   });
 
-  it("clearDispatch 复位面板（切换编辑对象时由编辑器调用）", async () => {
-    const store = makeStore(CONNECTION);
-    store.dispatch(startDraft({ name: "新客问价", schemaId: "dy-text" }));
-
-    apiMock.dispatchDirect.mockResolvedValueOnce({
-      step: directStep(),
-      cancelled: false,
-    });
-    stubSaveRun();
-    await store.dispatch(directDispatch());
-    expect(selectPanelPhase(store.getState().runs)).toBe("done");
-
-    store.dispatch(clearDispatch());
-    expect(selectPanelPhase(store.getState().runs)).toBe("idle");
-    expect(selectLastDispatch(store.getState().runs)).toBeNull();
-    // 运行记录不受影响
-    expect(selectRuns(store.getState().runs)).toHaveLength(1);
+  it("setFilters 复位页码；setPage 只翻页（列表筛选与其余域同构）", () => {
+    const store = makeStore();
+    store.dispatch(setPage(3));
+    expect(store.getState().runs.page).toBe(3);
+    store.dispatch(setFilters({ query: "抖音" }));
+    expect(store.getState().runs.filters).toEqual({ query: "抖音" });
+    expect(store.getState().runs.page).toBe(1);
   });
 
   it("后台完成时写入失败的快照不会被重新载入覆盖", () => {

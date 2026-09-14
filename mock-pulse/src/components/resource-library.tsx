@@ -1,21 +1,40 @@
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  FolderOpenIcon,
+  InfoIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+  SearchIcon,
+  StarIcon,
+  Trash2Icon,
+  WorkflowIcon,
+} from "lucide-react";
 import { forwardRef, type ReactNode } from "react";
 import { type ListProps, Virtuoso } from "react-virtuoso";
 import { IconButton } from "@/components/icon-button";
 import { SearchInput } from "@/components/search-input";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { ChannelId } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 import { ChannelMark } from "./channel-mark";
-
-import { StudioIcon } from "./studio-icon";
-import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 
 export type ResourceEntry = {
   id: string;
@@ -27,32 +46,35 @@ export type ResourceEntry = {
 };
 
 const ResourceList = forwardRef<HTMLDivElement, ListProps>((props, ref) => (
-  <div {...props} ref={ref} className="flex flex-col gap-1 px-2 pb-2" />
+  <div {...props} ref={ref} className="flex flex-col gap-1 px-2 pb-3" />
 ));
 
 export function ResourceFilters<T extends string>({
   value,
   options,
   onChange,
+  label = "素材类型筛选",
 }: {
   value: T;
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
+  label?: string;
 }) {
   return (
     <ToggleGroup
       className="w-full"
+      size="sm"
       value={[value]}
+      aria-label={label}
       onValueChange={(values) => {
         if (values[0]) onChange(values[0] as T);
       }}
-      aria-label="素材类型筛选"
     >
       {options.map((option) => (
         <ToggleGroupItem
           key={option.value}
           value={option.value}
-          className={cn("flex-1", value === option.value && "")}
+          className="min-w-0 flex-1"
         >
           {option.label}
         </ToggleGroupItem>
@@ -100,28 +122,31 @@ export function ResourceLibrary({
 }) {
   return (
     <>
-      <div className="flex shrink-0 items-center justify-between gap-2 px-4 pt-5 pb-3">
-        <h2>
-          {title}
-          <span className="ml-1 font-mono text-xs text-muted-foreground">
-            {total}
-          </span>
-        </h2>
+      <div className="flex shrink-0 items-center justify-between gap-2 px-4 pt-5 pb-4">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold">{title}</h2>
+          <Badge variant="outline">{total}</Badge>
+        </div>
         {onCreate ? (
-          <IconButton label={`新建${singular}`} onClick={onCreate}>
-            <StudioIcon name="plus" />
-          </IconButton>
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={`新建${singular}`}
+            onClick={onCreate}
+          >
+            <PlusIcon data-icon="inline-start" />
+            新建
+          </Button>
         ) : null}
       </div>
-      <div className="flex shrink-0 flex-col gap-2 px-3 pb-3">
-        <div className="min-w-0 flex-1">
-          <SearchInput
-            aria-label={`搜索${singular}`}
-            placeholder="搜索名称、平台或事件类型"
-            value={query}
-            onChange={(event) => onQuery(event.target.value)}
-          />
-        </div>
+      <div className="flex shrink-0 flex-col gap-3 px-3 pb-4">
+        <SearchInput
+          aria-label={`搜索${singular}`}
+          placeholder={`搜索${singular}…`}
+          value={query}
+          onChange={(event) => onQuery(event.target.value)}
+          onClear={query ? () => onQuery("") : undefined}
+        />
         {filters}
       </div>
       <div className="min-h-0 flex-1">
@@ -129,9 +154,9 @@ export function ResourceLibrary({
           <Empty role="alert">
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <StudioIcon name="info" />
+                <InfoIcon />
               </EmptyMedia>
-              <EmptyTitle>读取素材失败</EmptyTitle>
+              <EmptyTitle>读取失败</EmptyTitle>
               <EmptyDescription>{error}</EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -141,92 +166,132 @@ export function ResourceLibrary({
             style={{ height: "100%" }}
             data={entries}
             initialItemCount={entries.length}
+            computeItemKey={(_index, item) => item.id}
             itemContent={(_index, item) => (
-              <button
-                type="button"
-                className={cn(
-                  "flex w-full min-w-0 items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  selectedId === item.id &&
-                    "bg-secondary text-secondary-foreground",
-                )}
-                aria-current={selectedId === item.id ? "true" : undefined}
-                onClick={() => onSelect(item.id)}
-                onContextMenu={
-                  onContextMenu
-                    ? (event) => {
-                        event.preventDefault();
-                        onContextMenu(item.id);
+              <div className="group/resource relative">
+                <Button
+                  variant={selectedId === item.id ? "secondary" : "ghost"}
+                  className={cn(
+                    "h-auto w-full min-w-0 justify-start gap-3 p-3 text-left",
+                    onContextMenu && "pr-10",
+                  )}
+                  aria-current={selectedId === item.id ? "true" : undefined}
+                  onClick={() => onSelect(item.id)}
+                >
+                  {item.channel ? (
+                    <ChannelMark channel={item.channel} />
+                  ) : (
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                      {item.icon ?? <WorkflowIcon />}
+                    </span>
+                  )}
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate">{item.name}</span>
+                      {item.favorite ? (
+                        <StarIcon aria-label="已收藏" fill="currentColor" />
+                      ) : null}
+                    </span>
+                    <span
+                      className="truncate text-xs font-normal text-muted-foreground"
+                      title={item.description}
+                    >
+                      {item.description}
+                    </span>
+                  </span>
+                </Button>
+                {onContextMenu ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className="absolute top-3 right-1.5 sm:opacity-0 sm:group-focus-within/resource:opacity-100 sm:group-hover/resource:opacity-100 data-[popup-open]:opacity-100"
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`更多操作：${item.name}`}
+                        />
                       }
-                    : undefined
-                }
-              >
-                {item.channel ? (
-                  <ChannelMark channel={item.channel} />
-                ) : (
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    {item.icon ?? <StudioIcon name="plan" />}
-                  </span>
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium truncate">
-                    {item.name}
-                  </span>
-                  <span className="mt-1 block truncate text-xs text-muted-foreground">
-                    {item.description}
-                  </span>
-                </span>
-                {item.favorite ? (
-                  <span className="ml-auto text-primary">
-                    <StudioIcon name="star" />
-                  </span>
+                    >
+                      <MoreHorizontalIcon />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => onContextMenu(item.id)}
+                        >
+                          <Trash2Icon />
+                          删除{singular}
+                        </DropdownMenuItem>
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ) : null}
-              </button>
+              </div>
             )}
           />
         ) : (
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <StudioIcon name="search" />
+                {total ? <SearchIcon /> : <FolderOpenIcon />}
               </EmptyMedia>
               <EmptyTitle>
-                {singular === "运行" ? "还没有运行记录" : "没有找到匹配的素材"}
+                {total
+                  ? "没有找到匹配项"
+                  : `还没有${singular === "运行" ? "运行记录" : singular}`}
               </EmptyTitle>
               <EmptyDescription>
-                {singular === "运行"
-                  ? "发送一条事件，或运行一个剧本后，快照与回执会出现在这里。"
-                  : "换一个关键词，或清除筛选条件。"}
+                {total
+                  ? "试试其他关键词，或清除筛选。"
+                  : singular === "运行"
+                    ? "完成一次发送后，请求和回执会保存在这里。"
+                    : `新建第一份${singular}，保存后就能反复使用。`}
               </EmptyDescription>
             </EmptyHeader>
-            {onClear ? (
-              <Button size="sm" onClick={onClear} variant="outline">
-                清除筛选
-              </Button>
-            ) : null}
+            <EmptyContent>
+              {!total && onCreate ? (
+                <Button size="sm" variant="outline" onClick={onCreate}>
+                  新建{singular}
+                </Button>
+              ) : onClear && total > 0 ? (
+                <Button size="sm" variant="outline" onClick={onClear}>
+                  清除筛选
+                </Button>
+              ) : null}
+            </EmptyContent>
           </Empty>
         )}
       </div>
-      <footer className="flex shrink-0 items-center justify-between gap-2 border-t px-3 py-2 text-xs text-muted-foreground">
-        <span>共 {filteredTotal} 项</span>
-        <div className="flex items-center gap-2">
-          <IconButton
-            label="上一页"
-            disabled={page <= 1}
-            onClick={() => onPage(page - 1)}
-          >
-            <StudioIcon name="left" />
-          </IconButton>
-          <span className="font-mono tabular-nums">
-            {page} / {pages}
-          </span>
-          <IconButton
-            label="下一页"
-            disabled={page >= pages}
-            onClick={() => onPage(page + 1)}
-          >
-            <StudioIcon name="right" />
-          </IconButton>
-        </div>
+      <footer className="flex min-h-12 shrink-0 items-center justify-between gap-2 border-t px-4 py-2 text-xs text-muted-foreground">
+        <span>
+          {filteredTotal === total
+            ? `共 ${total} 项`
+            : `${filteredTotal} 项结果 · 共 ${total} 项`}
+        </span>
+        {pages > 1 ? (
+          <div className="flex items-center gap-1">
+            <IconButton
+              label="上一页"
+              disabled={page <= 1}
+              onClick={() => onPage(page - 1)}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            <span className="font-mono tabular-nums">
+              {page} / {pages}
+            </span>
+            <IconButton
+              label="下一页"
+              disabled={page >= pages}
+              onClick={() => onPage(page + 1)}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </div>
+        ) : (
+          <span>本机</span>
+        )}
       </footer>
     </>
   );

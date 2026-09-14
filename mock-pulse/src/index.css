@@ -1,12 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: "Bahnschrift", "Segoe UI", sans-serif;
-  --font-sans: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  --font-heading:
+    "Bahnschrift", "Inter Variable", "Microsoft YaHei UI", sans-serif;
+  --font-sans:
+    "Inter Variable", "Segoe UI", "PingFang SC", "Microsoft YaHei UI",
+    "Microsoft YaHei", sans-serif;
   --font-mono: "Cascadia Code", "Consolas", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -26,7 +30,6 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -50,43 +53,42 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* 雾蓝主题：深墨蓝正文、蓝灰次要文字与辅助灰，保留信号蓝和浅色画布。 */
+/* Vega 基础组件，共用一套蓝色主题；成功状态独立于品牌色。 */
 :root {
   color-scheme: light;
   --background: #f4f7fb;
-  --foreground: #152236;
+  --foreground: #26364d;
   --card: #ffffff;
   --card-foreground: var(--foreground);
   --popover: #ffffff;
   --popover-foreground: var(--foreground);
   --primary: #315de8;
   --primary-foreground: #ffffff;
-  --secondary: #edf2ff;
-  --secondary-foreground: var(--foreground);
-  --muted: #edf2f9;
-  --muted-foreground: #4a5a72;
-  --accent: #e4ebf6;
+  --secondary: #ecf0fe;
+  --secondary-foreground: #315de8;
+  --muted: #eef2f8;
+  --muted-foreground: #62718a;
+  --accent: #eef2f8;
   --accent-foreground: var(--foreground);
-  --destructive: #b6434e;
+  --destructive: oklch(0.577 0.245 27.325);
   --success: #16776b;
-  --success-foreground: #ffffff;
   --border: #dfe6f0;
-  --input: #dfe6f0;
-  --ring: #315de8;
-  --chart-1: #315de8;
-  --chart-2: #16776b;
-  --chart-3: #59718e;
-  --chart-4: #809bd4;
-  --chart-5: #26364d;
-  --radius: 0.5rem;
-  --sidebar: #edf2f9;
-  --sidebar-foreground: #36485f;
-  --sidebar-primary: #315de8;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ffffff;
-  --sidebar-accent-foreground: #315de8;
-  --sidebar-border: #dfe6f0;
-  --sidebar-ring: #315de8;
+  --input: #d3dceb;
+  --ring: var(--primary);
+  --chart-1: var(--primary);
+  --chart-2: var(--success);
+  --chart-3: var(--muted-foreground);
+  --chart-4: var(--foreground);
+  --chart-5: var(--border);
+  --radius: 0.625rem;
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--secondary-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {
@@ -94,7 +96,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-sm text-foreground;
+    @apply bg-background text-sm text-foreground antialiased;
+    overflow: hidden;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -102,5 +105,55 @@
   }
   html {
     @apply font-sans;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  ::selection {
+    @apply bg-primary/20;
+  }
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #111827;
+  --foreground: #e8edf7;
+  --card: #182131;
+  --card-foreground: var(--foreground);
+  --popover: #1c2739;
+  --popover-foreground: var(--foreground);
+  --primary: #8ba6ff;
+  --primary-foreground: #101b43;
+  --secondary: #243359;
+  --secondary-foreground: #bccbff;
+  --muted: #232f43;
+  --muted-foreground: #9baac2;
+  --accent: #26344a;
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.704 0.191 22.216);
+  --success: #6cd5bf;
+  --border: #2c3a51;
+  --input: #3b4b65;
+  --ring: var(--primary);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--secondary-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
   }
 }

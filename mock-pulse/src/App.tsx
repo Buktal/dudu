@@ -8,12 +8,10 @@ import {
   type NavGroup,
   WorkspaceShell,
 } from "@/components/shell/workspace-shell";
-import {
-  ConnectionsView,
-  discardConnectionDraft,
-  fetchConnections,
-  saveConnection,
-} from "@/features/connections";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toast";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ConnectionsView, fetchConnections } from "@/features/connections";
 import {
   discardDraft,
   EventsView,
@@ -43,12 +41,9 @@ import {
   stopRun,
 } from "@/features/runs";
 import {
-  discardScenarioDraft,
   fetchScenarios,
   ScenariosView,
-  saveScenario,
   scenarioNamesReferencingEvent,
-  selectScenarioDirty,
 } from "@/features/scenarios";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { useDeleteEventGuarded } from "@/hooks/use-delete-event-guarded";
@@ -58,18 +53,29 @@ import {
   type NavSection,
   selectView,
   setView,
-  VIEWS,
   type ViewId,
-  viewEntry,
 } from "@/stores/app-slice";
+import { resolveViewEntry, VIEW_ENTRIES } from "@/view-behavior";
 
 const SECTION_ORDER: readonly NavSection[] = ["build", "monitor", "bottom"];
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <TooltipProvider>
+        <MockPulseApp />
+        <Toaster />
+      </TooltipProvider>
+    </ThemeProvider>
+  );
+}
+
+function MockPulseApp() {
   const dispatch = useAppDispatch();
   const view = useAppSelector((state) => selectView(state.app));
   const state = useAppSelector(
     (root) => ({
+      app: root.app,
       events: root.events,
       scenarios: root.scenarios,
       plans: root.plans,
@@ -113,50 +119,17 @@ export default function App() {
     (root) => (draftId ? scenarioNamesReferencingEvent(root, draftId) : []),
     shallowEqual,
   );
-  const connectionDraft =
-    state.connections.drafts?.[state.connections.selectedChannel];
-  const current =
-    view === "events"
-      ? state.events.draft
-      : view === "scenarios"
-        ? state.scenarios.draft
-        : view === "plans"
-          ? state.plans.draft
-          : null;
-  const dirty =
-    view === "events"
-      ? selectDraftDirty(state.events)
-      : view === "scenarios"
-        ? selectScenarioDirty(state.scenarios)
-        : view === "plans"
-          ? selectPlanDirty(state.plans)
-          : view === "connections" &&
-            !!connectionDraft &&
-            JSON.stringify(connectionDraft) !==
-              JSON.stringify(
-                state.connections.items[state.connections.selectedChannel],
-              );
-  const saveCurrent = (): Promise<unknown> =>
-    view === "events"
-      ? dispatch(saveEvent()).unwrap()
-      : view === "scenarios"
-        ? dispatch(saveScenario()).unwrap()
-        : view === "plans"
-          ? dispatch(savePlan()).unwrap()
-          : connectionDraft
-            ? dispatch(saveConnection(connectionDraft)).unwrap()
-            : Promise.resolve();
-  const discardCurrent = () => {
-    if (view === "events") dispatch(discardDraft());
-    else if (view === "scenarios") dispatch(discardScenarioDraft());
-    else if (view === "plans") dispatch(discardPlanDraft());
-    else if (view === "connections")
-      dispatch(discardConnectionDraft(state.connections.selectedChannel));
-  };
+  // 当前视图行为一次查表：脏判定、草稿名、保存、放弃全部来自注册表条目
+  const entry = resolveViewEntry(view);
+  const { behavior } = entry;
+  const dirty = behavior.isDirty(state);
+  const currentName = behavior.draftName?.(state) ?? null;
+  const saveCurrent = (): Promise<unknown> => behavior.save(state, dispatch);
+  const discardCurrent = () => behavior.discard(state, dispatch);
   const groups: NavGroup<ViewId>[] = SECTION_ORDER.map((section) => ({
     label: section === "build" ? "构建与调试" : undefined,
     pinnedBottom: section === "bottom",
-    entries: VIEWS.filter((item) => item.navSection === section).map(
+    entries: VIEW_ENTRIES.filter((item) => item.navSection === section).map(
       (item) => ({
         ...item,
         count: item.id === "connections" ? undefined : counts[item.id],
@@ -167,7 +140,7 @@ export default function App() {
     <LibraryProvider>
       <DraftGuard
         dirty={dirty}
-        name={current?.name ?? "平台连接"}
+        name={currentName ?? "平台连接"}
         onSave={saveCurrent}
         onDiscard={discardCurrent}
       >
@@ -190,7 +163,7 @@ export default function App() {
                     <WorkspaceShell
                       navGroups={groups}
                       currentView={view}
-                      currentTitle={viewEntry(view).name}
+                      currentTitle={entry.name}
                       onSelectView={(next) => {
                         if (next !== view)
                           navigate(() => dispatch(setView(next)));

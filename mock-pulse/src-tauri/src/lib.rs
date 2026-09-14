@@ -7,6 +7,18 @@ mod runs;
 mod scenarios;
 mod sends;
 
+use tauri::Manager;
+
+/// TcpListener 测试基建共享单点（只在 cargo test 下编译，不进 release）。
+#[cfg(test)]
+mod test_support;
+
+/// 应用数据目录（各域落盘命令共用的单点）：解析失败统一转 String
+/// （Tauri 命令的 `Result<_, String>` 契约）。
+pub(crate) fn app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    app.path().app_data_dir().map_err(|err| err.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -26,8 +38,8 @@ pub fn run() {
             plans::plans_delete,
             runs::runs_load,
             runs::runs_save,
-            runs::executor::start_plan_run,
-            runs::executor::start_scenario_run,
+            runs::executor::commands::start_plan_run,
+            runs::executor::commands::start_scenario_run,
             runs::control::stop_run,
             scenarios::scenarios_load,
             scenarios::scenarios_save,

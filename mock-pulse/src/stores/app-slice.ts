@@ -8,6 +8,8 @@ import {
   Zap,
 } from "lucide-react";
 
+import type { AppDispatch, RootState } from "@/store";
+
 export const VIEW_IDS = [
   "events",
   "scenarios",
@@ -21,6 +23,24 @@ export type ViewId = (typeof VIEW_IDS)[number];
 /** 侧栏分组：build=构建与调试、monitor=运行记录、bottom=平台连接固定底部 */
 export type NavSection = "build" | "monitor" | "bottom";
 
+/**
+ * 视图行为位：外层 DraftGuard 消费的「当前视图草稿」语义。
+ * 形状在此声明，实现由组合根 src/view-behavior.ts 静态装配——本文件不能
+ * 运行时 import feature（event-editor 等组件反向 import setView，直接装配
+ * 会在模块图成环，见 biome noImportCycles）。
+ */
+export type ViewBehavior = {
+  /** 当前视图草稿显示名；无草稿返回 null（守卫回退「平台连接」）。
+   *  无草稿语义的视图（runs）省略此位。 */
+  draftName?: (rootState: RootState) => string | null;
+  /** 是否存在未保存修改 */
+  isDirty: (rootState: RootState) => boolean;
+  /** 保存当前草稿；reject 由守卫捕获展示 */
+  save: (rootState: RootState, dispatch: AppDispatch) => Promise<unknown>;
+  /** 放弃当前草稿修改 */
+  discard: (rootState: RootState, dispatch: AppDispatch) => void;
+};
+
 export type ViewEntry = {
   id: ViewId;
   /** 侧栏与面包屑显示名 */
@@ -31,6 +51,8 @@ export type ViewEntry = {
   implemented: boolean;
   icon: LucideIcon;
   navSection: NavSection;
+  /** 行为位：view-behavior.ts 按 id 装配；本文件的 VIEWS 只带元数据 */
+  behavior?: ViewBehavior;
 };
 
 /** 静态视图注册表：包含 React 图标，不进入 Redux state；state 只保存当前视图 id。 */
@@ -112,12 +134,3 @@ export const { setView } = appSlice.actions;
 export const appReducer = appSlice.reducer;
 
 export const selectView = (state: AppState): ViewId => state.view;
-
-/** 注册表必命中：view 只能来自受校验的 setView 或初始态 */
-export function viewEntry(view: ViewId): ViewEntry {
-  const found = VIEWS.find((entry) => entry.id === view);
-  if (!found) {
-    throw new Error(`视图未注册：${view}`);
-  }
-  return found;
-}

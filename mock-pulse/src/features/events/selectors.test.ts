@@ -2,12 +2,7 @@ import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 
 import type { EventItem } from "./model";
-import {
-  type EventFilters,
-  filterEvents,
-  PAGE_SIZE,
-  paginateEvents,
-} from "./selectors";
+import { type EventFilters, filterEvents } from "./selectors";
 
 /** 固定 seed 的数百条样本工厂（验收：筛选分页在数百条样本下可用） */
 function seededEvents(count: number): EventItem[] {
@@ -179,33 +174,6 @@ describe("filterEvents", () => {
         kind: "event",
       }).map((row) => row.item.id),
     ).toEqual(["evt-wc-enter"]);
-  });
-});
-
-describe("paginateEvents", () => {
-  it("分页切片与页数正确", () => {
-    const items = seededEvents(300);
-    const filtered = filterEvents(items, NO_FILTERS);
-    const page2 = paginateEvents(filtered, 2);
-    expect(page2.total).toBe(300);
-    expect(page2.pages).toBe(Math.ceil(300 / PAGE_SIZE));
-    expect(page2.page).toBe(2);
-    expect(page2.items).toEqual(filtered.slice(PAGE_SIZE, PAGE_SIZE * 2));
-    expect(page2.items[0]?.item.id).toBe(filtered[PAGE_SIZE]?.item.id);
-  });
-
-  it("页码越界收敛到有效区间", () => {
-    const items = seededEvents(300);
-    const filtered = filterEvents(items, NO_FILTERS);
-    expect(paginateEvents(filtered, 0).page).toBe(1);
-    expect(paginateEvents(filtered, 9999).page).toBe(
-      Math.ceil(300 / PAGE_SIZE),
-    );
-  });
-
-  it("空列表返回第 1 页空切片", () => {
-    const page = paginateEvents([], 3);
-    expect(page).toEqual({ items: [], page: 1, pages: 1, total: 0 });
   });
 });
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { PAGE_SIZE } from "@/lib/paginate";
+
 import { addLane, createPlan, withFavorite } from "./model";
-import { filterPlans, PAGE_SIZE, paginatePlans, planStats } from "./selectors";
+import { filterPlans, planStats } from "./selectors";
 
 function planOf(name: string, items: string[], favorite = false) {
   let plan = withFavorite(createPlan(name, "parallel"), favorite);
@@ -16,7 +18,7 @@ const SCENARIOS = [
   { id: "scn-wc", channelId: "wecom" as const, steps: [{}] },
 ];
 
-describe("编排筛选与分页", () => {
+describe("编排筛选", () => {
   const items = [
     planOf("双平台回归", ["scn-dy", "scn-wc"], true),
     planOf("抖音串行", ["scn-dy"]),
@@ -44,50 +46,32 @@ describe("编排筛选与分页", () => {
     expect(rows.map((row) => row.plan.name)).toEqual(["双平台回归"]);
   });
 
-  it("paginatePlans：页码收敛，空列表为第 1 页", () => {
+  it("数百条编排可筛选（分页语义由 lib/paginate 统一验收）", () => {
     const many = Array.from({ length: PAGE_SIZE + 3 }, (_v, index) =>
       planOf(`编排 ${index}`, []),
     );
-    const rows = filterPlans(many, { query: "", kind: "all" });
-    const page1 = paginatePlans(rows, 1);
-    expect(page1.pages).toBe(2);
-    expect(page1.items).toHaveLength(PAGE_SIZE);
-    expect(paginatePlans(rows, 99).page).toBe(page1.pages);
-    expect(paginatePlans([], 5)).toEqual({
-      items: [],
-      page: 1,
-      pages: 1,
-      total: 0,
-    });
+    expect(filterPlans(many, { query: "", kind: "all" })).toHaveLength(
+      PAGE_SIZE + 3,
+    );
   });
 });
 
 describe("编排统计 planStats", () => {
-  it("平台按引用剧本的渠道去重；事件 = 各剧本步骤数之和", () => {
-    let plan = createPlan("跨渠道", "parallel");
-    plan = addLane(plan, "scn-dy");
-    plan = addLane(plan, "scn-wc");
-    plan = addLane(plan, "scn-dy");
-    expect(planStats(plan, SCENARIOS)).toEqual({
+  it("平台按 lane 渠道去重；事件 = 各 lane 步骤数之和", () => {
+    expect(planStats([SCENARIOS[0], SCENARIOS[1], SCENARIOS[0]])).toEqual({
       platformCount: 2,
       eventCount: 5,
     });
   });
 
-  it("引用失效的 lane 不计入统计", () => {
-    let plan = createPlan("含失效 lane", "serial");
-    plan = addLane(plan, "scn-dy");
-    plan = addLane(plan, "scn-gone");
-    expect(planStats(plan, SCENARIOS)).toEqual({
+  it("未解析的 lane（undefined）不计入统计", () => {
+    expect(planStats([SCENARIOS[0], undefined])).toEqual({
       platformCount: 1,
       eventCount: 2,
     });
   });
 
   it("空编排为 0 平台 0 事件", () => {
-    expect(planStats(createPlan("空", "parallel"), SCENARIOS)).toEqual({
-      platformCount: 0,
-      eventCount: 0,
-    });
+    expect(planStats([])).toEqual({ platformCount: 0, eventCount: 0 });
   });
 });

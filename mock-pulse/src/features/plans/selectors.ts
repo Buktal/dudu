@@ -1,15 +1,14 @@
 import type { ChannelId } from "@/lib/channels";
+import { type Page, paginate as paginateList } from "@/lib/paginate";
 
 import type { Plan } from "./model";
-import { planModeLabel, plansReferencingScenario, scenarioById } from "./model";
+import { planModeLabel, plansReferencingScenario } from "./model";
 
 /** 编排筛选：搜索 + 全部/收藏 tab（纯 selector，列表交给 react-virtuoso） */
 export type PlanFilters = {
   query: string;
   kind: "all" | "favorite";
 };
-
-export const PAGE_SIZE = 10;
 
 /** 列表行：编排 + 派生展示事实（剧本数 / 执行方式文案） */
 export type PlanRow = {
@@ -35,40 +34,25 @@ export function filterPlans(items: Plan[], filters: PlanFilters): PlanRow[] {
     });
 }
 
-export type PlanPage = {
-  items: PlanRow[];
-  page: number;
-  pages: number;
-  total: number;
-};
+export type PlanPage = Page<PlanRow>;
 
-/** 分页（页码收敛到 [1, pages]；空列表为第 1 页）。页大小固定 PAGE_SIZE。 */
-export function paginatePlans(rows: PlanRow[], page: number): PlanPage {
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const clamped = Math.max(1, Math.min(page, pages));
-  return {
-    items: rows.slice((clamped - 1) * PAGE_SIZE, clamped * PAGE_SIZE),
-    page: clamped,
-    pages,
-    total: rows.length,
-  };
-}
+/** 分页：转发 lib 泛型实现（页码收敛到 [1, pages]；空列表为第 1 页）。 */
+export const paginatePlans = paginateList;
 
-/** 编辑器底部统计：「N 个平台 · N 个事件」——平台按引用剧本的渠道去重。 */
+/** 编辑器底部统计：「N 个平台 · N 个事件」——平台按 lane 渠道去重，
+ *  事件 = 各 lane 步骤数之和。入参为已解析的 lane 剧本列表
+ *  （resolveLaneScenario 产物：快照优先），未解析的 lane 不计入。 */
+type ResolvedLane = { channelId: ChannelId; steps: readonly unknown[] };
+
 export function planStats(
-  plan: Plan,
-  scenarios: readonly {
-    id: string;
-    channelId: ChannelId;
-    steps: readonly unknown[];
-  }[],
+  laneScenarios: readonly (ResolvedLane | undefined)[],
 ): { platformCount: number; eventCount: number } {
-  const referenced = plan.items
-    .map((item) => scenarioById(scenarios, item.scenarioId))
-    .filter((scenario) => scenario !== undefined);
-  const platforms = new Set(referenced.map((scenario) => scenario.channelId));
+  const referenced = laneScenarios.filter(
+    (scene): scene is ResolvedLane => scene !== undefined,
+  );
+  const platforms = new Set(referenced.map((scene) => scene.channelId));
   const eventCount = referenced.reduce(
-    (sum, scenario) => sum + scenario.steps.length,
+    (sum, scene) => sum + scene.steps.length,
     0,
   );
   return { platformCount: platforms.size, eventCount };

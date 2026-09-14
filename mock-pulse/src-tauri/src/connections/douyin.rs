@@ -7,24 +7,9 @@
 
 use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
-use super::HandshakeOutcome;
-use super::ConnectionConfig;
-
-/// 直发结果：签名头快照 + HTTP 状态 + 耗时 + 原始回执文本。
-/// status 0 = 未收到响应（超时/连接失败，原因在 error）。
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct DispatchOutcome {
-    pub msg_id: String,
-    pub signature: String,
-    pub status: u16,
-    pub elapsed_ms: u64,
-    pub body: String,
-    pub error: Option<String>,
-}
+use super::{ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
 /// 官方算法：sha1(client_secret + body 字节) 的小写 hex。
 pub fn sign(client_secret: &str, body: &str) -> String {
@@ -70,7 +55,8 @@ pub fn check_echo(expected: u64, response_body: &str) -> Result<(), String> {
 
 /// 按官方协议向目标发起 verify_webhook challenge 握手。
 /// 成功 = HTTP 200 且 challenge 原样回显；失败返回原因（不匹配/非 200/网络错误/超时）。
-pub fn verify_handshake(
+/// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
+fn verify_handshake(
     client: &reqwest::blocking::Client,
     config: &ConnectionConfig,
 ) -> HandshakeOutcome {
@@ -101,16 +87,9 @@ pub fn verify_handshake(
     let response = match response {
         Ok(response) => response,
         Err(err) => {
-            let reason = if err.is_timeout() {
-                "等待响应超时".to_string()
-            } else if err.is_connect() {
-                "无法连接到目标地址".to_string()
-            } else {
-                "请求发送失败".to_string()
-            };
             return HandshakeOutcome {
                 ok: false,
-                message: format!("{reason}：{err}"),
+                message: format!("{}：{err}", super::request_error_reason(&err, "")),
             };
         }
     };
@@ -136,23 +115,11 @@ pub fn verify_handshake(
     }
 }
 
-/// 生产用默认客户端：抖音连接超过 5s 自动断开，本地留 5s 上限。
-/// 握手与直发共用同一超时上限。
-pub fn handshake_client() -> reqwest::blocking::Client {
-    client_with_timeout(Duration::from_secs(5))
-}
-
-/// 指定超时的客户端（执行器/测试共用同一构造，不复制协议）。
-pub fn client_with_timeout(timeout: Duration) -> reqwest::blocking::Client {
-    reqwest::blocking::Client::builder()
-        .timeout(timeout)
-        .build()
-        .expect("构造 reqwest 客户端失败")
-}
-
 /// 按抖音协议直发一条事件：body 是前端逐字节拼装的明文，
 /// 这里只计算签名、构造头并 POST——字节透传，不重新解析/重排。
-pub fn dispatch_event(
+/// request_body 快照 = 明文（线上请求体即明文本身，超时/连接失败路径同样保留）。
+/// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
+fn dispatch_event(
     client: &reqwest::blocking::Client,
     config: &ConnectionConfig,
     body: &str,
@@ -163,14 +130,7 @@ pub fn dispatch_event(
         ..
     } = config
     else {
-        return DispatchOutcome {
-            msg_id: uuid::Uuid::new_v4().to_string(),
-            signature: String::new(),
-            status: 0,
-            elapsed_ms: 0,
-            body: String::new(),
-            error: Some("配置不是抖音渠道，无法直发".into()),
-        };
+        return DispatchOutcome::not_sent("配置不是抖音渠道，无法直发");
     };
     let signature = sign(client_secret, body);
     let msg_id = uuid::Uuid::new_v4().to_string();
@@ -189,39 +149,82 @@ pub fn dispatch_event(
         Ok(response) => DispatchOutcome {
             msg_id,
             signature,
+            timestamp: None,
+            request_body: Some(body.to_string()),
+            reply: None,
             status: response.status().as_u16(),
             elapsed_ms,
             body: response.text().unwrap_or_default(),
             error: None,
         },
-        Err(err) => {
-            let reason = if err.is_timeout() {
-                "等待响应超时"
-            } else if err.is_connect() {
-                "无法连接到目标地址"
-            } else {
-                "请求发送失败"
-            };
-            DispatchOutcome {
-                msg_id,
-                signature,
-                status: 0,
-                elapsed_ms,
-                body: String::new(),
-                error: Some(format!("{reason}：{err}")),
-            }
-        }
+        Err(err) => DispatchOutcome {
+            msg_id,
+            signature,
+            timestamp: None,
+            request_body: Some(body.to_string()),
+            reply: None,
+            status: 0,
+            elapsed_ms,
+            body: String::new(),
+            error: Some(format!("{}：{err}", super::request_error_reason(&err, ""))),
+        },
+    }
+}
+
+/// 抖音渠道适配器：[`super::ChannelAdapter`] 的抖音实现——
+/// 签名/头构造/载荷格式全部复用本模块的协议原语，不对外暴露。
+pub(crate) struct Adapter;
+
+impl super::ChannelAdapter for Adapter {
+    fn id(&self) -> &'static str {
+        "douyin"
+    }
+
+    fn label(&self) -> &'static str {
+        "抖音"
+    }
+
+    fn matches(&self, config: &ConnectionConfig) -> bool {
+        matches!(config, ConnectionConfig::Douyin { .. })
+    }
+
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
+        let ConnectionConfig::Douyin { url, .. } = config else {
+            return None;
+        };
+        Some(url)
+    }
+
+    fn handshake_client(&self) -> reqwest::blocking::Client {
+        // 生产用默认客户端：抖音连接超过 5s 自动断开，本地留 5s 上限
+        // （握手与直发共用同一超时上限）
+        super::client_with_timeout(Duration::from_secs(5))
+    }
+
+    fn verify_handshake(
+        &self,
+        client: &reqwest::blocking::Client,
+        config: &ConnectionConfig,
+    ) -> HandshakeOutcome {
+        verify_handshake(client, config)
+    }
+
+    fn dispatch_event(
+        &self,
+        client: &reqwest::blocking::Client,
+        config: &ConnectionConfig,
+        body: &str,
+    ) -> DispatchOutcome {
+        dispatch_event(client, config, body)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Read, Write};
-    use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
-    use std::sync::mpsc::{channel, Receiver};
     use std::time::Duration;
 
     use super::*;
+    use crate::test_support::{quick_client, start_single_server, RecordedPost};
 
     #[test]
     fn sign_matches_known_sha1_vector() {
@@ -270,60 +273,6 @@ mod tests {
 
     // ---- 握手全链路：本地 TcpListener 极简监听演示成功/失败两条路径 ----
 
-    #[derive(Clone)]
-    struct RecordedRequest {
-        request_line: String,
-        head: String,
-        body: String,
-    }
-
-    impl RecordedRequest {
-        fn header(&self, name: &str) -> Option<String> {
-            self.head.lines().find_map(|line| {
-                let (key, value) = line.split_once(':')?;
-                if key.trim().eq_ignore_ascii_case(name) {
-                    Some(value.trim().to_string())
-                } else {
-                    None
-                }
-            })
-        }
-    }
-
-    fn read_head_and_body(stream: &mut TcpStream) -> RecordedRequest {
-        let mut buf = Vec::new();
-        let mut chunk = [0u8; 4096];
-        loop {
-            let n = stream.read(&mut chunk).unwrap();
-            assert!(n > 0, "客户端提前断开");
-            buf.extend_from_slice(&chunk[..n]);
-            if let Some(split) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
-                let head = String::from_utf8_lossy(&buf[..split]).to_string();
-                let content_length = head
-                    .lines()
-                    .find_map(|line| {
-                        let (k, v) = line.split_once(':')?;
-                        if k.trim().eq_ignore_ascii_case("content-length") {
-                            v.trim().parse::<usize>().ok()
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or(0);
-                if buf.len() >= split + 4 + content_length {
-                    let request_line = head.lines().next().unwrap_or_default().to_string();
-                    let body = String::from_utf8_lossy(&buf[split + 4..split + 4 + content_length])
-                        .to_string();
-                    return RecordedRequest {
-                        request_line,
-                        head,
-                        body,
-                    };
-                }
-            }
-        }
-    }
-
     fn challenge_of(body: &str) -> u64 {
         serde_json::from_str::<serde_json::Value>(body)
             .unwrap()
@@ -332,44 +281,13 @@ mod tests {
             .unwrap()
     }
 
-    /// 起一个只处理一次请求的本地监听；responder 决定状态行与响应体。
-    fn start_server(
-        responder: fn(&RecordedRequest) -> (String, String),
-        delay: Duration,
-    ) -> (SocketAddr, Receiver<RecordedRequest>) {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-        let (tx, rx) = channel();
-        std::thread::spawn(move || {
-            let (mut stream, _) = listener.accept().unwrap();
-            let request = read_head_and_body(&mut stream);
-            tx.send(request.clone()).unwrap();
-            std::thread::sleep(delay);
-            let (status_line, body) = responder(&request);
-            let response = format!(
-                "{status_line}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                body.len()
-            );
-            stream.write_all(response.as_bytes()).unwrap();
-            stream.shutdown(Shutdown::Both).unwrap();
-        });
-        (addr, rx)
-    }
-
-    fn echo_ok(request: &RecordedRequest) -> (String, String) {
+    fn echo_ok(request: &RecordedPost) -> (String, String) {
         // 官方期望的成功实现：解析 challenge 后原样回显
         let challenge = challenge_of(&request.body);
         (
             "HTTP/1.1 200 OK".into(),
             format!("{{\"challenge\":{challenge}}}"),
         )
-    }
-
-    fn quick_client(timeout: Duration) -> reqwest::blocking::Client {
-        reqwest::blocking::Client::builder()
-            .timeout(timeout)
-            .build()
-            .unwrap()
     }
 
     fn config_with_url(url: String) -> ConnectionConfig {
@@ -382,7 +300,7 @@ mod tests {
 
     #[test]
     fn handshake_succeeds_when_challenge_echoed() {
-        let (addr, rx) = start_server(echo_ok, Duration::ZERO);
+        let (addr, rx) = start_single_server(echo_ok, Duration::ZERO);
         let config = config_with_url(format!("http://{addr}/webhooks/douyin"));
         let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
 
@@ -420,14 +338,14 @@ mod tests {
 
     #[test]
     fn handshake_fails_when_challenge_not_echoed() {
-        let wrong = |_request: &RecordedRequest| {
+        let wrong = |_request: &RecordedPost| {
             (
                 "HTTP/1.1 200 OK".to_string(),
                 r#"{"challenge":999}"#.to_string(),
             )
         };
-        let responder: fn(&RecordedRequest) -> (String, String) = wrong;
-        let (addr, _rx) = start_server(responder, Duration::ZERO);
+        let responder: fn(&RecordedPost) -> (String, String) = wrong;
+        let (addr, _rx) = start_single_server(responder, Duration::ZERO);
         let config = config_with_url(format!("http://{addr}/hook"));
         let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
 
@@ -437,9 +355,9 @@ mod tests {
 
     #[test]
     fn handshake_fails_on_non_200() {
-        let responder: fn(&RecordedRequest) -> (String, String) =
+        let responder: fn(&RecordedPost) -> (String, String) =
             |_| ("HTTP/1.1 500 Internal Server Error".into(), "boom".into());
-        let (addr, _rx) = start_server(responder, Duration::ZERO);
+        let (addr, _rx) = start_single_server(responder, Duration::ZERO);
         let config = config_with_url(format!("http://{addr}/hook"));
         let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
 
@@ -450,7 +368,7 @@ mod tests {
     #[test]
     fn handshake_fails_on_timeout() {
         // 客户端 200ms 超时 vs 服务器 1s 延迟
-        let (addr, _rx) = start_server(echo_ok, Duration::from_secs(1));
+        let (addr, _rx) = start_single_server(echo_ok, Duration::from_secs(1));
         let config = config_with_url(format!("http://{addr}/hook"));
         let outcome = verify_handshake(&quick_client(Duration::from_millis(200)), &config);
 
@@ -462,10 +380,10 @@ mod tests {
 
     #[test]
     fn dispatch_delivers_signed_body_verbatim_and_returns_receipt() {
-        let responder: fn(&RecordedRequest) -> (String, String) = |_| {
+        let responder: fn(&RecordedPost) -> (String, String) = |_| {
             ("HTTP/1.1 200 OK".into(), "ok".into())
         };
-        let (addr, rx) = start_server(responder, Duration::ZERO);
+        let (addr, rx) = start_single_server(responder, Duration::ZERO);
         let config = config_with_url(format!("http://{addr}/webhooks/douyin"));
         // 前端逐字节拼装的明文（含非 ASCII，验证 UTF-8 字节透传）
         let plaintext = r#"{"event":"im_receive_msg","content":{"text":"你好，抖音"}}"#;
@@ -510,10 +428,10 @@ mod tests {
 
     #[test]
     fn dispatch_returns_non_200_status_and_body() {
-        let responder: fn(&RecordedRequest) -> (String, String) = |_| {
+        let responder: fn(&RecordedPost) -> (String, String) = |_| {
             ("HTTP/1.1 500 Internal Server Error".into(), "boom".into())
         };
-        let (addr, _rx) = start_server(responder, Duration::ZERO);
+        let (addr, _rx) = start_single_server(responder, Duration::ZERO);
         let config = config_with_url(format!("http://{addr}/hook"));
 
         let outcome = dispatch_event(
@@ -529,7 +447,7 @@ mod tests {
 
     #[test]
     fn dispatch_reports_timeout_without_response() {
-        let (addr, _rx) = start_server(echo_ok, Duration::from_secs(1));
+        let (addr, _rx) = start_single_server(echo_ok, Duration::from_secs(1));
         let config = config_with_url(format!("http://{addr}/hook"));
 
         let outcome = dispatch_event(

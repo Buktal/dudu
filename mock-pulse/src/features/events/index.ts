@@ -28,6 +28,10 @@ export {
   type XmlLayout,
 } from "./schemas";
 export {
+  selectDraftChannelId,
+  selectDraftId,
+} from "./selectors";
+export {
   deleteEvent,
   discardDraft,
   duplicateCurrentDraft,
@@ -40,9 +44,7 @@ export {
   renameEvent,
   resolveCurrentDraft,
   saveEvent,
-  selectDraftChannelId,
   selectDraftDirty,
-  selectDraftId,
   setDraftExpected,
   setDraftField,
   setDraftName,

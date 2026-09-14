@@ -1,8 +1,27 @@
+import {
+  ArrowDownIcon,
+  ArrowRightIcon,
+  HistoryIcon,
+  SquareIcon,
+} from "lucide-react";
 import { Fragment } from "react";
 import { ChannelMark } from "@/components/channel-mark";
-import { StudioIcon } from "@/components/studio-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Progress,
+  ProgressLabel,
+  ProgressValue,
+} from "@/components/ui/progress";
+import { Spinner } from "@/components/ui/spinner";
 import type { ChannelId } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 import type { RunRecord } from "../model";
@@ -19,7 +38,7 @@ export type TimelineLane = {
 
 export function StatusBadge({ status }: { status: string }) {
   const labels: Record<string, string> = {
-    success: "已完成",
+    success: "已通过",
     failed: "未通过",
     waiting: "运行中",
     pending: "等待开始",
@@ -28,13 +47,20 @@ export function StatusBadge({ status }: { status: string }) {
   };
   return (
     <Badge
-      variant="outline"
-      className={cn(
-        "inline-flex items-center gap-2 text-xs",
-        status === "waiting" ? "running" : status,
-      )}
+      variant={
+        status === "failed"
+          ? "destructive"
+          : status === "waiting"
+            ? "default"
+            : "outline"
+      }
     >
-      <span className="inline-block size-1.5 shrink-0 rounded-full bg-current" />
+      <span
+        className={cn(
+          "size-1.5 shrink-0 rounded-full bg-current",
+          status === "success" && "text-success",
+        )}
+      />
       {labels[status] ?? status}
     </Badge>
   );
@@ -87,12 +113,20 @@ export function RunSummary({
   lanes,
   mode = "serial",
   active = false,
+  stopping = false,
+  cancelled = false,
+  source = "scenario",
+  title,
   onStop,
   onOpen,
 }: {
   lanes: TimelineLane[];
   mode?: "serial" | "parallel";
   active?: boolean;
+  stopping?: boolean;
+  cancelled?: boolean;
+  source?: RunRecord["source"];
+  title?: string;
   onStop?: () => void;
   onOpen?: () => void;
 }) {
@@ -102,58 +136,72 @@ export function RunSummary({
   const completed = steps.filter(
     (step) => !["pending", "waiting"].includes(step.status),
   ).length;
+  const status = active
+    ? "waiting"
+    : cancelled
+      ? "cancelled"
+      : failed || !steps.length
+        ? "failed"
+        : steps.some((step) => step.status === "skipped")
+          ? "cancelled"
+          : "success";
   return (
-    <div className="mb-5 flex flex-col gap-3 rounded-xl border bg-muted/30 p-4">
-      <div className="flex items-center gap-2">
-        <h3 className="min-w-0 flex-1">
-          {active ? "正在执行" : "最近一次运行"}
-        </h3>
-        <StatusBadge
-          status={
-            active
-              ? "waiting"
-              : failed
-                ? "failed"
-                : steps.some((step) => step.status === "skipped")
-                  ? "cancelled"
-                  : "success"
-          }
-        />
-        {active && onStop ? (
-          <Button size="sm" variant="ghost" onClick={onStop}>
-            <StudioIcon name="stop" data-icon="inline-start" />
-            停止
-          </Button>
-        ) : onOpen ? (
-          <Button size="sm" variant="ghost" onClick={onOpen}>
-            <StudioIcon name="history" data-icon="inline-start" />
-            查看记录
-          </Button>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        <span>
-          {mode === "parallel" ? "并行" : "串行"} · {lanes.length} 个剧本
-        </span>
-        <span className="font-mono">
-          {completed} / {steps.length}
-        </span>
-        <span className="text-success">{passed} 通过</span>
-        {failed ? (
-          <span className="text-destructive">{failed} 未通过</span>
-        ) : null}
-        <span className="min-w-0 flex-1" />
-        <span>HTTP 回执</span>
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-primary"
-          style={{
-            width: `${steps.length ? (100 * completed) / steps.length : 0}%`,
-          }}
-        />
-      </div>
-    </div>
+    <Card className="mb-5" size="sm">
+      <CardHeader className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
+            {title ?? (active ? "正在执行" : "最近一次运行")}
+            <StatusBadge status={status} />
+          </CardTitle>
+          <CardDescription className="flex flex-wrap items-center gap-3">
+            <span>
+              {source === "direct"
+                ? "单条发送"
+                : source === "scenario"
+                  ? `${steps.length} 步 · 顺序执行`
+                  : `${mode === "parallel" ? "并行" : "串行"} · ${lanes.length} 个剧本`}
+            </span>
+            <span className="text-success">{passed} 通过</span>
+            {failed ? (
+              <span className="text-destructive">{failed} 未通过</span>
+            ) : null}
+          </CardDescription>
+        </div>
+        <CardAction>
+          {active && onStop ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onStop}
+              disabled={stopping}
+            >
+              {stopping ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <SquareIcon data-icon="inline-start" />
+              )}
+              {stopping ? "正在停止…" : "停止"}
+            </Button>
+          ) : onOpen ? (
+            <Button size="sm" variant="ghost" onClick={onOpen}>
+              <HistoryIcon data-icon="inline-start" />
+              查看记录
+            </Button>
+          ) : null}
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <Progress
+          value={steps.length ? (100 * completed) / steps.length : 0}
+          aria-label="运行进度"
+        >
+          <ProgressLabel>执行进度</ProgressLabel>
+          <ProgressValue>
+            {() => `${completed} / ${steps.length}`}
+          </ProgressValue>
+        </Progress>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -165,7 +213,7 @@ export function RunLanes({
   mode?: "serial" | "parallel";
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-4">
       {lanes.map((lane, index) => {
         const status = lane.steps.some((step) => step.status === "waiting")
           ? "waiting"
@@ -181,61 +229,58 @@ export function RunLanes({
           <Fragment key={`${index}-${lane.name}`}>
             {mode === "serial" && index > 0 ? (
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                <StudioIcon name="down" />
+                <ArrowDownIcon className="size-4" />
                 等待前一剧本结束
               </div>
             ) : null}
-            <article className="min-w-0 rounded-xl border bg-card p-4">
-              <header className="mb-3 flex flex-wrap items-center gap-2">
-                <ChannelMark channel={lane.channel} small />
-                <div className="min-w-0 flex-1">
-                  <h3>{lane.name}</h3>
-                  <p>
-                    {lane.timing ??
-                      (status === "pending"
-                        ? "尚未开始"
-                        : status === "waiting"
-                          ? "正在执行"
-                          : "执行结束")}
-                  </p>
-                </div>
-                <StatusBadge status={status} />
-              </header>
-              <div className="flex min-w-0 items-center gap-3 overflow-x-auto pb-2">
-                {lane.steps.map((step, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: 运行快照中的步骤位置不可变，事件可重复出现。
-                  <Fragment key={`${i}-${step.name}`}>
-                    {i ? (
-                      <span className="shrink-0 text-muted-foreground">→</span>
-                    ) : null}
-                    <div
-                      className={cn(
-                        "min-w-28 shrink-0 rounded-lg border bg-background p-3 text-sm text-muted-foreground",
-                        step.status === "success"
-                          ? "done"
-                          : step.status === "waiting"
-                            ? ""
-                            : step.status,
-                      )}
+            <Card className="min-w-0" size="sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ChannelMark channel={lane.channel} small />
+                  {lane.name}
+                </CardTitle>
+                <CardDescription>
+                  {lane.timing ??
+                    (status === "pending"
+                      ? "尚未开始"
+                      : status === "waiting"
+                        ? "正在执行"
+                        : "执行结束")}
+                </CardDescription>
+                <CardAction>
+                  <StatusBadge status={status} />
+                </CardAction>
+              </CardHeader>
+              <CardContent className="min-w-0">
+                <ol
+                  className="flex min-w-0 items-center gap-3 overflow-x-auto pb-2"
+                  aria-label={`${lane.name}的运行步骤`}
+                >
+                  {lane.steps.map((step, stepIndex) => (
+                    <li
+                      // biome-ignore lint/suspicious/noArrayIndexKey: 运行快照中的步骤位置不可变，事件可重复出现。
+                      key={`${stepIndex}-${step.name}`}
+                      className="flex shrink-0 items-center gap-3"
                     >
-                      {step.name}
-                      <small>
-                        {step.detail ??
-                          (step.status === "pending"
-                            ? "等待"
-                            : step.status === "waiting"
-                              ? "正在发送"
-                              : step.status === "success"
-                                ? "通过"
-                                : step.status === "failed"
-                                  ? "未通过"
-                                  : "已停止")}
-                      </small>
-                    </div>
-                  </Fragment>
-                ))}
-              </div>
-            </article>
+                      {stepIndex ? (
+                        <ArrowRightIcon className="size-4 text-muted-foreground" />
+                      ) : null}
+                      <div className="flex min-w-32 max-w-64 flex-col items-start gap-2 rounded-lg bg-muted/50 p-3">
+                        <span className="max-w-full truncate" title={step.name}>
+                          {step.name}
+                        </span>
+                        <StatusBadge status={step.status} />
+                        {step.detail ? (
+                          <span className="text-xs text-muted-foreground">
+                            {step.detail}
+                          </span>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
           </Fragment>
         );
       })}

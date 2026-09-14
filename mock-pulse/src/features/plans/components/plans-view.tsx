@@ -1,26 +1,28 @@
+import { ArrowRightIcon, PlusIcon, WorkflowIcon } from "lucide-react";
 import { useState } from "react";
 import { DraftGuard } from "@/components/draft-guard";
 import { DeleteEntityDialog } from "@/components/entity-dialogs";
-import { Notice } from "@/components/notice";
 import {
   ResourceFilters,
   ResourceLibrary,
 } from "@/components/resource-library";
 import { ResourceWorkspace } from "@/components/resource-workspace";
-import { StudioIcon } from "@/components/studio-icon";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
+  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { type PlanMode, planModeLabel } from "../model";
@@ -116,13 +118,16 @@ export function PlansView() {
             <Empty className="min-h-60">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
-                  <StudioIcon name="plan" />
+                  <WorkflowIcon aria-hidden="true" />
                 </EmptyMedia>
                 <EmptyTitle>选择一个编排开始</EmptyTitle>
+                <EmptyDescription>
+                  把多个平台剧本串行或并行执行，复用一整套回归计划。
+                </EmptyDescription>
               </EmptyHeader>
               <Button variant="secondary" onClick={openCreate}>
-                <StudioIcon name="plus" data-icon="inline-start" />
-                新建
+                <PlusIcon aria-hidden="true" data-icon="inline-start" />
+                新建编排
               </Button>
             </Empty>
           )}
@@ -138,14 +143,17 @@ export function PlansView() {
                     取消
                   </Button>
                   <Button variant="default" onClick={create}>
-                    <StudioIcon name="arrow" data-icon="inline-start" />
+                    <ArrowRightIcon
+                      aria-hidden="true"
+                      data-icon="inline-start"
+                    />
                     开始编辑
                   </Button>
                 </>
               }
             >
               <FieldGroup className="gap-4">
-                <Field>
+                <Field data-invalid={!!error}>
                   <FieldLabel htmlFor="new-plan-name">编排名称</FieldLabel>
                   <Input
                     id="new-plan-name"
@@ -153,35 +161,42 @@ export function PlansView() {
                     maxLength={80}
                     placeholder="例如：双平台完整回归"
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    aria-invalid={!!error}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      setError("");
+                    }}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter") create();
+                      if (
+                        event.key === "Enter" &&
+                        !event.nativeEvent.isComposing
+                      ) {
+                        event.preventDefault();
+                        create();
+                      }
                     }}
                   />
+                  {error ? <FieldError>{error}</FieldError> : null}
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="new-plan-mode">执行方式</FieldLabel>
-                  <NativeSelect
-                    id="new-plan-mode"
-                    value={mode}
-                    onChange={(event) =>
-                      setMode(event.target.value as PlanMode)
-                    }
+                  <FieldLabel>执行方式</FieldLabel>
+                  <ToggleGroup
+                    variant="outline"
+                    value={[mode]}
+                    aria-label="执行方式"
+                    onValueChange={(values) => {
+                      if (values[0]) setMode(values[0] as PlanMode);
+                    }}
                   >
-                    <NativeSelectOption value="parallel">
+                    <ToggleGroupItem value="parallel" className="flex-1">
                       并行执行
-                    </NativeSelectOption>
-                    <NativeSelectOption value="serial">
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="serial" className="flex-1">
                       串行执行
-                    </NativeSelectOption>
-                  </NativeSelect>
+                    </ToggleGroupItem>
+                  </ToggleGroup>
                 </Field>
               </FieldGroup>
-              {error ? (
-                <Notice className="mb-4" role="alert" variant="destructive">
-                  {error}
-                </Notice>
-              ) : null}
             </WorkspaceDialog>
           ) : null}
           {deleting ? (

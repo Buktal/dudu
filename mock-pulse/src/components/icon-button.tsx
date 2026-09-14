@@ -1,17 +1,31 @@
 import type { ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function IconButton({
   label,
+  children,
   ...props
 }: ComponentProps<typeof Button> & { label: string }) {
   return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      aria-label={label}
-      title={label}
-      {...props}
-    />
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={label}
+            {...props}
+          />
+        }
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }

@@ -1,5 +1,5 @@
 import { keyParts, safePath } from "./paths";
-import type { EventSchema, WirePayload } from "./schemas";
+import type { EventSchema, WireForm, WirePayload } from "./schemas";
 import { buildXmlBody, parseXmlBody } from "./xml";
 
 /**
@@ -44,6 +44,12 @@ export function payloadPreview(
   return schema.name;
 }
 
+/** XML 元素值谓词：元素值只能是文本/数字/布尔，null 与对象（含数组）不合法。
+ *  withCustomField 与 parseFieldText 共用此单点判断（各自保留用户可见文案）。 */
+function isXmlNonScalar(value: unknown): boolean {
+  return value == null || typeof value === "object";
+}
+
 export function withCustomField(
   schema: EventSchema,
   payload: WirePayload,
@@ -55,11 +61,37 @@ export function withCustomField(
   if (schema.wire === "xml") {
     if (!/^[A-Za-z_][\w.-]*$/.test(key))
       throw new Error("XML 参数名须为单个元素名。");
-    if (value == null || typeof value === "object")
+    if (isXmlNonScalar(value))
       throw new Error("XML 参数值须为文本、数字或布尔值。");
     return { ...cloneJson(payload), [key]: String(value) };
   }
   return setPayloadField(payload, key, value);
+}
+
+/**
+ * 字段文本 → 类型化值（编辑器字段输入的单点转换，editFieldText 消费）：
+ * - number：Number 强转，空白或非有限值报「请输入有效数字。」；
+ * - json / boolean：JSON.parse，解析错误原样抛出（调用方落为字段错误）；
+ * - 其余类型：文本透传。
+ * XML 模板（wire === "xml"）下 null/对象不能作元素值，与 withCustomField
+ * 共用同一谓词；两处报错文案沿用各自措辞。
+ */
+export function parseFieldText(
+  type: string,
+  text: string,
+  wire: WireForm,
+): unknown {
+  const value =
+    type === "number"
+      ? Number(text)
+      : type === "json" || type === "boolean"
+        ? JSON.parse(text)
+        : text;
+  if (type === "number" && (!text.trim() || !Number.isFinite(value)))
+    throw new Error("请输入有效数字。");
+  if (wire === "xml" && isXmlNonScalar(value))
+    throw new Error("XML 元素的值必须是文本。");
+  return value;
 }
 
 /** 沿路径写入值；中间层缺失时按下一键是否数字创建数组或对象。 */

@@ -7,7 +7,8 @@
 pub mod store;
 
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+
+use crate::app_data_dir;
 
 /// 执行模式：parallel = 全部剧本 T+0 同时起跑；serial = 前一剧本结束才启下一剧。
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,10 +48,6 @@ pub struct StoredPlan {
     #[serde(default)]
     pub favorite: bool,
     pub items: Vec<StoredPlanItem>,
-}
-
-fn app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
-    app.path().app_data_dir().map_err(|err| err.to_string())
 }
 
 /// 读取全部编排（无 plans 目录时返回空列表）。

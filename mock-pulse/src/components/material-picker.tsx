@@ -1,3 +1,11 @@
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  GlobeIcon,
+  PlusIcon,
+  SearchIcon,
+  WorkflowIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { IconButton } from "@/components/icon-button";
 import { Notice } from "@/components/notice";
@@ -14,12 +22,11 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
+import { Spinner } from "@/components/ui/spinner";
 import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { CHANNELS, type ChannelId } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
 import { ChannelMark } from "./channel-mark";
-
-import { StudioIcon } from "./studio-icon";
 
 export type PickerItem = {
   id: string;
@@ -50,7 +57,7 @@ export function MaterialPicker({
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
   const [channel, setChannel] = useState("all");
   const matches = items.filter(
     (item) =>
@@ -62,7 +69,8 @@ export function MaterialPicker({
   const pages = Math.max(1, Math.ceil(matches.length / 8));
   const currentPage = Math.min(page, pages);
   const choose = async (id: string) => {
-    setPending(true);
+    if (pending) return;
+    setPending(id);
     setError("");
     try {
       await onSelect(id);
@@ -70,7 +78,7 @@ export function MaterialPicker({
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
-      setPending(false);
+      setPending(null);
     }
   };
   return (
@@ -82,7 +90,7 @@ export function MaterialPicker({
         if (!pending) onClose();
       }}
       footer={
-        <Button onClick={onClose} disabled={pending} variant="outline">
+        <Button onClick={onClose} disabled={!!pending} variant="outline">
           取消
         </Button>
       }
@@ -92,6 +100,14 @@ export function MaterialPicker({
           <SearchInput
             autoFocus
             value={query}
+            onClear={
+              query
+                ? () => {
+                    setQuery("");
+                    setPage(1);
+                  }
+                : undefined
+            }
             placeholder={platforms ? "搜索平台名称" : "搜索名称或类型"}
             aria-label="搜索可选素材"
             onChange={(event) => {
@@ -123,8 +139,8 @@ export function MaterialPicker({
           <Button
             key={item.id}
             type="button"
-            className="h-auto w-full justify-start gap-3 p-3 text-left "
-            disabled={pending}
+            className="h-auto w-full justify-start gap-3 p-3 text-left whitespace-normal"
+            disabled={!!pending}
             onClick={() => void choose(item.id)}
             variant="outline"
           >
@@ -132,14 +148,27 @@ export function MaterialPicker({
               <ChannelMark channel={item.channel} />
             ) : (
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                <StudioIcon name={platforms ? "globe" : "plan"} />
+                {platforms ? (
+                  <GlobeIcon aria-hidden="true" className="size-4 shrink-0" />
+                ) : (
+                  <WorkflowIcon
+                    aria-hidden="true"
+                    className="size-4 shrink-0"
+                  />
+                )}
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <h3>{item.name}</h3>
-              <p>{item.description}</p>
+              <h3 className="truncate">{item.name}</h3>
+              <p className="mt-1 text-xs font-normal leading-relaxed text-muted-foreground">
+                {item.description}
+              </p>
             </div>
-            <StudioIcon name="plus" />
+            {pending === item.id ? (
+              <Spinner data-icon="inline-end" />
+            ) : (
+              <PlusIcon aria-hidden="true" data-icon="inline-end" />
+            )}
           </Button>
         ))}
       </div>
@@ -147,7 +176,7 @@ export function MaterialPicker({
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <StudioIcon name="search" />
+              <SearchIcon aria-hidden="true" />
             </EmptyMedia>
             <EmptyTitle>没有可选择的素材</EmptyTitle>
             <EmptyDescription>
@@ -158,25 +187,27 @@ export function MaterialPicker({
       ) : null}
       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>共 {matches.length} 项</span>
-        <div className="flex items-center gap-2">
-          <IconButton
-            label="选择列表上一页"
-            disabled={currentPage === 1}
-            onClick={() => setPage(currentPage - 1)}
-          >
-            <StudioIcon name="left" />
-          </IconButton>
-          <span>
-            {currentPage} / {pages}
-          </span>
-          <IconButton
-            label="选择列表下一页"
-            disabled={currentPage === pages}
-            onClick={() => setPage(currentPage + 1)}
-          >
-            <StudioIcon name="right" />
-          </IconButton>
-        </div>
+        {pages > 1 ? (
+          <div className="flex items-center gap-2">
+            <IconButton
+              label="选择列表上一页"
+              disabled={currentPage === 1}
+              onClick={() => setPage(currentPage - 1)}
+            >
+              <ChevronLeftIcon aria-hidden="true" />
+            </IconButton>
+            <span>
+              {currentPage} / {pages}
+            </span>
+            <IconButton
+              label="选择列表下一页"
+              disabled={currentPage === pages}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              <ChevronRightIcon aria-hidden="true" />
+            </IconButton>
+          </div>
+        ) : null}
       </div>
       {error ? (
         <Notice role="alert" className="mb-4" variant="destructive">

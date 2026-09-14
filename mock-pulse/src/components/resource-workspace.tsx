@@ -1,6 +1,13 @@
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { WorkspaceDialog } from "@/components/workspace-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 const LibraryContext = createContext({
   requested: "",
@@ -32,36 +39,42 @@ export function ResourceWorkspace({
   const { requested, request } = useLibraryDisclosure();
   const closeLibrary = () => request("");
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <aside
         aria-label={libraryLabel}
-        className="hidden w-64 shrink-0 flex-col border-r bg-background xl:w-72 min-[900px]:flex"
+        className="hidden w-64 shrink-0 flex-col border-r bg-card min-[900px]:flex xl:w-72"
       >
         {library(closeLibrary)}
       </aside>
       <section
         aria-label="编辑工作区"
-        className="flex min-h-0 min-w-0 flex-1 flex-col bg-card @container/workspace"
+        className="@container/workspace flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background"
       >
         {children}
       </section>
-      <WorkspaceDialog
+      <Sheet
         open={requested === viewId}
-        title={libraryLabel}
-        description="搜索并打开一项素材，继续编辑。"
-        onClose={closeLibrary}
-        footer={
-          <Button onClick={closeLibrary} variant="outline">
-            关闭
-          </Button>
-        }
+        onOpenChange={(open) => !open && closeLibrary()}
       >
-        <div className="flex h-[65dvh] min-h-0 flex-col">
+        <SheetContent
+          side="left"
+          showCloseButton={false}
+          className="gap-0 data-[side=left]:w-[min(22rem,calc(100vw-2rem))]"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>{libraryLabel}</SheetTitle>
+            <SheetDescription>搜索并打开一项，继续编辑。</SheetDescription>
+          </SheetHeader>
           <div className="flex min-h-0 flex-1 flex-col">
             {library(closeLibrary)}
           </div>
-        </div>
-      </WorkspaceDialog>
+          <SheetFooter>
+            <Button variant="outline" onClick={closeLibrary}>
+              返回工作区
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

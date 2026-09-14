@@ -7,6 +7,15 @@ import type { EventItem } from "../model";
 import { getAt, wireDraftText } from "../payload";
 import { schemaById } from "../schemas";
 import {
+  selectDraft,
+  selectDraftChannelId,
+  selectEvents,
+  selectFieldDefinitions,
+  selectFilters,
+  selectPage,
+  selectSchemaUserDefinition,
+} from "../selectors";
+import {
   applyFieldDefinitions,
   deleteEvent,
   duplicateCurrentDraft,
@@ -18,14 +27,7 @@ import {
   resolveCurrentDraft,
   saveEvent,
   saveEventAs,
-  selectDraft,
-  selectDraftChannelId,
   selectDraftDirty,
-  selectEvents,
-  selectFieldDefinitions,
-  selectFilters,
-  selectPage,
-  selectSchemaUserDefinition,
   setDraftExpected,
   setDraftField,
   setDraftName,

@@ -1,96 +1,51 @@
 // 模块图说明：本域单向依赖 events | connections（经对方 index.ts，类型 +
-// 连接就绪判定）→ lib；不反向被它们引用。运行实况投影（live.ts）与运行
-// 会话（session.ts，互斥/在途/连接门/停止态的唯一出口）都在本域，plans 域
-// 经本入口消费它们。
+// 连接就绪判定）→ lib；不反向被它们引用。运行实况投影（live.ts）、运行
+// 会话（session.ts，互斥/在途/连接门/停止态的唯一出口）、运行区编排
+// （run-section.tsx，剧本/编排编辑器共用的按钮/连接指引/运行块）与
+// 「最近一次运行」查询（selectors 的 lastRunFor）都在本域，plans /
+// scenarios 域经本入口消费。门面只保留有跨域消费者的导出。
 
-export type {
-  DirectDispatchPayload,
-  DirectSendOutcome,
-} from "./api";
 export { DispatchPanel } from "./components/dispatch-panel";
 export { RunPersistenceNotice } from "./components/run-persistence-notice";
-export { RunStepDetail, StepVerdictBadge } from "./components/run-step-detail";
+export {
+  RunButton,
+  RunConnectionNotice,
+  RunSection,
+} from "./components/run-section";
 export {
   liveLanes,
   RunLanes,
   RunSummary,
   recordLanes,
-  StatusBadge,
-  type TimelineLane,
 } from "./components/run-visualization";
 export { RunsView } from "./components/runs-view";
-export type {
-  ReceiptSnapshot,
-  RunRecord,
-  RunStep,
-  RunVerdict,
-} from "./model";
+export { lastRunFor } from "./selectors";
+export { materializeRunSnapshot, type RunSnapshot } from "./snapshot";
+export { directDispatch } from "./stores/direct-dispatch";
 export {
-  filterRuns,
-  type LaneGroup,
-  laneGroups,
-  type RunFilters,
-  type RunRow,
-  runStatus,
-} from "./selectors";
-export {
-  materializeRunSnapshot,
-  type RunSnapshot,
-  type RunStepSnapshot,
-  type SnapshotSource,
-} from "./snapshot";
-export {
-  type DispatchPanelPhase,
-  type DispatchResult,
-  directDispatch,
-} from "./stores/direct-dispatch";
-export {
-  applyLiveProgress,
-  type LiveLane,
   type LiveRun,
-  type LiveRunKind,
-  type LiveRunSeed,
-  type LiveStep,
-  type LiveStepStatus,
-  liveCleared,
-  liveRunFromLanes,
+  liveFromPlanSnapshot,
   liveStarted,
+  type PlanRunSnapshotLike,
   type RunProgressPayload,
   runProgress,
   selectLiveRun,
   selectLiveRunFor,
+  startLiveRun,
 } from "./stores/live";
 export {
-  clearDispatch,
   fetchRuns,
-  initialRunsState,
-  retrySaveRun,
   runsReducer,
-  selectLastDispatch,
-  selectPanelMessage,
   selectPanelPhase,
   selectRun,
   selectRuns,
-  selectScenarioRunMessage,
-  selectScenarioRunPhase,
   stopRun,
 } from "./stores/runs-slice";
+export { startScenarioRun } from "./stores/scenario-run";
 export {
-  type ScenarioRunPhase,
-  type StartScenarioRunPayload,
-  startScenarioRun,
-} from "./stores/scenario-run";
-export {
-  type ActiveRun,
-  activeRun,
   canStartRun,
   isRunBusy,
   isStoppingRun,
   missingConnections,
-  type PlanRunSliceLike,
-  type RunKind,
   type RunPhase,
-  type RunSessionState,
-  type RunStartCheck,
-  stoppingRunId,
 } from "./stores/session";

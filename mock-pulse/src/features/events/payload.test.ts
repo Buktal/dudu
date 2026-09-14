@@ -11,6 +11,7 @@ import {
   editorPayload,
   flattenPayload,
   getAt,
+  parseFieldText,
   parseWirePayload,
   setAt,
   setPayloadField,
@@ -101,6 +102,53 @@ describe("表单/线上载荷转换", () => {
     expect(() => parseWirePayload('{"__proto__":{"x":1}}')).toThrow(
       "保留字段名",
     );
+  });
+});
+
+describe("parseFieldText：字段文本 → 类型化值", () => {
+  it("number：数字文本转数值，空白与非有限值报「请输入有效数字。」", () => {
+    expect(parseFieldText("number", "42", "json")).toBe(42);
+    expect(parseFieldText("number", " 3.5 ", "json")).toBe(3.5);
+    expect(parseFieldText("number", "0", "json")).toBe(0);
+    expect(() => parseFieldText("number", "  ", "json")).toThrow(
+      "请输入有效数字。",
+    );
+    expect(() => parseFieldText("number", "", "json")).toThrow(
+      "请输入有效数字。",
+    );
+    expect(() => parseFieldText("number", "abc", "json")).toThrow(
+      "请输入有效数字。",
+    );
+  });
+
+  it("json / boolean：JSON 解析，非法输入抛解析错误", () => {
+    expect(parseFieldText("json", '{"a":1}', "json")).toEqual({ a: 1 });
+    expect(parseFieldText("json", "[1,2]", "json")).toEqual([1, 2]);
+    expect(parseFieldText("boolean", "true", "json")).toBe(true);
+    expect(parseFieldText("boolean", "false", "json")).toBe(false);
+    expect(() => parseFieldText("json", "{", "json")).toThrow();
+  });
+
+  it("xml：null/对象值拒绝，文本/数字/布尔标量放行", () => {
+    expect(parseFieldText("text", "纯文本", "xml")).toBe("纯文本");
+    expect(parseFieldText("number", "7", "xml")).toBe(7);
+    expect(parseFieldText("boolean", "false", "xml")).toBe(false);
+    expect(() => parseFieldText("json", '{"a":1}', "xml")).toThrow(
+      "XML 元素的值必须是文本。",
+    );
+    expect(() => parseFieldText("json", "null", "xml")).toThrow(
+      "XML 元素的值必须是文本。",
+    );
+    expect(() => parseFieldText("json", "[1]", "xml")).toThrow(
+      "XML 元素的值必须是文本。",
+    );
+  });
+
+  it("其余类型文本透传（含空串与未知类型名）", () => {
+    expect(parseFieldText("text", "原文", "json")).toBe("原文");
+    expect(parseFieldText("text", "", "json")).toBe("");
+    expect(parseFieldText("string", "  带空格  ", "xml")).toBe("  带空格  ");
+    expect(parseFieldText("unknown-kind", "任意", "json")).toBe("任意");
   });
 });
 

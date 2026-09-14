@@ -1,3 +1,4 @@
+import { MessagesSquareIcon, Music2Icon } from "lucide-react";
 import { type ChannelId, channelById } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 
@@ -16,12 +17,15 @@ export function ChannelMark({
       aria-hidden
       className={cn(
         "flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground",
-        channel === "douyin" ? "dy" : "wc",
-        small && "mini",
+        small && "size-5 rounded-sm text-xs",
         className,
       )}
     >
-      {channel === "douyin" ? "♪" : "企"}
+      {channel === "douyin" ? (
+        <Music2Icon className={cn("size-4", small && "size-3")} />
+      ) : (
+        <MessagesSquareIcon className={cn("size-4", small && "size-3")} />
+      )}
     </span>
   );
 }

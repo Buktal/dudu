@@ -8,6 +8,7 @@ import type { RootState } from "@/store";
 
 import { loadRuns, saveRun as saveRunApi, stopRun as stopRunApi } from "../api";
 import type { RunRecord } from "../model";
+import type { RunFilters } from "../selectors";
 import type { DispatchPanelPhase, DispatchResult } from "./direct-dispatch";
 import { directDispatch, directStarted } from "./direct-dispatch";
 import {
@@ -21,17 +22,20 @@ import type { ScenarioRunPhase } from "./scenario-run";
 import { startScenarioRun } from "./scenario-run";
 
 /**
- * 运行记录域状态：持久化列表 + 直发面板（最近一次直发结果）+ 运行实况投影。
- * 直发与剧本运行 thunk 分别见 direct-dispatch / scenario-run（按职责拆分），
- * run-progress 事件投影与 Live 类型在 live.ts（组合根只 dispatch 一次
- * runProgress，本 slice 负责实况收敛、历史入列与阶段收束）。本文件收敛
- * 状态形状与选择器。
+ * 运行记录域状态：持久化列表 + 列表筛选（filters + page，与其余域同构）
+ * + 直发面板（最近一次直发结果）+ 运行实况投影。直发与剧本运行 thunk
+ * 分别见 direct-dispatch / scenario-run（按职责拆分），run-progress 事件
+ * 投影与 Live 类型在 live.ts（组合根只 dispatch 一次 runProgress，本
+ * slice 负责实况收敛、历史入列与阶段收束）。本文件收敛状态形状与选择器。
  */
 
 export type RunsState = {
   /** 持久化的运行记录（时间升序；视图展示时倒序） */
   items: RunRecord[];
   selectedId?: string | null;
+  /** 列表筛选：搜索查询词 */
+  filters: RunFilters;
+  page: number;
   loaded: boolean;
   phase: DispatchPanelPhase;
   result: DispatchResult | null;
@@ -50,6 +54,8 @@ export type RunsState = {
 
 export const initialRunsState: RunsState = {
   items: [],
+  filters: { query: "" },
+  page: 1,
   loaded: false,
   phase: "idle",
   result: null,
@@ -82,11 +88,13 @@ const runsSlice = createSlice({
     selectRun(state, action: PayloadAction<string>) {
       state.selectedId = action.payload;
     },
-    /** 切换编辑对象时复位面板（运行记录不受影响） */
-    clearDispatch(state) {
-      if (state.phase !== "sending") state.phase = "idle";
-      state.result = null;
-      state.message = "";
+    /** 查询词变更：翻页复位到第 1 页（与其余域 setFilters 同语义） */
+    setFilters(state, action: PayloadAction<Partial<RunFilters>>) {
+      state.filters = { ...state.filters, ...action.payload };
+      state.page = 1;
+    },
+    setPage(state, action: PayloadAction<number>) {
+      state.page = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -126,7 +134,8 @@ const runsSlice = createSlice({
         if (action.payload.kind === "scenario")
           state.scenarioRunPhase = "running";
       })
-      // 启动失败撤回投影（plans 域 IPC 失败时由 thunk 显式撤回）
+      // 启动失败撤回投影（剧本/编排 thunk 共用启动骨架 startLiveRun，
+      // IPC 失败统一在此撤回——实况回滚单点，rejected 分支不再清实况）
       .addCase(liveCleared, (state, action) => {
         if (state.live?.runId === action.payload.runId) state.live = null;
       })
@@ -207,20 +216,19 @@ const runsSlice = createSlice({
           state.scenarioRunPhase = "needConnection";
           return;
         }
-        // live 在 IPC 前初始化；完成事件可能早于命令返回，不能在这里复活运行。
+        // 竞态守卫（恒例见 live.ts startLiveRun）：完成事件可能早于命令返回
         if (state.live?.runId === action.payload.live.runId)
           state.scenarioRunPhase = "running";
       })
       .addCase(startScenarioRun.rejected, (state, action) => {
         if (action.meta.condition) return;
-        state.live = null;
         state.scenarioRunPhase = "error";
         state.scenarioRunMessage = action.error.message ?? "启动运行失败";
       });
   },
 });
 
-export const { clearDispatch, selectRun } = runsSlice.actions;
+export const { selectRun, setFilters, setPage } = runsSlice.actions;
 
 export const runsReducer = runsSlice.reducer;
 
@@ -236,14 +244,6 @@ export function selectLastDispatch(state: RunsState): DispatchResult | null {
   return state.result;
 }
 
-export function selectPanelMessage(state: RunsState): string {
-  return state.message;
-}
-
 export function selectScenarioRunPhase(state: RunsState): ScenarioRunPhase {
   return state.scenarioRunPhase;
-}
-
-export function selectScenarioRunMessage(state: RunsState): string {
-  return state.scenarioRunMessage;
 }

@@ -6,8 +6,6 @@ import type { EventItem } from "@/features/events";
 import type { Scenario, ScenarioStep } from "./model";
 import {
   filterScenarios,
-  PAGE_SIZE,
-  paginateScenarios,
   resolveSteps,
   type ScenarioFilters,
 } from "./selectors";
@@ -93,28 +91,6 @@ describe("filterScenarios", () => {
     expect(wecomAll.map((row) => row.scenario.id)).toEqual(
       expected.map((s) => s.id),
     );
-  });
-});
-
-describe("paginateScenarios", () => {
-  it("分页切片与页数正确", () => {
-    const rows = filterScenarios(seededScenarios(95), NO_FILTERS);
-    const page2 = paginateScenarios(rows, 2);
-    expect(page2.total).toBe(95);
-    expect(page2.pages).toBe(Math.ceil(95 / PAGE_SIZE));
-    expect(page2.items).toEqual(rows.slice(PAGE_SIZE, PAGE_SIZE * 2));
-  });
-
-  it("页码越界收敛到有效区间；空列表第 1 页空切片", () => {
-    const rows = filterScenarios(seededScenarios(25), NO_FILTERS);
-    expect(paginateScenarios(rows, 0).page).toBe(1);
-    expect(paginateScenarios(rows, 9999).page).toBe(Math.ceil(25 / PAGE_SIZE));
-    expect(paginateScenarios([], 3)).toEqual({
-      items: [],
-      page: 1,
-      pages: 1,
-      total: 0,
-    });
   });
 });
 

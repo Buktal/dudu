@@ -1,6 +1,6 @@
+import { InfoIcon } from "lucide-react";
 import { useState } from "react";
 import { Notice } from "@/components/notice";
-import { StudioIcon } from "@/components/studio-icon";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { retrySaveRun } from "../stores/runs-slice";
@@ -14,7 +14,7 @@ export function RunPersistenceNotice({ runId }: { runId?: string }) {
   if (!runId || !error) return null;
   return (
     <Notice className="mb-4" role="alert">
-      <StudioIcon name="info" />
+      <InfoIcon aria-hidden="true" className="size-4 shrink-0" />
       <span className="min-w-0 flex-1">运行已完成，记录尚未保存：{error}</span>
       <Button
         size="sm"

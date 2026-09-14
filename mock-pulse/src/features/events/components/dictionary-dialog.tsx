@@ -1,14 +1,16 @@
+import { CheckIcon, DownloadIcon, UploadIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Notice } from "@/components/notice";
-import { StudioIcon } from "@/components/studio-icon";
+import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 import { WorkspaceDialog } from "@/components/workspace-dialog";
-import { cn } from "@/lib/utils";
 import type { AppDispatch } from "@/store";
 import type { StoredSchemaDefinition } from "../api";
 import {
@@ -65,6 +67,12 @@ export function DictionaryDialog({
   );
   const [error, setError] = useState("");
   const [applying, setApplying] = useState(false);
+  const [query, setQuery] = useState("");
+  const visibleFields = fields.filter((field) =>
+    `${field.title} ${field.path}`
+      .toLowerCase()
+      .includes(query.trim().toLowerCase()),
+  );
 
   const selected = useMemo(() => {
     const found = fields.find((field) => field.path === selectedPath);
@@ -126,6 +134,7 @@ export function DictionaryDialog({
   };
 
   const onApply = async () => {
+    if (applying) return;
     setApplying(true);
     try {
       await dispatch(
@@ -135,6 +144,7 @@ export function DictionaryDialog({
           fields: fields.map(finalizeField),
         }),
       ).unwrap();
+      toast.add({ title: "字段说明已更新", type: "success" });
       onClose();
     } catch (applyError) {
       // thunk unwrap 对非 Error 抛出值（Tauri invoke 错误是字符串）给出 {message} 形状
@@ -158,7 +168,9 @@ export function DictionaryDialog({
       wide
       title="字段说明"
       description="修改名称、含义和分组，同一类事件都会更新。参数值不会因此改变。"
-      onClose={onClose}
+      onClose={() => {
+        if (!applying) onClose();
+      }}
       footer={
         <>
           <input
@@ -175,13 +187,19 @@ export function DictionaryDialog({
           <Button
             variant="ghost"
             size="sm"
+            disabled={applying}
             onClick={() => fileInputRef.current?.click()}
           >
-            <StudioIcon name="upload" data-icon="inline-start" />
+            <UploadIcon aria-hidden="true" data-icon="inline-start" />
             导入字段定义
           </Button>
-          <Button variant="ghost" size="sm" onClick={onExport}>
-            <StudioIcon name="download" data-icon="inline-start" />
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={applying}
+            onClick={onExport}
+          >
+            <DownloadIcon aria-hidden="true" data-icon="inline-start" />
             导出字段定义
           </Button>
           <span className="min-w-0 flex-1" />
@@ -190,54 +208,72 @@ export function DictionaryDialog({
             disabled={applying}
             onClick={() => void onApply()}
           >
-            <StudioIcon
-              name={applying ? "refresh" : "check"}
-              className={applying ? "motion-safe:animate-spin" : undefined}
-              data-icon="inline-start"
-            />
+            {applying ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <CheckIcon aria-hidden="true" data-icon="inline-start" />
+            )}
             {applying ? "正在应用…" : "应用说明"}
           </Button>
         </>
       }
     >
       <div className="grid gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
-        <nav
-          className="flex max-h-40 flex-col gap-1 overflow-auto sm:max-h-[55dvh] sm:border-r sm:pr-3"
-          aria-label="字段列表"
-        >
-          {fields.map((field) => (
-            <button
-              key={field.path}
-              type="button"
-              className={cn(
-                "flex w-full flex-col items-start gap-1 rounded-lg px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                selected?.path === field.path && "",
-              )}
-              aria-current={selected?.path === field.path ? "true" : undefined}
-              onClick={() => setSelectedPath(field.path)}
-            >
-              {field.title}
-              <small>{field.path}</small>
-            </button>
-          ))}
-        </nav>
+        <div className="flex min-w-0 flex-col gap-3 sm:border-r sm:pr-3">
+          <SearchInput
+            aria-label="搜索字段说明"
+            placeholder="搜索字段"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onClear={query ? () => setQuery("") : undefined}
+          />
+          <nav
+            className="flex max-h-40 flex-col gap-1 overflow-auto sm:max-h-[45dvh]"
+            aria-label="字段列表"
+          >
+            {visibleFields.map((field) => (
+              <Button
+                key={field.path}
+                type="button"
+                variant={selected?.path === field.path ? "secondary" : "ghost"}
+                className="h-auto w-full shrink-0 flex-col items-start gap-1 px-3 py-2 text-left whitespace-normal"
+                aria-current={
+                  selected?.path === field.path ? "true" : undefined
+                }
+                onClick={() => setSelectedPath(field.path)}
+              >
+                {field.title}
+                <span className="max-w-full truncate font-mono text-xs text-muted-foreground">
+                  {field.path}
+                </span>
+              </Button>
+            ))}
+            {!visibleFields.length ? (
+              <p className="p-3 text-sm text-muted-foreground">
+                没有匹配的字段
+              </p>
+            ) : null}
+          </nav>
+        </div>
         <div className="flex min-w-0 flex-col gap-4">
           {selected ? (
-            <>
+            <FieldGroup>
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="secondary">{selected.type}</Badge>
-                <code className="text-muted-foreground">{selected.path}</code>
+                <code className="text-xs text-muted-foreground wrap-anywhere">
+                  {selected.path}
+                </code>
               </div>
-              <Label htmlFor="dict-title">
-                显示名称
+              <Field>
+                <FieldLabel htmlFor="dict-title">显示名称</FieldLabel>
                 <Input
                   id="dict-title"
                   value={selected.title}
                   onChange={(event) => update({ title: event.target.value })}
                 />
-              </Label>
-              <Label htmlFor="dict-description">
-                字段含义
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="dict-description">字段含义</FieldLabel>
                 <Textarea
                   id="dict-description"
                   value={selected.description}
@@ -245,16 +281,16 @@ export function DictionaryDialog({
                     update({ description: event.target.value })
                   }
                 />
-              </Label>
-              <Label htmlFor="dict-group">
-                所属分组
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="dict-group">所属分组</FieldLabel>
                 <Input
                   id="dict-group"
                   value={selected.group}
                   onChange={(event) => update({ group: event.target.value })}
                 />
-              </Label>
-            </>
+              </Field>
+            </FieldGroup>
           ) : (
             <p>没有可编辑的字段。</p>
           )}

@@ -6,8 +6,9 @@ import type { RunRecord, RunStep } from "./model";
 import {
   filterRuns,
   laneGroups,
-  type RunFilters,
+  lastRunFor,
   runStatus,
+  selectedRun,
 } from "./selectors";
 
 function step(channel: ChannelId, overrides: Partial<RunStep> = {}): RunStep {
@@ -62,63 +63,92 @@ const wecomPass: RunRecord = {
 };
 
 const ALL: RunRecord[] = [directPass, scenarioFail, wecomPass];
-const NO_FILTERS: RunFilters = { status: "all", channel: "all" };
 
-describe("运行记录筛选 selector", () => {
-  it("runStatus：任一步骤未通过（含 skipped）即失败", () => {
+describe("运行状态与选中 selector", () => {
+  it("runStatus：任一步骤未通过（含 skipped）即失败；空运行视为失败", () => {
     expect(runStatus(directPass)).toBe("passed");
     expect(runStatus(scenarioFail)).toBe("failed");
     expect(runStatus(wecomPass)).toBe("passed");
+    expect(runStatus({ ...directPass, steps: [] })).toBe("failed");
   });
 
-  it("无筛选：全部按原序返回，行携带渠道/来源标识/步骤计数", () => {
-    const rows = filterRuns(ALL, NO_FILTERS);
-    expect(rows.map((row) => row.run.id)).toEqual(["run-1", "run-2", "run-3"]);
-    expect(rows[0]).toMatchObject({
-      channel: "douyin",
-      status: "passed",
-      sourceLabel: "直发",
-      stepCount: 1,
-    });
-    expect(rows[1]).toMatchObject({
-      sourceLabel: "剧本",
-      scenarioName: "抖音接待",
-      stepCount: 3,
-      passedCount: 1,
-    });
-    expect(rows[2].channel).toBe("wecom");
+  it("selectedRun：选中命中；未选中或 id 未命中回退最新一条", () => {
+    expect(selectedRun({ items: ALL, selectedId: "run-2" })?.id).toBe("run-2");
+    expect(selectedRun({ items: ALL })?.id).toBe("run-3");
+    expect(selectedRun({ items: ALL, selectedId: "gone" })?.id).toBe("run-3");
+    expect(selectedRun({ items: [] })).toBeUndefined();
+  });
+});
+
+describe("运行记录筛选 selector（查询分词 + 干草堆）", () => {
+  it("空查询返回全部；列表按开始时间倒序（新→旧）", () => {
+    expect(filterRuns(ALL, "").map((run) => run.id)).toEqual([
+      "run-3",
+      "run-2",
+      "run-1",
+    ]);
+    expect(filterRuns(ALL, "   ")).toHaveLength(3);
   });
 
-  it("按状态筛选：passed 只留全部通过的运行", () => {
-    const rows = filterRuns(ALL, { ...NO_FILTERS, status: "passed" });
-    expect(rows.map((row) => row.run.id)).toEqual(["run-1", "run-3"]);
+  it("查询按空白分词，全部词命中才保留（AND）", () => {
+    expect(filterRuns(ALL, "抖音 接待").map((run) => run.id)).toEqual([
+      "run-2",
+    ]);
+    expect(filterRuns(ALL, "抖音 企微")).toEqual([]);
   });
 
-  it("按状态筛选：failed 留含失败步骤的运行", () => {
-    const rows = filterRuns(ALL, { ...NO_FILTERS, status: "failed" });
-    expect(rows.map((row) => row.run.id)).toEqual(["run-2"]);
+  it("命中 id / 编排名 / 剧本名，大小写不敏感", () => {
+    expect(filterRuns(ALL, "run-1").map((run) => run.id)).toEqual(["run-1"]);
+    expect(filterRuns(ALL, "接待").map((run) => run.id)).toEqual([
+      "run-3",
+      "run-2",
+    ]);
   });
 
-  it("按渠道筛选：douyin 只留抖音运行（取首步渠道）", () => {
-    const rows = filterRuns(ALL, { ...NO_FILTERS, channel: "douyin" });
-    expect(rows.map((row) => row.run.id)).toEqual(["run-1", "run-2"]);
+  it("状态词匹配：成功/通过命中全通过；失败/未通过命中含失败步骤（「未通过」含「通过」的子串语义）", () => {
+    expect(filterRuns(ALL, "成功").map((run) => run.id)).toEqual([
+      "run-3",
+      "run-1",
+    ]);
+    expect(filterRuns(ALL, "失败").map((run) => run.id)).toEqual(["run-2"]);
+    expect(filterRuns(ALL, "未通过").map((run) => run.id)).toEqual(["run-2"]);
+    expect(filterRuns(ALL, "通过").map((run) => run.id)).toEqual([
+      "run-3",
+      "run-2",
+      "run-1",
+    ]);
   });
 
-  it("状态与渠道组合筛选", () => {
-    const rows = filterRuns(ALL, { status: "passed", channel: "wecom" });
-    expect(rows.map((row) => row.run.id)).toEqual(["run-3"]);
+  it("命中步骤事件名与渠道名", () => {
+    // 三条运行的首步事件名都是「新客问价」（fixture 默认）
+    expect(filterRuns(ALL, "新客问价").map((run) => run.id)).toEqual([
+      "run-3",
+      "run-2",
+      "run-1",
+    ]);
+    expect(filterRuns(ALL, "企业微信").map((run) => run.id)).toEqual(["run-3"]);
+  });
+});
+
+describe("lastRunFor（最近一次同源运行）", () => {
+  const scnRunA = { ...scenarioFail, sourceId: "scn-a" };
+  const scnRunB = { ...wecomPass, sourceId: "scn-a" };
+  const planRunA = {
+    ...directPass,
+    source: "plan" as const,
+    sourceId: "plan-1",
+  };
+
+  it("同 source + sourceId 取最新一条", () => {
+    const items = [scnRunA, scnRunB, planRunA];
+    expect(lastRunFor({ items }, "scenario", "scn-a")?.id).toBe("run-3");
   });
 
-  it("空运行（无步骤）不炸：状态视为失败、渠道未知不匹配渠道筛选", () => {
-    const empty: RunRecord = {
-      id: "run-empty",
-      startedAt: "2026-09-12T04:00:00.000Z",
-      source: "direct",
-      steps: [],
-    };
-    expect(runStatus(empty)).toBe("failed");
-    const rows = filterRuns([empty], { ...NO_FILTERS, channel: "douyin" });
-    expect(rows).toHaveLength(0);
+  it("种类或来源 id 不同不命中", () => {
+    const items = [scnRunA, planRunA];
+    expect(lastRunFor({ items }, "plan", "scn-a")).toBeUndefined();
+    expect(lastRunFor({ items }, "scenario", "scn-b")).toBeUndefined();
+    expect(lastRunFor({ items: [] }, "scenario", "scn-a")).toBeUndefined();
   });
 });
 
@@ -156,16 +186,10 @@ const planRun: RunRecord = {
 };
 
 describe("编排运行记录 selector", () => {
-  it("来源标识：plan → 执行编排；meta 携带编排名", () => {
-    const rows = filterRuns([planRun], NO_FILTERS);
-    expect(rows[0].sourceLabel).toBe("执行编排");
-    expect(rows[0].planName).toBe("双平台接待回归");
-    expect(rows[0].scenarioName).toBeUndefined();
-  });
-
-  it("编排运行跨渠道：不用首步渠道代表（渠道筛选不命中）", () => {
-    const rows = filterRuns([planRun], { ...NO_FILTERS, channel: "douyin" });
-    expect(rows).toHaveLength(0);
+  it("干草堆携带编排名，可按名称命中编排运行", () => {
+    expect(filterRuns([planRun], "双平台").map((run) => run.id)).toEqual([
+      "run-plan",
+    ]);
   });
 
   it("laneGroups：按 laneIndex 分组、组间按 lane 序号、组内保序", () => {

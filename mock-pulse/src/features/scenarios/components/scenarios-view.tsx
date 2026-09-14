@@ -1,22 +1,27 @@
+import { ArrowRightIcon, ListVideoIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { ChannelPicker } from "@/components/channel-picker";
 import { DraftGuard } from "@/components/draft-guard";
 import { DeleteEntityDialog } from "@/components/entity-dialogs";
-import { Notice } from "@/components/notice";
 import {
   ResourceFilters,
   ResourceLibrary,
 } from "@/components/resource-library";
 import { ResourceWorkspace } from "@/components/resource-workspace";
-import { StudioIcon } from "@/components/studio-icon";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
+  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   NativeSelect,
@@ -137,13 +142,16 @@ export function ScenariosView({
             <Empty className="min-h-60">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
-                  <StudioIcon name="scenario" />
+                  <ListVideoIcon aria-hidden="true" />
                 </EmptyMedia>
                 <EmptyTitle>选择一个剧本开始</EmptyTitle>
+                <EmptyDescription>
+                  把同一平台的事件按顺序组合，复现完整的会话流程。
+                </EmptyDescription>
               </EmptyHeader>
               <Button variant="secondary" onClick={openCreate}>
-                <StudioIcon name="plus" data-icon="inline-start" />
-                新建
+                <PlusIcon aria-hidden="true" data-icon="inline-start" />
+                新建剧本
               </Button>
             </Empty>
           )}
@@ -159,14 +167,17 @@ export function ScenariosView({
                     取消
                   </Button>
                   <Button variant="default" onClick={create}>
-                    <StudioIcon name="arrow" data-icon="inline-start" />
+                    <ArrowRightIcon
+                      aria-hidden="true"
+                      data-icon="inline-start"
+                    />
                     开始编辑
                   </Button>
                 </>
               }
             >
               <FieldGroup className="gap-4">
-                <Field>
+                <Field data-invalid={!!error}>
                   <FieldLabel htmlFor="new-scenario-name">剧本名称</FieldLabel>
                   <Input
                     id="new-scenario-name"
@@ -174,17 +185,29 @@ export function ScenariosView({
                     maxLength={80}
                     placeholder="例如：从进入会话到商品咨询"
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    aria-invalid={!!error}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      setError("");
+                    }}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter") create();
+                      if (
+                        event.key === "Enter" &&
+                        !event.nativeEvent.isComposing
+                      ) {
+                        event.preventDefault();
+                        create();
+                      }
                     }}
                   />
+                  {error ? <FieldError>{error}</FieldError> : null}
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="new-scenario-platform">
                     所属平台
                   </FieldLabel>
                   <NativeSelect
+                    className="w-full"
                     id="new-scenario-platform"
                     value={channel}
                     onChange={(event) =>
@@ -199,11 +222,6 @@ export function ScenariosView({
                   </NativeSelect>
                 </Field>
               </FieldGroup>
-              {error ? (
-                <Notice className="mb-4" role="alert" variant="destructive">
-                  {error}
-                </Notice>
-              ) : null}
             </WorkspaceDialog>
           ) : null}
           {deleting ? (

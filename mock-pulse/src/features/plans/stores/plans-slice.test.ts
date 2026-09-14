@@ -15,6 +15,7 @@ import {
   runProgress,
   runsReducer,
   selectLiveRun,
+  selectLiveRunFor,
   selectRuns,
 } from "@/features/runs";
 import {
@@ -39,7 +40,7 @@ import {
   syncPlanLane,
   togglePlanFavorite,
 } from "./plan-library";
-import { selectPlanLiveRun, startPlanRun } from "./plan-run";
+import { startPlanRun } from "./plan-run";
 import {
   discardPlanDraft,
   initialPlansState,
@@ -322,7 +323,7 @@ describe("plans slice 编排运行状态流转", () => {
 
     expect(selectPlanRunPhase(store.getState().plans)).toBe("running");
     const planId = store.getState().plans.draft?.id as string;
-    const live = selectPlanLiveRun(store.getState(), planId);
+    const live = selectLiveRunFor(store.getState().runs, "plan", planId);
     expect(live?.runId).toBe(snapshot.runId);
     expect(live?.kind).toBe("plan");
     expect(live?.lanes).toHaveLength(2);
@@ -364,7 +365,7 @@ describe("plans slice 编排运行状态流转", () => {
     expect(selectPlanRunPhase(store.getState().plans)).toBe("idle");
   });
 
-  it("runProgress 投影 + selectPlanLiveRun 派生：按 runId 过滤、按 lane 路由步骤实况", async () => {
+  it("runProgress 投影 + selectLiveRunFor 派生：按 runId 过滤、按 lane 路由步骤实况", async () => {
     const store = makeStore({ douyin: DY_CONNECTION, wecom: WC_CONNECTION });
     store.dispatch(openPlan(SAVED_PLAN.id));
     apiMock.startPlanRun.mockResolvedValueOnce("run-x1");
@@ -400,7 +401,7 @@ describe("plans slice 编排运行状态流转", () => {
       runProgress({ runId, index: 0, status: "skipped", lane: 1 }),
     );
 
-    const live = selectPlanLiveRun(store.getState(), planId);
+    const live = selectLiveRunFor(store.getState().runs, "plan", planId);
     expect(live?.lanes[0].steps[0]).toMatchObject({
       status: "success",
       step: { msgId: "m-1" },
@@ -445,7 +446,7 @@ describe("plans slice 编排运行状态流转", () => {
         run: finishedRecord,
       }),
     );
-    expect(selectPlanLiveRun(store.getState(), planId)).toBeNull();
+    expect(selectLiveRunFor(store.getState().runs, "plan", planId)).toBeNull();
     expect(selectPlanRunPhase(store.getState().plans)).toBe("idle");
     expect(store.getState().plans.activeRunId).toBeNull();
     // plans 域不收纳历史记录（runs 域消费同一事件入列）

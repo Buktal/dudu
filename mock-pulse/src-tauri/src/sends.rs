@@ -7,12 +7,10 @@ use std::sync::atomic::Ordering;
 
 use serde::Serialize;
 
-use crate::connections::douyin;
-use crate::connections::wecom;
-use crate::connections::ConnectionConfig;
+use crate::connections::{adapter_of, dispatch_client, ConnectionConfig, DispatchOutcome};
 use crate::runs::control;
 use crate::runs::verdict::ExpectedReceipt;
-use crate::runs::{receipt_from_douyin, receipt_from_wecom, sent_step, ReceiptSnapshot, RunStep};
+use crate::runs::{sent_step, RunStep, StepFacts};
 
 /// 直发结果：成品单步快照（期望比对已完成）+ 用户是否请求过停止。
 /// 停止先于发送：请求不发出，回执记「用户已停止运行」，结论仍按期望比对；
@@ -24,9 +22,9 @@ pub struct DirectSendOutcome {
     pub cancelled: bool,
 }
 
-/// 直发单步：按连接渠道路由协议原语发送（抖音 sha1 签名 JSON POST /
-/// 企微 AES 信封 XML POST），回执与期望比对后组装成品步骤。
-/// 网络等待放到阻塞线程池，避免卡住主线程。
+/// 直发单步：经适配器注册表按渠道路由协议原语发送（抖音 sha1 签名 JSON POST /
+/// 企微 AES 信封 XML POST；协议差异留在 adapter 实现内），回执与期望比对后
+/// 组装成品步骤。网络等待放到阻塞线程池，避免卡住主线程。
 #[tauri::command]
 pub async fn sends_dispatch_direct(
     config: ConnectionConfig,
@@ -61,68 +59,28 @@ fn direct_step(
     expected: Option<&ExpectedReceipt>,
     cancelled: impl Fn() -> bool,
 ) -> DirectSendOutcome {
-    let (channel, url) = match config {
-        ConnectionConfig::Douyin { url, .. } => ("douyin", url.clone()),
-        ConnectionConfig::Wecom { url, .. } => ("wecom", url.clone()),
+    let adapter = adapter_of(config);
+    let facts = StepFacts {
+        event_name: event_name.into(),
+        event_id: event_id.into(),
+        channel: adapter.id().into(),
+        url: adapter.url(config).unwrap_or_default().into(),
+        payload: body.into(),
     };
     let step = if cancelled() {
-        // 停止先于发送：请求不发出，回执记停止原因（结论仍按期望比对成形）
+        // 停止先于发送：请求不发出，回执记停止原因（结论仍按期望比对成形）；
+        // 明文本应作为请求体发出，请求快照照常保留
         sent_step(
             expected,
-            event_name.into(),
-            event_id.into(),
-            channel,
-            url,
-            body.into(),
-            Some(body.into()),
-            String::new(),
-            String::new(),
-            None,
-            ReceiptSnapshot {
-                status: 0,
-                elapsed_ms: 0,
-                body: String::new(),
-                reply: None,
-                error: Some("用户已停止运行".into()),
+            facts,
+            DispatchOutcome {
+                request_body: Some(body.into()),
+                ..DispatchOutcome::not_sent("用户已停止运行")
             },
         )
     } else {
-        match config {
-            ConnectionConfig::Douyin { .. } => {
-                let outcome = douyin::dispatch_event(&douyin::handshake_client(), config, body);
-                let receipt = receipt_from_douyin(&outcome);
-                sent_step(
-                    expected,
-                    event_name.into(),
-                    event_id.into(),
-                    "douyin",
-                    url,
-                    body.into(),
-                    Some(body.into()),
-                    outcome.signature,
-                    outcome.msg_id,
-                    None,
-                    receipt,
-                )
-            }
-            ConnectionConfig::Wecom { .. } => {
-                let outcome = wecom::dispatch_event(&wecom::dispatch_client(), config, body);
-                let receipt = receipt_from_wecom(&outcome);
-                sent_step(
-                    expected,
-                    event_name.into(),
-                    event_id.into(),
-                    "wecom",
-                    url,
-                    body.into(),
-                    outcome.request_body,
-                    outcome.signature,
-                    outcome.nonce,
-                    Some(outcome.timestamp),
-                    receipt,
-                )
-            }
-        }
+        let outcome = adapter.dispatch_event(&dispatch_client(), config, body);
+        sent_step(expected, facts, outcome)
     };
     DirectSendOutcome {
         step,
@@ -132,11 +90,16 @@ fn direct_step(
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Read, Write};
-    use std::net::{Shutdown, TcpListener, TcpStream};
     use std::sync::Arc;
 
+    use crate::connections::wecom;
+    // 企微官方黄金例唯一出处为 wecom::crypto：按测试旧名引作配置与断言
+    use crate::connections::wecom::crypto::{
+        GOLDEN_CORP_ID as WC_CORP_ID, GOLDEN_ENCODING_AES_KEY as WC_AES_KEY,
+        GOLDEN_TOKEN as WC_TOKEN,
+    };
     use crate::runs::verdict::ReceiptBodyMode;
+    use crate::test_support::{ok_responder, start_serial_server, Responder};
 
     use super::*;
 
@@ -152,59 +115,13 @@ mod tests {
         || false
     }
 
-    fn read_request_body(stream: &mut TcpStream) -> String {
-        let mut buf = Vec::new();
-        let mut chunk = [0u8; 4096];
-        loop {
-            let n = stream.read(&mut chunk).unwrap();
-            assert!(n > 0, "客户端提前断开");
-            buf.extend_from_slice(&chunk[..n]);
-            if let Some(split) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
-                let head = String::from_utf8_lossy(&buf[..split]).to_string();
-                let content_length = head
-                    .lines()
-                    .find_map(|line| {
-                        let (k, v) = line.split_once(':')?;
-                        if k.trim().eq_ignore_ascii_case("content-length") {
-                            v.trim().parse::<usize>().ok()
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or(0);
-                if buf.len() >= split + 4 + content_length {
-                    return String::from_utf8_lossy(&buf[split + 4..split + 4 + content_length])
-                        .to_string();
-                }
-            }
-        }
-    }
-
-    /// 本地服务器：依次处理 count 个请求，responder(序号, 请求 body) 决定响应。
-    fn start_server(
-        count: usize,
-        responder: Arc<dyn Fn(usize, &str) -> (String, String) + Send + Sync>,
-    ) -> String {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-        std::thread::spawn(move || {
-            for index in 0..count {
-                let (mut stream, _) = listener.accept().unwrap();
-                let body = read_request_body(&mut stream);
-                let (status_line, response_body) = responder(index, &body);
-                let response = format!(
-                    "{status_line}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}",
-                    response_body.len()
-                );
-                stream.write_all(response.as_bytes()).unwrap();
-                stream.shutdown(Shutdown::Both).unwrap();
-            }
-        });
-        format!("http://{addr}/hook")
-    }
-
-    fn ok_responder() -> Arc<dyn Fn(usize, &str) -> (String, String) + Send + Sync> {
-        Arc::new(|_, _| ("HTTP/1.1 200 OK".to_string(), "ok".to_string()))
+    /// 本地串行服务器：依次处理 count 个请求，返回 hook url（body 之外的
+    /// 录制细节本域不关心，网络基建在 crate::test_support 共享）。
+    /// 返回的 Receiver 须由测试持有到断言结束——它是服务线程的存活凭证
+    /// （提前丢弃会让共享 server 在响应首个请求后因 SendError 退出）。
+    fn serial_url(count: usize, responder: Responder) -> (String, std::sync::mpsc::Receiver<crate::test_support::RecordedPost>) {
+        let (addr, rx) = start_serial_server(count, responder, std::time::Duration::ZERO);
+        (format!("http://{addr}/hook"), rx)
     }
 
     fn douyin_config(url: String) -> ConnectionConfig {
@@ -214,10 +131,6 @@ mod tests {
             client_secret: "tt_secret".into(),
         }
     }
-
-    const WC_CORP_ID: &str = "wx5823bf96d3bd56c7";
-    const WC_TOKEN: &str = "QDG6eK";
-    const WC_AES_KEY: &str = "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C";
 
     fn wecom_config(url: String) -> ConnectionConfig {
         ConnectionConfig::Wecom {
@@ -231,7 +144,7 @@ mod tests {
 
     #[test]
     fn douyin_direct_records_protocol_snapshot_and_contains_verdict() {
-        let url = start_server(1, ok_responder());
+        let (url, _rx) = serial_url(1, ok_responder());
         let outcome = direct_step(
             &douyin_config(url.clone()),
             r#"{"event":"im_receive_msg","content":{"text":"你好，抖音"}}"#,
@@ -270,14 +183,13 @@ mod tests {
 
     #[test]
     fn douyin_direct_fails_on_status_mismatch() {
-        let responder: Arc<dyn Fn(usize, &str) -> (String, String) + Send + Sync> =
-            Arc::new(|_, _| {
-                (
-                    "HTTP/1.1 500 Internal Server Error".to_string(),
-                    "boom".into(),
-                )
-            });
-        let url = start_server(1, responder);
+        let responder: Responder = Arc::new(|_, _, _| {
+            (
+                "HTTP/1.1 500 Internal Server Error".to_string(),
+                "boom".into(),
+            )
+        });
+        let (url, _rx) = serial_url(1, responder);
         let outcome = direct_step(
             &douyin_config(url),
             "{}",
@@ -294,9 +206,9 @@ mod tests {
 
     #[test]
     fn douyin_direct_covers_equals_jsonfield_and_empty_expectation() {
-        let url = start_server(
+        let (url, _rx) = serial_url(
             3,
-            Arc::new(|_, _| {
+            Arc::new(|_, _, _| {
                 (
                     "HTTP/1.1 200 OK".to_string(),
                     r#"{"code":0,"extra":1}"#.to_string(),
@@ -364,16 +276,15 @@ mod tests {
             WC_CORP_ID,
         )
         .unwrap();
-        let responder: Arc<dyn Fn(usize, &str) -> (String, String) + Send + Sync> =
-            Arc::new(move |index, _| {
-                let body = match index {
-                    0 => "success".to_string(),
-                    1 => "success".to_string(),
-                    _ => format!("<xml><Encrypt><![CDATA[{reply_encrypt}]]></Encrypt></xml>"),
-                };
-                ("HTTP/1.1 200 OK".to_string(), body)
-            });
-        let url = start_server(3, responder);
+        let responder: Responder = Arc::new(move |index, _, _| {
+            let body = match index {
+                0 => "success".to_string(),
+                1 => "success".to_string(),
+                _ => format!("<xml><Encrypt><![CDATA[{reply_encrypt}]]></Encrypt></xml>"),
+            };
+            ("HTTP/1.1 200 OK".to_string(), body)
+        });
+        let (url, _rx) = serial_url(3, responder);
         let config = wecom_config(url);
         let plaintext = "<xml><MsgType><![CDATA[text]]></MsgType></xml>";
 
@@ -433,7 +344,7 @@ mod tests {
 
     #[test]
     fn direct_without_expectation_only_records_receipt() {
-        let url = start_server(1, ok_responder());
+        let (url, _rx) = serial_url(1, ok_responder());
         let outcome = direct_step(
             &douyin_config(url),
             "{}",

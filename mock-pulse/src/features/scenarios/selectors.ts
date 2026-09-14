@@ -4,6 +4,7 @@ import {
   resolveEventVersion,
 } from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
+import { type Page, paginate as paginateList } from "@/lib/paginate";
 
 import type { Scenario, ScenarioStep } from "./model";
 
@@ -13,8 +14,6 @@ export type ScenarioFilters = {
   channel: ChannelId | "all";
   kind?: "all" | "favorite";
 };
-
-export const PAGE_SIZE = 10;
 
 export type ScenarioRow = {
   scenario: Scenario;
@@ -50,27 +49,10 @@ export function filterScenarios(
   });
 }
 
-export type ScenarioPage = {
-  items: ScenarioRow[];
-  page: number;
-  pages: number;
-  total: number;
-};
+export type ScenarioPage = Page<ScenarioRow>;
 
-/** 分页（页码收敛到 [1, pages]；空列表为第 1 页）。页大小固定 PAGE_SIZE。 */
-export function paginateScenarios(
-  rows: ScenarioRow[],
-  page: number,
-): ScenarioPage {
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const clamped = Math.max(1, Math.min(page, pages));
-  return {
-    items: rows.slice((clamped - 1) * PAGE_SIZE, clamped * PAGE_SIZE),
-    page: clamped,
-    pages,
-    total: rows.length,
-  };
-}
+/** 分页：转发 lib 泛型实现（页码收敛到 [1, pages]；空列表为第 1 页）。 */
+export const paginateScenarios = paginateList;
 
 /** 步骤引用解析结果：四行语义中「发的内容 / 期待的回执」的数据源。 */
 export type StepRow = {

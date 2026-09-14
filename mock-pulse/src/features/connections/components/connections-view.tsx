@@ -1,25 +1,56 @@
+import {
+  CheckCircle2Icon,
+  KeyRoundIcon,
+  LinkIcon,
+  SaveIcon,
+  ServerIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { EntityHeader } from "@/components/entity-header";
 import { Notice } from "@/components/notice";
 import { ResourceLibrary } from "@/components/resource-library";
 import { ResourceWorkspace } from "@/components/resource-workspace";
-import { StudioIcon } from "@/components/studio-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
 import type { ConnectionConfig } from "../api";
 import * as actions from "../stores/connections-slice";
+import { ConnectionFields } from "./connection-fields";
 
 export function ConnectionsView() {
   const dispatch = useAppDispatch();
   const state = useAppSelector((root) => root.connections);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
+  const [urlError, setUrlError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [changedSinceTest, setChangedSinceTest] = useState<
+    Partial<Record<ChannelId, boolean>>
+  >({});
   const channel = state.selectedChannel;
   const platform = channelById(channel);
   const saved = state.items[channel];
@@ -31,69 +62,43 @@ export function ConnectionsView() {
       : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
-  const fields =
-    draft.channel === "douyin"
-      ? [
-          {
-            key: "clientKey",
-            label: "Client Key",
-            note: "应用标识",
-            value: draft.clientKey,
-            secret: false,
-          },
-          {
-            key: "clientSecret",
-            label: "Client Secret",
-            note: "用于构造平台签名",
-            value: draft.clientSecret,
-            secret: true,
-          },
-        ]
-      : [
-          {
-            key: "corpId",
-            label: "CorpID",
-            note: "企业标识",
-            value: draft.corpId,
-            secret: false,
-          },
-          {
-            key: "token",
-            label: "Token",
-            note: "回调签名 Token",
-            value: draft.token,
-            secret: true,
-          },
-          {
-            key: "encodingAesKey",
-            label: "EncodingAESKey",
-            note: "43 位消息加解密密钥",
-            value: draft.encodingAesKey,
-            secret: true,
-          },
-          {
-            key: "agentId",
-            label: "AgentID",
-            note: "自建应用 ID",
-            value: draft.agentId,
-            secret: false,
-          },
-        ];
-  const edit = (key: string, value: string) =>
+  const testing = test.status === "testing";
+  const staleTest = changedSinceTest[channel];
+  const edit = (key: string, value: string) => {
+    setError("");
+    if (key === "url") setUrlError("");
+    setChangedSinceTest((value) => ({ ...value, [channel]: true }));
     dispatch(
       actions.setConnectionDraft({
         ...draft,
         [key]: value,
       } as ConnectionConfig),
     );
+  };
+  const validateUrl = () => {
+    try {
+      const url = new URL(draft.url);
+      if (!["http:", "https:"].includes(url.protocol)) throw new Error();
+      setUrlError("");
+      return true;
+    } catch {
+      setUrlError(
+        "请输入完整的 HTTP 或 HTTPS 地址，例如 http://127.0.0.1:8080/webhooks/douyin。",
+      );
+      return false;
+    }
+  };
   const save = async () => {
+    if (!validateUrl()) return;
     setSaving(true);
     setError("");
     try {
-      const url = new URL(draft.url);
-      if (!["http:", "https:"].includes(url.protocol))
-        throw new Error("回调目标须为 HTTP 或 HTTPS 地址。");
       await dispatch(actions.saveConnection(draft)).unwrap();
+      toast.add({
+        title: "连接已保存",
+        description: `${platform?.name}的事件将使用这份配置。`,
+        type: "success",
+      });
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -103,7 +108,7 @@ export function ConnectionsView() {
   const matches = CHANNELS.filter((item) =>
     `${item.name} ${item.protocol} ${item.id}`
       .toLowerCase()
-      .includes(query.toLowerCase()),
+      .includes(query.trim().toLowerCase()),
   );
   return (
     <ResourceWorkspace
@@ -120,13 +125,14 @@ export function ConnectionsView() {
             id: item.id,
             name: item.name,
             channel: item.id,
-            description: item.protocol,
+            description: `${actions.isConnectionReady(state.items[item.id]) ? "已配置" : "待配置"} · ${item.protocol}`,
           }))}
           selectedId={channel}
           onSelect={(id) => {
             close();
             dispatch(actions.setConnectionChannel(id as ChannelId));
             setError("");
+            setUrlError("");
           }}
           page={1}
           pages={1}
@@ -136,118 +142,138 @@ export function ConnectionsView() {
       )}
     >
       <EntityHeader
-        name={platform?.name ?? channel}
+        name={`${platform?.name ?? channel}连接`}
         label="连接"
         channel={channel}
         kicker={platform?.protocol ?? ""}
         dirty={dirty}
         saved={!!saved}
         actions={
-          <Button
-            variant={dirty ? "secondary" : "outline"}
-            disabled={saving}
-            onClick={() => void save()}
-          >
-            <StudioIcon name="save" data-icon="inline-start" />
-            保存连接
+          <Button disabled={saving || !dirty} onClick={() => void save()}>
+            {saving ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <SaveIcon data-icon="inline-start" />
+            )}
+            {saving ? "正在保存…" : "保存连接"}
           </Button>
         }
       />
-      <div className="flex shrink-0 items-center gap-3 border-b px-4 py-2 lg:px-6">
-        <span className="flex items-center gap-2">目标服务</span>
-        <span className="min-w-0 flex-1" />
-        <Badge variant="secondary">本地开发</Badge>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 lg:px-6">
-        <Notice className="mb-4">
-          <StudioIcon name="info" />
-          <span>
-            填写你的服务接收回调的地址。发送时使用该平台的凭据进行签名或加密。
-          </span>
-        </Notice>
-        <FieldGroup className="grid grid-cols-1 gap-5 @xl/workspace:grid-cols-2">
-          <Field className="min-w-0 col-span-full">
-            <FieldLabel htmlFor="connection-url">回调目标地址</FieldLabel>
-            <Input
-              id="connection-url"
-              value={draft.url}
-              spellCheck={false}
-              onChange={(event) => edit("url", event.target.value)}
-            />
-            <small>该平台的事件和剧本共享这个地址，其他平台单独设置。</small>
-          </Field>
-          {fields.map((field) => (
-            <Field
-              key={`${channel}-${field.key}`}
-              className={`settings-field${field.key === "encodingAesKey" ? "col-span-full" : ""}`}
-            >
-              <FieldLabel htmlFor={`connection-${field.key}`}>
-                {field.label}
-              </FieldLabel>
-              <Input
-                id={`connection-${field.key}`}
-                type={field.secret ? "password" : "text"}
-                autoComplete="off"
-                spellCheck={false}
-                value={field.value}
-                onChange={(event) => edit(field.key, event.target.value)}
-              />
-              <small>{field.note}</small>
-            </Field>
-          ))}
-        </FieldGroup>
-        <div className="flex flex-wrap items-center gap-3">
-          <StudioIcon name="info" />
-          <span>
-            {channel === "douyin"
-              ? "抖音 dop · JSON 回调"
-              : "企业微信自建应用 · XML 回调"}
-          </span>
-        </div>
-        <section className="mt-8 flex flex-col gap-3">
-          <h3 className="text-sm font-semibold">连接测试</h3>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {channel === "douyin"
-              ? "发送 verify_webhook challenge，检查目标服务是否原样回显。"
-              : "发送加密 echostr，检查目标服务是否正确解密并回显。"}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              disabled={test.status === "testing"}
-              onClick={() => void dispatch(actions.testConnection(draft))}
-              variant="outline"
-            >
-              <StudioIcon
-                name={test.status === "testing" ? "refresh" : "link"}
-                className={
-                  test.status === "testing"
-                    ? "motion-safe:animate-spin"
-                    : undefined
-                }
-                data-icon="inline-start"
-              />
-              {test.status === "testing" ? "正在测试…" : "测试连接"}
-            </Button>
-            {test.status === "success" ? (
-              <Badge variant="secondary">连接正常</Badge>
-            ) : test.status === "failed" ? (
-              <Badge variant="destructive">测试未通过</Badge>
-            ) : null}
-          </div>
-          {test.message ? (
-            <p
-              className="mt-3 text-sm leading-relaxed text-muted-foreground"
-              role="status"
-            >
-              {test.message}
-            </p>
+      <div className="min-h-0 flex-1 overflow-y-auto border-t bg-background/50 p-5 lg:p-7">
+        <div className="mx-auto flex max-w-4xl flex-col gap-5">
+          {error ? (
+            <Notice role="alert" variant="destructive">
+              {error}
+            </Notice>
           ) : null}
-        </section>
-        {error ? (
-          <Notice role="alert" className="mb-4" variant="destructive">
-            {error}
-          </Notice>
-        ) : null}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ServerIcon />
+                回调目标
+              </CardTitle>
+              <CardDescription>
+                填写本地服务接收平台回调的地址。
+              </CardDescription>
+              <CardAction>
+                <Badge variant="outline">
+                  {channel === "douyin" ? "JSON" : "XML"}
+                </Badge>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              <FieldGroup>
+                <Field data-invalid={!!urlError}>
+                  <FieldLabel htmlFor="connection-url">回调地址</FieldLabel>
+                  <InputGroup>
+                    <InputGroupAddon>
+                      <LinkIcon />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      id="connection-url"
+                      value={draft.url}
+                      spellCheck={false}
+                      aria-invalid={!!urlError}
+                      aria-describedby="connection-url-hint"
+                      onChange={(event) => edit("url", event.target.value)}
+                    />
+                  </InputGroup>
+                  {urlError ? (
+                    <FieldError id="connection-url-hint">{urlError}</FieldError>
+                  ) : (
+                    <FieldDescription id="connection-url-hint">
+                      {platform?.name}的事件和剧本共用此地址，各平台独立配置。
+                    </FieldDescription>
+                  )}
+                </Field>
+              </FieldGroup>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRoundIcon />
+                签名与加密
+              </CardTitle>
+              <CardDescription>
+                与接收服务的配置保持一致，用于模拟平台的真实请求。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ConnectionFields draft={draft} onEdit={edit} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>验证连接</CardTitle>
+              <CardDescription>
+                {channel === "douyin"
+                  ? "发送 challenge，检查服务是否原样返回验证内容。"
+                  : "发送加密 echostr，检查服务是否正确解密并回显。"}
+              </CardDescription>
+              <CardAction>
+                <Button
+                  variant="outline"
+                  disabled={testing}
+                  onClick={() => {
+                    if (!validateUrl()) return;
+                    setChangedSinceTest((value) => ({
+                      ...value,
+                      [channel]: false,
+                    }));
+                    void dispatch(actions.testConnection(draft));
+                  }}
+                >
+                  {testing ? (
+                    <Spinner data-icon="inline-start" />
+                  ) : (
+                    <LinkIcon data-icon="inline-start" />
+                  )}
+                  {testing ? "正在测试…" : "测试连接"}
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              {test.message && !staleTest ? (
+                <Notice
+                  role="status"
+                  variant={test.status === "failed" ? "destructive" : "default"}
+                >
+                  {test.status === "success" ? (
+                    <CheckCircle2Icon className="size-4 text-success" />
+                  ) : null}
+                  <span>{test.message}</span>
+                </Notice>
+              ) : (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {test.message && staleTest
+                    ? "配置已修改，请重新测试。"
+                    : "测试使用当前表单的配置；保存后，事件发送才会使用新配置。"}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </ResourceWorkspace>
   );
