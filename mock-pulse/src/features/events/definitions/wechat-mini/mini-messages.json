@@ -1,0 +1,189 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wechat-mini",
+  "version": "2026.09",
+  "schemas": {
+    "wmn-text": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/customer-message/receive.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "小程序原始 ID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的小程序原始 ID（gh_ 开头；官方黄金样本占位 toUser）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送者 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送消息的用户 OpenID（官方黄金样本占位 fromUser）。修改它可模拟不同用户。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "text = 用户发文本（小程序客服接收仅 text/image/miniprogrampage 三包）。"
+        },
+        {
+          "path": "Content",
+          "title": "文本内容",
+          "type": "string",
+          "group": "消息内容",
+          "description": "用户发送的文本（官方黄金样本 this is a test）。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID（官方黄金样本 1234567890123456），幂等去重键。新建时按 64 位整型生成。"
+        }
+      ]
+    },
+    "wmn-image": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/customer-message/receive.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "小程序原始 ID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的小程序原始 ID（gh_ 开头；官方黄金样本占位 toUser）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送者 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送图片的用户 OpenID（官方黄金样本占位 fromUser）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "image = 用户发图片。"
+        },
+        {
+          "path": "PicUrl",
+          "title": "图片链接",
+          "type": "string",
+          "group": "消息内容",
+          "description": "系统生成的图片链接（官方黄金样本占位 this is a url）。"
+        },
+        {
+          "path": "MediaId",
+          "title": "图片素材 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "图片消息媒体 ID，可调获取临时素材接口拉取数据（官方黄金样本占位 media_id）。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID（官方黄金样本 1234567890123456），幂等去重键。新建时按 64 位整型生成。"
+        }
+      ]
+    },
+    "wmn-miniprogrampage": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/customer-message/receive.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "小程序原始 ID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收消息的小程序原始 ID（gh_ 开头；官方黄金样本占位 toUser）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "发送者 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "发送小程序卡片的用户 OpenID（官方黄金样本占位 fromUser）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "miniprogrampage = 用户发小程序卡片。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "64 位整型消息 ID（官方黄金样本 1234567890123456），官方样本序在 MsgType 之后。新建时按 64 位整型生成。"
+        },
+        {
+          "path": "Title",
+          "title": "卡片标题",
+          "type": "string",
+          "group": "消息内容",
+          "description": "小程序卡片标题（官方黄金样本占位 title）。"
+        },
+        {
+          "path": "AppId",
+          "title": "卡片小程序 AppId",
+          "type": "string",
+          "group": "消息内容",
+          "description": "小程序卡片所指向的小程序 AppId（官方黄金样本占位 appid），可与接收方不同。"
+        },
+        {
+          "path": "PagePath",
+          "title": "卡片页面路径",
+          "type": "string",
+          "group": "消息内容",
+          "description": "小程序卡片页面路径（官方黄金样本占位 path）。"
+        },
+        {
+          "path": "ThumbUrl",
+          "title": "卡片封面 URL",
+          "type": "string",
+          "group": "消息内容",
+          "description": "封面图片地址（官方黄金样本为空串，原样保留）。"
+        },
+        {
+          "path": "ThumbMediaId",
+          "title": "封面素材 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "封面图片的临时素材 ID（官方黄金样本为空串，原样保留）。"
+        }
+      ]
+    }
+  }
+}

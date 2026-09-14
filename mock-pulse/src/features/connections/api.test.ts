@@ -7,8 +7,10 @@ import {
   loadConnections,
   saveConnection,
   testDouyinConnection,
+  testWechatMiniConnection,
   testWechatMpConnection,
   testWecomConnection,
+  type WechatMiniConnectionConfig,
   type WechatMpConnectionConfig,
   type WecomConnectionConfig,
 } from "./api";
@@ -47,6 +49,16 @@ const wechatMpConfig: WechatMpConnectionConfig = {
   token: "mock_token",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   mode: "secure",
+};
+
+const wechatMiniConfig: WechatMiniConnectionConfig = {
+  channel: "wechat-mini",
+  url: "http://127.0.0.1:8080/webhooks/wechat-mini",
+  appId: "wx_mock_appid",
+  token: "mock_token",
+  encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
+  mode: "secure",
+  dataFormat: "xml",
 };
 
 describe("connections api 契约", () => {
@@ -93,11 +105,23 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/公众号（按 channel 区分形状）", async () => {
+  it("testWechatMiniConnection 调用 connections_test_wechat_mini 并透传配置", async () => {
+    const outcome = { ok: true, message: "echostr 握手成功" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testWechatMiniConnection(wechatMiniConfig)).resolves.toEqual(
+      outcome,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_wechat_mini", {
+      config: wechatMiniConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/公众号/小程序（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
       wechatMpConfig,
+      wechatMiniConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

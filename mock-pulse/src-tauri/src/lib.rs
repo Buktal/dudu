@@ -29,6 +29,7 @@ pub fn run() {
             connections::connections_test_douyin,
             connections::connections_test_wecom,
             connections::connections_test_wechat_mp,
+            connections::connections_test_wechat_mini,
             definitions::definitions_load,
             definitions::definitions_save,
             events::events_load,

@@ -22,6 +22,20 @@ export type WecomSystem = "agent" | "aibot";
 export type WechatMpMode = "plain" | "compatible" | "secure";
 
 /**
+ * 小程序消息加解密方式（与 Rust 端 WechatMiniMode 内标一致，snake_case）：
+ * 与公众号同族三模式（事实库 §3.1：明文/兼容不建议、安全强烈推荐）。
+ * 缺省 plain。
+ */
+export type WechatMiniMode = "plain" | "compatible" | "secure";
+
+/**
+ * 小程序推送数据格式（与 Rust 端 WechatMiniDataFormat 内标一致，snake_case）：
+ * 官方控制台 XML/JSON 可选（事实库 §3.1，与公众号不同点）；双格式按事实库
+ * 结论取 XML 为主，此项随连接记录目标侧形态。缺省 xml。
+ */
+export type WechatMiniDataFormat = "xml" | "json";
+
+/**
  * 连接配置按渠道区分形状（与 Rust 端 ConnectionConfig 内标枚举一致，
  * 以 channel 字段判别；持久化与 IPC 透传均为 camelCase）。
  */
@@ -72,10 +86,27 @@ export type WechatMpConnectionConfig = {
   mode: WechatMpMode;
 };
 
+export type WechatMiniConnectionConfig = {
+  channel: "wechat-mini";
+  /** 回调目标地址，事件与剧本共享 */
+  url: string;
+  /** 小程序 AppID（开发设置获取；安全模式密文尾部即它，解密后须校验） */
+  appId: string;
+  /** 服务器配置 Token（GET 三参握手与四参 msg_signature 的签名源） */
+  token: string;
+  /** 43 位 EncodingAESKey（明文模式可不填；兼容/安全的 AES-256-CBC 派生源） */
+  encodingAesKey: string;
+  /** 消息加解密方式：三模式直发路由（缺省 plain，官方推荐 secure） */
+  mode: WechatMiniMode;
+  /** 数据格式：XML/JSON 可选；推送取 XML 为主，此项记录目标侧控制台形态 */
+  dataFormat: WechatMiniDataFormat;
+};
+
 export type ConnectionConfig =
   | DouyinConnectionConfig
   | WecomConnectionConfig
-  | WechatMpConnectionConfig;
+  | WechatMpConnectionConfig
+  | WechatMiniConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -116,4 +147,12 @@ export function testWechatMpConnection(
   config: WechatMpConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_wechat_mp", { config });
+}
+
+/** 按小程序 GET 三参握手协议向目标发起 GET（与公众号同族：
+ *  signature=sha1(字典序三参)，目标须原样回显 echostr） */
+export function testWechatMiniConnection(
+  config: WechatMiniConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_wechat_mini", { config });
 }

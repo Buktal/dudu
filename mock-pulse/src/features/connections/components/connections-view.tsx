@@ -40,6 +40,7 @@ import { errorMessage } from "@/lib/errors";
 import type {
   ConnectionConfig,
   DouyinSystem,
+  WechatMiniMode,
   WechatMpMode,
   WecomSystem,
 } from "../api";
@@ -68,6 +69,17 @@ function wecomTestNote(system: WecomSystem): string {
 
 /** 公众号握手文案按消息加解密方式呈现（GET 三参握手三模式同一流程） */
 function wechatMpTestNote(mode: WechatMpMode): string {
+  const suffix =
+    mode === "plain"
+      ? "明文模式。"
+      : mode === "compatible"
+        ? "兼容模式。"
+        : "安全模式。";
+  return `发送 GET（signature=sha1(字典序排序(Token,timestamp,nonce)) 与随机 echostr），检查服务是否验签通过并原样回显 echostr。${suffix}`;
+}
+
+/** 小程序握手文案（与公众号同族 GET 三参握手，三模式同一流程） */
+function wechatMiniTestNote(mode: WechatMiniMode): string {
   const suffix =
     mode === "plain"
       ? "明文模式。"
@@ -109,7 +121,9 @@ export function ConnectionsView() {
       ? actions.defaultDouyinConnection
       : channel === "wechat-mp"
         ? actions.defaultWechatMpConnection
-        : actions.defaultWecomConnection);
+        : channel === "wechat-mini"
+          ? actions.defaultWechatMiniConnection
+          : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -288,9 +302,15 @@ export function ConnectionsView() {
                     ? wechatMpTestNote(
                         draft.channel === "wechat-mp" ? draft.mode : "plain",
                       )
-                    : wecomTestNote(
-                        draft.channel === "wecom" ? draft.system : "agent",
-                      )}
+                    : channel === "wechat-mini"
+                      ? wechatMiniTestNote(
+                          draft.channel === "wechat-mini"
+                            ? draft.mode
+                            : "plain",
+                        )
+                      : wecomTestNote(
+                          draft.channel === "wecom" ? draft.system : "agent",
+                        )}
               </CardDescription>
               <CardAction>
                 <Button

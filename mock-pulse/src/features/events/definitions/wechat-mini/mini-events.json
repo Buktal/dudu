@@ -1,0 +1,56 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wechat-mini",
+  "version": "2026.09",
+  "schemas": {
+    "wmn-enter-tempsession": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/customer-message/receive.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "小程序原始 ID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的小程序原始 ID（gh_ 开头；官方黄金样本占位 toUser）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "进入客服会话的用户 OpenID（官方黄金样本占位 fromUser）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "user_enter_tempsession = 用户经客服会话按钮进入客服会话（官方事件名仅此拼写，无 user_enter_session）。"
+        },
+        {
+          "path": "SessionFrom",
+          "title": "会话来源",
+          "type": "string",
+          "group": "事件内容",
+          "description": "开发者在客服会话按钮设置的 session-from 属性（官方黄金样本占位 sessionFrom）。"
+        }
+      ]
+    }
+  }
+}

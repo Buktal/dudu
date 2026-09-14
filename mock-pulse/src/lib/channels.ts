@@ -115,10 +115,10 @@ export const CHANNEL_REGISTRY = {
   },
   "wechat-mini": {
     name: "微信小程序",
-    protocol: "小程序 · XML/JSON 回调",
-    note: "小程序消息推送：XML/JSON 可选，GET 握手同公众号，客服消息为主",
+    protocol: "小程序 · XML 回调（XML/JSON 可选取 XML 为主）",
+    note: "小程序消息推送：GET 握手同公众号（原样回 echostr），明文/兼容/安全三模式 AES 同族，客服三包 + 进入会话与授权变更事件，回 success/空串",
     icon: "Smartphone",
-    implemented: false,
+    implemented: true,
   },
   dingtalk: {
     name: "钉钉",

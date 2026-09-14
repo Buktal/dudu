@@ -5,6 +5,7 @@ import { CHANNELS } from "@/lib/channels";
 import { defineSchema } from "./define";
 import { DOUYIN_DEFINITIONS } from "./douyin";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
+import { MINI_DEFINITIONS } from "./wechat-mini";
 import { MP_DEFINITIONS } from "./wechat-mp";
 import { WECOM_DEFINITIONS } from "./wecom";
 
@@ -12,17 +13,23 @@ const DEFINITIONS_BY_CHANNEL = {
   douyin: DOUYIN_DEFINITIONS,
   wecom: WECOM_DEFINITIONS,
   "wechat-mp": MP_DEFINITIONS,
+  "wechat-mini": MINI_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 公众号 26 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(148);
+  it("抖音 33 + 企微 89 + 公众号 26 + 小程序 7 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(155);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("每个模板的 channelId 与所在渠道包一致（协议模块与描述文件同渠道）", () => {
-    for (const channelId of ["douyin", "wecom", "wechat-mp"] as const) {
+    for (const channelId of [
+      "douyin",
+      "wecom",
+      "wechat-mp",
+      "wechat-mini",
+    ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
         expect(schema.channelId).toBe(channelId);
@@ -234,8 +241,21 @@ describe("事件模板聚合注册表", () => {
       "wm-subscribe-msg-change",
       "wm-subscribe-msg-sent",
     ]);
+    expect(schemasByChannel("wechat-mini").map((schema) => schema.id)).toEqual([
+      // 客服接收三包（事实库 §2.1：receive.html 全页仅此三包）
+      "wmn-text",
+      "wmn-image",
+      "wmn-miniprogrampage",
+      // 进入会话事件（事实库 §2.2：user_enter_tempsession，无 user_enter_session）
+      "wmn-enter-tempsession",
+      // 授权变更三事件（事实库 §2.4）
+      "wmn-user-info-modified",
+      "wmn-auth-revoke",
+      "wmn-auth-cancellation",
+    ]);
     for (const channel of CHANNELS) {
-      if (["douyin", "wecom", "wechat-mp"].includes(channel.id)) continue;
+      if (["douyin", "wecom", "wechat-mp", "wechat-mini"].includes(channel.id))
+        continue;
       expect(schemasByChannel(channel.id), channel.id).toEqual([]);
     }
   });

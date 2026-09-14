@@ -1,0 +1,196 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wechat-mini",
+  "version": "2026.09",
+  "schemas": {
+    "wmn-user-info-modified": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/miniprogram/dev/server/event_push/platform/authorized_user_information_changes.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "小程序原始 ID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的小程序原始 ID（gh_ 开头；官方 revoke 样本 gh_870882ca4b1）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "资料被平台清理的用户 OpenID（官方 revoke 样本 owAqB1v0ahK_Xlc7GshIDdf2yf7E）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "授权内容",
+          "description": "user_info_modified = 授权用户资料变更（平台清理风险资料后，通知近 30 天授权过的小程序开发者）。"
+        },
+        {
+          "path": "OpenID",
+          "title": "授权用户 OpenID",
+          "type": "string",
+          "group": "授权内容",
+          "description": "变更资料的用户 OpenID（信封字段表公共字段；官方 revoke 样本 owAqB1nqaOYYWl0Ng484G2z5NIwU）。"
+        },
+        {
+          "path": "AppID",
+          "title": "小程序 AppID",
+          "type": "string",
+          "group": "授权内容",
+          "description": "被授权的小程序 AppID（官方 revoke 样本 wx13974bf780d3dc89）。"
+        }
+      ]
+    },
+    "wmn-auth-revoke": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/miniprogram/dev/server/event_push/platform/authorized_user_information_changes.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "小程序原始 ID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的小程序原始 ID（官方黄金样本 gh_870882ca4b1）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "撤回授权的用户 OpenID（官方黄金样本 owAqB1v0ahK_Xlc7GshIDdf2yf7E）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型；官方黄金样本 1626857200）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "授权内容",
+          "description": "user_authorization_revoke = 用户撤回授权信息。"
+        },
+        {
+          "path": "OpenID",
+          "title": "授权用户 OpenID",
+          "type": "string",
+          "group": "授权内容",
+          "description": "撤回授权的用户 OpenID（官方黄金样本 owAqB1nqaOYYWl0Ng484G2z5NIwU，可与 FromUserName 不同）。"
+        },
+        {
+          "path": "AppID",
+          "title": "小程序 AppID",
+          "type": "string",
+          "group": "授权内容",
+          "description": "被授权的小程序 AppID（官方黄金样本 wx13974bf780d3dc89）。"
+        },
+        {
+          "path": "RevokeInfo",
+          "title": "撤回授权类型",
+          "type": "string",
+          "group": "授权内容",
+          "description": "撤回的授权信息类型（官方黄金样本 1）：1 车牌号、2 地址、3 发票、4 蓝牙、5 麦克风、6 昵称和头像、7 摄像头、8 手机号、12 运动步数、13 位置、14 选中的图片或视频、15 选中的文件、16 邮箱、18 选择的位置、19 昵称输入键盘选的昵称、20 头像组件选的头像。"
+        },
+        {
+          "path": "PluginID",
+          "title": "插件 ID",
+          "type": "string",
+          "group": "授权内容",
+          "description": "插件场景字段：授权撤回涉及插件时的小程序 AppID（官方黄金样本 wx13974bf780d3dc89）。"
+        },
+        {
+          "path": "OpenPID",
+          "title": "插件用户 OpenPID",
+          "type": "string",
+          "group": "授权内容",
+          "description": "插件场景的用户身份（官方黄金样本 G7esq5NVzP76HIHoB95t4CVBP6to）。"
+        }
+      ]
+    },
+    "wmn-auth-cancellation": {
+      "version": "2026.09",
+      "source": "https://developers.weixin.qq.com/miniprogram/dev/server/event_push/platform/authorized_user_information_changes.html",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "小程序原始 ID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "接收事件的小程序原始 ID（gh_ 开头；官方 revoke 样本 gh_870882ca4b1）。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "身份与账号",
+          "description": "完成注销的用户 OpenID（官方 revoke 样本 owAqB1v0ahK_Xlc7GshIDdf2yf7E）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "时序与排重",
+          "description": "10 位 Unix 秒级时间戳（整型）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "授权内容",
+          "description": "user_authorization_cancellation = 授权用户完成注销。"
+        },
+        {
+          "path": "OpenID",
+          "title": "授权用户 OpenID",
+          "type": "string",
+          "group": "授权内容",
+          "description": "注销用户 OpenID（信封字段表公共字段；官方 revoke 样本 owAqB1nqaOYYWl0Ng484G2z5NIwU）。"
+        },
+        {
+          "path": "AppID",
+          "title": "小程序 AppID",
+          "type": "string",
+          "group": "授权内容",
+          "description": "被授权的小程序 AppID（官方 revoke 样本 wx13974bf780d3dc89）。"
+        }
+      ]
+    }
+  }
+}

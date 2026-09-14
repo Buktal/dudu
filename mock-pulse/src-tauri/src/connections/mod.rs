@@ -7,6 +7,7 @@
 pub mod douyin;
 pub mod store;
 pub(crate) mod util;
+pub mod wechat_mini;
 pub mod wechat_mp;
 pub mod wecom;
 
@@ -96,8 +97,12 @@ pub(crate) trait ChannelAdapter: Send + Sync {
 }
 
 /// 渠道适配器注册表：全仓唯一的渠道路由点，新渠道在此登记一行。
-pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] =
-    &[&douyin::Adapter, &wecom::Adapter, &wechat_mp::Adapter];
+pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
+    &douyin::Adapter,
+    &wecom::Adapter,
+    &wechat_mp::Adapter,
+    &wechat_mini::Adapter,
+];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
 pub(crate) fn adapter_by_channel(channel: &str) -> Option<&'static dyn ChannelAdapter> {
@@ -183,6 +188,34 @@ pub enum WechatMpMode {
     Secure,
 }
 
+/// 小程序消息加解密方式（小程序事实库 §3.1 三选一：明文/兼容不建议、安全强烈
+/// 推荐；与公众号同族同流程）。序列化 snake_case，缺省 plain（明文列首且
+/// 免配 EncodingAESKey，与公众号缺省一致）。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WechatMiniMode {
+    /// 明文模式：明文报文直发，URL 仅三参 signature
+    #[default]
+    Plain,
+    /// 兼容模式：明文与密文并存，URL 加 encrypt_type=aes + msg_signature
+    Compatible,
+    /// 安全模式（官方强烈推荐）：仅密文信封，URL 同兼容
+    Secure,
+}
+
+/// 小程序推送数据格式（小程序事实库 §3.1：XML 或 JSON 可选，与公众号不同点）。
+/// 序列化 snake_case，缺省 xml——双格式按事实库结论取 XML 为主（模板与直发
+/// 均为 XML）；JSON 随配置记录目标侧控制台形态。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WechatMiniDataFormat {
+    /// XML 报文（本工具推送主形态，模板逐字锚定 XML 样本）
+    #[default]
+    Xml,
+    /// JSON 报文（官方可选；目标侧控制台配置形态随连接记录）
+    Json,
+}
+
 /// 平台连接配置：持久化（store）与协议握手（douyin/wecom/wechat_mp）共用的域类型。
 /// 按渠道存不同凭据形状，以 channel 内标序列化（旧版抖音/企微数据形状不变，
 /// 新增体系/通道/模式字段全部 serde default 缺省）。
@@ -236,6 +269,22 @@ pub enum ConnectionConfig {
         /// 消息加解密方式：三模式直发路由（缺省 plain，官方默认）
         #[serde(default)]
         mode: WechatMpMode,
+    },
+    #[serde(rename = "wechat-mini", rename_all = "camelCase")]
+    WechatMini {
+        url: String,
+        /// 小程序 AppID（开发设置获取）：安全模式密文尾部即它，解密后须校验
+        app_id: String,
+        /// 服务器配置 Token：GET 三参握手与四参 msg_signature 签名源
+        token: String,
+        /// 43 位 EncodingAESKey（明文模式可不填；兼容/安全的 AES-256-CBC 派生源）
+        encoding_aes_key: String,
+        /// 消息加解密方式：三模式直发路由（缺省 plain，官方推荐 secure）
+        #[serde(default)]
+        mode: WechatMiniMode,
+        /// 数据格式：XML/JSON 可选（事实库 §3.1 与公众号不同点）；推送取 XML 为主
+        #[serde(default)]
+        data_format: WechatMiniDataFormat,
     },
 }
 
@@ -294,6 +343,15 @@ pub async fn connections_test_wechat_mp(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&wechat_mp::Adapter, config).await
+}
+
+/// 按小程序 GET 三参握手协议测试连接（与公众号同族：signature=sha1(字典序
+/// 排序三参)，目标原样回显 echostr；官方 5 秒应答窗口）。
+#[tauri::command]
+pub async fn connections_test_wechat_mini(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&wechat_mini::Adapter, config).await
 }
 
 #[cfg(test)]
@@ -358,9 +416,18 @@ mod tests {
             encoding_aes_key: String::new(),
             mode: WechatMpMode::Plain,
         };
+        let wechat_mini_config = ConnectionConfig::WechatMini {
+            url: String::new(),
+            app_id: String::new(),
+            token: String::new(),
+            encoding_aes_key: String::new(),
+            mode: WechatMiniMode::Plain,
+            data_format: WechatMiniDataFormat::Xml,
+        };
         assert_eq!(adapter_of(&douyin_config).id(), "douyin");
         assert_eq!(adapter_of(&wecom_config).id(), "wecom");
         assert_eq!(adapter_of(&wechat_mp_config).id(), "wechat-mp");
+        assert_eq!(adapter_of(&wechat_mini_config).id(), "wechat-mini");
         assert_eq!(
             adapter_by_channel("douyin").map(|adapter| adapter.id()),
             Some("douyin")
@@ -372,6 +439,10 @@ mod tests {
         assert_eq!(
             adapter_by_channel("wechat-mp").map(|adapter| adapter.id()),
             Some("wechat-mp")
+        );
+        assert_eq!(
+            adapter_by_channel("wechat-mini").map(|adapter| adapter.id()),
+            Some("wechat-mini")
         );
         assert!(adapter_by_channel("telegram").is_none());
         // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
@@ -387,6 +458,10 @@ mod tests {
             assert_eq!(
                 adapter.url(&wechat_mp_config).is_some(),
                 adapter.matches(&wechat_mp_config)
+            );
+            assert_eq!(
+                adapter.url(&wechat_mini_config).is_some(),
+                adapter.matches(&wechat_mini_config)
             );
         }
     }

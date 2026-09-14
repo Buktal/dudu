@@ -12,8 +12,10 @@ import {
   loadConnections,
   saveConnection as saveConnectionApi,
   testDouyinConnection as testDouyinApi,
+  testWechatMiniConnection as testWechatMiniApi,
   testWechatMpConnection as testWechatMpApi,
   testWecomConnection as testWecomApi,
+  type WechatMiniConnectionConfig,
   type WechatMpConnectionConfig,
   type WecomConnectionConfig,
 } from "../api";
@@ -67,6 +69,17 @@ export const defaultWechatMpConnection: WechatMpConnectionConfig = {
   mode: "plain",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（明文模式 + XML 数据格式起步） */
+export const defaultWechatMiniConnection: WechatMiniConnectionConfig = {
+  channel: "wechat-mini",
+  url: "http://127.0.0.1:8080/webhooks/wechat-mini",
+  appId: "",
+  token: "",
+  encodingAesKey: "",
+  mode: "plain",
+  dataFormat: "xml",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -76,6 +89,7 @@ export const initialConnectionsState: ConnectionsState = {
     douyin: defaultDouyinConnection,
     wecom: defaultWecomConnection,
     "wechat-mp": defaultWechatMpConnection,
+    "wechat-mini": defaultWechatMiniConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -99,7 +113,7 @@ export const saveConnection = createAsyncThunk(
 );
 
 /** 测试连接按渠道路由到对应协议命令（抖音 challenge / 企微 echostr /
- *  公众号三参签名 GET）。switch 穷尽：新增渠道漏配路由时编译期报错；
+ *  公众号与小程序三参签名 GET）。switch 穷尽：新增渠道漏配路由时编译期报错；
  *  运行时未知渠道 fail-safe 拒绝。 */
 export const testConnection = createAsyncThunk(
   "connections/test",
@@ -111,6 +125,8 @@ export const testConnection = createAsyncThunk(
         return testWecomApi(config);
       case "wechat-mp":
         return testWechatMpApi(config);
+      case "wechat-mini":
+        return testWechatMiniApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
@@ -189,6 +205,8 @@ export const {
  *   自建应用另需 corpId（加密 receiveid），机器人 receiveid 恒为空串不核
  * - 公众号核：url + appId（密文尾部校验方）+ token（三参/四参签名源）；
  *   encodingAesKey 仅兼容/安全模式必填（明文模式官方无需配置）
+ * - 小程序核：同公众号族——url + appId + token；encodingAesKey 仅兼容/安全
+ *   模式必填（dataFormat 随连接记录，不参与必填集）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -203,6 +221,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && wecomSystemReady(config);
     case "wechat-mp":
       return config.url.trim() !== "" && wechatMpReady(config);
+    case "wechat-mini":
+      return config.url.trim() !== "" && wechatMiniReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -258,6 +278,25 @@ function wechatMpReady(config: WechatMpConnectionConfig): boolean {
     case "compatible":
     case "secure":
       // 兼容/安全走 AES 信封：EncodingAESKey 必填（事实库 §4.1）
+      return base && config.encodingAesKey !== "";
+    default: {
+      // 穷尽守卫：新增模式漏配必填集时编译期报错；未知模式视为未配置
+      const exhaustive: never = config.mode;
+      void exhaustive;
+      return false;
+    }
+  }
+}
+
+/** 小程序与公众号同族：按加解密方式核必填集（明文模式 AESKey 可空） */
+function wechatMiniReady(config: WechatMiniConnectionConfig): boolean {
+  const base = config.appId !== "" && config.token !== "";
+  switch (config.mode) {
+    case "plain":
+      return base;
+    case "compatible":
+    case "secure":
+      // 兼容/安全走 AES 信封：EncodingAESKey 必填（事实库 §3.1）
       return base && config.encodingAesKey !== "";
     default: {
       // 穷尽守卫：新增模式漏配必填集时编译期报错；未知模式视为未配置

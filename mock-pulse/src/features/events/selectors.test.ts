@@ -321,7 +321,12 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
     });
     expect(
       byName.map((row) => (row.region === "template" ? row.schema.id : "")),
-    ).toEqual(["dy-enter", "wc-enter", "wb-event-enter-chat"]);
+    ).toEqual([
+      "dy-enter",
+      "wc-enter",
+      "wb-event-enter-chat",
+      "wmn-enter-tempsession",
+    ]);
 
     const byChannelName = libraryRows([], EVENT_SCHEMAS, {
       ...NO_FILTERS,

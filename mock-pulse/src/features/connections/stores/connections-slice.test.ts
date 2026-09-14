@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ConnectionConfig } from "../api";
 import {
   connectionsReducer,
+  defaultWechatMiniConnection,
   defaultWechatMpConnection,
   defaultWecomConnection,
   fetchConnections,
@@ -21,6 +22,7 @@ vi.mock("../api", () => ({
   loadConnections: vi.fn(),
   saveConnection: vi.fn(),
   testDouyinConnection: vi.fn(),
+  testWechatMiniConnection: vi.fn(),
   testWechatMpConnection: vi.fn(),
   testWecomConnection: vi.fn(),
 }));
@@ -29,6 +31,7 @@ import {
   loadConnections,
   saveConnection as saveApi,
   testDouyinConnection,
+  testWechatMiniConnection,
   testWechatMpConnection,
   testWecomConnection,
 } from "../api";
@@ -61,6 +64,16 @@ const savedWechatMp: ConnectionConfig = {
   token: "AAAAA",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   mode: "secure",
+};
+
+const savedWechatMini: ConnectionConfig = {
+  channel: "wechat-mini",
+  url: "http://127.0.0.1:9099/wechat-mini",
+  appId: "wx_mock_appid",
+  token: "AAAAA",
+  encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
+  mode: "secure",
+  dataFormat: "xml",
 };
 
 function makeStore() {
@@ -207,6 +220,27 @@ describe("connections slice", () => {
     });
   });
 
+  it("小程序配置走 connections_test_wechat_mini（按渠道路由测试命令）", async () => {
+    vi.mocked(testWechatMiniConnection).mockResolvedValue({
+      ok: true,
+      message: "echostr 握手成功",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedWechatMini));
+
+    expect(vi.mocked(testWechatMiniConnection)).toHaveBeenCalledWith(
+      savedWechatMini,
+    );
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "echostr 握手成功",
+    });
+  });
+
   it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
     // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
     // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
@@ -221,6 +255,7 @@ describe("connections slice", () => {
     expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store)).status).toBe("failed");
   });
 });
@@ -341,6 +376,53 @@ describe("isConnectionReady（公众号按消息加解密方式核必填集）",
     expect(defaultWechatMpConnection.mode).toBe("plain");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "wechat-mp")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（小程序按消息加解密方式核必填集）", () => {
+  it("安全模式：url/appId/token/encodingAesKey 齐全才算已配置（dataFormat 不参与）", () => {
+    expect(isConnectionReady(savedWechatMini)).toBe(true);
+    expect(isConnectionReady({ ...savedWechatMini, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWechatMini, appId: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWechatMini, token: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWechatMini, encodingAesKey: "" })).toBe(
+      false,
+    );
+    expect(isConnectionReady({ ...savedWechatMini, dataFormat: "json" })).toBe(
+      true,
+    );
+  });
+
+  it("明文模式无需 EncodingAESKey（AESKey 可空）", () => {
+    const plain = {
+      ...savedWechatMini,
+      mode: "plain" as const,
+      encodingAesKey: "",
+    };
+    expect(isConnectionReady(plain)).toBe(true);
+  });
+
+  it("兼容模式与安全模式同按 AESKey 必填判定", () => {
+    const compatible = {
+      ...savedWechatMini,
+      mode: "compatible" as const,
+      encodingAesKey: "",
+    };
+    expect(isConnectionReady(compatible)).toBe(false);
+    expect(
+      isConnectionReady({ ...compatible, encodingAesKey: "A".repeat(43) }),
+    ).toBe(true);
+  });
+
+  it("初始小程序占位连接（凭据全空、XML 格式起步）不算已配置", () => {
+    expect(defaultWechatMiniConnection.channel).toBe("wechat-mini");
+    expect(defaultWechatMiniConnection.mode).toBe("plain");
+    expect(defaultWechatMiniConnection.dataFormat).toBe("xml");
+    expect(
+      isConnectionReady(
+        selectConnection(initialConnectionsState, "wechat-mini"),
+      ),
     ).toBe(false);
   });
 });
