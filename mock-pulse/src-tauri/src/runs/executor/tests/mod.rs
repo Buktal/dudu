@@ -66,6 +66,7 @@ where
 pub(super) fn wecom_connection(url: String) -> ConnectionConfig {
     ConnectionConfig::Wecom {
         url,
+        system: crate::connections::WecomSystem::Agent,
         corp_id: WC_CORP_ID.into(),
         token: WC_TOKEN.into(),
         encoding_aes_key: WC_AES_KEY.into(),

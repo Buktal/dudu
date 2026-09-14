@@ -44,10 +44,11 @@ export const defaultDouyinConnection: DouyinConnectionConfig = {
   isvKey: "",
 };
 
-/** 原型默认值：本地联调回调地址，凭据留空 */
+/** 原型默认值：本地联调回调地址，凭据留空（自建应用 XML 通道起步） */
 export const defaultWecomConnection: WecomConnectionConfig = {
   channel: "wecom",
   url: "http://127.0.0.1:8080/webhooks/wecom",
+  system: "agent",
   corpId: "",
   token: "",
   encodingAesKey: "",
@@ -168,8 +169,8 @@ export const {
  *   dop/生活服务 = url + clientSecret（clientKey 仅标识）；
  *   小游戏 = url + miniGameToken（x-signature 参与）；
  *   服务商 = url + isvToken（MsgSignature 参与；isv_key 暂不参与验签，可空）
- * - 企微：url + token + encodingAesKey + corpId（加密/签名/明文结构必需；
- *   agentId 不参与握手加密，可空）
+ * - 企微按通道核（加密/签名必需）：url + token + encodingAesKey；
+ *   自建应用另需 corpId（加密 receiveid），机器人 receiveid 恒为空串不核
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -181,12 +182,7 @@ export function isConnectionReady(
     case "douyin":
       return config.url.trim() !== "" && douyinSystemReady(config);
     case "wecom":
-      return (
-        config.url.trim() !== "" &&
-        config.token !== "" &&
-        config.encodingAesKey !== "" &&
-        config.corpId !== ""
-      );
+      return config.url.trim() !== "" && wecomSystemReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -208,6 +204,24 @@ function douyinSystemReady(config: DouyinConnectionConfig): boolean {
       return config.clientSecret !== "";
     default: {
       // 穷尽守卫：新增体系漏配必填集时编译期报错；未知体系视为未配置
+      const exhaustive: never = config.system;
+      void exhaustive;
+      return false;
+    }
+  }
+}
+
+/** 企微按推送通道核加密必填集（Token/EncodingAESKey 两通道通用） */
+function wecomSystemReady(config: WecomConnectionConfig): boolean {
+  const base = config.token !== "" && config.encodingAesKey !== "";
+  switch (config.system) {
+    case "agent":
+      return base && config.corpId !== "";
+    case "aibot":
+      // 机器人通道加密 receiveid 恒为空串，corpId 不参与
+      return base;
+    default: {
+      // 穷尽守卫：新增通道漏配必填集时编译期报错；未知通道视为未配置
       const exhaustive: never = config.system;
       void exhaustive;
       return false;

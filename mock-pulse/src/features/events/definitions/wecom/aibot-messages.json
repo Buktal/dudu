@@ -1,0 +1,467 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wb-text": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/100719",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "消息排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识；单聊与群聊共用同一信封，用 chattype 区分。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "single = 单聊，group = 群聊。文本/图文混排两类单聊群聊均可收，媒体类仅单聊。"
+        },
+        {
+          "path": "from.userid",
+          "title": "发送者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "发送成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "response_url",
+          "title": "回复地址",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "主动回复用的临时 URL（官方 §6：消息回调携带）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "文本消息固定为 text。"
+        },
+        {
+          "path": "text.content",
+          "title": "消息正文",
+          "type": "string",
+          "group": "消息内容",
+          "description": "模拟成员发来的完整文本（群聊内以 @ 机器人开头，官方 §5.7 样本）。",
+          "multiline": true,
+          "required": true
+        }
+      ]
+    },
+    "wb-quote": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/100719",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "消息排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识；单聊与群聊共用同一信封，用 chattype 区分。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "single = 单聊，group = 群聊。"
+        },
+        {
+          "path": "from.userid",
+          "title": "发送者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "发送成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "response_url",
+          "title": "回复地址",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "主动回复用的临时 URL（官方 §6：消息回调携带）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "引用消息的正文类型（官方 §5.7 样本为 text，引用结构另起 quote 字段）。"
+        },
+        {
+          "path": "text.content",
+          "title": "消息正文",
+          "type": "string",
+          "group": "消息内容",
+          "description": "成员针对引用内容发出的新文本。",
+          "multiline": true,
+          "required": true
+        },
+        {
+          "path": "quote.msgtype",
+          "title": "引用消息类型",
+          "type": "string",
+          "group": "引用内容",
+          "description": "被引用消息的类型（官方 §5.7 样本为 text）。"
+        },
+        {
+          "path": "quote.text.content",
+          "title": "引用正文",
+          "type": "string",
+          "group": "引用内容",
+          "description": "被引用消息的正文（官方 §5.7 样本原文「这是今日的测试情况」）。",
+          "multiline": true
+        }
+      ]
+    },
+    "wb-mixed": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/100719",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "消息排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识；单聊与群聊共用同一信封，用 chattype 区分。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "single = 单聊，group = 群聊。"
+        },
+        {
+          "path": "from.userid",
+          "title": "发送者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "发送成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "response_url",
+          "title": "回复地址",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "主动回复用的临时 URL（官方 §6：消息回调携带）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "图文混排固定为 mixed。"
+        },
+        {
+          "path": "mixed",
+          "title": "图文混排内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "图文混排结构体；官方 100719 页图文明细未入事实库，模板先以空对象占位，可在完整报文页按需增补。"
+        }
+      ]
+    },
+    "wb-image": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/100719",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "消息排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "图片消息仅单聊（官方 §2.10：后四类仅单聊）。"
+        },
+        {
+          "path": "from.userid",
+          "title": "发送者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "发送成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "response_url",
+          "title": "回复地址",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "主动回复用的临时 URL（官方 §6：消息回调携带）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "图片消息固定为 image。"
+        },
+        {
+          "path": "image",
+          "title": "图片内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "图片结构体；官方 100719 页图片字段明细未入事实库，模板先以空对象占位，可在完整报文页按需增补。"
+        }
+      ]
+    },
+    "wb-voice": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/100719",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "消息排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "语音消息仅单聊（官方 §2.10：后四类仅单聊）。"
+        },
+        {
+          "path": "from.userid",
+          "title": "发送者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "发送成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "response_url",
+          "title": "回复地址",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "主动回复用的临时 URL（官方 §6：消息回调携带）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "语音消息固定为 voice（官方注明带转文本）。"
+        },
+        {
+          "path": "voice",
+          "title": "语音内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "语音结构体（含转文本）；官方 100719 页语音字段明细未入事实库，模板先以空对象占位，可在完整报文页按需增补。"
+        }
+      ]
+    },
+    "wb-file": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/100719",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "消息排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "文件消息仅单聊（官方 §2.10：后四类仅单聊）。"
+        },
+        {
+          "path": "from.userid",
+          "title": "发送者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "发送成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "response_url",
+          "title": "回复地址",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "主动回复用的临时 URL（官方 §6：消息回调携带）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "文件消息固定为 file。"
+        },
+        {
+          "path": "file",
+          "title": "文件内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "文件结构体；官方 100719 页文件字段明细未入事实库，模板先以空对象占位，可在完整报文页按需增补。"
+        }
+      ]
+    },
+    "wb-video": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/100719",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "消息排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "视频消息仅单聊（官方 §2.10：后四类仅单聊）。"
+        },
+        {
+          "path": "from.userid",
+          "title": "发送者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "发送成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "response_url",
+          "title": "回复地址",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "主动回复用的临时 URL（官方 §6：消息回调携带）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "视频消息固定为 video。"
+        },
+        {
+          "path": "video",
+          "title": "视频内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "视频结构体；官方 100719 页视频字段明细未入事实库，模板先以空对象占位，可在完整报文页按需增补。"
+        }
+      ]
+    }
+  }
+}

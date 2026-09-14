@@ -16,6 +16,7 @@ import type { EventSchema, IdKind } from "./schemas";
  * - createTimeSec：10 位秒级时间戳（企微；字符串形态）
  * - msgId64：64 位整型消息 ID（企微 MsgId；18 位数字串，恒在 int64 内，
  *   全程字符串不经 number，防 2^53 精度丢失）
+ * - aibotMsgId：企微智能机器人 msgid（官方样本 31 字符 base64 风格 + "="）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -77,6 +78,16 @@ export function generateMsgId64(): string {
   return out;
 }
 
+/** 企微智能机器人 msgid：base64 风格串（官方样本 31 字符 + "="，可含 + /） */
+export function generateAibotMsgId(): string {
+  const bytes = randomBytes(31);
+  const body = Array.from(
+    bytes,
+    (byte) => BASE64_CHARS[byte % BASE64_CHARS.length],
+  ).join("");
+  return `${body}=`;
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -87,6 +98,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   createTimeSec: generateCreateTimeSec,
   createTimeSecNumber: generateCreateTimeSecNumber,
   msgId64: generateMsgId64,
+  aibotMsgId: generateAibotMsgId,
 };
 
 /**

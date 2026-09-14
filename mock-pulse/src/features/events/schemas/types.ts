@@ -26,7 +26,8 @@ export type IdKind =
   | "createTimeMs" // 抖音 13 位毫秒时间戳
   | "createTimeSec" // 企微 10 位秒级时间戳（字符串）
   | "createTimeSecNumber" // 10 位秒级时间戳（数字形态：小游戏 CreateTime 等）
-  | "msgId64"; // 企微 MsgId：64 位整型数字串（18 位，恒在 int64 内）
+  | "msgId64" // 企微 MsgId：64 位整型数字串（18 位，恒在 int64 内）
+  | "aibotMsgId"; // 企微智能机器人 msgid：base64 风格串（官方样本 31 字符 + "="）
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */

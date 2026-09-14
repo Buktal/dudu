@@ -7,6 +7,13 @@ import { invoke } from "@tauri-apps/api/core";
 export type DouyinSystem = "dop" | "life_service" | "mini_game" | "isv";
 
 /**
+ * 企微推送通道（与 Rust 端 WecomSystem 内标一致，snake_case）：
+ * 自建应用 XML 回调与智能机器人 JSON 回调两条通道，同用 Token/EncodingAESKey
+ * 验签加密，差异在报文形态与加密 receiveid（应用=corpId，机器人=空串）。
+ */
+export type WecomSystem = "agent" | "aibot";
+
+/**
  * 连接配置按渠道区分形状（与 Rust 端 ConnectionConfig 内标枚举一致，
  * 以 channel 字段判别；持久化与 IPC 透传均为 camelCase）。
  */
@@ -32,7 +39,9 @@ export type WecomConnectionConfig = {
   channel: "wecom";
   /** 回调目标地址，事件与剧本共享 */
   url: string;
-  /** 企业 ID（明文结构里的 receiveid，加解密参与方） */
+  /** 推送通道：自建应用 XML / 智能机器人 JSON（缺省 agent，兼容旧数据） */
+  system: WecomSystem;
+  /** 企业 ID（明文结构里的 receiveid，加解密参与方；机器人通道 receiveid 为空） */
   corpId: string;
   /** 回调配置 Token（参与签名） */
   token: string;

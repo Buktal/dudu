@@ -155,9 +155,21 @@ pub enum DouyinSystem {
     Isv,
 }
 
+/// 企微推送通道（事实库 §2.1/§2.10：XML 自建应用与 JSON 智能机器人两通道并行）。
+/// 连接配置按通道路由协议原语；序列化 snake_case，缺省 agent（旧版数据形状不变）。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WecomSystem {
+    /// 自建应用回调：明文 XML 报文，加密 receiveid = corpId（官方 90239/90240）
+    #[default]
+    Agent,
+    /// 智能机器人回调：明文 JSON 报文，加密 receiveid = 空串（官方 100719/101027/101033）
+    Aibot,
+}
+
 /// 平台连接配置：持久化（store）与协议握手（douyin/wecom）共用的域类型。
-/// 按渠道存不同凭据形状，以 channel 内标序列化（旧版抖音数据形状不变，
-/// 新增体系字段全部 serde default 缺省）。
+/// 按渠道存不同凭据形状，以 channel 内标序列化（旧版抖音/企微数据形状不变，
+/// 新增体系/通道字段全部 serde default 缺省）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "channel")]
 pub enum ConnectionConfig {
@@ -184,9 +196,16 @@ pub enum ConnectionConfig {
     #[serde(rename = "wecom", rename_all = "camelCase")]
     Wecom {
         url: String,
+        /// 推送通道：自建应用 XML / 智能机器人 JSON（缺省 agent）
+        #[serde(default)]
+        system: WecomSystem,
+        /// 企业 CorpID（自建应用通道的加密 receiveid；机器人通道 receiveid 为空）
         corp_id: String,
+        /// 回调配置 Token（两通道共用，参与四值签名）
         token: String,
+        /// 43 位 EncodingAESKey（两通道共用，AES-256-CBC 派生源）
         encoding_aes_key: String,
+        /// 自建应用数字 ID（仅应用相关回调信封携带）
         agent_id: String,
     },
 }
@@ -288,6 +307,7 @@ mod tests {
         };
         let wecom_config = ConnectionConfig::Wecom {
             url: String::new(),
+            system: WecomSystem::Agent,
             corp_id: String::new(),
             token: String::new(),
             encoding_aes_key: String::new(),

@@ -31,6 +31,7 @@ const douyinConfig: DouyinConnectionConfig = {
 const wecomConfig: WecomConnectionConfig = {
   channel: "wecom",
   url: "http://127.0.0.1:8080/webhooks/wecom",
+  system: "agent",
   corpId: "ww_mock_corp",
   token: "mock_token",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",

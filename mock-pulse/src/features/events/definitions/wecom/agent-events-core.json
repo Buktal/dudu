@@ -1,0 +1,454 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-subscribe": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员（官方事件样本 UserID）。修改它可模拟不同成员。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "subscribe = 成员加入应用可见范围/加入企业/被启用后关注（官方 §5.3 黄金样本，无 EventKey）。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-unsubscribe": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "unsubscribe = 成员退出应用可见范围/退出企业/被禁用，载荷形状与 subscribe 一致。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-enter": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "发送消息/触发事件的成员。修改它可模拟不同成员进入会话。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳（与抖音的 13 位毫秒不同）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "官方事件名：enter_agent = 成员进入应用会话；click = 点击菜单按钮。"
+        },
+        {
+          "path": "EventKey",
+          "title": "事件键值",
+          "type": "string",
+          "group": "事件内容",
+          "description": "enter_agent 的 EventKey 为空（官方 §2.2：进入会话不携带键值）。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-location-report": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员上报位置。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "LOCATION（全大写）= 成员进入应用会话时上报地理位置。"
+        },
+        {
+          "path": "Latitude",
+          "title": "纬度",
+          "type": "numberString",
+          "group": "事件内容",
+          "description": "地理位置纬度，裸文本输出（官方位置类样本不带 CDATA）。"
+        },
+        {
+          "path": "Longitude",
+          "title": "经度",
+          "type": "numberString",
+          "group": "事件内容",
+          "description": "地理位置经度，裸文本输出。"
+        },
+        {
+          "path": "Precision",
+          "title": "精度",
+          "type": "numberString",
+          "group": "事件内容",
+          "description": "地理位置精度，裸文本输出。"
+        },
+        {
+          "path": "AppType",
+          "title": "应用类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "官方 LOCATION 示例为 wxwork（企业微信绑定场景）。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-batch-job-result": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "batch_job_result = 异步任务完成通知。任务明细在 BatchJob 结构体内（嵌套结构按原文片段透传）。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-change-contact": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90970",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "通讯录变更固定为 sys（系统生成，官方原文该行行尾带一个空格）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "change_contact = 通讯录变更（推送目标为通讯录同步助手/代开发/上游共享应用）。"
+        },
+        {
+          "path": "ChangeType",
+          "title": "变更类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "create_user/update_user/delete_user/create_party/update_party/delete_party/update_tag（官方样本此处为裸文本）。"
+        },
+        {
+          "path": "UserID",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "成员属性",
+          "description": "变更成员的账号（官方 §5.4 create_user 样本）。"
+        },
+        {
+          "path": "Name",
+          "title": "成员名称",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员姓名。2022-08-15 后新配置的回调地址只回调 UserID/Department 两字段。"
+        },
+        {
+          "path": "Department",
+          "title": "所属部门",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员所属部门列表，逗号分隔（官方原文「1,2,3」）。"
+        },
+        {
+          "path": "MainDepartment",
+          "title": "主部门",
+          "type": "numberString",
+          "group": "成员属性",
+          "description": "主部门 ID，裸文本输出。"
+        },
+        {
+          "path": "IsLeaderInDept",
+          "title": "部门领导标识",
+          "type": "string",
+          "group": "成员属性",
+          "description": "在各部门是否为上级，逗号分隔（1 是 / 0 否）。"
+        },
+        {
+          "path": "DirectLeader",
+          "title": "直接上级",
+          "type": "string",
+          "group": "成员属性",
+          "description": "直接上级的 UserID 列表，逗号分隔。"
+        },
+        {
+          "path": "Position",
+          "title": "职位",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员职位。"
+        },
+        {
+          "path": "Mobile",
+          "title": "手机号",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员手机号，裸文本输出（官方样本如此）。"
+        },
+        {
+          "path": "Gender",
+          "title": "性别",
+          "type": "numberString",
+          "group": "成员属性",
+          "description": "0 未定义 / 1 男 / 2 女，裸文本输出。"
+        },
+        {
+          "path": "Email",
+          "title": "邮箱",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员邮箱。"
+        },
+        {
+          "path": "BizMail",
+          "title": "企业邮箱",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员企业邮箱（官方样本形如 zhangsan@qyycs2.wecom.work）。"
+        },
+        {
+          "path": "Status",
+          "title": "激活状态",
+          "type": "numberString",
+          "group": "成员属性",
+          "description": "1 已激活 / 2 已禁用 / 4 未激活 / 5 成员退出，裸文本输出。"
+        },
+        {
+          "path": "Avatar",
+          "title": "头像 URL",
+          "type": "string",
+          "group": "成员属性",
+          "description": "头像资源地址；小图把结尾 /0 改 /100。"
+        },
+        {
+          "path": "Alias",
+          "title": "别名",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员别名（帐号）。"
+        },
+        {
+          "path": "Telephone",
+          "title": "座机号",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员座机号。"
+        },
+        {
+          "path": "Address",
+          "title": "地址",
+          "type": "string",
+          "group": "成员属性",
+          "description": "成员办公地址。"
+        },
+        {
+          "path": "ExtAttr",
+          "title": "扩展属性",
+          "type": "string",
+          "group": "成员属性",
+          "description": "ExtAttr 结构体原文片段（Item：Type 0 文本 Text.Value / 1 网页 Web.Title+Url），整体按官方 §5.4 原文透传。"
+        }
+      ]
+    }
+  }
+}

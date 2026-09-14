@@ -1,101 +1,29 @@
-import { parseChannelDefinition } from "../definitions/loader";
-import wecomDefinition from "../definitions/wecom.json";
-import { defineSchema } from "./define";
-import type { ExpectedReceipt, WirePayload, XmlLayout } from "./types";
+import { WECOM_AIBOT_SCHEMAS } from "./wecom/aibot";
+import { WECOM_AGENT_CARD_EVENT_SCHEMAS } from "./wecom/cards";
+import { WECOM_AGENT_CORE_EVENT_SCHEMAS } from "./wecom/events";
+import { WECOM_AGENT_INTERACTION_EVENT_SCHEMAS } from "./wecom/interaction";
+import { WECOM_AGENT_LIFECYCLE_EVENT_SCHEMAS } from "./wecom/lifecycle";
+import { WECOM_AGENT_MENU_EVENT_SCHEMAS } from "./wecom/menu";
+import { WECOM_AGENT_MESSAGE_SCHEMAS } from "./wecom/messages";
+import { WECOM_DEFINITIONS } from "./wecom/shared";
 
 /**
- * 企业微信渠道协议元数据（自建应用回调，XML 报文）。
- * 载荷与协议事实：docs/research/channels/wecom.md（官方 90239/90240 摄取）；
- * 字段说明与版本/来源由 ../definitions/wecom.json 经 loader 装载即校验。
- * 载荷模型：扁平对象，键 = XML 元素名（文档序）；MsgId 64 位整型全程按字符串处理。
+ * 企微渠道协议元数据（两条通道聚合，事实库 docs/research/channels/wecom.md）：
+ * - 自建应用 XML 通道（90239/90240/90970）：成员消息 6 MsgType（wecom/messages）
+ *   + 事件字典 26 Event（wecom/events、menu、interaction、cards、lifecycle）
+ * - 智能机器人 JSON 通道（100719/101027）：收消息 7 msgtype + 收事件 4 种（wecom/aibot）
+ * 载荷逐字取自官方核验样本；字段说明与版本/来源由 definitions/wecom/
+ * 分通道描述文件装载即校验。加密信封（AES/receiveid）由 Rust 适配器完成。
  */
 
-/** 版本化字段描述文件：随应用分发，装载即校验（坏文件启动即炸） */
-export const WECOM_DEFINITIONS = parseChannelDefinition(wecomDefinition);
-
-/**
- * 企微官方成功语义：5 秒内回包即成功，正文形态走企微回执三态
- * （默认期望留空 = 服务原样回空串；要验证加密回包可在编辑器改期望）。
- */
-const WECOM_EXPECTED: ExpectedReceipt = {
-  status: 200,
-  body: "",
-  bodyMode: "wecomReply",
-};
-
-/** 事件类排版：§5.3/§5.4 官方事件样本（tab 缩进、无行尾空格） */
-const wcEventLayout: XmlLayout = {
-  indent: "\t",
-  bareTags: ["CreateTime", "MsgId", "AgentID"],
-};
-
-/** 官方黄金样本 §5.2：文本消息（逐字，MsgId 按字符串保真） */
-const goldenWcText: WirePayload = {
-  ToUserName: "toUser",
-  FromUserName: "fromUser",
-  CreateTime: "1348831860",
-  MsgType: "text",
-  Content: "this is a test",
-  MsgId: "1234567890123456",
-  AgentID: "1",
-};
+export { WECOM_DEFINITIONS };
 
 export const WECOM_EVENT_SCHEMAS = [
-  defineSchema(WECOM_DEFINITIONS, "wc-text", {
-    eventName: "text",
-    name: "接收消息 · 文本",
-    kind: "message",
-    contentString: false,
-    wire: "xml",
-    expected: WECOM_EXPECTED,
-    xmlLayout: {
-      indent: "   ",
-      bareTags: ["CreateTime", "MsgId", "AgentID"],
-      // §5.2 官方原文 FromUserName 行尾带一个空格——逐字保真
-      trailingSpaceTags: ["FromUserName"],
-    },
-    idGenerations: [
-      { path: "CreateTime", kind: "createTimeSec" },
-      { path: "MsgId", kind: "msgId64" },
-    ],
-    payload: goldenWcText,
-  }),
-  defineSchema(WECOM_DEFINITIONS, "wc-enter", {
-    eventName: "enter_agent",
-    name: "进入应用会话",
-    kind: "event",
-    contentString: false,
-    wire: "xml",
-    expected: WECOM_EXPECTED,
-    xmlLayout: wcEventLayout,
-    idGenerations: [{ path: "CreateTime", kind: "createTimeSec" }],
-    payload: {
-      ToUserName: "toUser",
-      FromUserName: "UserID",
-      CreateTime: "1348831860",
-      MsgType: "event",
-      Event: "enter_agent",
-      EventKey: "",
-      AgentID: "1",
-    },
-  }),
-  defineSchema(WECOM_DEFINITIONS, "wc-click", {
-    eventName: "click",
-    name: "点击菜单按钮",
-    kind: "event",
-    contentString: false,
-    wire: "xml",
-    expected: WECOM_EXPECTED,
-    xmlLayout: wcEventLayout,
-    idGenerations: [{ path: "CreateTime", kind: "createTimeSec" }],
-    payload: {
-      ToUserName: "toUser",
-      FromUserName: "UserID",
-      CreateTime: "1348831860",
-      MsgType: "event",
-      Event: "click",
-      EventKey: "EVENTKEY",
-      AgentID: "1",
-    },
-  }),
+  ...WECOM_AGENT_MESSAGE_SCHEMAS,
+  ...WECOM_AGENT_CORE_EVENT_SCHEMAS,
+  ...WECOM_AGENT_MENU_EVENT_SCHEMAS,
+  ...WECOM_AGENT_INTERACTION_EVENT_SCHEMAS,
+  ...WECOM_AGENT_CARD_EVENT_SCHEMAS,
+  ...WECOM_AGENT_LIFECYCLE_EVENT_SCHEMAS,
+  ...WECOM_AIBOT_SCHEMAS,
 ] as const;

@@ -71,6 +71,7 @@ const DY_CONNECTION: ConnectionConfig = {
 const WC_CONNECTION: ConnectionConfig = {
   channel: "wecom",
   url: "http://127.0.0.1:9999/webhooks/wecom",
+  system: "agent",
   corpId: "ww_corp",
   token: "QDG6eK",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",

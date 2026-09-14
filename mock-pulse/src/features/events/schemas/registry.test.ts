@@ -8,8 +8,8 @@ import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
 import { WECOM_DEFINITIONS } from "./wecom";
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 3 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(36);
+  it("抖音 33 + 企微 43 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(76);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -95,9 +95,52 @@ describe("事件模板聚合注册表", () => {
       "dy-isv-authorized",
     ]);
     expect(schemasByChannel("wecom").map((schema) => schema.id)).toEqual([
+      // 自建应用 XML 通道：成员消息 6 MsgType
       "wc-text",
+      "wc-image",
+      "wc-voice",
+      "wc-video",
+      "wc-location",
+      "wc-link",
+      // 事件字典 26 Event
+      "wc-subscribe",
+      "wc-unsubscribe",
       "wc-enter",
+      "wc-location-report",
+      "wc-batch-job-result",
+      "wc-change-contact",
       "wc-click",
+      "wc-view",
+      "wc-view-miniprogram",
+      "wc-scancode-push",
+      "wc-scancode-waitmsg",
+      "wc-pic-sysphoto",
+      "wc-pic-photo-or-album",
+      "wc-pic-weixin",
+      "wc-location-select",
+      "wc-open-approval-change",
+      "wc-share-agent-change",
+      "wc-share-chain-change",
+      "wc-template-card-event",
+      "wc-template-card-menu-event",
+      "wc-inactive-alert",
+      "wc-close-inactive-agent",
+      "wc-reopen-inactive-agent",
+      "wc-low-active-alert",
+      "wc-low-active",
+      "wc-active-restored",
+      // 智能机器人 JSON 通道：收消息 7 msgtype + 收事件 4 种
+      "wb-text",
+      "wb-quote",
+      "wb-mixed",
+      "wb-image",
+      "wb-voice",
+      "wb-file",
+      "wb-video",
+      "wb-event",
+      "wb-event-enter-chat",
+      "wb-event-template-card",
+      "wb-event-template-card-menu",
     ]);
     for (const channel of CHANNELS) {
       if (channel.id === "douyin" || channel.id === "wecom") continue;

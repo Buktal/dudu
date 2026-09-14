@@ -1,0 +1,343 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-scancode-push": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员扫码。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "scancode_push = 扫码推事件（扫码后直接推送）。扫码明细在 ScanCodeInfo 结构体内（嵌套结构按原文片段透传）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "事件键值",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单配置的按钮 key 值。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-scancode-waitmsg": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员扫码。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "scancode_waitmsg = 扫码且弹出提示框（等待回复消息）。扫码明细在 ScanCodeInfo 结构体内（嵌套结构按原文片段透传）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "事件键值",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单配置的按钮 key 值。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-pic-sysphoto": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员发图。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "pic_sysphoto = 弹出系统拍照发图。图片明细在 SendPicsInfo 结构体内（嵌套结构按原文片段透传）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "事件键值",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单配置的按钮 key 值。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-pic-photo-or-album": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员发图。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "pic_photo_or_album = 弹出拍照或相册发图。图片明细在 SendPicsInfo 结构体内（嵌套结构按原文片段透传）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "事件键值",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单配置的按钮 key 值。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-pic-weixin": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员发图。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "pic_weixin = 弹出微信相册发图。图片明细在 SendPicsInfo 结构体内（嵌套结构按原文片段透传）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "事件键值",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单配置的按钮 key 值。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-location-select": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员选位置。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "location_select = 弹出地理位置选择器。位置明细在 SendLocationInfo 结构体内（嵌套结构按原文片段透传）。"
+        },
+        {
+          "path": "EventKey",
+          "title": "事件键值",
+          "type": "string",
+          "group": "事件内容",
+          "description": "菜单配置的按钮 key 值。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    }
+  }
+}

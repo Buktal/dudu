@@ -44,6 +44,7 @@ const savedDouyin: ConnectionConfig = {
 const savedWecom: ConnectionConfig = {
   channel: "wecom",
   url: "http://127.0.0.1:9099/wecom",
+  system: "agent",
   corpId: "ww_mock_corp",
   token: "QDG6eK",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
@@ -107,11 +108,12 @@ describe("connections slice", () => {
     expect(selectConnection(stateOf(store), "douyin")).toEqual(savedDouyin);
   });
 
-  it("初始状态自带企微默认占位连接（url 预填、凭据留空）", () => {
+  it("初始状态自带企微默认占位连接（url 预填、自建应用通道、凭据留空）", () => {
     expect(defaultWecomConnection.channel).toBe("wecom");
     expect(defaultWecomConnection.url).toBe(
       "http://127.0.0.1:8080/webhooks/wecom",
     );
+    expect(defaultWecomConnection.system).toBe("agent");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "wecom")),
     ).toBe(false);
@@ -239,8 +241,8 @@ describe("isConnectionReady（直发前置的内容判定）", () => {
   });
 });
 
-describe("isConnectionReady（企微按加密必填集判定）", () => {
-  it("url/token/encodingAesKey/corpId 齐全才算已配置（agentId 不参与加密，可空）", () => {
+describe("isConnectionReady（企微按通道核加密必填集）", () => {
+  it("自建应用：url/token/encodingAesKey/corpId 齐全才算已配置（agentId 可空）", () => {
     expect(isConnectionReady(savedWecom)).toBe(true);
     expect(isConnectionReady({ ...savedWecom, agentId: "" })).toBe(true);
   });
@@ -252,6 +254,15 @@ describe("isConnectionReady（企微按加密必填集判定）", () => {
       false,
     );
     expect(isConnectionReady({ ...savedWecom, corpId: "" })).toBe(false);
+  });
+
+  it("智能机器人：加密 receiveid 恒为空串，corpId 不参与必填集", () => {
+    const aibot = { ...savedWecom, system: "aibot" as const };
+    expect(isConnectionReady(aibot)).toBe(true);
+    expect(isConnectionReady({ ...aibot, corpId: "" })).toBe(true);
+    expect(isConnectionReady({ ...aibot, agentId: "" })).toBe(true);
+    expect(isConnectionReady({ ...aibot, token: "" })).toBe(false);
+    expect(isConnectionReady({ ...aibot, encodingAesKey: "" })).toBe(false);
   });
 
   it("初始企微占位连接（凭据全空）不算已配置", () => {

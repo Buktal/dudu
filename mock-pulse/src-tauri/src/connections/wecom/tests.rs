@@ -9,14 +9,16 @@ use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
 use super::crypto::{GOLDEN_CORP_ID, GOLDEN_ENCODING_AES_KEY, GOLDEN_TOKEN};
-use crate::connections::ConnectionConfig;
+use crate::connections::{ConnectionConfig, WecomSystem};
 use crate::test_support::{quick_client, read_head_and_body, start_single_server, RecordedPost};
 
 use super::*;
 
+/// XML 自建应用通道连接配置（官方黄金例凭据；机器人通道测试在 aibot::tests）。
 fn wecom_config(url: String) -> ConnectionConfig {
     ConnectionConfig::Wecom {
         url,
+        system: WecomSystem::Agent,
         corp_id: GOLDEN_CORP_ID.into(),
         token: GOLDEN_TOKEN.into(),
         encoding_aes_key: GOLDEN_ENCODING_AES_KEY.into(),

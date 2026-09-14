@@ -1,0 +1,413 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-text": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90239",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "发送消息/触发事件的成员。修改它可模拟不同成员进入会话。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳（与抖音的 13 位毫秒不同）。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "文本消息固定为 text。其他消息类型（图片/语音等）可按官方文档在完整报文页补充专有字段。"
+        },
+        {
+          "path": "Content",
+          "title": "消息正文",
+          "type": "string",
+          "group": "消息内容",
+          "description": "模拟成员发来的完整文本。换行与特殊字符都会按原样进入 CDATA。",
+          "multiline": true,
+          "required": true
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "64 位整型消息去重 ID。全程按字符串处理不丢精度；新建时按官方形态生成 18 位数字串。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-image": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90239",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "发送消息/触发事件的成员。修改它可模拟不同成员进入会话。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "图片消息固定为 image。"
+        },
+        {
+          "path": "PicUrl",
+          "title": "图片链接",
+          "type": "string",
+          "group": "消息内容",
+          "description": "成员发送的图片资源地址（可自行拉取）。接收服务通常用它下载图片。"
+        },
+        {
+          "path": "MediaId",
+          "title": "媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "图片消息的媒体文件 ID，官方约束仅三天内有效。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "64 位整型消息去重 ID，全程按字符串处理；新建时按官方形态生成。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-voice": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90239",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "发送消息/触发事件的成员。修改它可模拟不同成员进入会话。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "语音消息固定为 voice。"
+        },
+        {
+          "path": "MediaId",
+          "title": "媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "语音消息的媒体文件 ID，官方约束仅三天内有效。"
+        },
+        {
+          "path": "Format",
+          "title": "语音格式",
+          "type": "string",
+          "group": "消息内容",
+          "description": "语音格式，官方如 amr、speex 等。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "64 位整型消息去重 ID，全程按字符串处理；新建时按官方形态生成。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-video": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90239",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "发送消息/触发事件的成员。修改它可模拟不同成员进入会话。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "视频消息固定为 video。"
+        },
+        {
+          "path": "MediaId",
+          "title": "媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "视频消息的媒体文件 ID，官方约束仅三天内有效。"
+        },
+        {
+          "path": "ThumbMediaId",
+          "title": "缩略图媒体 ID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "视频消息缩略图的媒体文件 ID，官方约束仅三天内有效。"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "64 位整型消息去重 ID，全程按字符串处理；新建时按官方形态生成。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-location": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90239",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "发送消息/触发事件的成员。修改它可模拟不同成员进入会话。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "位置消息固定为 location。"
+        },
+        {
+          "path": "Location_X",
+          "title": "纬度",
+          "type": "numberString",
+          "group": "消息内容",
+          "description": "地理位置纬度。"
+        },
+        {
+          "path": "Location_Y",
+          "title": "经度",
+          "type": "numberString",
+          "group": "消息内容",
+          "description": "地理位置经度。"
+        },
+        {
+          "path": "Scale",
+          "title": "地图缩放大小",
+          "type": "numberString",
+          "group": "消息内容",
+          "description": "地图缩放级别。"
+        },
+        {
+          "path": "Label",
+          "title": "位置信息",
+          "type": "string",
+          "group": "消息内容",
+          "description": "地理描述文本，进入 CDATA 原样传输。",
+          "required": true
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "64 位整型消息去重 ID，全程按字符串处理；新建时按官方形态生成。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-link": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90239",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "发送消息/触发事件的成员。修改它可模拟不同成员进入会话。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "消息时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "链接消息固定为 link。"
+        },
+        {
+          "path": "Title",
+          "title": "标题",
+          "type": "string",
+          "group": "消息内容",
+          "description": "链接消息的标题，进入 CDATA 原样传输。",
+          "required": true
+        },
+        {
+          "path": "Description",
+          "title": "描述",
+          "type": "string",
+          "group": "消息内容",
+          "description": "链接消息的描述，与标题同行展示。",
+          "multiline": true
+        },
+        {
+          "path": "Url",
+          "title": "链接地址",
+          "type": "string",
+          "group": "消息内容",
+          "description": "链接消息指向的目标地址。",
+          "format": "url"
+        },
+        {
+          "path": "PicUrl",
+          "title": "封面图链接",
+          "type": "string",
+          "group": "消息内容",
+          "description": "链接消息的封面缩略图地址。",
+          "format": "url"
+        },
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "64 位整型消息去重 ID，全程按字符串处理；新建时按官方形态生成。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    }
+  }
+}

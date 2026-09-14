@@ -1,0 +1,310 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-inactive-alert": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "停用预警固定为 sys（系统生成，官方 §2.2）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "inactive_alert = 长期未使用应用停用预警。"
+        },
+        {
+          "path": "EffectTime",
+          "title": "生效时间",
+          "type": "numberString",
+          "group": "事件内容",
+          "description": "停用生效时间戳（10 位 Unix 秒），裸文本输出。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-close-inactive-agent": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "自动停用固定为 sys（系统生成，官方 §2.2）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "close_inactive_agent = 长期未使用应用被自动停用。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-reopen-inactive-agent": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同管理员重新启用。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "reopen_inactive_agent = 停用应用被管理员重新启用。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-low-active-alert": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "低活跃预警固定为 sys（系统生成，官方 §2.2）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "low_active_alert = 应用低活跃预警（即将限制客户数据访问）。"
+        },
+        {
+          "path": "EffectTime",
+          "title": "生效时间",
+          "type": "numberString",
+          "group": "事件内容",
+          "description": "限制生效时间戳（10 位 Unix 秒），裸文本输出。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-low-active": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "低活跃事件固定为 sys（系统生成，官方 §2.2）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "low_active = 应用变为低活跃。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-active-restored": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "恢复活跃事件固定为 sys（系统生成，官方 §2.2）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "active_restored = 低活跃应用恢复活跃。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    }
+  }
+}

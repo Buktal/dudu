@@ -80,8 +80,8 @@ export const CHANNEL_REGISTRY = {
   },
   wecom: {
     name: "企业微信",
-    protocol: "自建应用 · XML 回调",
-    note: "企业微信自建应用回调：XML 报文，GET echostr 握手校验 Token/EncodingAESKey",
+    protocol: "自建应用 XML · 智能机器人 JSON",
+    note: "自建应用 XML 与智能机器人 JSON 双通道：GET echostr 握手 + AES 信封（机器人 receiveid 为空串），按连接推送通道路由",
     icon: "MessagesSquare",
     implemented: true,
   },

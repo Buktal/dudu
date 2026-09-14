@@ -1,0 +1,292 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wc-open-approval-change": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员的申请状态变化。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "open_approval_change = 审批流程引擎状态变化（自建/第三方应用发起的申请）。审批明细在 ApprovalInfo 结构体内（嵌套结构按原文片段透传）。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-share-agent-change": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "共享应用变更固定为 sys（系统生成，官方 §2.2）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "share_agent_change = 企业互联共享应用变更（上级共享/移除下级）。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-share-chain-change": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "系统账号",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "上下游共享应用变更固定为 sys（系统生成，官方 §2.2）。"
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "share_chain_change = 上下游共享应用变更（上游共享/移除下游）。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-template-card-event": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员点按钮。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "template_card_event = 用户点击模板卡片按钮。"
+        },
+        {
+          "path": "EventKey",
+          "title": "按钮 key",
+          "type": "string",
+          "group": "卡片信息",
+          "description": "官方 §2.2：模板卡片按钮事件 EventKey 形如 btn:key。"
+        },
+        {
+          "path": "TaskId",
+          "title": "卡片任务 ID",
+          "type": "string",
+          "group": "卡片信息",
+          "description": "模板卡片任务 ID，与更新模板卡片接口对应。"
+        },
+        {
+          "path": "CardType",
+          "title": "卡片类型",
+          "type": "string",
+          "group": "卡片信息",
+          "description": "模板卡片类型（如 button_interaction 按钮互动型）。"
+        },
+        {
+          "path": "ResponseCode",
+          "title": "响应码",
+          "type": "string",
+          "group": "卡片信息",
+          "description": "官方约束：72 小时内有效且仅可使用一次（用于更新模板卡片）。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    },
+    "wc-template-card-menu-event": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/90240",
+      "fields": [
+        {
+          "path": "ToUserName",
+          "title": "企业 CorpID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "接收回调的企业 ID，即连接配置里的 corpId，也是加密 receiveid。"
+        },
+        {
+          "path": "FromUserName",
+          "title": "成员 UserID",
+          "type": "string",
+          "group": "企业与身份",
+          "description": "触发事件的成员。修改它可模拟不同成员点菜单。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "事件时间",
+          "type": "numberString",
+          "group": "会话与时序",
+          "description": "10 位 Unix 秒级时间戳。新建时按当前时间生成。"
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "Event",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "template_card_menu_event = 点击模板卡片右上角菜单。"
+        },
+        {
+          "path": "TaskId",
+          "title": "卡片任务 ID",
+          "type": "string",
+          "group": "卡片信息",
+          "description": "模板卡片任务 ID，与更新模板卡片接口对应。"
+        },
+        {
+          "path": "CardType",
+          "title": "卡片类型",
+          "type": "string",
+          "group": "卡片信息",
+          "description": "官方 §2.2：取 text_notice/news_notice/button_interaction。"
+        },
+        {
+          "path": "AgentID",
+          "title": "应用 ID",
+          "type": "numberString",
+          "group": "企业与身份",
+          "description": "接收回调的自建应用数字 ID。须与连接配置的 agentId 对应。"
+        }
+      ]
+    }
+  }
+}

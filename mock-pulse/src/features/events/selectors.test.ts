@@ -221,11 +221,13 @@ describe("templatesForChannel（目录模板源）", () => {
     );
     expect(templatesForChannel("douyin")[14]?.id).toBe("dy-text");
     expect(templatesForChannel("douyin")[32]?.id).toBe("dy-isv-authorized");
-    expect(templatesForChannel("wecom").map((schema) => schema.id)).toEqual([
-      "wc-text",
-      "wc-enter",
-      "wc-click",
-    ]);
+    expect(templatesForChannel("wecom")).toHaveLength(43);
+    expect(templatesForChannel("wecom")[0]?.id).toBe("wc-text");
+    expect(templatesForChannel("wecom")[31]?.id).toBe("wc-active-restored");
+    expect(templatesForChannel("wecom")[32]?.id).toBe("wb-text");
+    expect(templatesForChannel("wecom")[42]?.id).toBe(
+      "wb-event-template-card-menu",
+    );
   });
 
   it("未接入模板的渠道返回空表", () => {
@@ -316,17 +318,19 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
     });
     expect(
       byName.map((row) => (row.region === "template" ? row.schema.id : "")),
-    ).toEqual(["dy-enter", "wc-enter"]);
+    ).toEqual(["dy-enter", "wc-enter", "wb-event-enter-chat"]);
 
     const byChannelName = libraryRows([], EVENT_SCHEMAS, {
       ...NO_FILTERS,
       query: "企业微信",
     });
-    expect(
-      byChannelName.map((row) =>
-        row.region === "template" ? row.schema.id : "",
-      ),
-    ).toEqual(["wc-text", "wc-enter", "wc-click"]);
+    const channelRows = byChannelName.map((row) =>
+      row.region === "template" ? row.schema : undefined,
+    );
+    expect(channelRows).toHaveLength(43);
+    expect(channelRows.every((schema) => schema?.channelId === "wecom")).toBe(
+      true,
+    );
 
     const byEventName = libraryRows([], EVENT_SCHEMAS, {
       ...NO_FILTERS,
@@ -380,10 +384,8 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
 
   it("模板区不因用户素材为空而消失，点击目标始终可解析回模板", () => {
     const rows = libraryRows([], schemasByChannel("wecom"), NO_FILTERS);
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(43);
     expect(rows.every((row) => row.region === "template")).toBe(true);
-    expect(
-      rows.map((row) => (row.region === "template" ? row.schema.id : "")),
-    ).toEqual(["wc-text", "wc-enter", "wc-click"]);
+    expect(rows[0]?.region === "template" && rows[0].schema.id).toBe("wc-text");
   });
 });

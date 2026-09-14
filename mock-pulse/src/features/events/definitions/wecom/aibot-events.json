@@ -1,0 +1,231 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "wecom",
+  "version": "2026.09",
+  "schemas": {
+    "wb-event": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/101027",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "事件排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识；单聊与群聊共用同一信封，用 chattype 区分。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "single = 单聊，group = 群聊。"
+        },
+        {
+          "path": "from.userid",
+          "title": "触发者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "触发事件的成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event（机器人事件通用格式）。"
+        },
+        {
+          "path": "event.eventtype",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "机器人事件通用格式载体：官方收录 enter_chat / template_card_event / template_card_menu_event（用户反馈事件官方未给机器名）。此模板留空，按实际事件填写。"
+        }
+      ]
+    },
+    "wb-event-enter-chat": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/101027",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "事件排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "single = 单聊，group = 群聊。"
+        },
+        {
+          "path": "from.userid",
+          "title": "触发者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "进入会话的成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "event.eventtype",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "enter_chat = 成员当天首次进入机器人会话。"
+        }
+      ]
+    },
+    "wb-event-template-card": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/101027",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "事件排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "single = 单聊，group = 群聊。"
+        },
+        {
+          "path": "from.userid",
+          "title": "触发者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "点击卡片的成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "event.eventtype",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "template_card_event = 模板卡片按钮事件，官方分 button_interaction/vote_interaction/multiple_interaction 三种卡片子事件（仅请求一次，5 秒内无响应即丢弃）。"
+        }
+      ]
+    },
+    "wb-event-template-card-menu": {
+      "version": "2026.09",
+      "source": "https://developer.work.weixin.qq.com/document/path/101027",
+      "fields": [
+        {
+          "path": "msgid",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "事件排重 ID（可能重复回调）。新建时按官方形态生成 base64 风格串。",
+          "required": true
+        },
+        {
+          "path": "aibotid",
+          "title": "机器人 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "接收回调的智能机器人 ID。"
+        },
+        {
+          "path": "chatid",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "会话标识。"
+        },
+        {
+          "path": "chattype",
+          "title": "会话类型",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "single = 单聊，group = 群聊。"
+        },
+        {
+          "path": "from.userid",
+          "title": "触发者 ID",
+          "type": "string",
+          "group": "机器人信封",
+          "description": "点菜单的成员；超管创建的机器人为明文 userid，否则为加密 userid。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "事件推送固定为 event。"
+        },
+        {
+          "path": "event.eventtype",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件内容",
+          "description": "template_card_menu_event = 点击模板卡片右上角菜单。"
+        }
+      ]
+    }
+  }
+}

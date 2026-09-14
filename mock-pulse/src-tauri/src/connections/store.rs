@@ -63,6 +63,7 @@ mod tests {
             },
             ConnectionConfig::Wecom {
                 url: "http://127.0.0.1:8080/webhooks/wecom".into(),
+                system: super::super::WecomSystem::Agent,
                 corp_id: "wx5823bf96d3bd56c7".into(),
                 token: "QDG6eK".into(),
                 encoding_aes_key: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C".into(),
@@ -123,6 +124,40 @@ mod tests {
     }
 
     #[test]
+    fn wecom_system_tag_routes_agent_and_aibot_channels() {
+        // #31 通道内标：snake_case 序列化（agent/aibot），缺省 agent 兼容旧数据
+        let dir = temp_dir("wecom-system");
+        let raw = r#"[
+            {"channel":"wecom","url":"http://localhost/xml","corpId":"ww_xml","token":"t","encodingAesKey":"a","agentId":"1"},
+            {"channel":"wecom","url":"http://localhost/json","system":"aibot","corpId":"","token":"t2","encodingAesKey":"b","agentId":""}
+        ]"#;
+        fs::write(connections_file(&dir), raw).unwrap();
+        assert_eq!(
+            load_connections(&dir).unwrap(),
+            vec![
+                ConnectionConfig::Wecom {
+                    url: "http://localhost/xml".into(),
+                    // 无 system 字段：按 agent 落位（#27–#30 旧版数据形状）
+                    system: super::super::WecomSystem::Agent,
+                    corp_id: "ww_xml".into(),
+                    token: "t".into(),
+                    encoding_aes_key: "a".into(),
+                    agent_id: "1".into(),
+                },
+                ConnectionConfig::Wecom {
+                    url: "http://localhost/json".into(),
+                    system: super::super::WecomSystem::Aibot,
+                    corp_id: String::new(),
+                    token: "t2".into(),
+                    encoding_aes_key: "b".into(),
+                    agent_id: String::new(),
+                },
+            ]
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn missing_file_yields_empty_list() {
         let dir = temp_dir("missing");
         assert!(load_connections(&dir).unwrap().is_empty());
@@ -144,6 +179,7 @@ mod tests {
             },
             ConnectionConfig::Wecom {
                 url: "http://localhost/wecom".into(),
+                system: super::super::WecomSystem::Aibot,
                 corp_id: "ww_corp".into(),
                 token: "t".into(),
                 encoding_aes_key: "a".repeat(43),

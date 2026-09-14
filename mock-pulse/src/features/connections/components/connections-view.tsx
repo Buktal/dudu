@@ -37,7 +37,7 @@ import { toast } from "@/components/ui/toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
-import type { ConnectionConfig, DouyinSystem } from "../api";
+import type { ConnectionConfig, DouyinSystem, WecomSystem } from "../api";
 import * as actions from "../stores/connections-slice";
 import { ConnectionFields } from "./connection-fields";
 
@@ -51,6 +51,26 @@ function douyinTestNote(system: DouyinSystem): string {
     default:
       return "发送 challenge，检查服务是否原样返回验证内容。";
   }
+}
+
+/** 企微握手文案按推送通道呈现（官方 GET echostr 流程相同，receiveid 语义不同） */
+function wecomTestNote(system: WecomSystem): string {
+  if (system === "aibot") {
+    return "发送加密 echostr（receiveid 为空串），检查服务是否正确解密并回显。";
+  }
+  return "发送加密 echostr，检查服务是否正确解密并回显。";
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音 JSON */
+function wireBadgeLabel(
+  channel: ChannelId,
+  draft: ConnectionConfig,
+): "JSON" | "XML" {
+  if (channel === "douyin") return "JSON";
+  if (channel === "wecom" && draft.channel === "wecom") {
+    return draft.system === "aibot" ? "JSON" : "XML";
+  }
+  return "XML";
 }
 
 export function ConnectionsView() {
@@ -192,7 +212,7 @@ export function ConnectionsView() {
               </CardDescription>
               <CardAction>
                 <Badge variant="outline">
-                  {channel === "douyin" ? "JSON" : "XML"}
+                  {wireBadgeLabel(channel, draft)}
                 </Badge>
               </CardAction>
             </CardHeader>
@@ -246,7 +266,9 @@ export function ConnectionsView() {
                   ? douyinTestNote(
                       draft.channel === "douyin" ? draft.system : "dop",
                     )
-                  : "发送加密 echostr，检查服务是否正确解密并回显。"}
+                  : wecomTestNote(
+                      draft.channel === "wecom" ? draft.system : "agent",
+                    )}
               </CardDescription>
               <CardAction>
                 <Button
