@@ -105,7 +105,10 @@ export function ConnectionsView() {
       setSaving(false);
     }
   };
-  const matches = CHANNELS.filter((item) =>
+  // 连接 = 渠道适配器（握手/直发/回执投影）；未实现渠道的适配器未接入，
+  // 平台列表只列已实现渠道（其余渠道在事件/剧本等选择器中照常可见）
+  const connectable = CHANNELS.filter((item) => item.implemented);
+  const matches = connectable.filter((item) =>
     `${item.name} ${item.protocol} ${item.id}`
       .toLowerCase()
       .includes(query.trim().toLowerCase()),
@@ -118,7 +121,7 @@ export function ConnectionsView() {
         <ResourceLibrary
           title="平台列表"
           singular="连接"
-          total={CHANNELS.length}
+          total={connectable.length}
           query={query}
           onQuery={setQuery}
           entries={matches.map((item) => ({

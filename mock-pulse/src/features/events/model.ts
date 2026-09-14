@@ -2,7 +2,7 @@ import type { ChannelId } from "@/lib/channels";
 
 import { applyGeneratedIds } from "./ids";
 import { cloneJson, editorPayload, wirePayload } from "./payload";
-import type { EventSchema, WirePayload } from "./schemas";
+import type { EventSchema, ExpectedReceipt, WirePayload } from "./schemas";
 import { schemaById } from "./schemas";
 
 /**
@@ -10,20 +10,11 @@ import { schemaById } from "./schemas";
  * 保存 = 追加不可变版本（保存时间 + 来源草稿快照）；旧版本可回看。
  */
 
-/** 期望回执的正文形态：包含 / 完全一致 / JSON 字段子集匹配 / 企微回执形态 */
-export type ReceiptBodyMode =
-  | "contains"
-  | "equals"
-  | "jsonField"
-  | "wecomReply";
+// 期望回执的正文形态与结构是模板三件套之一，类型单点在 schemas（随模板声明）；
+// 此处沿用原公开 API 从 model 再导出。
+export type { ExpectedReceipt, ReceiptBodyMode } from "./schemas";
 
-export type ExpectedReceipt = {
-  status: number;
-  /** 期望正文（空 = 不校验正文，只看状态码） */
-  body: string;
-  bodyMode: ReceiptBodyMode;
-};
-
+/** 兜底期望回执（无版本旧数据装载缺期望时的空形态：仅看状态码，不校验正文） */
 export const DEFAULT_EXPECTED: ExpectedReceipt = {
   status: 200,
   body: "",
@@ -71,7 +62,7 @@ export function newEventId(): string {
   return `evt-${Date.now().toString(36)}-${idCounter.toString(36)}`;
 }
 
-/** 从内置模板新建事件草稿：ID 默认值按官方形态生成并补齐信封。 */
+/** 从内置模板新建事件草稿：ID 默认值按官方形态生成、期望回执取渠道真实默认。 */
 export function createDraft(name: string, schema: EventSchema): EventDraft {
   return {
     id: newEventId(),
@@ -80,7 +71,7 @@ export function createDraft(name: string, schema: EventSchema): EventDraft {
     schemaId: schema.id,
     payload: applyGeneratedIds(schema, schema.payload),
     senderSync: false,
-    expected: { ...DEFAULT_EXPECTED },
+    expected: { ...schema.expected },
   };
 }
 
@@ -129,7 +120,7 @@ export function draftFromItem(event: EventItem): EventDraft {
       ? editorPayload(schema, latest.payload)
       : cloneJson(schema.payload),
     senderSync: false,
-    expected: latest ? { ...latest.expected } : { ...DEFAULT_EXPECTED },
+    expected: latest ? { ...latest.expected } : { ...schema.expected },
   };
 }
 

@@ -2,12 +2,11 @@ import { type ChannelId, isChannelId } from "@/lib/channels";
 
 import { safePath } from "../paths";
 import type { FieldDescriptor, FieldType } from "../schemas";
-import douyinDefinition from "./douyin.json";
-import wecomDefinition from "./wecom.json";
 
 /**
- * 版本化渠道字段描述文件的装载（#22）：两渠道各一份 JSON 随应用分发，
- * 这里做带类型校验的解析——文件是数据契约，坏了要在启动时炸出明确错误，
+ * 版本化渠道字段描述文件的装载契约（#22 → #27）：每渠道一份 JSON 随应用分发，
+ * 由该渠道的协议元数据模块（schemas/<channel>.ts）在装载时调用 parseChannelDefinition
+ * 校验——文件是数据契约，坏了要在启动时炸出明确错误，
  * 而不是让表单拿到半瘸的说明。导入字段定义（字典弹窗）复用同一套字段校验。
  */
 
@@ -159,24 +158,4 @@ export function parseChannelDefinition(raw: unknown): ChannelDefinition {
         : "未标注版本",
     schemas,
   };
-}
-
-/**
- * 随应用分发的渠道描述文件（douyin.json / wecom.json）。
- * 解析在模块装载时完成：文件损坏直接暴露给开发者，不带病运行。
- */
-export const CHANNEL_DEFINITIONS: Record<ChannelId, ChannelDefinition> = {
-  douyin: parseChannelDefinition(douyinDefinition),
-  wecom: parseChannelDefinition(wecomDefinition),
-};
-
-/** 按模板 id 取字段定义条目（跨渠道查找；未命中说明模板注册与描述文件脱节）。 */
-export function schemaDefinition(schemaId: string): SchemaDefinition {
-  for (const channel of Object.values(CHANNEL_DEFINITIONS)) {
-    const found = channel.schemas[schemaId];
-    if (found) {
-      return found;
-    }
-  }
-  throw new Error(`未知事件模板的字段定义：${schemaId}`);
 }

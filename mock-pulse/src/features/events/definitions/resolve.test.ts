@@ -16,7 +16,7 @@ const dyEnter = schemaById("dy-enter");
 describe("resolveFields：基线 + 用户覆写 + 未知回退", () => {
   it("无用户定义时按基线声明序展示官方说明与当前值", () => {
     const fields = resolveFields(
-      dyText.id,
+      dyText,
       undefined,
       flattenPayload(dyText.payload),
     );
@@ -47,7 +47,7 @@ describe("resolveFields：基线 + 用户覆写 + 未知回退", () => {
       extra_top: { nested: [1, "two", null] },
       content: { text: "hi", guest_id: "g-001" },
     };
-    const fields = resolveFields(dyText.id, undefined, flattenPayload(payload));
+    const fields = resolveFields(dyText, undefined, flattenPayload(payload));
     const unknowns = fields.filter((field) => field.unknown);
     expect(unknowns.map((field) => field.path)).toEqual([
       "content.guest_id",
@@ -69,7 +69,7 @@ describe("resolveFields：基线 + 用户覆写 + 未知回退", () => {
     );
     // 输入叶子数组未被修改
     const leaves = flattenPayload(payload);
-    resolveFields(dyText.id, undefined, leaves);
+    resolveFields(dyText, undefined, leaves);
     expect(leaves[0].path).toBe("event");
   });
 
@@ -93,7 +93,7 @@ describe("resolveFields：基线 + 用户覆写 + 未知回退", () => {
       },
     ];
     const fields = resolveFields(
-      dyText.id,
+      dyText,
       userFields,
       flattenPayload(dyText.payload),
     );
@@ -130,7 +130,7 @@ describe("resolveFields：基线 + 用户覆写 + 未知回退", () => {
       },
     ];
     const fields = resolveFields(
-      dyText.id,
+      dyText,
       userFields,
       flattenPayload(dyText.payload),
     );

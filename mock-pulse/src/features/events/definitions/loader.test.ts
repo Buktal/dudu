@@ -1,62 +1,40 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DOUYIN_EVENT_SCHEMAS,
-  type EventSchema,
-  schemaById,
-  WECOM_EVENT_SCHEMAS,
-} from "../schemas";
-import {
-  CHANNEL_DEFINITIONS,
   DEFINITIONS_FORMAT,
   parseChannelDefinition,
   parseFieldDescriptor,
-  schemaDefinition,
 } from "./loader";
 
 describe("渠道描述文件解析（带类型校验的 loader）", () => {
-  it("两渠道描述文件合法装载，带 format 与文件级版本标识", () => {
-    for (const channel of [
-      CHANNEL_DEFINITIONS.douyin,
-      CHANNEL_DEFINITIONS.wecom,
-    ]) {
-      expect(channel.format).toBe(DEFINITIONS_FORMAT);
-      expect(channel.format).toBe("mockpulse-field-definitions-v1");
-      expect(channel.version).toBe("2026.09");
-      expect(Object.keys(channel.schemas).length).toBeGreaterThan(0);
-    }
-    expect(CHANNEL_DEFINITIONS.douyin.channelId).toBe("douyin");
-    expect(CHANNEL_DEFINITIONS.wecom.channelId).toBe("wecom");
-  });
-
-  it("描述文件里的模板集合与 schemas.ts 一致（dy 四个 / wc 三个）", () => {
-    expect(Object.keys(CHANNEL_DEFINITIONS.douyin.schemas).sort()).toEqual(
-      DOUYIN_EVENT_SCHEMAS.map((schema) => schema.id).sort(),
-    );
-    expect(Object.keys(CHANNEL_DEFINITIONS.wecom.schemas).sort()).toEqual(
-      WECOM_EVENT_SCHEMAS.map((schema) => schema.id).sort(),
-    );
-  });
-
-  it("每个模板条目带版本与官方文档来源，字段形状完整", () => {
-    const all: EventSchema[] = [
-      ...DOUYIN_EVENT_SCHEMAS,
-      ...WECOM_EVENT_SCHEMAS,
-    ];
-    for (const schema of all) {
-      const entry = schemaDefinition(schema.id);
-      expect(entry.version, `${schema.id} version`).toBe("2026.09");
-      expect(entry.source, `${schema.id} source`).toMatch(/^https:\/\//);
-      for (const field of entry.fields) {
-        expect(field.path, `${schema.id} path`).toBeTruthy();
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
+  it("parseChannelDefinition 校验合法文件：format/channelId/版本/条目齐全", () => {
+    const parsed = parseChannelDefinition({
+      format: DEFINITIONS_FORMAT,
+      channelId: "douyin",
+      version: "2026.09",
+      schemas: {
+        "dy-text": {
+          version: "2026.09",
+          source: "https://developer.open-douyin.com/docs",
+          fields: [
+            {
+              path: "from_user_id",
+              title: "发送用户 ID",
+              type: "string",
+              group: "用户与身份",
+              description: "发送方的 open_id。",
+              required: true,
+            },
+          ],
+        },
+      },
+    });
+    expect(parsed.format).toBe(DEFINITIONS_FORMAT);
+    expect(parsed.format).toBe("mockpulse-field-definitions-v1");
+    expect(parsed.channelId).toBe("douyin");
+    expect(parsed.version).toBe("2026.09");
+    expect(Object.keys(parsed.schemas)).toEqual(["dy-text"]);
+    expect(parsed.schemas["dy-text"]?.fields[0]?.required).toBe(true);
   });
 
   it("format 不匹配时报错并指出需要的格式", () => {
@@ -65,11 +43,11 @@ describe("渠道描述文件解析（带类型校验的 loader）", () => {
     ).toThrow("mockpulse-field-definitions-v1");
   });
 
-  it("channelId 不在渠道注册表时报错", () => {
+  it("channelId 不在渠道注册表时报错（知乎未入表，同样拒绝）", () => {
     expect(() =>
       parseChannelDefinition({
         format: DEFINITIONS_FORMAT,
-        channelId: "dingtalk",
+        channelId: "zhihu",
       }),
     ).toThrow("channelId");
   });
@@ -89,6 +67,23 @@ describe("渠道描述文件解析（带类型校验的 loader）", () => {
         schemas: { "dy-text": { version: "2026.09", source: "https://x" } },
       }),
     ).toThrow("fields");
+  });
+
+  it("条目缺版本或来源时报错", () => {
+    expect(() =>
+      parseChannelDefinition({
+        format: DEFINITIONS_FORMAT,
+        channelId: "douyin",
+        schemas: { "dy-text": { source: "https://x", fields: [] } },
+      }),
+    ).toThrow("version");
+    expect(() =>
+      parseChannelDefinition({
+        format: DEFINITIONS_FORMAT,
+        channelId: "douyin",
+        schemas: { "dy-text": { version: "2026.09", fields: [] } },
+      }),
+    ).toThrow("source");
   });
 
   it("字段元素形状非法时报错并指出位置：path 保留名 / type 越界 / 非字符串标题", () => {
@@ -156,33 +151,5 @@ describe("渠道描述文件解析（带类型校验的 loader）", () => {
         "",
       ),
     ).toThrow("format");
-  });
-
-  it("schemaDefinition 未命中时抛出明确错误", () => {
-    expect(() => schemaDefinition("missing-schema")).toThrow("未知事件模板");
-  });
-
-  it("描述文件与 schemas.ts 的版本/来源同源：schema 元数据即文件条目", () => {
-    for (const schema of [...DOUYIN_EVENT_SCHEMAS, ...WECOM_EVENT_SCHEMAS]) {
-      const entry = schemaDefinition(schema.id);
-      expect(schema.version).toBe(entry.version);
-      expect(schema.source).toBe(entry.source);
-      expect(schema.fields).toEqual(entry.fields);
-    }
-  });
-
-  it("既有 schema 断言依然成立：dy-text 字段序与企微字段集来自描述文件", () => {
-    expect(schemaById("dy-text").fields.map((field) => field.path)[0]).toBe(
-      "from_user_id",
-    );
-    expect(schemaById("wc-text").fields.map((field) => field.path)).toEqual([
-      "ToUserName",
-      "FromUserName",
-      "CreateTime",
-      "MsgType",
-      "Content",
-      "MsgId",
-      "AgentID",
-    ]);
   });
 });

@@ -6,11 +6,10 @@ import type {
   FieldType,
   WirePayload,
 } from "../schemas";
-import { schemaDefinition } from "./loader";
 
 /**
  * 字段说明解析/合并（#22，纯数据进出，不碰 React/store）：
- * 渠道描述文件基线 + 用户定义覆写 + 未知叶子回退 → 表单字段。
+ * 模板字段基线（协议模块经描述文件装载）+ 用户定义覆写 + 未知叶子回退 → 表单字段。
  * - 覆写按 path 合并：title/description/group/required 随用户定义，
  *   type/format/multiline 恒取基线（类型由协议定，不随说明漂移）；
  * - 用户补录的新路径（如转正的未知字段）按用户定义序跟在基线后；
@@ -44,19 +43,19 @@ export function inferFieldType(value: unknown): FieldType {
 }
 
 /**
- * 生效描述符 = 渠道描述文件基线 + 用户定义覆写/补录。
+ * 生效描述符 = 模板字段基线 + 用户定义覆写/补录。
  * 用户定义命中基线路径 → 整条说明（标题/含义/分组/必填）随用户；
  * 未命中 → 作为补录的新描述符追加。
  */
 export function effectiveDescriptors(
-  schemaId: string,
+  schema: EventSchema,
   userFields: readonly FieldDescriptor[] | undefined,
 ): FieldDescriptor[] {
   const userByPath = new Map(
     (userFields ?? []).map((field) => [field.path, field]),
   );
   const merged: FieldDescriptor[] = [];
-  for (const base of schemaDefinition(schemaId).fields) {
+  for (const base of schema.fields) {
     const user = userByPath.get(base.path);
     if (!user) {
       merged.push(base);
@@ -87,13 +86,13 @@ export function effectiveDescriptors(
  * 入参 leaves 通常来自 flattenPayload(editorPayload(schema, payload))。
  */
 export function resolveFields(
-  schemaId: string,
+  schema: EventSchema,
   userFields: readonly FieldDescriptor[] | undefined,
   leaves: readonly PayloadLeaf[],
 ): EditorField[] {
   const leafByPath = new Map(leaves.map((leaf) => [leaf.path, leaf]));
   const fields: EditorField[] = [];
-  for (const descriptor of effectiveDescriptors(schemaId, userFields)) {
+  for (const descriptor of effectiveDescriptors(schema, userFields)) {
     fields.push({
       ...descriptor,
       value: leafByPath.get(descriptor.path)?.value,
@@ -126,7 +125,7 @@ export function resolveEditorFields(
   payload: WirePayload,
 ): EditorField[] {
   return resolveFields(
-    schema.id,
+    schema,
     userFields,
     flattenPayload(editorPayload(schema, payload)),
   );

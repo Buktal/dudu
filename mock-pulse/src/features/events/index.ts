@@ -20,10 +20,9 @@ export {
   RECEIPT_BODY_MODES,
 } from "./receipt";
 export {
-  DOUYIN_EVENT_SCHEMAS,
   type EventSchema,
   schemaById,
-  WECOM_EVENT_SCHEMAS,
+  schemasByChannel,
   type WireForm,
   type XmlLayout,
 } from "./schemas";

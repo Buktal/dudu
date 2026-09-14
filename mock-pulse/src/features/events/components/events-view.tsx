@@ -31,7 +31,7 @@ import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { latestVersion } from "../model";
-import { DOUYIN_EVENT_SCHEMAS, WECOM_EVENT_SCHEMAS } from "../schemas";
+import { schemasByChannel } from "../schemas";
 import { filterEvents, paginateEvents } from "../selectors";
 import * as actions from "../stores/events-slice";
 import { EventEditor, type EventEditorSlots } from "./event-editor";
@@ -46,13 +46,17 @@ function CreateEventDialog({
   const dispatch = useAppDispatch();
   const [name, setName] = useState("");
   const [channel, setChannel] = useState(initialChannel);
-  const templates =
-    channel === "douyin" ? DOUYIN_EVENT_SCHEMAS : WECOM_EVENT_SCHEMAS;
-  const [schemaId, setSchema] = useState(templates[0].id);
+  // 模板目录按渠道取自聚合注册表单点；未接入模板的渠道返回空表
+  const templates = schemasByChannel(channel);
+  const [schemaId, setSchema] = useState(templates[0]?.id ?? "");
   const [error, setError] = useState("");
   const create = () => {
     if (!name.trim()) {
       setError("请填写事件名称。");
+      return;
+    }
+    if (!schemaId) {
+      setError("该平台还没有内置事件模板。");
       return;
     }
     dispatch(actions.startDraft({ name: name.trim(), schemaId }));
@@ -109,11 +113,7 @@ function CreateEventDialog({
               onChange={(event) => {
                 const value = event.target.value as ChannelId;
                 setChannel(value);
-                setSchema(
-                  (value === "douyin"
-                    ? DOUYIN_EVENT_SCHEMAS
-                    : WECOM_EVENT_SCHEMAS)[0].id,
-                );
+                setSchema(schemasByChannel(value)[0]?.id ?? "");
               }}
             >
               {CHANNELS.map((item) => (
@@ -125,18 +125,26 @@ function CreateEventDialog({
           </Field>
           <Field>
             <FieldLabel htmlFor="new-schema">事件类型</FieldLabel>
-            <NativeSelect
-              className="w-full"
-              id="new-schema"
-              value={schemaId}
-              onChange={(event) => setSchema(event.target.value)}
-            >
-              {templates.map((schema) => (
-                <NativeSelectOption key={schema.id} value={schema.id}>
-                  {schema.name}
+            {templates.length > 0 ? (
+              <NativeSelect
+                className="w-full"
+                id="new-schema"
+                value={schemaId}
+                onChange={(event) => setSchema(event.target.value)}
+              >
+                {templates.map((schema) => (
+                  <NativeSelectOption key={schema.id} value={schema.id}>
+                    {schema.name}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            ) : (
+              <NativeSelect className="w-full" id="new-schema" disabled>
+                <NativeSelectOption value="">
+                  该平台暂无内置事件模板
                 </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              </NativeSelect>
+            )}
           </Field>
         </FieldGroup>
       </FieldGroup>
