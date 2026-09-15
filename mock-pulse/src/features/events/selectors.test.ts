@@ -233,8 +233,8 @@ describe("templatesForChannel（目录模板源）", () => {
     );
   });
 
-  it("未接入模板的渠道返回空表（拼多多已接入 #43，改用未接入的美团）", () => {
-    expect(templatesForChannel("meituan")).toEqual([]);
+  it("未接入模板的渠道返回空表（美团已接入 #44，改用未接入的饿了么）", () => {
+    expect(templatesForChannel("eleme")).toEqual([]);
   });
 });
 

@@ -1,0 +1,47 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "meituan",
+  "version": "2026.09",
+  "schemas": {
+    "mt-im-single-chat": {
+      "version": "2026.09",
+      "source": "https://developer.waimai.meituan.com/home/docDetail/842",
+      "fields": [
+        {
+          "path": "biz_type",
+          "title": "聊天类型",
+          "type": "number",
+          "group": "IM 单聊回调",
+          "description": "聊天类型，int 必填，固定 1（官方 §5.4 字段表逐字；单聊消息回调）。",
+          "required": true
+        },
+        {
+          "path": "app_poi_code",
+          "title": "门店标识",
+          "type": "string",
+          "group": "IM 单聊回调",
+          "description": "商家门店标识，string 必填（官方 §5.4 字段表逐字；样本值取订单推送核验样本 668921 同族）。",
+          "required": true
+        },
+        {
+          "path": "push_content",
+          "title": "消息内容",
+          "type": "string",
+          "group": "IM 单聊回调",
+          "description": "消息内容，string 必填（官方 §5.4 字段表逐字；载荷结构见 developer.meituan.com 对应文章 §3.1，全文待核验(09-27)，占位值 PUSH_CONTENT 不作官方样本）。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "extended_field",
+          "title": "扩展信息",
+          "type": "string",
+          "group": "IM 单聊回调",
+          "description": "扩展信息，string 可选（官方 §5.4 字段表逐字；留空即「没有值的参数也需拼接」形态，空值同样参与签名）。",
+          "required": false,
+          "multiline": true
+        }
+      ]
+    }
+  }
+}

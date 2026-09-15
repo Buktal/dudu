@@ -45,7 +45,8 @@ export type IdKind =
   | "taobaoModified" // 淘宝退款 modified：yyyy-MM-dd HH:mm:ss 字符串（官方样本 2000-12-30 12:32:20）
   | "openimMsgId" // OpenIM msg_id：19 位数字串（官方样本 6269105334747922432，int64 内）
   | "jdBizId" // 京东订单号/服务单号：官方未给格式样本，按京东单号数字串同族形态（9~15 位）
-  | "pddBizId"; // 拼多多订单号：官方未给格式样本，按电商单号数字串同族形态（9~15 位）
+  | "pddBizId" // 拼多多订单号：官方未给格式样本，按电商单号数字串同族形态（9~15 位）
+  | "mtBizId"; // 美团订单号：官方样本 27061900338318741 为 17 位数字串（bigint(20) 存储，15~17 位）
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */
@@ -68,8 +69,8 @@ export type IdGeneration = {
 
 export type WirePayload = { [key: string]: unknown };
 
-/** 报文的线上形态：抖音 JSON、企微 XML（决定拼装/解析方式） */
-export type WireForm = "json" | "xml";
+/** 报文的线上形态：抖音 JSON、企微 XML、美团 form（决定拼装/解析方式） */
+export type WireForm = "json" | "xml" | "form";
 
 /** 期望回执的正文形态：包含 / 完全一致 / JSON 字段子集匹配 / 企微与钉钉/QQ 回包形态 */
 export type ReceiptBodyMode =

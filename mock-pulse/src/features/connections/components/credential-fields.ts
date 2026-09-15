@@ -4,6 +4,7 @@ import type {
   FeishuConnectionConfig,
   JingdongConnectionConfig,
   KuaishouConnectionConfig,
+  MeituanConnectionConfig,
   PinduoduoConnectionConfig,
   QqConnectionConfig,
   TaobaoConnectionConfig,
@@ -431,6 +432,26 @@ function pinduoduoFields(draft: PinduoduoConnectionConfig): CredentialField[] {
   ];
 }
 
+/** 美团凭证字段（事实库 §4.1/§6，合作中心表单回调）：sig = MD5(url?字母序 k=v+secret) */
+function meituanFields(draft: MeituanConnectionConfig): CredentialField[] {
+  return [
+    {
+      key: "appId",
+      label: "AppID",
+      note: "应用 app_id（开发者中心查看）：系统级参数必传项（事实库 §4.1/§6），参与字母序签名拼接，由适配器随直发补齐。",
+      value: draft.appId,
+      secret: false,
+    },
+    {
+      key: "appSecret",
+      label: "App Secret",
+      note: "应用密钥（官方亦称 consumer_secret）：待签串 = 请求 url + ? + 全字段（sig 除外）字母序 k=v & 连接 + secret，MD5 32 位小写即 sig（官方五步逐字，事实库 §4.1，官方向量已对拍）。",
+      value: draft.appSecret,
+      secret: true,
+    },
+  ];
+}
+
 /** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
 export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
   switch (draft.channel) {
@@ -458,6 +479,8 @@ export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
       return jingdongFields(draft);
     case "pinduoduo":
       return pinduoduoFields(draft);
+    case "meituan":
+      return meituanFields(draft);
     case "wecom":
       return wecomFields(draft);
     default: {

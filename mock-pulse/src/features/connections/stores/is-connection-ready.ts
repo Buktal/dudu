@@ -5,6 +5,7 @@ import type {
   FeishuConnectionConfig,
   JingdongConnectionConfig,
   KuaishouConnectionConfig,
+  MeituanConnectionConfig,
   PinduoduoConnectionConfig,
   QqConnectionConfig,
   TaobaoConnectionConfig,
@@ -54,6 +55,9 @@ import type {
  * - 拼多多核（PMC 订阅推送模拟）：url + clientId + clientSecret 必填（sign =
  *   UPPER(MD5(client_secret + ASCII 排序 k+v + client_secret)) 的密钥与
  *   client_id 公共参数事实库 §4.1 表必传项，clientSecret 缺失即签名不可复算）
+ * - 美团核（合作中心表单回调模拟）：url + appId + appSecret 必填（sig =
+ *   MD5(url?字母序 k=v 串 + app secret) 的密钥与 app_id 系统级参数事实库
+ *   §4.1/§6，appSecret 缺失即签名不可复算；回调端口官方仅支持 80/8080）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -88,6 +92,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && jingdongReady(config);
     case "pinduoduo":
       return config.url.trim() !== "" && pinduoduoReady(config);
+    case "meituan":
+      return config.url.trim() !== "" && meituanReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -279,4 +285,15 @@ function jingdongReady(config: JingdongConnectionConfig): boolean {
  */
 function pinduoduoReady(config: PinduoduoConnectionConfig): boolean {
   return config.clientId.trim() !== "" && config.clientSecret.trim() !== "";
+}
+
+/**
+ * 美团核（合作中心表单回调模拟）：url + appId + appSecret 必填——sig =
+ * MD5(url?字母序 k=v 串 + app secret) 32 位小写（事实库 §4.1 官方五步逐字，
+ * 官方向量已对拍），appSecret 缺失即签名不可复算；app_id 为系统级参数必传项
+ * （事实库 §4.1/§6），缺失即请求不完整，同为直发前置。ISV 应用的门店
+ * access_token 参签流程待核验(09-27)（事实库 §6/§7），推送模拟不收。
+ */
+function meituanReady(config: MeituanConnectionConfig): boolean {
+  return config.appId.trim() !== "" && config.appSecret.trim() !== "";
 }

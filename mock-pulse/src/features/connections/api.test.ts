@@ -9,6 +9,7 @@ import {
   type JingdongConnectionConfig,
   type KuaishouConnectionConfig,
   loadConnections,
+  type MeituanConnectionConfig,
   type PinduoduoConnectionConfig,
   type QqConnectionConfig,
   saveConnection,
@@ -18,6 +19,7 @@ import {
   testFeishuConnection,
   testJingdongConnection,
   testKuaishouConnection,
+  testMeituanConnection,
   testPinduoduoConnection,
   testQqConnection,
   testTaobaoConnection,
@@ -145,6 +147,13 @@ const pinduoduoConfig: PinduoduoConnectionConfig = {
   url: "http://127.0.0.1:8080/webhooks/pinduoduo",
   clientId: "1",
   clientSecret: "testSecret",
+};
+
+const meituanConfig: MeituanConnectionConfig = {
+  channel: "meituan",
+  url: "http://127.0.0.1:8080/webhooks/meituan",
+  appId: "1235123121",
+  appSecret: "d31ba58fd73c71db697ab5e4946d52d",
 };
 
 describe("connections api 契约", () => {
@@ -293,7 +302,18 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东/拼多多（按 channel 区分形状）", async () => {
+  it("testMeituanConnection 调用 connections_test_meituan 并透传配置", async () => {
+    const outcome = { ok: true, message: "推送探针被接受" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testMeituanConnection(meituanConfig)).resolves.toEqual(
+      outcome,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_meituan", {
+      config: meituanConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东/拼多多/美团（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
@@ -308,6 +328,7 @@ describe("connections api 契约", () => {
       taobaoConfig,
       jingdongConfig,
       pinduoduoConfig,
+      meituanConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

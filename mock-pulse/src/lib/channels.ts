@@ -159,9 +159,9 @@ export const CHANNEL_REGISTRY = {
   meituan: {
     name: "美团",
     protocol: "合作中心 · 表单回调",
-    note: "技术服务合作中心回调：form-urlencoded 表单，签名 MD5(url?字母序+secret)，2 秒内回 ok",
+    note: "技术服务合作中心回调：form-urlencoded 表单（端口仅 80/8080），签名 MD5(url?字母序+secret) 小写，订单三态 2-已支付(必接)/4-已确认/8-已完成 + IM 单聊 biz_type=1，2 秒内回 ok、1 分钟×3 重试",
     icon: "Bike",
-    implemented: false,
+    implemented: true,
   },
   eleme: {
     name: "饿了么",

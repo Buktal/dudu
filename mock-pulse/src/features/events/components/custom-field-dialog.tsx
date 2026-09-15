@@ -71,7 +71,11 @@ export function CustomFieldDialog({
             id="custom-path"
             autoFocus
             placeholder={
-              schema.wire === "xml" ? "例如：Extra" : "例如：content.extra"
+              schema.wire === "xml"
+                ? "例如：Extra"
+                : schema.wire === "form"
+                  ? "例如：extended_field"
+                  : "例如：content.extra"
             }
             value={path}
             onChange={(event) => setPath(event.target.value)}

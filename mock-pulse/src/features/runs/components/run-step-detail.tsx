@@ -55,6 +55,12 @@ function requestSnapshot(step: RunStep): string {
     const separator = step.url.includes("?") ? "&" : "?";
     return `POST ${step.url}${separator}client_id=<连接 ClientID>&timestamp=${encodeURIComponent(step.timestamp ?? "")}&sign=${step.signature}\nContent-Type: application/json\n\n${step.payload}`;
   }
+  if (step.channel === "meituan") {
+    // 美团（合作中心回调）：POST form-urlencoded，表单字段集尾部追加系统参数
+    // 与 sig = MD5(url?字母序 k=v 串 + AppSecret)（官方推送参数未排序，追加
+    // 不重排）；requestBody 快照即实际发出的完整表单字节；msgId 快照取载荷订单号
+    return `POST ${step.url}\nContent-Type: application/x-www-form-urlencoded\n\n${step.requestBody ?? step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

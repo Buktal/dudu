@@ -14,6 +14,7 @@ import {
   type JingdongConnectionConfig,
   type KuaishouConnectionConfig,
   loadConnections,
+  type MeituanConnectionConfig,
   type PinduoduoConnectionConfig,
   type QqConnectionConfig,
   saveConnection as saveConnectionApi,
@@ -23,6 +24,7 @@ import {
   testFeishuConnection as testFeishuApi,
   testJingdongConnection as testJingdongApi,
   testKuaishouConnection as testKuaishouApi,
+  testMeituanConnection as testMeituanApi,
   testPinduoduoConnection as testPinduoduoApi,
   testQqConnection as testQqApi,
   testTaobaoConnection as testTaobaoApi,
@@ -175,6 +177,14 @@ export const defaultPinduoduoConnection: PinduoduoConnectionConfig = {
   clientSecret: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（合作中心 MD5(url?字母序+secret) 签名起步） */
+export const defaultMeituanConnection: MeituanConnectionConfig = {
+  channel: "meituan",
+  url: "http://127.0.0.1:8080/webhooks/meituan",
+  appId: "",
+  appSecret: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -194,6 +204,7 @@ export const initialConnectionsState: ConnectionsState = {
     taobao: defaultTaobaoConnection,
     jingdong: defaultJingdongConnection,
     pinduoduo: defaultPinduoduoConnection,
+    meituan: defaultMeituanConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -249,6 +260,8 @@ export const testConnection = createAsyncThunk(
         return testJingdongApi(config);
       case "pinduoduo":
         return testPinduoduoApi(config);
+      case "meituan":
+        return testMeituanApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);

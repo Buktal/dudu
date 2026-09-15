@@ -189,6 +189,24 @@ export type PinduoduoConnectionConfig = {
 };
 
 /**
+ * 美团连接配置形状（与 Rust 端 ConnectionConfig::Meituan 内标一致）：
+ * 技术服务合作中心回调模拟——POST form-urlencoded（端口仅 80/8080），签名 =
+ * MD5(url?字母序 k=v 串 + app secret) 32 位小写（事实库 §4.1 官方五步逐字，
+ * 官方向量 00934d00d0aea6f12161edfb6456143d 已对拍），系统级参数
+ * app_id/timestamp（调用时 UNIX 秒）/sig 由适配器直发时补齐；ISV 应用的门店
+ * access_token 参签流程待核验(09-27)（事实库 §6/§7），推送模拟不收。
+ */
+export type MeituanConnectionConfig = {
+  channel: "meituan";
+  /** 回调目标地址，事件与剧本共享（官方按推送项逐项配置回调 URL，端口仅 80/8080） */
+  url: string;
+  /** 应用 app_id（开发者中心查看，事实库 §4.1/§6 系统级参数必传项） */
+  appId: string;
+  /** app secret / consumer_secret（事实库 §4.1/§6）：MD5(url?字母序+secret) 签名密钥 */
+  appSecret: string;
+};
+
+/**
  * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
  * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
  * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
@@ -286,7 +304,8 @@ export type ConnectionConfig =
   | KuaishouConnectionConfig
   | TaobaoConnectionConfig
   | JingdongConnectionConfig
-  | PinduoduoConnectionConfig;
+  | PinduoduoConnectionConfig
+  | MeituanConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -411,4 +430,14 @@ export function testPinduoduoConnection(
   config: PinduoduoConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_pinduoduo", { config });
+}
+
+/** 按美团推送探针协议测试连接（官方验证握手正文待核验(09-27)，探针语义同
+ *  普通推送：POST 官方订单核验样本表单 + 字段集尾部追加 app_id/timestamp 与
+ *  sig = MD5(url?字母序 k=v 串 + app secret)，事实库 §4.1 官方向量已对拍，
+ *  期望 HTTP 200） */
+export function testMeituanConnection(
+  config: MeituanConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_meituan", { config });
 }

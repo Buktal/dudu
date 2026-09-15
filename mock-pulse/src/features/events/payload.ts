@@ -1,3 +1,4 @@
+import { buildFormBody, parseFormBody } from "./form";
 import { keyParts, safePath } from "./paths";
 import type { EventSchema, WireForm, WirePayload } from "./schemas";
 import { buildXmlBody, parseXmlBody } from "./xml";
@@ -5,7 +6,8 @@ import { buildXmlBody, parseXmlBody } from "./xml";
 /**
  * 报文载荷领域逻辑：路径读写、叶子展开、表单/线上双向转换、
  * 发送者 ID 同步。全部为纯函数。
- * 线上形态按 schema.wire 分发：抖音 JSON（紧凑序列化）、企微 XML（确定性拼装）。
+ * 线上形态按 schema.wire 分发：抖音 JSON（紧凑序列化）、企微 XML（确定性
+ * 拼装）、美团 form（确定性拼装，./form 单点）。
  * 路径工具（keyParts/safePath）见 ./paths，各模块直接导入；
  * 表单字段解析（描述符 ∪ 载荷叶子 + 用户定义合并）见 ./definitions/resolve。
  */
@@ -64,6 +66,14 @@ export function withCustomField(
     if (isXmlNonScalar(value))
       throw new Error("XML 参数值须为文本、数字或布尔值。");
     return { ...cloneJson(payload), [key]: String(value) };
+  }
+  if (schema.wire === "form") {
+    // form 模板载荷为扁平 kv：字段名单层、值不收 null（对象/数组拼装时
+    // JSON 字符串化，见 ./form）
+    if (!/^[A-Za-z_][\w.-]*$/.test(key))
+      throw new Error("表单参数名须为单个字段名。");
+    if (value == null) throw new Error("表单参数值不能为空。");
+    return { ...cloneJson(payload), [key]: value };
   }
   return setPayloadField(payload, key, value);
 }
@@ -212,6 +222,8 @@ export function wirePayload(
  *   （Rust 端 serde_json 开启 preserve_order，见 src-tauri/Cargo.toml）。
  * - 抖音（json）：JSON.stringify 紧凑无空格（UTF-8 原文，不转义非 ASCII）。
  * - 企微（xml）：确定性 XML 拼装（元素序 = 文档序，CDATA/排版按 xmlLayout）。
+ * - 美团（form）：确定性 form 拼装（字段序 = 文档序，./form 单点；
+ *   官方推送参数未排序，签名排序由渠道适配器负责）。
  */
 export function wireBodyText(
   schema: EventSchema,
@@ -224,27 +236,36 @@ export function wireBodyText(
       payload,
     );
   }
+  if (schema.wire === "form") {
+    return buildFormBody(wirePayload(schema, payload));
+  }
   return JSON.stringify(wirePayload(schema, payload));
 }
 
-/** 完整报文页的编辑文本：JSON 模板为 2 空格缩进；XML 模板即线上明文原文。 */
+/**
+ * 完整报文页的编辑文本：JSON 模板为 2 空格缩进；XML/form 模板即线上明文
+ * 原文（form 报文天然单行，预览即发送字节）。
+ */
 export function wireDraftText(
   schema: EventSchema,
   payload: WirePayload,
 ): string {
-  if (schema.wire === "xml") {
+  if (schema.wire === "xml" || schema.wire === "form") {
     return wireBodyText(schema, payload);
   }
   return JSON.stringify(wirePayload(schema, payload), null, 2);
 }
 
-/** 完整报文文本 → 载荷（JSON 校验对象形态；XML 校验扁平元素结构）。 */
+/** 完整报文文本 → 载荷（JSON 对象/XML 扁平元素/form 扁平字段三形态）。 */
 export function parseWireDraft(schema: EventSchema, text: string): WirePayload {
   if (schema.wire === "xml") {
     return parseXmlBody(
       schema.fields.map((field) => field.path),
       text,
     );
+  }
+  if (schema.wire === "form") {
+    return parseFormBody(text);
   }
   return parseWirePayload(text);
 }

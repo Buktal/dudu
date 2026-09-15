@@ -278,4 +278,15 @@ pub enum ConnectionConfig {
         /// E4DE3ED21002510DED352819E7AE6775 已核验）
         client_secret: String,
     },
+    #[serde(rename = "meituan", rename_all = "camelCase")]
+    Meituan {
+        url: String,
+        /// 应用 app_id（开发者中心查看，事实库 §4.1/§6 系统级参数必传项）：
+        /// 参与字母序签名拼接，由适配器随直发补齐进表单字段集
+        app_id: String,
+        /// app secret / consumer_secret：sig = MD5(url?字母序 k=v 串 + secret)
+        /// 32 位小写的签名源（事实库 §4.1 官方五步，官方向量
+        /// 00934d00d0aea6f12161edfb6456143d 已对拍）
+        app_secret: String,
+    },
 }

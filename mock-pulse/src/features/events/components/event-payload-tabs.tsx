@@ -37,7 +37,11 @@ export function EventRawEditor({
     <FieldGroup>
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">
-          {schema.wire === "xml" ? "加密前的 XML" : "平台原始 JSON"}
+          {schema.wire === "xml"
+            ? "加密前的 XML"
+            : schema.wire === "form"
+              ? "平台表单报文"
+              : "平台原始 JSON"}
         </Badge>
         <span className="min-w-0 flex-1" />
         <Button

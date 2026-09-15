@@ -44,6 +44,9 @@ import type { EventSchema, IdKind } from "./schemas";
  *   形态 9~15 位，首位非零；订单推送 order_id 与咚咚 orderId/serviceId 共用）
  * - pddBizId：拼多多订单号（官方未给格式样本，按电商单号数字串同族形态
  *   9~15 位，首位非零；订单三态推送 order_id 共用）
+ * - mtBizId：美团订单号（官方样本 27061900338318741 为 17 位数字串，
+ *   bigint(20) 存储；取 15~17 位首位非零，恒在 int64 内；订单三态推送
+ *   order_id 与展示 ID wm_order_id_view 共用）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -286,6 +289,21 @@ export function generatePddBizId(): string {
   return digits;
 }
 
+/**
+ * 美团订单号：官方样本 27061900338318741 为 17 位数字串（docDetail/177/180
+ * 核验样本，bigint(20) 存储）——取 15~17 位数字串（首位非零，17 位仍在
+ * int64 内）；订单三态推送 order_id 与 wm_order_id_view（sameAs）共用。
+ */
+export function generateMtBizId(): string {
+  const length = 15 + (randomBytes(1)[0] % 3);
+  const bytes = randomBytes(length);
+  let digits = String((bytes[0] % 9) + 1);
+  for (let i = 1; i < length; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return digits;
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -315,6 +333,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   openimMsgId: generateOpenimMsgId,
   jdBizId: generateJdBizId,
   pddBizId: generatePddBizId,
+  mtBizId: generateMtBizId,
 };
 
 /**

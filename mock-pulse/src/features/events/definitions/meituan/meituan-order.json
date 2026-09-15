@@ -1,0 +1,265 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "meituan",
+  "version": "2026.09",
+  "schemas": {
+    "mt-order-paid": {
+      "version": "2026.09",
+      "source": "https://developer.waimai.meituan.com/home/doc/food/7",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "订单号（官方 §5.3 核验样本 27061900338318741 逐字，long / bigint(20) 存储，全程文本不经 number 防精度丢失）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_tag_list",
+          "title": "订单标签",
+          "type": "string",
+          "group": "订单推送",
+          "description": "订单标签集合（set；官方 §5.3 样本 8=处方药、36=团好药，多值逗号分隔）。",
+          "required": false
+        },
+        {
+          "path": "wm_order_id_view",
+          "title": "订单展示 ID",
+          "type": "string",
+          "group": "订单推送",
+          "description": "展示 ID，与用户端/商家端一致（官方 §5.3 样本逐字）；与 order_id 同值，新建事件时跟随订单号重生成。",
+          "required": true
+        },
+        {
+          "path": "app_poi_code",
+          "title": "门店 ID",
+          "type": "string",
+          "group": "订单推送",
+          "description": "APP 方门店 id（官方 §5.3 样本 668921 逐字；未绑三方 id 时默认等于美团门店 id）。",
+          "required": true
+        },
+        {
+          "path": "wm_poi_name",
+          "title": "门店名称",
+          "type": "string",
+          "group": "订单推送",
+          "description": "门店名称（官方 §5.3 样本「药品01店」逐字；中文按 UTF-8 表单编码传输，签名用原文）。",
+          "required": true
+        },
+        {
+          "path": "recipient_phone",
+          "title": "收餐人电话",
+          "type": "string",
+          "group": "订单推送",
+          "description": "收餐人电话（官方 §5.3 样本 13812345678_1236 逐字；兼容真实号与 13812345678_1236 隐私号双格式）。",
+          "required": true
+        },
+        {
+          "path": "backup_recipient_phone",
+          "title": "备用电话",
+          "type": "json",
+          "group": "订单推送",
+          "description": "备用电话数组（官方 §5.3 样本逐字；无则 []。对象/数组先转 JSON 字符串再作表单字段，官方口径；编辑器按 JSON 结构进出）。",
+          "required": false
+        },
+        {
+          "path": "delivery_time",
+          "title": "送达时间",
+          "type": "number",
+          "group": "订单推送",
+          "description": "0=立即送出（见 estimate_arrival_time）；否则为用户所选秒级时间戳（官方 §5.3 口径逐字）。",
+          "required": true
+        },
+        {
+          "path": "pay_type",
+          "title": "支付方式",
+          "type": "number",
+          "group": "订单推送",
+          "description": "1-货到付款，2-在线支付（官方 §5.3 口径逐字；现仅在线支付）。",
+          "required": true
+        },
+        {
+          "path": "logistics_code",
+          "title": "物流编码",
+          "type": "string",
+          "group": "订单推送",
+          "description": "0000-商家自配、1001-美团加盟、2002-快送、3001-混合送、4015-企客全城送（官方 §5.3 词汇逐字；默认不推，需在订单字段订阅开启字段 22，保留作订阅开启后的形态）。",
+          "required": false
+        }
+      ]
+    },
+    "mt-order-confirmed": {
+      "version": "2026.09",
+      "source": "https://developer.waimai.meituan.com/home/docDetail/177",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "订单号（官方 §5.3 核验样本 27061900338318741 逐字，long / bigint(20) 存储，全程文本不经 number 防精度丢失）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_tag_list",
+          "title": "订单标签",
+          "type": "string",
+          "group": "订单推送",
+          "description": "订单标签集合（set；官方 §5.3 样本 8=处方药、36=团好药，多值逗号分隔）。",
+          "required": false
+        },
+        {
+          "path": "wm_order_id_view",
+          "title": "订单展示 ID",
+          "type": "string",
+          "group": "订单推送",
+          "description": "展示 ID，与用户端/商家端一致（官方 §5.3 样本逐字）；与 order_id 同值，新建事件时跟随订单号重生成。",
+          "required": true
+        },
+        {
+          "path": "app_poi_code",
+          "title": "门店 ID",
+          "type": "string",
+          "group": "订单推送",
+          "description": "APP 方门店 id（官方 §5.3 样本 668921 逐字；未绑三方 id 时默认等于美团门店 id）。",
+          "required": true
+        },
+        {
+          "path": "wm_poi_name",
+          "title": "门店名称",
+          "type": "string",
+          "group": "订单推送",
+          "description": "门店名称（官方 §5.3 样本「药品01店」逐字；中文按 UTF-8 表单编码传输，签名用原文）。",
+          "required": true
+        },
+        {
+          "path": "recipient_phone",
+          "title": "收餐人电话",
+          "type": "string",
+          "group": "订单推送",
+          "description": "收餐人电话（官方 §5.3 样本 13812345678_1236 逐字；兼容真实号与 13812345678_1236 隐私号双格式）。",
+          "required": true
+        },
+        {
+          "path": "backup_recipient_phone",
+          "title": "备用电话",
+          "type": "json",
+          "group": "订单推送",
+          "description": "备用电话数组（官方 §5.3 样本逐字；无则 []。对象/数组先转 JSON 字符串再作表单字段，官方口径；编辑器按 JSON 结构进出）。",
+          "required": false
+        },
+        {
+          "path": "delivery_time",
+          "title": "送达时间",
+          "type": "number",
+          "group": "订单推送",
+          "description": "0=立即送出（见 estimate_arrival_time）；否则为用户所选秒级时间戳（官方 §5.3 口径逐字）。",
+          "required": true
+        },
+        {
+          "path": "pay_type",
+          "title": "支付方式",
+          "type": "number",
+          "group": "订单推送",
+          "description": "1-货到付款，2-在线支付（官方 §5.3 口径逐字；现仅在线支付）。",
+          "required": true
+        },
+        {
+          "path": "logistics_code",
+          "title": "物流编码",
+          "type": "string",
+          "group": "订单推送",
+          "description": "0000-商家自配、1001-美团加盟、2002-快送、3001-混合送、4015-企客全城送（官方 §5.3 词汇逐字；默认不推，需在订单字段订阅开启字段 22，保留作订阅开启后的形态）。",
+          "required": false
+        }
+      ]
+    },
+    "mt-order-completed": {
+      "version": "2026.09",
+      "source": "https://developer.waimai.meituan.com/home/docDetail/180",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "订单号（官方 §5.3 核验样本 27061900338318741 逐字，long / bigint(20) 存储，全程文本不经 number 防精度丢失）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_tag_list",
+          "title": "订单标签",
+          "type": "string",
+          "group": "订单推送",
+          "description": "订单标签集合（set；官方 §5.3 样本 8=处方药、36=团好药，多值逗号分隔）。",
+          "required": false
+        },
+        {
+          "path": "wm_order_id_view",
+          "title": "订单展示 ID",
+          "type": "string",
+          "group": "订单推送",
+          "description": "展示 ID，与用户端/商家端一致（官方 §5.3 样本逐字）；与 order_id 同值，新建事件时跟随订单号重生成。",
+          "required": true
+        },
+        {
+          "path": "app_poi_code",
+          "title": "门店 ID",
+          "type": "string",
+          "group": "订单推送",
+          "description": "APP 方门店 id（官方 §5.3 样本 668921 逐字；未绑三方 id 时默认等于美团门店 id）。",
+          "required": true
+        },
+        {
+          "path": "wm_poi_name",
+          "title": "门店名称",
+          "type": "string",
+          "group": "订单推送",
+          "description": "门店名称（官方 §5.3 样本「药品01店」逐字；中文按 UTF-8 表单编码传输，签名用原文）。",
+          "required": true
+        },
+        {
+          "path": "recipient_phone",
+          "title": "收餐人电话",
+          "type": "string",
+          "group": "订单推送",
+          "description": "收餐人电话（官方 §5.3 样本 13812345678_1236 逐字；兼容真实号与 13812345678_1236 隐私号双格式）。",
+          "required": true
+        },
+        {
+          "path": "backup_recipient_phone",
+          "title": "备用电话",
+          "type": "json",
+          "group": "订单推送",
+          "description": "备用电话数组（官方 §5.3 样本逐字；无则 []。对象/数组先转 JSON 字符串再作表单字段，官方口径；编辑器按 JSON 结构进出）。",
+          "required": false
+        },
+        {
+          "path": "delivery_time",
+          "title": "送达时间",
+          "type": "number",
+          "group": "订单推送",
+          "description": "0=立即送出（见 estimate_arrival_time）；否则为用户所选秒级时间戳（官方 §5.3 口径逐字）。",
+          "required": true
+        },
+        {
+          "path": "pay_type",
+          "title": "支付方式",
+          "type": "number",
+          "group": "订单推送",
+          "description": "1-货到付款，2-在线支付（官方 §5.3 口径逐字；现仅在线支付）。",
+          "required": true
+        },
+        {
+          "path": "logistics_code",
+          "title": "物流编码",
+          "type": "string",
+          "group": "订单推送",
+          "description": "0000-商家自配、1001-美团加盟、2002-快送、3001-混合送、4015-企客全城送（官方 §5.3 词汇逐字；默认不推，需在订单字段订阅开启字段 22，保留作订阅开启后的形态）。",
+          "required": false
+        }
+      ]
+    }
+  }
+}

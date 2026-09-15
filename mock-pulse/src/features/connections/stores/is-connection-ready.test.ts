@@ -6,6 +6,7 @@ import {
   defaultFeishuConnection,
   defaultJingdongConnection,
   defaultKuaishouConnection,
+  defaultMeituanConnection,
   defaultPinduoduoConnection,
   defaultQqConnection,
   defaultTaobaoConnection,
@@ -130,6 +131,13 @@ const savedPinduoduo: ConnectionConfig = {
   url: "http://127.0.0.1:9099/pinduoduo",
   clientId: "1",
   clientSecret: "testSecret",
+};
+
+const savedMeituan: ConnectionConfig = {
+  channel: "meituan",
+  url: "http://127.0.0.1:9099/meituan",
+  appId: "1235123121",
+  appSecret: "d31ba58fd73c71db697ab5e4946d52d",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -539,6 +547,31 @@ describe("isConnectionReady（拼多多核必填集，PMC 订阅推送模拟）"
     expect(defaultPinduoduoConnection.clientSecret).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "pinduoduo")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（美团核必填集，合作中心表单回调模拟）", () => {
+  it("url/appId/appSecret 齐全才算已配置（sig = MD5(url?字母序 k=v 串 + app secret)）", () => {
+    expect(isConnectionReady(savedMeituan)).toBe(true);
+  });
+
+  it("缺 url/appId/appSecret 任一都不算已配置", () => {
+    expect(isConnectionReady({ ...savedMeituan, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedMeituan, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedMeituan, appId: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedMeituan, appSecret: "" })).toBe(false);
+  });
+
+  it("初始美团占位连接（凭据全空、合作中心 MD5 签名起步）不算已配置", () => {
+    expect(defaultMeituanConnection.channel).toBe("meituan");
+    expect(defaultMeituanConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/meituan",
+    );
+    expect(defaultMeituanConnection.appId).toBe("");
+    expect(defaultMeituanConnection.appSecret).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "meituan")),
     ).toBe(false);
   });
 });

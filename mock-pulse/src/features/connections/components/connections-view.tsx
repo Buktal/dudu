@@ -145,11 +145,16 @@ function pinduoduoTestNote(): string {
   return "发送推送探针（POST 官方订单状态样本明文，query 带 client_id/timestamp（UNIX 秒）与 sign = UPPER(MD5(client_secret+ASCII 排序 k+v+client_secret))），检查服务是否返回 HTTP 200（官方验证握手口径待核验，探针语义同普通推送）。";
 }
 
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书/快手/淘宝/京东 JSON、公众号 XML */
+/** 美团握手文案（事实库 §3.1：官方验证握手正文待核验(09-27)，探针语义同普通推送） */
+function meituanTestNote(): string {
+  return "发送推送探针（POST 官方订单核验样本表单，字段集尾部追加 app_id/timestamp 与 sig = MD5(url?字母序 k=v 串 + App Secret)），检查服务是否返回 HTTP 200（官方验证握手正文待核验，探针语义同普通推送）。";
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书/快手/淘宝/京东 JSON、美团表单、公众号 XML */
 function wireBadgeLabel(
   channel: ChannelId,
   draft: ConnectionConfig,
-): "JSON" | "XML" {
+): "JSON" | "XML" | "表单" {
   if (
     channel === "douyin" ||
     channel === "feishu" ||
@@ -163,6 +168,9 @@ function wireBadgeLabel(
     channel === "pinduoduo"
   ) {
     return "JSON";
+  }
+  if (channel === "meituan") {
+    return "表单";
   }
   if (channel === "wecom" && draft.channel === "wecom") {
     return draft.system === "aibot" ? "JSON" : "XML";
@@ -210,7 +218,9 @@ export function ConnectionsView() {
                           ? actions.defaultJingdongConnection
                           : channel === "pinduoduo"
                             ? actions.defaultPinduoduoConnection
-                            : actions.defaultWecomConnection);
+                            : channel === "meituan"
+                              ? actions.defaultMeituanConnection
+                              : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -421,11 +431,13 @@ export function ConnectionsView() {
                                       ? jingdongTestNote()
                                       : channel === "pinduoduo"
                                         ? pinduoduoTestNote()
-                                        : wecomTestNote(
-                                            draft.channel === "wecom"
-                                              ? draft.system
-                                              : "agent",
-                                          )}
+                                        : channel === "meituan"
+                                          ? meituanTestNote()
+                                          : wecomTestNote(
+                                              draft.channel === "wecom"
+                                                ? draft.system
+                                                : "agent",
+                                            )}
               </CardDescription>
               <CardAction>
                 <Button

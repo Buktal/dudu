@@ -8,6 +8,7 @@ import { DOUYIN_DEFINITIONS } from "./douyin";
 import { FEISHU_DEFINITIONS } from "./feishu";
 import { JD_DEFINITIONS } from "./jingdong";
 import { KS_DEFINITIONS } from "./kuaishou";
+import { MT_DEFINITIONS } from "./meituan";
 import { PDD_DEFINITIONS } from "./pinduoduo";
 import { QQ_DEFINITIONS } from "./qq";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
@@ -32,11 +33,12 @@ const DEFINITIONS_BY_CHANNEL = {
   taobao: TB_DEFINITIONS,
   jingdong: JD_DEFINITIONS,
   pinduoduo: PDD_DEFINITIONS,
+  meituan: MT_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(241);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(245);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -56,6 +58,7 @@ describe("事件模板聚合注册表", () => {
       "taobao",
       "jingdong",
       "pinduoduo",
+      "meituan",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -414,6 +417,14 @@ describe("事件模板聚合注册表", () => {
       "pdd-order-shipped",
       "pdd-order-signed",
     ]);
+    expect(schemasByChannel("meituan").map((schema) => schema.id)).toEqual([
+      // 订单三态推送（事实库 §2.1 目录行接口名逐字，必接与官方全文推送）
+      "mt-order-paid",
+      "mt-order-confirmed",
+      "mt-order-completed",
+      // IM 单聊回调 1（事实库 §5.4 docDetail/842 字段表逐字，biz_type=1）
+      "mt-im-single-chat",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -430,6 +441,7 @@ describe("事件模板聚合注册表", () => {
           "taobao",
           "jingdong",
           "pinduoduo",
+          "meituan",
         ].includes(channel.id)
       )
         continue;
