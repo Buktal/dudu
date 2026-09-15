@@ -30,6 +30,8 @@ import type { EventSchema, IdKind } from "./schemas";
  *   形态的 10 位数）
  * - weiboCreatedAt：微博 created_at（Mon Jul 16 18:09:20 +0800 2012 字符串，
  *   排重键 sender_id+created_at 的时刻半边，经 lib/time 封装格式化）
+ * - xhsMsgId：小红书 MsgId（官方口径字符串无格式样本，微信系 int64 同族
+ *   18 位数字串）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -190,6 +192,19 @@ export function generateWeiboCreatedAt(): string {
   return weiboCreatedAt();
 }
 
+/**
+ * 小红书 MsgId：官方仅口径为字符串（事实库 §10.3），无格式样本——按微信系
+ * int64 MsgId 同族的 18 位数字串生成（全程字符串，不经 number 防精度丢失）
+ */
+export function generateXhsMsgId(): string {
+  const bytes = randomBytes(18);
+  let digits = String((bytes[0] % 9) + 1);
+  for (let i = 1; i < 18; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return digits;
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -212,6 +227,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   qqOpenId: generateQqOpenId,
   weiboUid: generateWeiboUid,
   weiboCreatedAt: generateWeiboCreatedAt,
+  xhsMsgId: generateXhsMsgId,
 };
 
 /**

@@ -87,10 +87,10 @@ export const CHANNEL_REGISTRY = {
   },
   xiaohongshu: {
     name: "小红书",
-    protocol: "小程序客服 · JSON 回调",
-    note: "小程序客服消息：JSON 报文，GET echostr 握手 + sha1(字典序排序) 验签，回 success",
+    protocol: "小程序客服 + 电商 ark · JSON 回调",
+    note: "双体系：小程序客服消息 GET echostr 握手 + AES 加密信封（MsgSignature 在 body 内，回 success）；电商 ark POST JSON 数组明文，回 {success:true,error_code:0}",
     icon: "Heart",
-    implemented: false,
+    implemented: true,
   },
   feishu: {
     name: "飞书",

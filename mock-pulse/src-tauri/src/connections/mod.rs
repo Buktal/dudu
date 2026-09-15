@@ -14,6 +14,7 @@ pub mod wechat_mini;
 pub mod wechat_mp;
 pub mod weibo;
 pub mod wecom;
+pub mod xiaohongshu;
 
 use std::time::Duration;
 
@@ -110,6 +111,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &dingtalk::Adapter,
     &qq::Adapter,
     &weibo::Adapter,
+    &xiaohongshu::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -239,6 +241,21 @@ pub enum DingtalkSystem {
     Bot,
 }
 
+/// 小红书推送通道（事实库 §2/§10：小程序客服消息与电商 ark 推送双体系并行，
+/// 验签/加密体系完全不同）。连接配置按通道路由协议原语；序列化 snake_case，
+/// 缺省 miniapp（小程序客服消息为小红书侧官方消息型推送基准，事实库 §10.8）。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum XiaohongshuSystem {
+    /// 小程序客服消息：GET 四参握手（三参 sha1 排序验签）+ AES 加密信封
+    /// （MsgSignature 在 body 内），应答 success，5s 超时×3 重试
+    #[default]
+    Miniapp,
+    /// 电商 ark 订单推送：POST JSON 数组明文（无签名头），应答
+    /// {"success":true,"error_code":0}
+    Ark,
+}
+
 /// 平台连接配置：持久化（store）与协议握手（douyin/wecom/wechat_mp）共用的域类型。
 /// 按渠道存不同凭据形状，以 channel 内标序列化（旧版抖音/企微数据形状不变，
 /// 新增体系/通道/模式字段全部 serde default 缺省）。
@@ -359,6 +376,22 @@ pub enum ConnectionConfig {
         /// Token，与微信差异点；APPKEY 本身不参与推送协议，不设字段）
         app_secret: String,
     },
+    #[serde(rename = "xiaohongshu", rename_all = "camelCase")]
+    Xiaohongshu {
+        url: String,
+        /// 推送通道：小程序客服消息 / 电商 ark 订单推送（缺省 miniapp）
+        #[serde(default)]
+        system: XiaohongshuSystem,
+        /// 小程序通道：消息验证 TOKEN（GET 握手三参与 MsgSignature 四参签名源）
+        #[serde(default)]
+        token: String,
+        /// 小程序通道：43 位 EncodingAESKey（官方 MsgDecrypt 同族 AES 派生源）
+        #[serde(default)]
+        encoding_aes_key: String,
+        /// 小程序通道：小程序 AppID（加密明文尾部 receiveid，解密后须校验）
+        #[serde(default)]
+        app_id: String,
+    },
 }
 
 /// 读取全部持久化连接（无文件时返回空列表）。
@@ -457,6 +490,16 @@ pub async fn connections_test_weibo(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&weibo::Adapter, config).await
+}
+
+/// 按小红书通道测试连接：小程序通道发 GET 四参握手（三参 sha1 签名，目标
+/// 原样回显 echostr）；ark 通道发最小推送探针（官方数组形态，期望
+/// {"success":true,"error_code":0}；电商侧无官方握手口径）。
+#[tauri::command]
+pub async fn connections_test_xiaohongshu(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&xiaohongshu::Adapter, config).await
 }
 
 #[cfg(test)]

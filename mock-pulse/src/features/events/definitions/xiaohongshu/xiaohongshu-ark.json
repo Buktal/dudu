@@ -1,0 +1,317 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "xiaohongshu",
+  "version": "2026.09",
+  "schemas": {
+    "xhs-ark-fulfillment-status-change": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_fulfillment_status_change（履约-订单状态变更；多源：zsmhub/xhs-sdk 与 cxjava/xhs-sdk 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（官方样本掩码 5e8e****，逐字照录）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 序列化后的字符串（二级转义，接收方需二次反序列化）；本模板 data 字段：orderId(string)、updateTime(int64)、orderStatus(int64)。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-ark-fulfillment-receiver-change": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_fulfillment_receiver_change（履约-买家收货信息变更；多源：两 SDK 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（样本值按事实库掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 字符串（二级转义）；本模板 data 字段：orderId(string)、openAddressId(string——注意与 deliver_time_change 的 int64 类型不同，保留原样)、updateTime(int64)。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-ark-fulfillment-seller-remark-change": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_fulfillment_seller_remark_change（履约-卖家修改备注；多源：两 SDK 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（样本值按事实库掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 字符串（二级转义）；本模板 data 字段：orderId(string)、operator(string)、sellerMarkNote(string)、updateTime(int64)。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-ark-fulfillment-deliver-time-change": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_fulfillment_deliver_time_change（履约-订单发货时效变更；多源：两 SDK 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（样本值按事实库掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 字符串（二级转义）；本模板 data 字段：orderId(string)、openAddressId(int64——注意与 receiver_change 的 string 类型不同，事实库明示保留原样)、updateTime(int64)。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-ark-after-sale-create": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_after_sale_create（售后-发起售后申请；多源：两 SDK 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（官方样本掩码 5e8e****，逐字照录）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 字符串（二级转义）；本模板 data 字段：returnsId(string)、orderId(string)、returnType(int64)、request_from(int64——官方下划线命名，保留原样)、refundFee(float64)、updateTime(int64)。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-ark-after-sale-transfer": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_after_sale_transfer（售后-售后类型变更；多源：两 SDK 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（样本值按事实库掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 字符串（二级转义）；字段与 msg_after_sale_create 同构（事实库「同上」），request_from 下划线命名保留原样。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-ark-sku-create": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_sku_create（商品-商品新建；多源：两 SDK 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（样本值按事实库掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 字符串（二级转义）；本模板 data 字段：skuId(string)、updateTime(int64)。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-ark-sku-buyable": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_sku_buyable（商品-商品上下架；多源：两 SDK 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（样本值按事实库掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 字符串（二级转义）；本模板 data 字段：skuId(string)、updateTime(int64)。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-ark-sku-delete": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_sku_delete（商品-商品删除；多源：两 SDK 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（样本值按事实库掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 字符串（二级转义）；本模板 data 字段：skuId(string)、updateTime(int64)。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-ark-item-audit-reject": {
+      "version": "2026.09",
+      "source": "https://github.com/zsmhub/xhs-sdk",
+      "fields": [
+        {
+          "path": "msgTag",
+          "title": "事件类型标识",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 msg_item_audit_reject（商品-商品审核驳回；多源：两 SDK 交叉一致）。",
+          "required": true
+        },
+        {
+          "path": "sellerId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "商家标识（样本值按事实库掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "string",
+          "group": "推送信封",
+          "description": "内层业务 JSON 字符串（二级转义）；本模板 data 字段：itemId(string)、updateTime(int64)。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    }
+  }
+}

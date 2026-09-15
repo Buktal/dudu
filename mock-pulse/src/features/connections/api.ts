@@ -43,6 +43,14 @@ export type WechatMiniDataFormat = "xml" | "json";
 export type DingtalkSystem = "http_crypto" | "bot";
 
 /**
+ * 小红书推送通道（与 Rust 端 XiaohongshuSystem 内标一致，snake_case）：
+ * 双体系并行（事实库 §2/§10）——小程序客服消息（官方消息型推送基准：GET
+ * 四参握手 + AES 加密信封，回 success）与电商 ark 订单推送（POST JSON 数组
+ * 明文，回 {"success":true,"error_code":0}），验签/加密体系完全不同。
+ */
+export type XiaohongshuSystem = "miniapp" | "ark";
+
+/**
  * 钉钉连接配置形状（与 Rust 端 ConnectionConfig::Dingtalk 内标一致）：
  * 密文通道用 token/encodingAesKey/ownerKey（sha1 四参验签 + AES-CBC，
  * PKCS#7-32，包尾 $key=ownerKey）；机器人通道用 appSecret（HmacSHA256）。
@@ -91,6 +99,26 @@ export type WeiboConnectionConfig = {
   url: string;
   /** APPKEY 对应的 App Secret：三参 sha1 排序验签的签名源 */
   appSecret: string;
+};
+
+/**
+ * 小红书连接配置形状（与 Rust 端 ConnectionConfig::Xiaohongshu 内标一致）：
+ * 小程序通道三元组（Token 参与握手三参与 MsgSignature 四参签名、
+ * EncodingAESKey 派生 AES-256-CBC、AppID 为加密明文尾部 receiveid）；
+ * ark 通道无凭据（两 SDK 均未展示推送侧签名头，事实库 §3.7）。
+ */
+export type XiaohongshuConnectionConfig = {
+  channel: "xiaohongshu";
+  /** 回调目标地址，事件与剧本共享 */
+  url: string;
+  /** 推送通道：小程序客服消息 / 电商 ark 订单推送（缺省 miniapp） */
+  system: XiaohongshuSystem;
+  /** 小程序通道：消息验证 TOKEN（握手三参与 MsgSignature 四参签名源） */
+  token: string;
+  /** 小程序通道：43 位 EncodingAESKey（官方 MsgDecrypt 同族 AES 派生源） */
+  encodingAesKey: string;
+  /** 小程序通道：小程序 AppID（加密明文尾部 receiveid，解密后须校验） */
+  appId: string;
 };
 
 /**
@@ -186,7 +214,8 @@ export type ConnectionConfig =
   | FeishuConnectionConfig
   | DingtalkConnectionConfig
   | QqConnectionConfig
-  | WeiboConnectionConfig;
+  | WeiboConnectionConfig
+  | XiaohongshuConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -267,4 +296,12 @@ export function testWeiboConnection(
   config: WeiboConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_weibo", { config });
+}
+
+/** 按小红书通道测试连接：小程序通道发 GET 四参握手（三参 sha1 签名，目标
+ *  原样回显 echostr）；ark 通道发最小推送探针（回 {"success":true,...}） */
+export function testXiaohongshuConnection(
+  config: XiaohongshuConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_xiaohongshu", { config });
 }

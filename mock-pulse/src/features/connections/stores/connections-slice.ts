@@ -22,10 +22,12 @@ import {
   testWechatMpConnection as testWechatMpApi,
   testWecomConnection as testWecomApi,
   testWeiboConnection as testWeiboApi,
+  testXiaohongshuConnection as testXiaohongshuApi,
   type WechatMiniConnectionConfig,
   type WechatMpConnectionConfig,
   type WecomConnectionConfig,
   type WeiboConnectionConfig,
+  type XiaohongshuConnectionConfig,
 } from "../api";
 
 export type TestStatus = "idle" | "testing" | "success" | "failed";
@@ -123,6 +125,16 @@ export const defaultWeiboConnection: WeiboConnectionConfig = {
   appSecret: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（小程序客服消息通道起步） */
+export const defaultXiaohongshuConnection: XiaohongshuConnectionConfig = {
+  channel: "xiaohongshu",
+  url: "http://127.0.0.1:8080/webhooks/xiaohongshu",
+  system: "miniapp",
+  token: "",
+  encodingAesKey: "",
+  appId: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -131,6 +143,7 @@ export const initialConnectionsState: ConnectionsState = {
   items: {
     douyin: defaultDouyinConnection,
     wecom: defaultWecomConnection,
+    xiaohongshu: defaultXiaohongshuConnection,
     "wechat-mp": defaultWechatMpConnection,
     "wechat-mini": defaultWechatMiniConnection,
     feishu: defaultFeishuConnection,
@@ -182,6 +195,8 @@ export const testConnection = createAsyncThunk(
         return testQqApi(config);
       case "weibo":
         return testWeiboApi(config);
+      case "xiaohongshu":
+        return testXiaohongshuApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
@@ -271,6 +286,9 @@ export const {
  * - QQ 核：url + appSecret 必填（Ed25519 验签密钥）；appId 仅随连接记录
  * - 微博核：url + appSecret 必填（三参 sha1 排序验签的签名源，官方明示
  *   非 Token）；APPKEY 不参与推送协议不设字段
+ * - 小红书按通道核：小程序通道 = url + token + encodingAesKey + appId
+ *   （握手三参/MsgSignature 四参签名源 + AES 派生源 + 加密明文尾部校验方）；
+ *   ark 通道 = url 即可（官方无推送侧签名口径，事实库 §3.7）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -295,6 +313,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && qqReady(config);
     case "weibo":
       return config.url.trim() !== "" && weiboReady(config);
+    case "xiaohongshu":
+      return config.url.trim() !== "" && xiaohongshuReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -424,6 +444,28 @@ function qqReady(config: QqConnectionConfig): boolean {
  */
 function weiboReady(config: WeiboConnectionConfig): boolean {
   return config.appSecret.trim() !== "";
+}
+
+/** 小红书按推送通道核必填集（验签/加密要素是直发前置） */
+function xiaohongshuReady(config: XiaohongshuConnectionConfig): boolean {
+  switch (config.system) {
+    case "miniapp":
+      // 小程序通道：握手/MsgSignature 签名源 + AES 派生源 + 明文尾部 receiveid
+      return (
+        config.token.trim() !== "" &&
+        config.encodingAesKey.trim() !== "" &&
+        config.appId.trim() !== ""
+      );
+    case "ark":
+      // ark 通道明文直发：无验签凭据（官方无推送侧签名口径，事实库 §3.7）
+      return true;
+    default: {
+      // 穷尽守卫：新增通道漏配必填集时编译期报错；未知通道视为未配置
+      const exhaustive: never = config.system;
+      void exhaustive;
+      return false;
+    }
+  }
 }
 
 /** 按渠道字面量取对应形状的连接配置类型 */

@@ -34,6 +34,7 @@ pub fn run() {
             connections::connections_test_dingtalk,
             connections::connections_test_qq,
             connections::connections_test_weibo,
+            connections::connections_test_xiaohongshu,
             definitions::definitions_load,
             definitions::definitions_save,
             events::events_load,

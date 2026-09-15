@@ -5,6 +5,7 @@ import type {
   WechatMiniMode,
   WechatMpMode,
   WecomSystem,
+  XiaohongshuSystem,
 } from "../api";
 
 /**
@@ -34,6 +35,15 @@ export const DINGTALK_SYSTEMS: readonly {
 }[] = [
   { value: "http_crypto", label: "事件订阅（新 HTTP 密文信封）" },
   { value: "bot", label: "机器人收消息（明文 JSON）" },
+];
+
+/** 小红书推送通道（事实库 §2/§10：小程序客服消息与电商 ark 推送双体系并行） */
+export const XIAOHONGSHU_SYSTEMS: readonly {
+  value: XiaohongshuSystem;
+  label: string;
+}[] = [
+  { value: "miniapp", label: "小程序客服消息（加密 JSON 信封）" },
+  { value: "ark", label: "电商 ark 订单推送（JSON 数组明文）" },
 ];
 
 /** 公众号消息加解密方式（事实库 §4.1 三模式，官方服务器配置配套项） */

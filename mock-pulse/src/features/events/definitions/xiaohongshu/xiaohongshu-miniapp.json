@@ -1,0 +1,464 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "xiaohongshu",
+  "version": "2026.09",
+  "schemas": {
+    "xhs-text": {
+      "version": "2026.09",
+      "source": "https://miniapp.xiaohongshu.com/doc/DC897608",
+      "fields": [
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "消息唯一标识（官方口径为字符串，排重键）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "FromOpenId",
+          "title": "发送者 OpenID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "发送者的用户 openid（官方占位 USER_OPEN_ID）。",
+          "required": true
+        },
+        {
+          "path": "ToAppId",
+          "title": "小程序 AppID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "接收消息的小程序 appid（官方占位 SELLER_APP_ID）；加密明文尾部即它，解密后须校验一致。",
+          "required": true
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "通用字段",
+          "description": "固定为 text（文本客服消息；小程序客服 5 MsgType 之一）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "通用字段",
+          "description": "秒级 Unix 时间戳（官方样本 1648714429）。新建事件时按当前时刻重新生成。",
+          "required": true
+        },
+        {
+          "path": "Content",
+          "title": "文本内容",
+          "type": "string",
+          "group": "text 专属字段",
+          "description": "文本消息内容（官方样本以占位 ... 示意）。",
+          "required": true,
+          "multiline": true
+        }
+      ]
+    },
+    "xhs-image": {
+      "version": "2026.09",
+      "source": "https://miniapp.xiaohongshu.com/doc/DC897608",
+      "fields": [
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "消息唯一标识（官方口径为字符串，排重键）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "FromOpenId",
+          "title": "发送者 OpenID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "发送者的用户 openid（官方占位 USER_OPEN_ID）。",
+          "required": true
+        },
+        {
+          "path": "ToAppId",
+          "title": "小程序 AppID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "接收消息的小程序 appid（官方占位 SELLER_APP_ID）；加密明文尾部即它。",
+          "required": true
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "通用字段",
+          "description": "固定为 image（图片客服消息）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "通用字段",
+          "description": "秒级 Unix 时间戳。新建事件时按当前时刻重新生成。",
+          "required": true
+        },
+        {
+          "path": "PicUrl",
+          "title": "图片链接",
+          "type": "string",
+          "group": "image 专属字段",
+          "description": "图片消息专属字段（官方仅给字段名，无样本值；占位按官方大写下划线风格构造）。",
+          "required": true,
+          "format": "url"
+        }
+      ]
+    },
+    "xhs-video": {
+      "version": "2026.09",
+      "source": "https://miniapp.xiaohongshu.com/doc/DC897608",
+      "fields": [
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "消息唯一标识（官方口径为字符串，排重键）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "FromOpenId",
+          "title": "发送者 OpenID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "发送者的用户 openid（官方占位 USER_OPEN_ID）。",
+          "required": true
+        },
+        {
+          "path": "ToAppId",
+          "title": "小程序 AppID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "接收消息的小程序 appid（官方占位 SELLER_APP_ID）；加密明文尾部即它。",
+          "required": true
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "通用字段",
+          "description": "固定为 video（视频客服消息）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "通用字段",
+          "description": "秒级 Unix 时间戳。新建事件时按当前时刻重新生成。",
+          "required": true
+        },
+        {
+          "path": "VideoUrl",
+          "title": "视频链接",
+          "type": "string",
+          "group": "video 专属字段",
+          "description": "视频消息专属字段（官方仅给字段名，无样本值；占位按官方大写下划线风格构造）。",
+          "required": true,
+          "format": "url"
+        }
+      ]
+    },
+    "xhs-item": {
+      "version": "2026.09",
+      "source": "https://miniapp.xiaohongshu.com/doc/DC897608",
+      "fields": [
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "消息唯一标识（官方口径为字符串，排重键）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "FromOpenId",
+          "title": "发送者 OpenID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "发送者的用户 openid（官方占位 USER_OPEN_ID）。",
+          "required": true
+        },
+        {
+          "path": "ToAppId",
+          "title": "小程序 AppID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "接收消息的小程序 appid（官方占位 SELLER_APP_ID）；加密明文尾部即它。",
+          "required": true
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "通用字段",
+          "description": "固定为 item（商品客服消息）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "通用字段",
+          "description": "秒级 Unix 时间戳。新建事件时按当前时刻重新生成。",
+          "required": true
+        },
+        {
+          "path": "OutProductId",
+          "title": "外部商品 ID",
+          "type": "string",
+          "group": "item 专属字段",
+          "description": "商品消息专属字段（官方仅给字段名，无样本值；占位按官方大写下划线风格构造）。",
+          "required": true
+        }
+      ]
+    },
+    "xhs-order": {
+      "version": "2026.09",
+      "source": "https://miniapp.xiaohongshu.com/doc/DC897608",
+      "fields": [
+        {
+          "path": "MsgId",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "消息唯一标识（官方口径为字符串，排重键）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "FromOpenId",
+          "title": "发送者 OpenID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "发送者的用户 openid（官方占位 USER_OPEN_ID）。",
+          "required": true
+        },
+        {
+          "path": "ToAppId",
+          "title": "小程序 AppID",
+          "type": "string",
+          "group": "通用字段",
+          "description": "接收消息的小程序 appid（官方占位 SELLER_APP_ID）；加密明文尾部即它。",
+          "required": true
+        },
+        {
+          "path": "MsgType",
+          "title": "消息类型",
+          "type": "string",
+          "group": "通用字段",
+          "description": "固定为 order（订单客服消息）。",
+          "required": true
+        },
+        {
+          "path": "CreateTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "通用字段",
+          "description": "秒级 Unix 时间戳。新建事件时按当前时刻重新生成。",
+          "required": true
+        },
+        {
+          "path": "OutOrderId",
+          "title": "外部订单 ID",
+          "type": "string",
+          "group": "order 专属字段",
+          "description": "订单消息专属字段（官方仅给字段名，无样本值；占位按官方大写下划线风格构造）。",
+          "required": true
+        }
+      ]
+    },
+    "xhs-pay-result": {
+      "version": "2026.09",
+      "source": "https://miniapp.xiaohongshu.com/doc/DC753163",
+      "fields": [
+        {
+          "path": "Event",
+          "title": "事件名",
+          "type": "string",
+          "group": "事件字段",
+          "description": "固定为 PAY_RESULT（担保支付支付结果主动推送；主单与预约单共用同一 Event，OrderType 区分）。",
+          "required": true
+        },
+        {
+          "path": "OrderType",
+          "title": "订单类型",
+          "type": "number",
+          "group": "事件字段",
+          "description": "1 = 预售券/团购券主订单通知（本模板）。",
+          "required": true
+        },
+        {
+          "path": "OrderId",
+          "title": "平台订单号",
+          "type": "string",
+          "group": "事件字段",
+          "description": "小红书侧订单号（样本值按事实库掩码风格构造：P01****）。",
+          "required": true
+        },
+        {
+          "path": "OutOrderId",
+          "title": "商家外部订单号",
+          "type": "string",
+          "group": "事件字段",
+          "description": "主订单通知携带商家侧订单号（预约单通知改携 OutBookOrderId）；样本值按掩码风格构造。",
+          "required": true
+        },
+        {
+          "path": "Status",
+          "title": "支付状态",
+          "type": "number",
+          "group": "事件字段",
+          "description": "2 = 支付成功，998 = 支付取消（官方枚举）。",
+          "required": true
+        },
+        {
+          "path": "PayChannel",
+          "title": "支付渠道",
+          "type": "number",
+          "group": "事件字段",
+          "description": "1 = 微信，2 = 支付宝，99 = 其它（官方枚举；仅支付成功时返回）。",
+          "required": true
+        },
+        {
+          "path": "TotalAmount",
+          "title": "支付总金额",
+          "type": "number",
+          "group": "事件字段",
+          "description": "单位：分（官方明示）。"
+        },
+        {
+          "path": "VoucherInfos",
+          "title": "券信息列表",
+          "type": "json",
+          "group": "事件字段",
+          "description": "券列表，元素含 VoucherCode 券码（官方字段表；样本值按掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "VoucherInfos[0].VoucherCode",
+          "title": "券码",
+          "type": "string",
+          "group": "事件字段",
+          "description": "VoucherInfos 列表元素内的券码字段（官方字段表）。"
+        },
+        {
+          "path": "ProductType",
+          "title": "商品类型",
+          "type": "number",
+          "group": "事件字段",
+          "description": "1 = 团购券，2 = 酒旅预售券（官方枚举；预约单另可取 3 = 日历商品）。",
+          "required": true
+        },
+        {
+          "path": "PayTime",
+          "title": "支付时刻",
+          "type": "number",
+          "group": "事件字段",
+          "description": "秒级 Unix 时间戳（支付页官方明示秒级）。新建事件时按当前时刻重新生成。",
+          "required": true
+        }
+      ]
+    },
+    "xhs-pay-result-book": {
+      "version": "2026.09",
+      "source": "https://miniapp.xiaohongshu.com/doc/DC753163",
+      "fields": [
+        {
+          "path": "Event",
+          "title": "事件名",
+          "type": "string",
+          "group": "事件字段",
+          "description": "固定为 PAY_RESULT（担保支付支付结果主动推送；主单与预约单共用同一 Event，OrderType 区分）。",
+          "required": true
+        },
+        {
+          "path": "OrderType",
+          "title": "订单类型",
+          "type": "number",
+          "group": "事件字段",
+          "description": "2 = 预约单通知（本模板）。",
+          "required": true
+        },
+        {
+          "path": "OrderId",
+          "title": "平台订单号",
+          "type": "string",
+          "group": "事件字段",
+          "description": "小红书侧订单号（样本值按事实库掩码风格构造：P01****）。",
+          "required": true
+        },
+        {
+          "path": "OutBookOrderId",
+          "title": "商家外部预约单号",
+          "type": "string",
+          "group": "事件字段",
+          "description": "预约单通知以 OutBookOrderId 替代主单的 OutOrderId（官方字段表差异点）；样本值按掩码风格构造。",
+          "required": true
+        },
+        {
+          "path": "Status",
+          "title": "支付状态",
+          "type": "number",
+          "group": "事件字段",
+          "description": "2 = 支付成功，998 = 支付取消（官方枚举）。",
+          "required": true
+        },
+        {
+          "path": "PayChannel",
+          "title": "支付渠道",
+          "type": "number",
+          "group": "事件字段",
+          "description": "1 = 微信，2 = 支付宝，99 = 其它（官方枚举；仅支付成功时返回）。",
+          "required": true
+        },
+        {
+          "path": "TotalAmount",
+          "title": "支付总金额",
+          "type": "number",
+          "group": "事件字段",
+          "description": "单位：分（官方明示）。"
+        },
+        {
+          "path": "VoucherInfos",
+          "title": "券信息列表",
+          "type": "json",
+          "group": "事件字段",
+          "description": "券列表，元素含 VoucherCode 券码（官方字段表；样本值按掩码风格构造）。",
+          "required": true
+        },
+        {
+          "path": "VoucherInfos[0].VoucherCode",
+          "title": "券码",
+          "type": "string",
+          "group": "事件字段",
+          "description": "VoucherInfos 列表元素内的券码字段（官方字段表）。"
+        },
+        {
+          "path": "ProductType",
+          "title": "商品类型",
+          "type": "number",
+          "group": "事件字段",
+          "description": "预约单取 2（酒旅预售券补差价）或 3（日历商品）（官方枚举）；本模板取 3。",
+          "required": true
+        },
+        {
+          "path": "PayTime",
+          "title": "支付时刻",
+          "type": "number",
+          "group": "事件字段",
+          "description": "秒级 Unix 时间戳（支付页官方明示秒级）。新建事件时按当前时刻重新生成。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

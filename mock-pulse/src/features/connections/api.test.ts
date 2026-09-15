@@ -17,10 +17,12 @@ import {
   testWechatMpConnection,
   testWecomConnection,
   testWeiboConnection,
+  testXiaohongshuConnection,
   type WechatMiniConnectionConfig,
   type WechatMpConnectionConfig,
   type WecomConnectionConfig,
   type WeiboConnectionConfig,
+  type XiaohongshuConnectionConfig,
 } from "./api";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -98,6 +100,15 @@ const weiboConfig: WeiboConnectionConfig = {
   channel: "weibo",
   url: "http://127.0.0.1:8080/webhooks/weibo",
   appSecret: "xyz123xyz",
+};
+
+const xiaohongshuConfig: XiaohongshuConnectionConfig = {
+  channel: "xiaohongshu",
+  url: "http://127.0.0.1:8080/webhooks/xiaohongshu",
+  system: "miniapp",
+  token: "mock_token",
+  encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
+  appId: "wx_mock_appid",
 };
 
 describe("connections api 契约", () => {
@@ -193,10 +204,22 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/公众号/小程序/飞书/钉钉/QQ/微博（按 channel 区分形状）", async () => {
+  it("testXiaohongshuConnection 调用 connections_test_xiaohongshu 并透传配置", async () => {
+    const outcome = { ok: true, message: "echostr 握手成功" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testXiaohongshuConnection(xiaohongshuConfig)).resolves.toEqual(
+      outcome,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_xiaohongshu", {
+      config: xiaohongshuConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
+      xiaohongshuConfig,
       wechatMpConfig,
       wechatMiniConfig,
       feishuConfig,

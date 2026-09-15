@@ -12,10 +12,12 @@ import { MINI_DEFINITIONS } from "./wechat-mini";
 import { MP_DEFINITIONS } from "./wechat-mp";
 import { WECOM_DEFINITIONS } from "./wecom";
 import { WB_DEFINITIONS } from "./weibo";
+import { XHS_DEFINITIONS } from "./xiaohongshu";
 
 const DEFINITIONS_BY_CHANNEL = {
   douyin: DOUYIN_DEFINITIONS,
   wecom: WECOM_DEFINITIONS,
+  xiaohongshu: XHS_DEFINITIONS,
   "wechat-mp": MP_DEFINITIONS,
   "wechat-mini": MINI_DEFINITIONS,
   feishu: FEISHU_DEFINITIONS,
@@ -25,8 +27,8 @@ const DEFINITIONS_BY_CHANNEL = {
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(196);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(213);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -35,6 +37,7 @@ describe("事件模板聚合注册表", () => {
     for (const channelId of [
       "douyin",
       "wecom",
+      "xiaohongshu",
       "wechat-mp",
       "wechat-mini",
       "feishu",
@@ -86,7 +89,7 @@ describe("事件模板聚合注册表", () => {
     }
   });
 
-  it("schemasByChannel：已接入渠道返回模板，其余 14 渠道返回空表", () => {
+  it("schemasByChannel：已接入渠道返回模板，其余 10 渠道返回空表", () => {
     expect(schemasByChannel("douyin").map((schema) => schema.id)).toEqual([
       // dop 主体系
       "dy-create-video",
@@ -226,6 +229,28 @@ describe("事件模板聚合注册表", () => {
       "wb-event-template-card",
       "wb-event-template-card-menu",
     ]);
+    expect(schemasByChannel("xiaohongshu").map((schema) => schema.id)).toEqual([
+      // 客服接收 5 MsgType（事实库 §10.3：通用字段 + MsgType 专属字段）
+      "xhs-text",
+      "xhs-image",
+      "xhs-video",
+      "xhs-item",
+      "xhs-order",
+      // 支付结果回调（事实库 §11.1：主单/预约单共用 PAY_RESULT，OrderType 区分）
+      "xhs-pay-result",
+      "xhs-pay-result-book",
+      // 电商 ark 订单推送族（事实库 §2.2 十事件，多源）
+      "xhs-ark-fulfillment-status-change",
+      "xhs-ark-fulfillment-receiver-change",
+      "xhs-ark-fulfillment-seller-remark-change",
+      "xhs-ark-fulfillment-deliver-time-change",
+      "xhs-ark-after-sale-create",
+      "xhs-ark-after-sale-transfer",
+      "xhs-ark-sku-create",
+      "xhs-ark-sku-buyable",
+      "xhs-ark-sku-delete",
+      "xhs-ark-item-audit-reject",
+    ]);
     expect(schemasByChannel("wechat-mp").map((schema) => schema.id)).toEqual([
       // 普通消息 7 MsgType（事实库 §2.1）
       "wm-text",
@@ -337,6 +362,7 @@ describe("事件模板聚合注册表", () => {
         [
           "douyin",
           "wecom",
+          "xiaohongshu",
           "wechat-mp",
           "wechat-mini",
           "feishu",

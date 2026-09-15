@@ -44,6 +44,7 @@ import type {
   WechatMiniMode,
   WechatMpMode,
   WecomSystem,
+  XiaohongshuSystem,
 } from "../api";
 import * as actions from "../stores/connections-slice";
 import { ConnectionFields } from "./connection-fields";
@@ -116,7 +117,15 @@ function weiboTestNote(): string {
   return "发送 GET（signature=sha1(字典序排序(AppSecret,timestamp,nonce)) 与随机 echostr），检查服务是否验签通过并原样回显 echostr。";
 }
 
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博 JSON、公众号 XML */
+/** 小红书握手文案按推送通道呈现（事实库 §10.4/§3.4：小程序 GET 握手、ark 无官方口径） */
+function xiaohongshuTestNote(system: XiaohongshuSystem): string {
+  if (system === "ark") {
+    return '发送最小 ark 推送探针（单条信封的 JSON 数组），检查服务是否回 {"success":true,"error_code":0}（电商侧无官方握手口径）。';
+  }
+  return "发送 GET（signature=sha1(字典序排序(Token,timestamp,nonce)) 与随机 echostr），检查服务是否验签通过并原样回显 echostr。";
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书 JSON、公众号 XML */
 function wireBadgeLabel(
   channel: ChannelId,
   draft: ConnectionConfig,
@@ -126,7 +135,8 @@ function wireBadgeLabel(
     channel === "feishu" ||
     channel === "dingtalk" ||
     channel === "qq" ||
-    channel === "weibo"
+    channel === "weibo" ||
+    channel === "xiaohongshu"
   ) {
     return "JSON";
   }
@@ -166,7 +176,9 @@ export function ConnectionsView() {
                 ? actions.defaultQqConnection
                 : channel === "weibo"
                   ? actions.defaultWeiboConnection
-                  : actions.defaultWecomConnection);
+                  : channel === "xiaohongshu"
+                    ? actions.defaultXiaohongshuConnection
+                    : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -363,11 +375,17 @@ export function ConnectionsView() {
                             ? qqTestNote()
                             : channel === "weibo"
                               ? weiboTestNote()
-                              : wecomTestNote(
-                                  draft.channel === "wecom"
-                                    ? draft.system
-                                    : "agent",
-                                )}
+                              : channel === "xiaohongshu"
+                                ? xiaohongshuTestNote(
+                                    draft.channel === "xiaohongshu"
+                                      ? draft.system
+                                      : "miniapp",
+                                  )
+                                : wecomTestNote(
+                                    draft.channel === "wecom"
+                                      ? draft.system
+                                      : "agent",
+                                  )}
               </CardDescription>
               <CardAction>
                 <Button

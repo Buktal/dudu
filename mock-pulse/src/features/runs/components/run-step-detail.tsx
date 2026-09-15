@@ -23,6 +23,12 @@ function requestSnapshot(step: RunStep): string {
     const separator = step.url.includes("?") ? "&" : "?";
     return `POST ${step.url}${separator}signature=${step.signature}&timestamp=${step.timestamp ?? ""}&nonce=${step.msgId}\nContent-Type: application/json\n\n${step.payload}`;
   }
+  if (step.channel === "xiaohongshu") {
+    // 小红书：小程序通道 body 即加密信封 {Nonce,Timestamp,Encrypt,MsgSignature}
+    // （签名在 body 内，签名快照即 MsgSignature）；ark 通道 body 为官方批量
+    // 数组（payload 为单条信封，数组包裹见 requestBody 快照）
+    return `POST ${step.url}\nContent-Type: application/json\n\n${step.requestBody ?? step.payload}${step.payload && step.requestBody && step.requestBody !== step.payload ? `\n\n加密/包裹前明文：\n${step.payload}` : ""}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

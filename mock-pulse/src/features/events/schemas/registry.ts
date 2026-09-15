@@ -9,6 +9,7 @@ import { WECHAT_MINI_EVENT_SCHEMAS } from "./wechat-mini";
 import { WECHAT_MP_EVENT_SCHEMAS } from "./wechat-mp";
 import { WECOM_EVENT_SCHEMAS } from "./wecom";
 import { WB_SCHEMAS } from "./weibo";
+import { XHS_SCHEMAS } from "./xiaohongshu";
 
 /**
  * 事件模板聚合注册表：全仓库取模板仅此两个单点——
@@ -26,6 +27,7 @@ export type ChannelTemplatePack = {
 const PACKS: readonly ChannelTemplatePack[] = [
   { channel: "douyin", schemas: DOUYIN_EVENT_SCHEMAS },
   { channel: "wecom", schemas: WECOM_EVENT_SCHEMAS },
+  { channel: "xiaohongshu", schemas: XHS_SCHEMAS },
   { channel: "wechat-mp", schemas: WECHAT_MP_EVENT_SCHEMAS },
   { channel: "wechat-mini", schemas: WECHAT_MINI_EVENT_SCHEMAS },
   { channel: "feishu", schemas: FEISHU_SCHEMAS },

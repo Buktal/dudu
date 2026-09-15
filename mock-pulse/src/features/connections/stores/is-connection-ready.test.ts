@@ -8,6 +8,7 @@ import {
   defaultWechatMiniConnection,
   defaultWechatMpConnection,
   defaultWeiboConnection,
+  defaultXiaohongshuConnection,
   initialConnectionsState,
   isConnectionReady,
   selectConnection,
@@ -88,6 +89,15 @@ const savedWeibo: ConnectionConfig = {
   channel: "weibo",
   url: "http://127.0.0.1:9099/weibo",
   appSecret: "xyz123xyz",
+};
+
+const savedXiaohongshu: ConnectionConfig = {
+  channel: "xiaohongshu",
+  url: "http://127.0.0.1:9099/xiaohongshu",
+  system: "miniapp",
+  token: "token",
+  encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
+  appId: "wx_appid",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -358,6 +368,44 @@ describe("isConnectionReady（微博核必填集）", () => {
     expect(defaultWeiboConnection.appSecret).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "weibo")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（小红书按通道核必填集）", () => {
+  it("小程序通道：url/token/encodingAesKey/appId 齐全才算已配置", () => {
+    expect(isConnectionReady(savedXiaohongshu)).toBe(true);
+    expect(isConnectionReady({ ...savedXiaohongshu, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedXiaohongshu, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedXiaohongshu, token: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedXiaohongshu, encodingAesKey: "" })).toBe(
+      false,
+    );
+    expect(isConnectionReady({ ...savedXiaohongshu, appId: "" })).toBe(false);
+  });
+
+  it("ark 通道明文直发无凭据：url 齐全即算已配置（官方无推送侧签名口径）", () => {
+    const ark = {
+      ...savedXiaohongshu,
+      system: "ark" as const,
+      token: "",
+      encodingAesKey: "",
+      appId: "",
+    };
+    expect(isConnectionReady(ark)).toBe(true);
+    expect(isConnectionReady({ ...ark, url: "" })).toBe(false);
+  });
+
+  it("初始小红书占位连接（凭据全空、小程序通道起步）不算已配置", () => {
+    expect(defaultXiaohongshuConnection.channel).toBe("xiaohongshu");
+    expect(defaultXiaohongshuConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/xiaohongshu",
+    );
+    expect(defaultXiaohongshuConnection.system).toBe("miniapp");
+    expect(
+      isConnectionReady(
+        selectConnection(initialConnectionsState, "xiaohongshu"),
+      ),
     ).toBe(false);
   });
 });

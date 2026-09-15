@@ -27,6 +27,7 @@ vi.mock("../api", () => ({
   testWechatMpConnection: vi.fn(),
   testWecomConnection: vi.fn(),
   testWeiboConnection: vi.fn(),
+  testXiaohongshuConnection: vi.fn(),
 }));
 
 import {
@@ -40,6 +41,7 @@ import {
   testWechatMpConnection,
   testWecomConnection,
   testWeiboConnection,
+  testXiaohongshuConnection,
 } from "../api";
 
 const savedDouyin: ConnectionConfig = {
@@ -111,6 +113,15 @@ const savedWeibo: ConnectionConfig = {
   channel: "weibo",
   url: "http://127.0.0.1:9099/weibo",
   appSecret: "xyz123xyz",
+};
+
+const savedXiaohongshu: ConnectionConfig = {
+  channel: "xiaohongshu",
+  url: "http://127.0.0.1:9099/xiaohongshu",
+  system: "miniapp",
+  token: "mock_token",
+  encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
+  appId: "wx_mock_appid",
 };
 
 function makeStore() {
@@ -366,6 +377,32 @@ describe("connections slice", () => {
     });
   });
 
+  it("小红书配置走 connections_test_xiaohongshu（按渠道路由测试命令）", async () => {
+    vi.mocked(testXiaohongshuConnection).mockResolvedValue({
+      ok: true,
+      message: "echostr 握手成功",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedXiaohongshu));
+
+    expect(vi.mocked(testXiaohongshuConnection)).toHaveBeenCalledWith(
+      savedXiaohongshu,
+    );
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testDingtalkConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testQqConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWeiboConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "echostr 握手成功",
+    });
+  });
+
   it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
     // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
     // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
@@ -385,6 +422,7 @@ describe("connections slice", () => {
     expect(vi.mocked(testDingtalkConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testQqConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWeiboConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testXiaohongshuConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store)).status).toBe("failed");
   });
 });
