@@ -1,0 +1,169 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "kuaishou",
+  "version": "2026.09",
+  "schemas": {
+    "ks-test": {
+      "version": "2026.09",
+      "source": "https://open.kuaishou.com/platformDocs/openAbility/webHook/eventList/testEvent.html",
+      "fields": [
+        {
+          "path": "app_id",
+          "title": "AppID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "开发者应用 AppID（官方样本 ks696650570360602063）；开放域信封五字段之一。",
+          "required": true
+        },
+        {
+          "path": "event",
+          "title": "事件名",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 TEST：开发者填写推送地址时平台发送此消息进行测试（保存回调地址即触发验证）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "推送时刻",
+          "type": "number",
+          "group": "推送信封",
+          "description": "13 位毫秒时间戳（数字形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "当前消息的唯一 ID（每次随机生成，重试保持一致）——模拟器按它做幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "data.timestamp",
+          "title": "测试时间戳",
+          "type": "number",
+          "group": "事件数据",
+          "description": "测试消息发送了一个测试的时间戳（官方样本 1622518497536）；与信封 timestamp 同值。新建事件时随信封一同重新生成。",
+          "required": true
+        }
+      ]
+    },
+    "ks-authorize": {
+      "version": "2026.09",
+      "source": "https://open.kuaishou.com/platformDocs/openAbility/webHook/eventList/authorizationEvent.html",
+      "fields": [
+        {
+          "path": "app_id",
+          "title": "AppID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "开发者应用 AppID（官方样本 ks696650570360602063）；开放域信封五字段之一。",
+          "required": true
+        },
+        {
+          "path": "event",
+          "title": "事件名",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 AUTHORIZE：用户给开发者授权时推送此事件。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "推送时刻",
+          "type": "number",
+          "group": "推送信封",
+          "description": "13 位毫秒时间戳（数字形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "当前消息的唯一 ID（每次随机生成，重试保持一致）——模拟器按它做幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "data.open_id",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "事件数据",
+          "description": "用户的 openId（官方字段表；未给样本值，模板取占位 OPEN_ID）。",
+          "required": true
+        },
+        {
+          "path": "data.scope",
+          "title": "授权 Scope 列表",
+          "type": "json",
+          "group": "事件数据",
+          "description": "授权的 scope 列表（官方示例 [\"user_info\",\"user_video_info\"]）。",
+          "required": true
+        },
+        {
+          "path": "data.is_new",
+          "title": "是否新授权用户",
+          "type": "boolean",
+          "group": "事件数据",
+          "description": "是否是新授权用户（官方字段表）。",
+          "required": true
+        }
+      ]
+    },
+    "ks-un-authorize": {
+      "version": "2026.09",
+      "source": "https://open.kuaishou.com/platformDocs/openAbility/webHook/eventList/revocationOfAuth.html",
+      "fields": [
+        {
+          "path": "app_id",
+          "title": "AppID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "开发者应用 AppID（官方样本 ks696650570360602063）；开放域信封五字段之一。",
+          "required": true
+        },
+        {
+          "path": "event",
+          "title": "事件名",
+          "type": "string",
+          "group": "推送信封",
+          "description": "固定为 UN_AUTHORIZE（官方即此下划线命名）：用户解除授权时推送此事件。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "推送时刻",
+          "type": "number",
+          "group": "推送信封",
+          "description": "13 位毫秒时间戳（数字形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "当前消息的唯一 ID（每次随机生成，重试保持一致）——模拟器按它做幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "data.open_id",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "事件数据",
+          "description": "用户的 openId（官方字段表；未给样本值，模板取占位 OPEN_ID）。",
+          "required": true
+        },
+        {
+          "path": "data.scope",
+          "title": "撤销 Scope 列表",
+          "type": "json",
+          "group": "事件数据",
+          "description": "撤销的 scope 列表（官方字段表；示例形态同授权事件 [\"user_info\",\"user_video_info\"]）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

@@ -29,6 +29,11 @@ function requestSnapshot(step: RunStep): string {
     // 数组（payload 为单条信封，数组包裹见 requestBody 快照）
     return `POST ${step.url}\nContent-Type: application/json\n\n${step.requestBody ?? step.payload}${step.payload && step.requestBody && step.requestBody !== step.payload ? `\n\n加密/包裹前明文：\n${step.payload}` : ""}`;
   }
+  if (step.channel === "kuaishou") {
+    // 快手：验签在 header（kwaisign = MD5(原始 body + AppSecret)，无 AES），
+    // body 即明文 JSON 逐字节透传；message_id 幂等键在载荷内（msgId 快照即它）
+    return `POST ${step.url}\nContent-Type: application/json\nkwaisign: ${step.signature}\n\n${step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

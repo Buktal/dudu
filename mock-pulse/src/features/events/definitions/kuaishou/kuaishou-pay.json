@@ -1,0 +1,269 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "kuaishou",
+  "version": "2026.09",
+  "schemas": {
+    "ks-payment": {
+      "version": "2026.09",
+      "source": "https://open.kuaishou.com/docs/develop/server/epay/open-api-new/prePay-new.html",
+      "fields": [
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "回调业务数据对象（支付族信封五字段之一，官方 toSignStr 键序 data 在前）。",
+          "required": true
+        },
+        {
+          "path": "biz_type",
+          "title": "回调类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 PAYMENT：订单支付成功回调；回调地址预下单 notify_url 优先，否则取平台默认回调地址。",
+          "required": true
+        },
+        {
+          "path": "message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "回调消息的唯一 ID（官方样本 76a50e0c-a843-…，UUID 形态；重试保持一致）——模拟器按它做幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "app_id",
+          "title": "AppID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "小程序应用 AppID（官方样本 ks696650570360602063）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "回调时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "13 位毫秒时间戳（官方样本 1631515320564）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "data.status",
+          "title": "支付状态",
+          "type": "string",
+          "group": "回调数据",
+          "description": "支付状态：PROCESSING/SUCCESS/FAILED（官方枚举）；模板取 SUCCESS。",
+          "required": true
+        }
+      ]
+    },
+    "ks-refund": {
+      "version": "2026.09",
+      "source": "https://open.kuaishou.com/docs/develop/server/epay/open-api-new/refund-new.html",
+      "fields": [
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "回调业务数据对象（支付族信封五字段之一，官方 toSignStr 键序 data 在前）。",
+          "required": true
+        },
+        {
+          "path": "biz_type",
+          "title": "回调类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 REFUND：退款完成回调；回调地址退款接口 notify_url 优先，否则取平台默认回调地址。",
+          "required": true
+        },
+        {
+          "path": "message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "回调消息的唯一 ID（官方样本 UUID 形态；重试保持一致）——模拟器按它做幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "app_id",
+          "title": "AppID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "小程序应用 AppID（官方样本 ks696650570360602063）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "回调时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "13 位毫秒时间戳（官方样本 1631515320564）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "data.status",
+          "title": "退款状态",
+          "type": "string",
+          "group": "回调数据",
+          "description": "退款状态：PROCESSING/SUCCESS/FAILED（官方枚举）；模板取 SUCCESS。官方另带 refund_type（结算前/结算后/保证金），线上取值未核验不进模板。",
+          "required": true
+        }
+      ]
+    },
+    "ks-settle": {
+      "version": "2026.09",
+      "source": "https://open.kuaishou.com/docs/develop/server/epay/open-api-new/settle-new.html",
+      "fields": [
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "回调业务数据对象（支付族信封五字段之一）；结算语义为分账到可提现账户，事实库未记录字段表，留空不编造。",
+          "required": true
+        },
+        {
+          "path": "biz_type",
+          "title": "回调类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 SETTLE：结算成功回调；回调地址结算接口 notify_url 优先，否则取平台默认回调地址（另支持自动结算）。",
+          "required": true
+        },
+        {
+          "path": "message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "回调消息的唯一 ID（官方样本 UUID 形态；重试保持一致）——模拟器按它做幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "app_id",
+          "title": "AppID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "小程序应用 AppID（官方样本 ks696650570360602063）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "回调时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "13 位毫秒时间戳（官方样本 1631515320564）。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    },
+    "ks-withhold": {
+      "version": "2026.09",
+      "source": "https://open.kuaishou.com/docs/develop/server/epayAuto/withhold-new.html",
+      "fields": [
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "回调业务数据对象（支付族信封五字段之一，官方 toSignStr 键序 data 在前）。",
+          "required": true
+        },
+        {
+          "path": "biz_type",
+          "title": "回调类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 WITHHOLD：周期代扣成功/失败回调；回调地址取签约接口 withhold_notify_url（代扣日 12/23 点执行三次，均失败则本周期结束）。",
+          "required": true
+        },
+        {
+          "path": "message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "回调消息的唯一 ID（官方样本 UUID 形态；重试保持一致）——模拟器按它做幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "app_id",
+          "title": "AppID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "小程序应用 AppID（官方样本 ks696650570360602063）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "回调时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "13 位毫秒时间戳（官方样本 1631515320564）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "data.withhold_state",
+          "title": "代扣结果",
+          "type": "string",
+          "group": "回调数据",
+          "description": "代扣结果：PAY_SUCCESS/PAY_FAILD（官方枚举，官方拼写 PAY_FAILD 原文如此）；模板取 PAY_SUCCESS。",
+          "required": true
+        }
+      ]
+    },
+    "ks-contract": {
+      "version": "2026.09",
+      "source": "https://open.kuaishou.com/docs/develop/server/epayAuto/contract-new.html",
+      "fields": [
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "回调业务数据对象（支付族信封五字段之一，官方 toSignStr 键序 data 在前）。",
+          "required": true
+        },
+        {
+          "path": "biz_type",
+          "title": "回调类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 CONTRACT：签约/解约成功回调；回调地址取签约接口 contract_notify_url（支付并签约产生支付+签约两个回调）。",
+          "required": true
+        },
+        {
+          "path": "message_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "回调消息的唯一 ID（官方样本 UUID 形态；重试保持一致）——模拟器按它做幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "app_id",
+          "title": "AppID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "小程序应用 AppID（官方样本 ks696650570360602063）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "回调时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "13 位毫秒时间戳（官方样本 1631515320564）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "data.contract_status",
+          "title": "签约状态",
+          "type": "string",
+          "group": "回调数据",
+          "description": "签约状态：CONTRACT_SUCCESS/UNCONTRACT_SUCCESS（官方枚举）；模板取 CONTRACT_SUCCESS（签约成功）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

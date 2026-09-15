@@ -11,12 +11,14 @@ import {
   type DingtalkConnectionConfig,
   type DouyinConnectionConfig,
   type FeishuConnectionConfig,
+  type KuaishouConnectionConfig,
   loadConnections,
   type QqConnectionConfig,
   saveConnection as saveConnectionApi,
   testDingtalkConnection as testDingtalkApi,
   testDouyinConnection as testDouyinApi,
   testFeishuConnection as testFeishuApi,
+  testKuaishouConnection as testKuaishouApi,
   testQqConnection as testQqApi,
   testWechatMiniConnection as testWechatMiniApi,
   testWechatMpConnection as testWechatMpApi,
@@ -135,6 +137,14 @@ export const defaultXiaohongshuConnection: XiaohongshuConnectionConfig = {
   appId: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（kwaisign MD5 验签起步） */
+export const defaultKuaishouConnection: KuaishouConnectionConfig = {
+  channel: "kuaishou",
+  url: "http://127.0.0.1:8080/webhooks/kuaishou",
+  appId: "",
+  appSecret: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -150,6 +160,7 @@ export const initialConnectionsState: ConnectionsState = {
     dingtalk: defaultDingtalkConnection,
     qq: defaultQqConnection,
     weibo: defaultWeiboConnection,
+    kuaishou: defaultKuaishouConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -197,6 +208,8 @@ export const testConnection = createAsyncThunk(
         return testWeiboApi(config);
       case "xiaohongshu":
         return testXiaohongshuApi(config);
+      case "kuaishou":
+        return testKuaishouApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
@@ -289,6 +302,9 @@ export const {
  * - 小红书按通道核：小程序通道 = url + token + encodingAesKey + appId
  *   （握手三参/MsgSignature 四参签名源 + AES 派生源 + 加密明文尾部校验方）；
  *   ark 通道 = url 即可（官方无推送侧签名口径，事实库 §3.7）
+ * - 快手核：url + appId + appSecret 必填（开放域与支付回调族共用同一传输：
+ *   AppSecret 为 kwaisign = MD5(原始 body + AppSecret) 签名源，AppID 参与连接
+ *   测试 TEST 事件信封）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -315,6 +331,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && weiboReady(config);
     case "xiaohongshu":
       return config.url.trim() !== "" && xiaohongshuReady(config);
+    case "kuaishou":
+      return config.url.trim() !== "" && kuaishouReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -466,6 +484,15 @@ function xiaohongshuReady(config: XiaohongshuConnectionConfig): boolean {
       return false;
     }
   }
+}
+
+/**
+ * 快手核：url + appSecret 必填（kwaisign = MD5(原始 body + AppSecret) 头验签
+ * 的签名源，开放域与支付回调族共用同一传输）；appId 参与连接测试 TEST 事件
+ * 的信封 app_id，同为必填。
+ */
+function kuaishouReady(config: KuaishouConnectionConfig): boolean {
+  return config.appId.trim() !== "" && config.appSecret.trim() !== "";
 }
 
 /** 按渠道字面量取对应形状的连接配置类型 */

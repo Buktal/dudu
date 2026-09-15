@@ -122,6 +122,23 @@ export type XiaohongshuConnectionConfig = {
 };
 
 /**
+ * 快手连接配置形状（与 Rust 端 ConnectionConfig::Kuaishou 内标一致）：
+ * 开放域 WebHook 与支付回调族共用同一传输协议（明文 JSON + header kwaisign），
+ * 无推送通道之分——AppSecret 即 kwaisign = MD5(原始 body + AppSecret) 验签密钥，
+ * AppID 参与连接测试 TEST 事件的信封。两域回调地址可不同（notify_url 优先），
+ * 目标侧按需切换本连接的 url 即可。
+ */
+export type KuaishouConnectionConfig = {
+  channel: "kuaishou";
+  /** 回调目标地址，事件与剧本共享 */
+  url: string;
+  /** 应用 AppID（开放平台/小程序一致口径）：TEST 握手信封 app_id 即它 */
+  appId: string;
+  /** 应用 AppSecret：kwaisign = MD5(原始 body + AppSecret) 头验签的签名源 */
+  appSecret: string;
+};
+
+/**
  * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
  * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
  * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
@@ -215,7 +232,8 @@ export type ConnectionConfig =
   | DingtalkConnectionConfig
   | QqConnectionConfig
   | WeiboConnectionConfig
-  | XiaohongshuConnectionConfig;
+  | XiaohongshuConnectionConfig
+  | KuaishouConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -304,4 +322,12 @@ export function testXiaohongshuConnection(
   config: XiaohongshuConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_xiaohongshu", { config });
+}
+
+/** 按快手 TEST 事件协议测试连接（官方配地址握手：POST TEST 事件 + header
+ *  kwaisign = MD5(body+AppSecret)，目标须回 200 + result=1 并回传 message_id） */
+export function testKuaishouConnection(
+  config: KuaishouConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_kuaishou", { config });
 }

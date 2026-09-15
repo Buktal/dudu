@@ -6,12 +6,14 @@ import {
   type DingtalkConnectionConfig,
   type DouyinConnectionConfig,
   type FeishuConnectionConfig,
+  type KuaishouConnectionConfig,
   loadConnections,
   type QqConnectionConfig,
   saveConnection,
   testDingtalkConnection,
   testDouyinConnection,
   testFeishuConnection,
+  testKuaishouConnection,
   testQqConnection,
   testWechatMiniConnection,
   testWechatMpConnection,
@@ -109,6 +111,13 @@ const xiaohongshuConfig: XiaohongshuConnectionConfig = {
   token: "mock_token",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   appId: "wx_mock_appid",
+};
+
+const kuaishouConfig: KuaishouConnectionConfig = {
+  channel: "kuaishou",
+  url: "http://127.0.0.1:8080/webhooks/kuaishou",
+  appId: "ks696650570360602063",
+  appSecret: "Xgm23lSgws235hlgK",
 };
 
 describe("connections api 契约", () => {
@@ -215,7 +224,18 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博（按 channel 区分形状）", async () => {
+  it("testKuaishouConnection 调用 connections_test_kuaishou 并透传配置", async () => {
+    const outcome = { ok: true, message: "TEST 事件握手成功" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testKuaishouConnection(kuaishouConfig)).resolves.toEqual(
+      outcome,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_kuaishou", {
+      config: kuaishouConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
@@ -226,6 +246,7 @@ describe("connections api 契约", () => {
       dingtalkConfig,
       qqConfig,
       weiboConfig,
+      kuaishouConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

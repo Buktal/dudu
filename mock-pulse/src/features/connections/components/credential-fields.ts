@@ -2,6 +2,7 @@ import type {
   ConnectionConfig,
   DingtalkConnectionConfig,
   FeishuConnectionConfig,
+  KuaishouConnectionConfig,
   QqConnectionConfig,
   WeiboConnectionConfig,
   XiaohongshuConnectionConfig,
@@ -347,6 +348,26 @@ function xiaohongshuFields(
   ];
 }
 
+/** 快手凭证字段（事实库 §4.1）：kwaisign = MD5(原始 body + AppSecret) 头验签 */
+function kuaishouFields(draft: KuaishouConnectionConfig): CredentialField[] {
+  return [
+    {
+      key: "appId",
+      label: "AppID",
+      note: "应用 AppID（开放平台/小程序一致口径）：连接测试 TEST 事件信封的 app_id 即它，随载荷信封记录。",
+      value: draft.appId,
+      secret: false,
+    },
+    {
+      key: "appSecret",
+      label: "AppSecret",
+      note: "应用密钥：验签 kwaisign = MD5(原始 body 字符串 + AppSecret)（header kwaisign 字段）的签名源，无 AES。",
+      value: draft.appSecret,
+      secret: true,
+    },
+  ];
+}
+
 /** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
 export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
   switch (draft.channel) {
@@ -366,6 +387,8 @@ export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
       return weiboFields(draft);
     case "xiaohongshu":
       return xiaohongshuFields(draft);
+    case "kuaishou":
+      return kuaishouFields(draft);
     case "wecom":
       return wecomFields(draft);
     default: {

@@ -4,6 +4,7 @@
 //! - [`sha1_sorted_hex`]：字典序排序后拼接 sha1（微信系四值签名家族：
 //!   企微 msg_signature、抖音服务商 MsgSignature、钉钉 signature）
 //! - [`md5_base64`]：md5 摘要（16 字节）→ 标准 base64（抖音小游戏 x-signature）
+//! - [`md5_hex`]：按给定顺序拼接各段后 md5 → 32 位小写 hex（快手 kwaisign）
 //! - [`sha256_hex`]：按给定顺序拼接各段（字节串）后 sha256 → 64 位小写 hex
 //!   （飞书 X-Lark-Signature：timestamp+nonce+encrypt_key+原始 body 字节）
 //! - [`hmac_sha256_base64`]：HMAC-SHA256（RFC 2104，sha2 自实现免新依赖）→
@@ -47,6 +48,15 @@ pub(crate) fn md5_base64(input: &str) -> String {
     let mut hasher = Md5::new();
     hasher.update(input.as_bytes());
     BASE64.encode(hasher.finalize())
+}
+
+/// 按给定顺序拼接各段后取 md5，输出 32 位小写 hex（快手 kwaisign，事实库 §4.1）。
+pub(crate) fn md5_hex(parts: &[&str]) -> String {
+    let mut hasher = Md5::new();
+    for part in parts {
+        hasher.update(part.as_bytes());
+    }
+    hex::encode(hasher.finalize())
 }
 
 /// HMAC-SHA256（RFC 2104，sha2 块运算自实现：key 过长先散列、ipad/opad 双轮），
@@ -112,6 +122,19 @@ mod tests {
         // 独立来源：RFC 1321 测试向量 md5("abc") = 900150983cd24fb0d6963f7d28e17f72
         // 其 16 字节摘要的 base64 形态（Node crypto 交叉复算）
         assert_eq!(md5_base64("abc"), "kAFQmDzST7DWlj99KOF/cg==");
+    }
+
+    #[test]
+    fn md5_hex_matches_known_vector() {
+        // 独立来源：RFC 1321 测试向量 md5("abc")
+        assert_eq!(
+            md5_hex(&["abc"]),
+            "900150983cd24fb0d6963f7d28e17f72"
+        );
+        // 多段按序拼接等价于单段拼接
+        assert_eq!(md5_hex(&["a", "bc"]), md5_hex(&["abc"]));
+        // 空串向量（RFC 1321）
+        assert_eq!(md5_hex(&[""]), "d41d8cd98f00b204e9800998ecf8427e");
     }
 
     #[test]

@@ -22,6 +22,7 @@ vi.mock("../api", () => ({
   testDingtalkConnection: vi.fn(),
   testDouyinConnection: vi.fn(),
   testFeishuConnection: vi.fn(),
+  testKuaishouConnection: vi.fn(),
   testQqConnection: vi.fn(),
   testWechatMiniConnection: vi.fn(),
   testWechatMpConnection: vi.fn(),
@@ -36,6 +37,7 @@ import {
   testDingtalkConnection,
   testDouyinConnection,
   testFeishuConnection,
+  testKuaishouConnection,
   testQqConnection,
   testWechatMiniConnection,
   testWechatMpConnection,
@@ -122,6 +124,13 @@ const savedXiaohongshu: ConnectionConfig = {
   token: "mock_token",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   appId: "wx_mock_appid",
+};
+
+const savedKuaishou: ConnectionConfig = {
+  channel: "kuaishou",
+  url: "http://127.0.0.1:9099/kuaishou",
+  appId: "ks696650570360602063",
+  appSecret: "Xgm23lSgws235hlgK",
 };
 
 function makeStore() {
@@ -403,6 +412,33 @@ describe("connections slice", () => {
     });
   });
 
+  it("快手配置走 connections_test_kuaishou（按渠道路由测试命令）", async () => {
+    vi.mocked(testKuaishouConnection).mockResolvedValue({
+      ok: true,
+      message: "TEST 事件握手成功",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedKuaishou));
+
+    expect(vi.mocked(testKuaishouConnection)).toHaveBeenCalledWith(
+      savedKuaishou,
+    );
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testDingtalkConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testQqConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWeiboConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testXiaohongshuConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "TEST 事件握手成功",
+    });
+  });
+
   it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
     // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
     // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
@@ -423,6 +459,7 @@ describe("connections slice", () => {
     expect(vi.mocked(testQqConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWeiboConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testXiaohongshuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testKuaishouConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store)).status).toBe("failed");
   });
 });

@@ -4,6 +4,7 @@ import type { ConnectionConfig } from "../api";
 import {
   defaultDingtalkConnection,
   defaultFeishuConnection,
+  defaultKuaishouConnection,
   defaultQqConnection,
   defaultWechatMiniConnection,
   defaultWechatMpConnection,
@@ -98,6 +99,13 @@ const savedXiaohongshu: ConnectionConfig = {
   token: "token",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   appId: "wx_appid",
+};
+
+const savedKuaishou: ConnectionConfig = {
+  channel: "kuaishou",
+  url: "http://127.0.0.1:9099/kuaishou",
+  appId: "ks696650570360602063",
+  appSecret: "Xgm23lSgws235hlgK",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -406,6 +414,30 @@ describe("isConnectionReady（小红书按通道核必填集）", () => {
       isConnectionReady(
         selectConnection(initialConnectionsState, "xiaohongshu"),
       ),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（快手核必填集）", () => {
+  it("url/appId/appSecret 齐全才算已配置（AppSecret 即 kwaisign 验签密钥）", () => {
+    expect(isConnectionReady(savedKuaishou)).toBe(true);
+  });
+
+  it("缺 url/appId/appSecret 任一都不算已配置", () => {
+    expect(isConnectionReady({ ...savedKuaishou, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedKuaishou, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedKuaishou, appId: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedKuaishou, appSecret: "" })).toBe(false);
+  });
+
+  it("初始快手占位连接（凭据全空、kwaisign 验签起步）不算已配置", () => {
+    expect(defaultKuaishouConnection.channel).toBe("kuaishou");
+    expect(defaultKuaishouConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/kuaishou",
+    );
+    expect(defaultKuaishouConnection.appSecret).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "kuaishou")),
     ).toBe(false);
   });
 });

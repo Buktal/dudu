@@ -32,6 +32,8 @@ import type { EventSchema, IdKind } from "./schemas";
  *   排重键 sender_id+created_at 的时刻半边，经 lib/time 封装格式化）
  * - xhsMsgId：小红书 MsgId（官方口径字符串无格式样本，微信系 int64 同族
  *   18 位数字串）
+ * - ksMessageId：快手 message_id（官方支付回调样本为小写 UUID，「每次随机
+ *   生成的 ID」，幂等键重试保持一致）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -205,6 +207,14 @@ export function generateXhsMsgId(): string {
   return digits;
 }
 
+/**
+ * 快手 message_id：官方支付回调样本为小写 UUID 形态（事实库 §4.1 样本
+ * 76a50e0c-a843-492b-…；「每次随机生成的 ID」，重试保持一致——幂等键随新事件变化）
+ */
+export function generateKsMessageId(): string {
+  return crypto.randomUUID();
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -228,6 +238,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   weiboUid: generateWeiboUid,
   weiboCreatedAt: generateWeiboCreatedAt,
   xhsMsgId: generateXhsMsgId,
+  ksMessageId: generateKsMessageId,
 };
 
 /**

@@ -7,6 +7,7 @@
 pub mod dingtalk;
 pub mod douyin;
 pub mod feishu;
+pub mod kuaishou;
 pub mod qq;
 pub mod store;
 pub(crate) mod util;
@@ -112,6 +113,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &qq::Adapter,
     &weibo::Adapter,
     &xiaohongshu::Adapter,
+    &kuaishou::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -392,6 +394,14 @@ pub enum ConnectionConfig {
         #[serde(default)]
         app_id: String,
     },
+    #[serde(rename = "kuaishou", rename_all = "camelCase")]
+    Kuaishou {
+        url: String,
+        /// 应用 AppID（开放平台/小程序一致口径）：连接测试 TEST 事件信封 app_id
+        app_id: String,
+        /// 应用 AppSecret：kwaisign = MD5(原始 body + AppSecret) 头验签的签名源
+        app_secret: String,
+    },
 }
 
 /// 读取全部持久化连接（无文件时返回空列表）。
@@ -500,6 +510,15 @@ pub async fn connections_test_xiaohongshu(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&xiaohongshu::Adapter, config).await
+}
+
+/// 按快手 TEST 事件协议测试连接（官方配地址握手：POST TEST 事件 + header
+/// kwaisign = MD5(body+AppSecret)，目标须回 200 + result=1 并回传 message_id）。
+#[tauri::command]
+pub async fn connections_test_kuaishou(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&kuaishou::Adapter, config).await
 }
 
 #[cfg(test)]

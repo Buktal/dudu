@@ -125,7 +125,12 @@ function xiaohongshuTestNote(system: XiaohongshuSystem): string {
   return "发送 GET（signature=sha1(字典序排序(Token,timestamp,nonce)) 与随机 echostr），检查服务是否验签通过并原样回显 echostr。";
 }
 
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书 JSON、公众号 XML */
+/** 快手握手文案（事实库 §3.1/§4.1：配地址握手即 TEST 事件，kwaisign 头验签） */
+function kuaishouTestNote(): string {
+  return "发送 TEST 测试事件（header kwaisign = MD5(body+AppSecret)），检查服务是否回 HTTP 200 且 result=1 并回传收到的 message_id。";
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书/快手 JSON、公众号 XML */
 function wireBadgeLabel(
   channel: ChannelId,
   draft: ConnectionConfig,
@@ -136,7 +141,8 @@ function wireBadgeLabel(
     channel === "dingtalk" ||
     channel === "qq" ||
     channel === "weibo" ||
-    channel === "xiaohongshu"
+    channel === "xiaohongshu" ||
+    channel === "kuaishou"
   ) {
     return "JSON";
   }
@@ -178,7 +184,9 @@ export function ConnectionsView() {
                   ? actions.defaultWeiboConnection
                   : channel === "xiaohongshu"
                     ? actions.defaultXiaohongshuConnection
-                    : actions.defaultWecomConnection);
+                    : channel === "kuaishou"
+                      ? actions.defaultKuaishouConnection
+                      : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -381,11 +389,13 @@ export function ConnectionsView() {
                                       ? draft.system
                                       : "miniapp",
                                   )
-                                : wecomTestNote(
-                                    draft.channel === "wecom"
-                                      ? draft.system
-                                      : "agent",
-                                  )}
+                                : channel === "kuaishou"
+                                  ? kuaishouTestNote()
+                                  : wecomTestNote(
+                                      draft.channel === "wecom"
+                                        ? draft.system
+                                        : "agent",
+                                    )}
               </CardDescription>
               <CardAction>
                 <Button

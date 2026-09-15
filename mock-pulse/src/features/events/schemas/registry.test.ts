@@ -6,6 +6,7 @@ import { defineSchema } from "./define";
 import { DINGTALK_DEFINITIONS } from "./dingtalk";
 import { DOUYIN_DEFINITIONS } from "./douyin";
 import { FEISHU_DEFINITIONS } from "./feishu";
+import { KS_DEFINITIONS } from "./kuaishou";
 import { QQ_DEFINITIONS } from "./qq";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
 import { MINI_DEFINITIONS } from "./wechat-mini";
@@ -24,11 +25,12 @@ const DEFINITIONS_BY_CHANNEL = {
   dingtalk: DINGTALK_DEFINITIONS,
   qq: QQ_DEFINITIONS,
   weibo: WB_DEFINITIONS,
+  kuaishou: KS_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(213);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(221);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -44,6 +46,7 @@ describe("事件模板聚合注册表", () => {
       "dingtalk",
       "qq",
       "weibo",
+      "kuaishou",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -89,7 +92,7 @@ describe("事件模板聚合注册表", () => {
     }
   });
 
-  it("schemasByChannel：已接入渠道返回模板，其余 10 渠道返回空表", () => {
+  it("schemasByChannel：已接入渠道返回模板，其余 9 渠道返回空表", () => {
     expect(schemasByChannel("douyin").map((schema) => schema.id)).toEqual([
       // dop 主体系
       "dy-create-video",
@@ -357,6 +360,18 @@ describe("事件模板聚合注册表", () => {
       "weibo-click",
       "weibo-view",
     ]);
+    expect(schemasByChannel("kuaishou").map((schema) => schema.id)).toEqual([
+      // 开放域 WebHook 3（事实库 §2.1：全目录穷尽仅此三事件，event 判型）
+      "ks-test",
+      "ks-authorize",
+      "ks-un-authorize",
+      // 小程序支付回调族 5（事实库 §2.2：biz_type 判型）
+      "ks-payment",
+      "ks-refund",
+      "ks-settle",
+      "ks-withhold",
+      "ks-contract",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -369,6 +384,7 @@ describe("事件模板聚合注册表", () => {
           "dingtalk",
           "qq",
           "weibo",
+          "kuaishou",
         ].includes(channel.id)
       )
         continue;

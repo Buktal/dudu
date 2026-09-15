@@ -179,10 +179,10 @@ export const CHANNEL_REGISTRY = {
   },
   kuaishou: {
     name: "快手",
-    protocol: "开放域 · JSON 回调",
-    note: "开放域回调：JSON 报文，kwaisign = MD5(body+secret) 验签，无 AES",
+    protocol: "开放域 Webhook + 支付回调族 · JSON 回调",
+    note: "双判型信封：开放域 event 判型（TEST/AUTHORIZE/UN_AUTHORIZE）+ 支付族 biz_type 判型，kwaisign = MD5(body+secret) 头验签无 AES，应答 200 + result=1",
     icon: "Video",
-    implemented: false,
+    implemented: true,
   },
   alipay: {
     name: "支付宝",
