@@ -1,6 +1,6 @@
 //! 跨渠道签名/加密原语（util 层单点，各渠道 adapter 复用，不感知渠道语义）：
 //! - [`sha1_hex`]：按给定顺序拼接后 sha1 → 40 位小写 hex（抖音 dop/生活服务
-//!   X-Douyin-Signature）
+//!   X-Douyin-Signature、饿了么 SHA1 五步第 4 步）
 //! - [`sha1_sorted_hex`]：字典序排序后拼接 sha1（微信系四值签名家族：
 //!   企微 msg_signature、抖音服务商 MsgSignature、钉钉 signature）
 //! - [`md5_base64`]：md5 摘要（16 字节）→ 标准 base64（抖音小游戏 x-signature）
@@ -9,6 +9,9 @@
 //!   （飞书 X-Lark-Signature：timestamp+nonce+encrypt_key+原始 body 字节）
 //! - [`hmac_sha256_base64`]：HMAC-SHA256（RFC 2104，sha2 自实现免新依赖）→
 //!   标准 base64（钉钉机器人 sign 头）
+//! - [`percent_decode`]/[`form_encode_value`]/[`form_pairs`]/[`strip_sig`]：
+//!   form-urlencoded 编解码原语（RFC 3986 非保留字集、大写 hex、+ 还原空格，
+//!   与前端 form.ts 单点同一语义；美团/饿了么表单线共用，#45 自美团提炼）
 //!
 //! 拼接序/密钥来源等渠道语义由各 adapter 组合，本模块只提供纯原语。
 
@@ -97,6 +100,78 @@ pub(crate) fn hmac_sha256_base64(key: &str, data: &str) -> String {
 /// 官方 Java 示例逐字节 %02x 拼接后 toLowerCase，即小写 hex）。
 pub(crate) fn hmac_sha256_hex(key: &str, data: &str) -> String {
     hex::encode(hmac_sha256(key.as_bytes(), data.as_bytes()))
+}
+
+/// 表单值百分号解码（RFC 3986 字节还原 + form 惯例「+」还原空格）：与前端
+/// form.ts 单点同一语义（大写 hex 编码、UTF-8 字节序）。#45 自美团渠道提炼
+/// 为跨渠道原语（美团/饿了么表单线共用）。
+pub(crate) fn percent_decode(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'%'
+                if index + 2 < bytes.len()
+                    && bytes[index + 1].is_ascii_hexdigit()
+                    && bytes[index + 2].is_ascii_hexdigit() =>
+            {
+                let hex = std::str::from_utf8(&bytes[index + 1..index + 3])
+                    .unwrap_or("");
+                out.push(u8::from_str_radix(hex, 16).unwrap_or(b'%'));
+                index += 3;
+            }
+            b'+' => {
+                out.push(b' ');
+                index += 1;
+            }
+            byte => {
+                out.push(byte);
+                index += 1;
+            }
+        }
+    }
+    String::from_utf8(out)
+        .unwrap_or_else(|err| String::from_utf8_lossy(err.as_bytes()).into_owned())
+}
+
+/// 表单值百分号编码（RFC 3986 非保留字集原样，其余按 UTF-8 字节输出大写
+/// %XX）：美团直发追加系统级参数与饿了么 H5 表单线共用。
+pub(crate) fn form_encode_value(text: &str) -> String {
+    let mut out = String::new();
+    for byte in text.as_bytes() {
+        match *byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(*byte as char);
+            }
+            _ => out.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    out
+}
+
+/// 明文表单 → 解码 kv 对（文档序）：无值参数落空串（美团「没有值的参数也需
+/// 拼接」§4.1）；空段（连续 &）跳过。
+pub(crate) fn form_pairs(body: &str) -> Vec<(String, String)> {
+    body.split('&')
+        .filter(|pair| !pair.is_empty())
+        .map(|pair| match pair.split_once('=') {
+            Some((key, value)) => (percent_decode(key), percent_decode(value)),
+            None => (percent_decode(pair), String::new()),
+        })
+        .collect()
+}
+
+/// 去掉明文里携带的 sig 段（其余段原字节保留）：从真实推送拷贝的表单常带旧
+/// sig，重签语义要求 sig 由本连接密钥现算（美团/饿了么官方「sig 除外」口径）。
+pub(crate) fn strip_sig(body: &str) -> String {
+    body.split('&')
+        .filter(|pair| {
+            let key = pair.split('=').next().unwrap_or(pair);
+            percent_decode(key) != "sig"
+        })
+        .collect::<Vec<_>>()
+        .join("&")
 }
 
 #[cfg(test)]
@@ -199,5 +274,45 @@ mod tests {
             hmac_sha256_hex("Jefe", "what do ya want for nothing?"),
             hex::encode(hmac_sha256(b"Jefe", b"what do ya want for nothing?"))
         );
+    }
+
+    #[test]
+    fn percent_decode_restores_utf8_bytes_and_plus_as_space() {
+        // 大写 hex %XX 还原 UTF-8 字节（与前端 form.ts 同一语义）
+        assert_eq!(percent_decode("%E8%8D%AF%E5%93%81"), "药品");
+        // form 惯例「+」还原空格；非编码文本原样
+        assert_eq!(percent_decode("a+b%2Bc"), "a b+c");
+        assert_eq!(percent_decode("668921"), "668921");
+    }
+
+    #[test]
+    fn form_encode_value_matches_rfc3986_uppercase() {
+        // 非保留字集原样，其余大写 %XX
+        assert_eq!(form_encode_value("a b+c=d.e~f-g_h"), "a%20b%2Bc%3Dd.e~f-g_h");
+        assert_eq!(form_encode_value("药品"), "%E8%8D%AF%E5%93%81");
+        assert_eq!(form_encode_value(""), "");
+    }
+
+    #[test]
+    fn form_pairs_decodes_document_order_and_keeps_empty_values() {
+        // 文档序解码 kv；无值参数落空串；空段（连续 &）跳过
+        let pairs = form_pairs("a=1&b=%E8%8D%AF%E5%93%81&c");
+        assert_eq!(
+            pairs,
+            vec![
+                ("a".to_string(), "1".to_string()),
+                ("b".to_string(), "药品".to_string()),
+                ("c".to_string(), String::new()),
+            ]
+        );
+        assert_eq!(form_pairs("a=1&&b=2").len(), 2);
+    }
+
+    #[test]
+    fn strip_sig_removes_only_sig_pair_verbatim() {
+        // 旧 sig 剔除、其余段原字节保留（重签语义：sig 除外）
+        assert_eq!(strip_sig("a=1&sig=abcdef&b=2"), "a=1&b=2");
+        assert_eq!(strip_sig("sig=abcdef"), "");
+        assert_eq!(strip_sig("signature=x&a=1"), "signature=x&a=1");
     }
 }

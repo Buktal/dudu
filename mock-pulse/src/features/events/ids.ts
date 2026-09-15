@@ -47,6 +47,10 @@ import type { EventSchema, IdKind } from "./schemas";
  * - mtBizId：美团订单号（官方样本 27061900338318741 为 17 位数字串，
  *   bigint(20) 存储；取 15~17 位首位非零，恒在 int64 内；订单三态推送
  *   order_id 与展示 ID wm_order_id_view 共用）
+ * - eleBizId：饿了么订单号 eleme_order_id（官方样本 12637645858619059 为
+ *   17 位、100025663239521904 为 18 位纯数字字符串，事实库「ID 形态」速查；
+ *   取 17~18 位、首位取 1 保证恒在 int64 内；订单状态/配送/退单/赔偿四推送
+ *   共用）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -304,6 +308,22 @@ export function generateMtBizId(): string {
   return digits;
 }
 
+/**
+ * 饿了么订单号 eleme_order_id：官方样本 12637645858619059（17 位）与
+ * 100025663239521904（18 位）为纯数字字符串（事实库 §5.2/§5.4 核验样本）——
+ * 取 17~18 位数字串，首位取 1 保证恒小于 2^63-1；全程字符串不经 number
+ * 防精度丢失；订单状态/配送/退单/赔偿四推送共用。
+ */
+export function generateEleBizId(): string {
+  const length = 17 + (randomBytes(1)[0] % 2);
+  const bytes = randomBytes(length);
+  let digits = "1";
+  for (let i = 1; i < length; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return digits;
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -334,6 +354,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   jdBizId: generateJdBizId,
   pddBizId: generatePddBizId,
   mtBizId: generateMtBizId,
+  eleBizId: generateEleBizId,
 };
 
 /**

@@ -5,6 +5,7 @@ import { CHANNELS } from "@/lib/channels";
 import { defineSchema } from "./define";
 import { DINGTALK_DEFINITIONS } from "./dingtalk";
 import { DOUYIN_DEFINITIONS } from "./douyin";
+import { ELE_DEFINITIONS } from "./eleme";
 import { FEISHU_DEFINITIONS } from "./feishu";
 import { JD_DEFINITIONS } from "./jingdong";
 import { KS_DEFINITIONS } from "./kuaishou";
@@ -34,11 +35,12 @@ const DEFINITIONS_BY_CHANNEL = {
   jingdong: JD_DEFINITIONS,
   pinduoduo: PDD_DEFINITIONS,
   meituan: MT_DEFINITIONS,
+  eleme: ELE_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(245);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 + 饿了么 6 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(251);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -59,6 +61,7 @@ describe("事件模板聚合注册表", () => {
       "jingdong",
       "pinduoduo",
       "meituan",
+      "eleme",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -104,7 +107,7 @@ describe("事件模板聚合注册表", () => {
     }
   });
 
-  it("schemasByChannel：已接入渠道返回模板，其余 7 渠道返回空表", () => {
+  it("schemasByChannel：已接入渠道返回模板，其余 4 渠道返回空表", () => {
     expect(schemasByChannel("douyin").map((schema) => schema.id)).toEqual([
       // dop 主体系
       "dy-create-video",
@@ -425,6 +428,16 @@ describe("事件模板聚合注册表", () => {
       // IM 单聊回调 1（事实库 §5.4 docDetail/842 字段表逐字，biz_type=1）
       "mt-im-single-chat",
     ]);
+    expect(schemasByChannel("eleme").map((schema) => schema.id)).toEqual([
+      // v2 订单四推送（事实库 §2.1 目录 + §5.2–§5.5 载荷逐字，赔偿注明暂不开放）
+      "ele-order-status-update",
+      "ele-order-delivery",
+      "ele-order-refund",
+      "ele-order-compensate",
+      // H5 表单推送 2（事实库 §5.6 push_action 1/2 字段表逐字）
+      "ele-h5-order-create",
+      "ele-h5-order-status-update",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -442,6 +455,7 @@ describe("事件模板聚合注册表", () => {
           "jingdong",
           "pinduoduo",
           "meituan",
+          "eleme",
         ].includes(channel.id)
       )
         continue;

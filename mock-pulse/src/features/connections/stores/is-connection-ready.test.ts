@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ConnectionConfig } from "../api";
 import {
   defaultDingtalkConnection,
+  defaultElemeConnection,
   defaultFeishuConnection,
   defaultJingdongConnection,
   defaultKuaishouConnection,
@@ -138,6 +139,13 @@ const savedMeituan: ConnectionConfig = {
   url: "http://127.0.0.1:9099/meituan",
   appId: "1235123121",
   appSecret: "d31ba58fd73c71db697ab5e4946d52d",
+};
+
+const savedEleme: ConnectionConfig = {
+  channel: "eleme",
+  url: "http://127.0.0.1:9099/eleme",
+  consumerKey: "7284397484",
+  consumerSecret: "4d31ba58fd73c71db697ab5e4946d52d",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -572,6 +580,33 @@ describe("isConnectionReady（美团核必填集，合作中心表单回调模�
     expect(defaultMeituanConnection.appSecret).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "meituan")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（饿了么核必填集，用户线推送模拟）", () => {
+  it("url/consumerKey/consumerSecret 齐全才算已配置（sig = SHA1(HEX(url?字母序 k=v 串 + consumer_secret))）", () => {
+    expect(isConnectionReady(savedEleme)).toBe(true);
+  });
+
+  it("缺 url/consumerKey/consumerSecret 任一都不算已配置", () => {
+    expect(isConnectionReady({ ...savedEleme, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedEleme, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedEleme, consumerKey: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedEleme, consumerSecret: "" })).toBe(
+      false,
+    );
+  });
+
+  it("初始饿了么占位连接（凭据全空、用户线 SHA1 五步签名起步）不算已配置", () => {
+    expect(defaultElemeConnection.channel).toBe("eleme");
+    expect(defaultElemeConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/eleme",
+    );
+    expect(defaultElemeConnection.consumerKey).toBe("");
+    expect(defaultElemeConnection.consumerSecret).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "eleme")),
     ).toBe(false);
   });
 });

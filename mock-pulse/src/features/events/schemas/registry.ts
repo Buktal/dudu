@@ -2,6 +2,7 @@ import type { ChannelId } from "@/lib/channels";
 
 import { DINGTALK_SCHEMAS } from "./dingtalk";
 import { DOUYIN_EVENT_SCHEMAS } from "./douyin";
+import { ELE_SCHEMAS } from "./eleme";
 import { FEISHU_SCHEMAS } from "./feishu";
 import { JD_SCHEMAS } from "./jingdong";
 import { KS_SCHEMAS } from "./kuaishou";
@@ -44,6 +45,7 @@ const PACKS: readonly ChannelTemplatePack[] = [
   { channel: "jingdong", schemas: JD_SCHEMAS },
   { channel: "pinduoduo", schemas: PDD_SCHEMAS },
   { channel: "meituan", schemas: MT_SCHEMAS },
+  { channel: "eleme", schemas: ELE_SCHEMAS },
 ];
 
 /** 聚合后的全部内置模板（契约校验与全量遍历用） */

@@ -30,7 +30,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::md5_hex;
+use crate::connections::util::{form_encode_value, form_pairs, md5_hex, strip_sig};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -75,79 +75,6 @@ pub(crate) fn mt_sign(url: &str, params: &[(&str, &str)], secret: &str) -> Strin
         concat.push_str(value);
     }
     md5_hex(&[url, "?", &concat, secret])
-}
-
-/// 表单值百分号解码（RFC 3986 字节还原 + form 惯例「+」还原空格）：与前端
-/// form.ts 单点同一语义（大写 hex 编码、UTF-8 字节序），自实现免新依赖
-/// （同 util::hmac_sha256 先例）。
-pub(crate) fn percent_decode(input: &str) -> String {
-    let bytes = input.as_bytes();
-    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        match bytes[index] {
-            b'%'
-                if index + 2 < bytes.len()
-                    && bytes[index + 1].is_ascii_hexdigit()
-                    && bytes[index + 2].is_ascii_hexdigit() =>
-            {
-                let hex = std::str::from_utf8(&bytes[index + 1..index + 3])
-                    .unwrap_or("");
-                out.push(u8::from_str_radix(hex, 16).unwrap_or(b'%'));
-                index += 3;
-            }
-            b'+' => {
-                out.push(b' ');
-                index += 1;
-            }
-            byte => {
-                out.push(byte);
-                index += 1;
-            }
-        }
-    }
-    String::from_utf8(out)
-        .unwrap_or_else(|err| String::from_utf8_lossy(err.as_bytes()).into_owned())
-}
-
-/// 表单值百分号编码（RFC 3986 非保留字集原样，其余按 UTF-8 字节输出大写
-/// %XX）：仅用于直发时追加的系统级参数（app_id/timestamp/sig 均为 ASCII，
-/// 防御配置值含保留字符的场景）。
-pub(crate) fn form_encode_value(text: &str) -> String {
-    let mut out = String::new();
-    for byte in text.as_bytes() {
-        match *byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(*byte as char);
-            }
-            _ => out.push_str(&format!("%{byte:02X}")),
-        }
-    }
-    out
-}
-
-/// 明文表单 → 解码 kv 对（文档序）：无值参数落空串（官方「没有值的参数也需
-/// 拼接」，§4.1）；空段（连续 &）跳过。
-pub(crate) fn form_pairs(body: &str) -> Vec<(String, String)> {
-    body.split('&')
-        .filter(|pair| !pair.is_empty())
-        .map(|pair| match pair.split_once('=') {
-            Some((key, value)) => (percent_decode(key), percent_decode(value)),
-            None => (percent_decode(pair), String::new()),
-        })
-        .collect()
-}
-
-/// 去掉明文里携带的 sig 段（其余段原字节保留）：从真实推送拷贝的表单常带旧
-/// sig，重签语义要求 sig 由本连接密钥现算（官方「所有参数（sig 除外）」口径）。
-pub(crate) fn strip_sig(body: &str) -> String {
-    body.split('&')
-        .filter(|pair| {
-            let key = pair.split('=').next().unwrap_or(pair);
-            percent_decode(key) != "sig"
-        })
-        .collect::<Vec<_>>()
-        .join("&")
 }
 
 /// 签名参数集：明文解码 kv + 系统级参数（app_id/timestamp，§4.1/§6 必传项）；

@@ -61,6 +61,18 @@ function requestSnapshot(step: RunStep): string {
     // 不重排）；requestBody 快照即实际发出的完整表单字节；msgId 快照取载荷订单号
     return `POST ${step.url}\nContent-Type: application/x-www-form-urlencoded\n\n${step.requestBody ?? step.payload}`;
   }
+  if (step.channel === "eleme") {
+    // 饿了么（用户线推送）：系统参数一律放 Query（§4.1，consumer_key/sig/
+    // timestamp，sig = SHA1(HEX(url?字母序 k=v 串 + Consumer Secret))）；
+    // v2 JSON 推送 body 逐字节透传、H5 表单推送业务字段原字节保留，按明文
+    // 判型区分 Content-Type；msgId 快照取 eleme_order_id/order_id
+    const isJson = step.payload.trimStart().startsWith("{");
+    const separator = step.url.includes("?") ? "&" : "?";
+    const contentType = isJson
+      ? "application/json"
+      : "application/x-www-form-urlencoded";
+    return `POST ${step.url}${separator}consumer_key=<连接 ConsumerKey>&sig=${step.signature}&timestamp=${step.timestamp ?? ""}\nContent-Type: ${contentType}\n\n${step.requestBody ?? step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

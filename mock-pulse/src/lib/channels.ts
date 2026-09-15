@@ -165,10 +165,10 @@ export const CHANNEL_REGISTRY = {
   },
   eleme: {
     name: "饿了么",
-    protocol: "用户线 · JSON 推送",
-    note: "用户线推送：SHA1 五步签名（sig 作 Query），200+ok 双确认，无 token 无加密",
+    protocol: "用户线推送 · JSON + H5 表单",
+    note: '用户线推送：SHA1 五步签名（sig 作 Query，secret 尾拼 HEX 后 SHA1），订单 4 推送（状态/配送/退单/赔偿）+ H5 表单 push_action 1/2，200 + {"message":"ok"} 双确认，无 token 无加密，频控超限 1009',
     icon: "Utensils",
-    implemented: false,
+    implemented: true,
   },
   bilibili: {
     name: "B站",

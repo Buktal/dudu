@@ -2,6 +2,7 @@ import type {
   ConnectionConfig,
   DingtalkConnectionConfig,
   DouyinConnectionConfig,
+  ElemeConnectionConfig,
   FeishuConnectionConfig,
   JingdongConnectionConfig,
   KuaishouConnectionConfig,
@@ -58,6 +59,10 @@ import type {
  * - 美团核（合作中心表单回调模拟）：url + appId + appSecret 必填（sig =
  *   MD5(url?字母序 k=v 串 + app secret) 的密钥与 app_id 系统级参数事实库
  *   §4.1/§6，appSecret 缺失即签名不可复算；回调端口官方仅支持 80/8080）
+ * - 饿了么核（用户线推送模拟）：url + consumerKey + consumerSecret 必填（sig =
+ *   SHA1(HEX(url?字母序 k=v 串 + consumer_secret)) 的密钥与 consumer_key
+ *   系统级参数事实库 §4.1/§6，consumerSecret 缺失即签名不可复算；无 token
+ *   无加密无握手）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -94,6 +99,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && pinduoduoReady(config);
     case "meituan":
       return config.url.trim() !== "" && meituanReady(config);
+    case "eleme":
+      return config.url.trim() !== "" && elemeReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -296,4 +303,18 @@ function pinduoduoReady(config: PinduoduoConnectionConfig): boolean {
  */
 function meituanReady(config: MeituanConnectionConfig): boolean {
   return config.appId.trim() !== "" && config.appSecret.trim() !== "";
+}
+
+/**
+ * 饿了么核（用户线推送模拟）：url + consumerKey + consumerSecret 必填——sig =
+ * SHA1(HEX(url?字母序 k=v 串 + consumer_secret)) 40 位小写（事实库 §4.1 官方
+ * 五步逐字，官方示例待签串已复现），consumerSecret 缺失即签名不可复算；
+ * consumer_key 为系统级参数必传项（事实库 §4.1/§6「每次调用带 consumer_key +
+ * timestamp(秒) + sig」），缺失即请求不完整，同为直发前置。无 token 无加密
+ * 无握手（事实库 §3.1/§4.4）。
+ */
+function elemeReady(config: ElemeConnectionConfig): boolean {
+  return (
+    config.consumerKey.trim() !== "" && config.consumerSecret.trim() !== ""
+  );
 }

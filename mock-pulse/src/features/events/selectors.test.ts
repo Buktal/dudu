@@ -233,8 +233,8 @@ describe("templatesForChannel（目录模板源）", () => {
     );
   });
 
-  it("未接入模板的渠道返回空表（美团已接入 #44，改用未接入的饿了么）", () => {
-    expect(templatesForChannel("eleme")).toEqual([]);
+  it("未接入模板的渠道返回空表（饿了么已接入 #45，改用未接入的 B站）", () => {
+    expect(templatesForChannel("bilibili")).toEqual([]);
   });
 });
 

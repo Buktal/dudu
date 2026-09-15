@@ -124,6 +124,11 @@ fn adapter_registry_covers_every_config_variant() {
         app_id: String::new(),
         app_secret: String::new(),
     };
+    let eleme_config = ConnectionConfig::Eleme {
+        url: String::new(),
+        consumer_key: String::new(),
+        consumer_secret: String::new(),
+    };
     assert_eq!(adapter_of(&douyin_config).id(), "douyin");
     assert_eq!(adapter_of(&wecom_config).id(), "wecom");
     assert_eq!(adapter_of(&wechat_mp_config).id(), "wechat-mp");
@@ -138,6 +143,7 @@ fn adapter_registry_covers_every_config_variant() {
     assert_eq!(adapter_of(&jingdong_config).id(), "jingdong");
     assert_eq!(adapter_of(&pinduoduo_config).id(), "pinduoduo");
     assert_eq!(adapter_of(&meituan_config).id(), "meituan");
+    assert_eq!(adapter_of(&eleme_config).id(), "eleme");
     assert_eq!(
         adapter_by_channel("douyin").map(|adapter| adapter.id()),
         Some("douyin")
@@ -193,6 +199,10 @@ fn adapter_registry_covers_every_config_variant() {
     assert_eq!(
         adapter_by_channel("meituan").map(|adapter| adapter.id()),
         Some("meituan")
+    );
+    assert_eq!(
+        adapter_by_channel("eleme").map(|adapter| adapter.id()),
+        Some("eleme")
     );
     assert!(adapter_by_channel("telegram").is_none());
     // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
@@ -252,6 +262,10 @@ fn adapter_registry_covers_every_config_variant() {
         assert_eq!(
             adapter.url(&meituan_config).is_some(),
             adapter.matches(&meituan_config)
+        );
+        assert_eq!(
+            adapter.url(&eleme_config).is_some(),
+            adapter.matches(&eleme_config)
         );
     }
 }

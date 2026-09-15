@@ -5,6 +5,7 @@ import {
   type ConnectionConfig,
   type DingtalkConnectionConfig,
   type DouyinConnectionConfig,
+  type ElemeConnectionConfig,
   type FeishuConnectionConfig,
   type JingdongConnectionConfig,
   type KuaishouConnectionConfig,
@@ -16,6 +17,7 @@ import {
   type TaobaoConnectionConfig,
   testDingtalkConnection,
   testDouyinConnection,
+  testElemeConnection,
   testFeishuConnection,
   testJingdongConnection,
   testKuaishouConnection,
@@ -154,6 +156,13 @@ const meituanConfig: MeituanConnectionConfig = {
   url: "http://127.0.0.1:8080/webhooks/meituan",
   appId: "1235123121",
   appSecret: "d31ba58fd73c71db697ab5e4946d52d",
+};
+
+const elemeConfig: ElemeConnectionConfig = {
+  channel: "eleme",
+  url: "http://127.0.0.1:8080/webhooks/eleme",
+  consumerKey: "7284397484",
+  consumerSecret: "4d31ba58fd73c71db697ab5e4946d52d",
 };
 
 describe("connections api 契约", () => {
@@ -313,7 +322,16 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东/拼多多/美团（按 channel 区分形状）", async () => {
+  it("testElemeConnection 调用 connections_test_eleme 并透传配置", async () => {
+    const outcome = { ok: true, message: "推送探针被接受" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testElemeConnection(elemeConfig)).resolves.toEqual(outcome);
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_eleme", {
+      config: elemeConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东/拼多多/美团/饿了么（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
@@ -329,6 +347,7 @@ describe("connections api 契约", () => {
       jingdongConfig,
       pinduoduoConfig,
       meituanConfig,
+      elemeConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

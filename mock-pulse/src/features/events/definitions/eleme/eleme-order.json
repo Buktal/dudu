@@ -1,0 +1,256 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "eleme",
+  "version": "2026.09",
+  "schemas": {
+    "ele-order-status-update": {
+      "version": "2026.09",
+      "source": "https://openapi-doc.faas.ele.me/v2/api/signal/order-signal.html",
+      "fields": [
+        {
+          "path": "push_action",
+          "title": "推送动作",
+          "type": "number",
+          "group": "订单状态推送",
+          "description": "推送动作，仅 2 = order_status_update（官方 §2.1 逐字；JSON number 形态同官方 §5.2 样本逐字）。",
+          "required": true
+        },
+        {
+          "path": "eleme_order_id",
+          "title": "饿了么订单号",
+          "type": "numberString",
+          "group": "订单状态推送",
+          "description": "饿了么订单号（官方 §5.2 样本 12637645858619059 逐字，纯数字字符串形态，全程文本不经 number 防精度丢失）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "tp_order_id",
+          "title": "第三方订单号",
+          "type": "string",
+          "group": "订单状态推送",
+          "description": "第三方（合作方）订单号，ID 由第三方自定（官方 §5.2 样本 1425223342 逐字，事实库「ID 形态」速查）。",
+          "required": true
+        },
+        {
+          "path": "new_status",
+          "title": "新状态",
+          "type": "number",
+          "group": "订单状态推送",
+          "description": "订单状态（官方 §5.2 样本 1 逐字）：-5 等待支付 / -4 支付失败 / -1 已取消 / 0 未处理 / 2 已处理 / 11 用户确认（妥投）；取消时 extra 携带 invalid_type（0~16）与 description（枚举事实库 §2.1 enums 全文）。",
+          "required": true
+        },
+        {
+          "path": "extra",
+          "title": "附加信息",
+          "type": "string",
+          "group": "订单状态推送",
+          "description": "附加信息（官方 §5.2 样本 \"{}\" 逐字——线上为 JSON 字符串形态，故按文本编辑）；取消时形如 {\"invalid_type\": 1, \"description\": \"太忙\"} 的字符串（页内行文逐字）。",
+          "required": false,
+          "multiline": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时间",
+          "type": "numberString",
+          "group": "订单状态推送",
+          "description": "订单创建时间，秒级 UNIX 时间戳（官方 §5.2 样本 \"1531987437\" 为字符串形态逐字；官方示例字符串/数字混用，照录）。",
+          "required": true
+        }
+      ]
+    },
+    "ele-order-delivery": {
+      "version": "2026.09",
+      "source": "https://openapi-doc.faas.ele.me/v2/api/signal/order-delivery-signal.html",
+      "fields": [
+        {
+          "path": "eleme_order_id",
+          "title": "饿了么订单号",
+          "type": "numberString",
+          "group": "配送推送",
+          "description": "饿了么订单号（官方 §5.3 样本 12374793708765809 逐字，纯数字字符串形态，全程文本不经 number 防精度丢失）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "tp_order_id",
+          "title": "第三方订单号",
+          "type": "string",
+          "group": "配送推送",
+          "description": "第三方（合作方）订单号，ID 由第三方自定（官方 §5.3 样本 1425223342 逐字）。",
+          "required": true
+        },
+        {
+          "path": "deliveryman_name",
+          "title": "配送员姓名",
+          "type": "string",
+          "group": "配送推送",
+          "description": "配送员姓名（官方 §5.3 样本「李四」逐字；中文按 UTF-8 传输）。",
+          "required": true
+        },
+        {
+          "path": "deliveryman_phone",
+          "title": "配送员电话",
+          "type": "string",
+          "group": "配送推送",
+          "description": "配送员电话（官方 §5.3 样本 13800001234 逐字）。",
+          "required": true
+        },
+        {
+          "path": "state_code",
+          "title": "配送状态码",
+          "type": "number",
+          "group": "配送推送",
+          "description": "「新」配送状态码（官方 §5.3 样本 1234 为文档示意占位、非枚举值，照录并注明）：1 待分配（物流已建单）/ 2 待分配（配送已接单）/ 3 待取餐 / 4 到店 / 5 配送中 / 6 配送成功 / 7 配送取消（可重发）/ 8 配送异常（枚举事实库 §2.1 enums 全文）。",
+          "required": true
+        },
+        {
+          "path": "update_at",
+          "title": "更新时间",
+          "type": "number",
+          "group": "配送推送",
+          "description": "配送状态更新时间，秒级 UNIX 时间戳（官方 §5.3 样本 1463943884 为 number 形态逐字；官方示例字符串/数字混用，照录）。",
+          "required": true
+        }
+      ]
+    },
+    "ele-order-refund": {
+      "version": "2026.09",
+      "source": "https://openapi-doc.faas.ele.me/v2/api/signal/order-refund-status.html",
+      "fields": [
+        {
+          "path": "status_code",
+          "title": "退单状态码",
+          "type": "number",
+          "group": "退单推送",
+          "description": "退单状态码（官方 §5.4 样本 1 逐字）：1 申请 / 8 自动成功 / 9 自动失败，其余 2~7 中间态见事实库 §2.1 enums 全文。",
+          "required": true
+        },
+        {
+          "path": "role",
+          "title": "操作角色",
+          "type": "number",
+          "group": "退单推送",
+          "description": "触发退单的角色（官方 §5.4 样本 1 逐字）：1 用户 / 2 系统 / 3 餐厅+napos+风控 / 4 客服 / 5 openapi+第三方 / 8 风控（枚举事实库 §2.1 enums 全文）。",
+          "required": true
+        },
+        {
+          "path": "eleme_order_id",
+          "title": "饿了么订单号",
+          "type": "numberString",
+          "group": "退单推送",
+          "description": "饿了么订单号（官方 §5.4 样本 100025663239521904 逐字，纯数字字符串形态，全程文本不经 number 防精度丢失）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "tp_order_id",
+          "title": "第三方订单号",
+          "type": "string",
+          "group": "退单推送",
+          "description": "第三方（合作方）订单号，ID 由第三方自定（官方 §5.4 样本 tb1020303434342 逐字）。",
+          "required": true
+        },
+        {
+          "path": "update_at",
+          "title": "更新时间",
+          "type": "number",
+          "group": "退单推送",
+          "description": "退单状态更新时间，秒级 UNIX 时间戳（官方 §5.4 样本 1458721474 为 number 形态逐字；官方示例字符串/数字混用，照录）。",
+          "required": true
+        }
+      ]
+    },
+    "ele-order-compensate": {
+      "version": "2026.09",
+      "source": "https://openapi-doc.faas.ele.me/v2/api/signal/order-compensate.html",
+      "fields": [
+        {
+          "path": "compensate_type",
+          "title": "赔付类型",
+          "type": "number",
+          "group": "赔偿推送",
+          "description": "赔付类型（官方 §5.5 样本 1 逐字）：1 准时达 / 2 物流运单取消 / 3 下单 30 分钟后商户取消（枚举事实库 §2.1 enums 全文）。",
+          "required": true
+        },
+        {
+          "path": "action",
+          "title": "赔偿动作",
+          "type": "number",
+          "group": "赔偿推送",
+          "description": "1 赔付 / 0 取消（官方 §5.5 样本 1 逐字）；取消时仅 hongbao_id/eleme_order_id 两 id 有值（事实库 §2.1 口径逐字）。",
+          "required": true
+        },
+        {
+          "path": "hongbao_id",
+          "title": "红包 ID",
+          "type": "string",
+          "group": "赔偿推送",
+          "description": "赔偿红包 ID（官方 §5.5 样本 \"1234\" 逐字，字符串形态）。",
+          "required": true
+        },
+        {
+          "path": "eleme_order_id",
+          "title": "饿了么订单号",
+          "type": "numberString",
+          "group": "赔偿推送",
+          "description": "饿了么订单号（官方 §5.5 样本 100967782022644505 逐字，纯数字字符串形态，全程文本不经 number 防精度丢失）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "tp_order_id",
+          "title": "第三方订单号",
+          "type": "string",
+          "group": "赔偿推送",
+          "description": "第三方（合作方）订单号，ID 由第三方自定（官方 §5.5 样本 212433333745 逐字）。",
+          "required": true
+        },
+        {
+          "path": "phone",
+          "title": "接收手机号",
+          "type": "string",
+          "group": "赔偿推送",
+          "description": "红包接收手机号（官方 §5.5 样本 18843225250 逐字）。",
+          "required": true
+        },
+        {
+          "path": "amount",
+          "title": "赔偿金额",
+          "type": "number",
+          "group": "赔偿推送",
+          "description": "赔偿金额（官方 §5.5 样本 2.7 逐字，小数 number 形态）。",
+          "required": true
+        },
+        {
+          "path": "sum_condition",
+          "title": "满减条件",
+          "type": "number",
+          "group": "赔偿推送",
+          "description": "满 sum_condition 元可用（官方 §5.5 样本 27 逐字；与 amount 对应的红包使用门槛）。",
+          "required": true
+        },
+        {
+          "path": "begin_date",
+          "title": "有效期起",
+          "type": "string",
+          "group": "赔偿推送",
+          "description": "红包有效期开始日期（官方 §5.5 样本 \"2016-07-01\" 逐字，yyyy-MM-dd 字符串形态）。",
+          "required": true
+        },
+        {
+          "path": "end_date",
+          "title": "有效期止",
+          "type": "string",
+          "group": "赔偿推送",
+          "description": "红包有效期结束日期（官方 §5.5 样本 \"2016-07-31\" 逐字，yyyy-MM-dd 字符串形态）。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时间",
+          "type": "number",
+          "group": "赔偿推送",
+          "description": "赔偿创建时间，秒级 UNIX 时间戳（官方 §5.5 样本 1469361386 为 number 形态逐字；官方示例字符串/数字混用，照录）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

@@ -207,6 +207,24 @@ export type MeituanConnectionConfig = {
 };
 
 /**
+ * 饿了么连接配置形状（与 Rust 端 ConnectionConfig::Eleme 内标一致）：
+ * 用户线推送模拟——HTTP POST 无握手无 token 无加密，签名 = SHA1(HEX(url?字母序
+ * k=v 串 + consumer_secret)) 40 位小写（事实库 §4.1 官方五步逐字，官方示例
+ * 待签串已复现），系统级参数 consumer_key/timestamp/sig 一律放 Query String
+ * （§4.1）；v2 JSON 推送明文透传、H5 表单推送业务字段原字节保留。成功应答
+ * HTTP 200 + {"message":"ok"}（§5.1 逐字）。
+ */
+export type ElemeConnectionConfig = {
+  channel: "eleme";
+  /** 回调目标地址，事件与剧本共享（官方无握手，推送即普通 POST） */
+  url: string;
+  /** 应用 consumer_key（Key，应用身份标识，事实库 §6）：系统级参数与签名参与方 */
+  consumerKey: string;
+  /** 应用 consumer_secret（Secret，应用私钥，事实库 §4.1/§6）：SHA1 五步签名密钥 */
+  consumerSecret: string;
+};
+
+/**
  * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
  * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
  * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
@@ -305,7 +323,8 @@ export type ConnectionConfig =
   | TaobaoConnectionConfig
   | JingdongConnectionConfig
   | PinduoduoConnectionConfig
-  | MeituanConnectionConfig;
+  | MeituanConnectionConfig
+  | ElemeConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -440,4 +459,14 @@ export function testMeituanConnection(
   config: MeituanConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_meituan", { config });
+}
+
+/** 按饿了么推送探针协议测试连接（官方无握手，探针语义同普通推送：POST 官方
+ *  订单状态核验样本明文 + query 系统参数 consumer_key/timestamp 与
+ *  sig = SHA1(HEX(url?字母序 k=v 串 + consumer_secret))，事实库 §4.1 官方
+ *  五步，官方示例待签串已复现，期望 HTTP 200） */
+export function testElemeConnection(
+  config: ElemeConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_eleme", { config });
 }

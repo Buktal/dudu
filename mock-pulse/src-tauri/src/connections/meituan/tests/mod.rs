@@ -6,6 +6,7 @@
 mod chain;
 mod golden;
 
+use crate::connections::util::percent_decode;
 use crate::connections::ConnectionConfig;
 use crate::test_support::quick_client;
 

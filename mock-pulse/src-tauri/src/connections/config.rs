@@ -289,4 +289,16 @@ pub enum ConnectionConfig {
         /// 00934d00d0aea6f12161edfb6456143d 已对拍）
         app_secret: String,
     },
+    #[serde(rename = "eleme", rename_all = "camelCase")]
+    Eleme {
+        url: String,
+        /// 应用 consumer_key（Key，应用身份标识，饿了么分配可在接入后台查看，
+        /// 事实库 §6）：系统级参数必传项（§4.1/§6「每次调用带 consumer_key +
+        /// timestamp(秒) + sig」），参与 ASCII 排序签名拼接
+        consumer_key: String,
+        /// 应用 consumer_secret（Secret，应用私钥）：sig = SHA1(HEX(url?字母序
+        /// k=v 串 + consumer_secret)) 40 位小写的签名源（事实库 §4.1 官方
+        /// 五步，官方示例待签串已复现）
+        consumer_secret: String,
+    },
 }

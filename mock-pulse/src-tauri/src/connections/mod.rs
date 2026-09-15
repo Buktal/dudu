@@ -7,6 +7,7 @@
 mod config;
 pub mod dingtalk;
 pub mod douyin;
+pub mod eleme;
 pub mod feishu;
 pub mod jingdong;
 pub mod kuaishou;
@@ -130,6 +131,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &jingdong::Adapter,
     &pinduoduo::Adapter,
     &meituan::Adapter,
+    &eleme::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -331,6 +333,17 @@ pub async fn connections_test_meituan(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&meituan::Adapter, config).await
+}
+
+/// 按饿了么推送探针协议测试连接（官方无握手，探针语义同普通推送：POST 官方
+/// 订单状态核验样本明文 + query 系统参数 consumer_key/timestamp/sig =
+/// SHA1(HEX(url?字母序 k=v 串 + consumer_secret))，事实库 §4.1 官方五步，
+/// 官方示例待签串已复现）。
+#[tauri::command]
+pub async fn connections_test_eleme(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&eleme::Adapter, config).await
 }
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 import type {
   ConnectionConfig,
   DingtalkConnectionConfig,
+  ElemeConnectionConfig,
   FeishuConnectionConfig,
   JingdongConnectionConfig,
   KuaishouConnectionConfig,
@@ -452,6 +453,26 @@ function meituanFields(draft: MeituanConnectionConfig): CredentialField[] {
   ];
 }
 
+/** 饿了么凭证字段（事实库 §4.1/§6，用户线推送模拟）：sig = SHA1(HEX(url?字母序+secret)) */
+function elemeFields(draft: ElemeConnectionConfig): CredentialField[] {
+  return [
+    {
+      key: "consumerKey",
+      label: "Consumer Key",
+      note: "应用 Key（应用身份标识，饿了么分配、可在接入后台查看）：系统级参数必传项（事实库 §4.1/§6「每次调用带 consumer_key + timestamp(秒) + sig」），参与 ASCII 排序签名拼接。",
+      value: draft.consumerKey,
+      secret: false,
+    },
+    {
+      key: "consumerSecret",
+      label: "Consumer Secret",
+      note: "应用 Secret（应用私钥）：除 sig 外参数按 ASCII 排序 k=v & 连接，拼 url?…+ secret 后 UTF-8 逐字节 HEX，SHA1 取 40 位小写即 sig（官方五步逐字，事实库 §4.1，官方示例待签串已复现）。",
+      value: draft.consumerSecret,
+      secret: true,
+    },
+  ];
+}
+
 /** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
 export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
   switch (draft.channel) {
@@ -481,6 +502,8 @@ export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
       return pinduoduoFields(draft);
     case "meituan":
       return meituanFields(draft);
+    case "eleme":
+      return elemeFields(draft);
     case "wecom":
       return wecomFields(draft);
     default: {

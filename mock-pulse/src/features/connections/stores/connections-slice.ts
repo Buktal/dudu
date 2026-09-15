@@ -10,6 +10,7 @@ import {
   type ConnectionConfig,
   type DingtalkConnectionConfig,
   type DouyinConnectionConfig,
+  type ElemeConnectionConfig,
   type FeishuConnectionConfig,
   type JingdongConnectionConfig,
   type KuaishouConnectionConfig,
@@ -21,6 +22,7 @@ import {
   type TaobaoConnectionConfig,
   testDingtalkConnection as testDingtalkApi,
   testDouyinConnection as testDouyinApi,
+  testElemeConnection as testElemeApi,
   testFeishuConnection as testFeishuApi,
   testJingdongConnection as testJingdongApi,
   testKuaishouConnection as testKuaishouApi,
@@ -185,6 +187,14 @@ export const defaultMeituanConnection: MeituanConnectionConfig = {
   appSecret: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（用户线 SHA1 五步签名起步） */
+export const defaultElemeConnection: ElemeConnectionConfig = {
+  channel: "eleme",
+  url: "http://127.0.0.1:8080/webhooks/eleme",
+  consumerKey: "",
+  consumerSecret: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -205,6 +215,7 @@ export const initialConnectionsState: ConnectionsState = {
     jingdong: defaultJingdongConnection,
     pinduoduo: defaultPinduoduoConnection,
     meituan: defaultMeituanConnection,
+    eleme: defaultElemeConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -262,6 +273,8 @@ export const testConnection = createAsyncThunk(
         return testPinduoduoApi(config);
       case "meituan":
         return testMeituanApi(config);
+      case "eleme":
+        return testElemeApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
