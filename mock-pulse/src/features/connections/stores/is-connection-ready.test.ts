@@ -4,6 +4,7 @@ import type { ConnectionConfig } from "../api";
 import {
   defaultDingtalkConnection,
   defaultFeishuConnection,
+  defaultJingdongConnection,
   defaultKuaishouConnection,
   defaultQqConnection,
   defaultTaobaoConnection,
@@ -114,6 +115,13 @@ const savedTaobao: ConnectionConfig = {
   url: "http://127.0.0.1:9099/taobao",
   appKey: "123456",
   appSecret: "taobao_app_secret",
+};
+
+const savedJingdong: ConnectionConfig = {
+  channel: "jingdong",
+  url: "http://127.0.0.1:9099/jingdong",
+  appKey: "yourappkey",
+  appSecret: "yourappSecret",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -471,6 +479,31 @@ describe("isConnectionReady（淘宝核必填集，全球栈 HTTPS 回调）", (
     expect(defaultTaobaoConnection.appSecret).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "taobao")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（京东核必填集，JOS 消息推送模拟）", () => {
+  it("url/appKey/appSecret 齐全才算已配置（sign = UPPER(MD5(appSecret+字母序 k+v+appSecret))）", () => {
+    expect(isConnectionReady(savedJingdong)).toBe(true);
+  });
+
+  it("缺 url/appKey/appSecret 任一都不算已配置", () => {
+    expect(isConnectionReady({ ...savedJingdong, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedJingdong, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedJingdong, appKey: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedJingdong, appSecret: "" })).toBe(false);
+  });
+
+  it("初始京东占位连接（凭据全空、MD5 签名起步）不算已配置", () => {
+    expect(defaultJingdongConnection.channel).toBe("jingdong");
+    expect(defaultJingdongConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/jingdong",
+    );
+    expect(defaultJingdongConnection.appKey).toBe("");
+    expect(defaultJingdongConnection.appSecret).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "jingdong")),
     ).toBe(false);
   });
 });

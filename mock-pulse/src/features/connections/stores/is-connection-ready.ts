@@ -3,6 +3,7 @@ import type {
   DingtalkConnectionConfig,
   DouyinConnectionConfig,
   FeishuConnectionConfig,
+  JingdongConnectionConfig,
   KuaishouConnectionConfig,
   QqConnectionConfig,
   TaobaoConnectionConfig,
@@ -46,6 +47,9 @@ import type {
  *   测试 TEST 事件信封）
  * - 淘宝核（全球栈 HTTPS 回调）：url + appKey + appSecret 必填（验签消息体 =
  *   AppKey + body、密钥 = AppSecret，事实库 §4.2，两者缺一签名不可复算）
+ * - 京东核（JOS 消息推送模拟）：url + appKey + appSecret 必填（sign =
+ *   UPPER(MD5(appSecret + 字母序 k+v + appSecret)) 的密钥与 app_key 系统参数
+ *   事实库 §4.1/§4.2，appSecret 缺失即签名不可复算）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -76,6 +80,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && kuaishouReady(config);
     case "taobao":
       return config.url.trim() !== "" && taobaoReady(config);
+    case "jingdong":
+      return config.url.trim() !== "" && jingdongReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -244,5 +250,15 @@ function kuaishouReady(config: KuaishouConnectionConfig): boolean {
  * 不可复算，同为直发前置。
  */
 function taobaoReady(config: TaobaoConnectionConfig): boolean {
+  return config.appKey.trim() !== "" && config.appSecret.trim() !== "";
+}
+
+/**
+ * 京东核（JOS 消息推送模拟）：url + appKey + appSecret 必填——sign =
+ * UPPER(MD5(appSecret + 按字母序 k+v 拼接 + appSecret))（事实库 §4.1），
+ * appSecret 缺失即签名不可复算；app_key 为系统参数（事实库 §4.2 表必传项），
+ * 缺失即请求不完整，同为直发前置。
+ */
+function jingdongReady(config: JingdongConnectionConfig): boolean {
   return config.appKey.trim() !== "" && config.appSecret.trim() !== "";
 }

@@ -135,7 +135,12 @@ function taobaoTestNote(): string {
   return "发送 Verify 验证（POST 官方正向样本明文 + Authorization = HEX(HMAC-SHA256(AppKey+body, AppSecret)) 头），检查服务是否返回 HTTP 200（500ms 签收语义）。";
 }
 
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书/快手/淘宝 JSON、公众号 XML */
+/** 京东握手文案（事实库：官方首次验证握手待核验(09-27)，探针语义同普通推送） */
+function jingdongTestNote(): string {
+  return "发送推送探针（POST 官方状态枚举样本明文，query 带 app_key/timestamp/v 与 sign = UPPER(MD5(appSecret+字母序 k+v+appSecret))），检查服务是否返回 HTTP 200（官方验证握手口径待核验，探针语义同普通推送）。";
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书/快手/淘宝/京东 JSON、公众号 XML */
 function wireBadgeLabel(
   channel: ChannelId,
   draft: ConnectionConfig,
@@ -148,7 +153,8 @@ function wireBadgeLabel(
     channel === "weibo" ||
     channel === "xiaohongshu" ||
     channel === "kuaishou" ||
-    channel === "taobao"
+    channel === "taobao" ||
+    channel === "jingdong"
   ) {
     return "JSON";
   }
@@ -194,7 +200,9 @@ export function ConnectionsView() {
                       ? actions.defaultKuaishouConnection
                       : channel === "taobao"
                         ? actions.defaultTaobaoConnection
-                        : actions.defaultWecomConnection);
+                        : channel === "jingdong"
+                          ? actions.defaultJingdongConnection
+                          : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -401,11 +409,13 @@ export function ConnectionsView() {
                                   ? kuaishouTestNote()
                                   : channel === "taobao"
                                     ? taobaoTestNote()
-                                    : wecomTestNote(
-                                        draft.channel === "wecom"
-                                          ? draft.system
-                                          : "agent",
-                                      )}
+                                    : channel === "jingdong"
+                                      ? jingdongTestNote()
+                                      : wecomTestNote(
+                                          draft.channel === "wecom"
+                                            ? draft.system
+                                            : "agent",
+                                        )}
               </CardDescription>
               <CardAction>
                 <Button

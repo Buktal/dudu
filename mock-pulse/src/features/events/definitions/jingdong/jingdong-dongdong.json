@@ -1,0 +1,75 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "jingdong",
+  "version": "2026.09",
+  "schemas": {
+    "jd-dd-chat-message": {
+      "version": "2026.09",
+      "source": "https://jos.jd.com/platformdetail?itemId=2222&listId=0",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "聊天消息",
+          "description": "消息类型（官方协议体 voice 片段逐字：\"type\": \" voice\"——值含前置空格，为官方文档原文，勿「修正」）。咚咚消息协议 chat_message4.2 聊天消息格式仅标题实锤，正文待核验(09-27)，text/image/order 等其余类型未知。",
+          "required": true
+        },
+        {
+          "path": "url",
+          "title": "声音文件地址",
+          "type": "string",
+          "group": "聊天消息",
+          "description": "上传京东云文件地址url（字符型，必须。声音文件京东CDN下载地址）（官方协议体 voice 片段逐字，含官方占位符原文与前置空格）。正文待核验(09-27)。",
+          "required": true
+        }
+      ]
+    },
+    "jd-dd-push2": {
+      "version": "2026.09",
+      "source": "https://jos.jd.com/apilist?apiGroupId=1706",
+      "fields": [
+        {
+          "path": "buId",
+          "title": "商家 ID",
+          "type": "string",
+          "group": "发送参数",
+          "description": "商家ID（POP-京东商家id/厂直-供应商简码，官方应用级参数表逐字，事实库 §5.3）。官方未给样本值，示例值仅供联调。",
+          "required": true
+        },
+        {
+          "path": "operatePin",
+          "title": "操作人账号",
+          "type": "string",
+          "group": "发送参数",
+          "description": "操作人账号（官方参数表逐字，样本值 testPin 即官方原文，事实库 §5.3）。",
+          "required": true
+        },
+        {
+          "path": "operateNick",
+          "title": "操作人姓名",
+          "type": "string",
+          "group": "发送参数",
+          "description": "操作人姓名（官方应用级参数表逐字，事实库 §5.3）。官方未给样本值，示例值仅供联调。",
+          "required": true
+        },
+        {
+          "path": "serviceId",
+          "title": "服务单号",
+          "type": "string",
+          "group": "发送参数",
+          "description": "服务单号（售后业务主单据号，官方应用级参数表逐字，事实库 §5.3）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "orderId",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "发送参数",
+          "description": "京东订单号（官方应用级参数表逐字，事实库 §5.3）。完整请求/响应体待核验(09-27)。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

@@ -6,6 +6,7 @@ import { defineSchema } from "./define";
 import { DINGTALK_DEFINITIONS } from "./dingtalk";
 import { DOUYIN_DEFINITIONS } from "./douyin";
 import { FEISHU_DEFINITIONS } from "./feishu";
+import { JD_DEFINITIONS } from "./jingdong";
 import { KS_DEFINITIONS } from "./kuaishou";
 import { QQ_DEFINITIONS } from "./qq";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
@@ -28,11 +29,12 @@ const DEFINITIONS_BY_CHANNEL = {
   weibo: WB_DEFINITIONS,
   kuaishou: KS_DEFINITIONS,
   taobao: TB_DEFINITIONS,
+  jingdong: JD_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(226);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(238);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -50,6 +52,7 @@ describe("事件模板聚合注册表", () => {
       "weibo",
       "kuaishou",
       "taobao",
+      "jingdong",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -95,7 +98,7 @@ describe("事件模板聚合注册表", () => {
     }
   });
 
-  it("schemasByChannel：已接入渠道返回模板，其余 8 渠道返回空表", () => {
+  it("schemasByChannel：已接入渠道返回模板，其余 7 渠道返回空表", () => {
     expect(schemasByChannel("douyin").map((schema) => schema.id)).toEqual([
       // dop 主体系
       "dy-create-video",
@@ -385,6 +388,23 @@ describe("事件模板聚合注册表", () => {
       // OpenIM 离线消息 1（事实库 §5.8 旺旺 envelope 形态参考）
       "tb-openim-offmsg-push",
     ]);
+    expect(schemasByChannel("jingdong").map((schema) => schema.id)).toEqual([
+      // 订单 9 状态推送（事实库 §2.1 状态枚举逐字，全目录穷尽）
+      "jd-order-wait-seller-stock-out",
+      "jd-order-wait-goods-receive-confirm",
+      "jd-order-wait-seller-delivery",
+      "jd-order-pause",
+      "jd-order-finished-l",
+      "jd-order-trade-canceled",
+      "jd-order-locked",
+      "jd-order-pop-order-pause",
+      "jd-order-not-pay",
+      // 售后全流程消息 1（事实库 §2.2 消息名实锤，载荷骨架从简）
+      "jd-afs-step-result",
+      // 咚咚 2（事实库 §2.4/§5.3：chat_message4.2 voice 片段 + push2 五参数）
+      "jd-dd-chat-message",
+      "jd-dd-push2",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -399,6 +419,7 @@ describe("事件模板聚合注册表", () => {
           "weibo",
           "kuaishou",
           "taobao",
+          "jingdong",
         ].includes(channel.id)
       )
         continue;

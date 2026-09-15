@@ -40,6 +40,14 @@ function requestSnapshot(step: RunStep): string {
     // tid/refund_id/msg_id 等业务幂等键
     return `POST ${step.url}\nContent-Type: application/json\nAuthorization: ${step.signature}\n\n${step.payload}`;
   }
+  if (step.channel === "jingdong") {
+    // 京东（JOS）：系统参数走 URL query（app_key/timestamp(yyyy-MM-dd HH:mm:ss，
+    // 10 分钟窗)/v=2.0 + sign = UPPER(MD5(appSecret+字母序 k+v+appSecret))，
+    // 应用级参数 360buy_param_json 即 body 明文同值参与签名）；msgId 快照取
+    // 载荷业务单号（order_id/serviceId）
+    const separator = step.url.includes("?") ? "&" : "?";
+    return `POST ${step.url}${separator}app_key=<连接 AppKey>&timestamp=${encodeURIComponent(step.timestamp ?? "")}&v=2.0&sign=${step.signature}\nContent-Type: application/json\n\n${step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

@@ -257,4 +257,14 @@ pub enum ConnectionConfig {
         /// AppSecret（全球栈应用密钥）：HMAC-SHA256 验签密钥；数据明文传输无 AES
         app_secret: String,
     },
+    #[serde(rename = "jingdong", rename_all = "camelCase")]
+    Jingdong {
+        url: String,
+        /// 应用 app_key（应用中心创建应用获取，事实库 §6）：系统参数（§4.2 表
+        /// 必传项），参与字母序签名拼接
+        app_key: String,
+        /// appSecret：sign = UPPER(MD5(appSecret + 字母序 k+v + appSecret))
+        /// 两端夹 secret 的签名源（事实库 §4.1）
+        app_secret: String,
+    },
 }

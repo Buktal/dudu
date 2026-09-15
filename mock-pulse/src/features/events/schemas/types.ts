@@ -43,7 +43,8 @@ export type IdKind =
   | "ksMessageId" // 快手 message_id：官方支付回调样本为小写 UUID（每次推送随机生成，幂等键）
   | "taobaoBizId" // 淘宝 tid/oid/refund_id：官方样本为数字串形态（9~15 位，JSON 里恒字符串）
   | "taobaoModified" // 淘宝退款 modified：yyyy-MM-dd HH:mm:ss 字符串（官方样本 2000-12-30 12:32:20）
-  | "openimMsgId"; // OpenIM msg_id：19 位数字串（官方样本 6269105334747922432，int64 内）
+  | "openimMsgId" // OpenIM msg_id：19 位数字串（官方样本 6269105334747922432，int64 内）
+  | "jdBizId"; // 京东订单号/服务单号：官方未给格式样本，按京东单号数字串同族形态（9~15 位）
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */

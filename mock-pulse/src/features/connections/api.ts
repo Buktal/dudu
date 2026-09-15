@@ -155,6 +155,23 @@ export type TaobaoConnectionConfig = {
 };
 
 /**
+ * 京东连接配置形状（与 Rust 端 ConnectionConfig::Jingdong 内标一致）：
+ * JOS 消息推送模拟——app_key/timestamp/v/sign 系统参数走 URL query，事件明文
+ * 以 360buy_param_json 名参与签名（§4.1，应用级参数整体 JSON），sign =
+ * UPPER(MD5(appSecret + 字母序 k+v + appSecret))，timestamp 10 分钟窗口；
+ * 推送回调验签官方口径待核验(09-27)，以唯一实锤的 API 请求签名规则模拟。
+ */
+export type JingdongConnectionConfig = {
+  channel: "jingdong";
+  /** 回调目标地址，事件与剧本共享 */
+  url: string;
+  /** 应用 app_key（应用中心创建应用获取，事实库 §6）：系统参数与签名参与方 */
+  appKey: string;
+  /** appSecret（签名两端夹 secret，事实库 §4.1）：UPPER(MD5) 签名密钥 */
+  appSecret: string;
+};
+
+/**
  * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
  * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
  * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
@@ -250,7 +267,8 @@ export type ConnectionConfig =
   | WeiboConnectionConfig
   | XiaohongshuConnectionConfig
   | KuaishouConnectionConfig
-  | TaobaoConnectionConfig;
+  | TaobaoConnectionConfig
+  | JingdongConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -356,4 +374,13 @@ export function testTaobaoConnection(
   config: TaobaoConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_taobao", { config });
+}
+
+/** 按京东推送探针协议测试连接（官方首次验证握手待核验(09-27)，探针语义同
+ *  普通推送：POST 官方状态枚举样本明文 + 合规系统参数（app_key/timestamp/v/
+ *  sign = UPPER(MD5(appSecret+字母序 k+v+appSecret))），期望 HTTP 200） */
+export function testJingdongConnection(
+  config: JingdongConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_jingdong", { config });
 }

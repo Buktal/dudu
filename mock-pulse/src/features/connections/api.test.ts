@@ -6,6 +6,7 @@ import {
   type DingtalkConnectionConfig,
   type DouyinConnectionConfig,
   type FeishuConnectionConfig,
+  type JingdongConnectionConfig,
   type KuaishouConnectionConfig,
   loadConnections,
   type QqConnectionConfig,
@@ -14,6 +15,7 @@ import {
   testDingtalkConnection,
   testDouyinConnection,
   testFeishuConnection,
+  testJingdongConnection,
   testKuaishouConnection,
   testQqConnection,
   testTaobaoConnection,
@@ -127,6 +129,13 @@ const taobaoConfig: TaobaoConnectionConfig = {
   url: "http://127.0.0.1:8080/webhooks/taobao",
   appKey: "123456",
   appSecret: "taobao_app_secret",
+};
+
+const jingdongConfig: JingdongConnectionConfig = {
+  channel: "jingdong",
+  url: "http://127.0.0.1:8080/webhooks/jingdong",
+  appKey: "yourappkey",
+  appSecret: "yourappSecret",
 };
 
 describe("connections api 契约", () => {
@@ -253,7 +262,18 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝（按 channel 区分形状）", async () => {
+  it("testJingdongConnection 调用 connections_test_jingdong 并透传配置", async () => {
+    const outcome = { ok: true, message: "推送探针被接受" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testJingdongConnection(jingdongConfig)).resolves.toEqual(
+      outcome,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_jingdong", {
+      config: jingdongConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
@@ -266,6 +286,7 @@ describe("connections api 契约", () => {
       weiboConfig,
       kuaishouConfig,
       taobaoConfig,
+      jingdongConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

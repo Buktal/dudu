@@ -2,6 +2,7 @@ import type {
   ConnectionConfig,
   DingtalkConnectionConfig,
   FeishuConnectionConfig,
+  JingdongConnectionConfig,
   KuaishouConnectionConfig,
   QqConnectionConfig,
   TaobaoConnectionConfig,
@@ -389,6 +390,26 @@ function taobaoFields(draft: TaobaoConnectionConfig): CredentialField[] {
   ];
 }
 
+/** 京东凭证字段（事实库 §4.1/§4.2/§6，JOS 消息推送模拟）：sign = UPPER(MD5(appSecret+字母序 k+v+appSecret)) */
+function jingdongFields(draft: JingdongConnectionConfig): CredentialField[] {
+  return [
+    {
+      key: "appKey",
+      label: "AppKey",
+      note: "应用 app_key（应用中心创建应用获取）：系统参数（事实库 §4.2 表必传项），参与字母序签名拼接。",
+      value: draft.appKey,
+      secret: false,
+    },
+    {
+      key: "appSecret",
+      label: "AppSecret",
+      note: "应用密钥：sign = UPPER(MD5(appSecret + 按字母序 k+v 拼接 + appSecret))（官方签名步骤逐字，事实库 §4.1）两端夹 secret 的签名源。",
+      value: draft.appSecret,
+      secret: true,
+    },
+  ];
+}
+
 /** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
 export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
   switch (draft.channel) {
@@ -412,6 +433,8 @@ export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
       return kuaishouFields(draft);
     case "taobao":
       return taobaoFields(draft);
+    case "jingdong":
+      return jingdongFields(draft);
     case "wecom":
       return wecomFields(draft);
     default: {

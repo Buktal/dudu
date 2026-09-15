@@ -147,7 +147,7 @@ export const CHANNEL_REGISTRY = {
     protocol: "JOS · 消息推送",
     note: "JOS 消息推送：MD5(secret+字母序+secret) 签名，timestamp 10 分钟窗口",
     icon: "Package",
-    implemented: false,
+    implemented: true,
   },
   pinduoduo: {
     name: "拼多多",

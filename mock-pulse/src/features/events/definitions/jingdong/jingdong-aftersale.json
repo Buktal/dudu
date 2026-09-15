@@ -1,0 +1,21 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "jingdong",
+  "version": "2026.09",
+  "schemas": {
+    "jd-afs-step-result": {
+      "version": "2026.09",
+      "source": "https://jos.jd.com/apilist?apiGroupId=1707",
+      "fields": [
+        {
+          "path": "serviceId",
+          "title": "服务单号",
+          "type": "string",
+          "group": "售后推送",
+          "description": "服务单号（售后业务主单据号，push2 参数表官方词汇，事实库 §5.3）。AFS_StepResult_JOS 仅消息名实锤（官方原话「售后服务单全流程消息通知：AFS_StepResult_JOS」，并引导优先用消息——轮询 jingdong.asc.sync.list 计划 2026-09 下线），载荷字段与订阅方式待核验(09-27)，骨架从简并注明。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

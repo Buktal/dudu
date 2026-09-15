@@ -40,6 +40,8 @@ import type { EventSchema, IdKind } from "./schemas";
  *   封装格式化）
  * - openimMsgId：OpenIM msg_id（19 位数字串，官方样本 6269105334747922432，
  *   首位 1~6 恒在 int64 内）
+ * - jdBizId：京东订单号/服务单号（官方未给格式样本，按京东单号数字串同族
+ *   形态 9~15 位，首位非零；订单推送 order_id 与咚咚 orderId/serviceId 共用）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -254,6 +256,20 @@ export function generateOpenimMsgId(): string {
   return digits;
 }
 
+/**
+ * 京东业务单号（订单号/服务单号）：官方未给格式样本（事实库仅「京东订单号」
+ * 「服务单号」词汇实锤），按京东单号数字串同族形态取 9~15 位数字串（首位非零）。
+ */
+export function generateJdBizId(): string {
+  const length = 9 + (randomBytes(1)[0] % 7);
+  const bytes = randomBytes(length);
+  let digits = String((bytes[0] % 9) + 1);
+  for (let i = 1; i < length; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return digits;
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -281,6 +297,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   taobaoBizId: generateTaobaoBizId,
   taobaoModified: generateTaobaoModified,
   openimMsgId: generateOpenimMsgId,
+  jdBizId: generateJdBizId,
 };
 
 /**

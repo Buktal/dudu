@@ -1,0 +1,205 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "jingdong",
+  "version": "2026.09",
+  "schemas": {
+    "jd-order-wait-seller-stock-out": {
+      "version": "2026.09",
+      "source": "https://open.jd.com/home/home#/doc/common?listId=1867",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "京东订单号（官方订单查询 optional_fields 与 push2 参数表 orderId 词汇，事实库 §5.1/§5.3）。订单消息类型名与载荷整体待核验(09-27)（listId=520 未取得），骨架仅收官方已实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_state",
+          "title": "订单状态",
+          "type": "string",
+          "group": "订单推送",
+          "description": "等待出库（官方状态枚举 orderStatusItem 逐字，事实库 §2.1）。9 枚举即订单消息可能携带的全部实锤状态语义。",
+          "required": true
+        }
+      ]
+    },
+    "jd-order-wait-goods-receive-confirm": {
+      "version": "2026.09",
+      "source": "https://open.jd.com/home/home#/doc/common?listId=1867",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "京东订单号（官方订单查询 optional_fields 与 push2 参数表 orderId 词汇，事实库 §5.1/§5.3）。订单消息类型名与载荷整体待核验(09-27)（listId=520 未取得），骨架仅收官方已实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_state",
+          "title": "订单状态",
+          "type": "string",
+          "group": "订单推送",
+          "description": "等待确认收货（官方状态枚举 orderStatusItem 逐字，事实库 §2.1）。",
+          "required": true
+        }
+      ]
+    },
+    "jd-order-wait-seller-delivery": {
+      "version": "2026.09",
+      "source": "https://open.jd.com/home/home#/doc/common?listId=1867",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "京东订单号（官方订单查询 optional_fields 与 push2 参数表 orderId 词汇，事实库 §5.1/§5.3）。订单消息类型名与载荷整体待核验(09-27)（listId=520 未取得），骨架仅收官方已实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_state",
+          "title": "订单状态",
+          "type": "string",
+          "group": "订单推送",
+          "description": "等待发货（仅海外购商家，境内发货标签）（官方状态枚举 orderStatusItem 逐字，事实库 §2.1）。",
+          "required": true
+        }
+      ]
+    },
+    "jd-order-pause": {
+      "version": "2026.09",
+      "source": "https://open.jd.com/home/home#/doc/common?listId=1867",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "京东订单号（官方订单查询 optional_fields 与 push2 参数表 orderId 词汇，事实库 §5.1/§5.3）。订单消息类型名与载荷整体待核验(09-27)（listId=520 未取得），骨架仅收官方已实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_state",
+          "title": "订单状态",
+          "type": "string",
+          "group": "订单推送",
+          "description": "暂停（loc订单可通过此状态获取）（官方状态枚举 orderStatusItem 逐字，事实库 §2.1）。",
+          "required": true
+        }
+      ]
+    },
+    "jd-order-finished-l": {
+      "version": "2026.09",
+      "source": "https://open.jd.com/home/home#/doc/common?listId=1867",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "京东订单号（官方订单查询 optional_fields 与 push2 参数表 orderId 词汇，事实库 §5.1/§5.3）。订单消息类型名与载荷整体待核验(09-27)（listId=520 未取得），骨架仅收官方已实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_state",
+          "title": "订单状态",
+          "type": "string",
+          "group": "订单推送",
+          "description": "完成（官方状态枚举 orderStatusItem 逐字，事实库 §2.1）。",
+          "required": true
+        }
+      ]
+    },
+    "jd-order-trade-canceled": {
+      "version": "2026.09",
+      "source": "https://open.jd.com/home/home#/doc/common?listId=1867",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "京东订单号（官方订单查询 optional_fields 与 push2 参数表 orderId 词汇，事实库 §5.1/§5.3）。订单消息类型名与载荷整体待核验(09-27)（listId=520 未取得），骨架仅收官方已实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_state",
+          "title": "订单状态",
+          "type": "string",
+          "group": "订单推送",
+          "description": "取消（官方状态枚举 orderStatusItem 逐字，事实库 §2.1；SDK 示例同枚举，事实库 §5.2）。",
+          "required": true
+        }
+      ]
+    },
+    "jd-order-locked": {
+      "version": "2026.09",
+      "source": "https://open.jd.com/home/home#/doc/common?listId=1867",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "京东订单号（官方订单查询 optional_fields 与 push2 参数表 orderId 词汇，事实库 §5.1/§5.3）。订单消息类型名与载荷整体待核验(09-27)（listId=520 未取得），骨架仅收官方已实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_state",
+          "title": "订单状态",
+          "type": "string",
+          "group": "订单推送",
+          "description": "已锁定（官方状态枚举 orderStatusItem 逐字，事实库 §2.1）。",
+          "required": true
+        }
+      ]
+    },
+    "jd-order-pop-order-pause": {
+      "version": "2026.09",
+      "source": "https://open.jd.com/home/home#/doc/common?listId=1867",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "京东订单号（官方订单查询 optional_fields 与 push2 参数表 orderId 词汇，事实库 §5.1/§5.3）。订单消息类型名与载荷整体待核验(09-27)（listId=520 未取得），骨架仅收官方已实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_state",
+          "title": "订单状态",
+          "type": "string",
+          "group": "订单推送",
+          "description": "pop业务暂停（3c号卡/履约/黄金）（官方状态枚举 orderStatusItem 逐字，事实库 §2.1）。",
+          "required": true
+        }
+      ]
+    },
+    "jd-order-not-pay": {
+      "version": "2026.09",
+      "source": "https://open.jd.com/home/home#/doc/common?listId=1867",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "京东订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "京东订单号（官方订单查询 optional_fields 与 push2 参数表 orderId 词汇，事实库 §5.1/§5.3）。订单消息类型名与载荷整体待核验(09-27)（listId=520 未取得），骨架仅收官方已实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_state",
+          "title": "订单状态",
+          "type": "string",
+          "group": "订单推送",
+          "description": "未付款（官方状态枚举 orderStatusItem 逐字，事实库 §2.1）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}
