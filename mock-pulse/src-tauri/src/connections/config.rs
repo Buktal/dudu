@@ -314,4 +314,18 @@ pub enum ConnectionConfig {
         /// 支付宝公钥验签，测试联调自备密钥对）
         app_private_key: String,
     },
+    #[serde(rename = "whatsapp", rename_all = "camelCase")]
+    Whatsapp {
+        url: String,
+        /// App Secret（App Settings > Basic，第三方口径待核验(09-27)）：
+        /// X-Hub-Signature-256 = "sha256=" + hex(HMAC-SHA256(AppSecret,
+        /// 原始 body)) 头验签的签名源（事实库 §4.1，校验对原始字节算 MAC）；
+        /// 载荷不设加密字段
+        app_secret: String,
+        /// Verify Token（App Dashboard > WhatsApp > Configuration 自选任意
+        /// 字符串）：GET 三参握手 hub.verify_token 比对值（事实库 §3.2；
+        /// verify token 与 app secret 是两个无关值，verify token 不参与
+        /// POST 验签）
+        verify_token: String,
+    },
 }

@@ -22,6 +22,7 @@ pub mod wechat_mini;
 pub mod wechat_mp;
 pub mod weibo;
 pub mod wecom;
+pub mod whatsapp;
 pub mod xiaohongshu;
 
 use std::time::Duration;
@@ -134,6 +135,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &meituan::Adapter,
     &eleme::Adapter,
     &alipay::Adapter,
+    &whatsapp::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -357,6 +359,16 @@ pub async fn connections_test_alipay(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&alipay::Adapter, config).await
+}
+
+/// 按 WhatsApp GET 三参握手协议测试连接（官方配置保存即触发：GET 带
+/// hub.mode=subscribe + hub.challenge + hub.verify_token，verify_token 匹配
+/// 则 200 裸回 challenge 纯文本非 JSON，不匹配 403，事实库 §3.2）。
+#[tauri::command]
+pub async fn connections_test_whatsapp(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&whatsapp::Adapter, config).await
 }
 
 #[cfg(test)]

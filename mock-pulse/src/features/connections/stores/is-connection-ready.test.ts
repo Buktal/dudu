@@ -15,6 +15,7 @@ import {
   defaultWechatMiniConnection,
   defaultWechatMpConnection,
   defaultWeiboConnection,
+  defaultWhatsappConnection,
   defaultXiaohongshuConnection,
   initialConnectionsState,
   selectConnection,
@@ -154,6 +155,13 @@ const savedAlipay: ConnectionConfig = {
   url: "http://127.0.0.1:9099/alipay",
   appId: "2019082200007148",
   appPrivateKey: "MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEA0test",
+};
+
+const savedWhatsapp: ConnectionConfig = {
+  channel: "whatsapp",
+  url: "http://127.0.0.1:9099/whatsapp",
+  appSecret: "whatsapp_app_secret",
+  verifyToken: "meaty-hammer-7",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -642,6 +650,33 @@ describe("isConnectionReady（支付宝核必填集，异步通知三地址模�
     expect(defaultAlipayConnection.appPrivateKey).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "alipay")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（WhatsApp 核必填集，Cloud API Webhook）", () => {
+  it("url/appSecret/verifyToken 齐全才算已配置（App Secret 验签 + Verify Token 握手比对，两个无关值）", () => {
+    expect(isConnectionReady(savedWhatsapp)).toBe(true);
+  });
+
+  it("缺 url/appSecret/verifyToken 任一都不算已配置", () => {
+    expect(isConnectionReady({ ...savedWhatsapp, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWhatsapp, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedWhatsapp, appSecret: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWhatsapp, verifyToken: "" })).toBe(
+      false,
+    );
+  });
+
+  it("初始 WhatsApp 占位连接（凭据全空、X-Hub-Signature-256 验签起步）不算已配置", () => {
+    expect(defaultWhatsappConnection.channel).toBe("whatsapp");
+    expect(defaultWhatsappConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/whatsapp",
+    );
+    expect(defaultWhatsappConnection.appSecret).toBe("");
+    expect(defaultWhatsappConnection.verifyToken).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "whatsapp")),
     ).toBe(false);
   });
 });

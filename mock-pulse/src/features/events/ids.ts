@@ -55,6 +55,18 @@ import type { EventSchema, IdKind } from "./schemas";
  *   0c45cf72da943 为 35 位小写十六进制串，§5.1「通知校验 ID」128 位口径；
  *   「同一条异步通知重试时 notify_id 不变」§3.4——幂等键首选，新建事件即新
  *   通知故重生成；三地址代表模板共用）
+ * - waWamid：WhatsApp 消息 ID wamid（官方样本 wamid.HBgL… 为前缀 + base64
+ *   风格串，事实库「ID 形态」速查；inbound messages[].id = outbound
+ *   statuses[].id = 发送响应 messages[].id 三处同源，消费方幂等键随新事件变化）
+ * - waPhone：WhatsApp 电话 ID（官方样本 16505551234/15550783881 为纯数字
+ *   E.164 无 + 前缀的 11 位数字串；wa_id/from/recipient_id/display_phone_number
+ *   共用族）
+ * - waAccountId：WhatsApp 账户/号码数字 ID（官方样本 WABA 102290129340398、
+ *   phone_number_id 106540352242922 为 15 位数字串，首位取 1 恒在 2^53 内）
+ * - waConversationId：WhatsApp 会话 ID（官方样本 6ceb9d929c9bdc4f90e967a
+ *   32f8639b4 为 32 位小写十六进制）
+ * - waTemplateId：WhatsApp 模板 ID（官方样本 1689556908129832 为 16 位数字
+ *   JSON number，首位取 1 恒在 2^53 内）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -338,6 +350,65 @@ export function generateAliNotifyId(): string {
   return hexChars(35);
 }
 
+/**
+ * WhatsApp 消息 ID wamid：官方样本 wamid.HBgL… 为前缀 + base64 风格串
+ * （样本主体 48~51 字符、可带尾部 "="，事实库「ID 形态」速查）——三处同源
+ * 幂等键，新建事件即新消息故重生成。
+ */
+export function generateWaWamid(): string {
+  const length = 48 + (randomBytes(1)[0] % 4);
+  const body = Array.from(
+    randomBytes(length),
+    (byte) => BASE64_CHARS[byte % BASE64_CHARS.length],
+  ).join("");
+  return `wamid.HBgL${body}`;
+}
+
+/**
+ * WhatsApp 电话 ID：官方样本 16505551234（wa_id/from/recipient_id）与
+ * 15550783881（display_phone_number）为纯数字 E.164 无 + 前缀的 11 位数字串。
+ */
+export function generateWaPhone(): string {
+  const bytes = randomBytes(11);
+  let digits = "1";
+  for (let i = 1; i < 11; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return digits;
+}
+
+/**
+ * WhatsApp 账户/号码数字 ID：官方样本 WABA 102290129340398 与
+ * phone_number_id 106540352242922 为 15 位数字串——首位取 1 保证恒在 2^53 内
+ * （全程字符串，不经 number 防精度丢失）。
+ */
+export function generateWaAccountId(): string {
+  const bytes = randomBytes(15);
+  let digits = "1";
+  for (let i = 1; i < 15; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return digits;
+}
+
+/** WhatsApp 会话 ID：官方样本为 32 位小写十六进制串（conversation.id） */
+export function generateWaConversationId(): string {
+  return hexChars(32);
+}
+
+/**
+ * WhatsApp 模板 ID：官方样本 1689556908129832 为 16 位数字 JSON number——
+ * 首位取 1 保证恒在 2^53 内（message_template_id 载荷形态即 number）。
+ */
+export function generateWaTemplateId(): number {
+  const bytes = randomBytes(16);
+  let digits = "1";
+  for (let i = 1; i < 16; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return Number(digits);
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -370,6 +441,11 @@ const GENERATORS: Record<IdKind, Generator> = {
   mtBizId: generateMtBizId,
   eleBizId: generateEleBizId,
   aliNotifyId: generateAliNotifyId,
+  waWamid: generateWaWamid,
+  waPhone: generateWaPhone,
+  waAccountId: generateWaAccountId,
+  waConversationId: generateWaConversationId,
+  waTemplateId: generateWaTemplateId,
 };
 
 /**

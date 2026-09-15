@@ -31,11 +31,13 @@ import {
   testWechatMpConnection,
   testWecomConnection,
   testWeiboConnection,
+  testWhatsappConnection,
   testXiaohongshuConnection,
   type WechatMiniConnectionConfig,
   type WechatMpConnectionConfig,
   type WecomConnectionConfig,
   type WeiboConnectionConfig,
+  type WhatsappConnectionConfig,
   type XiaohongshuConnectionConfig,
 } from "./api";
 
@@ -173,6 +175,13 @@ const alipayConfig: AlipayConnectionConfig = {
   appId: "2019082200007148",
   appPrivateKey:
     "-----BEGIN PRIVATE KEY-----\nMIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEA0test\n-----END PRIVATE KEY-----",
+};
+
+const whatsappConfig: WhatsappConnectionConfig = {
+  channel: "whatsapp",
+  url: "http://127.0.0.1:8080/webhooks/whatsapp",
+  appSecret: "whatsapp_app_secret",
+  verifyToken: "meaty-hammer-7",
 };
 
 describe("connections api 契约", () => {
@@ -350,7 +359,18 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东/拼多多/美团/饿了么/支付宝（按 channel 区分形状）", async () => {
+  it("testWhatsappConnection 调用 connections_test_whatsapp 并透传配置", async () => {
+    const outcome = { ok: true, message: "challenge 裸回一致" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testWhatsappConnection(whatsappConfig)).resolves.toEqual(
+      outcome,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_whatsapp", {
+      config: whatsappConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东/拼多多/美团/饿了么/支付宝/WhatsApp（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
@@ -368,6 +388,7 @@ describe("connections api 契约", () => {
       meituanConfig,
       elemeConfig,
       alipayConfig,
+      whatsappConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

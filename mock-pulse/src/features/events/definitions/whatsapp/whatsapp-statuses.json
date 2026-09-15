@@ -1,0 +1,395 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "whatsapp",
+  "version": "2026.09",
+  "schemas": {
+    "wa-status-delivered": {
+      "version": "2026.09",
+      "source": "https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/status",
+      "fields": [
+        {
+          "path": "object",
+          "title": "信封对象",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp_business_account（§5.2 官方样本逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry",
+          "title": "条目数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "entry[] 数组，元素 id 为 WABA ID（§5.2 信封路径口径）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].id",
+          "title": "WABA ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "WhatsApp Business Account ID，纯数字串（官方样本 102290129340398）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes",
+          "title": "变更数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "changes[] 数组，field 标注订阅字段、value 携带载荷（§5.2 信封路径口径）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].field",
+          "title": "订阅字段",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 messages（statuses 随 messages 字段推送，§5.2 逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value",
+          "title": "变更载荷",
+          "type": "json",
+          "group": "回调信封",
+          "description": "value 对象：含 statuses[] 数组即商家 outbound 消息的状态（§2.1 判型规则）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.messaging_product",
+          "title": "消息产品",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp（§5.2 官方样本逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata",
+          "title": "商家元数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "商家侧号码元数据：display_phone_number + phone_number_id（§5.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata.display_phone_number",
+          "title": "商家显示号码",
+          "type": "string",
+          "group": "回调信封",
+          "description": "商家号码，纯数字 E.164 无 + 前缀（官方样本 15550783881）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata.phone_number_id",
+          "title": "号码 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "电话号码 ID，纯数字串（官方样本 106540352242922）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses",
+          "title": "状态数组",
+          "type": "json",
+          "group": "出站状态",
+          "description": "statuses[] 数组：商家 outbound 消息的状态（§2.1，同一下发最多触发 sent/delivered/read 三个独立 webhook）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].id",
+          "title": "消息 ID（wamid）",
+          "type": "string",
+          "group": "出站状态",
+          "description": "wamid.HBgL… 形态，回指发送响应中的 messages[].id（§5.2/§附速查三处同源）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].status",
+          "title": "状态",
+          "type": "string",
+          "group": "出站状态",
+          "description": "delivered（到用户设备，两勾；官方样本逐字）。状态枚举 sent/delivered/read/failed/played（§2.1）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].timestamp",
+          "title": "状态时刻",
+          "type": "string",
+          "group": "出站状态",
+          "description": "秒级 Unix 时间戳字符串（官方样本 1750263773）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].recipient_id",
+          "title": "收件人",
+          "type": "string",
+          "group": "出站状态",
+          "description": "接收状态的用户号码，纯数字 E.164 无 + 前缀（官方样本 16505551234）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].conversation",
+          "title": "会话对象",
+          "type": "json",
+          "group": "会话与计费",
+          "description": "conversation 对象：id + origin（v24.0+ 起 conversation/pricing 只出现在 sent 与 delivered/read 其中之一，§5.2 注）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].conversation.id",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "会话与计费",
+          "description": "32 位小写十六进制（官方样本 6ceb9d929c9bdc4f90e967a32f8639b4）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].conversation.origin",
+          "title": "会话来源",
+          "type": "json",
+          "group": "会话与计费",
+          "description": "会话来源对象：origin.type（§5.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].conversation.origin.type",
+          "title": "会话类别",
+          "type": "string",
+          "group": "会话与计费",
+          "description": "service/marketing/utility/authentication（官方样本 service，§5.2 注）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].pricing",
+          "title": "计费对象",
+          "type": "json",
+          "group": "会话与计费",
+          "description": "pricing 对象：billable/pricing_model/category（§5.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].pricing.billable",
+          "title": "可计费",
+          "type": "boolean",
+          "group": "会话与计费",
+          "description": "是否计费（官方样本 true）。计费口径存疑区（service 收费与否 10-01 起矛盾）不得写死，见事实库 §6。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].pricing.pricing_model",
+          "title": "计费模型",
+          "type": "string",
+          "group": "会话与计费",
+          "description": "CBP（官方 delivered 样本逐字；sent 例见 PMP，§5.2 注）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].pricing.category",
+          "title": "计费类别",
+          "type": "string",
+          "group": "会话与计费",
+          "description": "service（官方样本逐字；类别族 service/marketing/utility/authentication）。",
+          "required": true
+        }
+      ]
+    },
+    "wa-status-sent": {
+      "version": "2026.09",
+      "source": "https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/status",
+      "fields": [
+        {
+          "path": "object",
+          "title": "信封对象",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp_business_account（信封同 §5.2 官方样本）。",
+          "required": true
+        },
+        {
+          "path": "entry",
+          "title": "条目数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "entry[] 数组，元素 id 为 WABA ID（信封同 §5.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].id",
+          "title": "WABA ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "WhatsApp Business Account ID，纯数字串（取 §5.2 样本 102290129340398 同形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes",
+          "title": "变更数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "changes[] 数组，field 标注订阅字段、value 携带载荷（信封同 §5.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].field",
+          "title": "订阅字段",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 messages（statuses 随 messages 字段推送）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value",
+          "title": "变更载荷",
+          "type": "json",
+          "group": "回调信封",
+          "description": "value 对象：含 statuses[] 数组即 outbound 状态（官方 sent 全量样本未给，按 §5.2 注明的 sent 例形态构造：marketing/PMP/expiration_timestamp）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.messaging_product",
+          "title": "消息产品",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata",
+          "title": "商家元数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "商家侧号码元数据：display_phone_number + phone_number_id。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata.display_phone_number",
+          "title": "商家显示号码",
+          "type": "string",
+          "group": "回调信封",
+          "description": "商家号码（取 §5.2 样本 15550783881 同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata.phone_number_id",
+          "title": "号码 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "电话号码 ID（取 §5.2 样本 106540352242922 同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses",
+          "title": "状态数组",
+          "type": "json",
+          "group": "出站状态",
+          "description": "statuses[] 数组（官方 sent 例：marketing 类、pricing_model PMP、含 expiration_timestamp，§5.2 注）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].id",
+          "title": "消息 ID（wamid）",
+          "type": "string",
+          "group": "出站状态",
+          "description": "wamid.HBgL… 形态（取 §5.3 发送响应样本 wamid 逐字）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].status",
+          "title": "状态",
+          "type": "string",
+          "group": "出站状态",
+          "description": "sent（已从 Meta 服务器发出，一勾；§2.1 状态枚举逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].timestamp",
+          "title": "状态时刻",
+          "type": "string",
+          "group": "出站状态",
+          "description": "秒级 Unix 时间戳字符串（同形态占位，取 §5.2 样本时刻族）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].recipient_id",
+          "title": "收件人",
+          "type": "string",
+          "group": "出站状态",
+          "description": "接收状态的用户号码（取 §5.2 样本 16505551234 同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].conversation",
+          "title": "会话对象",
+          "type": "json",
+          "group": "会话与计费",
+          "description": "conversation 对象（conversation/pricing 按 v24.0+ 口径落在 sent 或 delivered/read 其中之一，本模板落 sent）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].conversation.id",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "会话与计费",
+          "description": "32 位小写十六进制（取 §5.2 样本同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].conversation.origin",
+          "title": "会话来源",
+          "type": "json",
+          "group": "会话与计费",
+          "description": "会话来源对象：origin.type。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].conversation.origin.type",
+          "title": "会话类别",
+          "type": "string",
+          "group": "会话与计费",
+          "description": "marketing（§5.2 注明的官方 sent 例类别）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].pricing",
+          "title": "计费对象",
+          "type": "json",
+          "group": "会话与计费",
+          "description": "pricing 对象（§5.2 注明的 sent 例计费形态）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].pricing.billable",
+          "title": "可计费",
+          "type": "boolean",
+          "group": "会话与计费",
+          "description": "是否计费（marketing 模板消息计费，true）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].pricing.pricing_model",
+          "title": "计费模型",
+          "type": "string",
+          "group": "会话与计费",
+          "description": "PMP（§5.2 注明的官方 sent 例计费模型）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].pricing.category",
+          "title": "计费类别",
+          "type": "string",
+          "group": "会话与计费",
+          "description": "marketing（§5.2 注明的官方 sent 例类别）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].expiration_timestamp",
+          "title": "会话过期时刻",
+          "type": "string",
+          "group": "会话与计费",
+          "description": "官方 sent 例含 expiration_timestamp（§5.2 注明字段名实锤；值形态官方未给，取秒级字符串占位）。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

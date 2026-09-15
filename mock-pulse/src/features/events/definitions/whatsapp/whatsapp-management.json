@@ -1,0 +1,335 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "whatsapp",
+  "version": "2026.09",
+  "schemas": {
+    "wa-template-status-update": {
+      "version": "2026.09",
+      "source": "https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/message_template_status_update",
+      "fields": [
+        {
+          "path": "entry",
+          "title": "条目数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "entry[] 数组在前、object 收尾（§5.4 官方样本键序逐字，与 messages 族相反）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].id",
+          "title": "WABA ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "WhatsApp Business Account ID，纯数字串（官方样本 102290129340398）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].time",
+          "title": "事件时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "秒级 Unix 时间戳，数字形态（官方样本 1751247548，管理面信封与 messages 族字符串形态不同）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes",
+          "title": "变更数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "changes[] 数组，field 标注订阅字段、value 携带载荷（§5.4）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].field",
+          "title": "订阅字段",
+          "type": "string",
+          "group": "回调信封",
+          "description": "message_template_status_update（whatsapp_business_management 权限组，§2.2 组件表）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value",
+          "title": "变更载荷",
+          "type": "json",
+          "group": "模板状态",
+          "description": "value 对象：模板状态变更载荷（§5.4 官方样本逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.event",
+          "title": "模板事件",
+          "type": "string",
+          "group": "模板状态",
+          "description": "APPROVED（官方样本逐字）；状态族 APPROVED/REJECTED/PENDING/PAUSED/DISABLED/FLAGGED/ARCHIVED/DELETED 等（§2.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.message_template_id",
+          "title": "模板 ID",
+          "type": "number",
+          "group": "模板状态",
+          "description": "模板 ID，JSON number（官方样本 1689556908129832，16 位恒在 2^53 内）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.message_template_name",
+          "title": "模板名",
+          "type": "string",
+          "group": "模板状态",
+          "description": "模板名（官方样本 order_confirmation）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.message_template_language",
+          "title": "模板语言",
+          "type": "string",
+          "group": "模板状态",
+          "description": "模板语言（官方样本 en-US）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.reason",
+          "title": "原因",
+          "type": "string",
+          "group": "模板状态",
+          "description": "变更原因（官方样本 NONE）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.message_template_category",
+          "title": "模板类别",
+          "type": "string",
+          "group": "模板状态",
+          "description": "UTILITY（官方样本逐字；模板三类 marketing/utility/authentication，§6 计费口径）。",
+          "required": true
+        },
+        {
+          "path": "object",
+          "title": "信封对象",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp_business_account（§5.4 键序在 entry 之后收尾）。",
+          "required": true
+        }
+      ]
+    },
+    "wa-phone-quality-update": {
+      "version": "2026.09",
+      "source": "https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/phone_number_quality_update",
+      "fields": [
+        {
+          "path": "entry",
+          "title": "条目数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "entry[] 数组在前、object 收尾（§5.5 官方样本键序逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].id",
+          "title": "WABA ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "WhatsApp Business Account ID，纯数字串（官方样本 102290129340398）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].time",
+          "title": "事件时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "秒级 Unix 时间戳，数字形态（官方样本 1748454394）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes",
+          "title": "变更数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "changes[] 数组，field 标注订阅字段、value 携带载荷（§5.5）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].field",
+          "title": "订阅字段",
+          "type": "string",
+          "group": "回调信封",
+          "description": "phone_number_quality_update（whatsapp_business_management 权限组，§2.2 组件表）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value",
+          "title": "变更载荷",
+          "type": "json",
+          "group": "号码质量",
+          "description": "value 对象：号码吞吐等级变更载荷（§5.5 官方样本逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.display_phone_number",
+          "title": "商家显示号码",
+          "type": "string",
+          "group": "号码质量",
+          "description": "商家号码，纯数字 E.164 无 + 前缀（官方样本 15550783881）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.event",
+          "title": "号码事件",
+          "type": "string",
+          "group": "号码质量",
+          "description": "THROUGHPUT_UPGRADE（官方样本逐字；号码 throughput 等级变更事件，§2.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.current_limit",
+          "title": "当前限额",
+          "type": "string",
+          "group": "号码质量",
+          "description": "TIER_UNLIMITED（官方样本逐字；默认 80 mps、达标升 1000 mps，超限报 130429，§6）。",
+          "required": true
+        },
+        {
+          "path": "object",
+          "title": "信封对象",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp_business_account（§5.5 键序在 entry 之后收尾）。",
+          "required": true
+        }
+      ]
+    },
+    "wa-capability-update": {
+      "version": "2026.09",
+      "source": "https://developers.facebook.com/docs/whatsapp/business-management-api/webhooks/components/",
+      "fields": [
+        {
+          "path": "entry",
+          "title": "条目数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "entry[] 数组在前、object 收尾（管理面信封同 §5.4/§5.5 键序）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].id",
+          "title": "WABA ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "WhatsApp Business Account ID，纯数字串（取 §5.2 样本同形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].time",
+          "title": "事件时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "秒级 Unix 时间戳，数字形态（同形态占位，取 §5.5 样本时刻）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes",
+          "title": "变更数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "changes[] 数组，field 标注订阅字段、value 携带载荷（管理面信封同 §5.4）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].field",
+          "title": "订阅字段",
+          "type": "string",
+          "group": "能力变更",
+          "description": "business_capability_update（WABA/商业组合能力变更，§2.2 组件表逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value",
+          "title": "变更载荷",
+          "type": "json",
+          "group": "能力变更",
+          "description": "value 对象：官方未给载荷样本，按 §2.2/messaging-limits 页实锤字段名构造占位。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.max_daily_conversations_per_business",
+          "title": "组合日限额",
+          "type": "number",
+          "group": "能力变更",
+          "description": "v24.0+ 字段名（messaging-limits 页实锤；旧口径 max_daily_conversation_per_phone 已于 2026-02 移除）。值为占位：100K 阶梯（新口径 250/2K/10K/100K/Unlimited，§6）。",
+          "required": true
+        },
+        {
+          "path": "object",
+          "title": "信封对象",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp_business_account（管理面信封在 entry 之后收尾）。",
+          "required": true
+        }
+      ]
+    },
+    "wa-account-update": {
+      "version": "2026.09",
+      "source": "https://developers.facebook.com/docs/whatsapp/business-management-api/webhooks/components/",
+      "fields": [
+        {
+          "path": "entry",
+          "title": "条目数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "entry[] 数组在前、object 收尾（管理面信封同 §5.4/§5.5 键序）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].id",
+          "title": "WABA ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "WhatsApp Business Account ID，纯数字串（取 §5.2 样本同形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].time",
+          "title": "事件时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "秒级 Unix 时间戳，数字形态（同形态占位，取 §5.5 样本时刻）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes",
+          "title": "变更数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "changes[] 数组，field 标注订阅字段、value 携带载荷（管理面信封同 §5.4）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].field",
+          "title": "订阅字段",
+          "type": "string",
+          "group": "账户更新",
+          "description": "account_update（WABA 变更：企业验证/主营业地/政策违规/offboard 等，§2.2 组件表；订阅语义由 field 名承载）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value",
+          "title": "变更载荷",
+          "type": "json",
+          "group": "账户更新",
+          "description": "value 对象：account_update 全事件表待核验(09-27)（§7-11），官方无可用载荷样本——按空对象占位，勿据此实现业务分支。",
+          "required": true
+        },
+        {
+          "path": "object",
+          "title": "信封对象",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp_business_account（管理面信封在 entry 之后收尾）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

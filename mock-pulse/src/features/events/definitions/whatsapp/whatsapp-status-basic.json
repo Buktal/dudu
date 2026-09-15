@@ -1,0 +1,275 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "whatsapp",
+  "version": "2026.09",
+  "schemas": {
+    "wa-status-read": {
+      "version": "2026.09",
+      "source": "https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/status",
+      "fields": [
+        {
+          "path": "object",
+          "title": "信封对象",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp_business_account（信封同 §5.2 官方样本）。",
+          "required": true
+        },
+        {
+          "path": "entry",
+          "title": "条目数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "entry[] 数组，元素 id 为 WABA ID（信封同 §5.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].id",
+          "title": "WABA ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "WhatsApp Business Account ID，纯数字串（取 §5.2 样本同形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes",
+          "title": "变更数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "changes[] 数组，field 标注订阅字段、value 携带载荷（信封同 §5.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].field",
+          "title": "订阅字段",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 messages（statuses 随 messages 字段推送）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value",
+          "title": "变更载荷",
+          "type": "json",
+          "group": "回调信封",
+          "description": "value 对象：官方 read 全量样本未给，按 statuses 基础五字段构造（conversation/pricing 按 v24.0+ 口径只落在其中一条状态，不落 read）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.messaging_product",
+          "title": "消息产品",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata",
+          "title": "商家元数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "商家侧号码元数据：display_phone_number + phone_number_id。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata.display_phone_number",
+          "title": "商家显示号码",
+          "type": "string",
+          "group": "回调信封",
+          "description": "商家号码（取 §5.2 样本同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata.phone_number_id",
+          "title": "号码 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "电话号码 ID（取 §5.2 样本同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses",
+          "title": "状态数组",
+          "type": "json",
+          "group": "出站状态",
+          "description": "statuses[] 数组（read 态）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].id",
+          "title": "消息 ID（wamid）",
+          "type": "string",
+          "group": "出站状态",
+          "description": "wamid.HBgL… 形态（取 §5.3 发送响应样本 wamid 逐字）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].status",
+          "title": "状态",
+          "type": "string",
+          "group": "出站状态",
+          "description": "read（已在打开的聊天线程展示，两蓝勾；§2.1 状态枚举逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].timestamp",
+          "title": "状态时刻",
+          "type": "string",
+          "group": "出站状态",
+          "description": "秒级 Unix 时间戳字符串（同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].recipient_id",
+          "title": "收件人",
+          "type": "string",
+          "group": "出站状态",
+          "description": "接收状态的用户号码（取 §5.2 样本同形态占位）。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    },
+    "wa-status-failed": {
+      "version": "2026.09",
+      "source": "https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/status",
+      "fields": [
+        {
+          "path": "object",
+          "title": "信封对象",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp_business_account（信封同 §5.2 官方样本）。",
+          "required": true
+        },
+        {
+          "path": "entry",
+          "title": "条目数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "entry[] 数组，元素 id 为 WABA ID（信封同 §5.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].id",
+          "title": "WABA ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "WhatsApp Business Account ID，纯数字串（取 §5.2 样本同形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes",
+          "title": "变更数组",
+          "type": "json",
+          "group": "回调信封",
+          "description": "changes[] 数组，field 标注订阅字段、value 携带载荷（信封同 §5.2）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].field",
+          "title": "订阅字段",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 messages（statuses 随 messages 字段推送）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value",
+          "title": "变更载荷",
+          "type": "json",
+          "group": "回调信封",
+          "description": "value 对象：官方 failed 全量样本未给，按 statuses 基础字段 + errors 挂载构造（§2.1 错误挂载三处：outbound 错误在 statuses[] 内）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.messaging_product",
+          "title": "消息产品",
+          "type": "string",
+          "group": "回调信封",
+          "description": "恒为 whatsapp。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata",
+          "title": "商家元数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "商家侧号码元数据：display_phone_number + phone_number_id。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata.display_phone_number",
+          "title": "商家显示号码",
+          "type": "string",
+          "group": "回调信封",
+          "description": "商家号码（取 §5.2 样本同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.metadata.phone_number_id",
+          "title": "号码 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "电话号码 ID（取 §5.2 样本同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses",
+          "title": "状态数组",
+          "type": "json",
+          "group": "出站状态",
+          "description": "statuses[] 数组（failed 态；同一用户多设备时 delivered 与 failed 可并存，§3.3）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].id",
+          "title": "消息 ID（wamid）",
+          "type": "string",
+          "group": "出站状态",
+          "description": "wamid.HBgL… 形态（取 §5.3 发送响应样本 wamid 逐字）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].status",
+          "title": "状态",
+          "type": "string",
+          "group": "出站状态",
+          "description": "failed（发送/投递失败，红三角；§2.1 状态枚举逐字）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].timestamp",
+          "title": "状态时刻",
+          "type": "string",
+          "group": "出站状态",
+          "description": "秒级 Unix 时间戳字符串（同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].recipient_id",
+          "title": "收件人",
+          "type": "string",
+          "group": "出站状态",
+          "description": "接收状态的用户号码（取 §5.2 样本同形态占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].errors",
+          "title": "错误数组",
+          "type": "json",
+          "group": "错误挂载",
+          "description": "statuses[].errors（outbound 错误挂载处，§2.1 实锤；完整错误对象形态待核验(09-27)）。",
+          "required": true
+        },
+        {
+          "path": "entry[0].changes[0].value.statuses[0].errors[0].code",
+          "title": "错误码",
+          "type": "number",
+          "group": "错误挂载",
+          "description": "131035（事实库 §3.3 实锤：No Storage 号码 1 小时重试窗超限丢弃后改发的错误 webhook 错误码；其余错误对象字段待核验(09-27) 不收录）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

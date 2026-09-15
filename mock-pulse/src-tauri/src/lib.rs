@@ -42,6 +42,7 @@ pub fn run() {
             connections::connections_test_meituan,
             connections::connections_test_eleme,
             connections::connections_test_alipay,
+            connections::connections_test_whatsapp,
             definitions::definitions_load,
             definitions::definitions_save,
             events::events_load,

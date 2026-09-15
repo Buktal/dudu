@@ -15,6 +15,7 @@ import type {
   WechatMpConnectionConfig,
   WecomConnectionConfig,
   WeiboConnectionConfig,
+  WhatsappConnectionConfig,
   XiaohongshuConnectionConfig,
 } from "../api";
 
@@ -68,6 +69,11 @@ import type {
  *   Base64(RSA-SHA256(剔除 sign/sign_type 后字典序 k=v 串)) 的签名私钥事实库
  *   §4.3/§4.1，与商户侧支付宝公钥成对，缺失即签名不可复算；appId 随载荷
  *   信封记录不参与必填集；应答 200 + success、fail 重推 25h 8 次 §3.3）
+ * - WhatsApp 核（Cloud API Webhook）：url + appSecret + verifyToken 必填
+ *   （X-Hub-Signature-256 = HMAC-SHA256(AppSecret, 原始 body) 头验签的签名源
+ *   事实库 §4.1，appSecret 缺失即签名不可复算；verifyToken 为 GET 三参握手
+ *   hub.verify_token 比对值 §3.2，缺失即握手必 403，与 App Secret 是两个
+ *   无关值）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -108,6 +114,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && elemeReady(config);
     case "alipay":
       return config.url.trim() !== "" && alipayReady(config);
+    case "whatsapp":
+      return config.url.trim() !== "" && whatsappReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -334,4 +342,15 @@ function elemeReady(config: ElemeConnectionConfig): boolean {
  */
 function alipayReady(config: AlipayConnectionConfig): boolean {
   return config.appPrivateKey.trim() !== "";
+}
+
+/**
+ * WhatsApp 核（Cloud API Webhook）：url + appSecret + verifyToken 必填——
+ * X-Hub-Signature-256 = sha256=hex(HMAC-SHA256(AppSecret, 原始 body))（事实库
+ * §4.1），appSecret 缺失即签名不可复算；verifyToken 为 GET 三参握手
+ * hub.verify_token 比对值（§3.2），缺失即握手必 403，与 App Secret 是两个
+ * 无关值。载荷不设加密字段（§4），无 AES 字段。
+ */
+function whatsappReady(config: WhatsappConnectionConfig): boolean {
+  return config.appSecret.trim() !== "" && config.verifyToken.trim() !== "";
 }

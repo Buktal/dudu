@@ -81,6 +81,13 @@ function requestSnapshot(step: RunStep): string {
     // 快照即信封 notify_time
     return `POST ${step.url}\nContent-Type: application/x-www-form-urlencoded\n\n${step.requestBody ?? step.payload}`;
   }
+  if (step.channel === "whatsapp") {
+    // WhatsApp（Cloud API Webhook）：验签在 header（X-Hub-Signature-256 =
+    // sha256=hex(HMAC-SHA256(AppSecret, 原始 body))，载荷不设加密字段）；
+    // body 即明文 JSON 逐字节透传，msgId 快照取 wamid（messages[].id /
+    // statuses[].id 三处同源），无独立时间戳要素
+    return `POST ${step.url}\nContent-Type: application/json\nX-Hub-Signature-256: ${step.signature}\n\n${step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

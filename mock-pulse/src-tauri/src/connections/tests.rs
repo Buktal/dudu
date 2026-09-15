@@ -134,6 +134,11 @@ fn adapter_registry_covers_every_config_variant() {
         app_id: String::new(),
         app_private_key: String::new(),
     };
+    let whatsapp_config = ConnectionConfig::Whatsapp {
+        url: String::new(),
+        app_secret: String::new(),
+        verify_token: String::new(),
+    };
     assert_eq!(adapter_of(&douyin_config).id(), "douyin");
     assert_eq!(adapter_of(&wecom_config).id(), "wecom");
     assert_eq!(adapter_of(&wechat_mp_config).id(), "wechat-mp");
@@ -214,7 +219,12 @@ fn adapter_registry_covers_every_config_variant() {
         adapter_by_channel("alipay").map(|adapter| adapter.id()),
         Some("alipay")
     );
+    assert_eq!(
+        adapter_by_channel("whatsapp").map(|adapter| adapter.id()),
+        Some("whatsapp")
+    );
     assert!(adapter_by_channel("telegram").is_none());
+    assert_eq!(adapter_of(&whatsapp_config).id(), "whatsapp");
     // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
     for adapter in ADAPTERS {
         assert_eq!(
@@ -280,6 +290,10 @@ fn adapter_registry_covers_every_config_variant() {
         assert_eq!(
             adapter.url(&alipay_config).is_some(),
             adapter.matches(&alipay_config)
+        );
+        assert_eq!(
+            adapter.url(&whatsapp_config).is_some(),
+            adapter.matches(&whatsapp_config)
         );
     }
 }

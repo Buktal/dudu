@@ -56,6 +56,7 @@ import {
   wechatMpTestNote,
   wecomTestNote,
   weiboTestNote,
+  whatsappTestNote,
   xiaohongshuTestNote,
 } from "./test-notes";
 
@@ -75,7 +76,8 @@ function wireBadgeLabel(
     channel === "taobao" ||
     channel === "jingdong" ||
     channel === "pinduoduo" ||
-    channel === "eleme"
+    channel === "eleme" ||
+    channel === "whatsapp"
   ) {
     return "JSON";
   }
@@ -134,7 +136,9 @@ export function ConnectionsView() {
                                 ? actions.defaultElemeConnection
                                 : channel === "alipay"
                                   ? actions.defaultAlipayConnection
-                                  : actions.defaultWecomConnection);
+                                  : channel === "whatsapp"
+                                    ? actions.defaultWhatsappConnection
+                                    : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -351,11 +355,13 @@ export function ConnectionsView() {
                                             ? elemeTestNote()
                                             : channel === "alipay"
                                               ? alipayTestNote()
-                                              : wecomTestNote(
-                                                  draft.channel === "wecom"
-                                                    ? draft.system
-                                                    : "agent",
-                                                )}
+                                              : channel === "whatsapp"
+                                                ? whatsappTestNote()
+                                                : wecomTestNote(
+                                                    draft.channel === "wecom"
+                                                      ? draft.system
+                                                      : "agent",
+                                                  )}
               </CardDescription>
               <CardAction>
                 <Button

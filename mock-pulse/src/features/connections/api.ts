@@ -262,6 +262,23 @@ export type AlipayConnectionConfig = {
 };
 
 /**
+ * WhatsApp 连接配置形状（与 Rust 端 ConnectionConfig::Whatsapp 内标一致）：
+ * Cloud API Webhook（单 URL + 必订 messages）——POST 明文 JSON + 头
+ * X-Hub-Signature-256 = sha256(HMAC-SHA256(AppSecret, 原始 body)) 验签
+ * （事实库 §4.1，载荷不设加密字段）；verifyToken 为 GET 三参握手
+ * hub.verify_token 比对值（§3.2，与 App Secret 是两个无关值）。
+ */
+export type WhatsappConnectionConfig = {
+  channel: "whatsapp";
+  /** 回调目标地址，事件与剧本共享（官方要求 HTTPS + 有效 TLS 证书，自签不接受） */
+  url: string;
+  /** App Secret（App Settings > Basic）：X-Hub-Signature-256 头验签的签名源 */
+  appSecret: string;
+  /** Verify Token（回调配置自选任意字符串）：GET 三参握手比对值 */
+  verifyToken: string;
+};
+
+/**
  * 连接配置按渠道区分形状（与 Rust 端 ConnectionConfig 内标枚举一致，
  * 以 channel 字段判别；持久化与 IPC 透传均为 camelCase）。
  */
@@ -344,7 +361,8 @@ export type ConnectionConfig =
   | PinduoduoConnectionConfig
   | MeituanConnectionConfig
   | ElemeConnectionConfig
-  | AlipayConnectionConfig;
+  | AlipayConnectionConfig
+  | WhatsappConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -499,4 +517,13 @@ export function testAlipayConnection(
   config: AlipayConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_alipay", { config });
+}
+
+/** 按 WhatsApp GET 三参握手协议测试连接（官方配置保存即触发：GET 带
+ *  hub.mode=subscribe + hub.challenge + hub.verify_token，verify_token 匹配
+ *  则 200 裸回 challenge 纯文本非 JSON，不匹配 403） */
+export function testWhatsappConnection(
+  config: WhatsappConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_whatsapp", { config });
 }

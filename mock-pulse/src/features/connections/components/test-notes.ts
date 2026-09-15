@@ -125,3 +125,8 @@ export function elemeTestNote(): string {
 export function alipayTestNote(): string {
   return "发送推送探针（POST 官方支付异步通知核验样本表单，sign = Base64(RSA-SHA256(剔除 sign/sign_type 后字典序 k=v 串))，RSA2），检查服务是否返回 HTTP 200 并回纯文本 success（官方网关验证握手细节待核验，探针语义同普通推送）。";
 }
+
+/** WhatsApp 握手文案（事实库 §3.2：GET 三参握手，verify_token 匹配 200 裸回 challenge） */
+export function whatsappTestNote(): string {
+  return "发送 GET（hub.mode=subscribe + 随机 hub.challenge + hub.verify_token），检查服务是否比对 verify_token 并以 HTTP 200 原样裸回 challenge（纯文本非 JSON；不匹配回 403 等非 200）。";
+}

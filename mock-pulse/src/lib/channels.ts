@@ -196,7 +196,7 @@ export const CHANNEL_REGISTRY = {
     protocol: "Webhook · JSON 回调",
     note: "Cloud API Webhook：JSON 报文，GET 三参握手 200 裸回 challenge，X-Hub-Signature-256 = HMAC-SHA256(AppSecret, body)",
     icon: "Phone",
-    implemented: false,
+    implemented: true,
   },
   telegram: {
     name: "Telegram",

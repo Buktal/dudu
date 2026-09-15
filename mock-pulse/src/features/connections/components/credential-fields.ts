@@ -9,6 +9,7 @@ import type {
   WechatMpConnectionConfig,
   WecomConnectionConfig,
   WeiboConnectionConfig,
+  WhatsappConnectionConfig,
   XiaohongshuConnectionConfig,
 } from "../api";
 import {
@@ -368,6 +369,29 @@ function kuaishouFields(draft: KuaishouConnectionConfig): CredentialField[] {
   ];
 }
 
+/**
+ * WhatsApp 凭证字段（事实库 §3.2/§4.1）：App Secret 为 X-Hub-Signature-256
+ * 头验签密钥，Verify Token 为 GET 三参握手比对值——两个无关值，缺一不可。
+ */
+function whatsappFields(draft: WhatsappConnectionConfig): CredentialField[] {
+  return [
+    {
+      key: "appSecret",
+      label: "App Secret",
+      note: "应用密钥：X-Hub-Signature-256 = sha256=hex(HMAC-SHA256(AppSecret, 原始 body)) 头验签的签名源；必须对原始字节计算，先 JSON.parse 再重序列化会改变摘要。",
+      value: draft.appSecret,
+      secret: true,
+    },
+    {
+      key: "verifyToken",
+      label: "Verify Token",
+      note: "回调配置自选任意字符串：GET 三参握手 hub.verify_token 比对值（不匹配目标回 403）；与 App Secret 是两个无关值。",
+      value: draft.verifyToken,
+      secret: true,
+    },
+  ];
+}
+
 /** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
 export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
   switch (draft.channel) {
@@ -401,6 +425,8 @@ export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
       return elemeFields(draft);
     case "alipay":
       return alipayFields(draft);
+    case "whatsapp":
+      return whatsappFields(draft);
     case "wecom":
       return wecomFields(draft);
     default: {

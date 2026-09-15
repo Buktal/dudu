@@ -18,6 +18,7 @@ import { MINI_DEFINITIONS } from "./wechat-mini";
 import { MP_DEFINITIONS } from "./wechat-mp";
 import { WECOM_DEFINITIONS } from "./wecom";
 import { WB_DEFINITIONS } from "./weibo";
+import { WA_DEFINITIONS } from "./whatsapp";
 import { XHS_DEFINITIONS } from "./xiaohongshu";
 
 const DEFINITIONS_BY_CHANNEL = {
@@ -37,11 +38,12 @@ const DEFINITIONS_BY_CHANNEL = {
   meituan: MT_DEFINITIONS,
   eleme: ELE_DEFINITIONS,
   alipay: ALI_DEFINITIONS,
+  whatsapp: WA_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 + 饿了么 6 + 支付宝 3 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(254);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 + 饿了么 6 + 支付宝 3 + WhatsApp 9 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(263);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -64,6 +66,7 @@ describe("事件模板聚合注册表", () => {
       "meituan",
       "eleme",
       "alipay",
+      "whatsapp",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -447,6 +450,20 @@ describe("事件模板聚合注册表", () => {
       "ali-gateway-appauth-cancelled",
       "ali-gateway-fund-trans-changed",
     ]);
+    expect(schemasByChannel("whatsapp").map((schema) => schema.id)).toEqual([
+      // 入站文本 1（事实库 §5.1 set-up-webhooks 页核验样本逐字）
+      "wa-inbound-text",
+      // 出站状态 4（§2.1 状态枚举；delivered §5.2 核验样本逐字，其余构造）
+      "wa-status-delivered",
+      "wa-status-sent",
+      "wa-status-read",
+      "wa-status-failed",
+      // 管理面组件事件 4（§2.2 组件表；模板状态/号码吞吐 §5.4/§5.5 逐字）
+      "wa-template-status-update",
+      "wa-phone-quality-update",
+      "wa-capability-update",
+      "wa-account-update",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -466,6 +483,7 @@ describe("事件模板聚合注册表", () => {
           "meituan",
           "eleme",
           "alipay",
+          "whatsapp",
         ].includes(channel.id)
       )
         continue;

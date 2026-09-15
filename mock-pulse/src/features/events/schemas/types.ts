@@ -48,7 +48,12 @@ export type IdKind =
   | "pddBizId" // 拼多多订单号：官方未给格式样本，按电商单号数字串同族形态（9~15 位）
   | "mtBizId" // 美团订单号：官方样本 27061900338318741 为 17 位数字串（bigint(20) 存储，15~17 位）
   | "eleBizId" // 饿了么订单号：官方样本 12637645858619059 为 17 位、100025663239521904 为 18 位数字串（首位取 1 恒在 int64 内，17~18 位）
-  | "aliNotifyId"; // 支付宝通知校验 ID notify_id：官方样本 ac05099…943 为 35 位小写十六进制（§5.1，128 位口径；重试不变幂等键 §3.4，三地址模板共用）
+  | "aliNotifyId" // 支付宝通知校验 ID notify_id：官方样本 ac05099…943 为 35 位小写十六进制（§5.1，128 位口径；重试不变幂等键 §3.4，三地址模板共用）
+  | "waWamid" // WhatsApp wamid：wamid.HBgL + base64 风格串（官方样本形态；messages[].id / statuses[].id / 发送响应三处同源幂等键，§附速查）
+  | "waPhone" // WhatsApp 电话 ID：纯数字 E.164 无 + 前缀（官方样本 16505551234/15550783881，wa_id/from/recipient_id/display_phone_number 共用族）
+  | "waAccountId" // WhatsApp 账户/号码数字 ID：15 位数字串（官方样本 WABA 102290129340398、phone_number_id 106540352242922）
+  | "waConversationId" // WhatsApp 会话 ID：32 位小写十六进制（官方样本 6ceb9d929c9bdc4f90e967a32f8639b4）
+  | "waTemplateId"; // WhatsApp 模板 ID：16 位数字 JSON number（官方样本 1689556908129832，恒在 2^53 内）
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */

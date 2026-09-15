@@ -36,11 +36,13 @@ import {
   testWechatMpConnection as testWechatMpApi,
   testWecomConnection as testWecomApi,
   testWeiboConnection as testWeiboApi,
+  testWhatsappConnection as testWhatsappApi,
   testXiaohongshuConnection as testXiaohongshuApi,
   type WechatMiniConnectionConfig,
   type WechatMpConnectionConfig,
   type WecomConnectionConfig,
   type WeiboConnectionConfig,
+  type WhatsappConnectionConfig,
   type XiaohongshuConnectionConfig,
 } from "../api";
 
@@ -205,6 +207,14 @@ export const defaultAlipayConnection: AlipayConnectionConfig = {
   appPrivateKey: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（X-Hub-Signature-256 验签起步） */
+export const defaultWhatsappConnection: WhatsappConnectionConfig = {
+  channel: "whatsapp",
+  url: "http://127.0.0.1:8080/webhooks/whatsapp",
+  appSecret: "",
+  verifyToken: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -227,6 +237,7 @@ export const initialConnectionsState: ConnectionsState = {
     meituan: defaultMeituanConnection,
     eleme: defaultElemeConnection,
     alipay: defaultAlipayConnection,
+    whatsapp: defaultWhatsappConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -288,6 +299,8 @@ export const testConnection = createAsyncThunk(
         return testElemeApi(config);
       case "alipay":
         return testAlipayApi(config);
+      case "whatsapp":
+        return testWhatsappApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
