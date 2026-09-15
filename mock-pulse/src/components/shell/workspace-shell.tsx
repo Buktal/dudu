@@ -30,6 +30,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { WindowControls } from "@/components/window-controls";
 import { WorkspaceDialog } from "@/components/workspace-dialog";
 
 export type NavEntry<T extends string = string> = {
@@ -104,7 +105,10 @@ export function WorkspaceShell<T extends string>({
         style={{ "--sidebar-width": "12.5rem" } as CSSProperties}
       >
         <Sidebar collapsible="icon" aria-label="主导航">
-          <SidebarHeader className="gap-3 px-3 py-6">
+          <SidebarHeader
+            className="gap-3 px-3 py-6"
+            data-tauri-drag-region="deep"
+          >
             <div className="flex items-center gap-2 px-2 group-data-[collapsible=icon]:px-0">
               <img
                 src={`${import.meta.env.BASE_URL}logo.svg`}
@@ -159,7 +163,10 @@ export function WorkspaceShell<T extends string>({
           <SidebarRail aria-label="收起或展开主导航" title="收起或展开主导航" />
         </Sidebar>
         <SidebarInset className="h-dvh min-h-0 min-w-0 overflow-hidden">
-          <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card px-4 lg:px-5">
+          <header
+            data-tauri-drag-region="deep"
+            className="flex h-14 shrink-0 select-none items-center gap-3 border-b bg-card px-4 lg:px-5"
+          >
             <SidebarTrigger aria-label="切换主导航" />
             <Separator orientation="vertical" className="h-4" />
             <div className="flex min-w-0 items-center gap-2 text-sm">
@@ -169,21 +176,19 @@ export function WorkspaceShell<T extends string>({
               <strong className="truncate font-medium">{currentTitle}</strong>
             </div>
             <div className="min-w-0 flex-1" />
-            {
-              <Button
-                variant="outline"
-                size="sm"
-                className="min-[900px]:hidden"
-                onClick={() => request(currentView)}
-              >
-                <FolderIcon data-icon="inline-start" />
-                {currentView === "connections"
-                  ? "平台列表"
-                  : currentView === "runs"
-                    ? "运行列表"
-                    : "素材库"}
-              </Button>
-            }
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-[900px]:hidden"
+              onClick={() => request(currentView)}
+            >
+              <FolderIcon data-icon="inline-start" />
+              {currentView === "connections"
+                ? "平台列表"
+                : currentView === "runs"
+                  ? "运行列表"
+                  : "素材库"}
+            </Button>
             <Badge variant="secondary" className="hidden lg:inline-flex">
               本地联调
             </Badge>
@@ -202,6 +207,9 @@ export function WorkspaceShell<T extends string>({
               <InfoIcon />
             </IconButton>
             <ThemeMenu />
+            <div className="-mr-4 flex self-stretch lg:-mr-5">
+              <WindowControls />
+            </div>
           </header>
           {children}
         </SidebarInset>
