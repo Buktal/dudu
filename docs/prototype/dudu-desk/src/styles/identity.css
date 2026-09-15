@@ -1,0 +1,86 @@
+.avatar {
+  width: 41px;
+  height: 41px;
+  display: inline-flex;
+  position: relative;
+  border-radius: 13px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+.avatar > svg {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+}
+.avatar-small {
+  width: 29px;
+  height: 29px;
+  border-radius: 10px;
+}
+.avatar-large {
+  width: 64px;
+  height: 64px;
+  border-radius: 21px;
+}
+.avatar-fallback {
+  color: #465b70;
+  font-size: 18px;
+  font-weight: 600;
+}
+.avatar-large .avatar-fallback {
+  font-size: 24px;
+}
+.avatar-small .avatar-fallback {
+  font-size: 12px;
+}
+.avatar-source {
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  background: white;
+  border: 2px solid white;
+  border-radius: 7px;
+  box-shadow: 0 1px 3px #18345214;
+}
+.avatar-source > svg {
+  width: 12px;
+  height: 12px;
+}
+.redbook-glyph {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+.source-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 16px;
+  padding: 0 5px;
+  border-radius: 4px;
+  width: fit-content;
+}
+.source-tag > svg {
+  width: 10px;
+  height: 10px;
+}
+.source-tag .redbook-glyph {
+  font-size: 9px;
+}
+.bag-illustration {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.profile-account {
+  color: var(--secondary-ink);
+  font-size: 11px;
+}

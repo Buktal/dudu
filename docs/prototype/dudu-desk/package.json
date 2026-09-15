@@ -1,0 +1,12 @@
+{
+  "name": "dudu-desk-explorations",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node tooling.mjs dev",
+    "build": "node tooling.mjs build",
+    "check:type": "node ../../../dudu-desk/node_modules/typescript/bin/tsc --project tsconfig.json",
+    "lint": "node ../../../dudu-desk/node_modules/@biomejs/biome/bin/biome check src tooling.mjs"
+  },
+  "packageManager": "yarn@4.18.0"
+}

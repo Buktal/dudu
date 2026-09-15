@@ -1,0 +1,13 @@
+@media (min-width: 761px) {
+  .parallel-shell.mobile-queue-open .parallel-queue {
+    display: none;
+  }
+  .parallel-shell.mobile-queue-open .parallel-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 1091px) {
+  .parallel-shell.mobile-queue-open.with-info .parallel-workspace {
+    grid-template-columns: minmax(0, 1fr) 251px;
+  }
+}

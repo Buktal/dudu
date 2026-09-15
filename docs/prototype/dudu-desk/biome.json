@@ -1,0 +1,11 @@
+{
+  "extends": ["../../../dudu-desk/biome.json"],
+  "files": { "includes": ["src/**", "tooling.mjs"] },
+  "vcs": { "enabled": false },
+  "overrides": [{
+    "includes": ["src/components/ui/**", "src/components/magicui/**"],
+    "formatter": { "enabled": false },
+    "linter": { "enabled": false },
+    "assist": { "enabled": false }
+  }]
+}

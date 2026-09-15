@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["react", "react-dom"],
+    "typeRoots": ["../../../dudu-desk/node_modules/@types"],
+    "paths": {
+      "@desk/*": ["../../../dudu-desk/src/*"],
+      "@/*": ["./src/*"],
+      "react": ["../../../dudu-desk/node_modules/@types/react"],
+      "react/*": ["../../../dudu-desk/node_modules/@types/react/*"],
+      "react-dom/*": ["../../../dudu-desk/node_modules/@types/react-dom/*"],
+      "@faker-js/faker/locale/zh_CN": ["../../../dudu-desk/node_modules/@faker-js/faker/dist/locale/zh_CN.d.ts"],
+      "*": ["../../../dudu-desk/node_modules/*"]
+    }
+  },
+  "include": ["src"]
+}
