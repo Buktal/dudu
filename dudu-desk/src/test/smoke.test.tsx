@@ -1,17 +1,44 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ThemeProvider } from "@/components/theme-provider";
+import { InboxWorkspace, unavailableInboxApi } from "@/features/inbox";
 
-// 冒烟：证明 jsdom + testing-library + jest-dom matcher 接线可用。
-// 业务测试按 CLAUDE.md 约定落在被测文件同目录，不在此堆叠。
-function Hello() {
-  return <h1>hi</h1>;
-}
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
-describe("test setup smoke", () => {
-  it("renders and matches with jest-dom", () => {
-    render(<Hello />);
+describe("Desk application smoke", () => {
+  it("opens the production workspace with explicit unavailable service and no fixture conversations", async () => {
+    vi.stubGlobal("matchMedia", (media: string) => ({
+      media,
+      matches: false,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => true,
+    }));
+    render(
+      <ThemeProvider>
+        <InboxWorkspace api={unavailableInboxApi} />
+      </ThemeProvider>,
+    );
     expect(
-      screen.getByRole("heading", { level: 1, name: "hi" }),
+      await screen.findByRole("heading", { name: "会话" }),
     ).toBeInTheDocument();
+    expect(await screen.findAllByText("接待服务未连接")).not.toHaveLength(0);
+    expect(screen.getByRole("button", { name: "并肩模式" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "速答模式" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "主题色，当前杏桃橙" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^接待 / }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "发送" }),
+    ).not.toBeInTheDocument();
   });
 });

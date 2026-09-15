@@ -1,0 +1,165 @@
+import type { ApiFailure } from "@/lib/api-response";
+
+export type WorkContext = { agentId: string; workspaceId: string };
+export type RequestState = "idle" | "loading" | "ready" | "error";
+export type ConversationStatus = "needs-reply" | "waiting" | "closed";
+export type SendKind = "text" | "image" | "file" | "audio" | "video";
+
+export type VisitorIdentity = {
+  id: string;
+  externalUserId: string;
+  name?: string;
+  avatarUrl?: string;
+  channelId: string;
+  channelName: string;
+  accountId: string;
+  accountName: string;
+};
+
+export type ReplyCapability = {
+  state: "allowed" | "restricted" | "unknown";
+  kinds: SendKind[];
+  reason?: string;
+  nextStep?: string;
+  expiresAt?: string;
+  remaining?: number;
+  attachments?: { maxBytes: number; maxCount: number; mimeTypes: string[] };
+};
+
+export type Conversation = {
+  id: string;
+  identity: VisitorIdentity;
+  status: ConversationStatus;
+  unread: number;
+  starred: boolean;
+  preview: string;
+  updatedAt: string;
+  version: number;
+  capability: ReplyCapability;
+};
+
+export type ProfileField =
+  | { state: "available"; value: string }
+  | { state: "not-provided" | "empty" };
+
+export type VisitorProfile = {
+  conversationId: string;
+  version: number;
+  fields: { label: string; value: ProfileField }[];
+  tags: string[];
+  note: string;
+};
+
+export type MediaReference = {
+  id: string;
+  kind: Exclude<SendKind, "text">;
+  name: string;
+  mimeType: string;
+  size: number;
+  url?: string;
+};
+
+export type MessageBody =
+  | { type: "text"; text: string }
+  | { type: "image" | "audio" | "video" | "file"; media: MediaReference }
+  | { type: "reply"; text: string; attachments: MediaReference[] }
+  | { type: "link"; title?: string; url: string; description?: string }
+  | { type: "location"; label?: string; latitude: number; longitude: number }
+  | { type: "quote"; text: string; quotedText?: string; messageId?: string }
+  | {
+      type: "card";
+      kind: string;
+      externalId?: string;
+      title?: string;
+      url?: string;
+    }
+  | {
+      type: "unknown";
+      originalType: string;
+      explanation?: string;
+      sourceUrl?: string;
+    };
+
+export type DeliveryState =
+  | "sending"
+  | "accepted"
+  | "sent"
+  | "delivered"
+  | "read"
+  | "failed"
+  | "unconfirmed";
+
+export type InboxMessage = {
+  id: string;
+  serverId?: string;
+  clientRequestId?: string;
+  conversationId: string;
+  direction: "incoming" | "outgoing" | "system";
+  body: MessageBody;
+  createdAt: string;
+  sequence: number;
+  version: number;
+  delivery?: { state: DeliveryState; reason?: string };
+};
+
+export type ConversationQuery = {
+  search: string;
+  channelId: string;
+  status: ConversationStatus | "all";
+  starred: boolean;
+};
+
+export type Page<T> = { items: T[]; nextCursor: string | null; total?: number };
+export type RequestOptions = { context: WorkContext; signal: AbortSignal };
+export type SendTarget = {
+  conversationId: string;
+  visitorId: string;
+  channelId: string;
+  accountId: string;
+  externalUserId: string;
+};
+
+export type SendSubmission = {
+  clientRequestId: string;
+  target: SendTarget;
+  text: string;
+  attachments: MediaReference[];
+};
+
+export type PreparedAttachment = MediaReference;
+export type ConnectionState =
+  | "unavailable"
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "disconnected";
+export type InboxEvent = {
+  id: string;
+  context: WorkContext;
+  cursor: string;
+} & (
+  | { type: "conversation"; conversation: Conversation }
+  | { type: "message"; message: InboxMessage }
+  | {
+      type: "receipt";
+      conversationId: string;
+      messageId?: string;
+      clientRequestId?: string;
+      version: number;
+      delivery: NonNullable<InboxMessage["delivery"]>;
+    }
+  | {
+      type: "capability";
+      conversationId: string;
+      capability: ReplyCapability;
+      version: number;
+    }
+  | { type: "removed"; conversationId: string; version: number }
+);
+
+export type LoadState = {
+  status: RequestState;
+  error: ApiFailure | null;
+  nextCursor: string | null;
+  hasLoaded: boolean;
+};

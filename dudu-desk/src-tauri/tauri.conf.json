@@ -12,9 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "dudu-desk",
-        "width": 800,
-        "height": 600
+        "title": "嘟嘟 Desk",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 360,
+        "minHeight": 520,
+        "center": true
       }
     ],
     "security": {
