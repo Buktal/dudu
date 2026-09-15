@@ -36,7 +36,9 @@ export type IdKind =
   | "larkChatId" // 飞书 chat_id：oc_ + 32 位十六进制
   | "dingtalkMsgId" // 钉钉机器人 msgId：24 字符 base64 风格 + "=="（官方样本形态）
   | "qqRobotMsgId" // QQ 消息 id：ROBOT1.0_ 前缀 + 56 位字母数字（官方样本掩码长度）
-  | "qqOpenId"; // QQ openid：32 位大写十六进制（user/group/member_openid 形态）
+  | "qqOpenId" // QQ openid：32 位大写十六进制（user/group/member_openid 形态）
+  | "weiboUid" // 微博 UID：int64 数字形态的 receiver_id/sender_id（官方样本 10 位）
+  | "weiboCreatedAt"; // 微博 created_at：Mon Jul 16 18:09:20 +0800 2012 字符串形态
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */

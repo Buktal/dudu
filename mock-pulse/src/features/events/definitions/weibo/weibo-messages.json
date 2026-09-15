@@ -1,0 +1,241 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "weibo",
+  "version": "2026.09",
+  "schemas": {
+    "weibo-text": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E6%99%AE%E9%80%9A%E6%B6%88%E6%81%AF",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "固定为 text（纯文本私信，type 直接判型）。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID（官方样本 1902538057）；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "发送者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "用户侧的 int64 数字 UID（官方样本 2489518277）；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键（官方无消息 ID，推荐 FromUserName + CreateTime 排重）。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "私信文本内容（官方样本「私信或留言内容」）。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "data",
+          "title": "扩展数据",
+          "type": "json",
+          "group": "载荷骨架",
+          "description": "text 私信恒为空对象 {}（官方样本原文）。"
+        }
+      ]
+    },
+    "weibo-position": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E6%99%AE%E9%80%9A%E6%B6%88%E6%81%AF",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "固定为 position（位置私信；注意不是 location，微信兼容 XML 侧才是 location）。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "发送者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "用户侧的 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "位置文案",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "位置原文案（官方样本「我在这里: http://t.cn/zQgLLYO」）；无文案时默认「发送了一个位置」。",
+          "required": true
+        },
+        {
+          "path": "data.longitude",
+          "title": "经度",
+          "type": "string",
+          "group": "位置数据",
+          "description": "字符串形态的经度（官方样本 116.308586）。"
+        },
+        {
+          "path": "data.latitude",
+          "title": "纬度",
+          "type": "string",
+          "group": "位置数据",
+          "description": "字符串形态的纬度（官方样本 39.982525）。"
+        }
+      ]
+    },
+    "weibo-voice": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E6%99%AE%E9%80%9A%E6%B6%88%E6%81%AF",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "固定为 voice（语音私信）。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "发送者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "用户侧的 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "语音消息的默认文案「发了一个语音消息」（官方样本原文）。",
+          "required": true
+        },
+        {
+          "path": "data.vfid",
+          "title": "发送者语音 ID",
+          "type": "number",
+          "group": "媒体数据",
+          "description": "发送者用此 ID 查看语音（官方行内注释；样本 821804459，int64 数字形态）。"
+        },
+        {
+          "path": "data.tovfid",
+          "title": "接收者语音 ID",
+          "type": "number",
+          "group": "媒体数据",
+          "description": "接收者用此 ID 查看语音（官方行内注释；样本 821804469）；媒体下载即 GET upload.api.weibo.com/2/mss/msget?fid=<tovfid>。"
+        }
+      ]
+    },
+    "weibo-image": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E6%99%AE%E9%80%9A%E6%B6%88%E6%81%AF",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "固定为 image（图片私信）。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "发送者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "用户侧的 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "图片消息的默认文案「发了一张图片」（官方样本原文）。",
+          "required": true
+        },
+        {
+          "path": "data.vfid",
+          "title": "发送者图片 ID",
+          "type": "number",
+          "group": "媒体数据",
+          "description": "发送者用此 ID 查看图片（官方行内注释；样本 821804459，int64 数字形态）。"
+        },
+        {
+          "path": "data.tovfid",
+          "title": "接收者图片 ID",
+          "type": "number",
+          "group": "媒体数据",
+          "description": "接收者用此 ID 查看图片（官方行内注释；样本 821804469）；媒体下载即 GET upload.api.weibo.com/2/mss/msget?fid=<tovfid>。"
+        }
+      ]
+    }
+  }
+}

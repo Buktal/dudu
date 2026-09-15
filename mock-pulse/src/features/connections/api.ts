@@ -80,6 +80,20 @@ export type QqConnectionConfig = {
 };
 
 /**
+ * 微博连接配置形状（与 Rust 端 ConnectionConfig::Weibo 内标一致）：
+ * 验签密钥是 APPKEY 对应的 App Secret（官方明示非自定义 Token，事实库 §4.1），
+ * GET 四参握手与每次推送的三参 sha1 签名都吃它；APPKEY 本身不参与推送协议，
+ * 不设字段。
+ */
+export type WeiboConnectionConfig = {
+  channel: "weibo";
+  /** 回调目标地址，事件与剧本共享 */
+  url: string;
+  /** APPKEY 对应的 App Secret：三参 sha1 排序验签的签名源 */
+  appSecret: string;
+};
+
+/**
  * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
  * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
  * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
@@ -171,7 +185,8 @@ export type ConnectionConfig =
   | WechatMiniConnectionConfig
   | FeishuConnectionConfig
   | DingtalkConnectionConfig
-  | QqConnectionConfig;
+  | QqConnectionConfig
+  | WeiboConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -244,4 +259,12 @@ export function testQqConnection(
   config: QqConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_qq", { config });
+}
+
+/** 按微博 GET 四参握手协议测试连接（signature=sha1(字典序排序三参)，
+ *  目标须原样回显 echostr；官方 5 秒应答窗口） */
+export function testWeiboConnection(
+  config: WeiboConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_weibo", { config });
 }

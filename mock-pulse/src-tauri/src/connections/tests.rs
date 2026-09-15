@@ -88,6 +88,10 @@ fn adapter_registry_covers_every_config_variant() {
         app_id: String::new(),
         app_secret: String::new(),
     };
+    let weibo_config = ConnectionConfig::Weibo {
+        url: String::new(),
+        app_secret: String::new(),
+    };
     assert_eq!(adapter_of(&douyin_config).id(), "douyin");
     assert_eq!(adapter_of(&wecom_config).id(), "wecom");
     assert_eq!(adapter_of(&wechat_mp_config).id(), "wechat-mp");
@@ -95,6 +99,7 @@ fn adapter_registry_covers_every_config_variant() {
     assert_eq!(adapter_of(&feishu_config).id(), "feishu");
     assert_eq!(adapter_of(&dingtalk_config).id(), "dingtalk");
     assert_eq!(adapter_of(&qq_config).id(), "qq");
+    assert_eq!(adapter_of(&weibo_config).id(), "weibo");
     assert_eq!(
         adapter_by_channel("douyin").map(|adapter| adapter.id()),
         Some("douyin")
@@ -122,6 +127,10 @@ fn adapter_registry_covers_every_config_variant() {
     assert_eq!(
         adapter_by_channel("qq").map(|adapter| adapter.id()),
         Some("qq")
+    );
+    assert_eq!(
+        adapter_by_channel("weibo").map(|adapter| adapter.id()),
+        Some("weibo")
     );
     assert!(adapter_by_channel("telegram").is_none());
     // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
@@ -153,6 +162,10 @@ fn adapter_registry_covers_every_config_variant() {
         assert_eq!(
             adapter.url(&qq_config).is_some(),
             adapter.matches(&qq_config)
+        );
+        assert_eq!(
+            adapter.url(&weibo_config).is_some(),
+            adapter.matches(&weibo_config)
         );
     }
 }

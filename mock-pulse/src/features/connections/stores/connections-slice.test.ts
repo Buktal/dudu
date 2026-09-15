@@ -26,6 +26,7 @@ vi.mock("../api", () => ({
   testWechatMiniConnection: vi.fn(),
   testWechatMpConnection: vi.fn(),
   testWecomConnection: vi.fn(),
+  testWeiboConnection: vi.fn(),
 }));
 
 import {
@@ -38,6 +39,7 @@ import {
   testWechatMiniConnection,
   testWechatMpConnection,
   testWecomConnection,
+  testWeiboConnection,
 } from "../api";
 
 const savedDouyin: ConnectionConfig = {
@@ -103,6 +105,12 @@ const savedQq: ConnectionConfig = {
   url: "http://127.0.0.1:9099/qq",
   appId: "11111111",
   appSecret: "DG5g3B4j9X2KOErG",
+};
+
+const savedWeibo: ConnectionConfig = {
+  channel: "weibo",
+  url: "http://127.0.0.1:9099/weibo",
+  appSecret: "xyz123xyz",
 };
 
 function makeStore() {
@@ -335,6 +343,29 @@ describe("connections slice", () => {
     });
   });
 
+  it("微博配置走 connections_test_weibo（按渠道路由测试命令）", async () => {
+    vi.mocked(testWeiboConnection).mockResolvedValue({
+      ok: true,
+      message: "echostr 握手成功",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedWeibo));
+
+    expect(vi.mocked(testWeiboConnection)).toHaveBeenCalledWith(savedWeibo);
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testDingtalkConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testQqConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "echostr 握手成功",
+    });
+  });
+
   it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
     // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
     // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
@@ -353,6 +384,7 @@ describe("connections slice", () => {
     expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testDingtalkConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testQqConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWeiboConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store)).status).toBe("failed");
   });
 });

@@ -1,3 +1,5 @@
+import { weiboCreatedAt } from "@/lib/time";
+
 import {
   cloneJson,
   getAt,
@@ -24,6 +26,10 @@ import type { EventSchema, IdKind } from "./schemas";
  * - dingtalkMsgId：钉钉机器人 msgId（msgr…== base64 形态，官方样本 msgrK2ck…）
  * - qqRobotMsgId：QQ 消息 id（ROBOT1.0_ + 56 位字母数字，官方样本掩码长度）
  * - qqOpenId：QQ openid（32 位大写十六进制）
+ * - weiboUid：微博 receiver_id/sender_id（int64 数字 UID，官方样本 1902538057
+ *   形态的 10 位数）
+ * - weiboCreatedAt：微博 created_at（Mon Jul 16 18:09:20 +0800 2012 字符串，
+ *   排重键 sender_id+created_at 的时刻半边，经 lib/time 封装格式化）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -166,6 +172,24 @@ export function generateQqOpenId(): string {
   return Array.from(randomBytes(32), (byte) => chars[byte % 16]).join("");
 }
 
+/**
+ * 微博 receiver_id/sender_id：int64 数字 UID（官方样本 1902538057/2489518277
+ * 为 10 位数；数字形态直落 JSON，10 位 < 2^53 无精度问题）
+ */
+export function generateWeiboUid(): number {
+  const bytes = randomBytes(10);
+  let digits = String((bytes[0] % 9) + 1);
+  for (let i = 1; i < 10; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return Number(digits);
+}
+
+/** 微博 created_at：线上字符串形态（格式经 lib/time 封装单点） */
+export function generateWeiboCreatedAt(): string {
+  return weiboCreatedAt();
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -186,6 +210,8 @@ const GENERATORS: Record<IdKind, Generator> = {
   dingtalkMsgId: generateDingtalkMsgId,
   qqRobotMsgId: generateQqRobotMsgId,
   qqOpenId: generateQqOpenId,
+  weiboUid: generateWeiboUid,
+  weiboCreatedAt: generateWeiboCreatedAt,
 };
 
 /**

@@ -8,6 +8,7 @@ import type { EventSchema } from "./types";
 import { WECHAT_MINI_EVENT_SCHEMAS } from "./wechat-mini";
 import { WECHAT_MP_EVENT_SCHEMAS } from "./wechat-mp";
 import { WECOM_EVENT_SCHEMAS } from "./wecom";
+import { WB_SCHEMAS } from "./weibo";
 
 /**
  * 事件模板聚合注册表：全仓库取模板仅此两个单点——
@@ -30,6 +31,7 @@ const PACKS: readonly ChannelTemplatePack[] = [
   { channel: "feishu", schemas: FEISHU_SCHEMAS },
   { channel: "dingtalk", schemas: DINGTALK_SCHEMAS },
   { channel: "qq", schemas: QQ_SCHEMAS },
+  { channel: "weibo", schemas: WB_SCHEMAS },
 ];
 
 /** 聚合后的全部内置模板（契约校验与全量遍历用） */

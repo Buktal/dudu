@@ -21,9 +21,11 @@ import {
   testWechatMiniConnection as testWechatMiniApi,
   testWechatMpConnection as testWechatMpApi,
   testWecomConnection as testWecomApi,
+  testWeiboConnection as testWeiboApi,
   type WechatMiniConnectionConfig,
   type WechatMpConnectionConfig,
   type WecomConnectionConfig,
+  type WeiboConnectionConfig,
 } from "../api";
 
 export type TestStatus = "idle" | "testing" | "success" | "failed";
@@ -114,6 +116,13 @@ export const defaultQqConnection: QqConnectionConfig = {
   appSecret: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（App Secret 验签起步） */
+export const defaultWeiboConnection: WeiboConnectionConfig = {
+  channel: "weibo",
+  url: "http://127.0.0.1:8080/webhooks/weibo",
+  appSecret: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -127,6 +136,7 @@ export const initialConnectionsState: ConnectionsState = {
     feishu: defaultFeishuConnection,
     dingtalk: defaultDingtalkConnection,
     qq: defaultQqConnection,
+    weibo: defaultWeiboConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -170,6 +180,8 @@ export const testConnection = createAsyncThunk(
         return testDingtalkApi(config);
       case "qq":
         return testQqApi(config);
+      case "weibo":
+        return testWeiboApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
@@ -257,6 +269,8 @@ export const {
  *   四参验签 + AES 解密封装 + 包尾 $key）；机器人通道 = url + appSecret
  *   （timestamp/sign = HmacSHA256）
  * - QQ 核：url + appSecret 必填（Ed25519 验签密钥）；appId 仅随连接记录
+ * - 微博核：url + appSecret 必填（三参 sha1 排序验签的签名源，官方明示
+ *   非 Token）；APPKEY 不参与推送协议不设字段
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -279,6 +293,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && dingtalkReady(config);
     case "qq":
       return config.url.trim() !== "" && qqReady(config);
+    case "weibo":
+      return config.url.trim() !== "" && weiboReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -399,6 +415,14 @@ function dingtalkReady(config: DingtalkConnectionConfig): boolean {
  * 都吃它）；appId 仅随连接记录（op13 请求头 X-Bot-Appid），不参与必填集。
  */
 function qqReady(config: QqConnectionConfig): boolean {
+  return config.appSecret.trim() !== "";
+}
+
+/**
+ * 微博核：url + appSecret 必填（GET 握手与每次推送的三参 sha1 签名都吃它，
+ * 官方明示密钥是 App Secret 而非自定义 Token）。
+ */
+function weiboReady(config: WeiboConnectionConfig): boolean {
   return config.appSecret.trim() !== "";
 }
 

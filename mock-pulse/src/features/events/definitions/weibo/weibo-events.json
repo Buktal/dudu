@@ -1,0 +1,481 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "weibo",
+  "version": "2026.09",
+  "schemas": {
+    "weibo-follow": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E4%BA%8B%E4%BB%B6%E6%8E%A8%E9%80%81",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "事件推送固定为 event，具体事件由 data.subtype 判型。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID（官方样本 1902538057）；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "触发用户 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "触发事件的用户侧 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "关注事件的默认文案「关注事件消息」（官方样本原文）。",
+          "required": true
+        },
+        {
+          "path": "data.subtype",
+          "title": "事件子类型",
+          "type": "string",
+          "group": "事件数据",
+          "description": "固定为 follow（关注）。",
+          "required": true
+        }
+      ]
+    },
+    "weibo-unfollow": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E4%BA%8B%E4%BB%B6%E6%8E%A8%E9%80%81",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "事件推送固定为 event，具体事件由 data.subtype 判型。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "触发用户 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "触发事件的用户侧 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "取消关注事件的默认文案「取消关注事件消息」（官方原文，unfollow 与 follow 同构）。",
+          "required": true
+        },
+        {
+          "path": "data.subtype",
+          "title": "事件子类型",
+          "type": "string",
+          "group": "事件数据",
+          "description": "固定为 unfollow（取消关注）。",
+          "required": true
+        }
+      ]
+    },
+    "weibo-subscribe": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E4%BA%8B%E4%BB%B6%E6%8E%A8%E9%80%81",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "事件推送固定为 event，具体事件由 data.subtype 判型。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID（官方样本 1902538057）；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "触发用户 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "触发事件的用户侧 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "非私信触发（点订阅按钮）为「订阅事件消息」；私信关键词触发时此值为触发订阅的关键词（如 dy）。",
+          "required": true
+        },
+        {
+          "path": "data.subtype",
+          "title": "事件子类型",
+          "type": "string",
+          "group": "事件数据",
+          "description": "固定为 subscribe（订阅）。",
+          "required": true
+        }
+      ]
+    },
+    "weibo-unsubscribe": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E4%BA%8B%E4%BB%B6%E6%8E%A8%E9%80%81",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "事件推送固定为 event，具体事件由 data.subtype 判型。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "触发用户 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "触发事件的用户侧 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "非私信触发为「取消订阅事件消息」；私信关键词触发时此值为触发的关键词。",
+          "required": true
+        },
+        {
+          "path": "data.subtype",
+          "title": "事件子类型",
+          "type": "string",
+          "group": "事件数据",
+          "description": "固定为 unsubscribe（取消订阅）。",
+          "required": true
+        }
+      ]
+    },
+    "weibo-scan": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E4%BA%8B%E4%BB%B6%E6%8E%A8%E9%80%81",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "事件推送固定为 event，具体事件由 data.subtype 判型。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID（官方样本 1902538057）；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "触发用户 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "触发事件的用户侧 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "扫码事件的默认文案「扫描二维码」（官方样本原文）。",
+          "required": true
+        },
+        {
+          "path": "data.subtype",
+          "title": "事件子类型",
+          "type": "string",
+          "group": "事件数据",
+          "description": "固定为 scan（已关注用户扫带参二维码；未关注推 scan_follow）。",
+          "required": true
+        },
+        {
+          "path": "data.key",
+          "title": "场景值",
+          "type": "string",
+          "group": "事件数据",
+          "description": "action_name 前缀 + scene_id（官方样本 action_name_scene_id）。"
+        },
+        {
+          "path": "data.ticket",
+          "title": "二维码 Ticket",
+          "type": "string",
+          "group": "事件数据",
+          "description": "换二维码图的票据（官方样本占位 TICKET）。"
+        }
+      ]
+    },
+    "weibo-scan-follow": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E4%BA%8B%E4%BB%B6%E6%8E%A8%E9%80%81",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "事件推送固定为 event，具体事件由 data.subtype 判型。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID（官方样本 1902538057）；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "触发用户 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "触发事件的用户侧 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "扫码事件的默认文案「扫描二维码」（官方样本原文）。",
+          "required": true
+        },
+        {
+          "path": "data.subtype",
+          "title": "事件子类型",
+          "type": "string",
+          "group": "事件数据",
+          "description": "固定为 scan_follow（未关注用户扫带参二维码 → 关注后推送；官方样本 §5.7 逐字，ticket 行尾逗号系官方原文笔误）。",
+          "required": true
+        },
+        {
+          "path": "data.key",
+          "title": "场景值",
+          "type": "string",
+          "group": "事件数据",
+          "description": "action_name 前缀 + scene_id（官方样本 action_name_scene_id）。"
+        },
+        {
+          "path": "data.ticket",
+          "title": "二维码 Ticket",
+          "type": "string",
+          "group": "事件数据",
+          "description": "换二维码图的票据（官方样本占位 TICKET）。"
+        }
+      ]
+    },
+    "weibo-click": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E4%BA%8B%E4%BB%B6%E6%8E%A8%E9%80%81",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "事件推送固定为 event，具体事件由 data.subtype 判型。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID（官方样本 1902538057）；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "触发用户 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "触发事件的用户侧 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "菜单点击事件的默认文案「自定义菜单点击事件消息」（官方样本原文）。",
+          "required": true
+        },
+        {
+          "path": "data.subtype",
+          "title": "事件子类型",
+          "type": "string",
+          "group": "事件数据",
+          "description": "固定为 click（点自定义菜单 Click 型）。",
+          "required": true
+        },
+        {
+          "path": "data.key",
+          "title": "菜单 EVENT_KEY",
+          "type": "string",
+          "group": "事件数据",
+          "description": "菜单 Click 型的 EVENT_KEY（官方样本占位 EVENT_KEY）。"
+        }
+      ]
+    },
+    "weibo-view": {
+      "version": "2026.09",
+      "source": "https://open.weibo.com/wiki/%E6%8E%A5%E6%94%B6%E4%BA%8B%E4%BB%B6%E6%8E%A8%E9%80%81",
+      "fields": [
+        {
+          "path": "type",
+          "title": "消息类型",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "事件推送固定为 event，具体事件由 data.subtype 判型。",
+          "required": true
+        },
+        {
+          "path": "receiver_id",
+          "title": "接收者 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "认证账号侧的 int64 数字 UID（官方样本 1902538057）；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "sender_id",
+          "title": "触发用户 UID",
+          "type": "number",
+          "group": "载荷骨架",
+          "description": "触发事件的用户侧 int64 数字 UID；与 created_at 组成排重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "created_at",
+          "title": "创建时刻",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "如 Mon Jul 16 18:09:20 +0800 2012 的字符串；与 sender_id 组成排重键。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "text",
+          "title": "正文",
+          "type": "string",
+          "group": "载荷骨架",
+          "description": "菜单跳转事件的默认文案「自定义菜单跳转链接事件消息」（官方样本原文）。",
+          "required": true
+        },
+        {
+          "path": "data.subtype",
+          "title": "事件子类型",
+          "type": "string",
+          "group": "事件数据",
+          "description": "固定为 view（点自定义菜单 View 跳转链接型）。",
+          "required": true
+        },
+        {
+          "path": "data.key",
+          "title": "跳转链接",
+          "type": "string",
+          "group": "事件数据",
+          "description": "按钮跳转 URL（官方样本占位 url）。"
+        }
+      ]
+    }
+  }
+}

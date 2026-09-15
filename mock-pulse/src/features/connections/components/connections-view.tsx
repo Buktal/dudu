@@ -111,7 +111,12 @@ function qqTestNote(): string {
   return "发送 op13 验证回调（User-Agent: QQBot-Callback + X-Bot-Appid），检查服务是否回 plain_token 回显 + Ed25519 签名的验签回包。";
 }
 
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ JSON、公众号 XML */
+/** 微博握手文案（事实库 §3.1：GET 四参，sha1 排序验签 + 原样回 echostr） */
+function weiboTestNote(): string {
+  return "发送 GET（signature=sha1(字典序排序(AppSecret,timestamp,nonce)) 与随机 echostr），检查服务是否验签通过并原样回显 echostr。";
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博 JSON、公众号 XML */
 function wireBadgeLabel(
   channel: ChannelId,
   draft: ConnectionConfig,
@@ -120,7 +125,8 @@ function wireBadgeLabel(
     channel === "douyin" ||
     channel === "feishu" ||
     channel === "dingtalk" ||
-    channel === "qq"
+    channel === "qq" ||
+    channel === "weibo"
   ) {
     return "JSON";
   }
@@ -158,7 +164,9 @@ export function ConnectionsView() {
               ? actions.defaultDingtalkConnection
               : channel === "qq"
                 ? actions.defaultQqConnection
-                : actions.defaultWecomConnection);
+                : channel === "weibo"
+                  ? actions.defaultWeiboConnection
+                  : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -353,11 +361,13 @@ export function ConnectionsView() {
                             )
                           : channel === "qq"
                             ? qqTestNote()
-                            : wecomTestNote(
-                                draft.channel === "wecom"
-                                  ? draft.system
-                                  : "agent",
-                              )}
+                            : channel === "weibo"
+                              ? weiboTestNote()
+                              : wecomTestNote(
+                                  draft.channel === "wecom"
+                                    ? draft.system
+                                    : "agent",
+                                )}
               </CardDescription>
               <CardAction>
                 <Button

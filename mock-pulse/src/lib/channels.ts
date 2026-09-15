@@ -104,7 +104,7 @@ export const CHANNEL_REGISTRY = {
     protocol: "粉服 Webhook · JSON 回调",
     note: "粉丝服务平台 Webhook：JSON 报文（可切微信 XML），GET 握手回 echostr，sha1(排序(appsecret,timestamp,nonce))",
     icon: "AtSign",
-    implemented: false,
+    implemented: true,
   },
   "wechat-mp": {
     name: "微信公众号",

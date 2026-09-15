@@ -12,6 +12,7 @@ pub mod store;
 pub(crate) mod util;
 pub mod wechat_mini;
 pub mod wechat_mp;
+pub mod weibo;
 pub mod wecom;
 
 use std::time::Duration;
@@ -108,6 +109,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &feishu::Adapter,
     &dingtalk::Adapter,
     &qq::Adapter,
+    &weibo::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -350,6 +352,13 @@ pub enum ConnectionConfig {
         /// 自我翻倍至 32 字节即 seed；老 Token 鉴权已废弃不收录（事实库 §6）
         app_secret: String,
     },
+    #[serde(rename = "weibo", rename_all = "camelCase")]
+    Weibo {
+        url: String,
+        /// APPKEY 对应的 App Secret（事实库 §4.1：验签密钥是它而非自定义
+        /// Token，与微信差异点；APPKEY 本身不参与推送协议，不设字段）
+        app_secret: String,
+    },
 }
 
 /// 读取全部持久化连接（无文件时返回空列表）。
@@ -439,6 +448,15 @@ pub async fn connections_test_dingtalk(
 #[tauri::command]
 pub async fn connections_test_qq(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
     run_handshake(&qq::Adapter, config).await
+}
+
+/// 按微博 GET 四参握手协议测试连接（signature=sha1(字典序排序三参)，
+/// 目标原样回显 echostr；官方 5 秒应答窗口，超时断开×3 重试）。
+#[tauri::command]
+pub async fn connections_test_weibo(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&weibo::Adapter, config).await
 }
 
 #[cfg(test)]

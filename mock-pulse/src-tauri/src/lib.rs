@@ -33,6 +33,7 @@ pub fn run() {
             connections::connections_test_feishu,
             connections::connections_test_dingtalk,
             connections::connections_test_qq,
+            connections::connections_test_weibo,
             definitions::definitions_load,
             definitions::definitions_save,
             events::events_load,

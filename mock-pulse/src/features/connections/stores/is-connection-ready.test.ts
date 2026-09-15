@@ -7,6 +7,7 @@ import {
   defaultQqConnection,
   defaultWechatMiniConnection,
   defaultWechatMpConnection,
+  defaultWeiboConnection,
   initialConnectionsState,
   isConnectionReady,
   selectConnection,
@@ -81,6 +82,12 @@ const savedQq: ConnectionConfig = {
   url: "http://127.0.0.1:9099/qq",
   appId: "11111111",
   appSecret: "DG5g3B4j9X2KOErG",
+};
+
+const savedWeibo: ConnectionConfig = {
+  channel: "weibo",
+  url: "http://127.0.0.1:9099/weibo",
+  appSecret: "xyz123xyz",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -328,6 +335,29 @@ describe("isConnectionReady（QQ 核必填集）", () => {
     expect(defaultQqConnection.appSecret).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "qq")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（微博核必填集）", () => {
+  it("url/appSecret 齐全才算已配置（App Secret 即三参 sha1 验签密钥）", () => {
+    expect(isConnectionReady(savedWeibo)).toBe(true);
+  });
+
+  it("缺 url 或缺 appSecret 都不算已配置", () => {
+    expect(isConnectionReady({ ...savedWeibo, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedWeibo, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedWeibo, appSecret: "" })).toBe(false);
+  });
+
+  it("初始微博占位连接（凭据全空、App Secret 验签起步）不算已配置", () => {
+    expect(defaultWeiboConnection.channel).toBe("weibo");
+    expect(defaultWeiboConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/weibo",
+    );
+    expect(defaultWeiboConnection.appSecret).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "weibo")),
     ).toBe(false);
   });
 });

@@ -16,6 +16,7 @@ import type {
   DingtalkConnectionConfig,
   FeishuConnectionConfig,
   QqConnectionConfig,
+  WeiboConnectionConfig,
 } from "../api";
 import {
   DINGTALK_SYSTEMS,
@@ -301,6 +302,19 @@ function qqFields(draft: QqConnectionConfig) {
   ];
 }
 
+/** 微博凭证字段（事实库 §4.1）：验签密钥是 APPKEY 对应的 App Secret，非自定义 Token */
+function weiboFields(draft: WeiboConnectionConfig) {
+  return [
+    {
+      key: "appSecret",
+      label: "AppSecret",
+      note: "APPKEY 对应的 App Secret（官方明示用它生成签名，非自定义 Token）：GET 握手与每次推送的 sha1(排序(appsecret,timestamp,nonce)) 签名源。",
+      value: draft.appSecret,
+      secret: true,
+    },
+  ];
+}
+
 export function ConnectionFields({
   draft,
   onEdit,
@@ -321,7 +335,9 @@ export function ConnectionFields({
               ? dingtalkFields(draft)
               : draft.channel === "qq"
                 ? qqFields(draft)
-                : wecomFields(draft);
+                : draft.channel === "weibo"
+                  ? weiboFields(draft)
+                  : wecomFields(draft);
   const systemSelector =
     draft.channel === "douyin" ? (
       <Field className="col-span-full">

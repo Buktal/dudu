@@ -18,6 +18,11 @@ function requestSnapshot(step: RunStep): string {
       : `User-Agent: QQBot-Callback（op13 验证回调）\nX-Bot-Appid: <连接 AppID>`;
     return `POST ${step.url}\nContent-Type: application/json\n${headers}\n\n${step.payload}`;
   }
+  if (step.channel === "weibo") {
+    // 微博：三参签名走 URL query（官方每次推送同样验签；msgId 快照 nonce）
+    const separator = step.url.includes("?") ? "&" : "?";
+    return `POST ${step.url}${separator}signature=${step.signature}&timestamp=${step.timestamp ?? ""}&nonce=${step.msgId}\nContent-Type: application/json\n\n${step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 
