@@ -3,13 +3,16 @@
 //! URL 签名 → 可独立解回原样本；check_url 握手明文同链路；机器人 sign
 //! 官方样例参数复算；加密 success 回包（官方向量 B 密文形态）验签解密。
 
+use crate::connections::wecom::random_16;
+
 use super::*;
 
 #[test]
 fn golden_event_sample_encrypts_signs_and_roundtrips() {
     // 黄金样本（§5.4 逐字）→ 加密单字段信封 → URL 三参 sha1 签名 → 解密回原文
-    let encrypt = crypto::encrypt_event(
+    let encrypt = crypto::encrypt_msg(
         GOLDEN_ENCODING_AES_KEY,
+        &random_16(),
         GOLDEN_EVENT_PLAINTEXT.as_bytes(),
         GOLDEN_OWNER_KEY,
     )
@@ -35,17 +38,17 @@ fn golden_event_sample_encrypts_signs_and_roundtrips() {
         ])
     );
 
-    // 独立解回官方样本逐字 + 包尾 $key 校验
+    // 独立解回官方样本逐字 + 包尾 $key 校验（$key = 企微实现字段名 receiveid）
     let decrypted = crypto::decrypt_msg(GOLDEN_ENCODING_AES_KEY, &encrypt).unwrap();
     assert_eq!(decrypted.msg, GOLDEN_EVENT_PLAINTEXT.as_bytes());
-    assert_eq!(decrypted.owner_key, GOLDEN_OWNER_KEY);
+    assert_eq!(decrypted.receiveid, GOLDEN_OWNER_KEY);
 }
 
 #[test]
 fn golden_check_url_handshake_follows_official_envelope_path() {
     // check_url 握手明文（§5.6 解密后逐字）→ 同一加密/验签链路（官方调试
     // 向量凭据）；固定随机数下加密输出可独立解密回原文
-    let encrypt = crypto::encrypt_event_with_random(
+    let encrypt = crypto::encrypt_msg(
         GOLDEN_ENCODING_AES_KEY,
         &[7u8; 16],
         HANDSHAKE_PLAINTEXT.as_bytes(),
@@ -55,7 +58,7 @@ fn golden_check_url_handshake_follows_official_envelope_path() {
 
     let decrypted = crypto::decrypt_msg(GOLDEN_ENCODING_AES_KEY, &encrypt).unwrap();
     assert_eq!(decrypted.msg, HANDSHAKE_PLAINTEXT.as_bytes());
-    assert_eq!(decrypted.owner_key, GOLDEN_OWNER_KEY);
+    assert_eq!(decrypted.receiveid, GOLDEN_OWNER_KEY);
     // 签名对信封可复算
     let signature =
         crypto::build_signature(GOLDEN_TOKEN, "1783610513", "w2WPvWxxxxGOmIB", &encrypt);

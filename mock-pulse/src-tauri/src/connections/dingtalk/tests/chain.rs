@@ -6,6 +6,7 @@
 use std::time::Duration;
 
 use crate::connections::util::sha1_sorted_hex;
+use crate::connections::wecom::random_16;
 use crate::test_support::{quick_client, start_single_server, RecordedPost};
 
 use super::*;
@@ -46,10 +47,10 @@ fn handshake_posts_signed_envelope_and_accepts_encrypted_success_reply() {
     );
     let expected_signature = sha1_sorted_hex(&[GOLDEN_TOKEN, timestamp, nonce, encrypt]);
     assert_eq!(signature, &expected_signature);
-    // 信封可独立解密回 check_url 握手明文
+    // 信封可独立解密回 check_url 握手明文（包尾 $key = 企微实现字段名 receiveid）
     let decrypted = crypto::decrypt_msg(GOLDEN_ENCODING_AES_KEY, encrypt).unwrap();
     assert_eq!(decrypted.msg, HANDSHAKE_PLAINTEXT.as_bytes());
-    assert_eq!(decrypted.owner_key, GOLDEN_OWNER_KEY);
+    assert_eq!(decrypted.receiveid, GOLDEN_OWNER_KEY);
 }
 
 /// 请求行中的 query 解析（测试侧专用）：去掉方法/路径前缀与 HTTP 版本后缀，
@@ -68,8 +69,13 @@ fn query_params(request_line: &str) -> std::collections::HashMap<String, String>
 fn handshake_fails_when_reply_plaintext_is_not_success() {
     // 目标回了可验签解密的加密包，但明文不是 success
     let wrong_plaintext = |_request: &RecordedPost| {
-        let encrypt =
-            crypto::encrypt_event(GOLDEN_ENCODING_AES_KEY, b"ok", GOLDEN_OWNER_KEY).unwrap();
+        let encrypt = crypto::encrypt_msg(
+            GOLDEN_ENCODING_AES_KEY,
+            &random_16(),
+            b"ok",
+            GOLDEN_OWNER_KEY,
+        )
+        .unwrap();
         let timestamp = "1783610513".to_string();
         let nonce = "w2WPvWxxxxGOmIB".to_string();
         let signature = crypto::build_signature(GOLDEN_TOKEN, &timestamp, &nonce, &encrypt);

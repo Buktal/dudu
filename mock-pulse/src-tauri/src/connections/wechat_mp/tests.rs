@@ -13,6 +13,7 @@ use std::time::Duration;
 use crate::connections::{ConnectionConfig, WechatMpMode};
 use crate::test_support::{quick_client, read_head_and_body, start_single_server, RecordedPost};
 
+use super::super::wechat_common::build_msg_signature;
 use super::super::wecom::crypto::{decrypt_msg, encrypt_msg};
 use super::*;
 

@@ -11,7 +11,9 @@
 //!   1500ms 内回 `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`
 //!   （回包先验签再解密，明文含 success 方算通过；suite_ticket 不回会连推 100 次）
 //! - AES（§4.1）：key = Base64Decode(EncodingAESKey+"=")、IV = key 前 16B、
-//!   PKCS#7-32（官方调试向量实证）、包尾 $key = owner_key——在 [`crypto`]
+//!   PKCS#7-32（官方调试向量实证）——与企微官方加密规范全套同算法，原语
+//!   直接复用 wecom::crypto（小红书同例，见 [`crypto`]）；包尾 $key =
+//!   owner_key（即企微实现字段名的 receiveid）
 //! - 机器人通道（§3.3）：明文 JSON + header timestamp/sign = HmacSHA256，见 [`bot`]
 
 mod bot;
@@ -21,6 +23,8 @@ mod crypto;
 mod tests;
 
 use std::time::Duration;
+
+use crate::connections::wecom;
 
 use super::{
     client_with_timeout, request_error_reason, ConnectionConfig, DingtalkSystem, DispatchOutcome,
@@ -75,7 +79,12 @@ fn build_crypto_push(
     encoding_aes_key: &str,
     owner_key: &str,
 ) -> Result<CryptoPush, String> {
-    let encrypt = crypto::encrypt_event(encoding_aes_key, plaintext.as_bytes(), owner_key)?;
+    let encrypt = crypto::encrypt_msg(
+        encoding_aes_key,
+        &wecom::random_16(),
+        plaintext.as_bytes(),
+        owner_key,
+    )?;
     let timestamp = unix_timestamp_ms().to_string();
     let nonce = random_nonce();
     let signature = crypto::build_signature(token, &timestamp, &nonce, &encrypt);

@@ -22,8 +22,9 @@ mod tests;
 
 use std::time::Duration;
 
-use crate::connections::util::sha1_sorted_hex;
-use crate::connections::wecom::crypto::decrypt_msg;
+// 微信族共享原语单点在 wechat_common（本模块 GET 握手与 tests 经 re-export
+// 取用；POST 直发骨架由 [`push`] 消费族共享 dispatcher）。
+pub(crate) use crate::connections::wechat_common::{build_callback_signature, unix_timestamp_secs};
 
 use super::{
     request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome, WechatMiniMode,
@@ -32,36 +33,6 @@ use super::{
 /// echostr 握手的随机明文：32 位 hex（官方仅要求原样回显，无内容约束）。
 fn random_echostr() -> String {
     uuid::Uuid::new_v4().simple().to_string()
-}
-
-fn unix_timestamp_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
-}
-
-/// 模拟用户的 openid（URL 参数透传，事实库 §3.3；官方样本 `o9AgO5Kd5ggOC-…`
-/// 为 28 位 `o` 开头串，mock 取 uuid simple 32 位 hex 同风格无连字符）。
-fn random_openid() -> String {
-    uuid::Uuid::new_v4().simple().to_string()
-}
-
-/// GET 握手三参签名：sha1(字典序排序(token, timestamp, nonce)后拼接)。
-/// 官方数值算例（事实库 §3.2）：token=AAAAA、1514711492、1714036504 → f464b24…。
-pub(crate) fn build_callback_signature(token: &str, timestamp: &str, nonce: &str) -> String {
-    sha1_sorted_hex(&[token, timestamp, nonce])
-}
-
-/// 兼容/安全的四参 msg_signature：sha1(字典序排序(token, timestamp, nonce,
-/// Encrypt)后拼接)（事实库 §4.2，官方算例 046e02f8…）。
-pub(crate) fn build_msg_signature(
-    token: &str,
-    timestamp: &str,
-    nonce: &str,
-    msg_encrypt: &str,
-) -> String {
-    sha1_sorted_hex(&[token, timestamp, nonce, msg_encrypt])
 }
 
 /// GET 首次校验握手（事实库 §3.2）：生成随机 echostr → 三参字典序签名 →
@@ -147,7 +118,7 @@ fn dispatch_event(
 /// 小程序渠道适配器：[`super::ChannelAdapter`] 的小程序实现——
 /// GET 三参握手（同公众号）与三模式 XML 直发按连接配置路由；数据格式取
 /// XML 为主（事实库结论），AES 信封复用企微 crypto 同族原语，尾部 AppId
-/// 校验等差异留在本渠道模块内。
+/// 校验在族共享直发骨架（wechat_common）内。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -192,20 +163,4 @@ impl super::ChannelAdapter for Adapter {
     ) -> DispatchOutcome {
         dispatch_event(client, config, plaintext)
     }
-}
-
-/// 解密加密回包并校验尾部 AppId（事实库 §4.3：appid 须校验与本小程序一致）。
-/// 回包信封支持 XML（公众号同族）与 JSON（事实库 §5.6 官方样本）双形态，
-/// 由 [`push::extract_reply_encrypt`] 提取密文。校验失败返回 None
-/// （回执正文仍原样入记录）。
-pub(crate) fn decrypt_reply(
-    encoding_aes_key: &str,
-    encrypt: &str,
-    app_id: &str,
-) -> Option<String> {
-    let decrypted = decrypt_msg(encoding_aes_key, encrypt).ok()?;
-    if decrypted.receiveid != app_id {
-        return None;
-    }
-    Some(String::from_utf8_lossy(&decrypted.msg).to_string())
 }

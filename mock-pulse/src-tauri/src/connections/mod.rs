@@ -20,6 +20,7 @@ pub mod store;
 pub mod taobao;
 pub mod telegram;
 pub(crate) mod util;
+pub(crate) mod wechat_common;
 pub mod wechat_mini;
 pub mod wechat_mp;
 pub mod weibo;

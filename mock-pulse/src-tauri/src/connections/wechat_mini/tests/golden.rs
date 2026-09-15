@@ -4,6 +4,8 @@
 //! 046e02f8（§4.2/§5.2）、加密回包重加密 + 签名 1b933996（§4.3/§5.6，
 //! 含 Nonce 复用请求值语义）。
 
+use crate::connections::wechat_common::build_msg_signature;
+
 use super::*;
 
 #[test]

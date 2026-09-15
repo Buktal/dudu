@@ -3,6 +3,8 @@
 //! JSON 双回包信封解密（JSON 形态为事实库 §5.6 逐字官方样本）；尾部 AppId
 //! 校验、非 200、超时与配置判别。
 
+use crate::connections::wechat_common::build_msg_signature;
+
 use super::*;
 
 // ---- GET 三参握手全链路 ----

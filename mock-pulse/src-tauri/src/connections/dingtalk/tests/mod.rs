@@ -6,6 +6,7 @@
 mod chain;
 mod golden;
 
+use crate::connections::wecom::random_16;
 use crate::connections::ConnectionConfig;
 use crate::test_support::quick_client;
 
@@ -67,8 +68,13 @@ pub(super) fn bot_config(url: String) -> ConnectionConfig {
 pub(super) fn reply_success_envelope(
     _request: &crate::test_support::RecordedPost,
 ) -> (String, String) {
-    let encrypt =
-        crypto::encrypt_event(GOLDEN_ENCODING_AES_KEY, b"success", GOLDEN_OWNER_KEY).unwrap();
+    let encrypt = crypto::encrypt_msg(
+        GOLDEN_ENCODING_AES_KEY,
+        &random_16(),
+        b"success",
+        GOLDEN_OWNER_KEY,
+    )
+    .unwrap();
     let timestamp = "1783610513".to_string();
     let nonce = "w2WPvWxxxxGOmIB".to_string();
     let signature = crypto::build_signature(GOLDEN_TOKEN, &timestamp, &nonce, &encrypt);

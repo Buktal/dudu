@@ -1,186 +1,28 @@
-//! 钉钉回调加解密原语（事实库 docs/research/channels/dingtalk.md §4.1/§5.6/§5.10，
-//! 自包含实现，与微信族同源算法但独立成模块——ADR-0001 渠道差异不外溢）：
+//! 钉钉回调加解密（事实库 docs/research/channels/dingtalk.md §4.1/§5.6/§5.10）：
 //! - 验签（§4.1 逐字）：`dev_msg_signature = sha1(sort(token, timestamp, nonce,
-//!   msg_encrypt))`，与推送/回包字段比对；原语与企微/抖音服务商同族
+//!   msg_encrypt))`，与推送/回包字段比对；原语与企微同族
 //!   （util::sha1_sorted_hex），官方调试向量双例验收（本模块测试）
 //! - AES（§4.1 逐字）：AESKey = Base64_Decode(EncodingAESKey + "=")，AES-256-CBC，
 //!   IV 取 AESKey 前 16 字节，PKCS#7 填充（RFC 2315）——官方调试向量实证
-//!   补位值 22/17 > 16，即 32 字节块（同企微族），16 字节块会误判补位非法
-//! - 密文结构（§4.1 逐字）：`encrypt = Base64(AES_Encrypt[random(16B) +
-//!   msg_len(4B 大端) + msg + $key])`；$key 对照表：企业内部应用 = Corpid、
-//!   企业定制应用 = customKey、第三方企业应用 = suiteKey → 连接配置的 owner_key
-//! - 加密 success 回包（§5.6/§5.10）：目标须回
-//!   `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`，
-//!   解密明文即字符串 success
+//!   补位值 22/17 > 16，即 32 字节块；密文结构
+//!   `encrypt = Base64(AES_Encrypt[random(16B) + msg_len(4B 大端) + msg + $key])`。
+//!   与企微官方加密规范全套同算法（wecom::crypto，小红书同例），原语直接
+//!   复用（[`decrypt_msg`]/[`encrypt_msg`] re-export）；钉钉语义差异只在包尾
+//!   $key（企业内部应用 = Corpid、企业定制应用 = customKey、第三方企业应用
+//!   = suiteKey → 连接配置的 owner_key，即企微实现字段名的 receiveid）与
+//!   加密 success 回包（§5.6/§5.10），留在本模块
 
-use aes::cipher::{block_padding::NoPadding, BlockDecryptMut, BlockEncryptMut, KeyIvInit};
-use base64::engine::general_purpose::STANDARD as BASE64;
-use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
-use base64::Engine;
+use crate::connections::util::sha1_sorted_hex;
 
-/// 钉钉 Base64 解码引擎：43 位 EncodingAESKey + "=" 的末字符带悬空位，
-/// 官方算法按宽松解码处理（canonical 严格模式会拒），故解码走此引擎。
-const BASE64_LENIENT: GeneralPurpose = GeneralPurpose::new(
-    &base64::alphabet::STANDARD,
-    GeneralPurposeConfig::new()
-        .with_decode_padding_mode(DecodePaddingMode::Indifferent)
-        .with_decode_allow_trailing_bits(true),
-);
-
-/// AES-256-CBC 编码器（底层块运算；补位按 32 字节块自实现，故用 NoPadding）。
-type Aes256CbcEnc = cbc::Encryptor<aes::Aes256>;
-
-/// AES-256-CBC 解码器（官方调试向量验收 + 加密 success 回包解密）。
-type Aes256CbcDec = cbc::Decryptor<aes::Aes256>;
-
-/// 补位块大小：官方调试向量实证 32 字节（PKCS#7/RFC 2315 语义）。
-const PAD_BLOCK: usize = 32;
+// AES 信封原语与企微全套同算法（key 派生 / PKCS#7-32 补位 / CBC 链 / Base64 /
+// rand_msg 拼包解包），直接复用企微实现——重写副本已删除，官方调试向量
+// 黄金测试（本模块 tests）锚定复用后行为不变。
+pub(crate) use crate::connections::wecom::crypto::{decrypt_msg, encrypt_msg};
 
 /// 官方验签算法（§4.1）：token/timestamp/nonce/msg_encrypt 字典序排序拼接后
 /// sha1，40 位小写 hex（官方调试向量：5a65cee… 与 9a95a00… 双例可复算）。
 pub fn build_signature(token: &str, timestamp: &str, nonce: &str, msg_encrypt: &str) -> String {
-    crate::connections::util::sha1_sorted_hex(&[token, timestamp, nonce, msg_encrypt])
-}
-
-/// 从 43 位 EncodingAESKey 派生 32 字节 AESKey：Base64_Decode(key + "=")。
-pub fn derive_aes_key(encoding_aes_key: &str) -> Result<[u8; 32], String> {
-    let decoded = BASE64_LENIENT
-        .decode(format!("{encoding_aes_key}="))
-        .map_err(|err| format!("EncodingAESKey 无法解码为 AESKey：{err}"))?;
-    decoded.try_into().map_err(|decoded: Vec<u8>| {
-        format!(
-            "AESKey 应为 32 字节，实际 {} 字节（EncodingAESKey 需为 43 位）",
-            decoded.len()
-        )
-    })
-}
-
-/// PKCS#7 去补位：以 32 字节块为单位（补位值 1..=32，整段同值）。
-fn pkcs7_unpad_32(data: &[u8]) -> Result<&[u8], String> {
-    let Some((&last, _)) = data.split_last() else {
-        return Err("解密结果为空，无法去补位".into());
-    };
-    let pad_len = last as usize;
-    let valid = (1..=PAD_BLOCK).contains(&pad_len)
-        && pad_len <= data.len()
-        && data[data.len() - pad_len..].iter().all(|&b| b == last);
-    if !valid {
-        return Err(format!("PKCS#7 补位非法（末字节 0x{last:02x}）"));
-    }
-    Ok(&data[..data.len() - pad_len])
-}
-
-/// AES-256-CBC 解密：IV = key 前 16 字节，密文须为 16 字节块整数倍，
-/// 解出后按 32 字节块 PKCS#7 去补位。
-fn aes_decrypt(key: &[u8; 32], data: &[u8]) -> Result<Vec<u8>, String> {
-    let decryptor = Aes256CbcDec::new_from_slices(key, &key[..16])
-        .map_err(|err| format!("AES 解密器初始化失败：{err}"))?;
-    let mut buf = data.to_vec();
-    let raw = decryptor
-        .decrypt_padded_mut::<NoPadding>(&mut buf)
-        .map_err(|_| format!("密文长度 {} 不是 16 字节块的整数倍", data.len()))?;
-    pkcs7_unpad_32(raw)
-        .map_err(|err| format!("AES 解密失败：{err}"))
-        .map(|slice| slice.to_vec())
-}
-
-/// PKCS#7 补位：以 32 字节块为单位，补位值 1..=32，整段同值。
-fn pkcs7_pad_32(data: &[u8]) -> Vec<u8> {
-    let pad_len = PAD_BLOCK - (data.len() % PAD_BLOCK);
-    let mut padded = data.to_vec();
-    padded.resize(data.len() + pad_len, pad_len as u8);
-    padded
-}
-
-/// AES-256-CBC 加密：先按 32 字节块 PKCS#7 补位，IV 取 key 前 16 字节。
-fn aes_encrypt(key: &[u8; 32], data: &[u8]) -> Result<Vec<u8>, String> {
-    let encryptor = Aes256CbcEnc::new_from_slices(key, &key[..16])
-        .map_err(|err| format!("AES 加密器初始化失败：{err}"))?;
-    let mut buf = pkcs7_pad_32(data);
-    let msg_len = buf.len();
-    let encrypted = encryptor
-        .encrypt_padded_mut::<NoPadding>(&mut buf, msg_len)
-        .map_err(|_| "明文补位后不是 16 字节块的整数倍".to_string())?;
-    Ok(encrypted.to_vec())
-}
-
-/// 拼加密明文结构（§4.1 逐字）：random(16B) + msg_len(4B 大端) + msg + $key。
-fn build_rand_msg(random16: &[u8; 16], msg: &[u8], owner_key: &str) -> Vec<u8> {
-    let mut rand_msg = Vec::with_capacity(16 + 4 + msg.len() + owner_key.len());
-    rand_msg.extend_from_slice(random16);
-    rand_msg.extend_from_slice(&(msg.len() as u32).to_be_bytes());
-    rand_msg.extend_from_slice(msg);
-    rand_msg.extend_from_slice(owner_key.as_bytes());
-    rand_msg
-}
-
-/// 加密事件明文（§4.1）：拼包 → AES → Base64，即推送信封 `{"encrypt":"…"}` 的
-/// 字段值（线上走 [`encrypt_event`] 随机 16B；测试黄金链路用指定随机数复算）。
-pub fn encrypt_event_with_random(
-    encoding_aes_key: &str,
-    random16: &[u8; 16],
-    plaintext: &[u8],
-    owner_key: &str,
-) -> Result<String, String> {
-    let key = derive_aes_key(encoding_aes_key)?;
-    let rand_msg = build_rand_msg(random16, plaintext, owner_key);
-    let encrypted = aes_encrypt(&key, &rand_msg)?;
-    Ok(BASE64.encode(encrypted))
-}
-
-/// 加密事件明文（线上入口）：随机 16B + PKCS#7-32 → AES-256-CBC → Base64。
-pub fn encrypt_event(
-    encoding_aes_key: &str,
-    plaintext: &[u8],
-    owner_key: &str,
-) -> Result<String, String> {
-    encrypt_event_with_random(encoding_aes_key, &random16(), plaintext, owner_key)
-}
-
-/// 解密结果：明文字节 + 尾部 $key（企业内部=Corpid / 定制=customKey / 第三方=suiteKey）。
-#[derive(Clone, Debug, PartialEq)]
-pub struct DecryptedMsg {
-    pub msg: Vec<u8>,
-    pub owner_key: String,
-}
-
-/// 解密 encrypt（§4.1 逆拼包）：Base64 → AES 解密 → 去 16 随机字节 → 读
-/// 4 字节大端 msg_len → 截 msg → 余下为 $key。
-pub fn decrypt_msg(encoding_aes_key: &str, msg_encrypt: &str) -> Result<DecryptedMsg, String> {
-    let key = derive_aes_key(encoding_aes_key)?;
-    let raw = BASE64
-        .decode(msg_encrypt)
-        .map_err(|err| format!("密文 Base64 解码失败：{err}"))?;
-    let unpadded = aes_decrypt(&key, &raw)?;
-    if unpadded.len() < 16 + 4 {
-        return Err("解密结果过短，缺少 random(16B) + msg_len(4B) 结构".into());
-    }
-    let msg_len =
-        u32::from_be_bytes([unpadded[16], unpadded[17], unpadded[18], unpadded[19]]) as usize;
-    if 16 + 4 + msg_len > unpadded.len() {
-        return Err(format!(
-            "msg_len（{msg_len}）超出解密结果长度（{}）",
-            unpadded.len()
-        ));
-    }
-    let msg = unpadded[20..20 + msg_len].to_vec();
-    let owner_key = String::from_utf8_lossy(&unpadded[20 + msg_len..]).to_string();
-    Ok(DecryptedMsg { msg, owner_key })
-}
-
-/// 校验解密包尾部的 $key（企业内部=Corpid / 第三方=suiteKey，连接配置的
-/// owner_key）。mock 只推不收（推送侧 $key 由本方封装时写入），解密侧仅
-/// 测试与排障取用。
-#[allow(dead_code)]
-pub fn verify_owner_key(decrypted: &DecryptedMsg, expect: &str) -> Result<(), String> {
-    if decrypted.owner_key == expect {
-        Ok(())
-    } else {
-        Err(format!(
-            "$key 校验错误：期望 {expect}，实际 {}",
-            decrypted.owner_key
-        ))
-    }
+    sha1_sorted_hex(&[token, timestamp, nonce, msg_encrypt])
 }
 
 /// 校验并解密加密 success 回包（§5.6/§5.10）：body 形如
@@ -220,13 +62,16 @@ pub fn verify_and_decrypt_reply(
         .map(|decrypted| String::from_utf8_lossy(&decrypted.msg).to_string())
 }
 
-/// 随机 16B：uuid v4 字节（依赖内已有的随机源，不额外引随机库）。
-fn random16() -> [u8; 16] {
-    *uuid::Uuid::new_v4().as_bytes()
-}
-
 #[cfg(test)]
 mod tests {
+    use base64::engine::general_purpose::STANDARD as BASE64;
+    use base64::Engine;
+
+    use crate::connections::wecom::crypto::{
+        aes_decrypt, aes_encrypt, derive_aes_key, verify_receiveid,
+    };
+    use crate::connections::wecom::random_16;
+
     use super::*;
 
     // ---- 官方调试向量（事实库 §4.1 逐字，Node crypto 交叉复算链路） ----
@@ -283,12 +128,13 @@ mod tests {
     #[test]
     fn golden_ciphertext_a_decrypts_to_handshake_plaintext() {
         // 官方向量 A：密文 → 明文（check_create_suite_url 握手）+ 包尾 $key；
-        // 补位值 22 > 16，实证 32 字节块（16 字节块实现会误判补位非法）
+        // 补位值 22 > 16，实证 32 字节块（16 字节块实现会误判补位非法）。
+        // 包尾 $key 即企微实现字段名的 receiveid（= 连接配置 owner_key）
         let decrypted = decrypt_msg(GOLDEN_A_ENCODING_AES_KEY, GOLDEN_A_ENCRYPT).unwrap();
         assert_eq!(decrypted.msg, GOLDEN_A_PLAINTEXT.as_bytes());
-        assert_eq!(decrypted.owner_key, GOLDEN_A_OWNER_KEY);
-        assert!(verify_owner_key(&decrypted, GOLDEN_A_OWNER_KEY).is_ok());
-        assert!(verify_owner_key(&decrypted, "other_key").is_err());
+        assert_eq!(decrypted.receiveid, GOLDEN_A_OWNER_KEY);
+        assert!(verify_receiveid(&decrypted, GOLDEN_A_OWNER_KEY).is_ok());
+        assert!(verify_receiveid(&decrypted, "other_key").is_err());
     }
 
     #[test]
@@ -296,13 +142,11 @@ mod tests {
         // 解密路径已由上例独立验证；取官方密文的 random(16B) 重新加密，
         // 必须逐字节复现官方密文（覆盖 key 派生、PKCS#7-32、CBC 链、Base64）
         let key = derive_aes_key(GOLDEN_A_ENCODING_AES_KEY).unwrap();
-        let mut buf = BASE64.decode(GOLDEN_A_ENCRYPT).unwrap();
-        let decryptor = Aes256CbcDec::new_from_slices(&key, &key[..16]).unwrap();
-        let raw = decryptor.decrypt_padded_mut::<NoPadding>(&mut buf).unwrap();
+        let rand_msg = aes_decrypt(&key, &BASE64.decode(GOLDEN_A_ENCRYPT).unwrap()).unwrap();
         let mut random16 = [0u8; 16];
-        random16.copy_from_slice(&raw[..16]);
+        random16.copy_from_slice(&rand_msg[..16]);
 
-        let encrypt = encrypt_event_with_random(
+        let encrypt = encrypt_msg(
             GOLDEN_A_ENCODING_AES_KEY,
             &random16,
             GOLDEN_A_PLAINTEXT.as_bytes(),
@@ -318,19 +162,17 @@ mod tests {
         // 官方向量 B（FAQ）：即 enc("success") 加密 success 回包的密文形态
         let decrypted = decrypt_msg(GOLDEN_B_ENCODING_AES_KEY, GOLDEN_B_ENCRYPT).unwrap();
         assert_eq!(decrypted.msg, GOLDEN_B_PLAINTEXT.as_bytes());
-        assert_eq!(decrypted.owner_key, GOLDEN_B_OWNER_KEY);
+        assert_eq!(decrypted.receiveid, GOLDEN_B_OWNER_KEY);
     }
 
     #[test]
     fn golden_ciphertext_b_reencrypts_verbatim_with_same_random() {
         let key = derive_aes_key(GOLDEN_B_ENCODING_AES_KEY).unwrap();
-        let mut buf = BASE64.decode(GOLDEN_B_ENCRYPT).unwrap();
-        let decryptor = Aes256CbcDec::new_from_slices(&key, &key[..16]).unwrap();
-        let raw = decryptor.decrypt_padded_mut::<NoPadding>(&mut buf).unwrap();
+        let rand_msg = aes_decrypt(&key, &BASE64.decode(GOLDEN_B_ENCRYPT).unwrap()).unwrap();
         let mut random16 = [0u8; 16];
-        random16.copy_from_slice(&raw[..16]);
+        random16.copy_from_slice(&rand_msg[..16]);
 
-        let encrypt = encrypt_event_with_random(
+        let encrypt = encrypt_msg(
             GOLDEN_B_ENCODING_AES_KEY,
             &random16,
             GOLDEN_B_PLAINTEXT.as_bytes(),
@@ -346,10 +188,11 @@ mod tests {
         // 明文长度跨 32 字节块边界两侧（含 0）：整段往返一致
         for len in [0usize, 1, 15, 16, 17, 31, 32, 33, 100, 1000] {
             let plaintext: Vec<u8> = (0..len).map(|i| (i % 251) as u8).collect();
-            let encrypt = encrypt_event(GOLDEN_A_ENCODING_AES_KEY, &plaintext, "owner").unwrap();
+            let encrypt =
+                encrypt_msg(GOLDEN_A_ENCODING_AES_KEY, &random_16(), &plaintext, "owner").unwrap();
             let decrypted = decrypt_msg(GOLDEN_A_ENCODING_AES_KEY, &encrypt).unwrap();
             assert_eq!(decrypted.msg, plaintext, "len={len}");
-            assert_eq!(decrypted.owner_key, "owner", "len={len}");
+            assert_eq!(decrypted.receiveid, "owner", "len={len}");
         }
     }
 
