@@ -2,6 +2,9 @@
 //! 完成时判定成败（失败即停），并把结论写进运行记录——两条产路共用本模块，
 //! 口径天然一致。（原与前端 features/events/receipt.ts 逐条镜像；直发收编后
 //! 前端实现已删除，前端仅保留期望的展示辅助。）
+//! 特殊回执形态（企微/钉钉/QQ 回包）按职责拆在 [`reply`]。
+
+mod reply;
 
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +19,7 @@ pub enum ReceiptBodyMode {
     JsonField,
     WecomReply,
     DingtalkReply,
+    QqSignReply,
 }
 
 /// 步骤期望（快照物化/直发请求由前端从事件版本或草稿带出）。
@@ -116,95 +120,12 @@ fn first_json_mismatch(
     }
 }
 
-/// 企微回执三形态比对（官方 §3.3：空串 / success 不带引号 / 加密被动回复包）。
-fn compare_wecom_reply(expected_body: &str, receipt: &ReceiptSnapshot, label: &str) -> RunVerdict {
-    if expected_body.is_empty() {
-        return if receipt.body.is_empty() {
-            RunVerdict {
-                passed: true,
-                reason: format!("{label}，回执为空串"),
-            }
-        } else {
-            RunVerdict {
-                passed: false,
-                reason: format!("{label}，期望空串，实际「{}」", clip(&receipt.body, 60)),
-            }
-        };
-    }
-    if expected_body == "success" {
-        return if receipt.body == "success" {
-            RunVerdict {
-                passed: true,
-                reason: format!("{label}，回执为 success（不带引号）"),
-            }
-        } else {
-            RunVerdict {
-                passed: false,
-                reason: format!(
-                    "{label}，期望逐字 success，实际「{}」",
-                    clip(&receipt.body, 60)
-                ),
-            }
-        };
-    }
-    match &receipt.reply {
-        None => RunVerdict {
-            passed: false,
-            reason: format!("{label}，期望加密被动回复，但目标未回可解密的加密包"),
-        },
-        Some(reply) => {
-            if reply.contains(expected_body) {
-                RunVerdict {
-                    passed: true,
-                    reason: format!("{label}，解密被动回复包含「{}」", clip(expected_body, 60)),
-                }
-            } else {
-                RunVerdict {
-                    passed: false,
-                    reason: format!("{label}，解密被动回复未包含「{}」", clip(expected_body, 60)),
-                }
-            }
-        }
-    }
-}
-
-/// 钉钉加密回包比对（官方 §5.6/§5.10：事件推送 1500ms 内回
-/// `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`——
-/// 解密明文须包含期望内容，默认 success；回包由 adapter 先验签再解密，
-/// 解不出加密包时 reply 为 None）。
-fn compare_dingtalk_reply(
-    expected_body: &str,
-    receipt: &ReceiptSnapshot,
-    label: &str,
-) -> RunVerdict {
-    match &receipt.reply {
-        Some(reply) if reply.contains(expected_body) => RunVerdict {
-            passed: true,
-            reason: format!(
-                "{label}，加密回包解密明文包含「{}」",
-                clip(expected_body, 60)
-            ),
-        },
-        Some(reply) => RunVerdict {
-            passed: false,
-            reason: format!(
-                "{label}，加密回包解密明文未包含「{}」（实际「{}」）",
-                clip(expected_body, 60),
-                clip(reply, 60)
-            ),
-        },
-        None => RunVerdict {
-            passed: false,
-            reason: format!("{label}，期望加密 success 回包，但目标未回可验签解密的加密包"),
-        },
-    }
-}
-
 fn compare_body(expected: &ExpectedReceipt, receipt: &ReceiptSnapshot) -> RunVerdict {
     let label = status_label(receipt.status);
     if expected.body.is_empty()
         && expected.body_mode != ReceiptBodyMode::WecomReply
         && expected.body_mode != ReceiptBodyMode::DingtalkReply
+        && expected.body_mode != ReceiptBodyMode::QqSignReply
     {
         return RunVerdict {
             passed: true,
@@ -225,8 +146,11 @@ fn compare_body(expected: &ExpectedReceipt, receipt: &ReceiptSnapshot) -> RunVer
                 }
             }
         }
-        ReceiptBodyMode::WecomReply => compare_wecom_reply(&expected.body, receipt, &label),
-        ReceiptBodyMode::DingtalkReply => compare_dingtalk_reply(&expected.body, receipt, &label),
+        ReceiptBodyMode::WecomReply => reply::compare_wecom_reply(&expected.body, receipt, &label),
+        ReceiptBodyMode::DingtalkReply => {
+            reply::compare_dingtalk_reply(&expected.body, receipt, &label)
+        }
+        ReceiptBodyMode::QqSignReply => reply::compare_qq_sign_reply(&expected.body, receipt, &label),
         ReceiptBodyMode::JsonField => {
             let expected_json: serde_json::Value = match serde_json::from_str(&expected.body) {
                 Ok(value) => value,
@@ -484,6 +408,47 @@ mod tests {
         assert_eq!(
             no_reply.reason,
             "HTTP 200，期望加密 success 回包，但目标未回可验签解密的加密包"
+        );
+    }
+
+    #[test]
+    fn qq_sign_reply_mode_checks_verified_op13_reply() {
+        // op13 验签回包：adapter 已验 plain_token 回显 + Ed25519 签名，
+        // reply = 回显的 plain_token，须包含期望内容
+        let pass = compare_receipt(
+            &expected(200, "Arq0D5A61EgUu4OxUvOp", ReceiptBodyMode::QqSignReply),
+            &receipt(
+                200,
+                r#"{"plain_token":"Arq0D5A61EgUu4OxUvOp","signature":"87be…"}"#,
+                Some("Arq0D5A61EgUu4OxUvOp"),
+            ),
+        );
+        assert!(pass.passed, "{pass:?}");
+        assert_eq!(
+            pass.reason,
+            "HTTP 200，op13 回包 plain_token 回显且 Ed25519 验签通过（Arq0D5A61EgUu4OxUvOp）"
+        );
+
+        // 回显的 plain_token 与期望不一致（请求值被改后未同步期望）：不通过
+        let wrong = compare_receipt(
+            &expected(200, "Arq0D5A61EgUu4OxUvOp", ReceiptBodyMode::QqSignReply),
+            &receipt(200, r#"{"plain_token":"Other","signature":"…"}"#, Some("Other")),
+        );
+        assert!(!wrong.passed);
+        assert_eq!(
+            wrong.reason,
+            "HTTP 200，回包 plain_token 回显（Other）与期望（Arq0D5A61EgUu4OxUvOp）不一致"
+        );
+
+        // 目标未回可验签的应答（验签不过/缺字段/明文）：不通过
+        let no_reply = compare_receipt(
+            &expected(200, "Arq0D5A61EgUu4OxUvOp", ReceiptBodyMode::QqSignReply),
+            &receipt(200, "ok", None),
+        );
+        assert!(!no_reply.passed);
+        assert_eq!(
+            no_reply.reason,
+            "HTTP 200，期望 op13 验签回包，但目标未回 plain_token 回显且签名可验的应答"
         );
     }
 }

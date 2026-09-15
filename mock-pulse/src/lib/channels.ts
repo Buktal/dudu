@@ -132,7 +132,7 @@ export const CHANNEL_REGISTRY = {
     protocol: "Webhook · JSON 回调",
     note: "QQ 机器人 Webhook：JSON 报文，op13 验证 + Ed25519 签名，无 AES",
     icon: "Bot",
-    implemented: false,
+    implemented: true,
   },
   taobao: {
     name: "淘宝/天猫",

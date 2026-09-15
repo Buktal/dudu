@@ -15,6 +15,7 @@ import type {
   ConnectionConfig,
   DingtalkConnectionConfig,
   FeishuConnectionConfig,
+  QqConnectionConfig,
 } from "../api";
 import {
   DINGTALK_SYSTEMS,
@@ -280,6 +281,26 @@ function feishuFields(draft: FeishuConnectionConfig) {
   ];
 }
 
+/** QQ 凭证字段（事实库 §4/§6）：AppSecret 即 Ed25519 验签密钥；老 Token 已废弃 */
+function qqFields(draft: QqConnectionConfig) {
+  return [
+    {
+      key: "appId",
+      label: "AppID",
+      note: "机器人 AppID（管理端开发基础设置获取）；随 op13 请求头 X-Bot-Appid 记录。",
+      value: draft.appId,
+      secret: false,
+    },
+    {
+      key: "appSecret",
+      label: "AppSecret",
+      note: "验签密钥（官方 sign 页亦称 Bot Secret）：自我翻倍至 32 字节即 Ed25519 seed；老 Token 鉴权已废弃不收集。",
+      value: draft.appSecret,
+      secret: true,
+    },
+  ];
+}
+
 export function ConnectionFields({
   draft,
   onEdit,
@@ -298,7 +319,9 @@ export function ConnectionFields({
             ? feishuFields(draft)
             : draft.channel === "dingtalk"
               ? dingtalkFields(draft)
-              : wecomFields(draft);
+              : draft.channel === "qq"
+                ? qqFields(draft)
+                : wecomFields(draft);
   const systemSelector =
     draft.channel === "douyin" ? (
       <Field className="col-span-full">

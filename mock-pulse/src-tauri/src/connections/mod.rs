@@ -7,6 +7,7 @@
 pub mod dingtalk;
 pub mod douyin;
 pub mod feishu;
+pub mod qq;
 pub mod store;
 pub(crate) mod util;
 pub mod wechat_mini;
@@ -106,6 +107,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &wechat_mini::Adapter,
     &feishu::Adapter,
     &dingtalk::Adapter,
+    &qq::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -339,6 +341,15 @@ pub enum ConnectionConfig {
         #[serde(default)]
         app_secret: String,
     },
+    #[serde(rename = "qq", rename_all = "camelCase")]
+    Qq {
+        url: String,
+        /// 机器人 AppID（op13 请求头 X-Bot-Appid；仅随连接记录）
+        app_id: String,
+        /// AppSecret（官方 sign 页亦称 Bot Secret）：Ed25519 验签密钥，
+        /// 自我翻倍至 32 字节即 seed；老 Token 鉴权已废弃不收录（事实库 §6）
+        app_secret: String,
+    },
 }
 
 /// 读取全部持久化连接（无文件时返回空列表）。
@@ -421,6 +432,13 @@ pub async fn connections_test_dingtalk(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&dingtalk::Adapter, config).await
+}
+
+/// 按 QQ op13 验证回调协议测试连接（目标须回 plain_token 回显 + Ed25519
+/// 签名回包；官方未给应答时限口径）。
+#[tauri::command]
+pub async fn connections_test_qq(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
+    run_handshake(&qq::Adapter, config).await
 }
 
 #[cfg(test)]

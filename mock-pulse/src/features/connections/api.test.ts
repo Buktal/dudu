@@ -7,10 +7,12 @@ import {
   type DouyinConnectionConfig,
   type FeishuConnectionConfig,
   loadConnections,
+  type QqConnectionConfig,
   saveConnection,
   testDingtalkConnection,
   testDouyinConnection,
   testFeishuConnection,
+  testQqConnection,
   testWechatMiniConnection,
   testWechatMpConnection,
   testWecomConnection,
@@ -81,6 +83,13 @@ const dingtalkConfig: DingtalkConnectionConfig = {
   encodingAesKey: "4g5j64qlyl3zvetqxz5jiocdr586fn2zvjpa8zls3ij",
   ownerKey: "suite4xxxxxxxxxxxxxxx",
   appSecret: "mock_app_secret",
+};
+
+const qqConfig: QqConnectionConfig = {
+  channel: "qq",
+  url: "http://127.0.0.1:8080/webhooks/qq",
+  appId: "11111111",
+  appSecret: "DG5g3B4j9X2KOErG",
 };
 
 describe("connections api 契约", () => {
@@ -158,7 +167,16 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/公众号/小程序/飞书/钉钉（按 channel 区分形状）", async () => {
+  it("testQqConnection 调用 connections_test_qq 并透传配置", async () => {
+    const outcome = { ok: true, message: "op13 验证回调握手成功" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testQqConnection(qqConfig)).resolves.toEqual(outcome);
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_qq", {
+      config: qqConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/公众号/小程序/飞书/钉钉/QQ（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
@@ -166,6 +184,7 @@ describe("connections api 契约", () => {
       wechatMiniConfig,
       feishuConfig,
       dingtalkConfig,
+      qqConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

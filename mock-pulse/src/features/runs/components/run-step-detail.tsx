@@ -11,6 +11,13 @@ function requestSnapshot(step: RunStep): string {
     const separator = step.url.includes("?") ? "&" : "?";
     return `POST ${step.url}${separator}msg_signature=${encodeURIComponent(step.signature)}&timestamp=${step.timestamp ?? ""}&nonce=${encodeURIComponent(step.msgId)}\nContent-Type: text/xml\n\n${step.requestBody ?? "（旧记录未保存加密信封）"}\n\n加密前 XML：\n${step.payload}`;
   }
+  if (step.channel === "qq") {
+    // QQ：普通事件带 Ed25519 签名三头；op13 验证回调无签名头（msgId 快照 plain_token）
+    const headers = step.signature
+      ? `X-Signature-Ed25519: ${step.signature}\nX-Signature-Timestamp: ${step.timestamp ?? ""}`
+      : `User-Agent: QQBot-Callback（op13 验证回调）\nX-Bot-Appid: <连接 AppID>`;
+    return `POST ${step.url}\nContent-Type: application/json\n${headers}\n\n${step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

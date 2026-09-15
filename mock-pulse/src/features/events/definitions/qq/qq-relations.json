@@ -1,0 +1,136 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "qq",
+  "version": "2026.09",
+  "schemas": {
+    "qq-friend-add": {
+      "version": "2026.09",
+      "source": "https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/friend_add.html",
+      "fields": [
+        {
+          "path": "id",
+          "title": "事件 id",
+          "type": "string",
+          "group": "事件信封",
+          "description": "外层事件 id（官方信封样本占位符原文 event_id）。"
+        },
+        {
+          "path": "op",
+          "title": "操作码",
+          "type": "number",
+          "group": "事件信封",
+          "description": "固定为 0（Dispatch，事件推送）。"
+        },
+        {
+          "path": "s",
+          "title": "下行序列号",
+          "type": "number",
+          "group": "事件信封",
+          "description": "平台下行序列号（官方信封样本值 42）。"
+        },
+        {
+          "path": "t",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件信封",
+          "description": "固定为 FRIEND_ADD：用户添加机器人为好友（GROUP_AND_C2C_EVENT 1<<25）。",
+          "required": true
+        },
+        {
+          "path": "d.openid",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "事件内容",
+          "description": "添加好友的用户 openid；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.timestamp",
+          "title": "事件时刻",
+          "type": "number",
+          "group": "事件内容",
+          "description": "Unix 秒级时间戳；新建事件时按当前秒重生成。"
+        },
+        {
+          "path": "d.scene",
+          "title": "添加来源",
+          "type": "number",
+          "group": "事件内容",
+          "description": "来源场景：1000=缺省，1001-1004=搜索/群空间，2001-2004=分享链接（官方样本 1001）。"
+        },
+        {
+          "path": "d.scene_param",
+          "title": "来源参数",
+          "type": "string",
+          "group": "事件内容",
+          "description": "开发者自定义 callback_data（官方样本为空串）。"
+        },
+        {
+          "path": "d.author.union_openid",
+          "title": "跨应用统一 OpenID",
+          "type": "string",
+          "group": "事件内容",
+          "description": "跨应用统一用户 OpenID（官方样本 32 位十六进制）；新建事件时重新生成。"
+        }
+      ]
+    },
+    "qq-group-add-robot": {
+      "version": "2026.09",
+      "source": "https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_add_robot.html",
+      "fields": [
+        {
+          "path": "id",
+          "title": "事件 id",
+          "type": "string",
+          "group": "事件信封",
+          "description": "外层事件 id（官方信封样本占位符原文 event_id）。"
+        },
+        {
+          "path": "op",
+          "title": "操作码",
+          "type": "number",
+          "group": "事件信封",
+          "description": "固定为 0（Dispatch，事件推送）。"
+        },
+        {
+          "path": "s",
+          "title": "下行序列号",
+          "type": "number",
+          "group": "事件信封",
+          "description": "平台下行序列号（官方信封样本值 42）。"
+        },
+        {
+          "path": "t",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件信封",
+          "description": "固定为 GROUP_ADD_ROBOT：机器人被添加到群聊（同时是群被动回复可用 event_id 类型）。",
+          "required": true
+        },
+        {
+          "path": "d.group_openid",
+          "title": "群 OpenID",
+          "type": "string",
+          "group": "事件内容",
+          "description": "被加入的群 openid；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.op_member_openid",
+          "title": "操作者 OpenID",
+          "type": "string",
+          "group": "事件内容",
+          "description": "操作机器人进群的成员 openid（官方样本与群 openid 同值照录）；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.timestamp",
+          "title": "事件时刻",
+          "type": "number",
+          "group": "事件内容",
+          "description": "Unix 秒级时间戳；新建事件时按当前秒重生成。"
+        }
+      ]
+    }
+  }
+}

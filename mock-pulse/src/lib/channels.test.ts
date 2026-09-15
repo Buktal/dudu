@@ -53,7 +53,7 @@ describe("渠道注册表", () => {
     }
   });
 
-  it("抖音/企微/飞书/钉钉/公众号/小程序已实现连接适配器，其余渠道在选择器可见但不可连", () => {
+  it("抖音/企微/飞书/钉钉/QQ/公众号/小程序已实现连接适配器，其余渠道在选择器可见但不可连", () => {
     const implemented = CHANNELS.filter((channel) => channel.implemented);
     expect(implemented.map((channel) => channel.id)).toEqual([
       "douyin",
@@ -62,6 +62,7 @@ describe("渠道注册表", () => {
       "wechat-mp",
       "wechat-mini",
       "dingtalk",
+      "qq",
     ]);
   });
 

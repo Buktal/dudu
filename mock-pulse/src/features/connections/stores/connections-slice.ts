@@ -12,10 +12,12 @@ import {
   type DouyinConnectionConfig,
   type FeishuConnectionConfig,
   loadConnections,
+  type QqConnectionConfig,
   saveConnection as saveConnectionApi,
   testDingtalkConnection as testDingtalkApi,
   testDouyinConnection as testDouyinApi,
   testFeishuConnection as testFeishuApi,
+  testQqConnection as testQqApi,
   testWechatMiniConnection as testWechatMiniApi,
   testWechatMpConnection as testWechatMpApi,
   testWecomConnection as testWecomApi,
@@ -104,6 +106,14 @@ export const defaultFeishuConnection: FeishuConnectionConfig = {
   encryptKey: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（Ed25519 验签密钥起步） */
+export const defaultQqConnection: QqConnectionConfig = {
+  channel: "qq",
+  url: "http://127.0.0.1:8080/webhooks/qq",
+  appId: "",
+  appSecret: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -116,6 +126,7 @@ export const initialConnectionsState: ConnectionsState = {
     "wechat-mini": defaultWechatMiniConnection,
     feishu: defaultFeishuConnection,
     dingtalk: defaultDingtalkConnection,
+    qq: defaultQqConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -157,6 +168,8 @@ export const testConnection = createAsyncThunk(
         return testFeishuApi(config);
       case "dingtalk":
         return testDingtalkApi(config);
+      case "qq":
+        return testQqApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
@@ -243,6 +256,7 @@ export const {
  * - 钉钉按通道核：密文通道 = url + token + encodingAesKey + ownerKey（sha1
  *   四参验签 + AES 解密封装 + 包尾 $key）；机器人通道 = url + appSecret
  *   （timestamp/sign = HmacSHA256）
+ * - QQ 核：url + appSecret 必填（Ed25519 验签密钥）；appId 仅随连接记录
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -263,6 +277,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && feishuReady(config);
     case "dingtalk":
       return config.url.trim() !== "" && dingtalkReady(config);
+    case "qq":
+      return config.url.trim() !== "" && qqReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -376,6 +392,14 @@ function dingtalkReady(config: DingtalkConnectionConfig): boolean {
       return false;
     }
   }
+}
+
+/**
+ * QQ 核：url + appSecret 必填（Ed25519 验签密钥，直发签名与 op13 回包校验
+ * 都吃它）；appId 仅随连接记录（op13 请求头 X-Bot-Appid），不参与必填集。
+ */
+function qqReady(config: QqConnectionConfig): boolean {
+  return config.appSecret.trim() !== "";
 }
 
 /** 按渠道字面量取对应形状的连接配置类型 */

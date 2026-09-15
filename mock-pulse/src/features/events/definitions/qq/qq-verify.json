@@ -1,0 +1,36 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "qq",
+  "version": "2026.09",
+  "schemas": {
+    "qq-op13-verify": {
+      "version": "2026.09",
+      "source": "https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/event-emit/webhook.html",
+      "fields": [
+        {
+          "path": "d.plain_token",
+          "title": "验证口令",
+          "type": "string",
+          "group": "op13 验证信封",
+          "description": "平台随验证回调下发的明文口令（官方样本 Arq0D5A61EgUu4OxUvOp，20 位字母数字）；目标须在回包中原样回显。",
+          "required": true
+        },
+        {
+          "path": "d.event_ts",
+          "title": "验证时刻",
+          "type": "string",
+          "group": "op13 验证信封",
+          "description": "秒级 Unix 时间戳字符串；目标回包签名 = hex(Ed25519.Sign(priv, event_ts + plain_token))，改此值可验证回签链路。新建事件时按当前秒重生成。",
+          "required": true
+        },
+        {
+          "path": "op",
+          "title": "操作码",
+          "type": "number",
+          "group": "op13 验证信封",
+          "description": "固定为 13（Webhook 验证回调）；请求头携带 User-Agent: QQBot-Callback 与 X-Bot-Appid。目标须回 {\"plain_token\":\"<同值>\",\"signature\":\"<128 位 hex>\"}。"
+        }
+      ]
+    }
+  }
+}

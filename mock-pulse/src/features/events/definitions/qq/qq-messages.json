@@ -1,0 +1,376 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "qq",
+  "version": "2026.09",
+  "schemas": {
+    "qq-c2c-message-create": {
+      "version": "2026.09",
+      "source": "https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/c2c_message_create.html",
+      "fields": [
+        {
+          "path": "id",
+          "title": "事件 id",
+          "type": "string",
+          "group": "事件信封",
+          "description": "外层事件 id（官方信封样本占位符原文 event_id）；可作为被动回复的 event_id（与 msg_id 二选一，仅部分事件可用）。"
+        },
+        {
+          "path": "op",
+          "title": "操作码",
+          "type": "number",
+          "group": "事件信封",
+          "description": "固定为 0（Dispatch，事件推送）。"
+        },
+        {
+          "path": "s",
+          "title": "下行序列号",
+          "type": "number",
+          "group": "事件信封",
+          "description": "平台下行序列号（官方信封样本值 42）；心跳会携带最新 s。"
+        },
+        {
+          "path": "t",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件信封",
+          "description": "固定为 C2C_MESSAGE_CREATE：用户在单聊给机器人发消息。请求头带 X-Signature-Ed25519 / X-Signature-Timestamp / X-Bot-Appid。",
+          "required": true
+        },
+        {
+          "path": "d.id",
+          "title": "消息 id",
+          "type": "string",
+          "group": "消息内容",
+          "description": "ROBOT1.0_ 前缀消息 id；被动回复的 msg_id 取它（同 msg_id 可能重复推送，按 msg_seq 去重）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.author.id",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "发送者用户 openid（32 位十六进制样）；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.author.user_openid",
+          "title": "用户 OpenID（user_openid）",
+          "type": "string",
+          "group": "消息内容",
+          "description": "与 author.id 同值（官方样本一致）；单聊发消息接口 /v2/users/{user_openid}/messages 即用它。"
+        },
+        {
+          "path": "d.author.union_openid",
+          "title": "跨应用统一 OpenID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "跨应用统一用户 OpenID，可能为空（官方样本为空串）。"
+        },
+        {
+          "path": "d.author.username",
+          "title": "用户名",
+          "type": "string",
+          "group": "消息内容",
+          "description": "发送者用户名；单聊事件官方样本为空串。"
+        },
+        {
+          "path": "d.author.bot",
+          "title": "是否机器人",
+          "type": "boolean",
+          "group": "消息内容",
+          "description": "发送者是否机器人；用户消息固定 false。"
+        },
+        {
+          "path": "d.content",
+          "title": "消息内容",
+          "type": "string",
+          "group": "消息内容",
+          "description": "消息文本内容；单聊事件不去前缀（群 @ 事件才自动去 @）。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "d.message_type",
+          "title": "消息内容类型",
+          "type": "number",
+          "group": "消息内容",
+          "description": "0=普通文本、3=结构化卡片（ark_data 有值）、101=并行消息、102=聊天记录、103=引用消息（msg_elements 有值）。"
+        },
+        {
+          "path": "d.message_scene.source",
+          "title": "消息场景来源",
+          "type": "string",
+          "group": "消息内容",
+          "description": "官方样本为 default。"
+        },
+        {
+          "path": "d.message_scene.ext",
+          "title": "消息场景扩展",
+          "type": "json",
+          "group": "消息内容",
+          "description": "字符串数组，含 msg_idx=REFIDX_…（引用消息索引；接收侧可结合它去重）。"
+        },
+        {
+          "path": "d.timestamp",
+          "title": "消息时刻",
+          "type": "string",
+          "group": "消息内容",
+          "description": "RFC3339 东八区时间（官方样本形态 2026-07-21T10:00:00+08:00）。"
+        }
+      ]
+    },
+    "qq-group-at-message-create": {
+      "version": "2026.09",
+      "source": "https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_at_message_create.html",
+      "fields": [
+        {
+          "path": "id",
+          "title": "事件 id",
+          "type": "string",
+          "group": "事件信封",
+          "description": "外层事件 id（官方信封样本占位符原文 event_id）。"
+        },
+        {
+          "path": "op",
+          "title": "操作码",
+          "type": "number",
+          "group": "事件信封",
+          "description": "固定为 0（Dispatch，事件推送）。"
+        },
+        {
+          "path": "s",
+          "title": "下行序列号",
+          "type": "number",
+          "group": "事件信封",
+          "description": "平台下行序列号（官方信封样本值 42）。"
+        },
+        {
+          "path": "t",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件信封",
+          "description": "固定为 GROUP_AT_MESSAGE_CREATE：用户在群里 @机器人 发消息。",
+          "required": true
+        },
+        {
+          "path": "d.id",
+          "title": "消息 id",
+          "type": "string",
+          "group": "消息内容",
+          "description": "ROBOT1.0_ 前缀消息 id；群被动回复的 msg_id 取它（5 分钟有效、每条 5 次）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.author.id",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "发送者用户 openid；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.author.member_openid",
+          "title": "群成员 OpenID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "群内用户 member_openid（官方样本与 author.id 同值）。"
+        },
+        {
+          "path": "d.author.member_role",
+          "title": "群成员角色",
+          "type": "string",
+          "group": "消息内容",
+          "description": "官方样本为 member。"
+        },
+        {
+          "path": "d.author.username",
+          "title": "用户名",
+          "type": "string",
+          "group": "消息内容",
+          "description": "发送者用户名（官方样本：小明）。"
+        },
+        {
+          "path": "d.author.bot",
+          "title": "是否机器人",
+          "type": "boolean",
+          "group": "消息内容",
+          "description": "发送者是否机器人；用户消息固定 false。"
+        },
+        {
+          "path": "d.content",
+          "title": "消息内容",
+          "type": "string",
+          "group": "消息内容",
+          "description": "消息文本；@ 前缀已被平台自动去除（官方样本含首尾空格照录）。",
+          "required": true
+        },
+        {
+          "path": "d.group_openid",
+          "title": "群 OpenID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "群 openid（32 位十六进制样）；群被动回复 /v2/groups/{group_openid}/messages 即用它。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.message_type",
+          "title": "消息内容类型",
+          "type": "number",
+          "group": "消息内容",
+          "description": "0=普通文本、3=结构化卡片、101=并行消息、102=聊天记录、103=引用消息。"
+        },
+        {
+          "path": "d.timestamp",
+          "title": "消息时刻",
+          "type": "string",
+          "group": "消息内容",
+          "description": "RFC3339 东八区时间。"
+        },
+        {
+          "path": "d.message_scene.source",
+          "title": "消息场景来源",
+          "type": "string",
+          "group": "消息内容",
+          "description": "官方样本为 default。"
+        },
+        {
+          "path": "d.message_scene.ext",
+          "title": "消息场景扩展",
+          "type": "json",
+          "group": "消息内容",
+          "description": "字符串数组，官方样本含 msg_idx=REFIDX_… 与 auth_token=…（群场景比单聊多 auth_token）。"
+        }
+      ]
+    },
+    "qq-group-message-create": {
+      "version": "2026.09",
+      "source": "https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_message_create.html",
+      "fields": [
+        {
+          "path": "id",
+          "title": "事件 id",
+          "type": "string",
+          "group": "事件信封",
+          "description": "外层事件 id（官方信封样本占位符原文 event_id）。"
+        },
+        {
+          "path": "op",
+          "title": "操作码",
+          "type": "number",
+          "group": "事件信封",
+          "description": "固定为 0（Dispatch，事件推送）。"
+        },
+        {
+          "path": "s",
+          "title": "下行序列号",
+          "type": "number",
+          "group": "事件信封",
+          "description": "平台下行序列号（官方信封样本值 42）。"
+        },
+        {
+          "path": "t",
+          "title": "事件类型",
+          "type": "string",
+          "group": "事件信封",
+          "description": "固定为 GROUP_MESSAGE_CREATE：开启「接收所有消息」后群内每条消息都推（不限 @机器人）。",
+          "required": true
+        },
+        {
+          "path": "d.id",
+          "title": "消息 id",
+          "type": "string",
+          "group": "消息内容",
+          "description": "ROBOT1.0_ 前缀消息 id；各字段含义与 GROUP_AT_MESSAGE_CREATE 完全一致。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.author.id",
+          "title": "用户 OpenID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "发送者用户 openid；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.author.member_openid",
+          "title": "群成员 OpenID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "群内用户 member_openid。"
+        },
+        {
+          "path": "d.author.member_role",
+          "title": "群成员角色",
+          "type": "string",
+          "group": "消息内容",
+          "description": "官方全量示例为 member。"
+        },
+        {
+          "path": "d.author.username",
+          "title": "用户名",
+          "type": "string",
+          "group": "消息内容",
+          "description": "发送者用户名。"
+        },
+        {
+          "path": "d.author.bot",
+          "title": "是否机器人",
+          "type": "boolean",
+          "group": "消息内容",
+          "description": "发送者是否机器人；用户消息固定 false。"
+        },
+        {
+          "path": "d.content",
+          "title": "消息内容",
+          "type": "string",
+          "group": "消息内容",
+          "description": "消息文本（事实库收录的全量示例 1 为「大家早上好呀」，未 @ 机器人）。",
+          "required": true
+        },
+        {
+          "path": "d.group_openid",
+          "title": "群 OpenID",
+          "type": "string",
+          "group": "消息内容",
+          "description": "群 openid；新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "d.message_type",
+          "title": "消息内容类型",
+          "type": "number",
+          "group": "消息内容",
+          "description": "0=普通文本、3=结构化卡片、101=并行消息、102=聊天记录、103=引用消息。"
+        },
+        {
+          "path": "d.timestamp",
+          "title": "消息时刻",
+          "type": "string",
+          "group": "消息内容",
+          "description": "RFC3339 东八区时间。"
+        },
+        {
+          "path": "d.message_scene.source",
+          "title": "消息场景来源",
+          "type": "string",
+          "group": "消息内容",
+          "description": "官方样本为 default。"
+        },
+        {
+          "path": "d.message_scene.ext",
+          "title": "消息场景扩展",
+          "type": "json",
+          "group": "消息内容",
+          "description": "字符串数组，含 msg_idx=REFIDX_… 与 auth_token=…。"
+        },
+        {
+          "path": "d.mentions",
+          "title": "@ 用户列表",
+          "type": "json",
+          "group": "消息内容",
+          "description": "消息中 @ 的用户列表，为相对 GROUP_AT_MESSAGE_CREATE 新增字段；无 @ 时为空数组。"
+        }
+      ]
+    }
+  }
+}

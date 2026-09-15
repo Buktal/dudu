@@ -6,6 +6,7 @@ import { defineSchema } from "./define";
 import { DINGTALK_DEFINITIONS } from "./dingtalk";
 import { DOUYIN_DEFINITIONS } from "./douyin";
 import { FEISHU_DEFINITIONS } from "./feishu";
+import { QQ_DEFINITIONS } from "./qq";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
 import { MINI_DEFINITIONS } from "./wechat-mini";
 import { MP_DEFINITIONS } from "./wechat-mp";
@@ -18,11 +19,12 @@ const DEFINITIONS_BY_CHANNEL = {
   "wechat-mini": MINI_DEFINITIONS,
   feishu: FEISHU_DEFINITIONS,
   dingtalk: DINGTALK_DEFINITIONS,
+  qq: QQ_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(176);
+  it("抖音 33 + 企微 89 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(184);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -35,6 +37,7 @@ describe("事件模板聚合注册表", () => {
       "wechat-mini",
       "feishu",
       "dingtalk",
+      "qq",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -75,6 +78,7 @@ describe("事件模板聚合注册表", () => {
         "jsonField",
         "wecomReply",
         "dingtalkReply",
+        "qqSignReply",
       ]).toContain(schema.expected.bodyMode);
     }
   });
@@ -295,6 +299,20 @@ describe("事件模板聚合注册表", () => {
       "dt-bot-file",
       "dt-bot-richtext",
     ]);
+    expect(schemasByChannel("qq").map((schema) => schema.id)).toEqual([
+      // op13 验证回调（事实库 §3.2：官方验证回调请求逐字）
+      "qq-op13-verify",
+      // 单聊/群消息（事实库 §5.3/§5.4/§5.12）
+      "qq-c2c-message-create",
+      "qq-group-at-message-create",
+      "qq-group-message-create",
+      // 频道消息（事实库 §5.7：Message 对象）
+      "qq-at-message-create",
+      "qq-direct-message-create",
+      // 关系链（事实库 §5.5/§5.6）
+      "qq-friend-add",
+      "qq-group-add-robot",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -304,6 +322,7 @@ describe("事件模板聚合注册表", () => {
           "wechat-mini",
           "feishu",
           "dingtalk",
+          "qq",
         ].includes(channel.id)
       )
         continue;

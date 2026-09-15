@@ -83,12 +83,18 @@ fn adapter_registry_covers_every_config_variant() {
         owner_key: String::new(),
         app_secret: String::new(),
     };
+    let qq_config = ConnectionConfig::Qq {
+        url: String::new(),
+        app_id: String::new(),
+        app_secret: String::new(),
+    };
     assert_eq!(adapter_of(&douyin_config).id(), "douyin");
     assert_eq!(adapter_of(&wecom_config).id(), "wecom");
     assert_eq!(adapter_of(&wechat_mp_config).id(), "wechat-mp");
     assert_eq!(adapter_of(&wechat_mini_config).id(), "wechat-mini");
     assert_eq!(adapter_of(&feishu_config).id(), "feishu");
     assert_eq!(adapter_of(&dingtalk_config).id(), "dingtalk");
+    assert_eq!(adapter_of(&qq_config).id(), "qq");
     assert_eq!(
         adapter_by_channel("douyin").map(|adapter| adapter.id()),
         Some("douyin")
@@ -112,6 +118,10 @@ fn adapter_registry_covers_every_config_variant() {
     assert_eq!(
         adapter_by_channel("dingtalk").map(|adapter| adapter.id()),
         Some("dingtalk")
+    );
+    assert_eq!(
+        adapter_by_channel("qq").map(|adapter| adapter.id()),
+        Some("qq")
     );
     assert!(adapter_by_channel("telegram").is_none());
     // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
@@ -139,6 +149,10 @@ fn adapter_registry_covers_every_config_variant() {
         assert_eq!(
             adapter.url(&dingtalk_config).is_some(),
             adapter.matches(&dingtalk_config)
+        );
+        assert_eq!(
+            adapter.url(&qq_config).is_some(),
+            adapter.matches(&qq_config)
         );
     }
 }

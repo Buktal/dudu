@@ -64,6 +64,22 @@ export type DingtalkConnectionConfig = {
 };
 
 /**
+ * QQ 连接配置形状（与 Rust 端 ConnectionConfig::Qq 内标一致）：
+ * AppID 随 op13 请求头 X-Bot-Appid 记录；AppSecret（官方 sign 页亦称
+ * Bot Secret）为 Ed25519 验签密钥（自我翻倍至 32 字节即 seed）。老 Token
+ * 鉴权官方已废弃（事实库 §6），不设 Token 字段。
+ */
+export type QqConnectionConfig = {
+  channel: "qq";
+  /** 回调目标地址，事件与剧本共享 */
+  url: string;
+  /** 机器人 AppID（op13 请求头 X-Bot-Appid；仅随连接记录） */
+  appId: string;
+  /** AppSecret / Bot Secret：Ed25519 验签密钥（翻倍截断 32 字节即 seed） */
+  appSecret: string;
+};
+
+/**
  * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
  * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
  * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
@@ -154,7 +170,8 @@ export type ConnectionConfig =
   | WechatMpConnectionConfig
   | WechatMiniConnectionConfig
   | FeishuConnectionConfig
-  | DingtalkConnectionConfig;
+  | DingtalkConnectionConfig
+  | QqConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -219,4 +236,12 @@ export function testDingtalkConnection(
   config: DingtalkConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_dingtalk", { config });
+}
+
+/** 按 QQ op13 验证回调协议测试连接（目标须回 plain_token 回显 + Ed25519
+ *  签名回包） */
+export function testQqConnection(
+  config: QqConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_qq", { config });
 }

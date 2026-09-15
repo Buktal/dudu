@@ -106,12 +106,22 @@ function dingtalkTestNote(system: DingtalkSystem): string {
   return "发送 check_url 握手（加密信封 + sha1 四参 URL 签名），检查服务是否在 1500ms 内回可解密的加密 success 包。";
 }
 
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉 JSON、公众号 XML */
+/** QQ 握手文案（事实库 §3.2：op13 验证回调，回包 plain_token 回显 + Ed25519 签名） */
+function qqTestNote(): string {
+  return "发送 op13 验证回调（User-Agent: QQBot-Callback + X-Bot-Appid），检查服务是否回 plain_token 回显 + Ed25519 签名的验签回包。";
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ JSON、公众号 XML */
 function wireBadgeLabel(
   channel: ChannelId,
   draft: ConnectionConfig,
 ): "JSON" | "XML" {
-  if (channel === "douyin" || channel === "feishu" || channel === "dingtalk") {
+  if (
+    channel === "douyin" ||
+    channel === "feishu" ||
+    channel === "dingtalk" ||
+    channel === "qq"
+  ) {
     return "JSON";
   }
   if (channel === "wecom" && draft.channel === "wecom") {
@@ -146,7 +156,9 @@ export function ConnectionsView() {
             ? actions.defaultFeishuConnection
             : channel === "dingtalk"
               ? actions.defaultDingtalkConnection
-              : actions.defaultWecomConnection);
+              : channel === "qq"
+                ? actions.defaultQqConnection
+                : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -339,11 +351,13 @@ export function ConnectionsView() {
                                 ? draft.system
                                 : "http_crypto",
                             )
-                          : wecomTestNote(
-                              draft.channel === "wecom"
-                                ? draft.system
-                                : "agent",
-                            )}
+                          : channel === "qq"
+                            ? qqTestNote()
+                            : wecomTestNote(
+                                draft.channel === "wecom"
+                                  ? draft.system
+                                  : "agent",
+                              )}
               </CardDescription>
               <CardAction>
                 <Button

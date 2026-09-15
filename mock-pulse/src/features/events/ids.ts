@@ -22,6 +22,8 @@ import type { EventSchema, IdKind } from "./schemas";
  * - larkOpenId/larkUnionId/larkMessageId/larkChatId：飞书 ou_/on_/om_/oc_ 前缀
  *   + 32 位十六进制（事实库「对 MockPulse 模拟的直接含义」ID 形态速查）
  * - dingtalkMsgId：钉钉机器人 msgId（msgr…== base64 形态，官方样本 msgrK2ck…）
+ * - qqRobotMsgId：QQ 消息 id（ROBOT1.0_ + 56 位字母数字，官方样本掩码长度）
+ * - qqOpenId：QQ openid（32 位大写十六进制）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -143,6 +145,27 @@ export function generateDingtalkMsgId(): string {
   return `${body}==`;
 }
 
+const ALPHANUMERIC_CHARS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+/**
+ * QQ 消息 id：ROBOT1.0_ 前缀 + 56 位字母数字（官方黄金样本掩码占位为
+ * 56 个 x，事实库「对 MockPulse 模拟的直接含义」ID 形态速查）
+ */
+export function generateQqRobotMsgId(): string {
+  const body = Array.from(
+    randomBytes(56),
+    (byte) => ALPHANUMERIC_CHARS[byte % ALPHANUMERIC_CHARS.length],
+  ).join("");
+  return `ROBOT1.0_${body}`;
+}
+
+/** QQ openid：32 位大写十六进制（user_openid/group_openid/member_openid 形态） */
+export function generateQqOpenId(): string {
+  const chars = "0123456789ABCDEF";
+  return Array.from(randomBytes(32), (byte) => chars[byte % 16]).join("");
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -161,6 +184,8 @@ const GENERATORS: Record<IdKind, Generator> = {
   larkMessageId: generateLarkMessageId,
   larkChatId: generateLarkChatId,
   dingtalkMsgId: generateDingtalkMsgId,
+  qqRobotMsgId: generateQqRobotMsgId,
+  qqOpenId: generateQqOpenId,
 };
 
 /**

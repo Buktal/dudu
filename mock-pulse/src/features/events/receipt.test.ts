@@ -33,5 +33,14 @@ describe("describeExpected", () => {
     ).toBe(
       "期望 HTTP 200，微信系解密被动回复包含「<Content><![CDATA[hi]]></Content>」",
     );
+    expect(
+      describeExpected({
+        status: 200,
+        body: "Arq0D5A61EgUu4OxUvOp",
+        bodyMode: "qqSignReply",
+      }),
+    ).toBe(
+      "期望 HTTP 200，op13 验签回包 plain_token 回显「Arq0D5A61EgUu4OxUvOp」（Ed25519 验签由适配器完成）",
+    );
   });
 });

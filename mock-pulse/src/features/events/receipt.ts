@@ -37,6 +37,11 @@ export const RECEIPT_BODY_MODES: readonly {
     label: "钉钉加密回包",
     hint: "按钉钉官方应答比对（事件推送 1500ms 窗口）：目标须回可验签解密的加密回包 {msg_signature,timeStamp,nonce,encrypt}，且解密明文包含期望内容（默认 success）。",
   },
+  {
+    id: "qqSignReply",
+    label: "QQ op13 验签回包",
+    hint: "按 QQ 官方 op13 应答比对：目标须回 {plain_token,signature}，plain_token 与请求同值且 signature = hex(Ed25519.Sign(priv, event_ts+plain_token))——由适配器按连接 AppSecret 验签，期望内容须出现在回显的 plain_token 中。",
+  },
 ];
 
 /** 展示用：一段文本截断（避免长正文撑爆原因行） */
@@ -50,6 +55,7 @@ const MODE_LABEL: Record<ReceiptBodyMode, string> = {
   jsonField: "正文含 JSON 字段",
   wecomReply: "微信系回执形态",
   dingtalkReply: "钉钉加密回包（解密明文包含）",
+  qqSignReply: "QQ op13 验签回包（plain_token 回显）",
 };
 
 /** 期望的人类可读描述（回执面板/运行记录展示用） */
@@ -59,6 +65,9 @@ export function describeExpected(expected: ExpectedReceipt): string {
   }
   if (expected.bodyMode === "dingtalkReply") {
     return `期望 HTTP ${expected.status}，加密回包解密明文包含「${clip(expected.body)}」（1500ms 窗口）`;
+  }
+  if (expected.bodyMode === "qqSignReply") {
+    return `期望 HTTP ${expected.status}，op13 验签回包 plain_token 回显「${clip(expected.body)}」（Ed25519 验签由适配器完成）`;
   }
   if (expected.bodyMode === "wecomReply" && expected.body === "") {
     return `期望 HTTP ${expected.status}，微信系回执为空串`;

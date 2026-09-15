@@ -29,6 +29,9 @@ sha1 = "0.10"
 md-5 = "0.10"
 # 飞书渠道（#35）：X-Lark-Signature 验签 + AES key 派生（sha256(encrypt_key)），同族 digest 0.10
 sha2 = "0.10"
+# QQ 渠道（#37）：Webhook Ed25519 验签（官方 sign 页 §4）——椭圆曲线签名体系
+# 无法像 sha/hmac 一样薄封装自实现，取纯 Rust 标准库 ed25519-dalek（RFC 8032 实现）
+ed25519-dalek = "2"
 hex = "0.4"
 uuid = { version = "1", features = ["v4"] }
 # 企微回调加解密（#17）：AES-256-CBC 底层块运算（补位按官方 PKCS#7-32 自实现）+ Base64

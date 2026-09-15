@@ -3,6 +3,7 @@ import type { ChannelId } from "@/lib/channels";
 import { DINGTALK_SCHEMAS } from "./dingtalk";
 import { DOUYIN_EVENT_SCHEMAS } from "./douyin";
 import { FEISHU_SCHEMAS } from "./feishu";
+import { QQ_SCHEMAS } from "./qq";
 import type { EventSchema } from "./types";
 import { WECHAT_MINI_EVENT_SCHEMAS } from "./wechat-mini";
 import { WECHAT_MP_EVENT_SCHEMAS } from "./wechat-mp";
@@ -28,6 +29,7 @@ const PACKS: readonly ChannelTemplatePack[] = [
   { channel: "wechat-mini", schemas: WECHAT_MINI_EVENT_SCHEMAS },
   { channel: "feishu", schemas: FEISHU_SCHEMAS },
   { channel: "dingtalk", schemas: DINGTALK_SCHEMAS },
+  { channel: "qq", schemas: QQ_SCHEMAS },
 ];
 
 /** 聚合后的全部内置模板（契约校验与全量遍历用） */
