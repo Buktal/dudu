@@ -10,11 +10,13 @@ import {
   loadConnections,
   type QqConnectionConfig,
   saveConnection,
+  type TaobaoConnectionConfig,
   testDingtalkConnection,
   testDouyinConnection,
   testFeishuConnection,
   testKuaishouConnection,
   testQqConnection,
+  testTaobaoConnection,
   testWechatMiniConnection,
   testWechatMpConnection,
   testWecomConnection,
@@ -118,6 +120,13 @@ const kuaishouConfig: KuaishouConnectionConfig = {
   url: "http://127.0.0.1:8080/webhooks/kuaishou",
   appId: "ks696650570360602063",
   appSecret: "Xgm23lSgws235hlgK",
+};
+
+const taobaoConfig: TaobaoConnectionConfig = {
+  channel: "taobao",
+  url: "http://127.0.0.1:8080/webhooks/taobao",
+  appKey: "123456",
+  appSecret: "taobao_app_secret",
 };
 
 describe("connections api 契约", () => {
@@ -235,7 +244,16 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手（按 channel 区分形状）", async () => {
+  it("testTaobaoConnection 调用 connections_test_taobao 并透传配置", async () => {
+    const outcome = { ok: true, message: "Verify 验证成功" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testTaobaoConnection(taobaoConfig)).resolves.toEqual(outcome);
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_taobao", {
+      config: taobaoConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
@@ -247,6 +265,7 @@ describe("connections api 契约", () => {
       qqConfig,
       weiboConfig,
       kuaishouConfig,
+      taobaoConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

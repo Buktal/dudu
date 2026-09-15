@@ -19,3 +19,11 @@ export function formatClock(iso: string | undefined | null): string {
 export function weiboCreatedAt(): string {
   return dayjs().format("ddd MMM DD HH:mm:ss ZZ YYYY");
 }
+
+/**
+ * 淘宝退款消息 modified 的线上格式（事实库 §5.4 字段口径：
+ * `yyyy-MM-dd HH:mm:ss`，官方样本 2000-12-30 12:32:20）。
+ */
+export function taobaoModified(): string {
+  return dayjs().format("YYYY-MM-DD HH:mm:ss");
+}

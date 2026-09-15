@@ -5,6 +5,7 @@ import { DOUYIN_EVENT_SCHEMAS } from "./douyin";
 import { FEISHU_SCHEMAS } from "./feishu";
 import { KS_SCHEMAS } from "./kuaishou";
 import { QQ_SCHEMAS } from "./qq";
+import { TB_SCHEMAS } from "./taobao";
 import type { EventSchema } from "./types";
 import { WECHAT_MINI_EVENT_SCHEMAS } from "./wechat-mini";
 import { WECHAT_MP_EVENT_SCHEMAS } from "./wechat-mp";
@@ -36,6 +37,7 @@ const PACKS: readonly ChannelTemplatePack[] = [
   { channel: "qq", schemas: QQ_SCHEMAS },
   { channel: "weibo", schemas: WB_SCHEMAS },
   { channel: "kuaishou", schemas: KS_SCHEMAS },
+  { channel: "taobao", schemas: TB_SCHEMAS },
 ];
 
 /** 聚合后的全部内置模板（契约校验与全量遍历用） */

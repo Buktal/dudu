@@ -92,6 +92,13 @@ pub(crate) fn hmac_sha256_base64(key: &str, data: &str) -> String {
     BASE64.encode(hmac_sha256(key.as_bytes(), data.as_bytes()))
 }
 
+/// HMAC-SHA256 → 64 位小写 hex（淘宝全球栈 Authorization =
+/// HEX_ENCODE(HMAC-SHA256(AppKey + message_body, AppSecret))，事实库 §4.2；
+/// 官方 Java 示例逐字节 %02x 拼接后 toLowerCase，即小写 hex）。
+pub(crate) fn hmac_sha256_hex(key: &str, data: &str) -> String {
+    hex::encode(hmac_sha256(key.as_bytes(), data.as_bytes()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,5 +181,23 @@ mod tests {
         let long_key = "k".repeat(100);
         let digest = hmac_sha256_base64(&long_key, "data");
         assert_eq!(digest, "CTgO5LgC2iNjvJbo4NEzuidUWOqN28Vk+Yb8ErMfjLE=");
+    }
+
+    #[test]
+    fn hmac_sha256_hex_matches_known_vector() {
+        // 独立来源：HMAC-SHA256 通行示例向量 key="key"、
+        // data="The quick brown fox jumps over the lazy dog"（Node crypto 交叉复算）
+        assert_eq!(
+            hmac_sha256_hex(
+                "key",
+                "The quick brown fox jumps over the lazy dog"
+            ),
+            "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8"
+        );
+        // 多段拼接由调用方完成：同串同钥与 base64 变体摘要一致（编码仅形态不同）
+        assert_eq!(
+            hmac_sha256_hex("Jefe", "what do ya want for nothing?"),
+            hex::encode(hmac_sha256(b"Jefe", b"what do ya want for nothing?"))
+        );
     }
 }

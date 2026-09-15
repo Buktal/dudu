@@ -137,9 +137,9 @@ export const CHANNEL_REGISTRY = {
   taobao: {
     name: "淘宝/天猫",
     protocol: "全球栈 · HTTPS 回调",
-    note: "国内 TOP 无 HTTP 回调（TMC 长连接不模拟），取全球栈 HTTPS 回调：HMAC-SHA256 验签",
+    note: "国内 TOP 无 HTTP 回调（TMC 长连接不模拟），取全球栈 HTTPS 回调：HMAC-SHA256 验签，回 200 签收（500ms/半小时/12 次重试语义）",
     icon: "ShoppingCart",
-    implemented: false,
+    implemented: true,
     globalStack: true,
   },
   jingdong: {

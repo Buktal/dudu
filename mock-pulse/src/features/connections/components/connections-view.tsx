@@ -130,7 +130,12 @@ function kuaishouTestNote(): string {
   return "发送 TEST 测试事件（header kwaisign = MD5(body+AppSecret)），检查服务是否回 HTTP 200 且 result=1 并回传收到的 message_id。";
 }
 
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书/快手 JSON、公众号 XML */
+/** 淘宝握手文案（事实库 §3.2 配置页：填回调地址后 Verify，返回 HTTP 200 即验证成功） */
+function taobaoTestNote(): string {
+  return "发送 Verify 验证（POST 官方正向样本明文 + Authorization = HEX(HMAC-SHA256(AppKey+body, AppSecret)) 头），检查服务是否返回 HTTP 200（500ms 签收语义）。";
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书/快手/淘宝 JSON、公众号 XML */
 function wireBadgeLabel(
   channel: ChannelId,
   draft: ConnectionConfig,
@@ -142,7 +147,8 @@ function wireBadgeLabel(
     channel === "qq" ||
     channel === "weibo" ||
     channel === "xiaohongshu" ||
-    channel === "kuaishou"
+    channel === "kuaishou" ||
+    channel === "taobao"
   ) {
     return "JSON";
   }
@@ -186,7 +192,9 @@ export function ConnectionsView() {
                     ? actions.defaultXiaohongshuConnection
                     : channel === "kuaishou"
                       ? actions.defaultKuaishouConnection
-                      : actions.defaultWecomConnection);
+                      : channel === "taobao"
+                        ? actions.defaultTaobaoConnection
+                        : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -391,11 +399,13 @@ export function ConnectionsView() {
                                   )
                                 : channel === "kuaishou"
                                   ? kuaishouTestNote()
-                                  : wecomTestNote(
-                                      draft.channel === "wecom"
-                                        ? draft.system
-                                        : "agent",
-                                    )}
+                                  : channel === "taobao"
+                                    ? taobaoTestNote()
+                                    : wecomTestNote(
+                                        draft.channel === "wecom"
+                                          ? draft.system
+                                          : "agent",
+                                      )}
               </CardDescription>
               <CardAction>
                 <Button

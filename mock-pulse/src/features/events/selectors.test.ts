@@ -233,8 +233,8 @@ describe("templatesForChannel（目录模板源）", () => {
     );
   });
 
-  it("未接入模板的渠道返回空表（小红书已接入 #39，改用未接入的淘宝）", () => {
-    expect(templatesForChannel("taobao")).toEqual([]);
+  it("未接入模板的渠道返回空表（淘宝已接入 #41，改用未接入的京东）", () => {
+    expect(templatesForChannel("jingdong")).toEqual([]);
   });
 });
 

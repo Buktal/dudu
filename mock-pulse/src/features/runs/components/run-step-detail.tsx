@@ -34,6 +34,12 @@ function requestSnapshot(step: RunStep): string {
     // body 即明文 JSON 逐字节透传；message_id 幂等键在载荷内（msgId 快照即它）
     return `POST ${step.url}\nContent-Type: application/json\nkwaisign: ${step.signature}\n\n${step.payload}`;
   }
+  if (step.channel === "taobao") {
+    // 淘宝（全球栈）：验签在 header（Authorization = HEX(HMAC-SHA256(AppKey+body,
+    // AppSecret))，数据明文传输）；body 即明文 JSON 逐字节透传，msgId 快照取
+    // tid/refund_id/msg_id 等业务幂等键
+    return `POST ${step.url}\nContent-Type: application/json\nAuthorization: ${step.signature}\n\n${step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

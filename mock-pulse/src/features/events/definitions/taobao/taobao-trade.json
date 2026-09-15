@@ -1,0 +1,163 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "taobao",
+  "version": "2026.09",
+  "schemas": {
+    "tb-trade-create": {
+      "version": "2026.09",
+      "source": "https://developer.alibaba.com/docs/topicDetail.htm?apiId=101",
+      "fields": [
+        {
+          "path": "buyer_nick",
+          "title": "买家昵称",
+          "type": "string",
+          "group": "交易信息",
+          "description": "买家昵称（官方样本脱敏形态「碎**」）。",
+          "required": true
+        },
+        {
+          "path": "buyer_open_uid",
+          "title": "买家加密 ID",
+          "type": "string",
+          "group": "交易信息",
+          "description": "buyer_id 加密串，可对外开放，替代 buyer_nick 作唯一标识（官方样本 AAGq5d-EAAeG3JedwSFpZMe1）。",
+          "required": true
+        },
+        {
+          "path": "payment",
+          "title": "实付金额",
+          "type": "string",
+          "group": "交易信息",
+          "description": "实付金额（官方样本为字符串形态「100.00」）。",
+          "required": true
+        },
+        {
+          "path": "oid",
+          "title": "子订单 ID",
+          "type": "string",
+          "group": "交易标识",
+          "description": "子订单 ID（官方样本数字串「987654321」，JSON 里恒为字符串）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "seller_nick",
+          "title": "卖家昵称",
+          "type": "string",
+          "group": "交易信息",
+          "description": "卖家昵称（官方样本「麦包包」）。",
+          "required": true
+        },
+        {
+          "path": "type",
+          "title": "交易类型",
+          "type": "string",
+          "group": "交易信息",
+          "description": "交易类型（官方样本 fixed）。",
+          "required": true
+        },
+        {
+          "path": "tid",
+          "title": "主订单 ID",
+          "type": "string",
+          "group": "交易标识",
+          "description": "主订单 ID（官方样本数字串「123456789」）；业务幂等以 tid/oid 为准（事实库 §3.3，通知+回查模式）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "status",
+          "title": "交易状态",
+          "type": "string",
+          "group": "交易信息",
+          "description": "交易状态（官方样本 TRADE_CREATE）；事实库 §2.1：交易消息 status 仅 4 态支付口径（无已发货态），详情须回查 API。",
+          "required": true
+        }
+      ]
+    },
+    "tb-refund-created": {
+      "version": "2026.09",
+      "source": "https://developer.alibaba.com/docs/topicDetail.htm?apiId=118",
+      "fields": [
+        {
+          "path": "buyer_nick",
+          "title": "买家昵称",
+          "type": "string",
+          "group": "退款信息",
+          "description": "买家昵称（官方样本脱敏形态「碎**」）。",
+          "required": true
+        },
+        {
+          "path": "buyer_open_uid",
+          "title": "买家加密 ID",
+          "type": "string",
+          "group": "退款信息",
+          "description": "buyer_id 加密串，可对外开放（官方样本 AAGq5d-EAAeG3JedwSFpZMe1）。",
+          "required": true
+        },
+        {
+          "path": "refund_phase",
+          "title": "退款阶段",
+          "type": "string",
+          "group": "退款信息",
+          "description": "退款阶段：onsale 售中 / aftersale 售后（官方样本 onsale）。",
+          "required": true
+        },
+        {
+          "path": "refund_fee",
+          "title": "退款金额",
+          "type": "string",
+          "group": "退款信息",
+          "description": "退款金额（官方样本为字符串形态「21.32」）。",
+          "required": true
+        },
+        {
+          "path": "bill_type",
+          "title": "单据类型",
+          "type": "string",
+          "group": "退款信息",
+          "description": "单据类型：refund_bill/return_bill/replace_bill（官方样本 refund_bill）。",
+          "required": true
+        },
+        {
+          "path": "modified",
+          "title": "修改时刻",
+          "type": "string",
+          "group": "退款信息",
+          "description": "yyyy-MM-dd HH:mm:ss 字符串（官方样本 2000-12-30 12:32:20）。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "oid",
+          "title": "子订单 ID",
+          "type": "string",
+          "group": "退款标识",
+          "description": "子订单 ID（官方样本数字串「110770592823138」）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "seller_nick",
+          "title": "卖家昵称",
+          "type": "string",
+          "group": "退款信息",
+          "description": "卖家昵称（官方样本「麦包包」）。",
+          "required": true
+        },
+        {
+          "path": "refund_id",
+          "title": "退款 ID",
+          "type": "string",
+          "group": "退款标识",
+          "description": "退款 ID（官方样本数字串「592823138」）；退款业务幂等以 refund_id 为准（事实库 §3.3）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "tid",
+          "title": "主订单 ID",
+          "type": "string",
+          "group": "退款标识",
+          "description": "主订单 ID（官方样本数字串「110770592823138」）。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

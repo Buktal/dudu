@@ -1,4 +1,4 @@
-import { weiboCreatedAt } from "@/lib/time";
+import { taobaoModified, weiboCreatedAt } from "@/lib/time";
 
 import {
   cloneJson,
@@ -34,6 +34,12 @@ import type { EventSchema, IdKind } from "./schemas";
  *   18 位数字串）
  * - ksMessageId：快手 message_id（官方支付回调样本为小写 UUID，「每次随机
  *   生成的 ID」，幂等键重试保持一致）
+ * - taobaoBizId：淘宝 tid/oid/refund_id（官方样本数字串形态 9~15 位，JSON 里
+ *   恒为字符串，事实库「ID 形态」速查；排重幂等键随新事件变化）
+ * - taobaoModified：淘宝退款 modified（yyyy-MM-dd HH:mm:ss 字符串，经 lib/time
+ *   封装格式化）
+ * - openimMsgId：OpenIM msg_id（19 位数字串，官方样本 6269105334747922432，
+ *   首位 1~6 恒在 int64 内）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -215,6 +221,39 @@ export function generateKsMessageId(): string {
   return crypto.randomUUID();
 }
 
+/**
+ * 淘宝业务单号（tid/oid/refund_id）：官方样本为数字串形态（TradeCreate 的
+ * tid "123456789"、RefundCreated 的 oid "110770592823138"），JSON 里恒为
+ * 字符串——取 9~15 位数字串（首位非零）。
+ */
+export function generateTaobaoBizId(): string {
+  const length = 9 + (randomBytes(1)[0] % 7);
+  const bytes = randomBytes(length);
+  let digits = String((bytes[0] % 9) + 1);
+  for (let i = 1; i < length; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return digits;
+}
+
+/** 淘宝退款 modified：线上字符串形态（格式经 lib/time 封装单点） */
+export function generateTaobaoModified(): string {
+  return taobaoModified();
+}
+
+/**
+ * OpenIM msg_id：19 位数字串（官方样本 6269105334747922432 为 int64 形态，
+ * 首位取 1~6 保证恒小于 2^63-1）
+ */
+export function generateOpenimMsgId(): string {
+  const bytes = randomBytes(19);
+  let digits = String((bytes[0] % 6) + 1);
+  for (let i = 1; i < 19; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return digits;
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -239,6 +278,9 @@ const GENERATORS: Record<IdKind, Generator> = {
   weiboCreatedAt: generateWeiboCreatedAt,
   xhsMsgId: generateXhsMsgId,
   ksMessageId: generateKsMessageId,
+  taobaoBizId: generateTaobaoBizId,
+  taobaoModified: generateTaobaoModified,
+  openimMsgId: generateOpenimMsgId,
 };
 
 /**

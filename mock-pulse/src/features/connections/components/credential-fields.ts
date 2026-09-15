@@ -4,6 +4,7 @@ import type {
   FeishuConnectionConfig,
   KuaishouConnectionConfig,
   QqConnectionConfig,
+  TaobaoConnectionConfig,
   WeiboConnectionConfig,
   XiaohongshuConnectionConfig,
 } from "../api";
@@ -368,6 +369,26 @@ function kuaishouFields(draft: KuaishouConnectionConfig): CredentialField[] {
   ];
 }
 
+/** 淘宝凭证字段（事实库 §4.2，全球栈 HTTPS 回调）：消息体 = AppKey + body，密钥 = AppSecret */
+function taobaoFields(draft: TaobaoConnectionConfig): CredentialField[] {
+  return [
+    {
+      key: "appKey",
+      label: "AppKey",
+      note: "全球栈应用标识：验签消息体 = AppKey 拼接请求 body（官方示例 AppKey「123456」），缺失即签名不可复算。",
+      value: draft.appKey,
+      secret: false,
+    },
+    {
+      key: "appSecret",
+      label: "AppSecret",
+      note: "全球栈应用密钥：Authorization = HEX(HMAC-SHA256(AppKey+body, AppSecret)) 头验签的密钥；数据明文传输，无 AES。",
+      value: draft.appSecret,
+      secret: true,
+    },
+  ];
+}
+
 /** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
 export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
   switch (draft.channel) {
@@ -389,6 +410,8 @@ export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
       return xiaohongshuFields(draft);
     case "kuaishou":
       return kuaishouFields(draft);
+    case "taobao":
+      return taobaoFields(draft);
     case "wecom":
       return wecomFields(draft);
     default: {

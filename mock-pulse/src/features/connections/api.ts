@@ -139,6 +139,22 @@ export type KuaishouConnectionConfig = {
 };
 
 /**
+ * 淘宝连接配置形状（与 Rust 端 ConnectionConfig::Taobao 内标一致）：
+ * 取全球栈 HTTPS 回调子形态（国内 TMC 长连接不在范围）——AppKey 拼接请求
+ * body 作消息体、AppSecret 作密钥，Authorization = HEX(HMAC-SHA256(AppKey +
+ * body, AppSecret))（事实库 §4.2）；数据明文传输，无 AES 字段。
+ */
+export type TaobaoConnectionConfig = {
+  channel: "taobao";
+  /** 回调目标地址，事件与剧本共享（官方要求 https + CA 签发 OV/EV 证书） */
+  url: string;
+  /** AppKey（全球栈应用标识）：验签消息体的前半段（官方示例 AppKey "123456"） */
+  appKey: string;
+  /** AppSecret（全球栈应用密钥）：HMAC-SHA256 验签密钥 */
+  appSecret: string;
+};
+
+/**
  * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
  * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
  * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
@@ -233,7 +249,8 @@ export type ConnectionConfig =
   | QqConnectionConfig
   | WeiboConnectionConfig
   | XiaohongshuConnectionConfig
-  | KuaishouConnectionConfig;
+  | KuaishouConnectionConfig
+  | TaobaoConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -330,4 +347,13 @@ export function testKuaishouConnection(
   config: KuaishouConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_kuaishou", { config });
+}
+
+/** 按全球栈 Verify 协议测试连接（官方配置页：填回调地址后 Verify，返回
+ *  HTTP 200 即验证成功；探针带 Authorization = HEX(HMAC-SHA256(AppKey+body,
+ *  AppSecret)) 头） */
+export function testTaobaoConnection(
+  config: TaobaoConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_taobao", { config });
 }

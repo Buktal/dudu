@@ -1,0 +1,61 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "taobao",
+  "version": "2026.09",
+  "schemas": {
+    "tb-openim-offmsg-push": {
+      "version": "2026.09",
+      "source": "https://developer.alibaba.com/docs/doc.htm?articleId=103623&docType=1&treeId=74",
+      "fields": [
+        {
+          "path": "content",
+          "title": "消息内容",
+          "type": "string",
+          "group": "离线消息",
+          "description": "旺旺聊天文本（官方形态参考样本「文本啊啊啊」；表情 content 如 /:^_^/:^$^/:Q 形态）。OffMsgPush 载荷全文待核验，本模板取事实库 §5.8 官方 envelope 形态参考。",
+          "required": true
+        },
+        {
+          "path": "to_id",
+          "title": "接收者 ID",
+          "type": "string",
+          "group": "离线消息",
+          "description": "接收者 OpenIM ID（官方样本 it3d3hxlxiaomishu）。",
+          "required": true
+        },
+        {
+          "path": "nickname",
+          "title": "发送者昵称",
+          "type": "string",
+          "group": "离线消息",
+          "description": "发送者昵称（官方样本 it3d3hxltest0）。",
+          "required": true
+        },
+        {
+          "path": "from_id",
+          "title": "发送者 ID",
+          "type": "string",
+          "group": "离线消息",
+          "description": "发送者 OpenIM ID（官方样本 it3d3hxltest0）。",
+          "required": true
+        },
+        {
+          "path": "gmt_send",
+          "title": "发送时刻",
+          "type": "string",
+          "group": "离线消息",
+          "description": "10 位秒级 Unix 时间戳字符串（官方样本 1444297001）。新建事件时按当前时刻重生成。",
+          "required": true
+        },
+        {
+          "path": "msg_id",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "离线消息",
+          "description": "19 位数字串消息 ID（官方样本 6269105334747922432，int64 形态）。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

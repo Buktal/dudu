@@ -9,6 +9,7 @@ import { FEISHU_DEFINITIONS } from "./feishu";
 import { KS_DEFINITIONS } from "./kuaishou";
 import { QQ_DEFINITIONS } from "./qq";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
+import { TB_DEFINITIONS } from "./taobao";
 import { MINI_DEFINITIONS } from "./wechat-mini";
 import { MP_DEFINITIONS } from "./wechat-mp";
 import { WECOM_DEFINITIONS } from "./wecom";
@@ -26,11 +27,12 @@ const DEFINITIONS_BY_CHANNEL = {
   qq: QQ_DEFINITIONS,
   weibo: WB_DEFINITIONS,
   kuaishou: KS_DEFINITIONS,
+  taobao: TB_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(221);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(226);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -47,6 +49,7 @@ describe("事件模板聚合注册表", () => {
       "qq",
       "weibo",
       "kuaishou",
+      "taobao",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -92,7 +95,7 @@ describe("事件模板聚合注册表", () => {
     }
   });
 
-  it("schemasByChannel：已接入渠道返回模板，其余 9 渠道返回空表", () => {
+  it("schemasByChannel：已接入渠道返回模板，其余 8 渠道返回空表", () => {
     expect(schemasByChannel("douyin").map((schema) => schema.id)).toEqual([
       // dop 主体系
       "dy-create-video",
@@ -372,6 +375,16 @@ describe("事件模板聚合注册表", () => {
       "ks-withhold",
       "ks-contract",
     ]);
+    expect(schemasByChannel("taobao").map((schema) => schema.id)).toEqual([
+      // 交易/退款代表事件 2（事实库 §5.3/§5.4 topic 核验载荷页逐字）
+      "tb-trade-create",
+      "tb-refund-created",
+      // 全球栈 HTTP 回调 2（事实库 §5.6 接收消息页正向/逆向示例逐字）
+      "tb-global-forward",
+      "tb-global-reverse",
+      // OpenIM 离线消息 1（事实库 §5.8 旺旺 envelope 形态参考）
+      "tb-openim-offmsg-push",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -385,6 +398,7 @@ describe("事件模板聚合注册表", () => {
           "qq",
           "weibo",
           "kuaishou",
+          "taobao",
         ].includes(channel.id)
       )
         continue;

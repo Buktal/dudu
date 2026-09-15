@@ -6,14 +6,15 @@ import {
   defaultFeishuConnection,
   defaultKuaishouConnection,
   defaultQqConnection,
+  defaultTaobaoConnection,
   defaultWechatMiniConnection,
   defaultWechatMpConnection,
   defaultWeiboConnection,
   defaultXiaohongshuConnection,
   initialConnectionsState,
-  isConnectionReady,
   selectConnection,
 } from "./connections-slice";
+import { isConnectionReady } from "./is-connection-ready";
 
 /**
  * 「已配置」的内容判定（isConnectionReady）按渠道必填集的单测。
@@ -106,6 +107,13 @@ const savedKuaishou: ConnectionConfig = {
   url: "http://127.0.0.1:9099/kuaishou",
   appId: "ks696650570360602063",
   appSecret: "Xgm23lSgws235hlgK",
+};
+
+const savedTaobao: ConnectionConfig = {
+  channel: "taobao",
+  url: "http://127.0.0.1:9099/taobao",
+  appKey: "123456",
+  appSecret: "taobao_app_secret",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -438,6 +446,31 @@ describe("isConnectionReady（快手核必填集）", () => {
     expect(defaultKuaishouConnection.appSecret).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "kuaishou")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（淘宝核必填集，全球栈 HTTPS 回调）", () => {
+  it("url/appKey/appSecret 齐全才算已配置（验签消息体 = AppKey+body，密钥 = AppSecret）", () => {
+    expect(isConnectionReady(savedTaobao)).toBe(true);
+  });
+
+  it("缺 url/appKey/appSecret 任一都不算已配置", () => {
+    expect(isConnectionReady({ ...savedTaobao, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedTaobao, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedTaobao, appKey: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedTaobao, appSecret: "" })).toBe(false);
+  });
+
+  it("初始淘宝占位连接（凭据全空、HMAC-SHA256 验签起步）不算已配置", () => {
+    expect(defaultTaobaoConnection.channel).toBe("taobao");
+    expect(defaultTaobaoConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/taobao",
+    );
+    expect(defaultTaobaoConnection.appKey).toBe("");
+    expect(defaultTaobaoConnection.appSecret).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "taobao")),
     ).toBe(false);
   });
 });

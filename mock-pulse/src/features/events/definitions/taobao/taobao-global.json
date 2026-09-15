@@ -1,0 +1,179 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "taobao",
+  "version": "2026.09",
+  "schemas": {
+    "tb-global-forward": {
+      "version": "2026.09",
+      "source": "https://open.alitrip.com/docs/doc.htm?articleId=119493&docType=1&treeId=735",
+      "fields": [
+        {
+          "path": "seller_id",
+          "title": "卖家 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "卖家 ID（官方正向样本 1234567）。",
+          "required": true
+        },
+        {
+          "path": "message_type",
+          "title": "消息类型",
+          "type": "number",
+          "group": "回调信封",
+          "description": "消息类型（官方正向样本 0）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "业务数据对象；订单中仅含必要标识信息，业务详情须用对应查询接口查询（事实库 §3.2 处理规范）。",
+          "required": true
+        },
+        {
+          "path": "data.order_status",
+          "title": "订单状态",
+          "type": "string",
+          "group": "回调数据",
+          "description": "订单状态（官方正向样本 unpaid，下单未付款）。",
+          "required": true
+        },
+        {
+          "path": "data.trade_order_id",
+          "title": "交易订单 ID",
+          "type": "string",
+          "group": "回调数据",
+          "description": "交易订单 ID（官方正向样本 260422900198363）。",
+          "required": true
+        },
+        {
+          "path": "data.trade_order_line_id",
+          "title": "交易订单行 ID",
+          "type": "string",
+          "group": "回调数据",
+          "description": "交易订单行 ID（官方正向样本 260422900298363）。",
+          "required": true
+        },
+        {
+          "path": "data.status_update_time",
+          "title": "状态更新时刻",
+          "type": "number",
+          "group": "回调数据",
+          "description": "10 位秒级 Unix 时间戳（官方正向样本 1603698638）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "推送时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "13 位毫秒 Unix 时间戳（官方正向样本 1603766859530）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "site",
+          "title": "站点标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "站点标识（官方样本 lazada_vn——全球栈/Lazada 同栈文档原文，实际站点以目标侧接入为准）。",
+          "required": true
+        }
+      ]
+    },
+    "tb-global-reverse": {
+      "version": "2026.09",
+      "source": "https://open.alitrip.com/docs/doc.htm?articleId=119493&docType=1&treeId=735",
+      "fields": [
+        {
+          "path": "seller_id",
+          "title": "卖家 ID",
+          "type": "string",
+          "group": "回调信封",
+          "description": "卖家 ID（官方逆向样本 1000114855）。",
+          "required": true
+        },
+        {
+          "path": "message_type",
+          "title": "消息类型",
+          "type": "number",
+          "group": "回调信封",
+          "description": "消息类型（官方逆向样本 0）。",
+          "required": true
+        },
+        {
+          "path": "data",
+          "title": "业务数据",
+          "type": "json",
+          "group": "回调信封",
+          "description": "业务数据对象；订单中仅含必要标识信息，业务详情须用对应查询接口查询（事实库 §3.2 处理规范）。",
+          "required": true
+        },
+        {
+          "path": "data.order_status",
+          "title": "订单状态",
+          "type": "string",
+          "group": "回调数据",
+          "description": "订单状态（官方逆向样本 canceled，取消/退货退款）。",
+          "required": true
+        },
+        {
+          "path": "data.reverse_order_id",
+          "title": "逆向订单 ID",
+          "type": "string",
+          "group": "回调数据",
+          "description": "逆向订单 ID（官方逆向样本 501977696648153）。",
+          "required": true
+        },
+        {
+          "path": "data.reverse_order_line_id",
+          "title": "逆向订单行 ID",
+          "type": "string",
+          "group": "回调数据",
+          "description": "逆向订单行 ID（官方逆向样本 502491640048153）。",
+          "required": true
+        },
+        {
+          "path": "data.status_update_time",
+          "title": "状态更新时刻",
+          "type": "number",
+          "group": "回调数据",
+          "description": "10 位秒级 Unix 时间戳（官方逆向样本 1603703663）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "data.trade_order_id",
+          "title": "交易订单 ID",
+          "type": "string",
+          "group": "回调数据",
+          "description": "关联的交易订单 ID（官方逆向样本 252883361348153）。",
+          "required": true
+        },
+        {
+          "path": "data.trade_order_line_id",
+          "title": "交易订单行 ID",
+          "type": "string",
+          "group": "回调数据",
+          "description": "关联的交易订单行 ID（官方逆向样本 252883361948153）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "推送时刻",
+          "type": "number",
+          "group": "回调信封",
+          "description": "13 位毫秒 Unix 时间戳（官方逆向样本 1603715010436）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "site",
+          "title": "站点标识",
+          "type": "string",
+          "group": "回调信封",
+          "description": "站点标识（官方样本 lazada_vn——全球栈/Lazada 同栈文档原文，实际站点以目标侧接入为准）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

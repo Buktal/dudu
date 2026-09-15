@@ -36,6 +36,7 @@ pub fn run() {
             connections::connections_test_weibo,
             connections::connections_test_xiaohongshu,
             connections::connections_test_kuaishou,
+            connections::connections_test_taobao,
             definitions::definitions_load,
             definitions::definitions_save,
             events::events_load,
