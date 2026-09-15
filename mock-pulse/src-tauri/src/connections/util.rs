@@ -2,10 +2,12 @@
 //! - [`sha1_hex`]：按给定顺序拼接后 sha1 → 40 位小写 hex（抖音 dop/生活服务
 //!   X-Douyin-Signature）
 //! - [`sha1_sorted_hex`]：字典序排序后拼接 sha1（微信系四值签名家族：
-//!   企微 msg_signature、抖音服务商 MsgSignature）
+//!   企微 msg_signature、抖音服务商 MsgSignature、钉钉 signature）
 //! - [`md5_base64`]：md5 摘要（16 字节）→ 标准 base64（抖音小游戏 x-signature）
 //! - [`sha256_hex`]：按给定顺序拼接各段（字节串）后 sha256 → 64 位小写 hex
 //!   （飞书 X-Lark-Signature：timestamp+nonce+encrypt_key+原始 body 字节）
+//! - [`hmac_sha256_base64`]：HMAC-SHA256（RFC 2104，sha2 自实现免新依赖）→
+//!   标准 base64（钉钉机器人 sign 头）
 //!
 //! 拼接序/密钥来源等渠道语义由各 adapter 组合，本模块只提供纯原语。
 
@@ -45,6 +47,39 @@ pub(crate) fn md5_base64(input: &str) -> String {
     let mut hasher = Md5::new();
     hasher.update(input.as_bytes());
     BASE64.encode(hasher.finalize())
+}
+
+/// HMAC-SHA256（RFC 2104，sha2 块运算自实现：key 过长先散列、ipad/opad 双轮），
+/// 输出 32 字节摘要（RFC 4231 向量验收）。
+pub(crate) fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
+    const BLOCK: usize = 64;
+    let mut padded = [0u8; BLOCK];
+    if key.len() > BLOCK {
+        let mut hasher = Sha256::new();
+        hasher.update(key);
+        padded[..32].copy_from_slice(&hasher.finalize());
+    } else {
+        padded[..key.len()].copy_from_slice(key);
+    }
+    let mut ipad = [0x36u8; BLOCK];
+    let mut opad = [0x5cu8; BLOCK];
+    for (index, byte) in padded.iter().enumerate() {
+        ipad[index] ^= byte;
+        opad[index] ^= byte;
+    }
+    let mut inner = Sha256::new();
+    inner.update(ipad);
+    inner.update(data);
+    let mut outer = Sha256::new();
+    outer.update(opad);
+    outer.update(inner.finalize());
+    outer.finalize().into()
+}
+
+/// HMAC-SHA256 → 标准 base64（钉钉机器人 sign =
+/// Base64(HmacSHA256(timestamp + "\n" + appSecret, key=appSecret))）。
+pub(crate) fn hmac_sha256_base64(key: &str, data: &str) -> String {
+    BASE64.encode(hmac_sha256(key.as_bytes(), data.as_bytes()))
 }
 
 #[cfg(test)]
@@ -88,5 +123,33 @@ mod tests {
         );
         // 多段按序拼接等价于单段拼接
         assert_eq!(sha256_hex(&[b"a", b"bc"]), sha256_hex(&[b"abc"]));
+    }
+
+    #[test]
+    fn hmac_sha256_matches_rfc_4231_vectors() {
+        // 独立来源：RFC 4231 测试向量 TC1/TC2（hex 参考值 + base64 形态）
+        let tc2 = hmac_sha256(b"Jefe", b"what do ya want for nothing?");
+        assert_eq!(
+            hex::encode(tc2),
+            "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
+        );
+        assert_eq!(
+            BASE64.encode(tc2),
+            "W9zBRr9gdU5qBCQmCJV1x1oAPwidJzmDnexYuWTsOEM="
+        );
+        // TC1：key = 0x0b × 20，data = "Hi There"
+        let tc1 = hmac_sha256(&[0x0b; 20], b"Hi There");
+        assert_eq!(
+            hex::encode(tc1),
+            "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
+        );
+    }
+
+    #[test]
+    fn hmac_sha256_handles_long_keys() {
+        // key 超过 64 字节块长：先散列再填充（RFC 2104；Node crypto 交叉复算）
+        let long_key = "k".repeat(100);
+        let digest = hmac_sha256_base64(&long_key, "data");
+        assert_eq!(digest, "CTgO5LgC2iNjvJbo4NEzuidUWOqN28Vk+Yb8ErMfjLE=");
     }
 }

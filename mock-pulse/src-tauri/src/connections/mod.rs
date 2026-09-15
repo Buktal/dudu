@@ -4,6 +4,7 @@
 //! 全部经注册表查表，不再各自手写渠道路由；各渠道的载荷/验签/加密差异
 //! 留在 adapter 实现内部（ADR-0001）。
 
+pub mod dingtalk;
 pub mod douyin;
 pub mod feishu;
 pub mod store;
@@ -104,6 +105,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &wechat_mp::Adapter,
     &wechat_mini::Adapter,
     &feishu::Adapter,
+    &dingtalk::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -218,6 +220,21 @@ pub enum WechatMiniDataFormat {
     Json,
 }
 
+/// 钉钉推送通道（事实库 §2 体系 B/D：新 HTTP 密文事件回调与机器人明文收消息
+/// 并行，验签体系完全不同）。连接配置按通道路由协议原语；序列化 snake_case，
+/// 缺省 http_crypto（本票主体为新 HTTP 密文信封子形态）。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DingtalkSystem {
+    /// 事件订阅新 HTTP 密文信封：sha1 四参验签 + AES-CBC（PKCS#7-32、包尾
+    /// $key），1500ms 内期望加密 success 回包
+    #[default]
+    HttpCrypto,
+    /// 机器人收消息明文通道：header timestamp/sign =
+    /// Base64(HmacSHA256(timestamp + "\n" + appSecret))，1h 时钟窗
+    Bot,
+}
+
 /// 平台连接配置：持久化（store）与协议握手（douyin/wecom/wechat_mp）共用的域类型。
 /// 按渠道存不同凭据形状，以 channel 内标序列化（旧版抖音/企微数据形状不变，
 /// 新增体系/通道/模式字段全部 serde default 缺省）。
@@ -301,6 +318,27 @@ pub enum ConnectionConfig {
         #[serde(default)]
         encrypt_key: String,
     },
+    #[serde(rename = "dingtalk", rename_all = "camelCase")]
+    Dingtalk {
+        url: String,
+        /// 推送通道：新 HTTP 密文事件回调 / 机器人收消息明文（缺省 http_crypto）
+        #[serde(default)]
+        system: DingtalkSystem,
+        /// 事件订阅加解密 Token（sha1 四参验签签名源，密文通道）
+        #[serde(default)]
+        token: String,
+        /// 43 位 EncodingAESKey（AESKey = Base64Decode(EncodingAESKey + "=")，
+        /// 密文通道）
+        #[serde(default)]
+        encoding_aes_key: String,
+        /// OWNER_KEY：控制台订阅 = AppKey、注册 API = 组织维度（密文包尾 $key，
+        /// 企业内部=Corpid / 第三方=suiteKey）
+        #[serde(default)]
+        owner_key: String,
+        /// 应用 Client Secret（机器人通道 timestamp/sign = HmacSHA256 密钥）
+        #[serde(default)]
+        app_secret: String,
+    },
 }
 
 /// 读取全部持久化连接（无文件时返回空列表）。
@@ -376,130 +414,14 @@ pub async fn connections_test_feishu(config: ConnectionConfig) -> Result<Handsha
     run_handshake(&feishu::Adapter, config).await
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn dispatch_outcome_serializes_camel_case_for_frontend() {
-        let outcome = DispatchOutcome {
-            msg_id: "1372623149".into(),
-            signature: "a".repeat(40),
-            timestamp: Some("1409659813".into()),
-            request_body: Some("<xml/>".into()),
-            reply: Some("<xml/>".into()),
-            status: 200,
-            elapsed_ms: 9,
-            body: "success".into(),
-            error: None,
-        };
-        let raw = serde_json::to_string(&outcome).unwrap();
-        assert!(raw.contains("\"elapsedMs\""));
-        assert!(raw.contains("\"reply\""));
-        assert!(!raw.contains("elapsed_ms"));
-    }
-
-    #[test]
-    fn not_sent_outcome_carries_zero_receipt_and_reason() {
-        let outcome = DispatchOutcome::not_sent("缺少渠道连接配置");
-        assert_eq!(outcome.status, 0);
-        assert_eq!(outcome.error.as_deref(), Some("缺少渠道连接配置"));
-        // 协议要素不落值：未发出请求就没有签名/唯一标识/请求快照
-        assert_eq!(outcome.signature, "");
-        assert_eq!(outcome.msg_id, "");
-        assert_eq!(outcome.request_body, None);
-        assert_eq!(outcome.timestamp, None);
-        assert_eq!(outcome.reply, None);
-    }
-
-    #[test]
-    fn adapter_registry_covers_every_config_variant() {
-        let douyin_config = ConnectionConfig::Douyin {
-            url: String::new(),
-            system: DouyinSystem::Dop,
-            client_key: String::new(),
-            client_secret: String::new(),
-            mini_game_token: String::new(),
-            isv_token: String::new(),
-            isv_key: String::new(),
-        };
-        let wecom_config = ConnectionConfig::Wecom {
-            url: String::new(),
-            system: WecomSystem::Agent,
-            corp_id: String::new(),
-            token: String::new(),
-            encoding_aes_key: String::new(),
-            agent_id: String::new(),
-        };
-        let wechat_mp_config = ConnectionConfig::WechatMp {
-            url: String::new(),
-            app_id: String::new(),
-            token: String::new(),
-            encoding_aes_key: String::new(),
-            mode: WechatMpMode::Plain,
-        };
-        let wechat_mini_config = ConnectionConfig::WechatMini {
-            url: String::new(),
-            app_id: String::new(),
-            token: String::new(),
-            encoding_aes_key: String::new(),
-            mode: WechatMiniMode::Plain,
-            data_format: WechatMiniDataFormat::Xml,
-        };
-        let feishu_config = ConnectionConfig::Feishu {
-            url: String::new(),
-            app_id: String::new(),
-            verification_token: String::new(),
-            encrypt_key: String::new(),
-        };
-        assert_eq!(adapter_of(&douyin_config).id(), "douyin");
-        assert_eq!(adapter_of(&wecom_config).id(), "wecom");
-        assert_eq!(adapter_of(&wechat_mp_config).id(), "wechat-mp");
-        assert_eq!(adapter_of(&wechat_mini_config).id(), "wechat-mini");
-        assert_eq!(adapter_of(&feishu_config).id(), "feishu");
-        assert_eq!(
-            adapter_by_channel("douyin").map(|adapter| adapter.id()),
-            Some("douyin")
-        );
-        assert_eq!(
-            adapter_by_channel("wecom").map(|adapter| adapter.id()),
-            Some("wecom")
-        );
-        assert_eq!(
-            adapter_by_channel("wechat-mp").map(|adapter| adapter.id()),
-            Some("wechat-mp")
-        );
-        assert_eq!(
-            adapter_by_channel("wechat-mini").map(|adapter| adapter.id()),
-            Some("wechat-mini")
-        );
-        assert_eq!(
-            adapter_by_channel("feishu").map(|adapter| adapter.id()),
-            Some("feishu")
-        );
-        assert!(adapter_by_channel("telegram").is_none());
-        // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
-        for adapter in ADAPTERS {
-            assert_eq!(
-                adapter.url(&douyin_config).is_some(),
-                adapter.matches(&douyin_config)
-            );
-            assert_eq!(
-                adapter.url(&wecom_config).is_some(),
-                adapter.matches(&wecom_config)
-            );
-            assert_eq!(
-                adapter.url(&wechat_mp_config).is_some(),
-                adapter.matches(&wechat_mp_config)
-            );
-            assert_eq!(
-                adapter.url(&wechat_mini_config).is_some(),
-                adapter.matches(&wechat_mini_config)
-            );
-            assert_eq!(
-                adapter.url(&feishu_config).is_some(),
-                adapter.matches(&feishu_config)
-            );
-        }
-    }
+/// 按钉钉通道测试连接：密文通道发 check_url 握手（1500ms 内期望加密 success
+/// 回包）；机器人通道发 timestamp/sign（HmacSHA256）签名的明文探测。
+#[tauri::command]
+pub async fn connections_test_dingtalk(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&dingtalk::Adapter, config).await
 }
+
+#[cfg(test)]
+mod tests;

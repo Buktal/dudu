@@ -15,6 +15,7 @@ pub enum ReceiptBodyMode {
     Equals,
     JsonField,
     WecomReply,
+    DingtalkReply,
 }
 
 /// 步骤期望（快照物化/直发请求由前端从事件版本或草稿带出）。
@@ -167,9 +168,44 @@ fn compare_wecom_reply(expected_body: &str, receipt: &ReceiptSnapshot, label: &s
     }
 }
 
+/// 钉钉加密回包比对（官方 §5.6/§5.10：事件推送 1500ms 内回
+/// `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`——
+/// 解密明文须包含期望内容，默认 success；回包由 adapter 先验签再解密，
+/// 解不出加密包时 reply 为 None）。
+fn compare_dingtalk_reply(
+    expected_body: &str,
+    receipt: &ReceiptSnapshot,
+    label: &str,
+) -> RunVerdict {
+    match &receipt.reply {
+        Some(reply) if reply.contains(expected_body) => RunVerdict {
+            passed: true,
+            reason: format!(
+                "{label}，加密回包解密明文包含「{}」",
+                clip(expected_body, 60)
+            ),
+        },
+        Some(reply) => RunVerdict {
+            passed: false,
+            reason: format!(
+                "{label}，加密回包解密明文未包含「{}」（实际「{}」）",
+                clip(expected_body, 60),
+                clip(reply, 60)
+            ),
+        },
+        None => RunVerdict {
+            passed: false,
+            reason: format!("{label}，期望加密 success 回包，但目标未回可验签解密的加密包"),
+        },
+    }
+}
+
 fn compare_body(expected: &ExpectedReceipt, receipt: &ReceiptSnapshot) -> RunVerdict {
     let label = status_label(receipt.status);
-    if expected.body.is_empty() && expected.body_mode != ReceiptBodyMode::WecomReply {
+    if expected.body.is_empty()
+        && expected.body_mode != ReceiptBodyMode::WecomReply
+        && expected.body_mode != ReceiptBodyMode::DingtalkReply
+    {
         return RunVerdict {
             passed: true,
             reason: format!("{label}，与期望状态一致"),
@@ -190,6 +226,7 @@ fn compare_body(expected: &ExpectedReceipt, receipt: &ReceiptSnapshot) -> RunVer
             }
         }
         ReceiptBodyMode::WecomReply => compare_wecom_reply(&expected.body, receipt, &label),
+        ReceiptBodyMode::DingtalkReply => compare_dingtalk_reply(&expected.body, receipt, &label),
         ReceiptBodyMode::JsonField => {
             let expected_json: serde_json::Value = match serde_json::from_str(&expected.body) {
                 Ok(value) => value,
@@ -415,5 +452,38 @@ mod tests {
         let parsed: ExpectedReceipt = serde_json::from_str(raw).unwrap();
         assert_eq!(parsed.body_mode, ReceiptBodyMode::JsonField);
         assert_eq!(parsed.status, 200);
+    }
+
+    #[test]
+    fn dingtalk_reply_mode_checks_decrypted_envelope_plaintext() {
+        // 加密 success 回包：adapter 已验签解密的回包明文须包含期望内容
+        let pass = compare_receipt(
+            &expected(200, "success", ReceiptBodyMode::DingtalkReply),
+            &receipt(200, r#"{"encrypt":"…"}"#, Some("success")),
+        );
+        assert!(pass.passed, "{pass:?}");
+        assert_eq!(pass.reason, "HTTP 200，加密回包解密明文包含「success」");
+
+        // 回包明文非 success：不通过
+        let wrong = compare_receipt(
+            &expected(200, "success", ReceiptBodyMode::DingtalkReply),
+            &receipt(200, r#"{"encrypt":"…"}"#, Some("ok")),
+        );
+        assert!(!wrong.passed);
+        assert_eq!(
+            wrong.reason,
+            "HTTP 200，加密回包解密明文未包含「success」（实际「ok」）"
+        );
+
+        // 目标未回可解密的加密包（明文回包/空包）：不通过
+        let no_reply = compare_receipt(
+            &expected(200, "success", ReceiptBodyMode::DingtalkReply),
+            &receipt(200, "success", None),
+        );
+        assert!(!no_reply.passed);
+        assert_eq!(
+            no_reply.reason,
+            "HTTP 200，期望加密 success 回包，但目标未回可验签解密的加密包"
+        );
     }
 }

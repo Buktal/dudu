@@ -13,50 +13,17 @@ import {
 import { cn } from "@/lib/utils";
 import type {
   ConnectionConfig,
-  DouyinSystem,
+  DingtalkConnectionConfig,
   FeishuConnectionConfig,
-  WechatMiniDataFormat,
-  WechatMiniMode,
-  WechatMpMode,
-  WecomSystem,
 } from "../api";
-
-/** 抖音推送体系（事实库 §2 四套并行体系，验签/信封完全不同） */
-const DOUYIN_SYSTEMS: readonly { value: DouyinSystem; label: string }[] = [
-  { value: "dop", label: "dop Webhooks（移动/网站应用）" },
-  { value: "life_service", label: "生活服务 WebHooks" },
-  { value: "mini_game", label: "小游戏消息推送" },
-  { value: "isv", label: "服务商（第三方小程序）" },
-];
-
-/** 企微推送通道（事实库 §2.1/§2.2/§2.10：XML 自建应用与 JSON 智能机器人） */
-const WECOM_SYSTEMS: readonly { value: WecomSystem; label: string }[] = [
-  { value: "agent", label: "自建应用（XML 回调）" },
-  { value: "aibot", label: "智能机器人（JSON 回调）" },
-];
-
-/** 公众号消息加解密方式（事实库 §4.1 三模式，官方服务器配置配套项） */
-const WECHAT_MP_MODES: readonly { value: WechatMpMode; label: string }[] = [
-  { value: "plain", label: "明文模式（官方默认）" },
-  { value: "compatible", label: "兼容模式（调试过渡）" },
-  { value: "secure", label: "安全模式（官方推荐）" },
-];
-
-/** 小程序消息加解密方式（事实库 §3.1 三选一：明文/兼容不建议、安全强烈推荐） */
-const WECHAT_MINI_MODES: readonly { value: WechatMiniMode; label: string }[] = [
-  { value: "plain", label: "明文模式" },
-  { value: "compatible", label: "兼容模式" },
-  { value: "secure", label: "安全模式（官方强烈推荐）" },
-];
-
-/** 小程序数据格式（事实库 §3.1：XML/JSON 可选，与公众号不同点） */
-const WECHAT_MINI_DATA_FORMATS: readonly {
-  value: WechatMiniDataFormat;
-  label: string;
-}[] = [
-  { value: "xml", label: "XML（本工具推送主形态）" },
-  { value: "json", label: "JSON" },
-];
+import {
+  DINGTALK_SYSTEMS,
+  DOUYIN_SYSTEMS,
+  WECHAT_MINI_DATA_FORMATS,
+  WECHAT_MINI_MODES,
+  WECHAT_MP_MODES,
+  WECOM_SYSTEMS,
+} from "./connection-options";
 
 /** 按推送体系取凭证字段：标签随体系语义变化，存储字段保持稳定 */
 function douyinFields(draft: Extract<ConnectionConfig, { channel: "douyin" }>) {
@@ -248,6 +215,44 @@ function wechatMiniFields(
   return fields;
 }
 
+/** 钉钉按推送通道取凭证字段：密文通道三元组，机器人通道 Client Secret */
+function dingtalkFields(draft: DingtalkConnectionConfig) {
+  if (draft.system === "bot") {
+    return [
+      {
+        key: "appSecret",
+        label: "Client Secret",
+        note: "应用密钥；timestamp/sign = Base64(HmacSHA256(timestamp+换行+appSecret))，与接收服务配置一致。",
+        value: draft.appSecret,
+        secret: true,
+      },
+    ];
+  }
+  return [
+    {
+      key: "token",
+      label: "Token",
+      note: "事件订阅页的加解密 Token；signature = sha1(字典序排序(token,timestamp,nonce,encrypt))。",
+      value: draft.token,
+      secret: true,
+    },
+    {
+      key: "encodingAesKey",
+      label: "EncodingAESKey",
+      note: '43 位消息加解密密钥；AESKey = Base64Decode(EncodingAESKey + "=")，IV 取 AESKey 前 16 字节。',
+      value: draft.encodingAesKey,
+      secret: true,
+    },
+    {
+      key: "ownerKey",
+      label: "OWNER_KEY",
+      note: "控制台订阅 = AppKey（注册 API = 组织维度）；加密包尾部的 $key，解密后须校验一致。",
+      value: draft.ownerKey,
+      secret: false,
+    },
+  ];
+}
+
 /** 飞书凭证字段（事实库 §4）：Encrypt Key 留空 = 明文直发，填写 = 签名 + 加密信封 */
 function feishuFields(draft: FeishuConnectionConfig) {
   return [
@@ -291,7 +296,9 @@ export function ConnectionFields({
           ? wechatMiniFields(draft)
           : draft.channel === "feishu"
             ? feishuFields(draft)
-            : wecomFields(draft);
+            : draft.channel === "dingtalk"
+              ? dingtalkFields(draft)
+              : wecomFields(draft);
   const systemSelector =
     draft.channel === "douyin" ? (
       <Field className="col-span-full">
@@ -404,6 +411,28 @@ export function ConnectionFields({
           </FieldDescription>
         </Field>
       </>
+    ) : draft.channel === "dingtalk" ? (
+      <Field className="col-span-full">
+        <FieldLabel htmlFor="connection-system">推送通道</FieldLabel>
+        <NativeSelect
+          id="connection-system"
+          className="w-full"
+          autoComplete="off"
+          value={draft.system}
+          aria-describedby="connection-system-hint"
+          onChange={(event) => onEdit("system", event.target.value)}
+        >
+          {DINGTALK_SYSTEMS.map((system) => (
+            <NativeSelectOption key={system.value} value={system.value}>
+              {system.label}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+        <FieldDescription id="connection-system-hint">
+          钉钉密文事件回调与机器人收消息并行且验签完全不同（sha1 四参 + AES 信封
+          / HmacSHA256 头）：回调地址与凭证按通道配套填写。
+        </FieldDescription>
+      </Field>
     ) : null;
   return (
     <FieldGroup className="grid grid-cols-1 gap-5 @xl/workspace:grid-cols-2">

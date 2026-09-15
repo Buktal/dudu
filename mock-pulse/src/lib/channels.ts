@@ -122,10 +122,10 @@ export const CHANNEL_REGISTRY = {
   },
   dingtalk: {
     name: "钉钉",
-    protocol: "HTTP 回调 · 加密 JSON",
-    note: "新 HTTP 回调：大写密文 JSON 信封，sha1 四参验签 + AES-CBC 解密",
+    protocol: "HTTP 回调 · 加密 JSON 信封 / 机器人明文 JSON",
+    note: "新 HTTP 密文信封：大写事件 + sha1 四参验签 + AES-CBC（PKCS#7-32），1500ms 回加密 success 包；机器人收消息明文 6 msgtype，timestamp/sign = HmacSHA256 头",
     icon: "Zap",
-    implemented: false,
+    implemented: true,
   },
   qq: {
     name: "QQ 机器人",

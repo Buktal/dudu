@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ConnectionConfig } from "../api";
 import {
   connectionsReducer,
+  defaultDingtalkConnection,
   defaultFeishuConnection,
   defaultWechatMiniConnection,
   defaultWechatMpConnection,
@@ -22,6 +23,7 @@ import {
 vi.mock("../api", () => ({
   loadConnections: vi.fn(),
   saveConnection: vi.fn(),
+  testDingtalkConnection: vi.fn(),
   testDouyinConnection: vi.fn(),
   testFeishuConnection: vi.fn(),
   testWechatMiniConnection: vi.fn(),
@@ -32,6 +34,7 @@ vi.mock("../api", () => ({
 import {
   loadConnections,
   saveConnection as saveApi,
+  testDingtalkConnection,
   testDouyinConnection,
   testFeishuConnection,
   testWechatMiniConnection,
@@ -85,6 +88,16 @@ const savedFeishu: ConnectionConfig = {
   appId: "cli_mock_appid",
   verificationToken: "rvaYgkND1GOiu5MM0E1rncYC6PLtF7JV",
   encryptKey: "test key",
+};
+
+const savedDingtalk: ConnectionConfig = {
+  channel: "dingtalk",
+  url: "http://127.0.0.1:9099/dingtalk",
+  system: "http_crypto",
+  token: "123456",
+  encodingAesKey: "4g5j64qlyl3zvetqxz5jiocdr586fn2zvjpa8zls3ij",
+  ownerKey: "suite4xxxxxxxxxxxxxxx",
+  appSecret: "this is a secret",
 };
 
 function makeStore() {
@@ -272,10 +285,33 @@ describe("connections slice", () => {
     });
   });
 
+  it("钉钉配置走 connections_test_dingtalk（按渠道路由测试命令）", async () => {
+    vi.mocked(testDingtalkConnection).mockResolvedValue({
+      ok: true,
+      message: "check_url 握手成功",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedDingtalk));
+
+    expect(vi.mocked(testDingtalkConnection)).toHaveBeenCalledWith(
+      savedDingtalk,
+    );
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "check_url 握手成功",
+    });
+  });
+
   it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
     // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
     // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
-    const rogue = { channel: "dingtalk" } as unknown as ConnectionConfig;
+    const rogue = { channel: "telegram" } as unknown as ConnectionConfig;
 
     expect(isConnectionReady(rogue)).toBe(false);
 
@@ -288,6 +324,7 @@ describe("connections slice", () => {
     expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testDingtalkConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store)).status).toBe("failed");
   });
 });
@@ -482,6 +519,39 @@ describe("isConnectionReady（飞书核必填集）", () => {
     expect(defaultFeishuConnection.encryptKey).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "feishu")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（钉钉按通道核必填集）", () => {
+  it("密文通道：url/token/encodingAesKey/ownerKey 齐全才算已配置（appSecret 不参与）", () => {
+    expect(isConnectionReady(savedDingtalk)).toBe(true);
+    expect(isConnectionReady({ ...savedDingtalk, appSecret: "" })).toBe(true);
+  });
+
+  it("密文通道缺 token/encodingAesKey/ownerKey 任一都不算已配置", () => {
+    expect(isConnectionReady({ ...savedDingtalk, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedDingtalk, token: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedDingtalk, encodingAesKey: "" })).toBe(
+      false,
+    );
+    expect(isConnectionReady({ ...savedDingtalk, ownerKey: "" })).toBe(false);
+  });
+
+  it("机器人通道按 appSecret 判定（密文三元组不参与）", () => {
+    const bot = { ...savedDingtalk, system: "bot" as const };
+    expect(isConnectionReady(bot)).toBe(true);
+    expect(isConnectionReady({ ...bot, appSecret: "" })).toBe(false);
+  });
+
+  it("初始钉钉占位连接（凭据全空、密文通道起步）不算已配置", () => {
+    expect(defaultDingtalkConnection.channel).toBe("dingtalk");
+    expect(defaultDingtalkConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/dingtalk",
+    );
+    expect(defaultDingtalkConnection.system).toBe("http_crypto");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "dingtalk")),
     ).toBe(false);
   });
 });

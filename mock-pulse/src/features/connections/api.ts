@@ -36,6 +36,34 @@ export type WechatMiniMode = "plain" | "compatible" | "secure";
 export type WechatMiniDataFormat = "xml" | "json";
 
 /**
+ * 钉钉推送通道（与 Rust 端 DingtalkSystem 内标一致，snake_case）：
+ * 新 HTTP 密文信封事件回调与机器人收消息明文通道并行，验签体系完全不同
+ * （事实库 §2 体系 B/D：前者 sha1 四参 + AES 信封，后者 HmacSHA256 头）。
+ */
+export type DingtalkSystem = "http_crypto" | "bot";
+
+/**
+ * 钉钉连接配置形状（与 Rust 端 ConnectionConfig::Dingtalk 内标一致）：
+ * 密文通道用 token/encodingAesKey/ownerKey（sha1 四参验签 + AES-CBC，
+ * PKCS#7-32，包尾 $key=ownerKey）；机器人通道用 appSecret（HmacSHA256）。
+ */
+export type DingtalkConnectionConfig = {
+  channel: "dingtalk";
+  /** 回调目标地址，事件与剧本共享 */
+  url: string;
+  /** 推送通道：新 HTTP 密文事件回调 / 机器人收消息明文通道（缺省 http_crypto） */
+  system: DingtalkSystem;
+  /** 回调加解密 Token（sha1 四参验签签名源，密文通道） */
+  token: string;
+  /** 43 位 EncodingAESKey（AESKey = Base64Decode(EncodingAESKey + "=")，密文通道） */
+  encodingAesKey: string;
+  /** OWNER_KEY：控制台订阅 = AppKey、注册 API = 组织维度（密文包尾 $key） */
+  ownerKey: string;
+  /** 应用 Client Secret（机器人通道 timestamp/sign = HmacSHA256 的密钥） */
+  appSecret: string;
+};
+
+/**
  * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
  * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
  * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
@@ -125,7 +153,8 @@ export type ConnectionConfig =
   | WecomConnectionConfig
   | WechatMpConnectionConfig
   | WechatMiniConnectionConfig
-  | FeishuConnectionConfig;
+  | FeishuConnectionConfig
+  | DingtalkConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -182,4 +211,12 @@ export function testFeishuConnection(
   config: FeishuConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_feishu", { config });
+}
+
+/** 按钉钉通道测试连接：密文通道发 check_url 握手（期望 1500ms 内回加密
+ *  success 包）；机器人通道发签名探测（timestamp/sign = HmacSHA256 头） */
+export function testDingtalkConnection(
+  config: DingtalkConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_dingtalk", { config });
 }

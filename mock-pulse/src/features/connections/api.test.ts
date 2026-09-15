@@ -3,10 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   type ConnectionConfig,
+  type DingtalkConnectionConfig,
   type DouyinConnectionConfig,
   type FeishuConnectionConfig,
   loadConnections,
   saveConnection,
+  testDingtalkConnection,
   testDouyinConnection,
   testFeishuConnection,
   testWechatMiniConnection,
@@ -69,6 +71,16 @@ const feishuConfig: FeishuConnectionConfig = {
   appId: "cli_mock_appid",
   verificationToken: "mock_verification_token",
   encryptKey: "mock_encrypt_key",
+};
+
+const dingtalkConfig: DingtalkConnectionConfig = {
+  channel: "dingtalk",
+  url: "http://127.0.0.1:8080/webhooks/dingtalk",
+  system: "http_crypto",
+  token: "mock_token",
+  encodingAesKey: "4g5j64qlyl3zvetqxz5jiocdr586fn2zvjpa8zls3ij",
+  ownerKey: "suite4xxxxxxxxxxxxxxx",
+  appSecret: "mock_app_secret",
 };
 
 describe("connections api 契约", () => {
@@ -135,13 +147,25 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/公众号/小程序/飞书（按 channel 区分形状）", async () => {
+  it("testDingtalkConnection 调用 connections_test_dingtalk 并透传配置", async () => {
+    const outcome = { ok: true, message: "check_url 握手成功" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testDingtalkConnection(dingtalkConfig)).resolves.toEqual(
+      outcome,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_dingtalk", {
+      config: dingtalkConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/公众号/小程序/飞书/钉钉（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
       wechatMpConfig,
       wechatMiniConfig,
       feishuConfig,
+      dingtalkConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

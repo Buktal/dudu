@@ -1,5 +1,6 @@
 import type { ChannelId } from "@/lib/channels";
 
+import { DINGTALK_SCHEMAS } from "./dingtalk";
 import { DOUYIN_EVENT_SCHEMAS } from "./douyin";
 import { FEISHU_SCHEMAS } from "./feishu";
 import type { EventSchema } from "./types";
@@ -26,6 +27,7 @@ const PACKS: readonly ChannelTemplatePack[] = [
   { channel: "wechat-mp", schemas: WECHAT_MP_EVENT_SCHEMAS },
   { channel: "wechat-mini", schemas: WECHAT_MINI_EVENT_SCHEMAS },
   { channel: "feishu", schemas: FEISHU_SCHEMAS },
+  { channel: "dingtalk", schemas: DINGTALK_SCHEMAS },
 ];
 
 /** 聚合后的全部内置模板（契约校验与全量遍历用） */

@@ -1,0 +1,260 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "dingtalk",
+  "version": "2026.09",
+  "schemas": {
+    "dt-bpms-instance-change": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/development/event-bpms-instance-change.md",
+      "fields": [
+        {
+          "path": "EventType",
+          "title": "事件类型",
+          "type": "string",
+          "group": "推送信封",
+          "description": "新 HTTP 密文信封的事件名（首字母大写系）：审批实例开始/结束/终止/删除。",
+          "required": true
+        },
+        {
+          "path": "EventTime",
+          "title": "事件时间",
+          "type": "number",
+          "group": "推送信封",
+          "description": "事件产生的毫秒时间戳（官方样本 1663143335567）；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "CorpId",
+          "title": "企业 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "事件归属企业（ding… 形态，官方样本 ding9f50b15bxxxx16741）。"
+        },
+        {
+          "path": "BizId",
+          "title": "业务 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "平台业务标识（官方样本 1663**35567，含掩码占位）。"
+        },
+        {
+          "path": "eventId",
+          "title": "事件唯一 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "幂等键（十六进制串，官方样本 c7c7120f2c07419**ebdba0318c8）；接收侧按它去重。新建事件时重生成。"
+        },
+        {
+          "path": "result",
+          "title": "审批结果",
+          "type": "string",
+          "group": "审批实例",
+          "description": "如 agree（同意）；与 type 组合表达实例状态语义。"
+        },
+        {
+          "path": "processInstanceId",
+          "title": "审批实例 ID",
+          "type": "string",
+          "group": "审批实例",
+          "description": "审批实例唯一标识（官方样本 9Qgx5QqjR7axMwxxxx 为混合串占位）。"
+        },
+        {
+          "path": "finishTime",
+          "title": "结束时间",
+          "type": "number",
+          "group": "审批实例",
+          "description": "实例结束的毫秒时间戳（官方样本 1495592272000）。"
+        },
+        {
+          "path": "createTime",
+          "title": "创建时间",
+          "type": "number",
+          "group": "审批实例",
+          "description": "实例创建的毫秒时间戳（官方样本 1495592305000）。"
+        },
+        {
+          "path": "processCode",
+          "title": "流程编码",
+          "type": "string",
+          "group": "审批实例",
+          "description": "审批模板唯一编码（Pro-xxx 形态）；订阅规则 /v1.0/event/bpms_instance_change/processCode/{processCode}/type/{type} 按它过滤。"
+        },
+        {
+          "path": "bizCategoryId",
+          "title": "业务分类 ID",
+          "type": "string",
+          "group": "审批实例",
+          "description": "审批业务分类（官方样本 20230xxx；打卡 open.com.dd.at.approveCheck、出差 alitrip.business 等）。"
+        },
+        {
+          "path": "businessId",
+          "title": "业务编号",
+          "type": "string",
+          "group": "审批实例",
+          "description": "发起方附属业务编号（官方样本 yewu1）。"
+        },
+        {
+          "path": "type",
+          "title": "实例状态",
+          "type": "string",
+          "group": "审批实例",
+          "description": "start/finish/terminate（页内示例载荷用 finish）；订阅规则 type 参数同源。"
+        },
+        {
+          "path": "title",
+          "title": "审批标题",
+          "type": "string",
+          "group": "审批实例",
+          "description": "审批实例标题（官方样本 自测-1016）。"
+        },
+        {
+          "path": "businessType",
+          "title": "业务类型",
+          "type": "string",
+          "group": "审批实例",
+          "description": "业务类型标识（官方样本 yewu1）。"
+        },
+        {
+          "path": "url",
+          "title": "实例链接",
+          "type": "string",
+          "group": "审批实例",
+          "description": "审批详情页链接；官方样本中 = 与 & 以 \\u003d/\\u0026 转义传输，本工具按解码后原文（等值）照录。",
+          "format": "url"
+        },
+        {
+          "path": "staffId",
+          "title": "发起人 staffId",
+          "type": "string",
+          "group": "审批实例",
+          "description": "发起审批的员工标识（官方样本 manager75）。"
+        }
+      ]
+    },
+    "dt-bpms-task-change": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/development/event-bpms-task-change.md",
+      "fields": [
+        {
+          "path": "EventType",
+          "title": "事件类型",
+          "type": "string",
+          "group": "推送信封",
+          "description": "新 HTTP 密文信封的事件名（首字母大写系）：审批任务开始/结束/转交。",
+          "required": true
+        },
+        {
+          "path": "EventTime",
+          "title": "事件时间",
+          "type": "number",
+          "group": "推送信封",
+          "description": "事件产生的毫秒时间戳（官方样本 1663143335567）；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "CorpId",
+          "title": "企业 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "事件归属企业（ding… 形态，官方样本 ding9f50b15bxxxx16741）。"
+        },
+        {
+          "path": "BizId",
+          "title": "业务 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "平台业务标识（官方样本 1663**35567，含掩码占位）。"
+        },
+        {
+          "path": "eventId",
+          "title": "事件唯一 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "幂等键（十六进制串，官方样本 c7c7120f2c07419**ebdba0318c8）；新建事件时重生成。"
+        },
+        {
+          "path": "result",
+          "title": "任务结果",
+          "type": "string",
+          "group": "审批任务",
+          "description": "如 agree（同意）；转交语义为 type:finish + result:redirect，结束另有 cancel（或签）。"
+        },
+        {
+          "path": "processInstanceId",
+          "title": "审批实例 ID",
+          "type": "string",
+          "group": "审批任务",
+          "description": "所属审批实例唯一标识（官方样本 ce133dd0-5b22-9516-xxxxxxxxxxxx）。"
+        },
+        {
+          "path": "finishTime",
+          "title": "结束时间",
+          "type": "number",
+          "group": "审批任务",
+          "description": "任务结束的毫秒时间戳（官方样本 1670983893000）。"
+        },
+        {
+          "path": "createTime",
+          "title": "创建时间",
+          "type": "number",
+          "group": "审批任务",
+          "description": "任务创建的毫秒时间戳（官方样本 1670983873000）。"
+        },
+        {
+          "path": "processCode",
+          "title": "流程编码",
+          "type": "string",
+          "group": "审批任务",
+          "description": "审批模板唯一编码（官方样本 PROC-27BBC5E6-DFFA-4EC3-A1F1-xxx）。"
+        },
+        {
+          "path": "bizCategoryId",
+          "title": "业务分类 ID",
+          "type": "string",
+          "group": "审批任务",
+          "description": "审批业务分类（官方样本 attendance.goout 外出）。"
+        },
+        {
+          "path": "businessId",
+          "title": "业务编号",
+          "type": "string",
+          "group": "审批任务",
+          "description": "发起方附属业务编号（官方样本 20xxxx38）。"
+        },
+        {
+          "path": "remark",
+          "title": "审批备注",
+          "type": "string",
+          "group": "审批任务",
+          "description": "审批人留言（官方样本 同意）。"
+        },
+        {
+          "path": "type",
+          "title": "任务状态",
+          "type": "string",
+          "group": "审批任务",
+          "description": "start/finish（含转交：finish + result:redirect），结束另有 cancel（或签）。"
+        },
+        {
+          "path": "title",
+          "title": "审批标题",
+          "type": "string",
+          "group": "审批任务",
+          "description": "审批实例标题（官方样本 考勤-测试）。"
+        },
+        {
+          "path": "taskId",
+          "title": "任务 ID",
+          "type": "number",
+          "group": "审批任务",
+          "description": "审批任务数字标识（官方样本 811165）。"
+        },
+        {
+          "path": "staffId",
+          "title": "处理人 staffId",
+          "type": "string",
+          "group": "审批任务",
+          "description": "任务处理员工标识（官方样本 08058646137）。"
+        }
+      ]
+    }
+  }
+}

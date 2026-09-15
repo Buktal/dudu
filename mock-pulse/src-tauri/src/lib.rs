@@ -31,6 +31,7 @@ pub fn run() {
             connections::connections_test_wechat_mp,
             connections::connections_test_wechat_mini,
             connections::connections_test_feishu,
+            connections::connections_test_dingtalk,
             definitions::definitions_load,
             definitions::definitions_save,
             events::events_load,

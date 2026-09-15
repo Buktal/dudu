@@ -8,10 +8,12 @@ import type { ChannelId } from "@/lib/channels";
 
 import {
   type ConnectionConfig,
+  type DingtalkConnectionConfig,
   type DouyinConnectionConfig,
   type FeishuConnectionConfig,
   loadConnections,
   saveConnection as saveConnectionApi,
+  testDingtalkConnection as testDingtalkApi,
   testDouyinConnection as testDouyinApi,
   testFeishuConnection as testFeishuApi,
   testWechatMiniConnection as testWechatMiniApi,
@@ -82,6 +84,17 @@ export const defaultWechatMiniConnection: WechatMiniConnectionConfig = {
   dataFormat: "xml",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（新 HTTP 密文事件回调起步） */
+export const defaultDingtalkConnection: DingtalkConnectionConfig = {
+  channel: "dingtalk",
+  url: "http://127.0.0.1:8080/webhooks/dingtalk",
+  system: "http_crypto",
+  token: "",
+  encodingAesKey: "",
+  ownerKey: "",
+  appSecret: "",
+};
+
 /** 原型默认值：本地联调回调地址，凭据留空（Encrypt Key 留空 = 明文直发起步） */
 export const defaultFeishuConnection: FeishuConnectionConfig = {
   channel: "feishu",
@@ -102,6 +115,7 @@ export const initialConnectionsState: ConnectionsState = {
     "wechat-mp": defaultWechatMpConnection,
     "wechat-mini": defaultWechatMiniConnection,
     feishu: defaultFeishuConnection,
+    dingtalk: defaultDingtalkConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -141,6 +155,8 @@ export const testConnection = createAsyncThunk(
         return testWechatMiniApi(config);
       case "feishu":
         return testFeishuApi(config);
+      case "dingtalk":
+        return testDingtalkApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
@@ -224,6 +240,9 @@ export const {
  * - 飞书核：url + verificationToken 必填（官方 §4.1 默认校验方式，握手三参与
  *   事件 header 都带）；encryptKey 选填（空 = 明文直发，非空 = 签名 + AES
  *   信封）；appId 仅随连接记录
+ * - 钉钉按通道核：密文通道 = url + token + encodingAesKey + ownerKey（sha1
+ *   四参验签 + AES 解密封装 + 包尾 $key）；机器人通道 = url + appSecret
+ *   （timestamp/sign = HmacSHA256）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -242,6 +261,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && wechatMiniReady(config);
     case "feishu":
       return config.url.trim() !== "" && feishuReady(config);
+    case "dingtalk":
+      return config.url.trim() !== "" && dingtalkReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -333,6 +354,28 @@ function wechatMiniReady(config: WechatMiniConnectionConfig): boolean {
  */
 function feishuReady(config: FeishuConnectionConfig): boolean {
   return config.url.trim() !== "" && config.verificationToken.trim() !== "";
+}
+
+/** 钉钉按推送通道核必填集（验签/加密要素是直发前置） */
+function dingtalkReady(config: DingtalkConnectionConfig): boolean {
+  switch (config.system) {
+    case "http_crypto":
+      // 密文通道：sha1 四参验签 + AES 解密封装都吃 token/aesKey，包尾 $key=ownerKey
+      return (
+        config.token.trim() !== "" &&
+        config.encodingAesKey.trim() !== "" &&
+        config.ownerKey.trim() !== ""
+      );
+    case "bot":
+      // 机器人通道：timestamp/sign = HmacSHA256(timestamp+"\n"+appSecret)
+      return config.appSecret.trim() !== "";
+    default: {
+      // 穷尽守卫：新增通道漏配必填集时编译期报错；未知通道视为未配置
+      const exhaustive: never = config.system;
+      void exhaustive;
+      return false;
+    }
+  }
 }
 
 /** 按渠道字面量取对应形状的连接配置类型 */

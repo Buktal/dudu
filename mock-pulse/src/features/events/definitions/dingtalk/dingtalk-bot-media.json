@@ -1,0 +1,454 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "dingtalk",
+  "version": "2026.09",
+  "schemas": {
+    "dt-bot-audio": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/orgapp/receive-message.md",
+      "fields": [
+        {
+          "path": "senderPlatform",
+          "title": "发送端平台",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送端客户端平台（官方样本 Mac）。"
+        },
+        {
+          "path": "conversationId",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "消息信封",
+          "description": "会话标识（cid…== base64 形态）。"
+        },
+        {
+          "path": "atUsers",
+          "title": "被 @ 用户列表",
+          "type": "json",
+          "group": "消息信封",
+          "description": "本条消息 @ 到的用户；群 @ 不支持语音（人与人会话亦不支持）。"
+        },
+        {
+          "path": "chatbotCorpId",
+          "title": "机器人所属企业",
+          "type": "string",
+          "group": "消息信封",
+          "description": "机器人归属企业corpId（ding… 形态）。"
+        },
+        {
+          "path": "chatbotUserId",
+          "title": "机器人用户标识",
+          "type": "string",
+          "group": "消息信封",
+          "description": "机器人在会话中的用户标识（$:LWCP_v1:$… 加密形态）。"
+        },
+        {
+          "path": "msgId",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "消息信封",
+          "description": "消息幂等键（msgr…== base64 形态）；新建事件时重生成。",
+          "required": true
+        },
+        {
+          "path": "senderNick",
+          "title": "发送者昵称",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者显示昵称（官方样本 小钉）。"
+        },
+        {
+          "path": "isAdmin",
+          "title": "发送者是否管理员",
+          "type": "boolean",
+          "group": "消息信封",
+          "description": "发送者在会话内是否具备管理身份。"
+        },
+        {
+          "path": "senderStaffId",
+          "title": "发送者 staffId",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者员工标识（数字串形态）。"
+        },
+        {
+          "path": "sessionWebhookExpiredTime",
+          "title": "Webhook 过期时刻",
+          "type": "number",
+          "group": "消息信封",
+          "description": "会话 webhook 失效毫秒时间戳；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "createAt",
+          "title": "消息创建时刻",
+          "type": "number",
+          "group": "消息信封",
+          "description": "消息创建毫秒时间戳；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "senderCorpId",
+          "title": "发送者所属企业",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者归属企业corpId（ding… 形态）。"
+        },
+        {
+          "path": "conversationType",
+          "title": "会话类型",
+          "type": "string",
+          "group": "消息信封",
+          "description": "字符串型：\"1\" 单聊、\"2\" 群聊。"
+        },
+        {
+          "path": "senderId",
+          "title": "发送者标识",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者加密标识（$:LWCP_v1:$… 形态）。"
+        },
+        {
+          "path": "conversationTitle",
+          "title": "会话标题",
+          "type": "string",
+          "group": "消息信封",
+          "description": "群聊会话名称。"
+        },
+        {
+          "path": "isInAtList",
+          "title": "机器人是否被 @",
+          "type": "boolean",
+          "group": "消息信封",
+          "description": "机器人是否在本条消息的 @ 列表中。"
+        },
+        {
+          "path": "sessionWebhook",
+          "title": "被动回复 Webhook",
+          "type": "string",
+          "group": "消息信封",
+          "description": "机器人被动回复地址（oapi.dingtalk.com/robot/sendBySession?session=…）。",
+          "format": "url"
+        },
+        {
+          "path": "content",
+          "title": "消息内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "语音消息体：{duration 毫秒, downloadCode, recognition 语音转文字}（官方样本 downloadCode 为 mIofN… 截断占位，照录）。"
+        },
+        {
+          "path": "robotCode",
+          "title": "机器人编码",
+          "type": "string",
+          "group": "消息内容",
+          "description": "机器人标识（dingo… 形态）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "本模板为 audio。",
+          "required": true
+        }
+      ]
+    },
+    "dt-bot-video": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/orgapp/receive-message.md",
+      "fields": [
+        {
+          "path": "senderPlatform",
+          "title": "发送端平台",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送端客户端平台（官方样本 Mac）。"
+        },
+        {
+          "path": "conversationId",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "消息信封",
+          "description": "会话标识（cid…== base64 形态）。"
+        },
+        {
+          "path": "atUsers",
+          "title": "被 @ 用户列表",
+          "type": "json",
+          "group": "消息信封",
+          "description": "本条消息 @ 到的用户；群 @ 不支持视频（人与人会话亦不支持）。"
+        },
+        {
+          "path": "chatbotCorpId",
+          "title": "机器人所属企业",
+          "type": "string",
+          "group": "消息信封",
+          "description": "机器人归属企业corpId（ding… 形态）。"
+        },
+        {
+          "path": "chatbotUserId",
+          "title": "机器人用户标识",
+          "type": "string",
+          "group": "消息信封",
+          "description": "机器人在会话中的用户标识（$:LWCP_v1:$… 加密形态）。"
+        },
+        {
+          "path": "msgId",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "消息信封",
+          "description": "消息幂等键（msgr…== base64 形态）；新建事件时重生成。",
+          "required": true
+        },
+        {
+          "path": "senderNick",
+          "title": "发送者昵称",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者显示昵称（官方样本 小钉）。"
+        },
+        {
+          "path": "isAdmin",
+          "title": "发送者是否管理员",
+          "type": "boolean",
+          "group": "消息信封",
+          "description": "发送者在会话内是否具备管理身份。"
+        },
+        {
+          "path": "senderStaffId",
+          "title": "发送者 staffId",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者员工标识（数字串形态）。"
+        },
+        {
+          "path": "sessionWebhookExpiredTime",
+          "title": "Webhook 过期时刻",
+          "type": "number",
+          "group": "消息信封",
+          "description": "会话 webhook 失效毫秒时间戳；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "createAt",
+          "title": "消息创建时刻",
+          "type": "number",
+          "group": "消息信封",
+          "description": "消息创建毫秒时间戳；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "senderCorpId",
+          "title": "发送者所属企业",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者归属企业corpId（ding… 形态）。"
+        },
+        {
+          "path": "conversationType",
+          "title": "会话类型",
+          "type": "string",
+          "group": "消息信封",
+          "description": "字符串型：\"1\" 单聊、\"2\" 群聊。"
+        },
+        {
+          "path": "senderId",
+          "title": "发送者标识",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者加密标识（$:LWCP_v1:$… 形态）。"
+        },
+        {
+          "path": "conversationTitle",
+          "title": "会话标题",
+          "type": "string",
+          "group": "消息信封",
+          "description": "群聊会话名称。"
+        },
+        {
+          "path": "isInAtList",
+          "title": "机器人是否被 @",
+          "type": "boolean",
+          "group": "消息信封",
+          "description": "机器人是否在本条消息的 @ 列表中。"
+        },
+        {
+          "path": "sessionWebhook",
+          "title": "被动回复 Webhook",
+          "type": "string",
+          "group": "消息信封",
+          "description": "机器人被动回复地址（oapi.dingtalk.com/robot/sendBySession?session=…）。",
+          "format": "url"
+        },
+        {
+          "path": "content",
+          "title": "消息内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "视频消息体：{duration 毫秒, downloadCode, videoType}（官方样本 downloadCode 为 mIofN… 截断占位，照录）。"
+        },
+        {
+          "path": "robotCode",
+          "title": "机器人编码",
+          "type": "string",
+          "group": "消息内容",
+          "description": "机器人标识（dingo… 形态）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "本模板为 video。",
+          "required": true
+        }
+      ]
+    },
+    "dt-bot-file": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/orgapp/receive-message.md",
+      "fields": [
+        {
+          "path": "senderPlatform",
+          "title": "发送端平台",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送端客户端平台（官方样本 Mac）。"
+        },
+        {
+          "path": "conversationId",
+          "title": "会话 ID",
+          "type": "string",
+          "group": "消息信封",
+          "description": "会话标识（cid…== base64 形态）。"
+        },
+        {
+          "path": "atUsers",
+          "title": "被 @ 用户列表",
+          "type": "json",
+          "group": "消息信封",
+          "description": "本条消息 @ 到的用户；群 @ 不支持文件（人与人会话亦不支持）。"
+        },
+        {
+          "path": "chatbotCorpId",
+          "title": "机器人所属企业",
+          "type": "string",
+          "group": "消息信封",
+          "description": "机器人归属企业corpId（ding… 形态）。"
+        },
+        {
+          "path": "chatbotUserId",
+          "title": "机器人用户标识",
+          "type": "string",
+          "group": "消息信封",
+          "description": "机器人在会话中的用户标识（$:LWCP_v1:$… 加密形态）。"
+        },
+        {
+          "path": "msgId",
+          "title": "消息 ID",
+          "type": "string",
+          "group": "消息信封",
+          "description": "消息幂等键（msgr…== base64 形态）；新建事件时重生成。",
+          "required": true
+        },
+        {
+          "path": "senderNick",
+          "title": "发送者昵称",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者显示昵称（官方样本 小钉）。"
+        },
+        {
+          "path": "isAdmin",
+          "title": "发送者是否管理员",
+          "type": "boolean",
+          "group": "消息信封",
+          "description": "发送者在会话内是否具备管理身份。"
+        },
+        {
+          "path": "senderStaffId",
+          "title": "发送者 staffId",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者员工标识（数字串形态）。"
+        },
+        {
+          "path": "sessionWebhookExpiredTime",
+          "title": "Webhook 过期时刻",
+          "type": "number",
+          "group": "消息信封",
+          "description": "会话 webhook 失效毫秒时间戳；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "createAt",
+          "title": "消息创建时刻",
+          "type": "number",
+          "group": "消息信封",
+          "description": "消息创建毫秒时间戳；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "senderCorpId",
+          "title": "发送者所属企业",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者归属企业corpId（ding… 形态）。"
+        },
+        {
+          "path": "conversationType",
+          "title": "会话类型",
+          "type": "string",
+          "group": "消息信封",
+          "description": "字符串型：\"1\" 单聊、\"2\" 群聊。"
+        },
+        {
+          "path": "senderId",
+          "title": "发送者标识",
+          "type": "string",
+          "group": "消息信封",
+          "description": "发送者加密标识（$:LWCP_v1:$… 形态）。"
+        },
+        {
+          "path": "conversationTitle",
+          "title": "会话标题",
+          "type": "string",
+          "group": "消息信封",
+          "description": "群聊会话名称。"
+        },
+        {
+          "path": "isInAtList",
+          "title": "机器人是否被 @",
+          "type": "boolean",
+          "group": "消息信封",
+          "description": "机器人是否在本条消息的 @ 列表中。"
+        },
+        {
+          "path": "sessionWebhook",
+          "title": "被动回复 Webhook",
+          "type": "string",
+          "group": "消息信封",
+          "description": "机器人被动回复地址（oapi.dingtalk.com/robot/sendBySession?session=…）。",
+          "format": "url"
+        },
+        {
+          "path": "content",
+          "title": "消息内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "文件消息体：{downloadCode, fileName}（官方样本 downloadCode 为 mIofN… 截断占位，照录）。"
+        },
+        {
+          "path": "robotCode",
+          "title": "机器人编码",
+          "type": "string",
+          "group": "消息内容",
+          "description": "机器人标识（dingo… 形态）。"
+        },
+        {
+          "path": "msgtype",
+          "title": "消息类型",
+          "type": "string",
+          "group": "消息内容",
+          "description": "本模板为 file。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

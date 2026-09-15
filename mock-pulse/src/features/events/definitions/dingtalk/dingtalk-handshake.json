@@ -1,0 +1,105 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "dingtalk",
+  "version": "2026.09",
+  "schemas": {
+    "dt-check-url": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/development/event-subscription-callback-test-url-event.md",
+      "fields": [
+        {
+          "path": "EventType",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "解密后明文固定为 check_url：注册/保存回调地址时平台推送的测试地址事件；你的服务须 1500ms 内回 success 的加密包。",
+          "required": true
+        }
+      ]
+    },
+    "dt-check-create-suite-url": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/development/event-subscription-callback-test-url-event.md",
+      "fields": [
+        {
+          "path": "EventType",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "解密后明文为 check_create_suite_url：新建应用回调 URL 时平台验证有效性；须回 success 的加密包。",
+          "required": true
+        },
+        {
+          "path": "Random",
+          "title": "随机串",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台随握手下发的随机串，官方样本为 8 位字母数字；照录即可。"
+        }
+      ]
+    },
+    "dt-check-update-suite-url": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/development/event-subscription-callback-test-url-event.md",
+      "fields": [
+        {
+          "path": "EventType",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "解密后明文为 check_update_suite_url：更新应用回调 URL 时平台验证有效性；须回 success 的加密包。",
+          "required": true
+        },
+        {
+          "path": "Random",
+          "title": "随机串",
+          "type": "string",
+          "group": "回调信封",
+          "description": "平台随握手下发的随机串；官方样本为占位符 xxxxxx，照录即可。"
+        },
+        {
+          "path": "TestSuiteKey",
+          "title": "测试套件 Key",
+          "type": "string",
+          "group": "回调信封",
+          "description": "更新地址握手随包下发的测试套件标识（suited6db0pze8yao1b1y 为官方样本原文）。"
+        }
+      ]
+    },
+    "dt-suite-ticket": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/development/event-subscription-callback-test-url-event.md",
+      "fields": [
+        {
+          "path": "SuiteKey",
+          "title": "套件 Key",
+          "type": "string",
+          "group": "回调信封",
+          "description": "第三方企业应用的套件标识（官方样本为占位符 xxxxxx）；不回 success 平台会连推至 100 次。"
+        },
+        {
+          "path": "EventType",
+          "title": "事件类型",
+          "type": "string",
+          "group": "回调信封",
+          "description": "固定为 suite_ticket：套件票据每 5 小时推送一次，换 corp token 的原料；以最新一次为准。",
+          "required": true
+        },
+        {
+          "path": "TimeStamp",
+          "title": "推送时间戳",
+          "type": "number",
+          "group": "回调信封",
+          "description": "票据推送时刻（官方样本为示意值 123456）；新建事件时按当前毫秒重生成。"
+        },
+        {
+          "path": "SuiteTicket",
+          "title": "套件票据",
+          "type": "string",
+          "group": "回调信封",
+          "description": "票据本体（官方样本为占位符 xxxxxx）；旧 ticket 随新推送失效。"
+        }
+      ]
+    }
+  }
+}

@@ -39,6 +39,7 @@ import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
 import type {
   ConnectionConfig,
+  DingtalkSystem,
   DouyinSystem,
   WechatMiniMode,
   WechatMpMode,
@@ -97,12 +98,22 @@ function feishuTestNote(draft: ConnectionConfig): string {
   }），检查服务是否在 1 秒内原样回显 challenge。`;
 }
 
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书 JSON、公众号 XML */
+/** 钉钉握手文案按推送通道呈现（事实库 §5.10/§3.3：密文握手与机器人探测） */
+function dingtalkTestNote(system: DingtalkSystem): string {
+  if (system === "bot") {
+    return "发送带 timestamp/sign（HmacSHA256）头的明文探测请求，检查服务是否验签通过并响应 HTTP 2xx。";
+  }
+  return "发送 check_url 握手（加密信封 + sha1 四参 URL 签名），检查服务是否在 1500ms 内回可解密的加密 success 包。";
+}
+
+/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉 JSON、公众号 XML */
 function wireBadgeLabel(
   channel: ChannelId,
   draft: ConnectionConfig,
 ): "JSON" | "XML" {
-  if (channel === "douyin" || channel === "feishu") return "JSON";
+  if (channel === "douyin" || channel === "feishu" || channel === "dingtalk") {
+    return "JSON";
+  }
   if (channel === "wecom" && draft.channel === "wecom") {
     return draft.system === "aibot" ? "JSON" : "XML";
   }
@@ -133,7 +144,9 @@ export function ConnectionsView() {
           ? actions.defaultWechatMiniConnection
           : channel === "feishu"
             ? actions.defaultFeishuConnection
-            : actions.defaultWecomConnection);
+            : channel === "dingtalk"
+              ? actions.defaultDingtalkConnection
+              : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -320,9 +333,17 @@ export function ConnectionsView() {
                         )
                       : channel === "feishu"
                         ? feishuTestNote(draft)
-                        : wecomTestNote(
-                            draft.channel === "wecom" ? draft.system : "agent",
-                          )}
+                        : channel === "dingtalk"
+                          ? dingtalkTestNote(
+                              draft.channel === "dingtalk"
+                                ? draft.system
+                                : "http_crypto",
+                            )
+                          : wecomTestNote(
+                              draft.channel === "wecom"
+                                ? draft.system
+                                : "agent",
+                            )}
               </CardDescription>
               <CardAction>
                 <Button

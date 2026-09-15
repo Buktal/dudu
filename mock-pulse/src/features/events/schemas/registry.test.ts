@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CHANNELS } from "@/lib/channels";
 
 import { defineSchema } from "./define";
+import { DINGTALK_DEFINITIONS } from "./dingtalk";
 import { DOUYIN_DEFINITIONS } from "./douyin";
 import { FEISHU_DEFINITIONS } from "./feishu";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
@@ -16,11 +17,12 @@ const DEFINITIONS_BY_CHANNEL = {
   "wechat-mp": MP_DEFINITIONS,
   "wechat-mini": MINI_DEFINITIONS,
   feishu: FEISHU_DEFINITIONS,
+  dingtalk: DINGTALK_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 公众号 26 + 小程序 7 + 飞书 7 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(162);
+  it("抖音 33 + 企微 89 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(176);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -32,6 +34,7 @@ describe("事件模板聚合注册表", () => {
       "wechat-mp",
       "wechat-mini",
       "feishu",
+      "dingtalk",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -66,9 +69,13 @@ describe("事件模板聚合注册表", () => {
       expect(schema.expected.status, `${schema.id} status`).toBeLessThanOrEqual(
         599,
       );
-      expect(["contains", "equals", "jsonField", "wecomReply"]).toContain(
-        schema.expected.bodyMode,
-      );
+      expect([
+        "contains",
+        "equals",
+        "jsonField",
+        "wecomReply",
+        "dingtalkReply",
+      ]).toContain(schema.expected.bodyMode);
     }
   });
 
@@ -268,11 +275,36 @@ describe("事件模板聚合注册表", () => {
       "fs-contact-deleted",
       "fs-approval-updated",
     ]);
+    expect(schemasByChannel("dingtalk").map((schema) => schema.id)).toEqual([
+      // 回调握手系（事实库 §5.6：解密后明文）
+      "dt-check-url",
+      "dt-check-create-suite-url",
+      "dt-check-update-suite-url",
+      "dt-suite-ticket",
+      // 审批双信封（事实库 §5.4：大写 HTTP 信封）
+      "dt-bpms-instance-change",
+      "dt-bpms-task-change",
+      // 通讯录双信封（事实库 §5.2/§5.3）
+      "dt-user-modify-org",
+      "dt-user-leave-org",
+      // 机器人收消息（事实库 §5.1：明文 6 msgtype）
+      "dt-bot-text",
+      "dt-bot-picture",
+      "dt-bot-audio",
+      "dt-bot-video",
+      "dt-bot-file",
+      "dt-bot-richtext",
+    ]);
     for (const channel of CHANNELS) {
       if (
-        ["douyin", "wecom", "wechat-mp", "wechat-mini", "feishu"].includes(
-          channel.id,
-        )
+        [
+          "douyin",
+          "wecom",
+          "wechat-mp",
+          "wechat-mini",
+          "feishu",
+          "dingtalk",
+        ].includes(channel.id)
       )
         continue;
       expect(schemasByChannel(channel.id), channel.id).toEqual([]);

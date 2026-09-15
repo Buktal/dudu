@@ -33,7 +33,8 @@ export type IdKind =
   | "larkOpenId" // 飞书 open_id：ou_ + 32 位十六进制
   | "larkUnionId" // 飞书 union_id：on_ + 32 位十六进制
   | "larkMessageId" // 飞书 message_id：om_ + 32 位十六进制
-  | "larkChatId"; // 飞书 chat_id：oc_ + 32 位十六进制
+  | "larkChatId" // 飞书 chat_id：oc_ + 32 位十六进制
+  | "dingtalkMsgId"; // 钉钉机器人 msgId：24 字符 base64 风格 + "=="（官方样本形态）
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */
@@ -59,12 +60,13 @@ export type WirePayload = { [key: string]: unknown };
 /** 报文的线上形态：抖音 JSON、企微 XML（决定拼装/解析方式） */
 export type WireForm = "json" | "xml";
 
-/** 期望回执的正文形态：包含 / 完全一致 / JSON 字段子集匹配 / 企微回执形态 */
+/** 期望回执的正文形态：包含 / 完全一致 / JSON 字段子集匹配 / 企微与钉钉回包形态 */
 export type ReceiptBodyMode =
   | "contains"
   | "equals"
   | "jsonField"
-  | "wecomReply";
+  | "wecomReply"
+  | "dingtalkReply";
 
 export type ExpectedReceipt = {
   status: number;

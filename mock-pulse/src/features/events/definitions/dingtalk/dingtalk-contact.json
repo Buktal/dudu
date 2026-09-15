@@ -1,0 +1,126 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "dingtalk",
+  "version": "2026.09",
+  "schemas": {
+    "dt-user-modify-org": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/orgapp/event-v3user-modify-org.md",
+      "fields": [
+        {
+          "path": "EventType",
+          "title": "事件类型",
+          "type": "string",
+          "group": "推送信封",
+          "description": "通讯录用户更改（仅企业内用户信息变更触发，个人头像/昵称/钉钉号不触发）。",
+          "required": true
+        },
+        {
+          "path": "EventTime",
+          "title": "事件时间",
+          "type": "number",
+          "group": "推送信封",
+          "description": "事件产生的毫秒时间戳（官方样本 1663143335567）；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "CorpId",
+          "title": "企业 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "事件归属企业（官方样本 ding9f50b15bxxxx16741）。"
+        },
+        {
+          "path": "BizId",
+          "title": "业务 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "平台业务标识（官方样本 1663**35567，含掩码占位）。"
+        },
+        {
+          "path": "eventId",
+          "title": "事件唯一 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "幂等键（十六进制串，官方样本 c7c7120f2c07419**ebdba0318c8）；新建事件时重生成。"
+        },
+        {
+          "path": "timeStamp",
+          "title": "变更时间戳",
+          "type": "string",
+          "group": "变更明细",
+          "description": "变更时刻的毫秒时间戳——注意为字符串型（官方样本 \"1608017258073\"）；新建事件时按当前毫秒重生成。"
+        },
+        {
+          "path": "diffInfo",
+          "title": "字段差异",
+          "type": "json",
+          "group": "变更明细",
+          "description": "变更前后差异：prev（旧值）/ curr（新值）/ userid；仅列发生变化的字段（官方样本 telephone 从 prev 消失即删除）。"
+        },
+        {
+          "path": "userId",
+          "title": "员工 ID 列表",
+          "type": "json",
+          "group": "变更明细",
+          "description": "本次变更涉及的员工 userid 数组（官方样本 [\"user123456\"]）。"
+        }
+      ]
+    },
+    "dt-user-leave-org": {
+      "version": "2026.09",
+      "source": "https://open.dingtalk.com/document/orgapp/event-v3user-leave-org.md",
+      "fields": [
+        {
+          "path": "EventType",
+          "title": "事件类型",
+          "type": "string",
+          "group": "推送信封",
+          "description": "通讯录用户离职。",
+          "required": true
+        },
+        {
+          "path": "EventTime",
+          "title": "事件时间",
+          "type": "number",
+          "group": "推送信封",
+          "description": "事件产生的毫秒时间戳（官方样本 1663143335567）；新建事件时按当前时刻重生成。"
+        },
+        {
+          "path": "CorpId",
+          "title": "企业 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "事件归属企业（官方样本 ding9f50b15bxxxx16741）。"
+        },
+        {
+          "path": "BizId",
+          "title": "业务 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "平台业务标识（官方样本 1663**35567，含掩码占位）。"
+        },
+        {
+          "path": "eventId",
+          "title": "事件唯一 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "幂等键（十六进制串，官方样本 c7c7120f2c07419**ebdba0318c8）；新建事件时重生成。"
+        },
+        {
+          "path": "timeStamp",
+          "title": "离职时间戳",
+          "type": "string",
+          "group": "变更明细",
+          "description": "离职时刻的毫秒时间戳——字符串型（官方样本 \"1685501863357\"）；新建事件时按当前毫秒重生成。"
+        },
+        {
+          "path": "userId",
+          "title": "员工 ID 列表",
+          "type": "json",
+          "group": "变更明细",
+          "description": "离职员工 userid 数组（官方样本 [\"015xxxx227\"]）。"
+        }
+      ]
+    }
+  }
+}

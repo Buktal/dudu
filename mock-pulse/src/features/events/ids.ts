@@ -21,6 +21,7 @@ import type { EventSchema, IdKind } from "./schemas";
  * - createTimeMsString：13 位毫秒时间戳字符串（飞书 create_time 字符串形态）
  * - larkOpenId/larkUnionId/larkMessageId/larkChatId：飞书 ou_/on_/om_/oc_ 前缀
  *   + 32 位十六进制（事实库「对 MockPulse 模拟的直接含义」ID 形态速查）
+ * - dingtalkMsgId：钉钉机器人 msgId（msgr…== base64 形态，官方样本 msgrK2ck…）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -130,6 +131,18 @@ export function generateLarkChatId(): string {
   return `oc_${hexChars(32)}`;
 }
 
+/**
+ * 钉钉机器人 msgId：24 字符 base64 风格 + "=="（幂等键，官方样本
+ * msgrK2ckHkMbaiUWt5xQU+riw== 的形态；16 字节消息标识的 base64 即此长度）
+ */
+export function generateDingtalkMsgId(): string {
+  const body = Array.from(
+    randomBytes(24),
+    (byte) => BASE64_CHARS[byte % BASE64_CHARS.length],
+  ).join("");
+  return `${body}==`;
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -147,6 +160,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   larkUnionId: generateLarkUnionId,
   larkMessageId: generateLarkMessageId,
   larkChatId: generateLarkChatId,
+  dingtalkMsgId: generateDingtalkMsgId,
 };
 
 /**
