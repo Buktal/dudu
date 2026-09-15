@@ -32,6 +32,11 @@ sha2 = "0.10"
 # QQ 渠道（#37）：Webhook Ed25519 验签（官方 sign 页 §4）——椭圆曲线签名体系
 # 无法像 sha/hmac 一样薄封装自实现，取纯 Rust 标准库 ed25519-dalek（RFC 8032 实现）
 ed25519-dalek = "2"
+# 支付宝渠道（#46）：notify_url 表单异步通知 RSA2 签名/验签（官方 rsaCheckV1，
+# 事实库 §4.3）——RSA-SHA256(PKCS#1 v1.5) 非对称签名无法自实现，取 RustCrypto
+# rsa（配合既有 sha2，ed25519-dalek #37 同族先例）；rand 供测试密钥生成
+rsa = { version = "0.9", features = ["pem", "sha2"] }
+rand = "0.8"
 hex = "0.4"
 uuid = { version = "1", features = ["v4"] }
 # 企微回调加解密（#17）：AES-256-CBC 底层块运算（补位按官方 PKCS#7-32 自实现）+ Base64

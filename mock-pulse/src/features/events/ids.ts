@@ -51,6 +51,10 @@ import type { EventSchema, IdKind } from "./schemas";
  *   17 位、100025663239521904 为 18 位纯数字字符串，事实库「ID 形态」速查；
  *   取 17~18 位、首位取 1 保证恒在 int64 内；订单状态/配送/退单/赔偿四推送
  *   共用）
+ * - aliNotifyId：支付宝通知校验 ID notify_id（官方样本 ac05099524730693a8b33
+ *   0c45cf72da943 为 35 位小写十六进制串，§5.1「通知校验 ID」128 位口径；
+ *   「同一条异步通知重试时 notify_id 不变」§3.4——幂等键首选，新建事件即新
+ *   通知故重生成；三地址代表模板共用）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -324,6 +328,16 @@ export function generateEleBizId(): string {
   return digits;
 }
 
+/**
+ * 支付宝通知校验 ID notify_id：官方样本 ac05099524730693a8b330c45cf72da943
+ * 为 35 位小写十六进制串（事实库 §5.1 公共参数表逐字，「通知校验 ID」128 位
+ * 口径）——同条异步通知重试时 notify_id 不变（§3.4 逐字），幂等键首选；
+ * 新建事件即新通知故重生成，三地址代表模板共用。
+ */
+export function generateAliNotifyId(): string {
+  return hexChars(35);
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -355,6 +369,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   pddBizId: generatePddBizId,
   mtBizId: generateMtBizId,
   eleBizId: generateEleBizId,
+  aliNotifyId: generateAliNotifyId,
 };
 
 /**

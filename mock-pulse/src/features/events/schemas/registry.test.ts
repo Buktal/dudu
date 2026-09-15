@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CHANNELS } from "@/lib/channels";
-
+import { ALI_DEFINITIONS } from "./alipay";
 import { defineSchema } from "./define";
 import { DINGTALK_DEFINITIONS } from "./dingtalk";
 import { DOUYIN_DEFINITIONS } from "./douyin";
@@ -36,11 +36,12 @@ const DEFINITIONS_BY_CHANNEL = {
   pinduoduo: PDD_DEFINITIONS,
   meituan: MT_DEFINITIONS,
   eleme: ELE_DEFINITIONS,
+  alipay: ALI_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 + 饿了么 6 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(251);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 + 饿了么 6 + 支付宝 3 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(254);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -62,6 +63,7 @@ describe("事件模板聚合注册表", () => {
       "pinduoduo",
       "meituan",
       "eleme",
+      "alipay",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -438,6 +440,13 @@ describe("事件模板聚合注册表", () => {
       "ele-h5-order-create",
       "ele-h5-order-status-update",
     ]);
+    expect(schemasByChannel("alipay").map((schema) => schema.id)).toEqual([
+      // 支付异步通知 1（事实库 §5.1 公共参数表 + 业务参数表逐字，notify_url 代表）
+      "ali-notify-trade-status-sync",
+      // 应用网关 / From 蚂蚁订阅代表 2（事实库 §2.2 topic 接口名逐字）
+      "ali-gateway-appauth-cancelled",
+      "ali-gateway-fund-trans-changed",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -456,6 +465,7 @@ describe("事件模板聚合注册表", () => {
           "pinduoduo",
           "meituan",
           "eleme",
+          "alipay",
         ].includes(channel.id)
       )
         continue;

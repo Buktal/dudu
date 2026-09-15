@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ConnectionConfig } from "../api";
 import {
+  defaultAlipayConnection,
   defaultDingtalkConnection,
   defaultElemeConnection,
   defaultFeishuConnection,
@@ -146,6 +147,13 @@ const savedEleme: ConnectionConfig = {
   url: "http://127.0.0.1:9099/eleme",
   consumerKey: "7284397484",
   consumerSecret: "4d31ba58fd73c71db697ab5e4946d52d",
+};
+
+const savedAlipay: ConnectionConfig = {
+  channel: "alipay",
+  url: "http://127.0.0.1:9099/alipay",
+  appId: "2019082200007148",
+  appPrivateKey: "MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEA0test",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -607,6 +615,33 @@ describe("isConnectionReady（饿了么核必填集，用户线推送模拟）",
     expect(defaultElemeConnection.consumerSecret).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "eleme")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（支付宝核必填集，异步通知三地址模拟）", () => {
+  it("url/appPrivateKey 齐全才算已配置（appId 随载荷信封记录，不参与必填集）", () => {
+    expect(isConnectionReady(savedAlipay)).toBe(true);
+    expect(isConnectionReady({ ...savedAlipay, appId: "" })).toBe(true);
+  });
+
+  it("缺 url 或缺 appPrivateKey 都不算已配置（私钥缺失即签名不可复算）", () => {
+    expect(isConnectionReady({ ...savedAlipay, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedAlipay, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedAlipay, appPrivateKey: "" })).toBe(
+      false,
+    );
+  });
+
+  it("初始支付宝占位连接（凭据全空、异步通知 RSA2 验签起步）不算已配置", () => {
+    expect(defaultAlipayConnection.channel).toBe("alipay");
+    expect(defaultAlipayConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/alipay",
+    );
+    expect(defaultAlipayConnection.appId).toBe("");
+    expect(defaultAlipayConnection.appPrivateKey).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "alipay")),
     ).toBe(false);
   });
 });

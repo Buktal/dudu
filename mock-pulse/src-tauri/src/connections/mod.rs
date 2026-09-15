@@ -5,6 +5,7 @@
 //! 留在 adapter 实现内部（ADR-0001）。
 
 mod config;
+pub mod alipay;
 pub mod dingtalk;
 pub mod douyin;
 pub mod eleme;
@@ -132,6 +133,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &pinduoduo::Adapter,
     &meituan::Adapter,
     &eleme::Adapter,
+    &alipay::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -344,6 +346,17 @@ pub async fn connections_test_eleme(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&eleme::Adapter, config).await
+}
+
+/// 按支付宝推送探针协议测试连接（官方网关验证握手细节待核验(09-27)，探针
+/// 语义同普通推送：POST 官方支付异步通知核验样本表单 + sign =
+/// Base64(RSA-SHA256(剔除 sign/sign_type 后字典序 k=v 串))（rsaCheckV1 语义），
+/// 事实库 §4.1/§4.3，签名 → 验签黄金对拍在 tests/golden.rs）。
+#[tauri::command]
+pub async fn connections_test_alipay(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&alipay::Adapter, config).await
 }
 
 #[cfg(test)]

@@ -7,6 +7,7 @@ import {
 import type { ChannelId } from "@/lib/channels";
 
 import {
+  type AlipayConnectionConfig,
   type ConnectionConfig,
   type DingtalkConnectionConfig,
   type DouyinConnectionConfig,
@@ -20,6 +21,7 @@ import {
   type QqConnectionConfig,
   saveConnection as saveConnectionApi,
   type TaobaoConnectionConfig,
+  testAlipayConnection as testAlipayApi,
   testDingtalkConnection as testDingtalkApi,
   testDouyinConnection as testDouyinApi,
   testElemeConnection as testElemeApi,
@@ -195,6 +197,14 @@ export const defaultElemeConnection: ElemeConnectionConfig = {
   consumerSecret: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（异步通知 RSA2 验签起步） */
+export const defaultAlipayConnection: AlipayConnectionConfig = {
+  channel: "alipay",
+  url: "http://127.0.0.1:8080/webhooks/alipay",
+  appId: "",
+  appPrivateKey: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -216,6 +226,7 @@ export const initialConnectionsState: ConnectionsState = {
     pinduoduo: defaultPinduoduoConnection,
     meituan: defaultMeituanConnection,
     eleme: defaultElemeConnection,
+    alipay: defaultAlipayConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -275,6 +286,8 @@ export const testConnection = createAsyncThunk(
         return testMeituanApi(config);
       case "eleme":
         return testElemeApi(config);
+      case "alipay":
+        return testAlipayApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);

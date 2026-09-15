@@ -1,5 +1,6 @@
 import type { ChannelId } from "@/lib/channels";
 
+import { ALI_SCHEMAS } from "./alipay";
 import { DINGTALK_SCHEMAS } from "./dingtalk";
 import { DOUYIN_EVENT_SCHEMAS } from "./douyin";
 import { ELE_SCHEMAS } from "./eleme";
@@ -46,6 +47,7 @@ const PACKS: readonly ChannelTemplatePack[] = [
   { channel: "pinduoduo", schemas: PDD_SCHEMAS },
   { channel: "meituan", schemas: MT_SCHEMAS },
   { channel: "eleme", schemas: ELE_SCHEMAS },
+  { channel: "alipay", schemas: ALI_SCHEMAS },
 ];
 
 /** 聚合后的全部内置模板（契约校验与全量遍历用） */

@@ -1,0 +1,165 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "alipay",
+  "version": "2026.09",
+  "schemas": {
+    "ali-gateway-appauth-cancelled": {
+      "version": "2026.09",
+      "source": "https://opendocs.alipay.com/common/06tsxc",
+      "fields": [
+        {
+          "path": "notify_time",
+          "title": "通知发送时间",
+          "type": "string",
+          "group": "应用网关信封",
+          "description": "通知发送时间（§5.1 公共参数族词汇：格式 yyyy-MM-dd HH:mm:ss）；官方未给该消息载荷样本，值 2026-09-15 10:00:00 为模拟器占位不作官方样本，适配器不代生成（信封字段参与验签）。",
+          "required": true
+        },
+        {
+          "path": "notify_type",
+          "title": "通知类型",
+          "type": "string",
+          "group": "应用网关信封",
+          "description": "通知类型（§5.1 公共参数族词汇）；官方未给非交易通知的枚举值，app_auth_cancelled 为模拟器占位不作官方样本。",
+          "required": true
+        },
+        {
+          "path": "notify_id",
+          "title": "通知校验 ID",
+          "type": "string",
+          "group": "应用网关信封",
+          "description": "通知校验 ID（§5.1 公共参数族词汇：官方口径 128 位）；同一条异步通知重试时 notify_id 不变（§3.4 逐字），幂等键首选——官方未给该消息载荷样本，值取 §5.1 样本形态 35 位小写十六进制为模拟器占位，新建事件即新通知故重生成。",
+          "required": true
+        },
+        {
+          "path": "charset",
+          "title": "编码集",
+          "type": "string",
+          "group": "应用网关信封",
+          "description": "编码集（§5.1 公共参数族词汇：如 utf-8/gbk）。",
+          "required": true
+        },
+        {
+          "path": "version",
+          "title": "接口版本",
+          "type": "string",
+          "group": "应用网关信封",
+          "description": "接口版本（§5.1 公共参数族词汇：固定 1.0）。",
+          "required": true
+        },
+        {
+          "path": "sign_type",
+          "title": "签名方式",
+          "type": "string",
+          "group": "应用网关信封",
+          "description": "签名方式（§5.1 公共参数族词汇：RSA2/RSA，新建应用必须 RSA2，§4.1）；sign_type 参与线上表单传输但不出现在待签串里（§4.3 rsaCheckV1「除去 sign、sign_type」逐字；「生活号通知保留 sign_type」例外仅在商户验签侧，官方未给机理）。",
+          "required": true
+        },
+        {
+          "path": "sign",
+          "title": "签名",
+          "type": "string",
+          "group": "应用网关信封",
+          "description": "签名（RSA2 签名为 base64 形态、344 位，§5.1 公共参数族词汇）；官方未给该消息载荷样本，SIGN_PLACEHOLDER 为模拟器占位，直发时由适配器剔除后按本连接私钥现算。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "app_id",
+          "title": "应用 APPID",
+          "type": "string",
+          "group": "应用网关信封",
+          "description": "应用 APPID（支付宝侧网关验签串的字母序首字段）；官方未给该消息载荷样本，值取异步通知样本同源形态 2019082200007148（§5.1）。",
+          "required": true
+        },
+        {
+          "path": "topic",
+          "title": "消息接口名",
+          "type": "string",
+          "group": "网关消息业务字段",
+          "description": "消息接口名（订阅 topic 即接口英文名，§2.2 表逐字：alipay.open.auth.appauth.cancelled = 第三方应用授权取消消息接口——商户取消对 ISV 的应用授权时触发）；From 蚂蚁消息默认以 POST 推到配置的应用网关地址（§2.2/§3.1），需先订阅：alipay.open.app.message.topic.subscribe（auth_type=app_auth + topic + comm_type，§2.2 逐字）；消息体内是否携带 topic 官方未给样本，本字段为模拟器占位承载订阅语义。",
+          "required": true
+        }
+      ]
+    },
+    "ali-gateway-fund-trans-changed": {
+      "version": "2026.09",
+      "source": "https://opendocs.alipay.com/open/03k9zr",
+      "fields": [
+        {
+          "path": "notify_time",
+          "title": "通知发送时间",
+          "type": "string",
+          "group": "From 蚂蚁信封",
+          "description": "通知发送时间（§5.1 公共参数族词汇：格式 yyyy-MM-dd HH:mm:ss）；官方未给该消息载荷样本，值 2026-09-15 10:00:00 为模拟器占位不作官方样本，适配器不代生成（信封字段参与验签）。",
+          "required": true
+        },
+        {
+          "path": "notify_type",
+          "title": "通知类型",
+          "type": "string",
+          "group": "From 蚂蚁信封",
+          "description": "通知类型（§5.1 公共参数族词汇）；官方未给非交易通知的枚举值，fund_trans_changed 为模拟器占位不作官方样本。",
+          "required": true
+        },
+        {
+          "path": "notify_id",
+          "title": "通知校验 ID",
+          "type": "string",
+          "group": "From 蚂蚁信封",
+          "description": "通知校验 ID（§5.1 公共参数族词汇：官方口径 128 位）；同一条异步通知重试时 notify_id 不变（§3.4 逐字），幂等键首选——官方未给该消息载荷样本，值取 §5.1 样本形态 35 位小写十六进制为模拟器占位，新建事件即新通知故重生成。",
+          "required": true
+        },
+        {
+          "path": "charset",
+          "title": "编码集",
+          "type": "string",
+          "group": "From 蚂蚁信封",
+          "description": "编码集（§5.1 公共参数族词汇：如 utf-8/gbk）。",
+          "required": true
+        },
+        {
+          "path": "version",
+          "title": "接口版本",
+          "type": "string",
+          "group": "From 蚂蚁信封",
+          "description": "接口版本（§5.1 公共参数族词汇：固定 1.0）。",
+          "required": true
+        },
+        {
+          "path": "sign_type",
+          "title": "签名方式",
+          "type": "string",
+          "group": "From 蚂蚁信封",
+          "description": "签名方式（§5.1 公共参数族词汇：RSA2/RSA，新建应用必须 RSA2，§4.1）；sign_type 参与线上表单传输但不出现在待签串里（§4.3 rsaCheckV1「除去 sign、sign_type」逐字）。",
+          "required": true
+        },
+        {
+          "path": "sign",
+          "title": "签名",
+          "type": "string",
+          "group": "From 蚂蚁信封",
+          "description": "签名（RSA2 签名为 base64 形态、344 位，§5.1 公共参数族词汇）；官方未给该消息载荷样本，SIGN_PLACEHOLDER 为模拟器占位，直发时由适配器剔除后按本连接私钥现算。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "app_id",
+          "title": "应用 APPID",
+          "type": "string",
+          "group": "From 蚂蚁信封",
+          "description": "应用 APPID（支付宝侧网关验签串的字母序首字段）；官方未给该消息载荷样本，值取异步通知样本同源形态 2019082200007148（§5.1）。",
+          "required": true
+        },
+        {
+          "path": "topic",
+          "title": "消息接口名",
+          "type": "string",
+          "group": "网关消息业务字段",
+          "description": "消息接口名（§2.2 表逐字：alipay.fund.trans.order.changed——单笔转账到支付宝账户/银行卡、C2C/B2C 现金红包单据状态变更后触发）；From 蚂蚁订阅制：需先经 alipay.open.app.message.topic.subscribe 订阅 topic（comm_type=HTTP/WebSocket，§2.2 逐字）或服务商 开发设置 > 消息服务 自订阅（§2.2），默认以 POST 推到应用网关（§3.1），From 蚂蚁重试节拍首重 2m（§3.3 单源口径照录）；消息体内是否携带 topic 官方未给样本，本字段为模拟器占位承载订阅语义。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

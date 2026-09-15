@@ -187,9 +187,9 @@ export const CHANNEL_REGISTRY = {
   alipay: {
     name: "支付宝",
     protocol: "异步通知 · 表单回调",
-    note: "异步通知回 notify_url：表单 POST，RSA2 验签，验签通过须回 success",
+    note: "异步通知三地址（接口 notify_url / 应用网关 / From 蚂蚁订阅）：表单 POST，RSA2 验签（rsaCheckV1：剔除 sign/sign_type → url_decode → 字典序），200 + success，fail 重推 25h 8 次，notify_id 幂等",
     icon: "Wallet",
-    implemented: false,
+    implemented: true,
   },
   whatsapp: {
     name: "WhatsApp",

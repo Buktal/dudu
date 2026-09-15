@@ -162,16 +162,23 @@ pub(crate) fn form_pairs(body: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-/// 去掉明文里携带的 sig 段（其余段原字节保留）：从真实推送拷贝的表单常带旧
-/// sig，重签语义要求 sig 由本连接密钥现算（美团/饿了么官方「sig 除外」口径）。
-pub(crate) fn strip_sig(body: &str) -> String {
+/// 去掉明文里携带的指定字段段（其余段原字节保留）：从真实推送拷贝的表单常带
+/// 旧签名字段，重签语义要求签名由本连接密钥现算（美团/饿了么「sig 除外」、
+/// 支付宝「sign 除外」口径，#46 自 sig 字面值泛化出参数化形态）。
+pub(crate) fn strip_form_pair(body: &str, name: &str) -> String {
     body.split('&')
         .filter(|pair| {
             let key = pair.split('=').next().unwrap_or(pair);
-            percent_decode(key) != "sig"
+            percent_decode(key) != name
         })
         .collect::<Vec<_>>()
         .join("&")
+}
+
+/// 去掉明文里携带的 sig 段（其余段原字节保留）：美团/饿了么表单线的旧 sig
+/// 剔除（官方「sig 除外」口径）。
+pub(crate) fn strip_sig(body: &str) -> String {
+    strip_form_pair(body, "sig")
 }
 
 #[cfg(test)]

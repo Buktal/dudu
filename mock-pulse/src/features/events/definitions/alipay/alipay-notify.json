@@ -1,0 +1,118 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "alipay",
+  "version": "2026.09",
+  "schemas": {
+    "ali-notify-trade-status-sync": {
+      "version": "2026.09",
+      "source": "https://opendocs.alipay.com/open/270/105902",
+      "fields": [
+        {
+          "path": "notify_time",
+          "title": "通知发送时间",
+          "type": "string",
+          "group": "支付异步通知",
+          "description": "通知发送时间（§5.1 公共参数表逐字：格式 yyyy-MM-dd HH:mm:ss）；本模板取官方样本值 2018-10-21 15:45:22 逐字，重发模拟时随草稿留存、适配器不代生成（信封字段属载荷本体并参与验签）。",
+          "required": true
+        },
+        {
+          "path": "notify_type",
+          "title": "通知类型",
+          "type": "string",
+          "group": "支付异步通知",
+          "description": "通知类型（§5.1 公共参数表逐字：示例 trade_status_sync，即交易状态同步）；本模板即该代表事件——notify_url 地址系的官方通知类型样本。",
+          "required": true
+        },
+        {
+          "path": "notify_id",
+          "title": "通知校验 ID",
+          "type": "string",
+          "group": "支付异步通知",
+          "description": "通知校验 ID（§5.1 公共参数表逐字：官方口径 128 位；样本值 ac05099…da943 逐字）；同一条异步通知重试时 notify_id 不变（§3.4 逐字），幂等键首选——新建事件即新通知，按官方样本形态 35 位小写十六进制重生成。",
+          "required": true
+        },
+        {
+          "path": "charset",
+          "title": "编码集",
+          "type": "string",
+          "group": "支付异步通知",
+          "description": "编码集（§5.1 公共参数表逐字：如 utf-8/gbk；样本值 utf-8）。",
+          "required": true
+        },
+        {
+          "path": "version",
+          "title": "接口版本",
+          "type": "string",
+          "group": "支付异步通知",
+          "description": "接口版本（§5.1 公共参数表逐字：固定 1.0）。",
+          "required": true
+        },
+        {
+          "path": "sign_type",
+          "title": "签名方式",
+          "type": "string",
+          "group": "支付异步通知",
+          "description": "签名方式（§5.1 公共参数表逐字：RSA2/RSA，推荐 RSA2；新建应用必须 RSA2，§4.1）；sign_type 参与线上表单传输但不出现在待签串里（§4.3 rsaCheckV1「除去 sign、sign_type」逐字）。",
+          "required": true
+        },
+        {
+          "path": "sign",
+          "title": "签名",
+          "type": "string",
+          "group": "支付异步通知",
+          "description": "签名（§5.1 公共参数表逐字：RSA2 签名为 base64 形态、344 位）；官方页样本值 6015…f70e 为截断示意值照录，直发时由适配器剔除后按本连接私钥现算——事实库警示「切勿用本 §5.1 拼出的串做验签回归向量」。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "auth_app_id",
+          "title": "授权方应用 ID",
+          "type": "string",
+          "group": "支付异步通知",
+          "description": "授权方应用 ID（§5.1 公共参数表逐字：「由于本接口暂不开放第三方应用授权，因此 auth_app_id=app_id」；样本值逐字）。",
+          "required": true
+        },
+        {
+          "path": "trade_no",
+          "title": "支付宝交易号",
+          "type": "numberString",
+          "group": "业务参数（§2.1 表逐字）",
+          "description": "支付宝交易号（§2.1 业务参数表逐字）；样本值 2013112011001004330000121536 为 28 位数字串（超出 int64），全程按字符串处理防精度丢失；幂等组合键（notify_id + trade_no/out_trade_no，§3.4）半边。",
+          "required": true
+        },
+        {
+          "path": "app_id",
+          "title": "应用 APPID",
+          "type": "string",
+          "group": "业务参数（§2.1 表逐字）",
+          "description": "应用 APPID（§2.1 业务参数表逐字；样本值 2019082200007148）；支付宝侧网关验签串的字母序首字段。",
+          "required": true
+        },
+        {
+          "path": "out_trade_no",
+          "title": "商户订单号",
+          "type": "numberString",
+          "group": "业务参数（§2.1 表逐字）",
+          "description": "原支付请求的商家订单号（§2.1 业务参数表逐字；样本值 6823789339978248）；验签后必做核对第 1 步「验证 out_trade_no 是否为商家系统中创建的订单号」（§3.4 逐字），幂等组合键半边。",
+          "required": true
+        },
+        {
+          "path": "trade_status",
+          "title": "交易状态",
+          "type": "string",
+          "group": "业务参数（§2.1 表逐字）",
+          "description": "交易状态（§2.1 业务参数表逐字：示例 TRADE_SUCCESS）；支付认定口径（§2.1 逐字）：仅 TRADE_SUCCESS（开通退款前提下买家付款成功）或 TRADE_FINISHED（不支持退款前提下付款成功、或已超可退款期限）认定为买家付款成功；支付成功通知不含 out_biz_no（§2.1 区分特征），退款通知才携带。",
+          "required": true
+        },
+        {
+          "path": "total_amount",
+          "title": "订单金额",
+          "type": "string",
+          "group": "业务参数（§2.1 表逐字）",
+          "description": "订单金额（字段名实锤于验签后必做核对第 2 步「判断 total_amount 是否确实为该订单的实际金额」，§3.4 逐字）；官方未给样本值，10.99 为模拟器占位不作官方样本。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

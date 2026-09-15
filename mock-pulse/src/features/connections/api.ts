@@ -243,6 +243,25 @@ export type FeishuConnectionConfig = {
 };
 
 /**
+ * 支付宝连接配置形状（与 Rust 端 ConnectionConfig::Alipay 内标一致）：
+ * 异步通知三地址（接口 notify_url / 应用网关 / From 蚂蚁订阅）共用同一传输
+ * 与签名协议——POST form-urlencoded，sign = Base64(RSA-SHA256(PKCS#1 v1.5)
+ * (剔除 sign/sign_type 后字典序 k=v 串))（rsaCheckV1 语义，事实库 §4.3/§4.1，
+ * sign 为 base64 344 位）；应答 200 + 纯文本 success、fail 重推 25h 8 次、
+ * notify_id 幂等（§3.3/§3.4）。信封字段由模板载荷携带（§5.1），appId 仅随
+ * 连接记录。
+ */
+export type AlipayConnectionConfig = {
+  channel: "alipay";
+  /** 回调目标地址（notify_url 或应用网关），事件与剧本共享（须外网 POST 回 200） */
+  url: string;
+  /** 应用 APPID（创建应用生成，事实库 §6.1）：非三方场景 auth_app_id=app_id，随载荷信封记录 */
+  appId: string;
+  /** 支付宝侧签名私钥（PEM PKCS#8/PKCS#1 或 DER Base64）：与商户侧配置的支付宝公钥成对（§4.3 验签用支付宝公钥），RSA-SHA256 签名源，测试联调自备密钥对 */
+  appPrivateKey: string;
+};
+
+/**
  * 连接配置按渠道区分形状（与 Rust 端 ConnectionConfig 内标枚举一致，
  * 以 channel 字段判别；持久化与 IPC 透传均为 camelCase）。
  */
@@ -324,7 +343,8 @@ export type ConnectionConfig =
   | JingdongConnectionConfig
   | PinduoduoConnectionConfig
   | MeituanConnectionConfig
-  | ElemeConnectionConfig;
+  | ElemeConnectionConfig
+  | AlipayConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -469,4 +489,14 @@ export function testElemeConnection(
   config: ElemeConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_eleme", { config });
+}
+
+/** 按支付宝推送探针协议测试连接（官方网关验证握手细节待核验(09-27)，探针
+ * 语义同普通推送：POST 官方支付异步通知核验样本表单 + sign =
+ * Base64(RSA-SHA256(剔除 sign/sign_type 后字典序 k=v 串))（rsaCheckV1 语义，
+ * 事实库 §4.1/§4.3），期望 HTTP 200） */
+export function testAlipayConnection(
+  config: AlipayConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_alipay", { config });
 }

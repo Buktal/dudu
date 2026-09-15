@@ -1,38 +1,37 @@
 import type {
   ConnectionConfig,
   DingtalkConnectionConfig,
-  ElemeConnectionConfig,
+  DouyinConnectionConfig,
   FeishuConnectionConfig,
-  JingdongConnectionConfig,
   KuaishouConnectionConfig,
-  MeituanConnectionConfig,
-  PinduoduoConnectionConfig,
   QqConnectionConfig,
-  TaobaoConnectionConfig,
+  WechatMiniConnectionConfig,
+  WechatMpConnectionConfig,
+  WecomConnectionConfig,
   WeiboConnectionConfig,
   XiaohongshuConnectionConfig,
 } from "../api";
+import {
+  alipayFields,
+  type CredentialField,
+  elemeFields,
+  jingdongFields,
+  meituanFields,
+  pinduoduoFields,
+  taobaoFields,
+} from "./credential-fields-trade";
 
 /**
  * 连接凭证字段的按渠道构建器（纯数据，无 JSX）：每个渠道/通道一个函数，
  * 返回表单字段描述列表（key 即配置键，secret 决定掩码控件）。
- * 从 connection-fields.tsx 按职责拆出（单文件 ≤ 500 行）；
- * 控件渲染与推送通道选择器留在原组件。
+ * 从 connection-fields.tsx 按职责拆出（单文件 ≤ 500 行）；平台/IM 系渠道
+ * 构建器在本模块，电商/交易系（淘宝/京东/拼多多/美团/饿了么/支付宝）在
+ * ./credential-fields-trade（#46 随支付宝接入拆分）；控件渲染与推送通道
+ * 选择器留在 connection-fields.tsx。
  */
 
-/** 表单字段的构建形态：key 对应配置字段名，secret 走掩码输入 */
-export type CredentialField = {
-  key: string;
-  label: string;
-  note: string;
-  value: string;
-  secret: boolean;
-};
-
 /** 按推送体系取凭证字段：标签随体系语义变化，存储字段保持稳定 */
-function douyinFields(
-  draft: Extract<ConnectionConfig, { channel: "douyin" }>,
-): CredentialField[] {
+function douyinFields(draft: DouyinConnectionConfig): CredentialField[] {
   switch (draft.system) {
     case "mini_game":
       return [
@@ -106,9 +105,7 @@ function douyinFields(
 }
 
 /** 按推送通道取凭证字段：机器人通道加密 receiveid 恒为空串，不收 CorpID/AgentID */
-function wecomFields(
-  draft: Extract<ConnectionConfig, { channel: "wecom" }>,
-): CredentialField[] {
+function wecomFields(draft: WecomConnectionConfig): CredentialField[] {
   if (draft.system === "aibot") {
     return [
       {
@@ -160,9 +157,7 @@ function wecomFields(
 }
 
 /** 公众号按消息加解密方式取凭证字段：明文模式无需 EncodingAESKey（可留空） */
-function wechatMpFields(
-  draft: Extract<ConnectionConfig, { channel: "wechat-mp" }>,
-): CredentialField[] {
+function wechatMpFields(draft: WechatMpConnectionConfig): CredentialField[] {
   const fields = [
     {
       key: "appId",
@@ -193,7 +188,7 @@ function wechatMpFields(
 
 /** 小程序按消息加解密方式取凭证字段：与公众号同族，明文模式 AESKey 可空 */
 function wechatMiniFields(
-  draft: Extract<ConnectionConfig, { channel: "wechat-mini" }>,
+  draft: WechatMiniConnectionConfig,
 ): CredentialField[] {
   const fields = [
     {
@@ -206,7 +201,7 @@ function wechatMiniFields(
     {
       key: "token",
       label: "Token",
-      note: "服务器配置 Token（任意填写），GET 三参握手与 msg_signature 的签名源。",
+      note: "服务器配置 Token（任意填写），GET 三参握手与四参 msg_signature 签名源。",
       value: draft.token,
       secret: true,
     },
@@ -215,7 +210,7 @@ function wechatMiniFields(
     fields.push({
       key: "encodingAesKey",
       label: "EncodingAESKey",
-      note: "43 位消息加解密密钥；兼容/安全模式的 AES-256-CBC 派生源。",
+      note: "43 位消息加解密密钥；兼容/安全的 AES-256-CBC 派生源。",
       value: draft.encodingAesKey,
       secret: true,
     });
@@ -373,106 +368,6 @@ function kuaishouFields(draft: KuaishouConnectionConfig): CredentialField[] {
   ];
 }
 
-/** 淘宝凭证字段（事实库 §4.2，全球栈 HTTPS 回调）：消息体 = AppKey + body，密钥 = AppSecret */
-function taobaoFields(draft: TaobaoConnectionConfig): CredentialField[] {
-  return [
-    {
-      key: "appKey",
-      label: "AppKey",
-      note: "全球栈应用标识：验签消息体 = AppKey 拼接请求 body（官方示例 AppKey「123456」），缺失即签名不可复算。",
-      value: draft.appKey,
-      secret: false,
-    },
-    {
-      key: "appSecret",
-      label: "AppSecret",
-      note: "全球栈应用密钥：Authorization = HEX(HMAC-SHA256(AppKey+body, AppSecret)) 头验签的密钥；数据明文传输，无 AES。",
-      value: draft.appSecret,
-      secret: true,
-    },
-  ];
-}
-
-/** 京东凭证字段（事实库 §4.1/§4.2/§6，JOS 消息推送模拟）：sign = UPPER(MD5(appSecret+字母序 k+v+appSecret)) */
-function jingdongFields(draft: JingdongConnectionConfig): CredentialField[] {
-  return [
-    {
-      key: "appKey",
-      label: "AppKey",
-      note: "应用 app_key（应用中心创建应用获取）：系统参数（事实库 §4.2 表必传项），参与字母序签名拼接。",
-      value: draft.appKey,
-      secret: false,
-    },
-    {
-      key: "appSecret",
-      label: "AppSecret",
-      note: "应用密钥：sign = UPPER(MD5(appSecret + 按字母序 k+v 拼接 + appSecret))（官方签名步骤逐字，事实库 §4.1）两端夹 secret 的签名源。",
-      value: draft.appSecret,
-      secret: true,
-    },
-  ];
-}
-
-/** 拼多多凭证字段（事实库 §4.1，PMC 订阅推送模拟）：sign = UPPER(MD5(secret+ASCII 排序 kv+secret)) */
-function pinduoduoFields(draft: PinduoduoConnectionConfig): CredentialField[] {
-  return [
-    {
-      key: "clientId",
-      label: "Client ID",
-      note: "应用 client_id（应用详情查看）：公共参数必传项（事实库 §4.1 表），参与 ASCII 排序签名拼接。",
-      value: draft.clientId,
-      secret: false,
-    },
-    {
-      key: "clientSecret",
-      label: "Client Secret",
-      note: "应用密钥：sign = UPPER(MD5(client_secret + 按 ASCII 升序 k+v 拼接 + client_secret))（官方签名三步逐字，事实库 §4.1，官方向量已核验）两端夹 secret 的签名源；access_token 放参数集参签，非 Authorization 头。",
-      value: draft.clientSecret,
-      secret: true,
-    },
-  ];
-}
-
-/** 美团凭证字段（事实库 §4.1/§6，合作中心表单回调）：sig = MD5(url?字母序 k=v+secret) */
-function meituanFields(draft: MeituanConnectionConfig): CredentialField[] {
-  return [
-    {
-      key: "appId",
-      label: "AppID",
-      note: "应用 app_id（开发者中心查看）：系统级参数必传项（事实库 §4.1/§6），参与字母序签名拼接，由适配器随直发补齐。",
-      value: draft.appId,
-      secret: false,
-    },
-    {
-      key: "appSecret",
-      label: "App Secret",
-      note: "应用密钥（官方亦称 consumer_secret）：待签串 = 请求 url + ? + 全字段（sig 除外）字母序 k=v & 连接 + secret，MD5 32 位小写即 sig（官方五步逐字，事实库 §4.1，官方向量已对拍）。",
-      value: draft.appSecret,
-      secret: true,
-    },
-  ];
-}
-
-/** 饿了么凭证字段（事实库 §4.1/§6，用户线推送模拟）：sig = SHA1(HEX(url?字母序+secret)) */
-function elemeFields(draft: ElemeConnectionConfig): CredentialField[] {
-  return [
-    {
-      key: "consumerKey",
-      label: "Consumer Key",
-      note: "应用 Key（应用身份标识，饿了么分配、可在接入后台查看）：系统级参数必传项（事实库 §4.1/§6「每次调用带 consumer_key + timestamp(秒) + sig」），参与 ASCII 排序签名拼接。",
-      value: draft.consumerKey,
-      secret: false,
-    },
-    {
-      key: "consumerSecret",
-      label: "Consumer Secret",
-      note: "应用 Secret（应用私钥）：除 sig 外参数按 ASCII 排序 k=v & 连接，拼 url?…+ secret 后 UTF-8 逐字节 HEX，SHA1 取 40 位小写即 sig（官方五步逐字，事实库 §4.1，官方示例待签串已复现）。",
-      value: draft.consumerSecret,
-      secret: true,
-    },
-  ];
-}
-
 /** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
 export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
   switch (draft.channel) {
@@ -504,6 +399,8 @@ export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
       return meituanFields(draft);
     case "eleme":
       return elemeFields(draft);
+    case "alipay":
+      return alipayFields(draft);
     case "wecom":
       return wecomFields(draft);
     default: {

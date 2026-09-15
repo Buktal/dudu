@@ -73,6 +73,14 @@ function requestSnapshot(step: RunStep): string {
       : "application/x-www-form-urlencoded";
     return `POST ${step.url}${separator}consumer_key=<连接 ConsumerKey>&sig=${step.signature}&timestamp=${step.timestamp ?? ""}\nContent-Type: ${contentType}\n\n${step.requestBody ?? step.payload}`;
   }
+  if (step.channel === "alipay") {
+    // 支付宝（异步通知三地址）：POST form-urlencoded，信封字段在表单内，
+    // 尾部追加现算 sign = Base64(RSA-SHA256(剔除 sign/sign_type 后字典序
+    // k=v 串))（rsaCheckV1 语义）；requestBody 快照即实际发出的完整表单字节
+    // （旧 sign 已剔除）；msgId 快照取 notify_id（幂等键 §3.4），timestamp
+    // 快照即信封 notify_time
+    return `POST ${step.url}\nContent-Type: application/x-www-form-urlencoded\n\n${step.requestBody ?? step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

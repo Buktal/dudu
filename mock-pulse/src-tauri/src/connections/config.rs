@@ -301,4 +301,17 @@ pub enum ConnectionConfig {
         /// 五步，官方示例待签串已复现）
         consumer_secret: String,
     },
+    #[serde(rename = "alipay", rename_all = "camelCase")]
+    Alipay {
+        url: String,
+        /// 应用 APPID（创建应用生成，事实库 §6.1「调用一切 OpenAPI 的身份」）：
+        /// 异步通知公共参数 app_id（非三方场景 auth_app_id = app_id，§5.1），
+        /// 属载荷信封、参与验签，由模板携带（§5.1），此处仅随连接记录
+        app_id: String,
+        /// 支付宝侧签名私钥（PEM PKCS#8/PKCS#1 或 DER Base64）：异步通知
+        /// sign = Base64(RSA-SHA256(PKCS#1 v1.5)(待签串)) 的签名源（事实库
+        /// §4.3 rsaCheckV1 / §4.1 RSA2 = SHA256WithRSA 2048 位；商户侧以成对的
+        /// 支付宝公钥验签，测试联调自备密钥对）
+        app_private_key: String,
+    },
 }

@@ -1,4 +1,5 @@
 import type {
+  AlipayConnectionConfig,
   ConnectionConfig,
   DingtalkConnectionConfig,
   DouyinConnectionConfig,
@@ -63,6 +64,10 @@ import type {
  *   SHA1(HEX(url?字母序 k=v 串 + consumer_secret)) 的密钥与 consumer_key
  *   系统级参数事实库 §4.1/§6，consumerSecret 缺失即签名不可复算；无 token
  *   无加密无握手）
+ * - 支付宝核（异步通知三地址模拟）：url + appPrivateKey 必填（sign =
+ *   Base64(RSA-SHA256(剔除 sign/sign_type 后字典序 k=v 串)) 的签名私钥事实库
+ *   §4.3/§4.1，与商户侧支付宝公钥成对，缺失即签名不可复算；appId 随载荷
+ *   信封记录不参与必填集；应答 200 + success、fail 重推 25h 8 次 §3.3）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -101,6 +106,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && meituanReady(config);
     case "eleme":
       return config.url.trim() !== "" && elemeReady(config);
+    case "alipay":
+      return config.url.trim() !== "" && alipayReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -317,4 +324,14 @@ function elemeReady(config: ElemeConnectionConfig): boolean {
   return (
     config.consumerKey.trim() !== "" && config.consumerSecret.trim() !== ""
   );
+}
+
+/**
+ * 支付宝核（异步通知三地址模拟）：url + appPrivateKey 必填——sign =
+ * Base64(RSA-SHA256(剔除 sign/sign_type 后字典序 k=v 串))（rsaCheckV1 语义，
+ * 事实库 §4.3/§4.1），appPrivateKey 缺失即签名不可复算；appId 随载荷信封
+ * 记录（§5.1 信封字段由模板携带），不参与必填集。
+ */
+function alipayReady(config: AlipayConnectionConfig): boolean {
+  return config.appPrivateKey.trim() !== "";
 }
