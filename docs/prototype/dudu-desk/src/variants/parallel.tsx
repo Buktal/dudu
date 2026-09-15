@@ -101,7 +101,7 @@ export function VariantC(props: WorkspaceProps) {
                 visitor={props.primary}
                 inbox={props.inbox}
                 mode="parallel"
-                paneLabel="主接待 · 跟随列表"
+                paneRole="primary"
                 focused={props.focus === 0}
                 onFocus={() => props.focusPane(0)}
                 onNext={props.next}
@@ -113,7 +113,7 @@ export function VariantC(props: WorkspaceProps) {
                   visitor={props.companion}
                   inbox={props.inbox}
                   mode="parallel"
-                  paneLabel="固定接待 · 手动选择"
+                  paneRole="pinned"
                   focused={props.focus === 1}
                   onFocus={() => props.focusPane(1)}
                   onNext={props.next}

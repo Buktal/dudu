@@ -9,7 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { BagIllustration, SourceLogo } from "../../components/identity";
 import { Button, IconButton } from "../../components/primitives";
 import { channels, type Visitor } from "../../types";
@@ -239,7 +239,10 @@ export function Composer({
               快捷回复
             </Button>
           </div>
-          <span className="reply-target" style={{ color: source.color }}>
+          <span
+            className="reply-target source-identity"
+            style={{ "--source-color": source.color } as CSSProperties}
+          >
             <SourceLogo channel={visitor.channel} />
             <span>
               回复给 <b>{visitor.name}</b> · {source.short}

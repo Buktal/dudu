@@ -79,14 +79,24 @@
   @apply bg-card min-w-0 flex flex-col overflow-hidden rounded-xl;
   border: 1px solid var(--border);
   border-color: var(--border);
-  box-shadow: 0 2px 5px color-mix(in srgb, var(--foreground) 2%, transparent);
+  box-shadow: 0 2px 5px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 2%,
+      transparent
+    );
   transition:
     border-color 180ms,
     box-shadow 180ms;
 }
 .quick-card.quick-card-selected {
   border-color: color-mix(in srgb, var(--ring) 35%, var(--border));
-  box-shadow: 0 3px 16px color-mix(in srgb, var(--foreground) 13%, transparent);
+  box-shadow: 0 3px 16px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 13%,
+      transparent
+    );
 }
 .quick-card-header {
   @apply flex items-start;

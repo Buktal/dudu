@@ -204,7 +204,12 @@
   @apply rounded-xl;
   width: 65px;
   height: 65px;
-  box-shadow: 0 5px 10px color-mix(in srgb, var(--foreground) 6%, transparent);
+  box-shadow: 0 5px 10px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 6%,
+      transparent
+    );
 }
 .visitor-tags > span:nth-child(2n) {
   @apply text-accent-foreground bg-accent;
@@ -235,7 +240,11 @@
     right: 0;
     z-index: 12;
     box-shadow: -12px 0 30px
-      color-mix(in srgb, var(--foreground) 14%, transparent);
+      color-mix(
+        in srgb,
+        light-dark(var(--foreground), var(--background)) 14%,
+        transparent
+      );
   }
   .info-dock[data-open="false"] {
     box-shadow: none;

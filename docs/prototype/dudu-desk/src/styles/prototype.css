@@ -36,7 +36,12 @@
   translate: -50% 0;
   border: 1px solid var(--border);
   padding: 12px 18px;
-  box-shadow: 0 6px 25px color-mix(in srgb, var(--foreground) 15%, transparent);
+  box-shadow: 0 6px 25px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 15%,
+      transparent
+    );
   font-size: 12px;
 }
 .dialog {
@@ -48,10 +53,19 @@
   max-height: calc(100dvh - 54px);
   padding: 25px 27px;
   border-color: var(--border);
-  box-shadow: 0 24px 90px color-mix(in srgb, var(--foreground) 19%, transparent);
+  box-shadow: 0 24px 90px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 19%,
+      transparent
+    );
 }
 .dialog::backdrop {
-  background: color-mix(in srgb, var(--foreground) 26%, transparent);
+  background: color-mix(
+    in srgb,
+    light-dark(var(--foreground), var(--background)) 26%,
+    transparent
+  );
   backdrop-filter: blur(5px);
 }
 .dialog-wide {

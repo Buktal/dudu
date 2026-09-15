@@ -19,6 +19,7 @@ export function Button({
         render ??
         (variant === "default" ? (
           <RippleButton
+            rippleColor="var(--primary-foreground)"
             duration={reduced ? "0ms" : "480ms"}
             className="[&>div.relative]:inline-flex [&>div.relative]:items-center [&>div.relative]:justify-center [&>div.relative]:gap-[inherit]"
           />

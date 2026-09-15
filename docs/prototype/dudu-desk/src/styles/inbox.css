@@ -18,7 +18,10 @@
   height: 64px;
 }
 .avatar-fallback {
-  @apply text-muted-foreground;
+  color: light-dark(
+    var(--muted-foreground),
+    color-mix(in srgb, var(--avatar-color) 25%, black)
+  );
   font-size: 18px;
   font-weight: 600;
 }
@@ -53,6 +56,16 @@
   width: fit-content;
   font-size: 11px;
   padding: 1px 5px;
+  background: light-dark(
+    var(--source-background),
+    color-mix(in srgb, var(--source-color) 12%, var(--card))
+  );
+}
+.source-identity {
+  color: light-dark(
+    var(--source-color),
+    color-mix(in srgb, var(--source-color) 55%, var(--foreground))
+  );
 }
 .source-tag > svg {
   width: 10px;
@@ -407,7 +420,11 @@
     z-index: 11;
     border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
     box-shadow: 12px 0 30px
-      color-mix(in srgb, var(--foreground) 15%, transparent);
+      color-mix(
+        in srgb,
+        light-dark(var(--foreground), var(--background)) 15%,
+        transparent
+      );
   }
 }
 @media (hover: none) {

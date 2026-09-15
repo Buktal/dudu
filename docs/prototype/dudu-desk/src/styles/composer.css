@@ -5,14 +5,24 @@
 .composer-editor {
   @apply bg-card overflow-hidden rounded-xl;
   border: 1px solid var(--border);
-  box-shadow: 0 7px 25px color-mix(in srgb, var(--foreground) 3%, transparent);
+  box-shadow: 0 7px 25px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 3%,
+      transparent
+    );
   transition:
     border-color 180ms,
     box-shadow 180ms;
 }
 .composer-editor:focus-within {
   border-color: color-mix(in srgb, var(--ring) 35%, var(--border));
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--foreground) 13%, transparent);
+  box-shadow: 0 4px 20px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 13%,
+      transparent
+    );
 }
 .composer-toolbar {
   @apply flex items-center justify-between;
@@ -103,7 +113,12 @@
   border: 1px solid var(--border);
   z-index: 6;
   border-color: var(--border);
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--foreground) 10%, transparent);
+  box-shadow: 0 10px 30px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 10%,
+      transparent
+    );
 }
 .popup-heading {
   @apply flex items-center justify-between;

@@ -8,7 +8,8 @@ import {
   type QueueOptions,
 } from "./features/inbox/conversation-list";
 import { useInbox } from "./features/inbox/use-inbox";
-import { readPalette, savePalette } from "./lib/theme-palette";
+import { palettes, readPalette, savePalette } from "./lib/theme-palette";
+import { cn } from "./lib/utils";
 import {
   DesignGuide,
   PrototypeDock,
@@ -223,7 +224,10 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <div
-        className="prototype-root"
+        className={cn(
+          "prototype-root",
+          palettes[palette].scheme === "dark" && "dark",
+        )}
         data-variant={variant}
         data-palette={palette}
       >

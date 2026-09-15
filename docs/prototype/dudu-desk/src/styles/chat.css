@@ -2,13 +2,13 @@
   @apply flex flex-col min-w-0 min-h-0 h-full relative;
 }
 .parallel-panes .chat-panel {
-  @apply overflow-hidden bg-card rounded-2xl;
-  border: 1px solid var(--border);
-  box-shadow: none;
-}
-.parallel-panes .chat-panel.chat-focused {
-  border-color: color-mix(in srgb, var(--ring) 35%, var(--border));
-  box-shadow: 0 4px 18px color-mix(in srgb, var(--foreground) 3%, transparent);
+  @apply overflow-hidden bg-card rounded-2xl border-0;
+  box-shadow: 0 3px 16px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 3%,
+      transparent
+    );
 }
 .chat-header {
   @apply flex items-center shrink-0 bg-transparent border-0;
@@ -51,6 +51,9 @@
   @apply flex items-center ml-auto text-muted-foreground;
   gap: 8px;
 }
+.chat-header-controls {
+  @apply shrink-0 ml-auto;
+}
 .chat-header-actions [data-slot="button"] {
   @apply rounded-md;
 }
@@ -90,51 +93,47 @@
   padding: 7px 13px;
   gap: 5px;
   font-size: 10px;
-  box-shadow: 0 3px 12px color-mix(in srgb, var(--foreground) 7%, transparent);
+  box-shadow: 0 3px 12px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 7%,
+      transparent
+    );
 }
-.pane-focus-bar {
-  @apply flex items-center text-left shrink-0 bg-muted text-muted-foreground;
-  gap: 5px;
-  min-height: 31px;
-  border-bottom: 1px solid var(--border);
-  padding: 10px 15px;
+.pane-role {
+  @apply shrink-0 whitespace-nowrap text-muted-foreground;
   font-size: 10px;
-  border-bottom-color: var(--border);
-}
-.pane-focus-hint {
-  @apply ml-auto text-inherit;
-  opacity: 0.7;
-  font-size: 9px;
 }
 .focus-indicator {
-  @apply bg-muted;
+  @apply shrink-0 rounded-full bg-current;
   width: 5px;
   height: 5px;
-  border-radius: 50%;
-}
-.chat-focused .pane-focus-bar {
-  @apply bg-accent text-primary;
-  border-bottom-color: color-mix(in srgb, var(--ring) 35%, var(--border));
-}
-.chat-focused .focus-indicator {
-  @apply bg-primary;
 }
 .chat-parallel .chat-header {
-  min-height: 83px;
-  padding: 17px 14px;
-  gap: 10px;
-  border-bottom: 1px solid var(--border);
+  @apply grid border-0;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  min-height: 88px;
+  padding: 14px 16px;
+  gap: 12px;
+}
+.chat-parallel.chat-focused .chat-header {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 65%, var(--card)),
+    var(--card)
+  );
 }
 .chat-parallel .chat-header > .avatar {
-  @apply rounded-md;
-  width: 34px;
-  height: 34px;
+  @apply rounded-lg;
+  width: 36px;
+  height: 36px;
+}
+.chat-parallel .chat-person > div {
+  gap: 8px;
 }
 .chat-parallel .chat-person h2 {
-  font-size: 14px;
-}
-.chat-parallel .chat-status {
-  @apply hidden;
+  @apply min-w-0 truncate;
+  font-size: 15px;
 }
 .chat-parallel .chat-person p {
   gap: 5px;
@@ -142,6 +141,13 @@
 }
 .chat-parallel .chat-account {
   max-width: 69px;
+}
+.chat-parallel .chat-header-controls {
+  @apply flex flex-col items-end;
+  gap: 4px;
+}
+.pane-focus-trigger {
+  width: 86px;
 }
 .chat-parallel .chat-header-actions {
   gap: 2px;
@@ -168,12 +174,10 @@
 .classic-chat > .chat-panel {
   @apply bg-transparent;
 }
-.chat-parallel .chat-header h2 {
-  font-size: 15px;
-}
 @media (max-width: 1360px) and (min-width: 1091px) {
   .chat-parallel .chat-header {
-    padding: 13px 10px;
+    padding: 12px;
+    gap: 10px;
   }
   .chat-parallel .chat-person h2 {
     font-size: 14px;
@@ -211,9 +215,6 @@
   }
   .chat-parallel .chat-account {
     max-width: 58px;
-  }
-  .pane-focus-hint {
-    @apply hidden;
   }
 }
 @media (max-width: 1090px) {

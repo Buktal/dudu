@@ -23,7 +23,12 @@
   padding: 11px 15px;
   font-size: 14px;
   line-height: 1.85;
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--foreground) 2%, transparent);
+  box-shadow: 0 2px 6px
+    color-mix(
+      in srgb,
+      light-dark(var(--foreground), var(--background)) 2%,
+      transparent
+    );
 }
 .message-bubble p {
   @apply whitespace-pre-wrap;
