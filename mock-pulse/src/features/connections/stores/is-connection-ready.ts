@@ -5,6 +5,7 @@ import type {
   FeishuConnectionConfig,
   JingdongConnectionConfig,
   KuaishouConnectionConfig,
+  PinduoduoConnectionConfig,
   QqConnectionConfig,
   TaobaoConnectionConfig,
   WechatMiniConnectionConfig,
@@ -50,6 +51,9 @@ import type {
  * - 京东核（JOS 消息推送模拟）：url + appKey + appSecret 必填（sign =
  *   UPPER(MD5(appSecret + 字母序 k+v + appSecret)) 的密钥与 app_key 系统参数
  *   事实库 §4.1/§4.2，appSecret 缺失即签名不可复算）
+ * - 拼多多核（PMC 订阅推送模拟）：url + clientId + clientSecret 必填（sign =
+ *   UPPER(MD5(client_secret + ASCII 排序 k+v + client_secret)) 的密钥与
+ *   client_id 公共参数事实库 §4.1 表必传项，clientSecret 缺失即签名不可复算）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -82,6 +86,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && taobaoReady(config);
     case "jingdong":
       return config.url.trim() !== "" && jingdongReady(config);
+    case "pinduoduo":
+      return config.url.trim() !== "" && pinduoduoReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -261,4 +267,16 @@ function taobaoReady(config: TaobaoConnectionConfig): boolean {
  */
 function jingdongReady(config: JingdongConnectionConfig): boolean {
   return config.appKey.trim() !== "" && config.appSecret.trim() !== "";
+}
+
+/**
+ * 拼多多核（PMC 订阅推送模拟）：url + clientId + clientSecret 必填——sign =
+ * UPPER(MD5(client_secret + 按 ASCII 升序 k+v 拼接 + client_secret))（事实库
+ * §4.1 官方三步逐字，官方向量已核验），clientSecret 缺失即签名不可复算；
+ * client_id 为公共参数必传项（事实库 §4.1 表），缺失即请求不完整，同为直发
+ * 前置。access_token 为选填公共参数（放参数集参签，非 Authorization 头），
+ * 推送模拟不收。
+ */
+function pinduoduoReady(config: PinduoduoConnectionConfig): boolean {
+  return config.clientId.trim() !== "" && config.clientSecret.trim() !== "";
 }

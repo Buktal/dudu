@@ -6,6 +6,7 @@ import {
   defaultFeishuConnection,
   defaultJingdongConnection,
   defaultKuaishouConnection,
+  defaultPinduoduoConnection,
   defaultQqConnection,
   defaultTaobaoConnection,
   defaultWechatMiniConnection,
@@ -122,6 +123,13 @@ const savedJingdong: ConnectionConfig = {
   url: "http://127.0.0.1:9099/jingdong",
   appKey: "yourappkey",
   appSecret: "yourappSecret",
+};
+
+const savedPinduoduo: ConnectionConfig = {
+  channel: "pinduoduo",
+  url: "http://127.0.0.1:9099/pinduoduo",
+  clientId: "1",
+  clientSecret: "testSecret",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -504,6 +512,33 @@ describe("isConnectionReady（京东核必填集，JOS 消息推送模拟）", (
     expect(defaultJingdongConnection.appSecret).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "jingdong")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（拼多多核必填集，PMC 订阅推送模拟）", () => {
+  it("url/clientId/clientSecret 齐全才算已配置（sign = UPPER(MD5(client_secret+ASCII 排序 kv+client_secret))）", () => {
+    expect(isConnectionReady(savedPinduoduo)).toBe(true);
+  });
+
+  it("缺 url/clientId/clientSecret 任一都不算已配置", () => {
+    expect(isConnectionReady({ ...savedPinduoduo, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedPinduoduo, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedPinduoduo, clientId: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedPinduoduo, clientSecret: "" })).toBe(
+      false,
+    );
+  });
+
+  it("初始拼多多占位连接（凭据全空、UPPER(MD5) 签名起步）不算已配置", () => {
+    expect(defaultPinduoduoConnection.channel).toBe("pinduoduo");
+    expect(defaultPinduoduoConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/pinduoduo",
+    );
+    expect(defaultPinduoduoConnection.clientId).toBe("");
+    expect(defaultPinduoduoConnection.clientSecret).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "pinduoduo")),
     ).toBe(false);
   });
 });

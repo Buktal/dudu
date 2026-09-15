@@ -48,6 +48,13 @@ function requestSnapshot(step: RunStep): string {
     const separator = step.url.includes("?") ? "&" : "?";
     return `POST ${step.url}${separator}app_key=<连接 AppKey>&timestamp=${encodeURIComponent(step.timestamp ?? "")}&v=2.0&sign=${step.signature}\nContent-Type: application/json\n\n${step.payload}`;
   }
+  if (step.channel === "pinduoduo") {
+    // 拼多多（PMC 订阅推送）：公共参数走 URL query（client_id/timestamp
+    // （UNIX 秒）+ sign = UPPER(MD5(client_secret+ASCII 排序 k+v+client_secret))，
+    // 覆盖 query 公共参数与 body 明文顶层 kv）；msgId 快照取载荷订单号
+    const separator = step.url.includes("?") ? "&" : "?";
+    return `POST ${step.url}${separator}client_id=<连接 ClientID>&timestamp=${encodeURIComponent(step.timestamp ?? "")}&sign=${step.signature}\nContent-Type: application/json\n\n${step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

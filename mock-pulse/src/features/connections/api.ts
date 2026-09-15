@@ -172,6 +172,23 @@ export type JingdongConnectionConfig = {
 };
 
 /**
+ * 拼多多连接配置形状（与 Rust 端 ConnectionConfig::Pinduoduo 内标一致）：
+ * PMC 订阅推送模拟——签名 = UPPER(MD5(client_secret + ASCII 排序 k+v +
+ * client_secret))（§4.1 官方三步逐字，官方向量 E4DE3ED21002510DED352819E7AE6775
+ * 已核验），公共参数 client_id/timestamp（UNIX 秒）必传；access_token 放参数集
+ * 参签（非 Authorization 头，事实库 §6），推送模拟不收该选填项。
+ */
+export type PinduoduoConnectionConfig = {
+  channel: "pinduoduo";
+  /** 回调目标地址，事件与剧本共享（官方推送地址为商户配置的回调 URL） */
+  url: string;
+  /** 应用 client_id（应用详情查看，事实库 §4.1 公共参数表必传项） */
+  clientId: string;
+  /** client_secret（签名两端夹 secret，事实库 §4.1）：UPPER(MD5) 签名密钥 */
+  clientSecret: string;
+};
+
+/**
  * 飞书连接配置形状（与 Rust 端 ConnectionConfig::Feishu 内标一致）：
  * Verification Token 参与 url_verification 三参与事件 header；Encrypt Key
  * 为空 = 明文直发，非空 = X-Lark-Signature 签名 + AES-256-CBC 加密信封
@@ -268,7 +285,8 @@ export type ConnectionConfig =
   | XiaohongshuConnectionConfig
   | KuaishouConnectionConfig
   | TaobaoConnectionConfig
-  | JingdongConnectionConfig;
+  | JingdongConnectionConfig
+  | PinduoduoConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -383,4 +401,14 @@ export function testJingdongConnection(
   config: JingdongConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_jingdong", { config });
+}
+
+/** 按拼多多推送探针协议测试连接（官方验证握手待核验(09-27)，探针语义同
+ *  普通推送：POST 官方订单状态样本明文 + query 公共参数 client_id/timestamp
+ *  （UNIX 秒）与 sign = UPPER(MD5(client_secret+ASCII 排序 k+v+client_secret))，
+ *  事实库 §4.1 官方向量已核验，期望 HTTP 200） */
+export function testPinduoduoConnection(
+  config: PinduoduoConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_pinduoduo", { config });
 }

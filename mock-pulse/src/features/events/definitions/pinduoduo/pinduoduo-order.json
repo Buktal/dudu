@@ -1,0 +1,73 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "pinduoduo",
+  "version": "2026.09",
+  "schemas": {
+    "pdd-order-wait-delivery": {
+      "version": "2026.09",
+      "source": "https://open.pinduoduo.com/application/document/browse?idStr=10388E8ACD79B689",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "订单号（官方模拟口径仅「先推轻量变更通知（含订单号）」，JSON 字段名未在官方站摘到 → 待核验(09-27)，order_id 为通名暂代）。推送载荷正文属 SPA 待复核范畴，骨架只收实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_status",
+          "title": "订单状态",
+          "type": "number",
+          "group": "订单推送",
+          "description": "1-待发货（官方订单状态照录逐字，事实库 §2.1；前提 confirm_status=1 已成交。JSON number 形态同官方 §5.1 请求 body 逐字）。",
+          "required": true
+        }
+      ]
+    },
+    "pdd-order-shipped": {
+      "version": "2026.09",
+      "source": "https://open.pinduoduo.com/application/document/browse?idStr=10388E8ACD79B689",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "订单号（官方模拟口径仅「先推轻量变更通知（含订单号）」，JSON 字段名未在官方站摘到 → 待核验(09-27)，order_id 为通名暂代）。推送载荷正文属 SPA 待复核范畴，骨架只收实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_status",
+          "title": "订单状态",
+          "type": "number",
+          "group": "订单推送",
+          "description": "2-已发货代签收（官方订单状态照录逐字，事实库 §2.1：第二步卖家发货。JSON number 形态同官方 §5.1 请求 body 逐字）。",
+          "required": true
+        }
+      ]
+    },
+    "pdd-order-signed": {
+      "version": "2026.09",
+      "source": "https://open.pinduoduo.com/application/document/browse?idStr=10388E8ACD79B689",
+      "fields": [
+        {
+          "path": "order_id",
+          "title": "订单号",
+          "type": "string",
+          "group": "订单推送",
+          "description": "订单号（官方模拟口径仅「先推轻量变更通知（含订单号）」，JSON 字段名未在官方站摘到 → 待核验(09-27)，order_id 为通名暂代）。推送载荷正文属 SPA 待复核范畴，骨架只收实锤字段。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "order_status",
+          "title": "订单状态",
+          "type": "number",
+          "group": "订单推送",
+          "description": "3-已签收（官方订单状态照录逐字，事实库 §2.1：第三步消费者确认收货。JSON number 形态同官方 §5.1 请求 body 逐字）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

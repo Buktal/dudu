@@ -151,10 +151,10 @@ export const CHANNEL_REGISTRY = {
   },
   pinduoduo: {
     name: "拼多多",
-    protocol: "消息推送 · 订阅推送",
-    note: "订阅后主动推：网关签名 UPPER(MD5(secret+排序kv+secret))，token 放 body 参签",
+    protocol: "PMC 订阅推送 · JSON 回调",
+    note: "订阅后主动推（permit/cancel 开通订阅）：签名 UPPER(MD5(secret+ASCII 排序 kv+secret)) 官方向量已核验，access_token 放参数集参签，订单三态 1-待发货/2-已发货/3-已签收",
     icon: "Users",
-    implemented: false,
+    implemented: true,
   },
   meituan: {
     name: "美团",

@@ -5,6 +5,7 @@ import { DOUYIN_EVENT_SCHEMAS } from "./douyin";
 import { FEISHU_SCHEMAS } from "./feishu";
 import { JD_SCHEMAS } from "./jingdong";
 import { KS_SCHEMAS } from "./kuaishou";
+import { PDD_SCHEMAS } from "./pinduoduo";
 import { QQ_SCHEMAS } from "./qq";
 import { TB_SCHEMAS } from "./taobao";
 import type { EventSchema } from "./types";
@@ -40,6 +41,7 @@ const PACKS: readonly ChannelTemplatePack[] = [
   { channel: "kuaishou", schemas: KS_SCHEMAS },
   { channel: "taobao", schemas: TB_SCHEMAS },
   { channel: "jingdong", schemas: JD_SCHEMAS },
+  { channel: "pinduoduo", schemas: PDD_SCHEMAS },
 ];
 
 /** 聚合后的全部内置模板（契约校验与全量遍历用） */

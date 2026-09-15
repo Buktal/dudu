@@ -267,4 +267,15 @@ pub enum ConnectionConfig {
         /// 两端夹 secret 的签名源（事实库 §4.1）
         app_secret: String,
     },
+    #[serde(rename = "pinduoduo", rename_all = "camelCase")]
+    Pinduoduo {
+        url: String,
+        /// 应用 client_id（应用详情查看，事实库 §4.1 公共参数表必传项）：参与
+        /// ASCII 排序签名拼接
+        client_id: String,
+        /// client_secret：sign = UPPER(MD5(client_secret + ASCII 排序 k+v +
+        /// client_secret)) 两端夹 secret 的签名源（事实库 §4.1，官方向量
+        /// E4DE3ED21002510DED352819E7AE6775 已核验）
+        client_secret: String,
+    },
 }

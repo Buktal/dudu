@@ -8,6 +8,7 @@ import { DOUYIN_DEFINITIONS } from "./douyin";
 import { FEISHU_DEFINITIONS } from "./feishu";
 import { JD_DEFINITIONS } from "./jingdong";
 import { KS_DEFINITIONS } from "./kuaishou";
+import { PDD_DEFINITIONS } from "./pinduoduo";
 import { QQ_DEFINITIONS } from "./qq";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
 import { TB_DEFINITIONS } from "./taobao";
@@ -30,11 +31,12 @@ const DEFINITIONS_BY_CHANNEL = {
   kuaishou: KS_DEFINITIONS,
   taobao: TB_DEFINITIONS,
   jingdong: JD_DEFINITIONS,
+  pinduoduo: PDD_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(238);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(241);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -53,6 +55,7 @@ describe("事件模板聚合注册表", () => {
       "kuaishou",
       "taobao",
       "jingdong",
+      "pinduoduo",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -405,6 +408,12 @@ describe("事件模板聚合注册表", () => {
       "jd-dd-chat-message",
       "jd-dd-push2",
     ]);
+    expect(schemasByChannel("pinduoduo").map((schema) => schema.id)).toEqual([
+      // 订单三态推送（事实库 §2.1 状态照录 1/2/3，三态穷尽）
+      "pdd-order-wait-delivery",
+      "pdd-order-shipped",
+      "pdd-order-signed",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -420,6 +429,7 @@ describe("事件模板聚合注册表", () => {
           "kuaishou",
           "taobao",
           "jingdong",
+          "pinduoduo",
         ].includes(channel.id)
       )
         continue;

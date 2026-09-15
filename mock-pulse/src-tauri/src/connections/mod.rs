@@ -10,6 +10,7 @@ pub mod douyin;
 pub mod feishu;
 pub mod jingdong;
 pub mod kuaishou;
+pub mod pinduoduo;
 pub mod qq;
 pub mod store;
 pub mod taobao;
@@ -126,6 +127,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &kuaishou::Adapter,
     &taobao::Adapter,
     &jingdong::Adapter,
+    &pinduoduo::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -305,6 +307,17 @@ pub async fn connections_test_jingdong(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&jingdong::Adapter, config).await
+}
+
+/// 按拼多多推送探针协议测试连接（官方验证握手待核验(09-27)，探针语义同
+/// 普通推送：POST 官方订单状态样本明文 + query 公共参数 client_id/timestamp
+/// （UNIX 秒）/sign = UPPER(MD5(client_secret+ASCII 排序 k+v+client_secret))，
+/// 事实库 §4.1，官方向量 E4DE3ED21002510DED352819E7AE6775 已核验）。
+#[tauri::command]
+pub async fn connections_test_pinduoduo(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&pinduoduo::Adapter, config).await
 }
 
 #[cfg(test)]

@@ -24,6 +24,7 @@ vi.mock("../api", () => ({
   testFeishuConnection: vi.fn(),
   testJingdongConnection: vi.fn(),
   testKuaishouConnection: vi.fn(),
+  testPinduoduoConnection: vi.fn(),
   testQqConnection: vi.fn(),
   testTaobaoConnection: vi.fn(),
   testWechatMiniConnection: vi.fn(),
@@ -41,6 +42,7 @@ import {
   testFeishuConnection,
   testJingdongConnection,
   testKuaishouConnection,
+  testPinduoduoConnection,
   testQqConnection,
   testTaobaoConnection,
   testWechatMiniConnection,
@@ -149,6 +151,13 @@ const savedJingdong: ConnectionConfig = {
   url: "http://127.0.0.1:9099/jingdong",
   appKey: "yourappkey",
   appSecret: "yourappSecret",
+};
+
+const savedPinduoduo: ConnectionConfig = {
+  channel: "pinduoduo",
+  url: "http://127.0.0.1:9099/pinduoduo",
+  clientId: "1",
+  clientSecret: "testSecret",
 };
 
 function makeStore() {
@@ -506,6 +515,37 @@ describe("connections slice", () => {
     expect(vi.mocked(testXiaohongshuConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testKuaishouConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testTaobaoConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testPinduoduoConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "推送探针被接受",
+    });
+  });
+
+  it("拼多多配置走 connections_test_pinduoduo（按渠道路由测试命令）", async () => {
+    vi.mocked(testPinduoduoConnection).mockResolvedValue({
+      ok: true,
+      message: "推送探针被接受",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedPinduoduo));
+
+    expect(vi.mocked(testPinduoduoConnection)).toHaveBeenCalledWith(
+      savedPinduoduo,
+    );
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testDingtalkConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testQqConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWeiboConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testXiaohongshuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testKuaishouConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testTaobaoConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testJingdongConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store))).toEqual({
       status: "success",
       message: "推送探针被接受",
@@ -535,6 +575,7 @@ describe("connections slice", () => {
     expect(vi.mocked(testKuaishouConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testTaobaoConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testJingdongConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testPinduoduoConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store)).status).toBe("failed");
   });
 });
