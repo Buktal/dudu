@@ -53,7 +53,8 @@ export type IdKind =
   | "waPhone" // WhatsApp 电话 ID：纯数字 E.164 无 + 前缀（官方样本 16505551234/15550783881，wa_id/from/recipient_id/display_phone_number 共用族）
   | "waAccountId" // WhatsApp 账户/号码数字 ID：15 位数字串（官方样本 WABA 102290129340398、phone_number_id 106540352242922）
   | "waConversationId" // WhatsApp 会话 ID：32 位小写十六进制（官方样本 6ceb9d929c9bdc4f90e967a32f8639b4）
-  | "waTemplateId"; // WhatsApp 模板 ID：16 位数字 JSON number（官方样本 1689556908129832，恒在 2^53 内）
+  | "waTemplateId" // WhatsApp 模板 ID：16 位数字 JSON number（官方样本 1689556908129832，恒在 2^53 内）
+  | "tgUpdateId"; // Telegram update_id：正整数 JSON number 顺序递增（官方样本 10000，api#update——去重/恢复顺序幂等键）
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */

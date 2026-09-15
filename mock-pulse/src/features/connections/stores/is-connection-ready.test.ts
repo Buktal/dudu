@@ -12,6 +12,7 @@ import {
   defaultPinduoduoConnection,
   defaultQqConnection,
   defaultTaobaoConnection,
+  defaultTelegramConnection,
   defaultWechatMiniConnection,
   defaultWechatMpConnection,
   defaultWeiboConnection,
@@ -162,6 +163,12 @@ const savedWhatsapp: ConnectionConfig = {
   url: "http://127.0.0.1:9099/whatsapp",
   appSecret: "whatsapp_app_secret",
   verifyToken: "meaty-hammer-7",
+};
+
+const savedTelegram: ConnectionConfig = {
+  channel: "telegram",
+  url: "http://127.0.0.1:9099/telegram",
+  secretToken: "tg-webhook-secret",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -677,6 +684,31 @@ describe("isConnectionReady（WhatsApp 核必填集，Cloud API Webhook）", () 
     expect(defaultWhatsappConnection.verifyToken).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "whatsapp")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（Telegram 核必填集，Bot Webhook）", () => {
+  it("url/secretToken 齐全才算已配置（恒等头 X-Telegram-Bot-Api-Secret-Token 是验证链路唯一要素）", () => {
+    expect(isConnectionReady(savedTelegram)).toBe(true);
+  });
+
+  it("缺 url 或缺 secretToken 都不算已配置（官方无 HMAC，token 缺失即恒等头链路无法模拟）", () => {
+    expect(isConnectionReady({ ...savedTelegram, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedTelegram, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedTelegram, secretToken: "" })).toBe(
+      false,
+    );
+  });
+
+  it("初始 Telegram 占位连接（凭据全空、恒等头原样比对起步）不算已配置", () => {
+    expect(defaultTelegramConnection.channel).toBe("telegram");
+    expect(defaultTelegramConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/telegram",
+    );
+    expect(defaultTelegramConnection.secretToken).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "telegram")),
     ).toBe(false);
   });
 });

@@ -279,6 +279,22 @@ export type WhatsappConnectionConfig = {
 };
 
 /**
+ * Telegram 连接配置形状（与 Rust 端 ConnectionConfig::Telegram 内标一致）：
+ * Bot Webhook 模拟——POST JSON Update 明文 + 恒等头
+ * X-Telegram-Bot-Api-Secret-Token（setWebhook secret_token 原样回显，
+ * 1–256 字符、仅 A-Z a-z 0-9 _ -，接收侧字符串相等比较，事实库 §4.1，
+ * 无 HMAC、无加密字段）；官方无 challenge 握手（§3.2）。
+ */
+export type TelegramConnectionConfig = {
+  channel: "telegram";
+  /** 回调目标地址，事件与剧本共享（官方约束：HTTPS、端口 443/80/88/8443、TLS1.2+） */
+  url: string;
+  /** Secret Token（setWebhook.secret_token，1–256 字符 A-Z a-z 0-9 _ -）：
+   *  恒等头 X-Telegram-Bot-Api-Secret-Token 的头值，原样比对 */
+  secretToken: string;
+};
+
+/**
  * 连接配置按渠道区分形状（与 Rust 端 ConnectionConfig 内标枚举一致，
  * 以 channel 字段判别；持久化与 IPC 透传均为 camelCase）。
  */
@@ -362,7 +378,8 @@ export type ConnectionConfig =
   | MeituanConnectionConfig
   | ElemeConnectionConfig
   | AlipayConnectionConfig
-  | WhatsappConnectionConfig;
+  | WhatsappConnectionConfig
+  | TelegramConnectionConfig;
 
 export type TestOutcome = {
   ok: boolean;
@@ -526,4 +543,13 @@ export function testWhatsappConnection(
   config: WhatsappConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_whatsapp", { config });
+}
+
+/** 按 Telegram 推送探针协议测试连接（官方无 challenge 握手：setWebhook 同步
+ *  返回 True 即成功，事实库 §3.2——探针语义同普通推送：POST 官方 §5.2 样本
+ *  Update 明文 + 恒等头 X-Telegram-Bot-Api-Secret-Token，期望 HTTP 2XY） */
+export function testTelegramConnection(
+  config: TelegramConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_telegram", { config });
 }

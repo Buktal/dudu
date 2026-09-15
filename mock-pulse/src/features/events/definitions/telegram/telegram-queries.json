@@ -1,0 +1,101 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "telegram",
+  "version": "2026.09",
+  "schemas": {
+    "tg-update-callback-query": {
+      "version": "2026.09",
+      "source": "https://core.telegram.org/bots/webhooks",
+      "fields": [
+        {
+          "path": "update_id",
+          "title": "Update 唯一标识",
+          "type": "number",
+          "group": "Update 信封",
+          "description": "Update 的唯一标识，正整数顺序递增，去重/恢复顺序键（api#update 口径）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "callback_query",
+          "title": "回调查询",
+          "type": "json",
+          "group": "Update 信封",
+          "description": "判型字段：新 callback query（内联按钮点击，api#update 表）；§5.2 官方自测样本逐字。",
+          "required": true
+        },
+        {
+          "path": "callback_query.id",
+          "title": "回调查询 ID",
+          "type": "string",
+          "group": "回调查询",
+          "description": "唯一查询标识，字符串（官方样本 4382bfdwdsb323b2d9，§附速查「callback_query.id 字符串」）；取官方样本值不重生成（格式口径仅单样本，不立生成规则）。",
+          "required": true
+        },
+        {
+          "path": "callback_query.from",
+          "title": "点击者",
+          "type": "json",
+          "group": "回调查询",
+          "description": "点击按钮的用户（User 对象，§5.2 样本键序 last_name→type→id→first_name→username）。",
+          "required": true
+        },
+        {
+          "path": "callback_query.from.type",
+          "title": "User.type 字段",
+          "type": "string",
+          "group": "回调查询",
+          "description": "官方样本原文即含 type: private（webhooks 指南样本原样照录的文档原文，不作裁剪）。",
+          "required": true
+        },
+        {
+          "path": "callback_query.from.id",
+          "title": "点击者 ID",
+          "type": "number",
+          "group": "回调查询",
+          "description": "用户数字 ID（官方样本 1111111）。",
+          "required": true
+        },
+        {
+          "path": "callback_query.from.first_name",
+          "title": "点击者名",
+          "type": "string",
+          "group": "回调查询",
+          "description": "名字（官方样本 Test Firstname）。",
+          "required": true
+        },
+        {
+          "path": "callback_query.from.last_name",
+          "title": "点击者姓",
+          "type": "string",
+          "group": "回调查询",
+          "description": "姓氏（官方样本 Test Lastname）。",
+          "required": true
+        },
+        {
+          "path": "callback_query.from.username",
+          "title": "点击者用户名",
+          "type": "string",
+          "group": "回调查询",
+          "description": "@用户名（官方样本 Testusername）。",
+          "required": true
+        },
+        {
+          "path": "callback_query.data",
+          "title": "回调数据",
+          "type": "string",
+          "group": "回调查询",
+          "description": "按钮 callback_data 原文（官方样本 Data from button callback）。",
+          "required": true
+        },
+        {
+          "path": "callback_query.inline_message_id",
+          "title": "内联消息 ID",
+          "type": "string",
+          "group": "回调查询",
+          "description": "内联消息标识（官方样本 1234csdbsk4839）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

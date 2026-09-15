@@ -328,4 +328,13 @@ pub enum ConnectionConfig {
         /// POST 验签）
         verify_token: String,
     },
+    #[serde(rename = "telegram", rename_all = "camelCase")]
+    Telegram {
+        url: String,
+        /// Secret Token（setWebhook 的 secret_token，官方限 1–256 字符、
+        /// 仅 A-Z a-z 0-9 _ -）：恒等头 X-Telegram-Bot-Api-Secret-Token 的
+        /// 头值——原样回显 + 接收侧字符串相等比较（事实库 §4.1，无 HMAC
+        /// 无签名无加密，官方验证链路的唯一要素）
+        secret_token: String,
+    },
 }

@@ -364,7 +364,7 @@ fn unknown_channel_step_fails_without_requests() {
                 wait: None,
                 event_name: "外星渠道".into(),
                 event_id: "evt-x".into(),
-                channel: "telegram".into(),
+                channel: "bilibili".into(),
                 expected: ExpectedReceipt {
                     status: 200,
                     body: String::new(),

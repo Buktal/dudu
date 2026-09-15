@@ -30,6 +30,7 @@ vi.mock("../api", () => ({
   testPinduoduoConnection: vi.fn(),
   testQqConnection: vi.fn(),
   testTaobaoConnection: vi.fn(),
+  testTelegramConnection: vi.fn(),
   testWechatMiniConnection: vi.fn(),
   testWechatMpConnection: vi.fn(),
   testWecomConnection: vi.fn(),
@@ -52,6 +53,7 @@ import {
   testPinduoduoConnection,
   testQqConnection,
   testTaobaoConnection,
+  testTelegramConnection,
   testWechatMiniConnection,
   testWechatMpConnection,
   testWecomConnection,
@@ -194,6 +196,12 @@ const savedWhatsapp: ConnectionConfig = {
   url: "http://127.0.0.1:9099/whatsapp",
   appSecret: "whatsapp_app_secret",
   verifyToken: "meaty-hammer-7",
+};
+
+const savedTelegram: ConnectionConfig = {
+  channel: "telegram",
+  url: "http://127.0.0.1:9099/telegram",
+  secretToken: "tg-webhook-secret",
 };
 
 function makeStore() {
@@ -716,10 +724,45 @@ describe("connections slice", () => {
     });
   });
 
+  it("Telegram 配置走 connections_test_telegram（按渠道路由测试命令）", async () => {
+    vi.mocked(testTelegramConnection).mockResolvedValue({
+      ok: true,
+      message: "Update 推送探针被接受",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedTelegram));
+
+    expect(vi.mocked(testTelegramConnection)).toHaveBeenCalledWith(
+      savedTelegram,
+    );
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testDingtalkConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testQqConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWeiboConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testXiaohongshuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testKuaishouConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testTaobaoConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testJingdongConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testPinduoduoConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testMeituanConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testElemeConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testAlipayConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWhatsappConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "Update 推送探针被接受",
+    });
+  });
+
   it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
     // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
     // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
-    const rogue = { channel: "telegram" } as unknown as ConnectionConfig;
+    const rogue = { channel: "bilibili" } as unknown as ConnectionConfig;
 
     expect(isConnectionReady(rogue)).toBe(false);
 

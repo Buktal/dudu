@@ -203,7 +203,7 @@ export const CHANNEL_REGISTRY = {
     protocol: "Webhook · JSON Update",
     note: "Bot Webhook：JSON Update，恒等头 X-Telegram-Bot-Api-Secret-Token 原样比对，无 HMAC",
     icon: "Send",
-    implemented: false,
+    implemented: true,
   },
 } as const satisfies Record<string, ChannelRow>;
 

@@ -88,6 +88,13 @@ function requestSnapshot(step: RunStep): string {
     // statuses[].id 三处同源），无独立时间戳要素
     return `POST ${step.url}\nContent-Type: application/json\nX-Hub-Signature-256: ${step.signature}\n\n${step.payload}`;
   }
+  if (step.channel === "telegram") {
+    // Telegram（Bot Webhook）：无 HMAC 无加密，验证仅恒等头
+    // X-Telegram-Bot-Api-Secret-Token（signature 快照即头值 = Secret Token
+    // 原样回显，接收侧字符串相等比较）；body 即 JSON Update 逐字节透传，
+    // update_id 为去重/恢复顺序幂等键（msgId 快照即它），无 query 与时间戳要素
+    return `POST ${step.url}\nContent-Type: application/json\nX-Telegram-Bot-Api-Secret-Token: ${step.signature}\n\n${step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

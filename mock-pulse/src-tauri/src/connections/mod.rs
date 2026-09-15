@@ -17,6 +17,7 @@ pub mod pinduoduo;
 pub mod qq;
 pub mod store;
 pub mod taobao;
+pub mod telegram;
 pub(crate) mod util;
 pub mod wechat_mini;
 pub mod wechat_mp;
@@ -136,6 +137,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &eleme::Adapter,
     &alipay::Adapter,
     &whatsapp::Adapter,
+    &telegram::Adapter,
 ];
 
 /// 按渠道字符串取适配器（未知渠道 None，由调用方给出「未知渠道」文案）。
@@ -369,6 +371,17 @@ pub async fn connections_test_whatsapp(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&whatsapp::Adapter, config).await
+}
+
+/// 按 Telegram 推送探针协议测试连接（官方无 challenge 握手：setWebhook
+/// 同步返回 True 即成功，探针语义同普通推送：POST 官方 §5.2 文本消息核验
+/// 样本明文 + 恒等头 X-Telegram-Bot-Api-Secret-Token 原样携带，事实库
+/// §3.2/§4.1/§5.2，期望 HTTP 2XY）。
+#[tauri::command]
+pub async fn connections_test_telegram(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&telegram::Adapter, config).await
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@ import type {
   FeishuConnectionConfig,
   KuaishouConnectionConfig,
   QqConnectionConfig,
+  TelegramConnectionConfig,
   WechatMiniConnectionConfig,
   WechatMpConnectionConfig,
   WecomConnectionConfig,
@@ -392,6 +393,23 @@ function whatsappFields(draft: WhatsappConnectionConfig): CredentialField[] {
   ];
 }
 
+/**
+ * Telegram 凭证字段（事实库 §4.1）：secret_token 是恒等头
+ * X-Telegram-Bot-Api-Secret-Token 的头值——官方验证链路的唯一要素，
+ * 原样比对无 HMAC；接收服务若未配置 secret 则无需校验该头。
+ */
+function telegramFields(draft: TelegramConnectionConfig): CredentialField[] {
+  return [
+    {
+      key: "secretToken",
+      label: "Secret Token",
+      note: "setWebhook 的 secret_token（1–256 字符，仅 A-Z a-z 0-9 _ -）：恒等头 X-Telegram-Bot-Api-Secret-Token 原样回显，接收侧做字符串相等比较（无 HMAC 无加密）。",
+      value: draft.secretToken,
+      secret: true,
+    },
+  ];
+}
+
 /** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
 export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
   switch (draft.channel) {
@@ -427,6 +445,8 @@ export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
       return alipayFields(draft);
     case "whatsapp":
       return whatsappFields(draft);
+    case "telegram":
+      return telegramFields(draft);
     case "wecom":
       return wecomFields(draft);
     default: {

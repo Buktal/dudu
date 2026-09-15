@@ -130,3 +130,8 @@ export function alipayTestNote(): string {
 export function whatsappTestNote(): string {
   return "发送 GET（hub.mode=subscribe + 随机 hub.challenge + hub.verify_token），检查服务是否比对 verify_token 并以 HTTP 200 原样裸回 challenge（纯文本非 JSON；不匹配回 403 等非 200）。";
 }
+
+/** Telegram 探针文案（事实库 §3.2/§4.1：无 challenge 握手，探针语义同普通推送） */
+export function telegramTestNote(): string {
+  return "发送 Update 推送探针（POST 官方样本 Update 明文 + 头 X-Telegram-Bot-Api-Secret-Token = Secret Token），检查服务是否原样比对 token 并返回 HTTP 2XY（官方无 challenge 握手：setWebhook 同步返回 True 即成功；非 2XY 按合理次数重推）。";
+}

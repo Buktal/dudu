@@ -139,6 +139,10 @@ fn adapter_registry_covers_every_config_variant() {
         app_secret: String::new(),
         verify_token: String::new(),
     };
+    let telegram_config = ConnectionConfig::Telegram {
+        url: String::new(),
+        secret_token: String::new(),
+    };
     assert_eq!(adapter_of(&douyin_config).id(), "douyin");
     assert_eq!(adapter_of(&wecom_config).id(), "wecom");
     assert_eq!(adapter_of(&wechat_mp_config).id(), "wechat-mp");
@@ -155,6 +159,7 @@ fn adapter_registry_covers_every_config_variant() {
     assert_eq!(adapter_of(&meituan_config).id(), "meituan");
     assert_eq!(adapter_of(&eleme_config).id(), "eleme");
     assert_eq!(adapter_of(&alipay_config).id(), "alipay");
+    assert_eq!(adapter_of(&telegram_config).id(), "telegram");
     assert_eq!(
         adapter_by_channel("douyin").map(|adapter| adapter.id()),
         Some("douyin")
@@ -223,7 +228,11 @@ fn adapter_registry_covers_every_config_variant() {
         adapter_by_channel("whatsapp").map(|adapter| adapter.id()),
         Some("whatsapp")
     );
-    assert!(adapter_by_channel("telegram").is_none());
+    assert_eq!(
+        adapter_by_channel("telegram").map(|adapter| adapter.id()),
+        Some("telegram")
+    );
+    assert!(adapter_by_channel("bilibili").is_none());
     assert_eq!(adapter_of(&whatsapp_config).id(), "whatsapp");
     // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
     for adapter in ADAPTERS {
@@ -294,6 +303,10 @@ fn adapter_registry_covers_every_config_variant() {
         assert_eq!(
             adapter.url(&whatsapp_config).is_some(),
             adapter.matches(&whatsapp_config)
+        );
+        assert_eq!(
+            adapter.url(&telegram_config).is_some(),
+            adapter.matches(&telegram_config)
         );
     }
 }

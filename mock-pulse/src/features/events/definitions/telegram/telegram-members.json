@@ -1,0 +1,51 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "telegram",
+  "version": "2026.09",
+  "schemas": {
+    "tg-update-my-chat-member": {
+      "version": "2026.09",
+      "source": "https://core.telegram.org/bots/api",
+      "fields": [
+        {
+          "path": "update_id",
+          "title": "Update 唯一标识",
+          "type": "number",
+          "group": "Update 信封",
+          "description": "Update 的唯一标识，正整数顺序递增，去重/恢复顺序键（api#update 口径）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "my_chat_member",
+          "title": "Bot 成员状态变更",
+          "type": "json",
+          "group": "Update 信封",
+          "description": "判型字段：bot 自身成员状态变更，私聊仅 block/unblock 时收到（api#update 表逐字）。ChatMemberUpdated 载荷官方样本未给（待核验(09-27)）——空对象占位，订阅语义由信封字段名承载（同 WhatsApp account-update 先例）。",
+          "required": true
+        }
+      ]
+    },
+    "tg-update-chat-member": {
+      "version": "2026.09",
+      "source": "https://core.telegram.org/bots/api",
+      "fields": [
+        {
+          "path": "update_id",
+          "title": "Update 唯一标识",
+          "type": "number",
+          "group": "Update 信封",
+          "description": "Update 的唯一标识，正整数顺序递增，去重/恢复顺序键（api#update 口径）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "chat_member",
+          "title": "成员状态变更",
+          "type": "json",
+          "group": "Update 信封",
+          "description": "判型字段：群成员状态变更——bot 须为管理员且 allowed_updates 显式订阅本类型，默认订阅三例外之一（api#update 表/getupdates 注）。ChatMemberUpdated 载荷官方样本未给（待核验(09-27)）——空对象占位，订阅语义由信封字段名承载。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

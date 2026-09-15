@@ -14,6 +14,7 @@ import { PDD_DEFINITIONS } from "./pinduoduo";
 import { QQ_DEFINITIONS } from "./qq";
 import { EVENT_SCHEMAS, schemaById, schemasByChannel } from "./registry";
 import { TB_DEFINITIONS } from "./taobao";
+import { TG_DEFINITIONS } from "./telegram";
 import { MINI_DEFINITIONS } from "./wechat-mini";
 import { MP_DEFINITIONS } from "./wechat-mp";
 import { WECOM_DEFINITIONS } from "./wecom";
@@ -39,11 +40,12 @@ const DEFINITIONS_BY_CHANNEL = {
   eleme: ELE_DEFINITIONS,
   alipay: ALI_DEFINITIONS,
   whatsapp: WA_DEFINITIONS,
+  telegram: TG_DEFINITIONS,
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 + 饿了么 6 + 支付宝 3 + WhatsApp 9 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(263);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 + 饿了么 6 + 支付宝 3 + WhatsApp 9 + Telegram 7 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(270);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -67,6 +69,7 @@ describe("事件模板聚合注册表", () => {
       "eleme",
       "alipay",
       "whatsapp",
+      "telegram",
     ] as const) {
       const definitions = DEFINITIONS_BY_CHANNEL[channelId];
       for (const schema of schemasByChannel(channelId)) {
@@ -112,7 +115,7 @@ describe("事件模板聚合注册表", () => {
     }
   });
 
-  it("schemasByChannel：已接入渠道返回模板，其余 4 渠道返回空表", () => {
+  it("schemasByChannel：已接入渠道返回模板，其余渠道返回空表", () => {
     expect(schemasByChannel("douyin").map((schema) => schema.id)).toEqual([
       // dop 主体系
       "dy-create-video",
@@ -464,6 +467,19 @@ describe("事件模板聚合注册表", () => {
       "wa-capability-update",
       "wa-account-update",
     ]);
+    expect(schemasByChannel("telegram").map((schema) => schema.id)).toEqual([
+      // 消息族 4（事实库 §5.2 message 样本逐字 + edited_message「结构同上」
+      // 口径 + channel_post 族按 message 同构构造）
+      "tg-update-message",
+      "tg-update-edited-message",
+      "tg-update-channel-post",
+      "tg-update-edited-channel-post",
+      // 回调查询 1（§5.2 官方样本逐字）
+      "tg-update-callback-query",
+      // 成员变更 2（§2.2 Update 表；ChatMemberUpdated 载荷样本未给，空对象占位）
+      "tg-update-my-chat-member",
+      "tg-update-chat-member",
+    ]);
     for (const channel of CHANNELS) {
       if (
         [
@@ -484,6 +500,7 @@ describe("事件模板聚合注册表", () => {
           "eleme",
           "alipay",
           "whatsapp",
+          "telegram",
         ].includes(channel.id)
       )
         continue;

@@ -11,6 +11,7 @@ import type {
   PinduoduoConnectionConfig,
   QqConnectionConfig,
   TaobaoConnectionConfig,
+  TelegramConnectionConfig,
   WechatMiniConnectionConfig,
   WechatMpConnectionConfig,
   WecomConnectionConfig,
@@ -74,6 +75,10 @@ import type {
  *   事实库 §4.1，appSecret 缺失即签名不可复算；verifyToken 为 GET 三参握手
  *   hub.verify_token 比对值 §3.2，缺失即握手必 403，与 App Secret 是两个
  *   无关值）
+ * - Telegram 核（Bot Webhook）：url + secretToken 必填（恒等头
+ *   X-Telegram-Bot-Api-Secret-Token 的头值——setWebhook.secret_token 原样
+ *   回显，事实库 §4.1「字符串相等比较」的唯一验证要素，缺失即恒等头链路
+ *   无法模拟；官方限 1–256 字符仅 A-Z a-z 0-9 _ -，无 HMAC 无加密）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -116,6 +121,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && alipayReady(config);
     case "whatsapp":
       return config.url.trim() !== "" && whatsappReady(config);
+    case "telegram":
+      return config.url.trim() !== "" && telegramReady(config);
     default: {
       // 穷尽守卫：新增渠道漏配必填集时编译期报错；运行时未知渠道一律视为未配置
       const exhaustive: never = config;
@@ -353,4 +360,15 @@ function alipayReady(config: AlipayConnectionConfig): boolean {
  */
 function whatsappReady(config: WhatsappConnectionConfig): boolean {
   return config.appSecret.trim() !== "" && config.verifyToken.trim() !== "";
+}
+
+/**
+ * Telegram 核（Bot Webhook）：url + secretToken 必填——恒等头
+ * X-Telegram-Bot-Api-Secret-Token 是官方验证链路的唯一要素（原样回显 +
+ * 字符串相等比较，事实库 §4.1，无 HMAC），secretToken 缺失即恒等头链路
+ * 无法模拟。官方限 1–256 字符、仅 A-Z a-z 0-9 _ -（越限的 token 真实
+ * setWebhook 配不出来，由 Rust 适配器直发侧拒绝）。
+ */
+function telegramReady(config: TelegramConnectionConfig): boolean {
+  return config.secretToken.trim() !== "";
 }

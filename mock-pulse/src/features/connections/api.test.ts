@@ -16,6 +16,7 @@ import {
   type QqConnectionConfig,
   saveConnection,
   type TaobaoConnectionConfig,
+  type TelegramConnectionConfig,
   testAlipayConnection,
   testDingtalkConnection,
   testDouyinConnection,
@@ -27,6 +28,7 @@ import {
   testPinduoduoConnection,
   testQqConnection,
   testTaobaoConnection,
+  testTelegramConnection,
   testWechatMiniConnection,
   testWechatMpConnection,
   testWecomConnection,
@@ -182,6 +184,12 @@ const whatsappConfig: WhatsappConnectionConfig = {
   url: "http://127.0.0.1:8080/webhooks/whatsapp",
   appSecret: "whatsapp_app_secret",
   verifyToken: "meaty-hammer-7",
+};
+
+const telegramConfig: TelegramConnectionConfig = {
+  channel: "telegram",
+  url: "http://127.0.0.1:8080/webhooks/telegram",
+  secretToken: "tg-webhook-secret",
 };
 
 describe("connections api 契约", () => {
@@ -370,7 +378,18 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东/拼多多/美团/饿了么/支付宝/WhatsApp（按 channel 区分形状）", async () => {
+  it("testTelegramConnection 调用 connections_test_telegram 并透传配置", async () => {
+    const outcome = { ok: true, message: "Update 推送探针被接受" };
+    invokeMock.mockResolvedValueOnce(outcome);
+    await expect(testTelegramConnection(telegramConfig)).resolves.toEqual(
+      outcome,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("connections_test_telegram", {
+      config: telegramConfig,
+    });
+  });
+
+  it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东/拼多多/美团/饿了么/支付宝/WhatsApp/Telegram（按 channel 区分形状）", async () => {
     const list: ConnectionConfig[] = [
       douyinConfig,
       wecomConfig,
@@ -389,6 +408,7 @@ describe("connections api 契约", () => {
       elemeConfig,
       alipayConfig,
       whatsappConfig,
+      telegramConfig,
     ];
     invokeMock.mockResolvedValueOnce(list);
     await expect(saveConnection(wechatMpConfig)).resolves.toEqual(list);

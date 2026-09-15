@@ -21,6 +21,7 @@ import {
   type QqConnectionConfig,
   saveConnection as saveConnectionApi,
   type TaobaoConnectionConfig,
+  type TelegramConnectionConfig,
   testAlipayConnection as testAlipayApi,
   testDingtalkConnection as testDingtalkApi,
   testDouyinConnection as testDouyinApi,
@@ -32,6 +33,7 @@ import {
   testPinduoduoConnection as testPinduoduoApi,
   testQqConnection as testQqApi,
   testTaobaoConnection as testTaobaoApi,
+  testTelegramConnection as testTelegramApi,
   testWechatMiniConnection as testWechatMiniApi,
   testWechatMpConnection as testWechatMpApi,
   testWecomConnection as testWecomApi,
@@ -215,6 +217,13 @@ export const defaultWhatsappConnection: WhatsappConnectionConfig = {
   verifyToken: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（恒等头原样比对起步） */
+export const defaultTelegramConnection: TelegramConnectionConfig = {
+  channel: "telegram",
+  url: "http://127.0.0.1:8080/webhooks/telegram",
+  secretToken: "",
+};
+
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
@@ -238,6 +247,7 @@ export const initialConnectionsState: ConnectionsState = {
     eleme: defaultElemeConnection,
     alipay: defaultAlipayConnection,
     whatsapp: defaultWhatsappConnection,
+    telegram: defaultTelegramConnection,
   },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -301,6 +311,8 @@ export const testConnection = createAsyncThunk(
         return testAlipayApi(config);
       case "whatsapp":
         return testWhatsappApi(config);
+      case "telegram":
+        return testTelegramApi(config);
       default: {
         const exhaustive: never = config;
         throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);

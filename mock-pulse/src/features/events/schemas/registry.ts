@@ -11,6 +11,7 @@ import { MT_SCHEMAS } from "./meituan";
 import { PDD_SCHEMAS } from "./pinduoduo";
 import { QQ_SCHEMAS } from "./qq";
 import { TB_SCHEMAS } from "./taobao";
+import { TG_SCHEMAS } from "./telegram";
 import type { EventSchema } from "./types";
 import { WECHAT_MINI_EVENT_SCHEMAS } from "./wechat-mini";
 import { WECHAT_MP_EVENT_SCHEMAS } from "./wechat-mp";
@@ -50,6 +51,7 @@ const PACKS: readonly ChannelTemplatePack[] = [
   { channel: "eleme", schemas: ELE_SCHEMAS },
   { channel: "alipay", schemas: ALI_SCHEMAS },
   { channel: "whatsapp", schemas: WA_SCHEMAS },
+  { channel: "telegram", schemas: TG_SCHEMAS },
 ];
 
 /** 聚合后的全部内置模板（契约校验与全量遍历用） */

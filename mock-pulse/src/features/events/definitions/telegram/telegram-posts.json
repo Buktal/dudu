@@ -1,0 +1,147 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "telegram",
+  "version": "2026.09",
+  "schemas": {
+    "tg-update-channel-post": {
+      "version": "2026.09",
+      "source": "https://core.telegram.org/bots/api",
+      "fields": [
+        {
+          "path": "update_id",
+          "title": "Update 唯一标识",
+          "type": "number",
+          "group": "Update 信封",
+          "description": "Update 的唯一标识，正整数顺序递增，去重/恢复顺序键（api#update 口径）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "channel_post",
+          "title": "新频道帖",
+          "type": "json",
+          "group": "Update 信封",
+          "description": "判型字段：新频道帖、任意类型（api#update 表逐字）。频道帖样本官方未给——骨架按 message 样本同构（webhooks 指南「结构同上」口径），chat.type=channel 为语义对齐构造值。",
+          "required": true
+        },
+        {
+          "path": "channel_post.date",
+          "title": "帖子时刻",
+          "type": "number",
+          "group": "消息体",
+          "description": "10 位 Unix 秒级时间戳（官方 message 样本值占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "channel_post.chat",
+          "title": "频道会话",
+          "type": "json",
+          "group": "发送者与会话",
+          "description": "帖子所属频道（Chat 对象）；频道 Chat 官方样本未给，占位注明。",
+          "required": true
+        },
+        {
+          "path": "channel_post.chat.id",
+          "title": "频道 ID",
+          "type": "number",
+          "group": "发送者与会话",
+          "description": "频道数字 ID（官方频道样本未给，占位取样本同源数字 1111111，待核验(09-27)）。",
+          "required": true
+        },
+        {
+          "path": "channel_post.chat.type",
+          "title": "会话类型",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "channel（频道帖语义对齐的构造值；官方 Chat.type 频道取值样本未给，待核验(09-27)）。",
+          "required": true
+        },
+        {
+          "path": "channel_post.message_id",
+          "title": "帖子 ID",
+          "type": "number",
+          "group": "消息体",
+          "description": "chat 内唯一（官方样本 1365 占位）。",
+          "required": true
+        },
+        {
+          "path": "channel_post.text",
+          "title": "帖子正文",
+          "type": "string",
+          "group": "消息体",
+          "description": "text 型帖子正文（官方样本 /start 占位；「任意类型」频道帖仅收 text 代表）。",
+          "required": true
+        }
+      ]
+    },
+    "tg-update-edited-channel-post": {
+      "version": "2026.09",
+      "source": "https://core.telegram.org/bots/api",
+      "fields": [
+        {
+          "path": "update_id",
+          "title": "Update 唯一标识",
+          "type": "number",
+          "group": "Update 信封",
+          "description": "Update 的唯一标识，正整数顺序递增，去重/恢复顺序键（api#update 口径）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "edited_channel_post",
+          "title": "被编辑频道帖",
+          "type": "json",
+          "group": "Update 信封",
+          "description": "判型字段：已知频道帖被编辑（api#update 表逐字）。载荷按 channel_post 同构构造（官方样本未给）。",
+          "required": true
+        },
+        {
+          "path": "edited_channel_post.date",
+          "title": "原帖时刻",
+          "type": "number",
+          "group": "消息体",
+          "description": "原帖 10 位 Unix 秒级时间戳（官方样本值占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "edited_channel_post.chat",
+          "title": "频道会话",
+          "type": "json",
+          "group": "发送者与会话",
+          "description": "帖子所属频道（Chat 对象，占位同 channel_post）。",
+          "required": true
+        },
+        {
+          "path": "edited_channel_post.chat.id",
+          "title": "频道 ID",
+          "type": "number",
+          "group": "发送者与会话",
+          "description": "频道数字 ID（官方样本未给，占位取样本同源数字 1111111，待核验(09-27)）。",
+          "required": true
+        },
+        {
+          "path": "edited_channel_post.chat.type",
+          "title": "会话类型",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "channel（频道帖语义对齐的构造值，待核验(09-27)）。",
+          "required": true
+        },
+        {
+          "path": "edited_channel_post.message_id",
+          "title": "帖子 ID",
+          "type": "number",
+          "group": "消息体",
+          "description": "chat 内唯一（官方样本 1365 占位），与原帖同 ID。",
+          "required": true
+        },
+        {
+          "path": "edited_channel_post.text",
+          "title": "编辑后正文",
+          "type": "string",
+          "group": "消息体",
+          "description": "编辑后的帖子正文（官方样本 /start 占位；编辑语义由信封字段名 edited_channel_post 承载）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,275 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "telegram",
+  "version": "2026.09",
+  "schemas": {
+    "tg-update-message": {
+      "version": "2026.09",
+      "source": "https://core.telegram.org/bots/webhooks",
+      "fields": [
+        {
+          "path": "update_id",
+          "title": "Update 唯一标识",
+          "type": "number",
+          "group": "Update 信封",
+          "description": "Update 的唯一标识，正整数顺序递增（空闲 ≥1 周后下一个随机）；Webhook 下凭它忽略重复/恢复乱序（api#update 口径），消费方去重键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "message",
+          "title": "新收消息",
+          "type": "json",
+          "group": "Update 信封",
+          "description": "判型字段：新收消息（文本/照片等任意类型，api#update 表）；任一 Update 至多含一个可选事件字段。",
+          "required": true
+        },
+        {
+          "path": "message.date",
+          "title": "消息时刻",
+          "type": "number",
+          "group": "消息体",
+          "description": "10 位 Unix 秒级时间戳（官方样本 1441645532）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "message.chat",
+          "title": "会话对象",
+          "type": "json",
+          "group": "发送者与会话",
+          "description": "消息所属会话（Chat 对象，§5.2 样本键序 last_name→id→type→first_name→username）。",
+          "required": true
+        },
+        {
+          "path": "message.chat.id",
+          "title": "会话 ID",
+          "type": "number",
+          "group": "发送者与会话",
+          "description": "会话数字 ID（官方样本 1111111）；chat.id 可超 32 位、按 64 位存（§附速查）。",
+          "required": true
+        },
+        {
+          "path": "message.chat.type",
+          "title": "会话类型",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "官方样本逐字 private（私聊）。",
+          "required": true
+        },
+        {
+          "path": "message.chat.first_name",
+          "title": "会话对方名",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "名字（官方样本 Test Firstname）。",
+          "required": true
+        },
+        {
+          "path": "message.chat.last_name",
+          "title": "会话对方姓",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "姓氏（官方样本 Test Lastname）。",
+          "required": true
+        },
+        {
+          "path": "message.chat.username",
+          "title": "会话对方用户名",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "@用户名（官方样本 Testusername）。",
+          "required": true
+        },
+        {
+          "path": "message.message_id",
+          "title": "消息 ID",
+          "type": "number",
+          "group": "消息体",
+          "description": "chat 内唯一（官方样本 1365，§附速查）；取官方样本值不重生成（格式口径仅单样本，不立生成规则）。",
+          "required": true
+        },
+        {
+          "path": "message.from",
+          "title": "发送者",
+          "type": "json",
+          "group": "发送者与会话",
+          "description": "消息发送者（User 对象，§5.2 样本键序 last_name→id→first_name→username）。",
+          "required": true
+        },
+        {
+          "path": "message.from.id",
+          "title": "发送者 ID",
+          "type": "number",
+          "group": "发送者与会话",
+          "description": "发送者数字 ID（官方样本 1111111，与 chat.id 同值——私聊两者相同）。",
+          "required": true
+        },
+        {
+          "path": "message.from.first_name",
+          "title": "发送者名",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "名字（官方样本 Test Firstname）。",
+          "required": true
+        },
+        {
+          "path": "message.from.last_name",
+          "title": "发送者姓",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "姓氏（官方样本 Test Lastname）。",
+          "required": true
+        },
+        {
+          "path": "message.from.username",
+          "title": "发送者用户名",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "@用户名（官方样本 Testusername）。",
+          "required": true
+        },
+        {
+          "path": "message.text",
+          "title": "文本正文",
+          "type": "string",
+          "group": "消息体",
+          "description": "text 型消息正文（官方样本 /start）；文本上限 4096 字符（entities 解析后计，sendMessage.text 口径）。",
+          "required": true
+        }
+      ]
+    },
+    "tg-update-edited-message": {
+      "version": "2026.09",
+      "source": "https://core.telegram.org/bots/webhooks",
+      "fields": [
+        {
+          "path": "update_id",
+          "title": "Update 唯一标识",
+          "type": "number",
+          "group": "Update 信封",
+          "description": "Update 的唯一标识，正整数顺序递增，去重/恢复顺序键（api#update 口径）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "edited_message",
+          "title": "被编辑消息",
+          "type": "json",
+          "group": "Update 信封",
+          "description": "判型字段：已知消息被编辑（api#update 表）。webhooks 指南同页给出 edited_message 版式 curl、注明结构同 message 样本（§5.2 收尾注），官方整段原文未录入事实库——载荷按该口径构造。",
+          "required": true
+        },
+        {
+          "path": "edited_message.date",
+          "title": "原消息时刻",
+          "type": "number",
+          "group": "消息体",
+          "description": "原消息 10 位 Unix 秒级时间戳（官方 message 样本值占位）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "edited_message.chat",
+          "title": "会话对象",
+          "type": "json",
+          "group": "发送者与会话",
+          "description": "消息所属会话（结构同 message 样本 §5.2）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.chat.id",
+          "title": "会话 ID",
+          "type": "number",
+          "group": "发送者与会话",
+          "description": "会话数字 ID（官方样本 1111111 占位）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.chat.type",
+          "title": "会话类型",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "官方样本逐字 private（私聊）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.chat.first_name",
+          "title": "会话对方名",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "名字（官方样本 Test Firstname 占位）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.chat.last_name",
+          "title": "会话对方姓",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "姓氏（官方样本 Test Lastname 占位）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.chat.username",
+          "title": "会话对方用户名",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "@用户名（官方样本 Testusername 占位）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.message_id",
+          "title": "消息 ID",
+          "type": "number",
+          "group": "消息体",
+          "description": "chat 内唯一（官方样本 1365 占位），与原消息同 ID。",
+          "required": true
+        },
+        {
+          "path": "edited_message.from",
+          "title": "发送者",
+          "type": "json",
+          "group": "发送者与会话",
+          "description": "原消息发送者（结构同 message 样本 §5.2）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.from.id",
+          "title": "发送者 ID",
+          "type": "number",
+          "group": "发送者与会话",
+          "description": "发送者数字 ID（官方样本 1111111 占位）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.from.first_name",
+          "title": "发送者名",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "名字（官方样本 Test Firstname 占位）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.from.last_name",
+          "title": "发送者姓",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "姓氏（官方样本 Test Lastname 占位）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.from.username",
+          "title": "发送者用户名",
+          "type": "string",
+          "group": "发送者与会话",
+          "description": "@用户名（官方样本 Testusername 占位）。",
+          "required": true
+        },
+        {
+          "path": "edited_message.text",
+          "title": "编辑后正文",
+          "type": "string",
+          "group": "消息体",
+          "description": "编辑后的文本正文（官方样本 /start 占位；编辑语义由信封字段名 edited_message 承载）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

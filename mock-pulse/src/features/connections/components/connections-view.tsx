@@ -52,6 +52,7 @@ import {
   pinduoduoTestNote,
   qqTestNote,
   taobaoTestNote,
+  telegramTestNote,
   wechatMiniTestNote,
   wechatMpTestNote,
   wecomTestNote,
@@ -77,7 +78,8 @@ function wireBadgeLabel(
     channel === "jingdong" ||
     channel === "pinduoduo" ||
     channel === "eleme" ||
-    channel === "whatsapp"
+    channel === "whatsapp" ||
+    channel === "telegram"
   ) {
     return "JSON";
   }
@@ -138,7 +140,9 @@ export function ConnectionsView() {
                                   ? actions.defaultAlipayConnection
                                   : channel === "whatsapp"
                                     ? actions.defaultWhatsappConnection
-                                    : actions.defaultWecomConnection);
+                                    : channel === "telegram"
+                                      ? actions.defaultTelegramConnection
+                                      : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -357,11 +361,13 @@ export function ConnectionsView() {
                                               ? alipayTestNote()
                                               : channel === "whatsapp"
                                                 ? whatsappTestNote()
-                                                : wecomTestNote(
-                                                    draft.channel === "wecom"
-                                                      ? draft.system
-                                                      : "agent",
-                                                  )}
+                                                : channel === "telegram"
+                                                  ? telegramTestNote()
+                                                  : wecomTestNote(
+                                                      draft.channel === "wecom"
+                                                        ? draft.system
+                                                        : "agent",
+                                                    )}
               </CardDescription>
               <CardAction>
                 <Button

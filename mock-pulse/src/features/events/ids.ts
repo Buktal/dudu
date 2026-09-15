@@ -67,6 +67,10 @@ import type { EventSchema, IdKind } from "./schemas";
  *   32f8639b4 为 32 位小写十六进制）
  * - waTemplateId：WhatsApp 模板 ID（官方样本 1689556908129832 为 16 位数字
  *   JSON number，首位取 1 恒在 2^53 内）
+ * - tgUpdateId：Telegram update_id（官方样本 10000 为正整数 JSON number，
+ *   api#update「start from a certain positive number and increase
+ *   sequentially」——Webhook 去重/恢复顺序幂等键，新建事件即新 Update 故
+ *   重生成；取 5 位数与样本同量级）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -409,6 +413,20 @@ export function generateWaTemplateId(): number {
   return Number(digits);
 }
 
+/**
+ * Telegram update_id：正整数 JSON number 顺序递增（官方样本 10000，api#update
+ * ——「ignore repeated updates or restore the correct update sequence」的
+ * 去重幂等键）；取 5 位数与官方样本同量级（首位非零）。
+ */
+export function generateTgUpdateId(): number {
+  const bytes = randomBytes(5);
+  let digits = String((bytes[0] % 9) + 1);
+  for (let i = 1; i < 5; i += 1) {
+    digits += String(bytes[i] % 10);
+  }
+  return Number(digits);
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -446,6 +464,7 @@ const GENERATORS: Record<IdKind, Generator> = {
   waAccountId: generateWaAccountId,
   waConversationId: generateWaConversationId,
   waTemplateId: generateWaTemplateId,
+  tgUpdateId: generateTgUpdateId,
 };
 
 /**
