@@ -1,4 +1,5 @@
 import type {
+  BilibiliConnectionConfig,
   ConnectionConfig,
   DingtalkConnectionConfig,
   DouyinConnectionConfig,
@@ -410,6 +411,29 @@ function telegramFields(draft: TelegramConnectionConfig): CredentialField[] {
   ];
 }
 
+/**
+ * B站凭证字段（事实库 §4.2/§6）：client_id 即签名头表 x-bili-accesskeyid，
+ * secret 为 HMAC-SHA256 签名密钥——两者缺一签名不可复算。
+ */
+function bilibiliFields(draft: BilibiliConnectionConfig): CredentialField[] {
+  return [
+    {
+      key: "clientId",
+      label: "Client ID",
+      note: "应用 client_id（管理中心创建应用分配）：服务端签名头表 x-bili-accesskeyid 的头值（官方头表必填项）。",
+      value: draft.clientId,
+      secret: false,
+    },
+    {
+      key: "clientSecret",
+      label: "App Secret",
+      note: "应用 secret：Authorization = HMAC-SHA256（x-bili-* 头字典序 \\n 拼接，拼接串官方正文待核验(09-27)）的签名密钥；与接收服务配置一致。",
+      value: draft.clientSecret,
+      secret: true,
+    },
+  ];
+}
+
 /** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
 export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
   switch (draft.channel) {
@@ -447,6 +471,8 @@ export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
       return whatsappFields(draft);
     case "telegram":
       return telegramFields(draft);
+    case "bilibili":
+      return bilibiliFields(draft);
     case "wecom":
       return wecomFields(draft);
     default: {

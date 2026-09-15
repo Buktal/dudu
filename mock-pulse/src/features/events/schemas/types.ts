@@ -54,7 +54,11 @@ export type IdKind =
   | "waAccountId" // WhatsApp 账户/号码数字 ID：15 位数字串（官方样本 WABA 102290129340398、phone_number_id 106540352242922）
   | "waConversationId" // WhatsApp 会话 ID：32 位小写十六进制（官方样本 6ceb9d929c9bdc4f90e967a32f8639b4）
   | "waTemplateId" // WhatsApp 模板 ID：16 位数字 JSON number（官方样本 1689556908129832，恒在 2^53 内）
-  | "tgUpdateId"; // Telegram update_id：正整数 JSON number 顺序递增（官方样本 10000，api#update——去重/恢复顺序幂等键）
+  | "tgUpdateId" // Telegram update_id：正整数 JSON number 顺序递增（官方样本 10000，api#update——去重/恢复顺序幂等键）
+  | "biliOpenId" // B站 openid：32 位字母数字混淆串（官方示例 9205eeaa…混入非 hex 字符，按字母数字形态生成）
+  | "biliClientId" // B站 client_id：16 位小写十六进制（官方示例 395c8275dd674f17，即 x-bili-accesskeyid）
+  | "biliBvId" // B站 BV 号：BV + 10 位 base58 风格字母数字（去易混 0OIl，官方示例 BV1S9L90H082 为占位）
+  | "biliTimestamp"; // B站事件 timestamp：yyyy-MM-dd HH:mm:ss（UTC+8）字符串（官方包络表逐字）
 
 export type FieldDescriptor = {
   /** 报文内的点路径，数组用 [index] */

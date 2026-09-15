@@ -95,6 +95,13 @@ function requestSnapshot(step: RunStep): string {
     // update_id 为去重/恢复顺序幂等键（msgId 快照即它），无 query 与时间戳要素
     return `POST ${step.url}\nContent-Type: application/json\nX-Telegram-Bot-Api-Secret-Token: ${step.signature}\n\n${step.payload}`;
   }
+  if (step.channel === "bilibili") {
+    // B站（开放平台 Webhooks）：验证 = x-bili-* 签名头表 + Authorization =
+    // HMAC-SHA256（signature 快照即 Authorization，x-bili-timestamp 快照即
+    // timestamp，其余 x-bili-* 头由适配器随请求携带）；body 即事件明文
+    // 逐字节透传，官方无幂等键字段（nonce 快照作 msgId，5s 超时最多共推 3 次）
+    return `POST ${step.url}\nContent-Type: application/json\nx-bili-timestamp: ${step.timestamp ?? ""}\nAuthorization: ${step.signature}\n\n${step.payload}`;
+  }
   return `POST ${step.url}\nContent-Type: application/json\nX-Douyin-Signature: ${step.signature}\nMsg-Id: ${step.msgId}\n\n${step.payload}`;
 }
 

@@ -1,6 +1,8 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 
+import type { ChannelId } from "@/lib/channels";
+
 import type { EventItem } from "./model";
 import { EVENT_SCHEMAS, schemasByChannel } from "./schemas";
 import {
@@ -233,8 +235,8 @@ describe("templatesForChannel（目录模板源）", () => {
     );
   });
 
-  it("未接入模板的渠道返回空表（饿了么已接入 #45，改用未接入的 B站）", () => {
-    expect(templatesForChannel("bilibili")).toEqual([]);
+  it("未在注册表接入模板的 id 返回空表（B站已接入 #49；知乎无推送不入表，以注册表外 id 验证空表路径）", () => {
+    expect(templatesForChannel("zhihu" as ChannelId)).toEqual([]);
   });
 });
 

@@ -1,0 +1,223 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "bilibili",
+  "version": "2026.09",
+  "schemas": {
+    "bili-authorize": {
+      "version": "2026.09",
+      "source": "https://bilibili.apifox.cn/doc-895917",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名",
+          "type": "string",
+          "group": "事件信封",
+          "description": "事件名（官方公共包络表逐字：event 为 string 事件名）。authorize = B站用户授权给开发者的应用（镜像事件表行，官方事件列表页仅实锤 deauthorize，本行待核验(09-27)）。",
+          "required": true
+        },
+        {
+          "path": "content.openid",
+          "title": "用户 openid",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "用户 openid（官方 deauthorize 字段表同构）。官方示例为 32 位字母数字混淆串、尾部空格原文照录。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.client_id",
+          "title": "应用 id",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "应用 id（官方 deauthorize 字段表同构；即服务端签名头表 x-bili-accesskeyid，事实库 §6）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.permits",
+          "title": "授权权限列表",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "授权的权限列表，逗号分割（官方示例 USER_INFO, USER_DATA 照录；授权页仅显示应用已申请通过的权限，事实库 §6）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "事件时间标签",
+          "type": "string",
+          "group": "事件信封",
+          "description": "事件发生时间标签，格式 yyyy-MM-dd HH:mm:ss（UTC+8）（官方公共包络表逐字；与请求签名 x-bili-timestamp 的 unix 秒是两个并存口径）。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    },
+    "bili-deauthorize": {
+      "version": "2026.09",
+      "source": "https://open.bilibili.com/doc/4/a3f37dde-212b-b71b-5388-fbd3bfb41623",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名",
+          "type": "string",
+          "group": "事件信封",
+          "description": "事件名（官方公共包络表逐字）。deauthorize = 用户解除对应用授权时触发（官方逐字）；用户注销 B站账号时开放平台会向所有已授权应用广播同业务消息（官方逐字，§2.2）。",
+          "required": true
+        },
+        {
+          "path": "content.openid",
+          "title": "用户 openid",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "用户 openid（官方 deauthorize 字段表逐字）。官方示例为 32 位字母数字混淆串、尾部空格原文照录。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.client_id",
+          "title": "应用 id",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "应用 id（官方 deauthorize 字段表逐字；即服务端签名头表 x-bili-accesskeyid，事实库 §6）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.permits",
+          "title": "解除授权的权限列表",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "用户解除授权的权限列表，逗号分割（官方字段表逐字；示例值 ATC_DATA, ATC_BASE 照录）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "事件时间标签",
+          "type": "string",
+          "group": "事件信封",
+          "description": "事件发生时间标签，格式 yyyy-MM-dd HH:mm:ss（UTC+8）（官方公共包络表逐字）。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    },
+    "bili-video-open": {
+      "version": "2026.09",
+      "source": "https://bilibili.apifox.cn/doc-895917",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名",
+          "type": "string",
+          "group": "事件信封",
+          "description": "事件名（官方公共包络表逐字）。video_open = 通过开发者应用投递的视频稿件开放浏览（镜像事件表行；Scope: ARC_BASE 侧页印证，事件行待核验(09-27)）。",
+          "required": true
+        },
+        {
+          "path": "content.openid",
+          "title": "用户 openid",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "稿件投递者 openid（镜像示例同构 deauthorize 字段族）。示例尾部空格原文照录。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.client_id",
+          "title": "应用 id",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "应用 id（镜像示例同构；即服务端签名头表 x-bili-accesskeyid）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.resource_id",
+          "title": "稿件 BV 号",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "视频稿件 resource_id（镜像示例 BV1S9L90H082 为占位；BV 号通行形态 BV + 10 位 base58 字母数字）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.state",
+          "title": "稿件状态码",
+          "type": "number",
+          "group": "content 消息体",
+          "description": "稿件状态码（镜像示例开放浏览为 0，JSON number 形态照录）。",
+          "required": true
+        },
+        {
+          "path": "content.state_desc",
+          "title": "状态描述",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "稿件状态描述（镜像示例开放浏览为「开放浏览」照录）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "事件时间标签",
+          "type": "string",
+          "group": "事件信封",
+          "description": "事件发生时间标签，格式 yyyy-MM-dd HH:mm:ss（UTC+8）（官方公共包络表逐字）。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    },
+    "bili-video-fail": {
+      "version": "2026.09",
+      "source": "https://bilibili.apifox.cn/doc-895917",
+      "fields": [
+        {
+          "path": "event",
+          "title": "事件名",
+          "type": "string",
+          "group": "事件信封",
+          "description": "事件名（官方公共包络表逐字）。video_fail = 通过开发者应用投递的视频稿件投稿失败（镜像事件表行，Scope: ARC_BASE 侧页印证，事件行待核验(09-27)）。",
+          "required": true
+        },
+        {
+          "path": "content.openid",
+          "title": "用户 openid",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "稿件投递者 openid（镜像示例同构 deauthorize 字段族）。示例尾部空格原文照录。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.client_id",
+          "title": "应用 id",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "应用 id（镜像示例同构；即服务端签名头表 x-bili-accesskeyid）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.resource_id",
+          "title": "稿件 BV 号",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "视频稿件 resource_id（镜像示例 BV1S9L90H082 为占位；BV 号通行形态 BV + 10 位 base58 字母数字）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "content.state",
+          "title": "稿件状态码",
+          "type": "number",
+          "group": "content 消息体",
+          "description": "稿件状态码（镜像示例投稿失败/已退回为 -2，JSON number 形态照录）。",
+          "required": true
+        },
+        {
+          "path": "content.state_desc",
+          "title": "状态描述",
+          "type": "string",
+          "group": "content 消息体",
+          "description": "稿件状态描述（镜像示例投稿失败为「已退回」照录）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "事件时间标签",
+          "type": "string",
+          "group": "事件信封",
+          "description": "事件发生时间标签，格式 yyyy-MM-dd HH:mm:ss（UTC+8）（官方公共包络表逐字）。新建事件时重新生成。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

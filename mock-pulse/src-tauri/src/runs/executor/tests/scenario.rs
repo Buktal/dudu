@@ -364,7 +364,8 @@ fn unknown_channel_step_fails_without_requests() {
                 wait: None,
                 event_name: "外星渠道".into(),
                 event_id: "evt-x".into(),
-                channel: "bilibili".into(),
+                // 样例取注册表外 id：知乎无推送不入表，事实库结论
+                channel: "zhihu".into(),
                 expected: ExpectedReceipt {
                     status: 200,
                     body: String::new(),

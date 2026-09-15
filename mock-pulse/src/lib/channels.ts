@@ -173,9 +173,9 @@ export const CHANNEL_REGISTRY = {
   bilibili: {
     name: "B站",
     protocol: "Webhooks · HTTPS 回调",
-    note: "开放平台 Webhooks：HTTPS POST，HMAC-SHA256 验签，封闭 4 事件",
+    note: "开放平台 Webhooks：HTTPS POST 明文 JSON，x-bili-* 签名头表 + HMAC-SHA256，verify_webhooks 握手回显 data，封闭 4 事件",
     icon: "Tv",
-    implemented: false,
+    implemented: true,
   },
   kuaishou: {
     name: "快手",

@@ -1,5 +1,6 @@
 import type {
   AlipayConnectionConfig,
+  BilibiliConnectionConfig,
   ConnectionConfig,
   DingtalkConnectionConfig,
   DouyinConnectionConfig,
@@ -79,6 +80,10 @@ import type {
  *   X-Telegram-Bot-Api-Secret-Token 的头值——setWebhook.secret_token 原样
  *   回显，事实库 §4.1「字符串相等比较」的唯一验证要素，缺失即恒等头链路
  *   无法模拟；官方限 1–256 字符仅 A-Z a-z 0-9 _ -，无 HMAC 无加密）
+ * - B站核（开放平台 Webhooks）：url + clientId + clientSecret 必填（clientId
+ *   即签名头表 x-bili-accesskeyid 官方必填项、clientSecret 为 Authorization =
+ *   HMAC-SHA256 的签名密钥事实库 §4.2/§6，任一缺失即签名不可复算；事件
+ *   timestamp 为 UTC+8 字符串、5s 建连超时失败最多共推 3 次 §3.3）
  */
 export function isConnectionReady(
   config: ConnectionConfig | undefined,
@@ -117,6 +122,8 @@ export function isConnectionReady(
       return config.url.trim() !== "" && meituanReady(config);
     case "eleme":
       return config.url.trim() !== "" && elemeReady(config);
+    case "bilibili":
+      return config.url.trim() !== "" && bilibiliReady(config);
     case "alipay":
       return config.url.trim() !== "" && alipayReady(config);
     case "whatsapp":
@@ -371,4 +378,14 @@ function whatsappReady(config: WhatsappConnectionConfig): boolean {
  */
 function telegramReady(config: TelegramConnectionConfig): boolean {
   return config.secretToken.trim() !== "";
+}
+
+/**
+ * B站核（开放平台 Webhooks）：url + clientId + clientSecret 必填——clientId
+ * 即签名头表 x-bili-accesskeyid（官方头表必填项，事实库 §4.2/§6），缺失即
+ * 请求不完整；clientSecret 为 Authorization = HMAC-SHA256 的签名密钥，缺失
+ * 即签名不可复算。事件载荷明文无加密（§4.3），无 AES 字段。
+ */
+function bilibiliReady(config: BilibiliConnectionConfig): boolean {
+  return config.clientId.trim() !== "" && config.clientSecret.trim() !== "";
 }

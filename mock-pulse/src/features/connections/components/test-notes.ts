@@ -135,3 +135,8 @@ export function whatsappTestNote(): string {
 export function telegramTestNote(): string {
   return "发送 Update 推送探针（POST 官方样本 Update 明文 + 头 X-Telegram-Bot-Api-Secret-Token = Secret Token），检查服务是否原样比对 token 并返回 HTTP 2XY（官方无 challenge 握手：setWebhook 同步返回 True 即成功；非 2XY 按合理次数重推）。";
 }
+
+/** B站握手文案（事实库 §3.2 镜像口径：配置保存失焦即发 verify_webhooks，期望原样回 data） */
+export function bilibiliTestNote(): string {
+  return '发送 verify_webhooks 握手（POST {"event":"verify_webhooks","content":{"data":<随机数>},"timestamp":…} + x-bili-* 签名头表 + Authorization = HMAC-SHA256），检查服务是否解析 data 并以 HTTP 200 原样回 {"data":<数值>}（管理中心填回调地址失焦即触发校验，镜像口径待核验(09-27)；事件推送 5s 建连超时、失败最多共推 3 次）。';
+}

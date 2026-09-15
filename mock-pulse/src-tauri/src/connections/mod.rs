@@ -6,6 +6,7 @@
 
 mod config;
 pub mod alipay;
+pub mod bilibili;
 pub mod dingtalk;
 pub mod douyin;
 pub mod eleme;
@@ -136,6 +137,7 @@ pub(crate) static ADAPTERS: &[&dyn ChannelAdapter] = &[
     &meituan::Adapter,
     &eleme::Adapter,
     &alipay::Adapter,
+    &bilibili::Adapter,
     &whatsapp::Adapter,
     &telegram::Adapter,
 ];
@@ -361,6 +363,17 @@ pub async fn connections_test_alipay(
     config: ConnectionConfig,
 ) -> Result<HandshakeOutcome, String> {
     run_handshake(&alipay::Adapter, config).await
+}
+
+/// 按 B站 verify_webhooks 握手协议测试连接（镜像口径，配置保存失焦即触发：
+/// POST {"event":"verify_webhooks","content":{"data":<随机数>},"timestamp":…}
+/// + x-bili-* 签名头表 + Authorization = HMAC-SHA256，期望 HTTP 200 原样回
+/// {"data":<数值>}，事实库 §3.2/§4.2）。
+#[tauri::command]
+pub async fn connections_test_bilibili(
+    config: ConnectionConfig,
+) -> Result<HandshakeOutcome, String> {
+    run_handshake(&bilibili::Adapter, config).await
 }
 
 /// 按 WhatsApp GET 三参握手协议测试连接（官方配置保存即触发：GET 带

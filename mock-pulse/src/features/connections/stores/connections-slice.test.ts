@@ -20,6 +20,7 @@ vi.mock("../api", () => ({
   loadConnections: vi.fn(),
   saveConnection: vi.fn(),
   testAlipayConnection: vi.fn(),
+  testBilibiliConnection: vi.fn(),
   testDingtalkConnection: vi.fn(),
   testDouyinConnection: vi.fn(),
   testElemeConnection: vi.fn(),
@@ -43,6 +44,7 @@ import {
   loadConnections,
   saveConnection as saveApi,
   testAlipayConnection,
+  testBilibiliConnection,
   testDingtalkConnection,
   testDouyinConnection,
   testElemeConnection,
@@ -202,6 +204,13 @@ const savedTelegram: ConnectionConfig = {
   channel: "telegram",
   url: "http://127.0.0.1:9099/telegram",
   secretToken: "tg-webhook-secret",
+};
+
+const savedBilibili: ConnectionConfig = {
+  channel: "bilibili",
+  url: "http://127.0.0.1:9099/bilibili",
+  clientId: "395c8275dd674f17",
+  clientSecret: "bilibili_app_secret",
 };
 
 function makeStore() {
@@ -753,16 +762,53 @@ describe("connections slice", () => {
     expect(vi.mocked(testElemeConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testAlipayConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWhatsappConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testBilibiliConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store))).toEqual({
       status: "success",
       message: "Update 推送探针被接受",
     });
   });
 
+  it("B站配置走 connections_test_bilibili（按渠道路由测试命令）", async () => {
+    vi.mocked(testBilibiliConnection).mockResolvedValue({
+      ok: true,
+      message: "verify_webhooks 握手成功",
+    });
+    const store = makeStore();
+
+    await store.dispatch(testConnection(savedBilibili));
+
+    expect(vi.mocked(testBilibiliConnection)).toHaveBeenCalledWith(
+      savedBilibili,
+    );
+    expect(vi.mocked(testDouyinConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWecomConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMpConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWechatMiniConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testFeishuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testDingtalkConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testQqConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWeiboConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testXiaohongshuConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testKuaishouConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testTaobaoConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testJingdongConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testPinduoduoConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testMeituanConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testElemeConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testAlipayConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testWhatsappConnection)).not.toHaveBeenCalled();
+    expect(selectTestState(stateOf(store))).toEqual({
+      status: "success",
+      message: "verify_webhooks 握手成功",
+    });
+  });
+
   it("未知渠道不落进任何已知分支：不算已配置，测试连接直接拒绝（穷尽分发兜底）", async () => {
     // 运行时兜底防线（类型穷尽守卫在编译期挡新增渠道漏改；
-    // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议）
-    const rogue = { channel: "bilibili" } as unknown as ConnectionConfig;
+    // 此处验证持久化文件混入怪渠道时 fail-safe，不静默走错协议——
+    // 样例取注册表外 id：知乎无推送不入表，事实库结论）
+    const rogue = { channel: "zhihu" } as unknown as ConnectionConfig;
 
     expect(isConnectionReady(rogue)).toBe(false);
 
@@ -787,6 +833,7 @@ describe("connections slice", () => {
     expect(vi.mocked(testElemeConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testAlipayConnection)).not.toHaveBeenCalled();
     expect(vi.mocked(testWhatsappConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(testBilibiliConnection)).not.toHaveBeenCalled();
     expect(selectTestState(stateOf(store)).status).toBe("failed");
   });
 });

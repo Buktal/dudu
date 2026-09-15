@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ConnectionConfig } from "../api";
 import {
   defaultAlipayConnection,
+  defaultBilibiliConnection,
   defaultDingtalkConnection,
   defaultElemeConnection,
   defaultFeishuConnection,
@@ -169,6 +170,13 @@ const savedTelegram: ConnectionConfig = {
   channel: "telegram",
   url: "http://127.0.0.1:9099/telegram",
   secretToken: "tg-webhook-secret",
+};
+
+const savedBilibili: ConnectionConfig = {
+  channel: "bilibili",
+  url: "http://127.0.0.1:9099/bilibili",
+  clientId: "395c8275dd674f17",
+  clientSecret: "bilibili_app_secret",
 };
 
 describe("isConnectionReady（直发前置的内容判定）", () => {
@@ -709,6 +717,33 @@ describe("isConnectionReady（Telegram 核必填集，Bot Webhook）", () => {
     expect(defaultTelegramConnection.secretToken).toBe("");
     expect(
       isConnectionReady(selectConnection(initialConnectionsState, "telegram")),
+    ).toBe(false);
+  });
+});
+
+describe("isConnectionReady（B站核必填集，开放平台 Webhooks）", () => {
+  it("url/clientId/clientSecret 齐全才算已配置（clientId 即 x-bili-accesskeyid 官方必填项）", () => {
+    expect(isConnectionReady(savedBilibili)).toBe(true);
+  });
+
+  it("缺 url/clientId/clientSecret 任一都不算已配置（任一缺失即签名不可复算）", () => {
+    expect(isConnectionReady({ ...savedBilibili, url: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedBilibili, url: "  " })).toBe(false);
+    expect(isConnectionReady({ ...savedBilibili, clientId: "" })).toBe(false);
+    expect(isConnectionReady({ ...savedBilibili, clientSecret: "" })).toBe(
+      false,
+    );
+  });
+
+  it("初始 B站占位连接（凭据全空、x-bili-* 头表 HMAC-SHA256 验签起步）不算已配置", () => {
+    expect(defaultBilibiliConnection.channel).toBe("bilibili");
+    expect(defaultBilibiliConnection.url).toBe(
+      "http://127.0.0.1:8080/webhooks/bilibili",
+    );
+    expect(defaultBilibiliConnection.clientId).toBe("");
+    expect(defaultBilibiliConnection.clientSecret).toBe("");
+    expect(
+      isConnectionReady(selectConnection(initialConnectionsState, "bilibili")),
     ).toBe(false);
   });
 });

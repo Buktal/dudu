@@ -8,6 +8,7 @@ import type { ChannelId } from "@/lib/channels";
 
 import {
   type AlipayConnectionConfig,
+  type BilibiliConnectionConfig,
   type ConnectionConfig,
   type DingtalkConnectionConfig,
   type DouyinConnectionConfig,
@@ -23,6 +24,7 @@ import {
   type TaobaoConnectionConfig,
   type TelegramConnectionConfig,
   testAlipayConnection as testAlipayApi,
+  testBilibiliConnection as testBilibiliApi,
   testDingtalkConnection as testDingtalkApi,
   testDouyinConnection as testDouyinApi,
   testElemeConnection as testElemeApi,
@@ -201,6 +203,14 @@ export const defaultElemeConnection: ElemeConnectionConfig = {
   consumerSecret: "",
 };
 
+/** 原型默认值：本地联调回调地址，凭据留空（x-bili-* 头表 HMAC-SHA256 验签起步） */
+export const defaultBilibiliConnection: BilibiliConnectionConfig = {
+  channel: "bilibili",
+  url: "http://127.0.0.1:8080/webhooks/bilibili",
+  clientId: "",
+  clientSecret: "",
+};
+
 /** 原型默认值：本地联调回调地址，凭据留空（异步通知 RSA2 验签起步） */
 export const defaultAlipayConnection: AlipayConnectionConfig = {
   channel: "alipay",
@@ -245,6 +255,7 @@ export const initialConnectionsState: ConnectionsState = {
     pinduoduo: defaultPinduoduoConnection,
     meituan: defaultMeituanConnection,
     eleme: defaultElemeConnection,
+    bilibili: defaultBilibiliConnection,
     alipay: defaultAlipayConnection,
     whatsapp: defaultWhatsappConnection,
     telegram: defaultTelegramConnection,
@@ -307,6 +318,8 @@ export const testConnection = createAsyncThunk(
         return testMeituanApi(config);
       case "eleme":
         return testElemeApi(config);
+      case "bilibili":
+        return testBilibiliApi(config);
       case "alipay":
         return testAlipayApi(config);
       case "whatsapp":

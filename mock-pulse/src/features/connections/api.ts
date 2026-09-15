@@ -295,6 +295,24 @@ export type TelegramConnectionConfig = {
 };
 
 /**
+ * B站连接配置形状（与 Rust 端 ConnectionConfig::Bilibili 内标一致）：
+ * 开放平台 Webhooks 模拟——POST 明文 JSON {event, content, timestamp} +
+ * x-bili-* 服务端签名头表（官方摘录实锤，§4.2），Authorization =
+ * HMAC-SHA256 签名；clientId 即 x-bili-accesskeyid（= client_id，事实库
+ * §6），clientSecret 为签名密钥。verify_webhooks 握手（§3.2 镜像口径）
+ * 由 Rust 适配器承载。
+ */
+export type BilibiliConnectionConfig = {
+  channel: "bilibili";
+  /** 回调目标地址，事件与剧本共享（管理中心 Webhooks 模块配置） */
+  url: string;
+  /** 应用 Client ID（client_id，事实库 §6）：签名头表 x-bili-accesskeyid 的头值 */
+  clientId: string;
+  /** 应用 secret（签名密钥，事实库 §6）：Authorization = HMAC-SHA256 的签名源 */
+  clientSecret: string;
+};
+
+/**
  * 连接配置按渠道区分形状（与 Rust 端 ConnectionConfig 内标枚举一致，
  * 以 channel 字段判别；持久化与 IPC 透传均为 camelCase）。
  */
@@ -377,6 +395,7 @@ export type ConnectionConfig =
   | PinduoduoConnectionConfig
   | MeituanConnectionConfig
   | ElemeConnectionConfig
+  | BilibiliConnectionConfig
   | AlipayConnectionConfig
   | WhatsappConnectionConfig
   | TelegramConnectionConfig;
@@ -552,4 +571,13 @@ export function testTelegramConnection(
   config: TelegramConnectionConfig,
 ): Promise<TestOutcome> {
   return invoke<TestOutcome>("connections_test_telegram", { config });
+}
+
+/** 按 B站 verify_webhooks 握手协议测试连接（镜像口径 §3.2，配置保存失焦即
+ *  触发：POST {"event":"verify_webhooks","content":{"data":<随机数>},
+ *  "timestamp":…} + x-bili-* 签名头表，期望 HTTP 200 原样回 {"data":<数值>}） */
+export function testBilibiliConnection(
+  config: BilibiliConnectionConfig,
+): Promise<TestOutcome> {
+  return invoke<TestOutcome>("connections_test_bilibili", { config });
 }

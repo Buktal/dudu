@@ -1,4 +1,4 @@
-import { taobaoModified, weiboCreatedAt } from "@/lib/time";
+import { bilibiliTimestamp, taobaoModified, weiboCreatedAt } from "@/lib/time";
 
 import {
   cloneJson,
@@ -71,6 +71,16 @@ import type { EventSchema, IdKind } from "./schemas";
  *   api#update「start from a certain positive number and increase
  *   sequentially」——Webhook 去重/恢复顺序幂等键，新建事件即新 Update 故
  *   重生成；取 5 位数与样本同量级）
+ * - biliOpenId：B站 openid（官方示例 9205eeaa1879skxys969ed47874f225c3 为
+ *   32 位字母数字混淆串——示例混入 s/k/x/y 非 hex 字符，按小写字母数字
+ *   形态生成；授权/解除授权/稿件事件三模板共用）
+ * - biliClientId：B站 client_id（官方示例 395c8275dd674f17 为 16 位小写
+ *   十六进制，即服务端签名头表 x-bili-accesskeyid，事实库 §6）
+ * - biliBvId：B站 BV 号（官方示例 BV1S9L90H082 明显为占位——BV + 10 位
+ *   base58 风格字母数字，去易混 0OIl 与真实 BV 号形态一致）
+ * - biliTimestamp：B站事件 timestamp（官方包络表实锤 yyyy-MM-dd HH:mm:ss
+ *   字符串、UTC+8——与请求签名 x-bili-timestamp 的 unix 秒并存口径，事实库
+ *   §7-9；经 lib/time 封装固定偏移格式化，新建事件即事件发生时刻）
  */
 
 function randomBytes(length: number): Uint8Array {
@@ -427,6 +437,37 @@ export function generateTgUpdateId(): number {
   return Number(digits);
 }
 
+/**
+ * B站 openid：官方示例为 32 位字母数字混淆串（示例值混入 s/k/x/y 非 hex
+ * 字符，事实库「ID 形态」速查）——按小写字母数字形态生成 32 位串。
+ */
+export function generateBiliOpenId(): string {
+  const bytes = randomBytes(32);
+  const chars = "0123456789abcdefghijklmnopqrstuvwxyz";
+  return Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
+}
+
+/** B站 client_id：官方示例为 16 位小写十六进制串（即 x-bili-accesskeyid）。 */
+export function generateBiliClientId(): string {
+  return hexChars(16);
+}
+
+/**
+ * B站 BV 号：官方示例 BV1S9L90H082 明显为占位——BV 号通行形态为 BV + 10 位
+ * base58 字母数字（去易混 0、O、I、l），按该字符集生成。
+ */
+export function generateBiliBvId(): string {
+  const bytes = randomBytes(10);
+  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  const body = Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
+  return `BV${body}`;
+}
+
+/** B站事件 timestamp：yyyy-MM-dd HH:mm:ss（UTC+8 固定偏移，经 lib/time 封装）。 */
+export function generateBiliTimestamp(): string {
+  return bilibiliTimestamp();
+}
+
 type Generator = () => string | number;
 
 const GENERATORS: Record<IdKind, Generator> = {
@@ -465,6 +506,10 @@ const GENERATORS: Record<IdKind, Generator> = {
   waConversationId: generateWaConversationId,
   waTemplateId: generateWaTemplateId,
   tgUpdateId: generateTgUpdateId,
+  biliOpenId: generateBiliOpenId,
+  biliClientId: generateBiliClientId,
+  biliBvId: generateBiliBvId,
+  biliTimestamp: generateBiliTimestamp,
 };
 
 /**

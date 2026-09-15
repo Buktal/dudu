@@ -337,4 +337,14 @@ pub enum ConnectionConfig {
         /// 无签名无加密，官方验证链路的唯一要素）
         secret_token: String,
     },
+    #[serde(rename = "bilibili", rename_all = "camelCase")]
+    Bilibili {
+        url: String,
+        /// 应用 client_id（管理中心创建应用分配，事实库 §6）：签名头表
+        /// x-bili-accesskeyid 的头值（官方头表必填项，即 accesskeyid）
+        client_id: String,
+        /// 应用 secret（回调验签/服务端签名密钥，事实库 §6）：
+        /// Authorization = HMAC-SHA256 的签名源；载荷明文无加密（§4.3）
+        app_secret: String,
+    },
 }

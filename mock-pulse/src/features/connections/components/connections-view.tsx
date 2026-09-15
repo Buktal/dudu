@@ -42,6 +42,7 @@ import * as actions from "../stores/connections-slice";
 import { ConnectionFields } from "./connection-fields";
 import {
   alipayTestNote,
+  bilibiliTestNote,
   dingtalkTestNote,
   douyinTestNote,
   elemeTestNote,
@@ -78,6 +79,7 @@ function wireBadgeLabel(
     channel === "jingdong" ||
     channel === "pinduoduo" ||
     channel === "eleme" ||
+    channel === "bilibili" ||
     channel === "whatsapp" ||
     channel === "telegram"
   ) {
@@ -136,13 +138,15 @@ export function ConnectionsView() {
                               ? actions.defaultMeituanConnection
                               : channel === "eleme"
                                 ? actions.defaultElemeConnection
-                                : channel === "alipay"
-                                  ? actions.defaultAlipayConnection
-                                  : channel === "whatsapp"
-                                    ? actions.defaultWhatsappConnection
-                                    : channel === "telegram"
-                                      ? actions.defaultTelegramConnection
-                                      : actions.defaultWecomConnection);
+                                : channel === "bilibili"
+                                  ? actions.defaultBilibiliConnection
+                                  : channel === "alipay"
+                                    ? actions.defaultAlipayConnection
+                                    : channel === "whatsapp"
+                                      ? actions.defaultWhatsappConnection
+                                      : channel === "telegram"
+                                        ? actions.defaultTelegramConnection
+                                        : actions.defaultWecomConnection);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -361,13 +365,16 @@ export function ConnectionsView() {
                                               ? alipayTestNote()
                                               : channel === "whatsapp"
                                                 ? whatsappTestNote()
-                                                : channel === "telegram"
-                                                  ? telegramTestNote()
-                                                  : wecomTestNote(
-                                                      draft.channel === "wecom"
-                                                        ? draft.system
-                                                        : "agent",
-                                                    )}
+                                                : channel === "bilibili"
+                                                  ? bilibiliTestNote()
+                                                  : channel === "telegram"
+                                                    ? telegramTestNote()
+                                                    : wecomTestNote(
+                                                        draft.channel ===
+                                                          "wecom"
+                                                          ? draft.system
+                                                          : "agent",
+                                                      )}
               </CardDescription>
               <CardAction>
                 <Button
