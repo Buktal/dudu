@@ -23,10 +23,6 @@ const packages = [
   "cn",
   "class-variance-authority",
   "dayjs",
-  "tailwindcss",
-  "tw-animate-css",
-  "shadcn",
-  "@fontsource-variable/inter",
 ];
 const config = {
   root,
@@ -80,7 +76,7 @@ if (process.argv[2] === "build") {
     path.join(root, "src/assets/dudu-favicon.svg"),
     "utf8",
   );
-  const html = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5f7f5"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,${encodeURIComponent(favicon)}"><title>嘟嘟 · 接待原型探索</title><style>${css}</style></head><body><div id="root"></div><script>${js.replaceAll("</script", "<\\/script")}</script></body></html>`;
+  const html = `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5f7f5"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,${encodeURIComponent(favicon)}"><title>嘟嘟 · 统一接待工作台原型</title><style>${css}</style></head><body><div id="root"></div><script>${js.replaceAll("</script", "<\\/script")}</script></body></html>`;
   const destination = path.join(root, "dudu-desk-prototype.html");
   await writeFile(destination, html);
   process.stdout.write(`Standalone prototype: ${destination}\n`);

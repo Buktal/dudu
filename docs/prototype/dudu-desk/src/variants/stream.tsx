@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Image as ImageIcon,
   MessageCircle,
-  Radio,
   RotateCcw,
   Rows3,
 } from "lucide-react";
@@ -12,13 +11,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Avatar, SourceTag } from "../components/identity";
 import { Count, softSpring } from "../components/motion";
-import {
-  Brand,
-  Button,
-  Empty,
-  IconButton,
-  Modal,
-} from "../components/primitives";
+import { Button, Empty, IconButton, Modal } from "../components/primitives";
 import { ChatPanel } from "../features/inbox/chat-panel";
 import { QueueTabs, QueueTools } from "../features/inbox/conversation-list";
 import type { Inbox } from "../features/inbox/use-inbox";
@@ -221,27 +214,6 @@ export function VariantE(props: WorkspaceProps) {
   ).length;
   return (
     <div className={`stream-shell ${props.infoOpen ? "with-info" : ""}`}>
-      <header className="stream-app-header">
-        <Brand />
-        <span className="header-divider" />
-        <div className="stream-app-title">
-          <Radio size={18} />
-          <h1>消息速答</h1>
-        </div>
-        <div className="app-header-right">
-          <span className="prototype-badge">新方向 · 05</span>
-          <Button size="sm" variant="ghost" onClick={props.openHelp}>
-            设计说明
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => props.setInfoOpen(!props.infoOpen)}
-          >
-            访客信息
-          </Button>
-        </div>
-      </header>
       <div className="stream-workspace">
         <main className="stream-main">
           <div className="stream-heading">

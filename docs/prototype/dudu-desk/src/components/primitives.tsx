@@ -18,7 +18,10 @@ export function Button({
       render={
         render ??
         (variant === "default" ? (
-          <RippleButton duration={reduced ? "0ms" : "480ms"} />
+          <RippleButton
+            duration={reduced ? "0ms" : "480ms"}
+            className="[&>div.relative]:inline-flex [&>div.relative]:items-center [&>div.relative]:justify-center [&>div.relative]:gap-[inherit]"
+          />
         ) : undefined)
       }
       {...props}
@@ -46,6 +49,7 @@ export function IconButton({
       title={label}
       aria-label={label}
       data-active={active}
+      className="data-[active=true]:bg-accent data-[active=true]:text-accent-foreground"
       onClick={onClick}
       disabled={disabled}
     >

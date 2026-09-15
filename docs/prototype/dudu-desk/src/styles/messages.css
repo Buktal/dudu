@@ -1,0 +1,250 @@
+.bag-illustration {
+  @apply w-full block;
+  height: auto;
+}
+.message-row {
+  @apply flex items-start;
+  gap: 10px;
+  margin: 0 0 15px;
+}
+.message-row > .avatar {
+  margin-top: 1px;
+}
+.message-stack {
+  @apply flex flex-col items-start min-w-0;
+  max-width: min(80%, 520px);
+}
+.message-bubble {
+  @apply bg-card text-foreground;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm) var(--radius-xl) var(--radius-xl);
+  padding: 11px 15px;
+  font-size: 14px;
+  line-height: 1.85;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--foreground) 2%, transparent);
+}
+.message-bubble p {
+  @apply whitespace-pre-wrap;
+}
+.outgoing {
+  @apply justify-end;
+}
+.outgoing .message-stack {
+  align-items: flex-end;
+}
+.outgoing .message-bubble {
+  @apply bg-accent text-accent-foreground;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl) var(--radius-sm) var(--radius-xl)
+    var(--radius-xl);
+}
+.message-meta {
+  @apply flex items-center tabular-nums text-muted-foreground;
+  margin: 5px 1px 0;
+  font-size: 10px;
+  margin-top: 6px;
+  gap: 5px;
+}
+.message-meta > svg {
+  margin-left: 3px;
+}
+.message-meta > time {
+  @apply text-muted-foreground;
+  font-size: 10px;
+}
+.message-meta.message-failed {
+  @apply text-destructive;
+}
+.message-failed button {
+  @apply flex items-center text-destructive;
+  gap: 4px;
+  margin-left: 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.message-product {
+  padding: 10px;
+}
+.product-card {
+  @apply flex items-center rounded-md;
+  gap: 12px;
+  width: 290px;
+  max-width: 100%;
+}
+.product-card > .bag-illustration {
+  @apply shrink-0 rounded-md;
+  width: 86px;
+  height: 90px;
+  object-fit: cover;
+}
+.product-card > div {
+  @apply flex flex-col items-start min-w-0;
+  gap: 3px;
+}
+.product-card small {
+  @apply text-muted-foreground;
+  font-size: 9px;
+}
+.product-card strong {
+  font-size: 12px;
+  font-weight: 620;
+}
+.product-card span {
+  @apply text-muted-foreground;
+  font-size: 9px;
+}
+.product-card b {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+.product-price-decimal {
+  @apply text-inherit;
+  font-size: 10px;
+}
+.message-image {
+  padding: 5px;
+  width: 245px;
+}
+.image-message {
+  @apply w-full text-left rounded-lg;
+}
+.image-message svg {
+  @apply rounded-sm;
+}
+.image-message > span {
+  @apply flex items-center justify-between text-muted-foreground;
+  font-size: 9px;
+  padding: 6px 5px 3px;
+}
+.image-preview {
+  @apply rounded-md overflow-hidden;
+  margin-bottom: 15px;
+}
+.voice-message {
+  min-width: 192px;
+}
+.waveform {
+  @apply flex items-center text-primary;
+  gap: 3px;
+  height: 31px;
+}
+.waveform > i {
+  @apply block;
+  width: 3px;
+  border-radius: calc(var(--radius) * 0.35);
+  background: currentColor;
+  opacity: 0.65;
+}
+.waveform > span {
+  @apply text-muted-foreground;
+  margin-left: 7px;
+  font-size: 11px;
+}
+.voice-message > button {
+  @apply text-primary;
+  font-size: 9px;
+  margin-top: 4px;
+}
+.transcript {
+  max-width: 240px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.transcript small {
+  @apply block text-muted-foreground;
+  font-size: 8px;
+}
+.file-message {
+  @apply flex items-center;
+  gap: 10px;
+}
+.file-message > svg {
+  @apply text-primary;
+}
+.file-message > div {
+  @apply flex flex-col;
+  gap: 3px;
+}
+.file-message strong {
+  font-size: 11px;
+  font-weight: 550;
+}
+.file-message small {
+  @apply text-muted-foreground;
+  font-size: 9px;
+}
+.unsupported-message {
+  @apply grid text-muted-foreground;
+  gap: 3px;
+  font-size: 10px;
+}
+.unsupported-message strong {
+  font-weight: 550;
+}
+.chat-parallel .message-bubble {
+  padding: 9px 11px;
+  font-size: 13px;
+  line-height: 1.85;
+}
+.chat-parallel .message-stack {
+  max-width: 86%;
+}
+.chat-parallel .product-card {
+  width: 240px;
+  gap: 8px;
+}
+.chat-parallel .product-card > .bag-illustration {
+  width: 70px;
+  height: 75px;
+}
+.chat-parallel .product-card strong {
+  font-size: 11px;
+}
+.chat-parallel .product-card span {
+  font-size: 8px;
+}
+.chat-parallel .product-card small {
+  font-size: 8px;
+}
+@media (min-width: 1650px) {
+  .message-bubble {
+    font-size: 14px;
+  }
+  .chat-parallel .message-bubble {
+    font-size: 13px;
+  }
+}
+@media (max-width: 1260px) {
+  .chat-parallel .product-card {
+    @apply flex-col items-start;
+    width: 174px;
+  }
+  .chat-parallel .product-card > .bag-illustration {
+    @apply w-full;
+    height: 102px;
+  }
+}
+@media (max-width: 760px) {
+  .message-stack {
+    max-width: 94%;
+  }
+  .message-row > .avatar {
+    @apply hidden;
+  }
+  .message-bubble {
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+  .product-card {
+    gap: 10px;
+    width: min(245px, 100%);
+  }
+  .product-card > .bag-illustration {
+    width: 71px;
+    height: 81px;
+  }
+}

@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   ArrowRight,
   BookOpen,
   CircleHelp,
@@ -10,92 +9,54 @@ import {
   Send,
   X,
 } from "lucide-react";
-import { LayoutGroup, motion } from "motion/react";
-import { softSpring } from "./components/motion";
-import { Button, IconButton, Modal } from "./components/primitives";
+import { Button, Modal } from "./components/primitives";
 import type { Inbox } from "./features/inbox/use-inbox";
 import type { Variant, Visitor } from "./types";
 import { variantKeys, variants } from "./variant-registry";
 
 export function PrototypeDock({
   variant,
-  onVariant,
   onHelp,
   onScenarios,
   draftCount,
 }: {
   variant: Variant;
-  onVariant: (variant: Variant) => void;
   onHelp: () => void;
   onScenarios: () => void;
   draftCount: number;
 }) {
-  const all = variantKeys;
-  function cycle(offset: number) {
-    onVariant(all[(all.indexOf(variant) + offset + all.length) % all.length]);
-  }
   return (
     <footer className="prototype-footer">
       <span className="prototype-caption">
         <span />
-        DUDU DESK <b>·</b> 交互探索
+        DUDU DESK <b>·</b> 交互原型
       </span>
-      <div className="prototype-dock">
-        <span className="dock-label">方案</span>
-        <IconButton
-          icon={ArrowLeft}
-          label="上一版原型"
-          onClick={() => cycle(-1)}
-        />
-        <LayoutGroup id="prototype-variants">
-          <fieldset className="variant-options" aria-label="选择原型方案">
-            {all.map((key) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={variant === key}
-                onClick={() => onVariant(key)}
-              >
-                {variant === key && (
-                  <motion.span
-                    className="variant-selection"
-                    layoutId="variant-selection"
-                    transition={softSpring}
-                  />
-                )}
-                <span className="variant-key">{variants[key].number}</span>
-                {variants[key].name}
-              </button>
-            ))}
-          </fieldset>
-        </LayoutGroup>
-        <IconButton
-          icon={ArrowRight}
-          label="下一版原型"
-          onClick={() => cycle(1)}
-        />
-        <span className="dock-divider" />
-        <button
-          type="button"
-          className="dock-action"
+      <span className="mode-summary" aria-live="polite">
+        {variants[variant].name} · {variants[variant].description}
+      </span>
+      <div className="prototype-tools">
+        <span className="prototype-state" aria-live="polite">
+          {draftCount ? `${draftCount} 位访客有草稿` : "演示数据 · 可自由操作"}
+        </span>
+        <Button
+          variant="ghost"
+          size="xs"
           aria-label="体验场景"
           onClick={onScenarios}
         >
-          <FlaskConical size={14} />
+          <FlaskConical data-icon="inline-start" />
           <span>体验场景</span>
-        </button>
-        <button
-          type="button"
-          className="dock-help"
-          aria-label="查看原型设计说明"
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
+          aria-label="查看接待模式说明"
           onClick={onHelp}
         >
-          <CircleHelp size={17} />
-        </button>
+          <CircleHelp data-icon="inline-start" />
+          <span>模式说明</span>
+        </Button>
       </div>
-      <span className="prototype-state" aria-live="polite">
-        {draftCount ? `${draftCount} 位访客有草稿` : "演示数据 · 可自由操作"}
-      </span>
     </footer>
   );
 }
@@ -108,15 +69,14 @@ export function DesignGuide({
   onClose: () => void;
 }) {
   return (
-    <Modal title="四种接待方式，继续探索" onClose={onClose} wide>
+    <Modal title="一个工作台，三种接待方式" onClose={onClose} wide>
       <p className="guide-lead">
-        经典界面 +
-        快速响应模式。同一批访客，比较四种接待方式；每位访客的草稿随切换保留。
+        在顶部选择自在、并肩或速答，按自己的节奏随时切换。同一批访客、同一段对话；当前回复对象、草稿、访客信息和固定窗口都随你保留。
       </p>
       <div className="guide-directions">
         {variantKeys.map((key) => (
           <article key={key} data-selected={key === variant}>
-            <span className="guide-letter">方案 {variants[key].number}</span>
+            <span className="guide-letter">接待模式</span>
             <h3>
               {variants[key].name}
               <small className="direction-subtitle">
@@ -125,14 +85,14 @@ export function DesignGuide({
             </h3>
             <p>{variants[key].angle}</p>
             <p>{variants[key].benefit}</p>
-            <div>{variants[key].question}</div>
+            <div>{variants[key].useWhen}</div>
           </article>
         ))}
       </div>
       <div className="guide-shared">
         <BookOpen size={18} />
         <p>
-          <strong>每一版共同遵守</strong>
+          <strong>换个布局，继续这段对话</strong>
           来访用户是一种统一的对象；来源徽标帮助识别渠道，气泡不随渠道变样。每段会话独立保存草稿，新消息不抢焦点。未提供的资料、未确认的投递结果不编造。
         </p>
       </div>
@@ -153,7 +113,7 @@ export function DesignGuide({
           <kbd>Alt 1 / 2</kbd>切换并行窗口
         </span>
         <span>
-          <kbd>← / →</kbd>切换方案（输入时除外）
+          <kbd>← / →</kbd>选择顶部模式，Enter 确认
         </span>
       </div>
       <p className="dialog-caption">
@@ -227,7 +187,7 @@ export function ScenarioPanel({
       <p className="guide-lead">
         当前回复对象：<strong>{visitor.name}</strong>
         <br />
-        可以先输入半句话，再触发新消息或切换方案。
+        可以先输入半句话，再触发新消息或切换接待模式。
       </p>
       <div className="scenario-list">
         {scenarios.map((scenario) => (

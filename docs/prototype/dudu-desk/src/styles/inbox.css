@@ -1,0 +1,417 @@
+.avatar {
+  @apply inline-flex relative rounded-md shrink-0 items-center justify-center;
+  width: 41px;
+  height: 41px;
+}
+.avatar > svg {
+  @apply w-full h-full overflow-hidden;
+  border-radius: inherit;
+}
+.avatar-small {
+  @apply rounded-md;
+  width: 29px;
+  height: 29px;
+}
+.avatar-large {
+  @apply rounded-xl;
+  width: 64px;
+  height: 64px;
+}
+.avatar-fallback {
+  @apply text-muted-foreground;
+  font-size: 18px;
+  font-weight: 600;
+}
+.avatar-large .avatar-fallback {
+  font-size: 24px;
+}
+.avatar-small .avatar-fallback {
+  font-size: 12px;
+}
+.avatar-source {
+  @apply absolute grid place-items-center bg-card rounded-sm;
+  right: -4px;
+  bottom: -3px;
+  width: 19px;
+  height: 19px;
+  border: 2px solid var(--border);
+  box-shadow: 0 0 0 2px var(--card);
+}
+.avatar-source > svg {
+  width: 12px;
+  height: 12px;
+}
+.redbook-glyph {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+.source-tag {
+  @apply inline-flex items-center whitespace-nowrap rounded-sm;
+  gap: 4px;
+  line-height: 16px;
+  width: fit-content;
+  font-size: 11px;
+  padding: 1px 5px;
+}
+.source-tag > svg {
+  width: 10px;
+  height: 10px;
+}
+.source-tag .redbook-glyph {
+  font-size: 9px;
+}
+.inbox-column {
+  @apply flex flex-col min-h-0 min-w-0 bg-transparent border-0;
+  border-right: 1px solid var(--border);
+}
+.inbox-title {
+  @apply flex items-center justify-between shrink-0;
+  height: 99px;
+  padding: 21px 23px 15px;
+}
+.inbox-title h1 {
+  @apply text-foreground;
+  letter-spacing: -0.8px;
+  font-size: 25px;
+  font-weight: 700;
+}
+.title-caption {
+  @apply block text-muted-foreground;
+  font-size: 11px;
+  letter-spacing: 0;
+  margin-top: 4px;
+}
+.inbox-mark {
+  @apply grid place-items-center bg-accent text-primary rounded-lg;
+  width: 34px;
+  height: 34px;
+  transform: rotate(-7deg);
+}
+.queue-tabs {
+  @apply flex shrink-0 items-center border-0;
+  border-bottom: 1px solid var(--border);
+  gap: 3px;
+  padding: 0 14px 4px;
+}
+.queue-tabs button {
+  @apply bg-transparent whitespace-nowrap text-muted-foreground relative border-0 rounded-md;
+  border-bottom: 2px solid transparent;
+  isolation: isolate;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.queue-tabs button[aria-pressed="true"] {
+  @apply text-primary bg-transparent;
+  border-bottom-color: var(--primary);
+  font-weight: 650;
+}
+.tab-count {
+  font-size: 11px;
+  margin-left: 4px;
+}
+.queue-tools {
+  @apply shrink-0;
+  padding: 12px 16px 7px;
+}
+.search-field {
+  @apply flex items-center text-muted-foreground rounded-md bg-muted;
+  gap: 8px;
+  border: 1px solid var(--border);
+  padding: 0 10px;
+  border-color: transparent;
+  height: 37px;
+  transition:
+    background-color 180ms,
+    border-color 180ms,
+    box-shadow 180ms;
+}
+.search-field input {
+  @apply border-0 bg-transparent flex-1 text-foreground;
+  outline: 0;
+  width: 0;
+  font-size: 12px;
+}
+.search-field:focus-within {
+  @apply bg-card;
+  border-color: color-mix(in srgb, var(--ring) 35%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.search-field input:focus-visible {
+  outline: none;
+}
+.search-field input::placeholder {
+  @apply text-muted-foreground;
+}
+.search-field kbd {
+  @apply whitespace-nowrap;
+  border: 1px solid var(--border);
+  padding: 0 3px;
+  font-family: inherit;
+  border-color: var(--border);
+  border-radius: calc(var(--radius) * 0.35);
+  font-size: 10px;
+}
+.queue-selects {
+  @apply flex items-center justify-between;
+  gap: 4px;
+  padding: 10px 0 0;
+}
+.queue-selects select {
+  @apply text-muted-foreground border-0 bg-transparent;
+  max-width: 50%;
+  outline-offset: 1px;
+  font-size: 11px;
+  min-height: 29px;
+}
+.queue-caption {
+  @apply flex justify-between text-muted-foreground;
+  padding: 13px 23px 6px;
+  font-size: 11px;
+  padding-top: 9px;
+}
+.conversation-list {
+  @apply min-h-0 flex-1 overflow-y-auto;
+  scrollbar-gutter: stable;
+  padding: 4px 10px 14px;
+}
+.conversation-row {
+  @apply relative rounded-lg;
+  transition: background 0.12s;
+  isolation: isolate;
+  margin: 3px 0;
+}
+.conversation-row:hover {
+  @apply bg-background;
+}
+.conversation-row.selected {
+  @apply bg-transparent;
+}
+.conversation-hit {
+  @apply flex items-start w-full text-left;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  padding: 14px 12px;
+  gap: 11px;
+}
+.conversation-content {
+  @apply flex-1 min-w-0;
+}
+.row-heading {
+  @apply flex items-center;
+  gap: 6px;
+  line-height: 17px;
+}
+.row-heading strong {
+  @apply overflow-hidden whitespace-nowrap;
+  font-weight: 630;
+  text-overflow: ellipsis;
+  font-size: 14px;
+}
+.wait-time {
+  @apply tabular-nums ml-auto whitespace-nowrap text-muted-foreground;
+  font-size: 10px;
+}
+.row-preview {
+  @apply block text-muted-foreground whitespace-nowrap overflow-hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.row-preview em {
+  @apply text-primary;
+  font-style: normal;
+}
+.row-meta {
+  @apply flex items-center;
+  gap: 6px;
+  min-height: 16px;
+  margin-top: 9px;
+}
+.row-topic {
+  @apply whitespace-nowrap overflow-hidden text-muted-foreground;
+  text-overflow: ellipsis;
+  font-size: 10px;
+}
+.unread-count {
+  @apply ml-auto text-primary-foreground grid place-items-center rounded-sm bg-primary;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  font-size: 10px;
+}
+.inbox-footer {
+  @apply shrink-0 flex items-center justify-between border-0 bg-card;
+  border-top: 1px solid var(--border);
+  gap: 8px;
+  height: 62px;
+  padding: 0 18px;
+}
+.inbox-footer > span {
+  @apply flex items-center text-muted-foreground;
+  gap: 5px;
+  font-size: 9px;
+}
+.inbox-footer > span i {
+  @apply bg-success;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.parallel-action {
+  @apply absolute bg-accent rounded-sm;
+  bottom: 7px;
+  right: 5px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  z-index: 1;
+}
+.conversation-row:hover .parallel-action {
+  opacity: 1;
+}
+.conversation-row:focus-within .parallel-action {
+  opacity: 1;
+}
+.row-compact .conversation-hit {
+  gap: 10px;
+  padding: 13px 8px;
+}
+.row-compact .avatar {
+  @apply rounded-lg;
+  width: 34px;
+  height: 34px;
+}
+.row-compact .row-heading strong {
+  font-size: 13px;
+}
+.row-compact .row-preview {
+  max-width: 150px;
+}
+.row-compact .row-meta {
+  margin-top: 6px;
+}
+.queue-tools-compact {
+  @apply flex items-center;
+  gap: 14px;
+  padding: 0;
+}
+.queue-tools-compact .search-field {
+  @apply bg-muted;
+  width: 185px;
+}
+.queue-tools-compact .queue-selects {
+  padding: 0;
+  gap: 12px;
+}
+.queue-tools-compact select {
+  max-width: 110px;
+}
+.parallel-queue .queue-tabs {
+  @apply border-0;
+  gap: 3px;
+  padding: 0 14px 4px;
+}
+.parallel-queue .queue-tabs button {
+  @apply relative border-0 rounded-md;
+  isolation: isolate;
+  font-size: 11px;
+  padding: 7px 8px;
+}
+.parallel-queue .queue-tools {
+  padding: 14px 12px 9px;
+}
+.parallel-queue .search-field kbd {
+  @apply hidden;
+}
+.parallel-picker .conversation-list {
+  @apply w-full;
+}
+.count-value {
+  @apply text-inherit tabular-nums;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.count-value > span {
+  @apply text-inherit tabular-nums;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.queue-tabs button:hover {
+  @apply text-foreground bg-muted;
+}
+.queue-tab-selection {
+  @apply absolute bg-accent;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+.row-selection {
+  @apply absolute bg-accent;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+.conversation-row.selected:hover {
+  @apply bg-transparent;
+}
+.conversation-row .row-selection {
+  @apply bg-accent;
+}
+.conversation-row .avatar {
+  @apply rounded-lg;
+}
+.row-compact .source-tag {
+  font-size: 10px;
+}
+.empty-state {
+  @apply flex items-center justify-center flex-col text-muted-foreground text-center;
+  min-height: 180px;
+  gap: 8px;
+  padding: 24px;
+}
+.empty-state small {
+  font-size: 11px;
+}
+.empty-mark {
+  @apply grid place-items-center text-primary bg-accent;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  margin-bottom: 5px;
+}
+.star-filled {
+  @apply text-warning-foreground;
+  fill: var(--warning-foreground);
+}
+.wait-urgent {
+  @apply text-warning-foreground;
+}
+@media (max-width: 1360px) and (min-width: 1091px) {
+  .parallel-queue .queue-tabs {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+}
+@media (max-width: 760px) {
+  .inbox-column {
+    @apply hidden;
+  }
+  .mobile-queue-open .inbox-column {
+    @apply flex absolute bg-card overflow-hidden;
+    top: 0;
+    bottom: 0;
+    left: 52px;
+    width: min(300px, calc(100vw - 70px));
+    z-index: 11;
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+    box-shadow: 12px 0 30px
+      color-mix(in srgb, var(--foreground) 15%, transparent);
+  }
+}
+@media (hover: none) {
+  .parallel-action {
+    opacity: 1;
+  }
+}

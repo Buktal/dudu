@@ -1,4 +1,4 @@
-// Four throwaway reception layouts, selected by ?variant=A|C|D|E (1, 3, 4, 5).
+// One prototype workspace with three reception modes: ?variant=A|C|E (1, 3, 5).
 
 import { MessageCircle } from "lucide-react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
@@ -8,15 +8,15 @@ import {
   type QueueOptions,
 } from "./features/inbox/conversation-list";
 import { useInbox } from "./features/inbox/use-inbox";
+import { readPalette, savePalette } from "./lib/theme-palette";
 import {
   DesignGuide,
   PrototypeDock,
   ScenarioPanel,
 } from "./prototype-controls";
+import { ReceptionToolbar } from "./reception-toolbar";
 import type { Variant } from "./types";
-import { variantKeys } from "./variant-registry";
 import { VariantA, type WorkspaceProps } from "./variants";
-import { VariantD } from "./variants/fold";
 import { VariantC } from "./variants/parallel";
 import { VariantE } from "./variants/stream";
 
@@ -24,7 +24,7 @@ function readVariant(): Variant {
   const value =
     new URLSearchParams(window.location.hash.slice(1)).get("variant") ??
     new URLSearchParams(window.location.search).get("variant");
-  return value === "C" || value === "D" || value === "E" ? value : "A";
+  return value === "C" || value === "E" ? value : "A";
 }
 const initialOptions: QueueOptions = {
   query: "",
@@ -36,6 +36,8 @@ const initialOptions: QueueOptions = {
 export default function App() {
   const inbox = useInbox();
   const [variant, setVariant] = useState<Variant>(readVariant);
+  const [palette, setPalette] = useState(readPalette);
+  const [currentId, setCurrentId] = useState("lin");
   const [primaryId, setPrimaryId] = useState("lin");
   const [companionId, setCompanionId] = useState("zhou");
   const [companionOpen, setCompanionOpen] = useState(true);
@@ -47,8 +49,6 @@ export default function App() {
   const [away, setAway] = useState(false);
   const [mobileQueue, setMobileQueue] = useState(false);
   const [resetVersion, setResetVersion] = useState(0);
-  const currentId =
-    variant === "C" && companionOpen && focus === 1 ? companionId : primaryId;
   const currentRef = useRef(currentId);
   currentRef.current = currentId;
   const visitor =
@@ -67,41 +67,35 @@ export default function App() {
     );
   }
   function changeVariant(value: Variant) {
-    if (variant === "C" && focus === 1 && value !== "C") {
-      setPrimaryId(companionId);
-      setCompanionId(primaryId);
-      setFocus(0);
+    if (value === variant) return;
+    if (value === "C") {
+      if (companionOpen && currentId === companionId) setFocus(1);
+      else {
+        setPrimaryId(currentId);
+        setFocus(0);
+      }
     }
     setVariant(value);
     setMobileQueue(false);
-    if (window.location.protocol === "file:")
-      window.location.hash = `variant=${value}`;
-    else {
-      const url = new URL(window.location.href);
-      url.searchParams.set("variant", value);
-      url.hash = "";
-      window.history.replaceState({}, "", url);
-    }
   }
   function select(id: string) {
     if (variant === "C") {
       if (companionOpen && id === companionId) setFocus(1);
       else {
-        if (id === companionId) setCompanionId(primaryId);
         setPrimaryId(id);
         setFocus(0);
       }
-    } else {
-      setPrimaryId(id);
-      if (id === companionId) setCompanionId(primaryId);
     }
+    setCurrentId(id);
     inbox.markRead(id);
     setMobileQueue(false);
   }
   function focusPane(slot: number) {
     if (slot === 1 && !companionOpen) return;
     setFocus(slot);
-    inbox.markRead(slot === 0 ? primaryId : companionId);
+    const id = slot === 0 ? primaryId : companionId;
+    setCurrentId(id);
+    inbox.markRead(id);
   }
   function next(fromId: string) {
     if (fromId !== currentRef.current) return;
@@ -115,10 +109,17 @@ export default function App() {
     } else inbox.notify("当前没有其他可以回复的待接待访客");
   }
   function parallel(id: string) {
-    if (id === primaryId) setPrimaryId(companionId);
+    if (id === primaryId) {
+      const other =
+        companionId !== id
+          ? companionId
+          : inbox.visitors.find((item) => item.id !== id)?.id;
+      if (other) setPrimaryId(other);
+    }
     setCompanionId(id);
     setCompanionOpen(true);
     setFocus(1);
+    setCurrentId(id);
     inbox.markRead(id);
     setMobileQueue(false);
     inbox.notify(
@@ -128,10 +129,12 @@ export default function App() {
   function closeCompanion() {
     setCompanionOpen(false);
     setFocus(0);
+    setCurrentId(primaryId);
     inbox.notify("已收起第二窗，访客的草稿仍然保留");
   }
   function reset() {
     inbox.reset();
+    setCurrentId("lin");
     setPrimaryId("lin");
     setCompanionId("zhou");
     setCompanionOpen(true);
@@ -141,17 +144,40 @@ export default function App() {
     setResetVersion((value) => value + 1);
   }
   useEffect(() => {
-    const update = () => setVariant(readVariant());
+    savePalette(palette);
+  }, [palette]);
+  useEffect(() => {
+    if (window.location.protocol === "file:")
+      window.location.hash = `variant=${variant}&palette=${palette}`;
+    else {
+      const url = new URL(window.location.href);
+      url.searchParams.set("variant", variant);
+      url.searchParams.set("palette", palette);
+      url.hash = "";
+      window.history.replaceState({}, "", url);
+    }
+  }, [variant, palette]);
+  useEffect(() => {
+    const update = () => {
+      changeVariant(readVariant());
+      setPalette(readPalette());
+    };
     window.addEventListener("popstate", update);
     window.addEventListener("hashchange", update);
     return () => {
       window.removeEventListener("popstate", update);
       window.removeEventListener("hashchange", update);
     };
-  }, []);
+  });
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
-      if (helpOpen || scenariosOpen) return;
+      if (
+        event.defaultPrevented ||
+        helpOpen ||
+        scenariosOpen ||
+        (event.target as HTMLElement).closest("dialog")
+      )
+        return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         search();
@@ -165,25 +191,6 @@ export default function App() {
         event.preventDefault();
         focusPane(Number(event.key) - 1);
         return;
-      }
-      const element = event.target as HTMLElement;
-      if (
-        element.closest("input,textarea,select,[contenteditable],dialog") ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.altKey
-      )
-        return;
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-        event.preventDefault();
-        const all = variantKeys;
-        changeVariant(
-          all[
-            (all.indexOf(variant) +
-              (event.key === "ArrowRight" ? 1 : all.length - 1)) %
-              all.length
-          ],
-        );
       }
     }
     window.addEventListener("keydown", keydown);
@@ -209,15 +216,28 @@ export default function App() {
     infoOpen,
     setInfoOpen,
     openHelp: () => setHelpOpen(true),
-    away,
-    toggleAway: () => setAway(!away),
     mobileQueue,
     toggleQueue: () => setMobileQueue(!mobileQueue),
     search,
   };
   return (
     <MotionConfig reducedMotion="user">
-      <div className="prototype-root" data-variant={variant}>
+      <div
+        className="prototype-root"
+        data-variant={variant}
+        data-palette={palette}
+      >
+        <ReceptionToolbar
+          variant={variant}
+          onVariant={changeVariant}
+          palette={palette}
+          onPalette={setPalette}
+          onToggleQueue={() => setMobileQueue(!mobileQueue)}
+          infoOpen={infoOpen}
+          onToggleInfo={() => setInfoOpen(!infoOpen)}
+          away={away}
+          onToggleAway={() => setAway(!away)}
+        />
         <motion.div
           className="workspace"
           key={`${variant}-${resetVersion}`}
@@ -229,15 +249,12 @@ export default function App() {
             <VariantA {...props} />
           ) : variant === "C" ? (
             <VariantC {...props} />
-          ) : variant === "D" ? (
-            <VariantD {...props} />
           ) : (
             <VariantE {...props} />
           )}
         </motion.div>
         <PrototypeDock
           variant={variant}
-          onVariant={changeVariant}
           onHelp={() => setHelpOpen(true)}
           onScenarios={() => setScenariosOpen(true)}
           draftCount={

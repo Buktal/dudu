@@ -1,14 +1,14 @@
-import { Columns2, Keyboard, PanelLeft, Pin, Plus, X } from "lucide-react";
+import { Pin, Plus, X } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { useState } from "react";
-import { Brand, Button, IconButton, Modal } from "../components/primitives";
+import { Button, Modal } from "../components/primitives";
 import { ChatPanel } from "../features/inbox/chat-panel";
 import {
   ConversationList,
   QueueTabs,
   QueueTools,
 } from "../features/inbox/conversation-list";
-import { AgentStatus, Details, type WorkspaceProps } from "../variants";
+import { Details, type WorkspaceProps } from "../variants";
 
 export function VariantC(props: WorkspaceProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -16,28 +16,6 @@ export function VariantC(props: WorkspaceProps) {
     <div
       className={`parallel-shell ${props.infoOpen ? "with-info" : ""} ${props.mobileQueue ? "mobile-queue-open" : ""}`}
     >
-      <header className="parallel-app-header">
-        <Brand />
-        <span className="header-divider" />
-        <div className="parallel-title">
-          <Columns2 size={16} />
-          <h1>并肩接待</h1>
-          <span>一位主接待，一位手动固定</span>
-        </div>
-        <div className="app-header-right">
-          <Button variant="ghost" size="sm" onClick={props.toggleQueue}>
-            <PanelLeft data-icon="inline-start" />
-            会话
-          </Button>
-          <span className="prototype-badge">交互原型</span>
-          <IconButton
-            icon={Keyboard}
-            label="并行接待快捷键"
-            onClick={props.openHelp}
-          />
-          <AgentStatus away={props.away} toggleAway={props.toggleAway} />
-        </div>
-      </header>
       <div className="parallel-workspace">
         <aside className="parallel-queue">
           <header>

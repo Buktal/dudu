@@ -44,6 +44,7 @@ export function Count({ value }: { value: number }) {
             value={value}
             startValue={initial.current}
             aria-hidden="true"
+            className="text-current tracking-normal"
           />
           <span className="sr-only">{value}</span>
         </>

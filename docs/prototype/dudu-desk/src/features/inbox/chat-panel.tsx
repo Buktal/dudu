@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar, SourceTag } from "../../components/identity";
 import { SoftReveal } from "../../components/motion";
 import { Button, IconButton } from "../../components/primitives";
-import { waitLabel } from "../../lib/time";
 import type { Visitor } from "../../types";
 import { Composer } from "./composer";
 import { MessageView } from "./message";
@@ -22,7 +21,7 @@ export function ChatPanel({
 }: {
   visitor: Visitor;
   inbox: Inbox;
-  mode?: "standard" | "focus" | "parallel" | "inline";
+  mode?: "standard" | "parallel";
   focused?: boolean;
   paneLabel?: string;
   onFocus: () => void;
@@ -127,21 +126,6 @@ export function ChatPanel({
           </Button>
         </div>
       </header>
-      {mode === "focus" && (
-        <div className="focus-context">
-          <span>
-            <i />
-            {visitor.status === "needs-reply"
-              ? "这位访客正在等你"
-              : "让每一段对话从容一点"}
-          </span>
-          <span>
-            {visitor.wait > 0
-              ? `已等待 ${waitLabel(visitor.wait)}`
-              : "消息已及时回复"}
-          </span>
-        </div>
-      )}
       <div
         ref={scroller}
         className="message-scroller"
@@ -191,7 +175,6 @@ export function ChatPanel({
         inbox={inbox}
         onFocus={onFocus}
         onNext={onNext}
-        focusMode={mode === "focus"}
       />
     </motion.section>
   );

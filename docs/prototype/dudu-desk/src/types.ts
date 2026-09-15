@@ -1,4 +1,4 @@
-export type Variant = "A" | "C" | "D" | "E";
+export type Variant = "A" | "C" | "E";
 export type ChannelKey =
   | "xiaohongshu"
   | "wechat"
