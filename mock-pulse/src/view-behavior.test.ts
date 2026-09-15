@@ -14,8 +14,7 @@ import { resolveViewEntry, VIEW_ENTRIES } from "./view-behavior";
 vi.mock("@/features/connections/api", () => ({
   loadConnections: vi.fn(),
   saveConnection: vi.fn(),
-  testDouyinConnection: vi.fn(),
-  testWecomConnection: vi.fn(),
+  testConnectionInvoke: vi.fn(),
 }));
 
 const apiMock = vi.mocked(connectionsApi, true);

@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { type ChannelId, isChannelId } from "@/lib/channels";
+
 /**
  * 抖音推送体系（与 Rust 端 DouyinSystem 内标一致，snake_case）：
  * 四套并行推送体系，验签与信封完全不同（事实库 §2）。
@@ -418,166 +420,50 @@ export function saveConnection(
   return invoke<ConnectionConfig[]>("connections_save", { config });
 }
 
-/** 按抖音连接的推送体系测试连接：dop/生活服务 challenge 握手、
- *  小游戏 verify_request 握手、服务商授权推送（目标回 success） */
-export function testDouyinConnection(
-  config: DouyinConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_douyin", { config });
-}
+/**
+ * 渠道连接测试的 IPC 命令分发表（单点）：Rust 侧 `#[tauri::command]` 具名函数
+ * 不动，前端 19 个 testXxxConnection 包装器收敛为按 channel 查表分发。
+ * 命令名 = connections_test_<渠道 id 的 snake_case>；新增渠道 = 注册表加渠道
+ * + 此表加一行（satisfies 穷尽：漏配时编译期报错）。各渠道握手/探针形态
+ * 锚定事实库（docs/research/channels/），文案见 channel-notes.ts。
+ */
+const TEST_COMMANDS = {
+  douyin: "connections_test_douyin", // dop/生活服务 challenge、小游戏 verify_request、服务商授权推送
+  wecom: "connections_test_wecom", // GET echostr 握手（AES 加密 + 四值字典序签名）
+  "wechat-mp": "connections_test_wechat_mp", // GET 三参握手（signature=sha1 字典序三参，回显 echostr）
+  "wechat-mini": "connections_test_wechat_mini", // GET 三参握手（与公众号同族）
+  feishu: "connections_test_feishu", // POST url_verification（1s 内回显 challenge；配 Encrypt Key 加密信封）
+  dingtalk: "connections_test_dingtalk", // 密文通道 check_url 握手 / 机器人通道 HmacSHA256 签名探测
+  qq: "connections_test_qq", // op13 验证回调（plain_token 回显 + Ed25519 签名回包）
+  weibo: "connections_test_weibo", // GET 四参握手（sha1 排序验签，官方 5 秒应答窗口）
+  xiaohongshu: "connections_test_xiaohongshu", // 小程序 GET 四参握手 / ark 最小推送探针
+  kuaishou: "connections_test_kuaishou", // TEST 事件握手（kwaisign = MD5(body+AppSecret)，回 200 + result=1）
+  taobao: "connections_test_taobao", // 全球栈 Verify（HTTP 200 即验证成功）
+  jingdong: "connections_test_jingdong", // 推送探针（POST 状态枚举样本 + JOS 系统参数与 MD5 签名）
+  pinduoduo: "connections_test_pinduoduo", // 推送探针（POST 订单状态样本 + client_id/timestamp/sign）
+  meituan: "connections_test_meituan", // 推送探针（POST 订单核验表单 + 尾部追加 app_id/timestamp/sig）
+  eleme: "connections_test_eleme", // 推送探针（POST 订单状态样本 + query 系统参数与 sig）
+  alipay: "connections_test_alipay", // 推送探针（POST 异步通知核验表单 + RSA2 sign）
+  whatsapp: "connections_test_whatsapp", // GET 三参握手（hub.mode=subscribe，匹配 200 裸回 challenge）
+  telegram: "connections_test_telegram", // Update 推送探针（恒等头 X-Telegram-Bot-Api-Secret-Token）
+  bilibili: "connections_test_bilibili", // verify_webhooks 握手（x-bili-* 签名头表，200 原样回 data）
+} as const satisfies Record<ChannelId, string>;
 
-/** 按企微 GET echostr 协议向目标发起握手（AES 加密 + 四值字典序签名） */
-export function testWecomConnection(
-  config: WecomConnectionConfig,
+/**
+ * 按渠道分发连接测试命令：探针语义同该渠道普通推送，期望值由 Rust 适配器
+ * 判定。运行时未知渠道（持久化文件混入注册表外 id）fail-safe 拒绝，
+ * 不静默路由到任何已知协议。
+ */
+export function testConnectionInvoke(
+  config: ConnectionConfig,
 ): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_wecom", { config });
-}
-
-/** 按公众号 GET 三参握手协议向目标发起 GET（signature=sha1(字典序三参)，
- *  目标须原样回显 echostr） */
-export function testWechatMpConnection(
-  config: WechatMpConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_wechat_mp", { config });
-}
-
-/** 按小程序 GET 三参握手协议向目标发起 GET（与公众号同族：
- *  signature=sha1(字典序三参)，目标须原样回显 echostr） */
-export function testWechatMiniConnection(
-  config: WechatMiniConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_wechat_mini", { config });
-}
-
-/** 按飞书 POST url_verification 协议测试连接（1 秒内原样回显 challenge；
- *  配 Encrypt Key 时发加密信封 + X-Lark-Signature 签名） */
-export function testFeishuConnection(
-  config: FeishuConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_feishu", { config });
-}
-
-/** 按钉钉通道测试连接：密文通道发 check_url 握手（期望 1500ms 内回加密
- *  success 包）；机器人通道发签名探测（timestamp/sign = HmacSHA256 头） */
-export function testDingtalkConnection(
-  config: DingtalkConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_dingtalk", { config });
-}
-
-/** 按 QQ op13 验证回调协议测试连接（目标须回 plain_token 回显 + Ed25519
- *  签名回包） */
-export function testQqConnection(
-  config: QqConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_qq", { config });
-}
-
-/** 按微博 GET 四参握手协议测试连接（signature=sha1(字典序排序三参)，
- *  目标须原样回显 echostr；官方 5 秒应答窗口） */
-export function testWeiboConnection(
-  config: WeiboConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_weibo", { config });
-}
-
-/** 按小红书通道测试连接：小程序通道发 GET 四参握手（三参 sha1 签名，目标
- *  原样回显 echostr）；ark 通道发最小推送探针（回 {"success":true,...}） */
-export function testXiaohongshuConnection(
-  config: XiaohongshuConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_xiaohongshu", { config });
-}
-
-/** 按快手 TEST 事件协议测试连接（官方配地址握手：POST TEST 事件 + header
- *  kwaisign = MD5(body+AppSecret)，目标须回 200 + result=1 并回传 message_id） */
-export function testKuaishouConnection(
-  config: KuaishouConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_kuaishou", { config });
-}
-
-/** 按全球栈 Verify 协议测试连接（官方配置页：填回调地址后 Verify，返回
- *  HTTP 200 即验证成功；探针带 Authorization = HEX(HMAC-SHA256(AppKey+body,
- *  AppSecret)) 头） */
-export function testTaobaoConnection(
-  config: TaobaoConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_taobao", { config });
-}
-
-/** 按京东推送探针协议测试连接（官方首次验证握手待核验(09-27)，探针语义同
- *  普通推送：POST 官方状态枚举样本明文 + 合规系统参数（app_key/timestamp/v/
- *  sign = UPPER(MD5(appSecret+字母序 k+v+appSecret))），期望 HTTP 200） */
-export function testJingdongConnection(
-  config: JingdongConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_jingdong", { config });
-}
-
-/** 按拼多多推送探针协议测试连接（官方验证握手待核验(09-27)，探针语义同
- *  普通推送：POST 官方订单状态样本明文 + query 公共参数 client_id/timestamp
- *  （UNIX 秒）与 sign = UPPER(MD5(client_secret+ASCII 排序 k+v+client_secret))，
- *  事实库 §4.1 官方向量已核验，期望 HTTP 200） */
-export function testPinduoduoConnection(
-  config: PinduoduoConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_pinduoduo", { config });
-}
-
-/** 按美团推送探针协议测试连接（官方验证握手正文待核验(09-27)，探针语义同
- *  普通推送：POST 官方订单核验样本表单 + 字段集尾部追加 app_id/timestamp 与
- *  sig = MD5(url?字母序 k=v 串 + app secret)，事实库 §4.1 官方向量已对拍，
- *  期望 HTTP 200） */
-export function testMeituanConnection(
-  config: MeituanConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_meituan", { config });
-}
-
-/** 按饿了么推送探针协议测试连接（官方无握手，探针语义同普通推送：POST 官方
- *  订单状态核验样本明文 + query 系统参数 consumer_key/timestamp 与
- *  sig = SHA1(HEX(url?字母序 k=v 串 + consumer_secret))，事实库 §4.1 官方
- *  五步，官方示例待签串已复现，期望 HTTP 200） */
-export function testElemeConnection(
-  config: ElemeConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_eleme", { config });
-}
-
-/** 按支付宝推送探针协议测试连接（官方网关验证握手细节待核验(09-27)，探针
- * 语义同普通推送：POST 官方支付异步通知核验样本表单 + sign =
- * Base64(RSA-SHA256(剔除 sign/sign_type 后字典序 k=v 串))（rsaCheckV1 语义，
- * 事实库 §4.1/§4.3），期望 HTTP 200） */
-export function testAlipayConnection(
-  config: AlipayConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_alipay", { config });
-}
-
-/** 按 WhatsApp GET 三参握手协议测试连接（官方配置保存即触发：GET 带
- *  hub.mode=subscribe + hub.challenge + hub.verify_token，verify_token 匹配
- *  则 200 裸回 challenge 纯文本非 JSON，不匹配 403） */
-export function testWhatsappConnection(
-  config: WhatsappConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_whatsapp", { config });
-}
-
-/** 按 Telegram 推送探针协议测试连接（官方无 challenge 握手：setWebhook 同步
- *  返回 True 即成功，事实库 §3.2——探针语义同普通推送：POST 官方 §5.2 样本
- *  Update 明文 + 恒等头 X-Telegram-Bot-Api-Secret-Token，期望 HTTP 2XY） */
-export function testTelegramConnection(
-  config: TelegramConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_telegram", { config });
-}
-
-/** 按 B站 verify_webhooks 握手协议测试连接（镜像口径 §3.2，配置保存失焦即
- *  触发：POST {"event":"verify_webhooks","content":{"data":<随机数>},
- *  "timestamp":…} + x-bili-* 签名头表，期望 HTTP 200 原样回 {"data":<数值>}） */
-export function testBilibiliConnection(
-  config: BilibiliConnectionConfig,
-): Promise<TestOutcome> {
-  return invoke<TestOutcome>("connections_test_bilibili", { config });
+  const command = isChannelId(config.channel)
+    ? TEST_COMMANDS[config.channel]
+    : undefined;
+  if (!command) {
+    return Promise.reject(
+      new Error(`未知渠道，无法路由测试命令：${String(config.channel)}`),
+    );
+  }
+  return invoke<TestOutcome>(command, { config });
 }

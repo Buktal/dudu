@@ -38,61 +38,9 @@ import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
 import type { ConnectionConfig } from "../api";
+import { channelTraits, channelWireFormat } from "../channel-traits";
 import * as actions from "../stores/connections-slice";
 import { ConnectionFields } from "./connection-fields";
-import {
-  alipayTestNote,
-  bilibiliTestNote,
-  dingtalkTestNote,
-  douyinTestNote,
-  elemeTestNote,
-  feishuTestNote,
-  jingdongTestNote,
-  kuaishouTestNote,
-  meituanTestNote,
-  pinduoduoTestNote,
-  qqTestNote,
-  taobaoTestNote,
-  telegramTestNote,
-  wechatMiniTestNote,
-  wechatMpTestNote,
-  wecomTestNote,
-  weiboTestNote,
-  whatsappTestNote,
-  xiaohongshuTestNote,
-} from "./test-notes";
-
-/** 回包信封形态标注：企微自建应用 XML、智能机器人 JSON、抖音/飞书/钉钉/QQ/微博/小红书/快手/淘宝/京东/饿了么 JSON、美团/支付宝表单、公众号 XML */
-function wireBadgeLabel(
-  channel: ChannelId,
-  draft: ConnectionConfig,
-): "JSON" | "XML" | "表单" {
-  if (
-    channel === "douyin" ||
-    channel === "feishu" ||
-    channel === "dingtalk" ||
-    channel === "qq" ||
-    channel === "weibo" ||
-    channel === "xiaohongshu" ||
-    channel === "kuaishou" ||
-    channel === "taobao" ||
-    channel === "jingdong" ||
-    channel === "pinduoduo" ||
-    channel === "eleme" ||
-    channel === "bilibili" ||
-    channel === "whatsapp" ||
-    channel === "telegram"
-  ) {
-    return "JSON";
-  }
-  if (channel === "meituan" || channel === "alipay") {
-    return "表单";
-  }
-  if (channel === "wecom" && draft.channel === "wecom") {
-    return draft.system === "aibot" ? "JSON" : "XML";
-  }
-  return "XML";
-}
 
 export function ConnectionsView() {
   const dispatch = useAppDispatch();
@@ -107,46 +55,11 @@ export function ConnectionsView() {
   const channel = state.selectedChannel;
   const platform = channelById(channel);
   const saved = state.items[channel];
+  // 无草稿且未保存过时回退渠道默认连接（定义随 channel-traits 表）
   const draft =
     state.drafts?.[channel] ??
     saved ??
-    (channel === "douyin"
-      ? actions.defaultDouyinConnection
-      : channel === "wechat-mp"
-        ? actions.defaultWechatMpConnection
-        : channel === "wechat-mini"
-          ? actions.defaultWechatMiniConnection
-          : channel === "feishu"
-            ? actions.defaultFeishuConnection
-            : channel === "dingtalk"
-              ? actions.defaultDingtalkConnection
-              : channel === "qq"
-                ? actions.defaultQqConnection
-                : channel === "weibo"
-                  ? actions.defaultWeiboConnection
-                  : channel === "xiaohongshu"
-                    ? actions.defaultXiaohongshuConnection
-                    : channel === "kuaishou"
-                      ? actions.defaultKuaishouConnection
-                      : channel === "taobao"
-                        ? actions.defaultTaobaoConnection
-                        : channel === "jingdong"
-                          ? actions.defaultJingdongConnection
-                          : channel === "pinduoduo"
-                            ? actions.defaultPinduoduoConnection
-                            : channel === "meituan"
-                              ? actions.defaultMeituanConnection
-                              : channel === "eleme"
-                                ? actions.defaultElemeConnection
-                                : channel === "bilibili"
-                                  ? actions.defaultBilibiliConnection
-                                  : channel === "alipay"
-                                    ? actions.defaultAlipayConnection
-                                    : channel === "whatsapp"
-                                      ? actions.defaultWhatsappConnection
-                                      : channel === "telegram"
-                                        ? actions.defaultTelegramConnection
-                                        : actions.defaultWecomConnection);
+    channelTraits(channel).defaultConnection;
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
@@ -267,7 +180,7 @@ export function ConnectionsView() {
               </CardDescription>
               <CardAction>
                 <Badge variant="outline">
-                  {wireBadgeLabel(channel, draft)}
+                  {channelWireFormat(channel, draft)}
                 </Badge>
               </CardAction>
             </CardHeader>
@@ -317,64 +230,7 @@ export function ConnectionsView() {
             <CardHeader>
               <CardTitle>验证连接</CardTitle>
               <CardDescription>
-                {channel === "douyin"
-                  ? douyinTestNote(
-                      draft.channel === "douyin" ? draft.system : "dop",
-                    )
-                  : channel === "wechat-mp"
-                    ? wechatMpTestNote(
-                        draft.channel === "wechat-mp" ? draft.mode : "plain",
-                      )
-                    : channel === "wechat-mini"
-                      ? wechatMiniTestNote(
-                          draft.channel === "wechat-mini"
-                            ? draft.mode
-                            : "plain",
-                        )
-                      : channel === "feishu"
-                        ? feishuTestNote(draft)
-                        : channel === "dingtalk"
-                          ? dingtalkTestNote(
-                              draft.channel === "dingtalk"
-                                ? draft.system
-                                : "http_crypto",
-                            )
-                          : channel === "qq"
-                            ? qqTestNote()
-                            : channel === "weibo"
-                              ? weiboTestNote()
-                              : channel === "xiaohongshu"
-                                ? xiaohongshuTestNote(
-                                    draft.channel === "xiaohongshu"
-                                      ? draft.system
-                                      : "miniapp",
-                                  )
-                                : channel === "kuaishou"
-                                  ? kuaishouTestNote()
-                                  : channel === "taobao"
-                                    ? taobaoTestNote()
-                                    : channel === "jingdong"
-                                      ? jingdongTestNote()
-                                      : channel === "pinduoduo"
-                                        ? pinduoduoTestNote()
-                                        : channel === "meituan"
-                                          ? meituanTestNote()
-                                          : channel === "eleme"
-                                            ? elemeTestNote()
-                                            : channel === "alipay"
-                                              ? alipayTestNote()
-                                              : channel === "whatsapp"
-                                                ? whatsappTestNote()
-                                                : channel === "bilibili"
-                                                  ? bilibiliTestNote()
-                                                  : channel === "telegram"
-                                                    ? telegramTestNote()
-                                                    : wecomTestNote(
-                                                        draft.channel ===
-                                                          "wecom"
-                                                          ? draft.system
-                                                          : "agent",
-                                                      )}
+                {channelTraits(channel).testNote(draft)}
               </CardDescription>
               <CardAction>
                 <Button

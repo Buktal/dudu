@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   type AlipayConnectionConfig,
@@ -18,25 +18,7 @@ import {
   saveConnection,
   type TaobaoConnectionConfig,
   type TelegramConnectionConfig,
-  testAlipayConnection,
-  testBilibiliConnection,
-  testDingtalkConnection,
-  testDouyinConnection,
-  testElemeConnection,
-  testFeishuConnection,
-  testJingdongConnection,
-  testKuaishouConnection,
-  testMeituanConnection,
-  testPinduoduoConnection,
-  testQqConnection,
-  testTaobaoConnection,
-  testTelegramConnection,
-  testWechatMiniConnection,
-  testWechatMpConnection,
-  testWecomConnection,
-  testWeiboConnection,
-  testWhatsappConnection,
-  testXiaohongshuConnection,
+  testConnectionInvoke,
   type WechatMiniConnectionConfig,
   type WechatMpConnectionConfig,
   type WecomConnectionConfig,
@@ -202,6 +184,10 @@ const telegramConfig: TelegramConnectionConfig = {
 };
 
 describe("connections api 契约", () => {
+  beforeEach(() => {
+    invokeMock.mockClear();
+  });
+
   it("loadConnections 调用 connections_load 命令", async () => {
     invokeMock.mockResolvedValueOnce([douyinConfig]);
     await expect(loadConnections()).resolves.toEqual([douyinConfig]);
@@ -216,197 +202,41 @@ describe("connections api 契约", () => {
     });
   });
 
-  it("testDouyinConnection 调用 connections_test_douyin 并透传配置", async () => {
-    const outcome = { ok: true, message: "challenge 回显一致" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testDouyinConnection(douyinConfig)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_douyin", {
-      config: douyinConfig,
-    });
-  });
+  it.each([
+    ["douyin", "connections_test_douyin", douyinConfig],
+    ["wecom", "connections_test_wecom", wecomConfig],
+    ["wechat-mp", "connections_test_wechat_mp", wechatMpConfig],
+    ["wechat-mini", "connections_test_wechat_mini", wechatMiniConfig],
+    ["feishu", "connections_test_feishu", feishuConfig],
+    ["dingtalk", "connections_test_dingtalk", dingtalkConfig],
+    ["qq", "connections_test_qq", qqConfig],
+    ["weibo", "connections_test_weibo", weiboConfig],
+    ["xiaohongshu", "connections_test_xiaohongshu", xiaohongshuConfig],
+    ["kuaishou", "connections_test_kuaishou", kuaishouConfig],
+    ["taobao", "connections_test_taobao", taobaoConfig],
+    ["jingdong", "connections_test_jingdong", jingdongConfig],
+    ["pinduoduo", "connections_test_pinduoduo", pinduoduoConfig],
+    ["meituan", "connections_test_meituan", meituanConfig],
+    ["eleme", "connections_test_eleme", elemeConfig],
+    ["alipay", "connections_test_alipay", alipayConfig],
+    ["whatsapp", "connections_test_whatsapp", whatsappConfig],
+    ["telegram", "connections_test_telegram", telegramConfig],
+    ["bilibili", "connections_test_bilibili", bilibiliConfig],
+  ] as const)(
+    "%s 渠道路由到 %s 并透传配置",
+    async (_channel, command, config) => {
+      const outcome = { ok: true, message: "探针被接受" };
+      invokeMock.mockResolvedValueOnce(outcome);
+      await expect(testConnectionInvoke(config)).resolves.toEqual(outcome);
+      expect(invokeMock).toHaveBeenCalledWith(command, { config });
+    },
+  );
 
-  it("testWecomConnection 调用 connections_test_wecom 并透传配置", async () => {
-    const outcome = { ok: true, message: "echostr 握手成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testWecomConnection(wecomConfig)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_wecom", {
-      config: wecomConfig,
-    });
-  });
-
-  it("testWechatMpConnection 调用 connections_test_wechat_mp 并透传配置", async () => {
-    const outcome = { ok: true, message: "echostr 握手成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testWechatMpConnection(wechatMpConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_wechat_mp", {
-      config: wechatMpConfig,
-    });
-  });
-
-  it("testWechatMiniConnection 调用 connections_test_wechat_mini 并透传配置", async () => {
-    const outcome = { ok: true, message: "echostr 握手成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testWechatMiniConnection(wechatMiniConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_wechat_mini", {
-      config: wechatMiniConfig,
-    });
-  });
-
-  it("testFeishuConnection 调用 connections_test_feishu 并透传配置", async () => {
-    const outcome = { ok: true, message: "challenge 原样回显" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testFeishuConnection(feishuConfig)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_feishu", {
-      config: feishuConfig,
-    });
-  });
-
-  it("testDingtalkConnection 调用 connections_test_dingtalk 并透传配置", async () => {
-    const outcome = { ok: true, message: "check_url 握手成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testDingtalkConnection(dingtalkConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_dingtalk", {
-      config: dingtalkConfig,
-    });
-  });
-
-  it("testQqConnection 调用 connections_test_qq 并透传配置", async () => {
-    const outcome = { ok: true, message: "op13 验证回调握手成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testQqConnection(qqConfig)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_qq", {
-      config: qqConfig,
-    });
-  });
-
-  it("testWeiboConnection 调用 connections_test_weibo 并透传配置", async () => {
-    const outcome = { ok: true, message: "echostr 握手成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testWeiboConnection(weiboConfig)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_weibo", {
-      config: weiboConfig,
-    });
-  });
-
-  it("testXiaohongshuConnection 调用 connections_test_xiaohongshu 并透传配置", async () => {
-    const outcome = { ok: true, message: "echostr 握手成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testXiaohongshuConnection(xiaohongshuConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_xiaohongshu", {
-      config: xiaohongshuConfig,
-    });
-  });
-
-  it("testKuaishouConnection 调用 connections_test_kuaishou 并透传配置", async () => {
-    const outcome = { ok: true, message: "TEST 事件握手成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testKuaishouConnection(kuaishouConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_kuaishou", {
-      config: kuaishouConfig,
-    });
-  });
-
-  it("testTaobaoConnection 调用 connections_test_taobao 并透传配置", async () => {
-    const outcome = { ok: true, message: "Verify 验证成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testTaobaoConnection(taobaoConfig)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_taobao", {
-      config: taobaoConfig,
-    });
-  });
-
-  it("testJingdongConnection 调用 connections_test_jingdong 并透传配置", async () => {
-    const outcome = { ok: true, message: "推送探针被接受" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testJingdongConnection(jingdongConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_jingdong", {
-      config: jingdongConfig,
-    });
-  });
-
-  it("testPinduoduoConnection 调用 connections_test_pinduoduo 并透传配置", async () => {
-    const outcome = { ok: true, message: "推送探针被接受" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testPinduoduoConnection(pinduoduoConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_pinduoduo", {
-      config: pinduoduoConfig,
-    });
-  });
-
-  it("testMeituanConnection 调用 connections_test_meituan 并透传配置", async () => {
-    const outcome = { ok: true, message: "推送探针被接受" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testMeituanConnection(meituanConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_meituan", {
-      config: meituanConfig,
-    });
-  });
-
-  it("testElemeConnection 调用 connections_test_eleme 并透传配置", async () => {
-    const outcome = { ok: true, message: "推送探针被接受" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testElemeConnection(elemeConfig)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_eleme", {
-      config: elemeConfig,
-    });
-  });
-
-  it("testAlipayConnection 调用 connections_test_alipay 并透传配置", async () => {
-    const outcome = { ok: true, message: "推送探针被接受" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testAlipayConnection(alipayConfig)).resolves.toEqual(outcome);
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_alipay", {
-      config: alipayConfig,
-    });
-  });
-
-  it("testBilibiliConnection 调用 connections_test_bilibili 并透传配置", async () => {
-    const outcome = { ok: true, message: "verify_webhooks 握手成功" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testBilibiliConnection(bilibiliConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_bilibili", {
-      config: bilibiliConfig,
-    });
-  });
-
-  it("testWhatsappConnection 调用 connections_test_whatsapp 并透传配置", async () => {
-    const outcome = { ok: true, message: "challenge 裸回一致" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testWhatsappConnection(whatsappConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_whatsapp", {
-      config: whatsappConfig,
-    });
-  });
-
-  it("testTelegramConnection 调用 connections_test_telegram 并透传配置", async () => {
-    const outcome = { ok: true, message: "Update 推送探针被接受" };
-    invokeMock.mockResolvedValueOnce(outcome);
-    await expect(testTelegramConnection(telegramConfig)).resolves.toEqual(
-      outcome,
-    );
-    expect(invokeMock).toHaveBeenCalledWith("connections_test_telegram", {
-      config: telegramConfig,
-    });
+  it("未知渠道 fail-safe 拒绝：不触任何 invoke、不静默走错协议", async () => {
+    // 运行时兜底防线：样例取注册表外 id（知乎无推送不入表，事实库结论）
+    const rogue = { channel: "zhihu" } as unknown as ConnectionConfig;
+    await expect(testConnectionInvoke(rogue)).rejects.toThrow("未知渠道");
+    expect(invokeMock).not.toHaveBeenCalled();
   });
 
   it("saveConnection 的返回列表可同时携带抖音/企微/小红书/公众号/小程序/飞书/钉钉/QQ/微博/快手/淘宝/京东/拼多多/美团/饿了么/B站/支付宝/WhatsApp/Telegram（按 channel 区分形状）", async () => {

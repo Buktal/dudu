@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/native-select";
 import { cn } from "@/lib/utils";
 import type { ConnectionConfig } from "../api";
+import { channelTraits } from "../channel-traits";
 import {
   DINGTALK_SYSTEMS,
   DOUYIN_SYSTEMS,
@@ -21,11 +22,11 @@ import {
   WECOM_SYSTEMS,
   XIAOHONGSHU_SYSTEMS,
 } from "./connection-options";
-import { credentialFieldsOf } from "./credential-fields";
 
 /**
- * 连接表单的凭证字段区：字段构建器在 ./credential-fields（按渠道/通道拆分），
- * 本组件只负责推送通道选择器与控件渲染（secret 字段走掩码输入）。
+ * 连接表单的凭证字段区：字段定义查 channel-traits 渠道描述表（构建器在
+ * ../channel-credentials[-trade]），本组件只负责推送通道选择器与控件渲染
+ * （secret 字段走掩码输入）。
  */
 
 /** 抖音推送体系选择器（四套体系并行且验签完全不同） */
@@ -256,7 +257,7 @@ export function ConnectionFields({
   draft: ConnectionConfig;
   onEdit: (key: string, value: string) => void;
 }) {
-  const fields = credentialFieldsOf(draft);
+  const fields = channelTraits(draft.channel).credentialFields(draft);
   const systemSelector =
     draft.channel === "douyin" ? (
       <DouyinSystemSelector draft={draft} onEdit={onEdit} />

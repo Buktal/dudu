@@ -3,6 +3,10 @@ export type {
   DouyinConnectionConfig,
   WecomConnectionConfig,
 } from "./api";
+export {
+  defaultDouyinConnection,
+  defaultWecomConnection,
+} from "./channel-defaults";
 export { ConnectionsView } from "./components/connections-view";
 export type {
   ConnectionsState,
@@ -12,8 +16,6 @@ export type {
 export {
   connectionsReducer,
   connectionsSlice,
-  defaultDouyinConnection,
-  defaultWecomConnection,
   discardConnectionDraft,
   fetchConnections,
   initialConnectionsState,

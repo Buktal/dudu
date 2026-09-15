@@ -6,13 +6,14 @@ import type {
   WechatMpMode,
   WecomSystem,
   XiaohongshuSystem,
-} from "../api";
+} from "./api";
 
 /**
  * 「验证连接」卡片说明文案的按渠道构建器（纯数据，无 JSX）：
  * 握手/探针形态随渠道（推送体系/通道/模式）变化，文案锚定各渠道事实库
  * （docs/research/channels/）。自 connections-view.tsx 按职责拆出
- * （单文件 ≤ 500 行，#46 随支付宝接入拆分）。
+ * （单文件 ≤ 500 行，#46 随支付宝接入拆分）；code-review 退件后自
+ * components/ 移入 features 根，作为 channel-traits 表的数据行。
  */
 
 /** 抖音握手文案按推送体系呈现（事实库 §3.1/§3.4：四套体系握手形态不同） */

@@ -1,6 +1,5 @@
 import type {
   BilibiliConnectionConfig,
-  ConnectionConfig,
   DingtalkConnectionConfig,
   DouyinConnectionConfig,
   FeishuConnectionConfig,
@@ -13,28 +12,29 @@ import type {
   WeiboConnectionConfig,
   WhatsappConnectionConfig,
   XiaohongshuConnectionConfig,
-} from "../api";
-import {
-  alipayFields,
-  type CredentialField,
-  elemeFields,
-  jingdongFields,
-  meituanFields,
-  pinduoduoFields,
-  taobaoFields,
-} from "./credential-fields-trade";
+} from "./api";
 
 /**
- * 连接凭证字段的按渠道构建器（纯数据，无 JSX）：每个渠道/通道一个函数，
+ * 平台/IM 系渠道的凭证字段构建器（纯数据，无 JSX）：每个渠道/通道一个函数，
  * 返回表单字段描述列表（key 即配置键，secret 决定掩码控件）。
- * 从 connection-fields.tsx 按职责拆出（单文件 ≤ 500 行）；平台/IM 系渠道
- * 构建器在本模块，电商/交易系（淘宝/京东/拼多多/美团/饿了么/支付宝）在
- * ./credential-fields-trade（#46 随支付宝接入拆分）；控件渲染与推送通道
- * 选择器留在 connection-fields.tsx。
+ * 自 components/credential-fields.ts 移入 features 根并改为 channel-traits
+ * 表的数据行（code-review 退件：凭证字段定义随渠道描述表聚合，消费点查表）；
+ * 电商/交易系（淘宝/京东/拼多多/美团/饿了么/支付宝）在
+ * ./channel-credentials-trade。标签/说明锚定各渠道事实库
+ * （docs/research/channels/）。
  */
 
+/** 表单字段的构建形态：key 对应配置字段名，secret 走掩码输入 */
+export type CredentialField = {
+  key: string;
+  label: string;
+  note: string;
+  value: string;
+  secret: boolean;
+};
+
 /** 按推送体系取凭证字段：标签随体系语义变化，存储字段保持稳定 */
-function douyinFields(draft: DouyinConnectionConfig): CredentialField[] {
+export function douyinFields(draft: DouyinConnectionConfig): CredentialField[] {
   switch (draft.system) {
     case "mini_game":
       return [
@@ -108,7 +108,7 @@ function douyinFields(draft: DouyinConnectionConfig): CredentialField[] {
 }
 
 /** 按推送通道取凭证字段：机器人通道加密 receiveid 恒为空串，不收 CorpID/AgentID */
-function wecomFields(draft: WecomConnectionConfig): CredentialField[] {
+export function wecomFields(draft: WecomConnectionConfig): CredentialField[] {
   if (draft.system === "aibot") {
     return [
       {
@@ -160,7 +160,9 @@ function wecomFields(draft: WecomConnectionConfig): CredentialField[] {
 }
 
 /** 公众号按消息加解密方式取凭证字段：明文模式无需 EncodingAESKey（可留空） */
-function wechatMpFields(draft: WechatMpConnectionConfig): CredentialField[] {
+export function wechatMpFields(
+  draft: WechatMpConnectionConfig,
+): CredentialField[] {
   const fields = [
     {
       key: "appId",
@@ -190,7 +192,7 @@ function wechatMpFields(draft: WechatMpConnectionConfig): CredentialField[] {
 }
 
 /** 小程序按消息加解密方式取凭证字段：与公众号同族，明文模式 AESKey 可空 */
-function wechatMiniFields(
+export function wechatMiniFields(
   draft: WechatMiniConnectionConfig,
 ): CredentialField[] {
   const fields = [
@@ -222,7 +224,9 @@ function wechatMiniFields(
 }
 
 /** 钉钉按推送通道取凭证字段：密文通道三元组，机器人通道 Client Secret */
-function dingtalkFields(draft: DingtalkConnectionConfig): CredentialField[] {
+export function dingtalkFields(
+  draft: DingtalkConnectionConfig,
+): CredentialField[] {
   if (draft.system === "bot") {
     return [
       {
@@ -260,7 +264,7 @@ function dingtalkFields(draft: DingtalkConnectionConfig): CredentialField[] {
 }
 
 /** 飞书凭证字段（事实库 §4）：Encrypt Key 留空 = 明文直发，填写 = 签名 + 加密信封 */
-function feishuFields(draft: FeishuConnectionConfig): CredentialField[] {
+export function feishuFields(draft: FeishuConnectionConfig): CredentialField[] {
   return [
     {
       key: "appId",
@@ -287,7 +291,7 @@ function feishuFields(draft: FeishuConnectionConfig): CredentialField[] {
 }
 
 /** QQ 凭证字段（事实库 §4/§6）：AppSecret 即 Ed25519 验签密钥；老 Token 已废弃 */
-function qqFields(draft: QqConnectionConfig): CredentialField[] {
+export function qqFields(draft: QqConnectionConfig): CredentialField[] {
   return [
     {
       key: "appId",
@@ -307,7 +311,7 @@ function qqFields(draft: QqConnectionConfig): CredentialField[] {
 }
 
 /** 微博凭证字段（事实库 §4.1）：验签密钥是 APPKEY 对应的 App Secret，非自定义 Token */
-function weiboFields(draft: WeiboConnectionConfig): CredentialField[] {
+export function weiboFields(draft: WeiboConnectionConfig): CredentialField[] {
   return [
     {
       key: "appSecret",
@@ -320,7 +324,7 @@ function weiboFields(draft: WeiboConnectionConfig): CredentialField[] {
 }
 
 /** 小红书按推送通道取凭证字段：小程序三元组，ark 明文直发无凭据 */
-function xiaohongshuFields(
+export function xiaohongshuFields(
   draft: XiaohongshuConnectionConfig,
 ): CredentialField[] {
   if (draft.system === "ark") {
@@ -352,7 +356,9 @@ function xiaohongshuFields(
 }
 
 /** 快手凭证字段（事实库 §4.1）：kwaisign = MD5(原始 body + AppSecret) 头验签 */
-function kuaishouFields(draft: KuaishouConnectionConfig): CredentialField[] {
+export function kuaishouFields(
+  draft: KuaishouConnectionConfig,
+): CredentialField[] {
   return [
     {
       key: "appId",
@@ -375,7 +381,9 @@ function kuaishouFields(draft: KuaishouConnectionConfig): CredentialField[] {
  * WhatsApp 凭证字段（事实库 §3.2/§4.1）：App Secret 为 X-Hub-Signature-256
  * 头验签密钥，Verify Token 为 GET 三参握手比对值——两个无关值，缺一不可。
  */
-function whatsappFields(draft: WhatsappConnectionConfig): CredentialField[] {
+export function whatsappFields(
+  draft: WhatsappConnectionConfig,
+): CredentialField[] {
   return [
     {
       key: "appSecret",
@@ -399,7 +407,9 @@ function whatsappFields(draft: WhatsappConnectionConfig): CredentialField[] {
  * X-Telegram-Bot-Api-Secret-Token 的头值——官方验证链路的唯一要素，
  * 原样比对无 HMAC；接收服务若未配置 secret 则无需校验该头。
  */
-function telegramFields(draft: TelegramConnectionConfig): CredentialField[] {
+export function telegramFields(
+  draft: TelegramConnectionConfig,
+): CredentialField[] {
   return [
     {
       key: "secretToken",
@@ -415,7 +425,9 @@ function telegramFields(draft: TelegramConnectionConfig): CredentialField[] {
  * B站凭证字段（事实库 §4.2/§6）：client_id 即签名头表 x-bili-accesskeyid，
  * secret 为 HMAC-SHA256 签名密钥——两者缺一签名不可复算。
  */
-function bilibiliFields(draft: BilibiliConnectionConfig): CredentialField[] {
+export function bilibiliFields(
+  draft: BilibiliConnectionConfig,
+): CredentialField[] {
   return [
     {
       key: "clientId",
@@ -432,54 +444,4 @@ function bilibiliFields(draft: BilibiliConnectionConfig): CredentialField[] {
       secret: true,
     },
   ];
-}
-
-/** 按渠道取凭证字段构建器（与 ConnectionFields 的渠道分支同序） */
-export function credentialFieldsOf(draft: ConnectionConfig): CredentialField[] {
-  switch (draft.channel) {
-    case "douyin":
-      return douyinFields(draft);
-    case "wechat-mp":
-      return wechatMpFields(draft);
-    case "wechat-mini":
-      return wechatMiniFields(draft);
-    case "feishu":
-      return feishuFields(draft);
-    case "dingtalk":
-      return dingtalkFields(draft);
-    case "qq":
-      return qqFields(draft);
-    case "weibo":
-      return weiboFields(draft);
-    case "xiaohongshu":
-      return xiaohongshuFields(draft);
-    case "kuaishou":
-      return kuaishouFields(draft);
-    case "taobao":
-      return taobaoFields(draft);
-    case "jingdong":
-      return jingdongFields(draft);
-    case "pinduoduo":
-      return pinduoduoFields(draft);
-    case "meituan":
-      return meituanFields(draft);
-    case "eleme":
-      return elemeFields(draft);
-    case "alipay":
-      return alipayFields(draft);
-    case "whatsapp":
-      return whatsappFields(draft);
-    case "telegram":
-      return telegramFields(draft);
-    case "bilibili":
-      return bilibiliFields(draft);
-    case "wecom":
-      return wecomFields(draft);
-    default: {
-      // 穷尽守卫：新增渠道漏配字段构建器时编译期报错
-      const exhaustive: never = draft;
-      void exhaustive;
-      return [];
-    }
-  }
 }

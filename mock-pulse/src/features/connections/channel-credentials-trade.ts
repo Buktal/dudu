@@ -5,23 +5,16 @@ import type {
   MeituanConnectionConfig,
   PinduoduoConnectionConfig,
   TaobaoConnectionConfig,
-} from "../api";
+} from "./api";
+import type { CredentialField } from "./channel-credentials";
 
 /**
  * 电商/交易系渠道的凭证字段构建器（纯数据，无 JSX）：淘宝/京东/拼多多/美团/
- * 饿了么/支付宝六渠道——自 credential-fields.ts 按职责拆出（单文件 ≤ 500 行，
- * #46 随支付宝接入拆分）；共享的表单字段形态也在此声明（router 单向依赖本
- * 模块，无循环）。标签/说明锚定各渠道事实库（docs/research/channels/）。
+ * 饿了么/支付宝六渠道——自 components/credential-fields-trade.ts 移入
+ * features 根（#46 随支付宝接入拆分出的模块，code-review 退件后归入
+ * channel-traits 表的数据行）；共享的表单字段形态（CredentialField）在
+ * ./channel-credentials。标签/说明锚定各渠道事实库（docs/research/channels/）。
  */
-
-/** 表单字段的构建形态：key 对应配置字段名，secret 走掩码输入 */
-export type CredentialField = {
-  key: string;
-  label: string;
-  note: string;
-  value: string;
-  secret: boolean;
-};
 
 /** 淘宝凭证字段（事实库 §4.2，全球栈 HTTPS 回调）：消息体 = AppKey + body，密钥 = AppSecret */
 export function taobaoFields(draft: TaobaoConnectionConfig): CredentialField[] {

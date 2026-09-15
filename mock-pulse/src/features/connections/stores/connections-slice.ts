@@ -7,48 +7,12 @@ import {
 import type { ChannelId } from "@/lib/channels";
 
 import {
-  type AlipayConnectionConfig,
-  type BilibiliConnectionConfig,
   type ConnectionConfig,
-  type DingtalkConnectionConfig,
-  type DouyinConnectionConfig,
-  type ElemeConnectionConfig,
-  type FeishuConnectionConfig,
-  type JingdongConnectionConfig,
-  type KuaishouConnectionConfig,
   loadConnections,
-  type MeituanConnectionConfig,
-  type PinduoduoConnectionConfig,
-  type QqConnectionConfig,
   saveConnection as saveConnectionApi,
-  type TaobaoConnectionConfig,
-  type TelegramConnectionConfig,
-  testAlipayConnection as testAlipayApi,
-  testBilibiliConnection as testBilibiliApi,
-  testDingtalkConnection as testDingtalkApi,
-  testDouyinConnection as testDouyinApi,
-  testElemeConnection as testElemeApi,
-  testFeishuConnection as testFeishuApi,
-  testJingdongConnection as testJingdongApi,
-  testKuaishouConnection as testKuaishouApi,
-  testMeituanConnection as testMeituanApi,
-  testPinduoduoConnection as testPinduoduoApi,
-  testQqConnection as testQqApi,
-  testTaobaoConnection as testTaobaoApi,
-  testTelegramConnection as testTelegramApi,
-  testWechatMiniConnection as testWechatMiniApi,
-  testWechatMpConnection as testWechatMpApi,
-  testWecomConnection as testWecomApi,
-  testWeiboConnection as testWeiboApi,
-  testWhatsappConnection as testWhatsappApi,
-  testXiaohongshuConnection as testXiaohongshuApi,
-  type WechatMiniConnectionConfig,
-  type WechatMpConnectionConfig,
-  type WecomConnectionConfig,
-  type WeiboConnectionConfig,
-  type WhatsappConnectionConfig,
-  type XiaohongshuConnectionConfig,
+  testConnectionInvoke,
 } from "../api";
+import { DEFAULT_CONNECTIONS } from "../channel-defaults";
 
 export type TestStatus = "idle" | "testing" | "success" | "failed";
 
@@ -66,200 +30,14 @@ export type ConnectionsState = {
   drafts?: Partial<Record<ChannelId, ConnectionConfig>>;
 };
 
-/** 原型默认值：本地联调回调地址，凭据留空（dop 体系起步） */
-export const defaultDouyinConnection: DouyinConnectionConfig = {
-  channel: "douyin",
-  url: "http://127.0.0.1:8080/webhooks/douyin",
-  system: "dop",
-  clientKey: "",
-  clientSecret: "",
-  miniGameToken: "",
-  isvToken: "",
-  isvKey: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（自建应用 XML 通道起步） */
-export const defaultWecomConnection: WecomConnectionConfig = {
-  channel: "wecom",
-  url: "http://127.0.0.1:8080/webhooks/wecom",
-  system: "agent",
-  corpId: "",
-  token: "",
-  encodingAesKey: "",
-  agentId: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（官方默认明文模式起步） */
-export const defaultWechatMpConnection: WechatMpConnectionConfig = {
-  channel: "wechat-mp",
-  url: "http://127.0.0.1:8080/webhooks/wechat-mp",
-  appId: "",
-  token: "",
-  encodingAesKey: "",
-  mode: "plain",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（明文模式 + XML 数据格式起步） */
-export const defaultWechatMiniConnection: WechatMiniConnectionConfig = {
-  channel: "wechat-mini",
-  url: "http://127.0.0.1:8080/webhooks/wechat-mini",
-  appId: "",
-  token: "",
-  encodingAesKey: "",
-  mode: "plain",
-  dataFormat: "xml",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（新 HTTP 密文事件回调起步） */
-export const defaultDingtalkConnection: DingtalkConnectionConfig = {
-  channel: "dingtalk",
-  url: "http://127.0.0.1:8080/webhooks/dingtalk",
-  system: "http_crypto",
-  token: "",
-  encodingAesKey: "",
-  ownerKey: "",
-  appSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（Encrypt Key 留空 = 明文直发起步） */
-export const defaultFeishuConnection: FeishuConnectionConfig = {
-  channel: "feishu",
-  url: "http://127.0.0.1:8080/webhooks/feishu",
-  appId: "",
-  verificationToken: "",
-  encryptKey: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（Ed25519 验签密钥起步） */
-export const defaultQqConnection: QqConnectionConfig = {
-  channel: "qq",
-  url: "http://127.0.0.1:8080/webhooks/qq",
-  appId: "",
-  appSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（App Secret 验签起步） */
-export const defaultWeiboConnection: WeiboConnectionConfig = {
-  channel: "weibo",
-  url: "http://127.0.0.1:8080/webhooks/weibo",
-  appSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（小程序客服消息通道起步） */
-export const defaultXiaohongshuConnection: XiaohongshuConnectionConfig = {
-  channel: "xiaohongshu",
-  url: "http://127.0.0.1:8080/webhooks/xiaohongshu",
-  system: "miniapp",
-  token: "",
-  encodingAesKey: "",
-  appId: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（kwaisign MD5 验签起步） */
-export const defaultKuaishouConnection: KuaishouConnectionConfig = {
-  channel: "kuaishou",
-  url: "http://127.0.0.1:8080/webhooks/kuaishou",
-  appId: "",
-  appSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（全球栈 HMAC-SHA256 验签起步） */
-export const defaultTaobaoConnection: TaobaoConnectionConfig = {
-  channel: "taobao",
-  url: "http://127.0.0.1:8080/webhooks/taobao",
-  appKey: "",
-  appSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（JOS MD5 签名起步） */
-export const defaultJingdongConnection: JingdongConnectionConfig = {
-  channel: "jingdong",
-  url: "http://127.0.0.1:8080/webhooks/jingdong",
-  appKey: "",
-  appSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（PMC UPPER(MD5) 签名起步） */
-export const defaultPinduoduoConnection: PinduoduoConnectionConfig = {
-  channel: "pinduoduo",
-  url: "http://127.0.0.1:8080/webhooks/pinduoduo",
-  clientId: "",
-  clientSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（合作中心 MD5(url?字母序+secret) 签名起步） */
-export const defaultMeituanConnection: MeituanConnectionConfig = {
-  channel: "meituan",
-  url: "http://127.0.0.1:8080/webhooks/meituan",
-  appId: "",
-  appSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（用户线 SHA1 五步签名起步） */
-export const defaultElemeConnection: ElemeConnectionConfig = {
-  channel: "eleme",
-  url: "http://127.0.0.1:8080/webhooks/eleme",
-  consumerKey: "",
-  consumerSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（x-bili-* 头表 HMAC-SHA256 验签起步） */
-export const defaultBilibiliConnection: BilibiliConnectionConfig = {
-  channel: "bilibili",
-  url: "http://127.0.0.1:8080/webhooks/bilibili",
-  clientId: "",
-  clientSecret: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（异步通知 RSA2 验签起步） */
-export const defaultAlipayConnection: AlipayConnectionConfig = {
-  channel: "alipay",
-  url: "http://127.0.0.1:8080/webhooks/alipay",
-  appId: "",
-  appPrivateKey: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（X-Hub-Signature-256 验签起步） */
-export const defaultWhatsappConnection: WhatsappConnectionConfig = {
-  channel: "whatsapp",
-  url: "http://127.0.0.1:8080/webhooks/whatsapp",
-  appSecret: "",
-  verifyToken: "",
-};
-
-/** 原型默认值：本地联调回调地址，凭据留空（恒等头原样比对起步） */
-export const defaultTelegramConnection: TelegramConnectionConfig = {
-  channel: "telegram",
-  url: "http://127.0.0.1:8080/webhooks/telegram",
-  secretToken: "",
-};
-
 function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
   return Object.fromEntries(list.map((config) => [config.channel, config]));
 }
 
 export const initialConnectionsState: ConnectionsState = {
-  items: {
-    douyin: defaultDouyinConnection,
-    wecom: defaultWecomConnection,
-    xiaohongshu: defaultXiaohongshuConnection,
-    "wechat-mp": defaultWechatMpConnection,
-    "wechat-mini": defaultWechatMiniConnection,
-    feishu: defaultFeishuConnection,
-    dingtalk: defaultDingtalkConnection,
-    qq: defaultQqConnection,
-    weibo: defaultWeiboConnection,
-    kuaishou: defaultKuaishouConnection,
-    taobao: defaultTaobaoConnection,
-    jingdong: defaultJingdongConnection,
-    pinduoduo: defaultPinduoduoConnection,
-    meituan: defaultMeituanConnection,
-    eleme: defaultElemeConnection,
-    bilibili: defaultBilibiliConnection,
-    alipay: defaultAlipayConnection,
-    whatsapp: defaultWhatsappConnection,
-    telegram: defaultTelegramConnection,
-  },
+  // 初始占位连接按渠道描述表逐行铺开（url 预填本地联调地址、凭据留空，
+  // 定义见 ../channel-defaults）
+  items: { ...DEFAULT_CONNECTIONS },
   loaded: false,
   test: { status: "idle", message: "" },
   testsByChannel: {},
@@ -281,56 +59,15 @@ export const saveConnection = createAsyncThunk(
   },
 );
 
-/** 测试连接按渠道路由到对应协议命令（抖音 challenge / 企微 echostr /
- *  公众号与小程序三参签名 GET / 飞书 url_verification POST challenge）。
- *  switch 穷尽：新增渠道漏配路由时编译期报错；运行时未知渠道 fail-safe 拒绝。 */
+/**
+ * 测试连接：IPC 命令按渠道路由收敛在 api 层单点分发
+ * （testConnectionInvoke → connections_test_*，Rust 具名命令不动）。
+ * 运行时未知渠道由分发器 fail-safe 拒绝，不静默走错协议。
+ */
 export const testConnection = createAsyncThunk(
   "connections/test",
   async (config: ConnectionConfig) => {
-    switch (config.channel) {
-      case "douyin":
-        return testDouyinApi(config);
-      case "wecom":
-        return testWecomApi(config);
-      case "wechat-mp":
-        return testWechatMpApi(config);
-      case "wechat-mini":
-        return testWechatMiniApi(config);
-      case "feishu":
-        return testFeishuApi(config);
-      case "dingtalk":
-        return testDingtalkApi(config);
-      case "qq":
-        return testQqApi(config);
-      case "weibo":
-        return testWeiboApi(config);
-      case "xiaohongshu":
-        return testXiaohongshuApi(config);
-      case "kuaishou":
-        return testKuaishouApi(config);
-      case "taobao":
-        return testTaobaoApi(config);
-      case "jingdong":
-        return testJingdongApi(config);
-      case "pinduoduo":
-        return testPinduoduoApi(config);
-      case "meituan":
-        return testMeituanApi(config);
-      case "eleme":
-        return testElemeApi(config);
-      case "bilibili":
-        return testBilibiliApi(config);
-      case "alipay":
-        return testAlipayApi(config);
-      case "whatsapp":
-        return testWhatsappApi(config);
-      case "telegram":
-        return testTelegramApi(config);
-      default: {
-        const exhaustive: never = config;
-        throw new Error(`未知渠道，无法路由测试命令：${String(exhaustive)}`);
-      }
-    }
+    return testConnectionInvoke(config);
   },
 );
 

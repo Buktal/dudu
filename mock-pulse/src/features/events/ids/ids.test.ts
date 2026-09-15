@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-
+import { schemaById } from "../schemas";
 import {
   applyGeneratedIds,
   generateCreateTimeMs,
@@ -8,8 +8,7 @@ import {
   generateLogId,
   generateMsgId64,
   generateOpenId,
-} from "./ids";
-import { schemaById } from "./schemas";
+} from "./index";
 
 describe("官方 ID 形态生成", () => {
   it("open_id 为 uuid v4 风格小写十六进制", () => {
