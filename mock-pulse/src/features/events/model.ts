@@ -89,42 +89,9 @@ export function latestVersion(event: EventItem): EventVersion | undefined {
   return event.versions[event.versions.length - 1];
 }
 
-/**
- * 步骤引用解析核心（runs 运行时钟 / scenarios 展示时钟共用的下钻单点）：
- * {eventId, revision} → {事件, 版本}。任一缺失返回 undefined——
- * 缺失语义（运行时钟抛错拒绝启动 / 展示时钟 missing·outdated 标记）
- * 由调用侧决定，本函数只做查找。events 不反向依赖任何 feature。
- */
-export function resolveEventVersion(
-  events: readonly EventItem[],
-  ref: { readonly eventId: string; readonly revision: number },
-): { event: EventItem | undefined; version: EventVersion | undefined } {
-  const event = events.find((item) => item.id === ref.eventId);
-  const version = event?.versions.find(
-    (candidate) => candidate.revision === ref.revision,
-  );
-  return { event, version };
-}
-
-/**
- * 模板引用解析核心（与 resolveEventVersion 并列的模板下钻单点，ADR-0009）：
- * {templateId, templateVersion} → 模板。钉住语义的数据基础：注册表同一模板
- * 允许并存多个版本条目（升版 = 追加新条目，旧条目原样保留），按
- * id + version 精确匹配；未命中（未注册 id / 超前或已更替版本）返回
- * undefined——缺失语义（运行时钟抛错拒绝启动 / 展示时钟 missing 标记）
- * 由调用侧决定，本函数只做查找。templates 不反向依赖任何 feature。
- */
-export function resolveTemplateVersion(
-  templates: readonly EventSchema[],
-  ref: { readonly templateId: string; readonly templateVersion: string },
-): { template: EventSchema | undefined } {
-  const template = templates.find(
-    (candidate) =>
-      candidate.id === ref.templateId &&
-      candidate.version === ref.templateVersion,
-  );
-  return { template };
-}
+// 步骤引用解析核心住在 ./resolve（C4：查找与缺失含义同一模块）；
+// 经此处再导出，既有调用（barrel / model.test.ts）不受影响。
+export { resolveEventVersion, resolveTemplateVersion } from "./resolve";
 
 /** 装载已保存事件为草稿：基于最新版本。 */
 export function draftFromItem(event: EventItem): EventDraft {

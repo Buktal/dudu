@@ -230,7 +230,7 @@ describe("testConnection 按渠道分发", () => {
     // 拒绝本体在 testConnectionInvoke（见 ../api.test.ts），此处验 slice 落态
     const rogue = { channel: "zhihu" } as unknown as ConnectionConfig;
     vi.mocked(testConnectionInvoke).mockRejectedValueOnce(
-      new Error("未知渠道，无法路由测试命令：zhihu"),
+      new Error("未知渠道，无法测试连接：zhihu"),
     );
     const store = makeStore();
 

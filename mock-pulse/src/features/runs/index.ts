@@ -23,6 +23,14 @@ export { lastRunFor } from "./selectors";
 export { materializeRunSnapshot, type RunSnapshot } from "./snapshot";
 export { directDispatch } from "./stores/direct-dispatch";
 export {
+  type LaunchState,
+  type LaunchStore,
+  launchDirectRun,
+  launchProjectedRun,
+  type ProjectedLaunch,
+  type ProjectedOutcome,
+} from "./stores/launch";
+export {
   type LiveRun,
   liveFromPlanSnapshot,
   liveStarted,

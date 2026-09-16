@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import { type ChannelId, isChannelId } from "@/lib/channels";
+import { isChannelId } from "@/lib/channels";
 
 /**
  * 抖音推送体系（与 Rust 端 DouyinSystem 内标一致，snake_case）：
@@ -421,49 +421,19 @@ export function saveConnection(
 }
 
 /**
- * 渠道连接测试的 IPC 命令分发表（单点）：Rust 侧 `#[tauri::command]` 具名函数
- * 不动，前端 19 个 testXxxConnection 包装器收敛为按 channel 查表分发。
- * 命令名 = connections_test_<渠道 id 的 snake_case>；新增渠道 = 注册表加渠道
- * + 此表加一行（satisfies 穷尽：漏配时编译期报错）。各渠道握手/探针形态
- * 锚定事实库（docs/research/channels/），文案见 channel-notes.ts。
- */
-const TEST_COMMANDS = {
-  douyin: "connections_test_douyin", // dop/生活服务 challenge、小游戏 verify_request、服务商授权推送
-  wecom: "connections_test_wecom", // GET echostr 握手（AES 加密 + 四值字典序签名）
-  "wechat-mp": "connections_test_wechat_mp", // GET 三参握手（signature=sha1 字典序三参，回显 echostr）
-  "wechat-mini": "connections_test_wechat_mini", // GET 三参握手（与公众号同族）
-  feishu: "connections_test_feishu", // POST url_verification（1s 内回显 challenge；配 Encrypt Key 加密信封）
-  dingtalk: "connections_test_dingtalk", // 密文通道 check_url 握手 / 机器人通道 HmacSHA256 签名探测
-  qq: "connections_test_qq", // op13 验证回调（plain_token 回显 + Ed25519 签名回包）
-  weibo: "connections_test_weibo", // GET 四参握手（sha1 排序验签，官方 5 秒应答窗口）
-  xiaohongshu: "connections_test_xiaohongshu", // 小程序 GET 四参握手 / ark 最小推送探针
-  kuaishou: "connections_test_kuaishou", // TEST 事件握手（kwaisign = MD5(body+AppSecret)，回 200 + result=1）
-  taobao: "connections_test_taobao", // 全球栈 Verify（HTTP 200 即验证成功）
-  jingdong: "connections_test_jingdong", // 推送探针（POST 状态枚举样本 + JOS 系统参数与 MD5 签名）
-  pinduoduo: "connections_test_pinduoduo", // 推送探针（POST 订单状态样本 + client_id/timestamp/sign）
-  meituan: "connections_test_meituan", // 推送探针（POST 订单核验表单 + 尾部追加 app_id/timestamp/sig）
-  eleme: "connections_test_eleme", // 推送探针（POST 订单状态样本 + query 系统参数与 sig）
-  alipay: "connections_test_alipay", // 推送探针（POST 异步通知核验表单 + RSA2 sign）
-  whatsapp: "connections_test_whatsapp", // GET 三参握手（hub.mode=subscribe，匹配 200 裸回 challenge）
-  telegram: "connections_test_telegram", // Update 推送探针（恒等头 X-Telegram-Bot-Api-Secret-Token）
-  bilibili: "connections_test_bilibili", // verify_webhooks 握手（x-bili-* 签名头表，200 原样回 data）
-} as const satisfies Record<ChannelId, string>;
-
-/**
- * 按渠道分发连接测试命令：探针语义同该渠道普通推送，期望值由 Rust 适配器
- * 判定。运行时未知渠道（持久化文件混入注册表外 id）fail-safe 拒绝，
+ * 按渠道连接测试（单点）：Rust 侧握手入口已收敛为单个 `connections_test`
+ * 命令，渠道差异由适配器注册表在命令内路由（ADR-0001）。未知渠道
+ * （持久化文件混入注册表外 id）在前端 fail-safe 拒绝——Rust 侧的
+ * ConnectionConfig 枚举反序列化同样拒收未知渠道，双层防线，
  * 不静默路由到任何已知协议。
  */
 export function testConnectionInvoke(
   config: ConnectionConfig,
 ): Promise<TestOutcome> {
-  const command = isChannelId(config.channel)
-    ? TEST_COMMANDS[config.channel]
-    : undefined;
-  if (!command) {
+  if (!isChannelId(config.channel)) {
     return Promise.reject(
-      new Error(`未知渠道，无法路由测试命令：${String(config.channel)}`),
+      new Error(`未知渠道，无法测试连接：${String(config.channel)}`),
     );
   }
-  return invoke<TestOutcome>(command, { config });
+  return invoke<TestOutcome>("connections_test", { config });
 }

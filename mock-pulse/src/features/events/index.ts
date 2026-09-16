@@ -21,6 +21,12 @@ export {
   RECEIPT_BODY_MODES,
 } from "./receipt";
 export {
+  describeEventVersion,
+  describeTemplateVersion,
+  type EventRefStatus,
+  type TemplateRefStatus,
+} from "./resolve";
+export {
   EVENT_SCHEMAS,
   type EventSchema,
   schemaById,

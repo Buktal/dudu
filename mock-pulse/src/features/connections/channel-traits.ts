@@ -94,6 +94,8 @@ import {
  * 属性——凭证字段定义、必填集判定、默认连接、回包信封形态、「验证连接」文案。
  * 表是数据，消费点是通用逻辑：新增渠道 = 注册表加渠道 + 各数据模块加构建器
  * + 此表加一行，不再改任何共享分支（code-review 退件：消灭渠道 switch 级联）。
+ * 初始占位连接表 DEFAULT_CONNECTIONS 由此表行内 defaultConnection 派生，
+ * 不再手写第二张表（两表同不同步曾是必漏的坑）。
  */
 
 /** 回包信封形态标注（连接卡片徽标；文案即展示值） */
@@ -266,6 +268,17 @@ export function channelTraits<C extends ChannelId>(
   // 行按 channel 键入（satisfies 穷尽校验），键与配置形状在这里对齐
   return CHANNEL_TRAITS[channel] as unknown as ChannelTrait<ConfigOfChannel<C>>;
 }
+
+/**
+ * 初始占位连接表：由上表各行 defaultConnection 派生（slice 初始化铺开用）。
+ * 派生而非手写——加渠道只改 CHANNEL_TRAITS，不再同步第二张逐行表。
+ */
+export const DEFAULT_CONNECTIONS: Record<ChannelId, ConnectionConfig> =
+  Object.fromEntries(
+    (Object.entries(CHANNEL_TRAITS) as [ChannelId, ChannelTrait][]).map(
+      ([channel, trait]) => [channel, trait.defaultConnection],
+    ),
+  ) as Record<ChannelId, ConnectionConfig>;
 
 /**
  * 运行时未知渠道（持久化文件混入注册表外 id）返回 undefined，调用方

@@ -12,7 +12,7 @@ import {
   saveConnection as saveConnectionApi,
   testConnectionInvoke,
 } from "../api";
-import { DEFAULT_CONNECTIONS } from "../channel-defaults";
+import { DEFAULT_CONNECTIONS } from "../channel-traits";
 
 export type TestStatus = "idle" | "testing" | "success" | "failed";
 
@@ -36,7 +36,7 @@ function itemsFrom(list: ConnectionConfig[]): Record<string, ConnectionConfig> {
 
 export const initialConnectionsState: ConnectionsState = {
   // 初始占位连接按渠道描述表逐行铺开（url 预填本地联调地址、凭据留空，
-  // 定义见 ../channel-defaults）
+  // 定义见 ../channel-traits，由各行 defaultConnection 派生）
   items: { ...DEFAULT_CONNECTIONS },
   loaded: false,
   test: { status: "idle", message: "" },
@@ -60,8 +60,8 @@ export const saveConnection = createAsyncThunk(
 );
 
 /**
- * 测试连接：IPC 命令按渠道路由收敛在 api 层单点分发
- * （testConnectionInvoke → connections_test_*，Rust 具名命令不动）。
+ * 测试连接：握手入口在 Rust 侧已收敛为单个 connections_test 命令
+ * （testConnectionInvoke 直调，渠道差异由适配器注册表路由）。
  * 运行时未知渠道由分发器 fail-safe 拒绝，不静默走错协议。
  */
 export const testConnection = createAsyncThunk(

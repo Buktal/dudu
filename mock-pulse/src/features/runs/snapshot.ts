@@ -1,10 +1,10 @@
 import {
+  describeEventVersion,
+  describeTemplateVersion,
   EVENT_SCHEMAS,
   type EventItem,
   type EventSchema,
   type ExpectedReceipt,
-  resolveEventVersion,
-  resolveTemplateVersion,
   schemaById,
   wireBodyText,
 } from "@/features/events";
@@ -81,14 +81,12 @@ export function materializeRunSnapshot(input: {
   }
   const steps = scenario.steps.map((step, index) => {
     if ("templateId" in step) {
-      // 模板引用解析核心共用（events 域 resolveTemplateVersion）；钉住的
-      // 版本不在注册表（未注册 id / 超前或已更替）按缺失抛可读错误，拒绝启动。
-      const { template } = resolveTemplateVersion(templates, step);
-      if (!template) {
-        const registered = templates.some(
-          (item) => item.id === step.templateId,
-        );
-        if (!registered) {
+      // 模板引用分类共用（events 域 describeTemplateVersion：未注册 id 与
+      // 钉住版本不在注册表的区分住在数据侧）；缺失语义（抛可读错误，
+      // 拒绝启动）留在本运行时钟。
+      const status = describeTemplateVersion(templates, step);
+      if (status.status !== "ok") {
+        if (status.status === "template-missing") {
           throw new Error(
             `第 ${index + 1} 步引用的内置模板不存在：${step.templateId}。先删除该步骤或更新剧本。`,
           );
@@ -97,6 +95,7 @@ export function materializeRunSnapshot(input: {
           `第 ${index + 1} 步引用的模板版本不存在：${templateName(templates, step.templateId)} v${step.templateVersion}。`,
         );
       }
+      const template = status.template;
       if (template.channelId !== scenario.channelId) {
         throw new Error(
           `第 ${index + 1} 步引用了${channelName(template.channelId)}的内置模板：${template.id}（剧本渠道为${channelName(scenario.channelId)}）。`,
@@ -112,24 +111,26 @@ export function materializeRunSnapshot(input: {
         ...(step.wait === undefined ? {} : { wait: step.wait }),
       };
     }
-    // 引用解析核心共用（events 域 resolveEventVersion）；缺失语义（抛错
+    // 引用分类共用（events 域 describeEventVersion）；缺失语义（抛错
     // 拒绝启动、不产半成品快照）留在本运行时钟。
-    const { event, version: referenced } = resolveEventVersion(events, step);
-    if (!event) {
+    const refStatus = describeEventVersion(events, step);
+    if (refStatus.status === "event-missing") {
       throw new Error(
         `第 ${index + 1} 步引用的事件不存在：${step.eventId}。先删除该步骤或调整素材库。`,
       );
     }
+    const event = refStatus.event;
     if (event.channelId !== scenario.channelId) {
       throw new Error(
         `第 ${index + 1} 步引用了${channelName(event.channelId)}的事件：${event.name}（剧本渠道为${channelName(scenario.channelId)}）。`,
       );
     }
-    if (!referenced) {
+    if (refStatus.status === "revision-missing") {
       throw new Error(
         `第 ${index + 1} 步引用的版本不存在：${event.name} v${step.revision}。`,
       );
     }
+    const referenced = refStatus.version;
     const schema = schemaById(event.schemaId);
     return {
       eventName: event.name,

@@ -54,7 +54,13 @@ export function ChannelPicker(props: Props) {
           {props.value === "all" ? "全部平台" : channelById(props.value)?.name}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent alignItemWithTrigger={false}>
+      <SelectContent
+        alignItemWithTrigger={false}
+        // 19 个平台全量展开时上限约 9 行出内滚：裸 var(--available-height)
+        // 在定位首帧未写入时整条 max-h 声明失效、弹窗按全高测量
+        // （见 Base UI useAnchorPositioning 的 min(x, var(...)) 建议）。
+        className="max-h-[min(20rem,var(--available-height,100dvh))]"
+      >
         <SelectGroup>
           {items.map((item) => (
             <SelectItem key={item.value} value={item.value}>

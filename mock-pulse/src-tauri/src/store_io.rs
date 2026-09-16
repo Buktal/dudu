@@ -43,3 +43,25 @@ pub(crate) fn save_json_atomic<T: serde::Serialize + ?Sized>(
     fs::write(&tmp, raw)?;
     fs::rename(&tmp, path)
 }
+
+/// 命名单文件域读（C5）：目录 + 文件名 → join 后走 [`load_json`]。
+/// 单文件布局的域（connections/events/runs/definitions）经此收敛，各自
+/// 只保留文件名常量与 `*_file()` 路径函数（测试 legacy 夹具写盘与存在
+/// 断言用）；目录型布局（plans/scenarios）不走这里，另有扫描语义。
+pub(crate) fn load_named<T: serde::de::DeserializeOwned + Default>(
+    dir: &Path,
+    file_name: &str,
+) -> std::io::Result<T> {
+    load_json(&dir.join(file_name))
+}
+
+/// 命名单文件域原子写（C5）：目录 + 文件名 → join 后走
+/// [`save_json_atomic`]。
+pub(crate) fn save_named<T: serde::Serialize + ?Sized>(
+    dir: &Path,
+    file_name: &str,
+    value: &T,
+) -> std::io::Result<()> {
+    let path = dir.join(file_name);
+    save_json_atomic(dir, &path, value)
+}

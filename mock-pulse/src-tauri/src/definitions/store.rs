@@ -1,18 +1,14 @@
 //! 字段说明持久化：`field-definitions.json` 存于应用数据目录，camelCase 契约。
 //! 文件读写函数接受目录参数，测试用临时目录；先写临时文件再原子替换。
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::{DefinitionsDoc, StoredSchemaDefinition};
 
 const FILE_NAME: &str = "field-definitions.json";
 
-pub fn definitions_file(dir: &Path) -> PathBuf {
-    dir.join(FILE_NAME)
-}
-
 pub fn load_definitions(dir: &Path) -> std::io::Result<DefinitionsDoc> {
-    crate::store_io::load_json(&definitions_file(dir))
+    crate::store_io::load_named(dir, FILE_NAME)
 }
 
 /// 按 schemaId 整体覆写该模板的用户定义（原子写），返回保存后的完整文档。
@@ -24,7 +20,7 @@ pub fn save_definition(
     let mut doc = load_definitions(dir)?;
     doc.schemas.insert(schema_id.to_string(), definition);
 
-    crate::store_io::save_json_atomic(dir, &definitions_file(dir), &doc)?;
+    crate::store_io::save_named(dir, FILE_NAME, &doc)?;
     Ok(doc)
 }
 
@@ -33,6 +29,7 @@ mod tests {
     use super::*;
     use serde_json::Value;
     use std::fs;
+    use std::path::PathBuf;
 
     fn temp_dir(tag: &str) -> PathBuf {
         let dir = std::env::temp_dir()
@@ -111,7 +108,7 @@ mod tests {
     fn document_uses_camel_case_contract() {
         let dir = temp_dir("camel");
         save_definition(&dir, "dy-text", dy_text_definition()).unwrap();
-        let raw = fs::read_to_string(definitions_file(&dir)).unwrap();
+        let raw = fs::read_to_string(dir.join(FILE_NAME)).unwrap();
         let doc: Value = serde_json::from_str(&raw).unwrap();
 
         // 顶层键：schemas；条目键：schemaId/version/fields（camelCase）
@@ -160,7 +157,7 @@ mod tests {
         // 旧版本文件：条目只有 schemaId，无 version/fields——缺省读入不炸
         let dir = temp_dir("legacy");
         fs::write(
-            definitions_file(&dir),
+            dir.join(FILE_NAME),
             r#"{"schemas":{"dy-text":{"schemaId":"dy-text"}}}"#,
         )
         .unwrap();

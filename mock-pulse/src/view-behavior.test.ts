@@ -6,7 +6,12 @@ import {
   setConnectionDraft,
 } from "@/features/connections";
 import * as connectionsApi from "@/features/connections/api";
-import { discardDraft, eventsReducer, startDraft } from "@/features/events";
+import {
+  discardDraft,
+  eventsReducer,
+  setDraftName,
+  startDraft,
+} from "@/features/events";
 import type { AppDispatch, RootState } from "@/store";
 import { appReducer, type ViewId } from "@/stores/app-slice";
 import { resolveViewEntry, VIEW_ENTRIES } from "./view-behavior";
@@ -67,6 +72,10 @@ describe("视图行为注册表（view-behavior）", () => {
 
     store.dispatch(startDraft({ name: "新客问价", schemaId: "dy-text" }));
     expect(behavior.draftName?.(root())).toBe("新客问价");
+    // 未动手不算脏：点模板即脏曾误拦切换（DraftGuard 误报）
+    expect(behavior.isDirty(root())).toBe(false);
+
+    store.dispatch(setDraftName("新客问价·改"));
     expect(behavior.isDirty(root())).toBe(true);
 
     store.dispatch(discardDraft());

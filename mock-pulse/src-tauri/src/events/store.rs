@@ -1,22 +1,18 @@
 //! 事件素材库的本地文件持久化：events.json 存于应用数据目录。
 //! 文件读写函数接受目录参数，测试用临时目录。
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::StoredEvent;
 
 const FILE_NAME: &str = "events.json";
 
-pub fn events_file(dir: &Path) -> PathBuf {
-    dir.join(FILE_NAME)
-}
-
 pub fn load_events(dir: &Path) -> std::io::Result<Vec<StoredEvent>> {
-    crate::store_io::load_json(&events_file(dir))
+    crate::store_io::load_named(dir, FILE_NAME)
 }
 
 pub fn save_events(dir: &Path, events: &[StoredEvent]) -> std::io::Result<()> {
-    crate::store_io::save_json_atomic(dir, &events_file(dir), events)
+    crate::store_io::save_named(dir, FILE_NAME, events)
 }
 
 #[cfg(test)]
@@ -24,6 +20,7 @@ mod tests {
     use super::super::{ExpectedReceipt, StoredVersion};
     use super::*;
     use std::fs;
+    use std::path::PathBuf;
     use serde_json::json;
 
     fn temp_dir(tag: &str) -> PathBuf {
@@ -115,7 +112,7 @@ mod tests {
     fn file_uses_camel_case_keys_for_frontend_contract() {
         let dir = temp_dir("camel");
         save_events(&dir, &[sample_event()]).unwrap();
-        let raw = fs::read_to_string(events_file(&dir)).unwrap();
+        let raw = fs::read_to_string(dir.join(FILE_NAME)).unwrap();
         assert!(raw.contains("\"channelId\""));
         assert!(raw.contains("\"schemaId\""));
         assert!(raw.contains("\"savedAt\""));
@@ -132,7 +129,7 @@ mod tests {
         event.versions[0].payload = json!({ "zebra": 1, "alpha": { "m": 2, "a": 1 } });
         save_events(&dir, &[event]).unwrap();
 
-        let raw = fs::read_to_string(events_file(&dir)).unwrap();
+        let raw = fs::read_to_string(dir.join(FILE_NAME)).unwrap();
         let zebra = raw.find("\"zebra\"").expect("缺少 zebra");
         let alpha = raw.find("\"alpha\"").expect("缺少 alpha");
         assert!(zebra < alpha, "顶层键按文档序持久化：{raw}");

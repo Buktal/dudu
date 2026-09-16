@@ -203,32 +203,32 @@ describe("connections api 契约", () => {
   });
 
   it.each([
-    ["douyin", "connections_test_douyin", douyinConfig],
-    ["wecom", "connections_test_wecom", wecomConfig],
-    ["wechat-mp", "connections_test_wechat_mp", wechatMpConfig],
-    ["wechat-mini", "connections_test_wechat_mini", wechatMiniConfig],
-    ["feishu", "connections_test_feishu", feishuConfig],
-    ["dingtalk", "connections_test_dingtalk", dingtalkConfig],
-    ["qq", "connections_test_qq", qqConfig],
-    ["weibo", "connections_test_weibo", weiboConfig],
-    ["xiaohongshu", "connections_test_xiaohongshu", xiaohongshuConfig],
-    ["kuaishou", "connections_test_kuaishou", kuaishouConfig],
-    ["taobao", "connections_test_taobao", taobaoConfig],
-    ["jingdong", "connections_test_jingdong", jingdongConfig],
-    ["pinduoduo", "connections_test_pinduoduo", pinduoduoConfig],
-    ["meituan", "connections_test_meituan", meituanConfig],
-    ["eleme", "connections_test_eleme", elemeConfig],
-    ["alipay", "connections_test_alipay", alipayConfig],
-    ["whatsapp", "connections_test_whatsapp", whatsappConfig],
-    ["telegram", "connections_test_telegram", telegramConfig],
-    ["bilibili", "connections_test_bilibili", bilibiliConfig],
+    ["douyin", douyinConfig],
+    ["wecom", wecomConfig],
+    ["wechat-mp", wechatMpConfig],
+    ["wechat-mini", wechatMiniConfig],
+    ["feishu", feishuConfig],
+    ["dingtalk", dingtalkConfig],
+    ["qq", qqConfig],
+    ["weibo", weiboConfig],
+    ["xiaohongshu", xiaohongshuConfig],
+    ["kuaishou", kuaishouConfig],
+    ["taobao", taobaoConfig],
+    ["jingdong", jingdongConfig],
+    ["pinduoduo", pinduoduoConfig],
+    ["meituan", meituanConfig],
+    ["eleme", elemeConfig],
+    ["alipay", alipayConfig],
+    ["whatsapp", whatsappConfig],
+    ["telegram", telegramConfig],
+    ["bilibili", bilibiliConfig],
   ] as const)(
-    "%s 渠道路由到 %s 并透传配置",
-    async (_channel, command, config) => {
+    "%s 渠道走单一 connections_test 命令并透传配置（渠道差异由 Rust 注册表路由）",
+    async (_channel, config) => {
       const outcome = { ok: true, message: "探针被接受" };
       invokeMock.mockResolvedValueOnce(outcome);
       await expect(testConnectionInvoke(config)).resolves.toEqual(outcome);
-      expect(invokeMock).toHaveBeenCalledWith(command, { config });
+      expect(invokeMock).toHaveBeenCalledWith("connections_test", { config });
     },
   );
 

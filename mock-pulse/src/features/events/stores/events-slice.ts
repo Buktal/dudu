@@ -47,6 +47,12 @@ export type EventsState = {
   selectedId: string | null;
   /** 编辑器草稿（无则为空态）；payload 为表单形态 */
   draft: EventDraft | null;
+  /**
+   * 草稿自打开 / 新建 / 保存后是否被编辑过。派生比较只能判内容差，
+   * 判不了「人动手没」——未保存过的新草稿内容恒与空存量不同，
+   * 不加此标记，点一下模板再点事件就会误报未保存（DraftGuard 误拦）。
+   */
+  touched: boolean;
   /** 未应用的完整报文也属于草稿；切换功能区时保留，包括暂不合法的输入。 */
   rawText: string | null;
   fieldInputs?: Record<string, { text: string; error?: string }>;
@@ -61,6 +67,7 @@ export const initialEventsState: EventsState = {
   loaded: false,
   selectedId: null,
   draft: null,
+  touched: false,
   rawText: null,
   fieldInputs: {},
   filters: { query: "", channel: "all", kind: "all" },
@@ -163,6 +170,7 @@ const eventsSlice = createSlice({
       if (!item) return;
       state.selectedId = item.id;
       state.draft = draftFromItem(item);
+      state.touched = false;
       state.rawText = null;
       state.fieldInputs = {};
     },
@@ -176,6 +184,7 @@ const eventsSlice = createSlice({
         schemaById(action.payload.schemaId),
       );
       state.selectedId = null;
+      state.touched = false;
       state.rawText = null;
       state.fieldInputs = {};
     },
@@ -185,6 +194,7 @@ const eventsSlice = createSlice({
       action: PayloadAction<{ path: string; value: unknown }>,
     ) {
       if (!state.draft) return;
+      state.touched = true;
       const schema = schemaById(state.draft.schemaId);
       if (state.rawText != null) {
         state.draft.payload = editorPayload(
@@ -209,6 +219,7 @@ const eventsSlice = createSlice({
       action: PayloadAction<{ path: string; text: string; type: string }>,
     ) {
       if (!state.draft) return;
+      state.touched = true;
       const { path, text, type } = action.payload;
       state.fieldInputs ??= {};
       state.fieldInputs[path] = { text };
@@ -236,6 +247,7 @@ const eventsSlice = createSlice({
     /** 完整报文应用回字段（组件已校验合法性；contentString 解析为表单形态） */
     setDraftPayload(state, action: PayloadAction<WirePayload>) {
       if (!state.draft) return;
+      state.touched = true;
       const schema = schemaById(state.draft.schemaId);
       state.draft.payload = editorPayload(schema, action.payload);
       state.rawText = null;
@@ -243,23 +255,29 @@ const eventsSlice = createSlice({
     },
     setDraftRawText(state, action: PayloadAction<string>) {
       if (!state.draft) return;
+      state.touched = true;
       state.rawText = action.payload;
     },
     setDraftName(state, action: PayloadAction<string>) {
       if (!state.draft) return;
+      state.touched = true;
       state.draft.name = action.payload;
     },
     toggleEventFavorite(state) {
-      if (state.draft) state.draft.favorite = !state.draft.favorite;
+      if (!state.draft) return;
+      state.draft.favorite = !state.draft.favorite;
+      state.touched = true;
     },
     /** 编辑期望回执（Partial 合并：状态码 / 形态 / 期望正文） */
     setDraftExpected(state, action: PayloadAction<Partial<ExpectedReceipt>>) {
       if (!state.draft) return;
+      state.touched = true;
       state.draft.expected = { ...state.draft.expected, ...action.payload };
     },
     /** 发送者 ID 显式同步开关：开启即对齐资料 open_id */
     toggleSenderSync(state) {
       if (!state.draft) return;
+      state.touched = true;
       state.draft.senderSync = !state.draft.senderSync;
       if (state.draft.senderSync) {
         state.draft.payload = syncSenderIdentity(
@@ -270,13 +288,14 @@ const eventsSlice = createSlice({
           delete state.fieldInputs["content.user_infos[0].open_id"];
       }
     },
-    /** 复制 = 新事件携带当前载荷草稿 */
+    /** 复制 = 新事件携带当前载荷草稿（新 id 未保存，显式置脏） */
     duplicateCurrentDraft(state) {
       if (!state.draft) return;
       const resolved = resolveCurrentDraft(state);
       if (!resolved) return;
       state.draft = duplicateDraft(resolved);
       state.selectedId = null;
+      state.touched = true;
       state.rawText = null;
       state.fieldInputs = {};
     },
@@ -284,6 +303,7 @@ const eventsSlice = createSlice({
       if (!state.draft) return;
       const item = state.items.find((entry) => entry.id === state.draft?.id);
       state.draft = item ? draftFromItem(item) : null;
+      state.touched = false;
       state.rawText = null;
       state.fieldInputs = {};
     },
@@ -305,6 +325,16 @@ const eventsSlice = createSlice({
         state.items = action.payload;
         if (action.payload.some((item) => item.id === state.draft?.id))
           state.selectedId = state.draft?.id ?? null;
+        // 回包只清「保存瞬间」的脏：保存途中又动手的，脏保留
+        //（savePlanAs/saveEventAs 式 source 比对的同例，此处按回包重算）。
+        try {
+          const draft = resolveCurrentDraft(state);
+          const saved =
+            action.payload.find((item) => item.id === state.draft?.id) ?? null;
+          state.touched = draft !== null && isDraftDirty(saved, draft);
+        } catch {
+          state.touched = true;
+        }
       })
       .addCase(saveEventAs.fulfilled, (state, action) => {
         state.items = action.payload.items;
@@ -315,6 +345,7 @@ const eventsSlice = createSlice({
           return;
         state.draft = action.payload.copy;
         state.selectedId = action.payload.copy.id;
+        state.touched = false;
         state.rawText = null;
       })
       .addCase(renameEvent.fulfilled, (state, action) => {
@@ -333,6 +364,7 @@ const eventsSlice = createSlice({
         if (state.draft?.id === action.meta.arg) {
           state.draft = null;
           state.selectedId = null;
+          state.touched = false;
           state.rawText = null;
         }
       })
@@ -391,7 +423,9 @@ export function resolveCurrentDraft(state: EventsState): EventDraft | null {
 }
 
 export function selectDraftDirty(state: EventsState): boolean {
-  if (!state.draft) return false;
+  // 没动手就不脏：派生比较判内容差，touched 判人动手没。
+  // 未保存过的新草稿内容恒与空存量不同，只看派生比较会误报。
+  if (!state.draft || !state.touched) return false;
   try {
     const draft = resolveCurrentDraft(state);
     const saved =

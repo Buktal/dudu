@@ -475,3 +475,47 @@ describe("可见草稿与异步保存回归", () => {
     expect(store.getState().events.draft?.schemaId).toBe("wc-text");
   });
 });
+
+describe("草稿 untouched 不误报未保存", () => {
+  it("点模板建草稿后未动手，切换不算脏", () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "群聊收消息", schemaId: "dy-text" }));
+    expect(store.getState().events.draft).not.toBeNull();
+    expect(selectDraftDirty(store.getState().events)).toBe(false);
+  });
+
+  it("动手后才算脏，保存后回到不脏", async () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "群聊收消息", schemaId: "dy-text" }));
+    store.dispatch(setDraftName("改了名"));
+    expect(selectDraftDirty(store.getState().events)).toBe(true);
+    apiMock.saveEvent.mockImplementationOnce(async (event) => [event]);
+    await store.dispatch(saveEvent()).unwrap();
+    expect(selectDraftDirty(store.getState().events)).toBe(false);
+  });
+
+  it("保存途中又动手，回包后仍算脏", async () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "竞态", schemaId: "dy-text" }));
+    let finish!: (events: EventItem[]) => void;
+    let sent!: EventItem;
+    apiMock.saveEvent.mockImplementationOnce((event) => {
+      sent = event;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    const pending = store.dispatch(saveEvent());
+    store.dispatch(setDraftName("保存途中又改"));
+    finish([sent]);
+    await pending;
+    expect(selectDraftDirty(store.getState().events)).toBe(true);
+  });
+
+  it("复制新草稿显式置脏，切换会拦", () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "群聊收消息", schemaId: "dy-text" }));
+    store.dispatch(duplicateCurrentDraft());
+    expect(selectDraftDirty(store.getState().events)).toBe(true);
+  });
+});

@@ -1,9 +1,9 @@
 import {
+  describeEventVersion,
+  describeTemplateVersion,
   type EventItem,
   type EventSchema,
   type EventVersion,
-  resolveEventVersion,
-  resolveTemplateVersion,
 } from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
 import { type Page, paginate as paginateList } from "@/lib/paginate";
@@ -87,9 +87,12 @@ export function resolveSteps(
 ): StepRow[] {
   return steps.map((step, index) => {
     if (isTemplateStep(step)) {
-      // 模板引用解析核心共用（events 域 resolveTemplateVersion）；钉住
+      // 模板引用分类共用（events 域 describeTemplateVersion）；钉住
       // 语义：只按步骤存下的 id + 版本精确解析，缺失留给本侧标记
-      const { template } = resolveTemplateVersion(templates, step);
+      //（未注册 id 与版本更替同样 missing）。
+      const refStatus = describeTemplateVersion(templates, step);
+      const template =
+        refStatus.status === "ok" ? refStatus.template : undefined;
       return {
         index,
         step,
@@ -102,9 +105,14 @@ export function resolveSteps(
         missing: !template,
       };
     }
-    // 引用解析核心共用（events 域 resolveEventVersion）；展示时钟特有的
-    // missing / outdated 标记与最新版本号留在本侧。
-    const { event, version: referenced } = resolveEventVersion(events, step);
+    // 引用分类共用（events 域 describeEventVersion）；展示时钟特有的
+    // missing / outdated 标记与最新版本号留在本侧。注意钉住版本不在
+    // （revision-missing）不标 missing——行照常展示，拒绝启动是运行时钟的事。
+    const refStatus = describeEventVersion(events, step);
+    const event =
+      refStatus.status === "event-missing" ? undefined : refStatus.event;
+    const referenced =
+      refStatus.status === "ok" ? refStatus.version : undefined;
     const latest = event?.versions[event.versions.length - 1];
     const latestRevision = latest?.revision ?? 0;
     return {

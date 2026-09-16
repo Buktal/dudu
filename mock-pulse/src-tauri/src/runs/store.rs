@@ -1,23 +1,19 @@
 //! 运行记录的本地文件持久化：runs.json 存于应用数据目录。
 //! 文件读写函数接受目录参数，测试用临时目录。
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Mutex;
 
 use super::RunRecord;
 
 const FILE_NAME: &str = "runs.json";
 
-pub fn runs_file(dir: &Path) -> PathBuf {
-    dir.join(FILE_NAME)
-}
-
 pub fn load_runs(dir: &Path) -> std::io::Result<Vec<RunRecord>> {
-    crate::store_io::load_json(&runs_file(dir))
+    crate::store_io::load_named(dir, FILE_NAME)
 }
 
 pub fn save_runs(dir: &Path, runs: &[RunRecord]) -> std::io::Result<()> {
-    crate::store_io::save_json_atomic(dir, &runs_file(dir), runs)
+    crate::store_io::save_named(dir, FILE_NAME, runs)
 }
 
 /// 同一条运行可重试保存；串行化读改写，避免重试与后台完成互相覆盖。
@@ -39,6 +35,7 @@ mod tests {
     use super::super::tests::sample_run;
     use super::*;
     use std::fs;
+    use std::path::PathBuf;
 
     fn temp_dir(tag: &str) -> PathBuf {
         let dir = std::env::temp_dir()

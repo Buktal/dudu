@@ -204,6 +204,18 @@ describe("runs 剧本运行状态流转（scenario-run）", () => {
     expect(liveOf(store)).toBeNull();
   });
 
+  it("缺连接 + 坏 stepIndex：门禁先行，回 needConnection 不抛步骤错", async () => {
+    const store = makeScenarioStore();
+    const action = await store.dispatch(
+      startScenarioRun({ scenario: scenarioDraft, stepIndex: 99 }),
+    );
+
+    expect(startScenarioRun.fulfilled.match(action)).toBe(true);
+    expect(apiMock.startScenarioRun).not.toHaveBeenCalled();
+    expect(phaseOf(store)).toBe("needConnection");
+    expect(liveOf(store)).toBeNull();
+  });
+
   it("物化失败（悬空引用）：rejected 且给可读错误，不调命令", async () => {
     const broken = makeScenarioStore({ connection: CONNECTION, events: [] });
 

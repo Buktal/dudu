@@ -291,182 +291,20 @@ async fn run_handshake(
     .map_err(|err| err.to_string())
 }
 
-/// 按抖音连接配置的推送体系测试连接：dop/生活服务 verify_webhook challenge 握手、
-/// 小游戏 verify_request x-signature 握手、服务商授权推送（回 success）。
+/// 按连接配置测试连接（全渠道唯一握手入口）：渠道差异（握手协议、
+/// 超时上限）全部经适配器注册表取用，调用方不再按渠道分支；
+/// 未知渠道在 IPC 参数反序列化即被拒绝，不会到达本函数。
+/// 各渠道握手/探针形态锚定事实库（docs/research/channels/）：
+/// 抖音 dop/生活服务 challenge、小游戏 verify_request、服务商授权推送；
+/// 企微/公众号/小程序/微博 GET echostr；飞书 POST url_verification；
+/// 钉钉密文 check_url / 机器人 HmacSHA256 探测；QQ op13 回调；
+/// 小红书小程序握手 / ark 探针；快手 TEST 事件；淘宝全球栈 Verify；
+/// 京东/拼多多/美团/饿了么/支付宝推送探针；B站 verify_webhooks；
+/// WhatsApp GET 三参握手；Telegram Update 推送探针。
+/// 网络等待放到阻塞线程池，避免卡住主线程。
 #[tauri::command]
-pub async fn connections_test_douyin(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
-    run_handshake(&douyin::Adapter, config).await
-}
-
-/// 按企业微信 GET echostr 协议测试连接（官方要求 1 秒内回显解密明文）。
-#[tauri::command]
-pub async fn connections_test_wecom(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
-    run_handshake(&wecom::Adapter, config).await
-}
-
-/// 按公众号 GET 三参握手协议测试连接（signature=sha1(字典序排序三参)，
-/// 目标原样回显 echostr；官方 5 秒应答窗口）。
-#[tauri::command]
-pub async fn connections_test_wechat_mp(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&wechat_mp::Adapter, config).await
-}
-
-/// 按小程序 GET 三参握手协议测试连接（与公众号同族：signature=sha1(字典序
-/// 排序三参)，目标原样回显 echostr；官方 5 秒应答窗口）。
-#[tauri::command]
-pub async fn connections_test_wechat_mini(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&wechat_mini::Adapter, config).await
-}
-
-/// 按飞书 POST url_verification 协议测试连接（官方要求 1 秒内回显
-/// challenge；配 Encrypt Key 时发加密信封 + X-Lark-Signature 签名）。
-#[tauri::command]
-pub async fn connections_test_feishu(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
-    run_handshake(&feishu::Adapter, config).await
-}
-
-/// 按钉钉通道测试连接：密文通道发 check_url 握手（1500ms 内期望加密 success
-/// 回包）；机器人通道发 timestamp/sign（HmacSHA256）签名的明文探测。
-#[tauri::command]
-pub async fn connections_test_dingtalk(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&dingtalk::Adapter, config).await
-}
-
-/// 按 QQ op13 验证回调协议测试连接（目标须回 plain_token 回显 + Ed25519
-/// 签名回包；官方未给应答时限口径）。
-#[tauri::command]
-pub async fn connections_test_qq(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
-    run_handshake(&qq::Adapter, config).await
-}
-
-/// 按微博 GET 四参握手协议测试连接（signature=sha1(字典序排序三参)，
-/// 目标原样回显 echostr；官方 5 秒应答窗口，超时断开×3 重试）。
-#[tauri::command]
-pub async fn connections_test_weibo(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&weibo::Adapter, config).await
-}
-
-/// 按小红书通道测试连接：小程序通道发 GET 四参握手（三参 sha1 签名，目标
-/// 原样回显 echostr）；ark 通道发最小推送探针（官方数组形态，期望
-/// {"success":true,"error_code":0}；电商侧无官方握手口径）。
-#[tauri::command]
-pub async fn connections_test_xiaohongshu(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&xiaohongshu::Adapter, config).await
-}
-
-/// 按快手 TEST 事件协议测试连接（官方配地址握手：POST TEST 事件 + header
-/// kwaisign = MD5(body+AppSecret)，目标须回 200 + result=1 并回传 message_id）。
-#[tauri::command]
-pub async fn connections_test_kuaishou(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&kuaishou::Adapter, config).await
-}
-
-/// 按全球栈 Verify 协议测试连接（官方配置页：填回调地址后 Verify，返回
-/// HTTP 200 即验证成功；探针带 Authorization = HEX(HMAC-SHA256(AppKey+body,
-/// AppSecret)) 签名头，事实库 §3.2/§4.2）。
-#[tauri::command]
-pub async fn connections_test_taobao(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&taobao::Adapter, config).await
-}
-
-/// 按京东推送探针协议测试连接（官方首次验证握手待核验(09-27)，探针语义同
-/// 普通推送：POST 官方状态枚举样本明文 + query 系统参数 app_key/timestamp/v/
-/// sign = UPPER(MD5(appSecret+字母序 k+v+appSecret))，事实库 §4.1/§4.2）。
-#[tauri::command]
-pub async fn connections_test_jingdong(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&jingdong::Adapter, config).await
-}
-
-/// 按拼多多推送探针协议测试连接（官方验证握手待核验(09-27)，探针语义同
-/// 普通推送：POST 官方订单状态样本明文 + query 公共参数 client_id/timestamp
-/// （UNIX 秒）/sign = UPPER(MD5(client_secret+ASCII 排序 k+v+client_secret))，
-/// 事实库 §4.1，官方向量 E4DE3ED21002510DED352819E7AE6775 已核验）。
-#[tauri::command]
-pub async fn connections_test_pinduoduo(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&pinduoduo::Adapter, config).await
-}
-
-/// 按美团推送探针协议测试连接（官方验证握手正文待核验(09-27)，探针语义同
-/// 普通推送：POST 官方订单核验样本表单 + 字段集尾部追加 app_id/timestamp 与
-/// sig = MD5(url?字母序 k=v 串 + app secret)，事实库 §4.1，官方向量
-/// 00934d00d0aea6f12161edfb6456143d 已对拍）。
-#[tauri::command]
-pub async fn connections_test_meituan(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&meituan::Adapter, config).await
-}
-
-/// 按饿了么推送探针协议测试连接（官方无握手，探针语义同普通推送：POST 官方
-/// 订单状态核验样本明文 + query 系统参数 consumer_key/timestamp/sig =
-/// SHA1(HEX(url?字母序 k=v 串 + consumer_secret))，事实库 §4.1 官方五步，
-/// 官方示例待签串已复现）。
-#[tauri::command]
-pub async fn connections_test_eleme(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&eleme::Adapter, config).await
-}
-
-/// 按支付宝推送探针协议测试连接（官方网关验证握手细节待核验(09-27)，探针
-/// 语义同普通推送：POST 官方支付异步通知核验样本表单 + sign =
-/// Base64(RSA-SHA256(剔除 sign/sign_type 后字典序 k=v 串))（rsaCheckV1 语义），
-/// 事实库 §4.1/§4.3，签名 → 验签黄金对拍在 tests/golden.rs）。
-#[tauri::command]
-pub async fn connections_test_alipay(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&alipay::Adapter, config).await
-}
-
-/// 按 B站 verify_webhooks 握手协议测试连接（镜像口径，配置保存失焦即触发：
-/// POST {"event":"verify_webhooks","content":{"data":<随机数>},"timestamp":…}
-/// + x-bili-* 签名头表 + Authorization = HMAC-SHA256，期望 HTTP 200 原样回
-/// {"data":<数值>}，事实库 §3.2/§4.2）。
-#[tauri::command]
-pub async fn connections_test_bilibili(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&bilibili::Adapter, config).await
-}
-
-/// 按 WhatsApp GET 三参握手协议测试连接（官方配置保存即触发：GET 带
-/// hub.mode=subscribe + hub.challenge + hub.verify_token，verify_token 匹配
-/// 则 200 裸回 challenge 纯文本非 JSON，不匹配 403，事实库 §3.2）。
-#[tauri::command]
-pub async fn connections_test_whatsapp(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&whatsapp::Adapter, config).await
-}
-
-/// 按 Telegram 推送探针协议测试连接（官方无 challenge 握手：setWebhook
-/// 同步返回 True 即成功，探针语义同普通推送：POST 官方 §5.2 文本消息核验
-/// 样本明文 + 恒等头 X-Telegram-Bot-Api-Secret-Token 原样携带，事实库
-/// §3.2/§4.1/§5.2，期望 HTTP 2XY）。
-#[tauri::command]
-pub async fn connections_test_telegram(
-    config: ConnectionConfig,
-) -> Result<HandshakeOutcome, String> {
-    run_handshake(&telegram::Adapter, config).await
+pub async fn connections_test(config: ConnectionConfig) -> Result<HandshakeOutcome, String> {
+    run_handshake(adapter_of(&config), config).await
 }
 
 #[cfg(test)]

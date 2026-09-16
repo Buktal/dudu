@@ -1,9 +1,6 @@
-import type { ChannelId } from "@/lib/channels";
-
 import type {
   AlipayConnectionConfig,
   BilibiliConnectionConfig,
-  ConnectionConfig,
   DingtalkConnectionConfig,
   DouyinConnectionConfig,
   ElemeConnectionConfig,
@@ -196,27 +193,4 @@ export const defaultTelegramConnection: TelegramConnectionConfig = {
   channel: "telegram",
   url: "http://127.0.0.1:8080/webhooks/telegram",
   secretToken: "",
-};
-
-/** 初始占位连接表：按渠道一行（slice 初始化铺开用） */
-export const DEFAULT_CONNECTIONS: Record<ChannelId, ConnectionConfig> = {
-  douyin: defaultDouyinConnection,
-  wecom: defaultWecomConnection,
-  xiaohongshu: defaultXiaohongshuConnection,
-  "wechat-mp": defaultWechatMpConnection,
-  "wechat-mini": defaultWechatMiniConnection,
-  feishu: defaultFeishuConnection,
-  dingtalk: defaultDingtalkConnection,
-  qq: defaultQqConnection,
-  weibo: defaultWeiboConnection,
-  kuaishou: defaultKuaishouConnection,
-  taobao: defaultTaobaoConnection,
-  jingdong: defaultJingdongConnection,
-  pinduoduo: defaultPinduoduoConnection,
-  meituan: defaultMeituanConnection,
-  eleme: defaultElemeConnection,
-  bilibili: defaultBilibiliConnection,
-  alipay: defaultAlipayConnection,
-  whatsapp: defaultWhatsappConnection,
-  telegram: defaultTelegramConnection,
 };
