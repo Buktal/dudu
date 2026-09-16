@@ -1,4 +1,4 @@
-import { weiboCreatedAt } from "@/lib/time";
+import { compactTimestamp, weiboCreatedAt } from "@/lib/time";
 
 import {
   BASE64_CHARS,
@@ -22,16 +22,10 @@ export function generateEncryptedId(): string {
   return `@${body}==`;
 }
 
-function pad(value: number, width = 2): string {
-  return String(value).padStart(width, "0");
-}
-
 export function generateLogId(): string {
-  const now = new Date();
-  const prefix = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const bytes = randomBytes(9);
   return (
-    prefix +
+    compactTimestamp() +
     Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"))
       .join("")
       .toUpperCase()

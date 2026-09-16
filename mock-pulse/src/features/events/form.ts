@@ -21,41 +21,30 @@ import type { WirePayload } from "./schemas";
 /** 表单字段名：单个字段名（与 XML 元素名同族约束；\w 为 ASCII 词字符） */
 const FORM_FIELD_PATTERN = /^[A-Za-z_][\w.-]*$/;
 
-function isUnreserved(byte: number): boolean {
-  return (
-    (byte >= 0x41 && byte <= 0x5a) ||
-    (byte >= 0x61 && byte <= 0x7a) ||
-    (byte >= 0x30 && byte <= 0x39) ||
-    byte === 0x2d ||
-    byte === 0x5f ||
-    byte === 0x2e ||
-    byte === 0x7e
+/**
+ * 单值百分号编码：非保留字原样，其余按 UTF-8 字节输出大写 %XX。
+ * 标准编码走 encodeURIComponent 组合：其不编码集恰为 RFC 3986 非保留字集
+ * 加 `!'()*` 六字符（本规范要求照编码），replace 补上这六字符即逐字节等价
+ * （RFC 3986 大写 hex、UTF-8 字节序均为 encodeURIComponent 的规范行为）；
+ * URLSearchParams 序列化把空格写「+」且编码集不同，不可用。Rust 侧同一
+ * 语义单点换 percent-encoding crate（util::form_encode_value），两端对拍。
+ */
+export function formEncodeValue(text: string): string {
+  return encodeURIComponent(text).replace(
+    /[!'()*]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 }
 
 /**
- * 单值百分号编码：非保留字原样，其余按 UTF-8 字节输出大写 %XX。
- * 为何不用标准 API（与 Rust 侧 util 同一手写语义、逐字节对拍是设计约束）：
- * encodeURIComponent 额外不编码 `!~*'()` 六字符（本规范要求照编码）；
- * URLSearchParams 序列化把空格写「+」且编码集不同（本规范写 %20）；
- * 二者均无法在不动字节输出的前提下替换，故保留手写（Rust 侧同注）。
- */
-export function formEncodeValue(text: string): string {
-  const bytes = new TextEncoder().encode(text);
-  let out = "";
-  for (const byte of bytes) {
-    out += isUnreserved(byte)
-      ? String.fromCharCode(byte)
-      : `%${byte.toString(16).toUpperCase().padStart(2, "0")}`;
-  }
-  return out;
-}
-
-/**
  * 单值百分号解码：%XX 还原字节（非法序列报可读错误）、「+」还原空格。
- * 为何不用标准 API：decodeURIComponent 不还原「+」为空格，也无法对非法
- * % 序列报可读错误；URLSearchParams 只解析整段 query（按 &/= 切分），
- * 没有单值入口且对空段/非法序列静默容忍——语义均不匹配，保留手写。
+ * 为何不用标准 API（本轮重判，与 Rust 侧 util::percent_decode 同注）：
+ * decodeURIComponent 配合「+」前置 replace 虽可覆盖合法输入，但它对「坏
+ * % 序列」与「坏 UTF-8 字节序」同报单一 URIError，无法区分下方两条各有
+ * 测试锚定的可读错误，孤代理等边缘字节序行为亦有漂移；URLSearchParams
+ * 只解析整段 query（按 &/= 切分），没有单值入口且对空段/非法序列静默
+ * 容忍。按「同一字节语义单点」的铁律（两端同换或同不换），解码端两侧都
+ * 保留手写；编码端已随本轮换 API 组合/percent-encoding。
  */
 export function formDecodeValue(text: string): string {
   const bytes = new TextEncoder().encode(text);

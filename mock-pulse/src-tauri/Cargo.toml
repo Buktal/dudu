@@ -47,6 +47,10 @@ rand = "0.8"
 # 格式描述与固定偏移）
 time = { version = "0.3", features = ["formatting", "macros"] }
 hex = "0.4"
+# form-urlencoded 百分号编码（美团/饿了么/支付宝表单线与前端 form.ts 同一
+# RFC 3986 语义单点）：非保留字集编码集与恒大写 hex 输出由库定义；
+# 解码端见 util::percent_decode 注（跨端对拍约束下仍手写）
+percent-encoding = "2.3"
 uuid = { version = "1", features = ["v4"] }
 # 企微回调加解密（#17）：AES-256-CBC 底层块运算（补位按官方 PKCS#7-32 自实现）+ Base64
 aes = "0.8"

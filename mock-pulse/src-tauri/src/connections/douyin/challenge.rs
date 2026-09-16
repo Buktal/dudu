@@ -16,13 +16,10 @@ pub(super) fn build_verify_body(client_key: &str, challenge: u64) -> String {
     .to_string()
 }
 
-/// 从 uuid v4 派生一个正的随机 challenge（uuid 已在依赖内，不额外引随机库）。
+/// 一个正的随机 challenge（rand 均匀采样全 u64 空间，`| 1` 保证非零；
+/// 原 uuid 字节拼 u64 的取数式随 rand 入树退场）。
 fn random_challenge() -> u64 {
-    let id = uuid::Uuid::new_v4();
-    let bytes = id.as_bytes();
-    u64::from_be_bytes([
-        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-    ]) | 1
+    rand::random::<u64>() | 1
 }
 
 /// 校验目标是否在 ResponseBody 里以 text 格式 JSON 原样回显 challenge。

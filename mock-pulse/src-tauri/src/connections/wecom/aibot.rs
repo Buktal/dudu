@@ -110,6 +110,7 @@ mod tests {
     use super::super::crypto::{
         GOLDEN_ENCODING_AES_KEY, GOLDEN_TOKEN, GOLDEN_CORP_ID,
     };
+    use crate::connections::util::percent_decode;
     use crate::connections::{ConnectionConfig, WecomSystem};
     use crate::test_support::{
         quick_client, read_head_and_body, start_single_server, start_serial_server, RecordedPost,
@@ -130,30 +131,6 @@ mod tests {
         }
     }
 
-    /// 表单风格 urldecode（官方握手第①步「参数值 urldecode」）。
-    fn urldecode(value: &str) -> String {
-        let bytes = value.as_bytes();
-        let mut out = Vec::with_capacity(bytes.len());
-        let mut i = 0;
-        while i < bytes.len() {
-            match bytes[i] {
-                b'+' => out.push(b' '),
-                b'%' if i + 2 < bytes.len() => {
-                    let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("");
-                    if let Ok(byte) = u8::from_str_radix(hex, 16) {
-                        out.push(byte);
-                        i += 3;
-                        continue;
-                    }
-                    out.push(b'%');
-                }
-                byte => out.push(byte),
-            }
-            i += 1;
-        }
-        String::from_utf8_lossy(&out).to_string()
-    }
-
     fn query_of(request_line: &str) -> HashMap<String, String> {
         let url = request_line.split_whitespace().nth(1).unwrap_or_default();
         let query = url.split_once('?').map(|(_, q)| q).unwrap_or_default();
@@ -162,7 +139,7 @@ mod tests {
             .filter(|kv| !kv.is_empty())
             .map(|kv| {
                 let (key, value) = kv.split_once('=').unwrap_or((kv, ""));
-                (urldecode(key), urldecode(value))
+                (percent_decode(key), percent_decode(value))
             })
             .collect()
     }

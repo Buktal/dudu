@@ -45,12 +45,14 @@ fn unix_timestamp_millis() -> u128 {
         .unwrap_or(0)
 }
 
-/// 握手 nonce：8 位数字（官方算例 nonce=57155157 同形态）。
+/// 握手 nonce：8 位数字（官方算例 nonce=57155157 同形态）——rand Uniform
+/// 均匀采样（原 uuid 字节 `% 10` 有模偏差，同 Alphanumeric 退件口径）。
 fn random_nonce() -> String {
-    let uuid = uuid::Uuid::new_v4();
-    let bytes = uuid.as_bytes();
+    use rand::distributions::{Distribution, Uniform};
+    let mut rng = rand::thread_rng();
+    let digit = Uniform::new(0u8, 10);
     (0..8)
-        .map(|index| char::from(b'0' + bytes[index] % 10))
+        .map(|_| char::from(b'0' + digit.sample(&mut rng)))
         .collect()
 }
 

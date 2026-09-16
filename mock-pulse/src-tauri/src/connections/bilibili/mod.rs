@@ -180,15 +180,17 @@ pub(crate) fn probe_envelope(data: i64, timestamp: &str) -> String {
     .to_string()
 }
 
-/// 握手 data：本侧生成同形态的 10 位数字（首位非零）。
+/// 握手 data：本侧生成同形态的 10 位数字（首位非零）——rand Uniform 均匀
+/// 采样（原 uuid 字节 `% 9`/`% 10` 有模偏差，同 Alphanumeric 退件口径）。
 fn random_probe_data() -> i64 {
-    let uuid = uuid::Uuid::new_v4();
-    let bytes = uuid.as_bytes();
-    let mut digits = String::with_capacity(10);
-    digits.push(char::from(b'1' + bytes[0] % 9));
-    for byte in bytes.iter().take(10).skip(1) {
-        digits.push(char::from(b'0' + byte % 10));
-    }
+    use rand::distributions::{Distribution, Uniform};
+    let mut rng = rand::thread_rng();
+    let digit = Uniform::new(0u8, 10);
+    let head = Uniform::new_inclusive(1u8, 9);
+    let digits = std::iter::once(head.sample(&mut rng))
+        .chain(std::iter::repeat_with(|| digit.sample(&mut rng)).take(9))
+        .map(|value| char::from(b'0' + value))
+        .collect::<String>();
     digits.parse().unwrap_or(0)
 }
 

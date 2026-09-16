@@ -14,19 +14,32 @@
 //!   §2.2 官方逐字同形）
 //! - [`percent_decode`]/[`form_encode_value`]/[`form_pairs`]/[`strip_sig`]：
 //!   form-urlencoded 编解码原语（RFC 3986 非保留字集、大写 hex、+ 还原空格，
-//!   与前端 form.ts 单点同一语义；美团/饿了么表单线共用，#45 自美团提炼；
-//!   不换库的原因见 [`percent_decode`] 注）
+//!   与前端 form.ts 单点同一语义；美团/饿了么/支付宝表单线共用，#45 自美团
+//!   提炼；编码端走 percent-encoding crate，解码端不换库的原因见
+//!   [`percent_decode`] 注）
 //!
 //! 拼接序/密钥来源等渠道语义由各 adapter 组合，本模块只提供纯原语。
 
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 use md5::Md5;
+use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use sha1::{Digest, Sha1};
 use sha2::Sha256;
 use time::format_description::FormatItem;
 use time::macros::format_description;
 use time::{OffsetDateTime, UtcOffset};
+
+/// RFC 3986 非保留字集（A-Za-z0-9 与 `-` `_` `.` `~`）之外逐字节编码的编码集
+/// （percent-encoding 恒输出大写 hex、按 UTF-8 字节序；space 在集内 → `%20`，
+/// 与前端 form.ts 同一语义单点）。
+const FORM_ENCODE_SET: &AsciiSet =
+    &NON_ALPHANUMERIC.remove(b'-').remove(b'_').remove(b'.').remove(b'~');
+
+/// 饿了么签名线编码集（eleme `sig_encode_value` 专用）：同 [`FORM_ENCODE_SET`]
+/// 但 space 移出集（原样保留，由调用侧改写为官方 `x-www-form-urlencoded`
+/// 的「+」形态）。
+pub(crate) const SIG_ENCODE_SET: &AsciiSet = &FORM_ENCODE_SET.remove(b' ');
 
 /// `yyyy-MM-dd HH:mm:ss`（京东 JOS timestamp §4.1/§4.2 与 B站事件 timestamp
 /// §2.2 官方逐字同形的派生格式描述）。
@@ -113,12 +126,13 @@ pub(crate) fn utc8_timestamp(unix_secs: u64) -> String {
 /// form.ts 单点同一语义（大写 hex 编码、UTF-8 字节序）。#45 自美团渠道提炼
 /// 为跨渠道原语（美团/饿了么表单线共用）。
 ///
-/// 为何不换 `percent-encoding` crate：其 percent_decode 语义本可覆盖（非法
-/// % 序列原样保留、大小写 hex 均收），「+」补一次前置 replace 也等价——但
-/// 前端同语义单点（form.ts）没有对应标准 API（encodeURIComponent 额外不
-/// 编码 `!~*'()`、decodeURIComponent 不还原「+」；URLSearchParams 只解析
-/// 整段 query 且空格写「+」），两端无法同时等价换库。按「同一字节语义
-/// 单点、官方载荷逐字对齐」的设计约束，两侧都保留手写，由对拍测试锚定。
+/// 为何不换 `percent-encoding` crate：本侧语义其 percent_decode 本可覆盖
+/// （非法 % 序列原样保留、大小写 hex 均收，「+」前置 replace 一行）——但
+/// 前端同语义单点（form.ts）无法等价换 `decodeURIComponent`：它对「坏 %
+/// 序列」与「坏 UTF-8 字节序」同报单一 URIError，混同了前端有测试锚定的
+/// 两条可读错误，孤代理等边缘字节序行为亦有漂移。按「同一字节语义单点、
+/// 官方载荷逐字对齐」的设计约束（铁律：两端同换或同不换），解码端两侧都
+/// 保留手写，由对拍测试锚定；编码端已随本轮换库（见 [`form_encode_value`]）。
 pub(crate) fn percent_decode(input: &str) -> String {
     let bytes = input.as_bytes();
     let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
@@ -150,21 +164,13 @@ pub(crate) fn percent_decode(input: &str) -> String {
 }
 
 /// 表单值百分号编码（RFC 3986 非保留字集原样，其余按 UTF-8 字节输出大写
-/// %XX）：美团直发追加系统级参数与饿了么 H5 表单线共用。为何不换库同
-/// [`percent_decode`] 注（percent-encoding 自定义 AsciiSet 本可表达且恒
-/// 输出大写 hex，form_urlencoded 则空格写「+」语义不匹配；前端无对应
-/// 标准 API，两端都保留手写）。
+/// %XX）：美团直发追加系统级参数、饿了么 H5 表单线与支付宝 sign 拼装共用。
+/// percent-encoding 自定义 AsciiSet（[`FORM_ENCODE_SET`]）与前端 form.ts 的
+/// `encodeURIComponent + RFC 3986 补码` 组合同为同一语义单点（非法孤代理
+/// 在 TextEncoder 路径替换为 U+FFFD、encodeURIComponent 抛错，两端对合法
+/// 载荷字节恒等，由对拍测试锚定）。
 pub(crate) fn form_encode_value(text: &str) -> String {
-    let mut out = String::new();
-    for byte in text.as_bytes() {
-        match *byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(*byte as char);
-            }
-            _ => out.push_str(&format!("%{byte:02X}")),
-        }
-    }
-    out
+    utf8_percent_encode(text, FORM_ENCODE_SET).to_string()
 }
 
 /// 明文表单 → 解码 kv 对（文档序）：无值参数落空串（美团「没有值的参数也需

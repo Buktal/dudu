@@ -32,9 +32,9 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::{
-    form_pairs, sha1_hex, strip_sig,
-};
+use percent_encoding::utf8_percent_encode;
+
+use crate::connections::util::{form_pairs, sha1_hex, strip_sig, SIG_ENCODE_SET};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -63,19 +63,13 @@ fn now_secs() -> u64 {
 
 /// §4.1 步骤 1 的参数值 urlencode（逐字规则：未保留字符为字母数字与
 /// `- _ . ~`；保留字符必须编码；`x-www-form-urlencoded` 下空格编为 `+`；
-/// UTF-8 字节序大写 hex）。签名吃编码前的原文值，编码发生在拼串时。
+/// UTF-8 字节序大写 hex）。编码集复用 percent-encoding（util 层单点，
+/// space 原样保留后改写官方「+」形态）。签名吃编码前的原文值，编码发生
+/// 在拼串时。
 pub(crate) fn sig_encode_value(text: &str) -> String {
-    let mut out = String::new();
-    for byte in text.as_bytes() {
-        match *byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(*byte as char);
-            }
-            b' ' => out.push('+'),
-            _ => out.push_str(&format!("%{byte:02X}")),
-        }
-    }
-    out
+    utf8_percent_encode(text, SIG_ENCODE_SET)
+        .to_string()
+        .replace(' ', "+")
 }
 
 /// 饿了么签名（事实库 §4.1 官方五步逐字）：

@@ -209,12 +209,14 @@ fn dispatch_event(
 }
 
 /// 握手 hub.challenge：Meta 生成的随机 int/字符串（§3.2），本侧生成同形态的
-/// 16 位数字串（echo-bot 示例 challenge 为随机值、无内容约束）。
+/// 16 位数字串（echo-bot 示例 challenge 为随机值、无内容约束）——rand
+/// Uniform 均匀采样（原 uuid 字节 `% 10` 有模偏差，同 Alphanumeric 退件口径）。
 fn random_challenge() -> String {
-    let uuid = uuid::Uuid::new_v4();
-    let bytes = uuid.as_bytes();
+    use rand::distributions::{Distribution, Uniform};
+    let mut rng = rand::thread_rng();
+    let digit = Uniform::new(0u8, 10);
     (0..16)
-        .map(|index| char::from(b'0' + bytes[index] % 10))
+        .map(|_| char::from(b'0' + digit.sample(&mut rng)))
         .collect()
 }
 

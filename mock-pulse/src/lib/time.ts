@@ -41,3 +41,11 @@ export function taobaoModified(): string {
 export function bilibiliTimestamp(now = Date.now()): string {
   return dayjs(now).utcOffset(8).format("YYYY-MM-DD HH:mm:ss");
 }
+
+/**
+ * 紧凑本地时间戳 `yyyyMMddHHmmss`（企微 LogId 前缀的官方逐字形态：
+ * 14 位年月日时分秒连写）。
+ */
+export function compactTimestamp(): string {
+  return dayjs().format("YYYYMMDDHHmmss");
+}

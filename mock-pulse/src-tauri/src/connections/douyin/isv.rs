@@ -42,11 +42,13 @@ fn parse_encrypt(body: &str) -> Result<String, String> {
         .ok_or_else(|| format!("推送信封缺少 Encrypt 字段：{body}"))
 }
 
-/// 随机 Nonce：官方黄金例为纯数字（"4464221"），从 uuid v4 派生数字串。
+/// 随机 Nonce：官方黄金例为纯数字（"4464221"）的 7 位形态——rand Uniform
+/// 均匀采样（原 uuid 字节算术拼值分布非均匀且位数不定）。
 fn random_nonce() -> String {
-    let id = uuid::Uuid::new_v4();
-    let bytes = id.as_bytes();
-    (bytes[0] as u32 * 2_000_000 + bytes[1] as u32 * 8_000 + bytes[2] as u32).to_string()
+    use rand::distributions::{Distribution, Uniform};
+    Uniform::new_inclusive(1_000_000u32, 9_999_999)
+        .sample(&mut rand::thread_rng())
+        .to_string()
 }
 
 fn unix_timestamp_secs() -> u64 {
