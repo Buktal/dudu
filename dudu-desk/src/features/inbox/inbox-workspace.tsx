@@ -1,4 +1,4 @@
-import { MessageCircle, X } from "lucide-react";
+import { X } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Provider } from "react-redux";
 import { useTheme } from "@/components/theme-provider";
@@ -6,8 +6,12 @@ import { Button } from "@/components/ui/button";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { type InboxApi, unavailableInboxApi } from "./api";
 import { CalmWorkspace } from "./components/calm-workspace";
-import { ConnectionBar } from "./components/connection-bar";
+import { ConnectionStatus } from "./components/connection-status";
 import { InboxLoading } from "./components/inbox-state";
+import {
+  KeyboardHelp,
+  WorkspaceNavigation,
+} from "./components/workspace-navigation";
 import { useInboxDispatch, useInboxSelector } from "./hooks/use-inbox-store";
 import { loadInboxApi } from "./runtime";
 import { startInboxUpdates } from "./stores/events";
@@ -43,15 +47,12 @@ function InboxSession() {
     <WorkspaceShell
       mode={mode}
       onModeChange={setMode}
-      navigation={
-        <Button
-          size="icon-lg"
-          aria-label="所有会话"
-          title="所有会话"
-          onClick={() => void dispatch(loadConversations())}
-        >
-          <MessageCircle />
-        </Button>
+      navigation={<WorkspaceNavigation />}
+      toolbarActions={
+        <>
+          <ConnectionStatus />
+          <KeyboardHelp />
+        </>
       }
     >
       <Suspense fallback={<InboxLoading label="正在切换接待布局…" />}>
@@ -79,7 +80,6 @@ function InboxSession() {
           </Button>
         </div>
       )}
-      <ConnectionBar />
     </WorkspaceShell>
   );
 }

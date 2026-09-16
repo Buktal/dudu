@@ -127,6 +127,11 @@ export const sendReducers = {
     state.ending[action.payload.id] = { status: "saved" };
     state.notice = { kind: "information", message: "本次接待已结束" };
   },
+  resumeSucceeded(state: InboxState, action: PayloadAction<Conversation>) {
+    mergeConversation(state, action.payload);
+    state.ending[action.payload.id] = { status: "saved" };
+    state.notice = { kind: "information", message: "已继续接待" };
+  },
   endFailed(
     state: InboxState,
     action: PayloadAction<{ conversationId: string; error: ApiFailure }>,

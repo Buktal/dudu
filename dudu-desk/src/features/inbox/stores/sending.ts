@@ -2,13 +2,17 @@ import { DeskApiError } from "@/lib/api-response";
 import { attachmentBatchRestriction } from "../attachment-rules";
 import { sendRestriction, sendTarget } from "../sending-rules";
 import type { InboxMessage, SendKind } from "../types";
-import { selectConversation } from "./reading";
+import { receiveNext } from "./next-reception";
 import {
   beginRequest,
   failureOf,
   releaseAttachmentResources,
 } from "./requests";
-import { blankDraft, type ReplySubmission } from "./sending-state";
+import {
+  blankDraft,
+  latestIncomingSequence,
+  type ReplySubmission,
+} from "./sending-state";
 import { inboxActions } from "./slice";
 import type { InboxCommand } from "./store";
 
@@ -66,26 +70,8 @@ function deliver(
       const state = getState().inbox;
       if (state.submissions[message.id]?.status === "accepted")
         releaseAttachmentResources(runtime, submission.draftAttachmentIds);
-      if (
-        submission.next &&
-        state.submissions[message.id]?.status === "accepted" &&
-        state.selectionRevision === submission.selectionRevision &&
-        state.replyId === target.conversationId
-      ) {
-        const next = state.queue.ids.find(
-          (id) =>
-            id !== target.conversationId &&
-            state.conversations[id]?.status === "needs-reply" &&
-            !sendRestriction(
-              state.conversations[id],
-              state.connection,
-              ["text"],
-              runtime.now(),
-            ),
-        );
-        if (next) await dispatch(selectConversation(next));
-        else dispatch(inboxActions.noticeChanged("没有其他可回复的待接待会话"));
-      }
+      if (submission.next)
+        await dispatch(receiveNext(submission, request.current));
     } catch (error) {
       if (!request.current()) return;
       const failure = failureOf(error);
@@ -175,6 +161,11 @@ export function sendReply(
       textRevision: draft.textRevision,
       draftAttachmentIds: [...draft.attachmentIds],
       selectionRevision: state.selectionRevision,
+      // Compare events with what was known at submission, even if history arrives first.
+      incomingSequence: Math.max(
+        state.events.incomingSequence[conversationId] ?? 0,
+        latestIncomingSequence(state.messages, conversationId),
+      ),
       next,
       status: "sending",
     };
@@ -222,42 +213,4 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
   };
 }
 
-export function endReception(
-  conversationId: string,
-): InboxCommand<Promise<void>> {
-  return async (dispatch, getState, runtime) => {
-    const state = getState().inbox;
-    if (
-      !state.conversations[conversationId] ||
-      state.ending[conversationId]?.status === "saving"
-    )
-      return;
-    const request = beginRequest(runtime, `end:${conversationId}`, getState);
-    dispatch(inboxActions.endStarted(conversationId));
-    try {
-      const conversation = await runtime.api.endConversation({
-        context: request.context,
-        signal: request.signal,
-        conversationId,
-      });
-      if (request.current()) {
-        if (
-          conversation.id !== conversationId ||
-          conversation.status !== "closed"
-        )
-          throw new DeskApiError(
-            "invalid-response",
-            "服务未确认本次接待已结束",
-          );
-        dispatch(inboxActions.endSucceeded(conversation));
-      }
-    } catch (error) {
-      if (request.current())
-        dispatch(
-          inboxActions.endFailed({ conversationId, error: failureOf(error) }),
-        );
-    } finally {
-      request.finish();
-    }
-  };
-}
+export { endReception, resumeReception } from "./reception";

@@ -1,8 +1,10 @@
-import { PanelRight } from "lucide-react";
+import { PanelRight, Star } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { useInboxSelector } from "../hooks/use-inbox-store";
+import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
+import { setConversationStarred } from "../stores/details";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
 import { InboxEmpty } from "./inbox-state";
 import { MessageTimeline } from "./message-timeline";
@@ -28,8 +30,12 @@ export function ChatPanel({
   onRetry?: (id: string) => void;
   onAtBottom?: (sequence: number) => void;
 }) {
+  const dispatch = useInboxDispatch();
   const conversation = useInboxSelector(
     (state) => state.inbox.conversations[conversationId],
+  );
+  const starring = useInboxSelector(
+    (state) => state.inbox.starUpdates[conversationId]?.status === "saving",
   );
   if (!conversation)
     return (
@@ -42,16 +48,29 @@ export function ChatPanel({
   return (
     <section
       className={cn(
-        "flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-card text-card-foreground",
-        paneRole && focused && "ring-1 ring-ring/30",
+        "relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+        paneRole && "rounded-2xl bg-card text-card-foreground shadow-xs",
       )}
       aria-label={`${name} 的聊天`}
     >
-      <header className="flex shrink-0 flex-wrap items-center gap-3 px-5 py-4 max-[760px]:gap-2 max-[760px]:px-3 max-[760px]:py-2.5">
+      <header
+        className={cn(
+          "flex min-h-[84px] shrink-0 flex-wrap items-center gap-3 px-5 py-4 max-[760px]:gap-2 max-[760px]:px-3 max-[760px]:py-2.5",
+          paneRole && "gap-2.5 px-3 py-3",
+          paneRole && focused && "bg-accent/30",
+        )}
+      >
         <VisitorAvatar identity={conversation.identity} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-sm font-semibold">{name}</h2>
+            <h2
+              className={cn(
+                "truncate text-[17px] font-semibold tracking-tight",
+                paneRole && "text-[15px]",
+              )}
+            >
+              {name}
+            </h2>
             <span className="text-[10px] text-muted-foreground">
               {paneRole
                 ? paneRole === "primary"
@@ -82,6 +101,25 @@ export function ChatPanel({
               {focused ? "当前回复" : "切换回复"}
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={starring}
+            aria-label={conversation.starred ? "取消星标" : "标记星标"}
+            title={conversation.starred ? "取消星标" : "标记星标"}
+            onClick={() =>
+              void dispatch(
+                setConversationStarred(conversationId, !conversation.starred),
+              )
+            }
+          >
+            <Star
+              data-icon="inline-start"
+              className={cn(
+                conversation.starred && "fill-primary text-primary",
+              )}
+            />
+          </Button>
           {actions}
           {onInfo && (
             <Button
@@ -98,6 +136,7 @@ export function ChatPanel({
           )}
         </div>
       </header>
+      {!paneRole && <Separator />}
       <MessageTimeline
         conversationId={conversationId}
         onRetry={onRetry}

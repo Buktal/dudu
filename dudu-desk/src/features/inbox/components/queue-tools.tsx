@@ -1,6 +1,5 @@
 import { Search, Star, X } from "lucide-react";
 import { useId, useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   InputGroup,
@@ -25,33 +24,51 @@ import { emptyQuery } from "../stores/state";
 import type { ConversationQuery } from "../types";
 
 const statuses = [
-  { value: "all", label: "全部" },
-  { value: "needs-reply", label: "待回复" },
-  { value: "waiting", label: "等待中" },
+  { value: "active", label: "全部", count: "active" },
+  { value: "needs-reply", label: "待回复", count: "needsReply" },
+  { value: "waiting", label: "等待" },
   { value: "closed", label: "已结束" },
 ] as const;
+const orders = [
+  { value: "wait", label: "等待最久" },
+  { value: "messages", label: "消息最多" },
+];
 
-export function QueueTools({ compact = false }: { compact?: boolean }) {
+export function QueueTools({
+  compact = false,
+  showOrder = true,
+}: {
+  compact?: boolean;
+  showOrder?: boolean;
+}) {
   const dispatch = useInboxDispatch();
-  const query = useInboxSelector((state) => state.inbox.queue.query);
+  const {
+    query,
+    counts,
+    channels: catalog,
+  } = useInboxSelector((state) => state.inbox.queue);
   const conversations = useInboxSelector((state) => state.inbox.conversations);
   const id = useId();
   const channels = useMemo(() => {
-    const known = new Map(
-      Object.values(conversations).map(({ identity }) => [
-        identity.channelId,
-        identity.channelName,
-      ]),
-    );
+    const known =
+      catalog ??
+      Array.from(
+        new Map(
+          Object.values(conversations).map(({ identity }) => [
+            identity.channelId,
+            { id: identity.channelId, name: identity.channelName },
+          ]),
+        ).values(),
+      );
     return [
-      { value: "all", label: "全部渠道" },
-      ...Array.from(known, ([value, label]) => ({ value, label })),
+      { value: "all", label: "全部来源" },
+      ...known.map((channel) => ({ value: channel.id, label: channel.name })),
     ];
-  }, [conversations]);
+  }, [catalog, conversations]);
   const hasFilters =
     !!query.search ||
     query.channelId !== "all" ||
-    query.status !== "all" ||
+    query.status !== "active" ||
     query.starred;
 
   function change(changes: Partial<ConversationQuery>) {
@@ -61,17 +78,52 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
   return (
     <FieldGroup
       className={cn(
-        "gap-3 px-3 pb-3",
+        "shrink-0 gap-2.5 px-3 pb-2",
         compact &&
-          "min-[1100px]:grid min-[1100px]:grid-cols-[minmax(160px,1fr)_auto_minmax(280px,1fr)] min-[1100px]:items-center",
+          "flex-wrap px-0 min-[1100px]:flex-row min-[1100px]:items-center",
       )}
       aria-label="查找会话"
     >
-      <Field className="gap-1">
+      <ToggleGroup
+        value={query.starred ? [] : [query.status]}
+        onValueChange={(values) => {
+          const status = statuses.find((item) => item.value === values[0]);
+          if (status) change({ status: status.value, starred: false });
+        }}
+        size="sm"
+        spacing={0.5}
+        className={cn("w-full", compact && "min-[1100px]:w-auto")}
+        aria-label="按会话状态筛选"
+      >
+        {statuses.map((status) => (
+          <ToggleGroupItem
+            key={status.value}
+            value={status.value}
+            className="min-w-0 flex-1 gap-1 rounded-md px-1.5"
+          >
+            <span className="text-xs">{status.label}</span>
+            {counts && "count" in status && (
+              <span
+                className="text-[10px] tabular-nums"
+                title="当前坐席的全部会话统计"
+              >
+                {counts[status.count]}
+              </span>
+            )}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      <Field
+        className={cn(
+          "min-w-0 gap-1",
+          compact &&
+            "min-[1100px]:w-auto min-[1100px]:min-w-44 min-[1100px]:flex-1",
+        )}
+      >
         <FieldLabel className="sr-only" htmlFor={`${id}-search`}>
           搜索访客或消息
         </FieldLabel>
-        <InputGroup>
+        <InputGroup className="rounded-lg">
           <InputGroupInput
             id={`${id}-search`}
             data-inbox-search
@@ -84,45 +136,46 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
             <Search aria-hidden="true" />
           </InputGroupAddon>
           <InputGroupAddon align="inline-end">
-            {query.search ? (
+            <Toggle
+              size="sm"
+              pressed={query.starred}
+              onPressedChange={(starred) =>
+                change({ starred, status: starred ? "all" : "active" })
+              }
+              aria-label="仅查看星标会话"
+              title="星标会话（包含已结束）"
+              className="size-6 min-w-6 shrink-0 rounded-md p-0"
+            >
+              <Star data-icon="inline-start" />
+            </Toggle>
+            {hasFilters && (
               <InputGroupButton
                 size="icon-xs"
-                aria-label="清除搜索"
-                onClick={() => change({ search: "" })}
+                aria-label="清除筛选"
+                title="清除筛选"
+                onClick={() =>
+                  void dispatch(
+                    loadConversations({
+                      query: { ...emptyQuery, order: query.order },
+                    }),
+                  )
+                }
               >
                 <X data-icon="inline-start" />
               </InputGroupButton>
-            ) : (
-              <kbd className="text-[10px] text-muted-foreground">Ctrl K</kbd>
             )}
           </InputGroupAddon>
         </InputGroup>
       </Field>
-      <ToggleGroup
-        value={[query.status]}
-        onValueChange={(values) => {
-          const status = statuses.find((item) => item.value === values[0]);
-          if (status) change({ status: status.value });
-        }}
-        size="sm"
-        spacing={1}
-        className="w-full"
-        aria-label="按会话状态筛选"
+      <div
+        className={cn(
+          "flex min-w-0 items-center gap-1.5",
+          compact && "min-[1100px]:shrink-0",
+        )}
       >
-        {statuses.map((status) => (
-          <ToggleGroupItem
-            key={status.value}
-            value={status.value}
-            className="min-w-0 flex-1 px-2 text-xs"
-          >
-            {status.label}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <div className="flex min-w-0 items-center gap-1">
         <Field className="min-w-0 flex-1">
           <FieldLabel className="sr-only" htmlFor={`${id}-channel`}>
-            按渠道筛选
+            按消息来源筛选
           </FieldLabel>
           <Select
             items={channels}
@@ -132,9 +185,14 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
             <SelectTrigger
               id={`${id}-channel`}
               size="sm"
-              className="w-full text-xs"
+              className="w-full min-w-0 gap-1 rounded-lg px-1.5"
             >
-              <SelectValue />
+              <SelectValue>
+                <span className="truncate text-xs">
+                  {channels.find((channel) => channel.value === query.channelId)
+                    ?.label ?? "全部来源"}
+                </span>
+              </SelectValue>
             </SelectTrigger>
             <SelectContent alignItemWithTrigger={false}>
               <SelectGroup>
@@ -147,26 +205,42 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
             </SelectContent>
           </Select>
         </Field>
-        <Toggle
-          size="sm"
-          pressed={query.starred}
-          onPressedChange={(starred) => change({ starred })}
-          aria-label="仅查看星标会话"
-          className="text-xs"
-        >
-          <Star data-icon="inline-start" />
-          星标
-        </Toggle>
-        <Button
-          variant="ghost"
-          size="xs"
-          disabled={!hasFilters}
-          onClick={() =>
-            void dispatch(loadConversations({ query: { ...emptyQuery } }))
-          }
-        >
-          清除筛选
-        </Button>
+        {showOrder && (
+          <Field className="min-w-0 flex-1">
+            <FieldLabel className="sr-only" htmlFor={`${id}-order`}>
+              会话排序
+            </FieldLabel>
+            <Select
+              items={orders}
+              value={query.order}
+              onValueChange={(value) => {
+                if (value === "wait" || value === "messages")
+                  change({ order: value });
+              }}
+            >
+              <SelectTrigger
+                id={`${id}-order`}
+                size="sm"
+                className="w-full min-w-0 gap-1 rounded-lg px-1.5"
+              >
+                <SelectValue>
+                  <span className="text-xs">
+                    {query.order === "wait" ? "等待最久" : "消息最多"}
+                  </span>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                <SelectGroup>
+                  {orders.map((order) => (
+                    <SelectItem key={order.value} value={order.value}>
+                      {order.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
       </div>
     </FieldGroup>
   );

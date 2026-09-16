@@ -364,6 +364,7 @@ describe("incremental inbox updates", () => {
           channelId: "telegram",
           status: "all",
           starred: false,
+          order: "wait",
         },
       }),
     );

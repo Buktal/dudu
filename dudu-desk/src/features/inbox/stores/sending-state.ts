@@ -31,6 +31,7 @@ export type ReplySubmission = {
   textRevision: number;
   draftAttachmentIds: string[];
   selectionRevision: number;
+  incomingSequence: number;
   next: boolean;
   status: "sending" | "accepted" | "failed" | "unconfirmed";
 };
@@ -48,3 +49,17 @@ export type StartSubmission = {
   submission: ReplySubmission;
   message: InboxMessage;
 };
+
+export function latestIncomingSequence(
+  messages: Record<string, InboxMessage>,
+  conversationId: string,
+) {
+  return Object.values(messages).reduce(
+    (latest, message) =>
+      message.conversationId === conversationId &&
+      message.direction === "incoming"
+        ? Math.max(latest, message.sequence)
+        : latest,
+    0,
+  );
+}

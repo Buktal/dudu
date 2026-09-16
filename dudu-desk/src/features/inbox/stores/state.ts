@@ -1,6 +1,7 @@
 import type {
   ConnectionState,
   Conversation,
+  ConversationPage,
   ConversationQuery,
   InboxMessage,
   LoadState,
@@ -19,8 +20,9 @@ import type {
 export const emptyQuery: ConversationQuery = {
   search: "",
   channelId: "all",
-  status: "all",
+  status: "active",
   starred: false,
+  order: "wait",
 };
 
 export function emptyLoad(): LoadState {
@@ -37,7 +39,10 @@ export type InboxState = {
   queue: LoadState & {
     ids: string[];
     query: ConversationQuery;
+    failedRead?: "refresh" | "more";
     total?: number;
+    counts?: ConversationPage["counts"];
+    channels?: ConversationPage["channels"];
   };
   histories: Record<string, LoadState & { ids: string[] }>;
   profiles: Record<

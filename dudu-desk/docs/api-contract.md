@@ -25,7 +25,7 @@ type RequestOptions = { context: WorkContext; signal: AbortSignal };
 
 | 方法 | 附加输入 | 结果 |
 | --- | --- | --- |
-| `listConversations` | `query: ConversationQuery`、可选 `cursor` | `Promise<Page<Conversation>>` |
+| `listConversations` | `query: ConversationQuery`、可选 `cursor` | `Promise<ConversationPage>` |
 | `listMessages` | `conversationId`、可选 `cursor` | `Promise<Page<InboxMessage>>` |
 | `readProfile` | `conversationId` | `Promise<VisitorProfile>` |
 | `getCapability` | `conversationId` | `Promise<ReplyCapability>` |
@@ -35,6 +35,7 @@ type RequestOptions = { context: WorkContext; signal: AbortSignal };
 | `setStarred` | `conversationId`、`starred` | `Promise<Conversation>` |
 | `saveProfile` | `conversationId`、`tags`、`note`、`version` | `Promise<VisitorProfile>` |
 | `endConversation` | `conversationId` | `Promise<Conversation>` |
+| `resumeConversation` | `conversationId` | `Promise<Conversation>` |
 | `subscribe` | 可选 `cursor`、`onEvent`、`onConnection` | 同步返回退订函数 `() => void` |
 | `dispose?` | 无 | `void`，可选的适配器实例清理 |
 
@@ -42,9 +43,19 @@ type RequestOptions = { context: WorkContext; signal: AbortSignal };
 
 ## 查询、实体与版本
 
-`ConversationQuery` 包含 `search`、`channelId`、`status` 和 `starred`。会话状态为 `needs-reply`、`waiting`、`closed`，查询可使用 `all`。筛选作用于服务查询，而非仅对已加载的一页数据过滤。
+`ConversationQuery` 包含 `search`、`channelId`、`status`、`starred` 和 `order`。会话状态为 `needs-reply`、`waiting`、`closed`；查询另有 `active`（排除已结束，界面“全部”的默认值）和 `all`（包含已结束，供星标等查询使用）。筛选和排序作用于整个授权范围，在服务分页之前执行。
+
+`order: "wait"` 表示“等待最久”：待回复优先，再按最早的 `waitingSince` 排列；`order: "messages"` 表示“消息最多”，按完整的 `messageCount` 降序。已知的等待起点或数量优先于缺失值；相同值用 `updatedAt` 降序和稳定会话 ID 决定次序。前端不能用最后活跃时间冒充等待时间，也不能用已加载历史条数冒充总消息数。
+
+`waitingSince` 是本轮未回复来信开始等待的 ISO 时间；后续追问不重置起点，恢复或回复后的状态由服务确认。`messageCount` 是完整会话的消息总数。两者可省略，缺失时界面只显示真实已知信息。搜索应覆盖访客姓名、渠道名、账号名、外部身份、标签和完整消息历史；本地未加载的历史不能被当成不存在。服务返回的搜索结果是成员依据，标签保存和重连后需重新查询。
 
 分页统一返回 `{ items, nextCursor, total? }`；`nextCursor: null` 表示没有后续页，`total` 可省略。游标由适配器提供，前端不依据列表长度生成，也不解析它的内部格式。
+
+会话页 `ConversationPage` 另可返回 `counts: { active, needsReply, waiting, closed, starred }` 和 `channels: { id, name }[]`。`total` 是当前筛选的总数；`counts` 和 `channels` 是当前坐席授权范围内的完整汇总与来源目录，不受当前分页限制。缺少汇总时不把已加载行数显示成全量计数。
+
+普通刷新从第一页重新定位当前已加载的成员，直到全部找到，或读到末页确认其不再匹配；新排名不能把仍匹配的编辑中卡片挤出列表。刷新保留有效行的相对顺序与下一页游标；搜索、渠道或状态变化会从第一页重建。自在和并肩按当前排序派生展示顺序，速答保持卡片位置，新命中项追加到后方。固定访客选择器和“下一位”使用独立查询，不修改主队列的搜索、筛选或分页。
+
+实时事件需要刷新列表时，先等待正在读取的分页完成，再合并执行一次刷新。读取失败保留原数据与失败的刷新／分页意图；`retryConversations` 重试对应读取，成功后再处理待刷新需求，后台刷新不能吞掉分页错误。
 
 历史第一页返回最新一段，页内按 `sequence` 升序；下一页游标继续读取更早历史。分页和订阅可以重叠，但实体身份与版本必须一致，使前端能够归并。消息 `id` 在工作上下文内应稳定且不跨会话冲突；`serverId` 和 `clientRequestId` 用于关联服务端消息与本地发送记录。
 
@@ -61,7 +72,7 @@ type RequestOptions = { context: WorkContext; signal: AbortSignal };
 
 `VisitorProfile.fields` 的每个字段区分 `available`（有实际值）、`not-provided`（渠道未提供）和 `empty`（未填写）；读取失败由请求错误表达。标签与内部备注通过 `saveProfile` 保存，`version` 使用开始编辑时的基准版本。服务端应拒绝过期版本覆盖，新失败不能清掉坐席的本地编辑。
 
-`setStarred` 返回服务确认的会话快照；`endConversation` 成功返回该会话的 `closed` 快照。来信未读、是否待回复、出站投递和渠道可回复能力是独立维度。`markRead` 只确认 `throughSequence` 及以前的来信，不能清掉之后的新来信，也不能因此改变待回复状态。
+`setStarred` 返回服务确认的会话快照；`endConversation` 成功返回该会话的 `closed` 快照。`resumeConversation` 必须返回相同会话的 `needs-reply` 或 `waiting` 快照及当前真实回复能力，失败时仍保持已结束状态和草稿。继续接待不代表重开渠道回复窗口，不能把 `restricted` / `unknown` 权限改为允许；迟到的恢复响应也不能覆盖较新的关闭事件。来信未读、是否待回复、出站投递和渠道可回复能力是独立维度。`markRead` 只确认 `throughSequence` 及以前的来信，不能清掉之后的新来信，也不能因此改变待回复状态。
 
 ## 发送与回执
 
@@ -81,7 +92,9 @@ type RequestOptions = { context: WorkContext; signal: AbortSignal };
 
 网络中断、超时、取消或无法解析的响应不能证明服务端未接收消息。前端保留未确认状态并等待补偿，不自动重发；也不通过计时器推进送达或已读。查询和回执确认原提交后，可以更新同一条本地消息。
 
-发送结果只清理该次提交仍对应的文字版本和附件，提交期间的新输入继续保留。普通发送保持当前会话；“发送并下一位”仅在明确受理且坐席期间未主动改变回复对象时推进到下一位可回复的待接待会话，不隐含结束接待。
+发送结果只清理该次提交仍对应的文字版本和附件，提交期间的新输入继续保留。普通发送保持当前会话；“发送并下一位”在明确受理后，从全局待回复队列按等待顺序分页寻找可进行文字回复的另一位访客，不受当前搜索、渠道或星标筛选限制，也不隐含结束接待。
+
+若坐席期间改变了回复对象、当前会话已结束，或收到同访客的新来信，则不自动推进。提交时保存已知入站消息和事件的最高序号；随后实时入站事件与该快照比较，即使新追问先经历史查询到达也能阻止推进。仅补读既有历史或重放提交前已知事件不会被误认为新来信。查找下一位失败只提示手动选择，不把已受理的消息改为发送失败；速答中的下一位不在当前筛选卡片内时，打开该访客的完整对话，保留原筛选和草稿。
 
 消息体可表示文字、图片、音频、视频、文件、文字与附件组合、链接、位置、引用、渠道卡片及未知类型。`unknown` 保留原类型与可用说明；仅有商品或订单标识时不得补造价格、状态或处理动作。收到某种类型不代表该渠道也支持发送此类型。
 

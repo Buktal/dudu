@@ -13,6 +13,7 @@ import {
   resetContext,
   selectConversation,
 } from "./reading";
+import { selectQueueConversations } from "./selectors";
 import { emptyQuery } from "./state";
 import {
   deferred,
@@ -22,6 +23,49 @@ import {
 } from "./test-support";
 
 describe("visitor details", () => {
+  it("refreshes tag search membership after a saved tag is removed and restored", async () => {
+    let tags = ["保修"];
+    let version = 1;
+    const store = testStore({
+      listConversations: async ({ query }) => ({
+        items:
+          !query.search || tags.includes("保修") ? [firstConversation] : [],
+        nextCursor: null,
+      }),
+      readProfile: async ({ conversationId }) => ({
+        conversationId,
+        version,
+        tags,
+        note: "",
+        fields: [],
+      }),
+      saveProfile: async ({ conversationId, tags: savedTags, note }) => {
+        tags = savedTags;
+        version++;
+        return { conversationId, version, tags, note, fields: [] };
+      },
+    });
+    await store.dispatch(
+      loadConversations({ query: { ...emptyQuery, search: "保修" } }),
+    );
+    store.dispatch(editVisitorProfile(firstConversation.id, { tagsText: "" }));
+
+    await store.dispatch(saveVisitorProfile(firstConversation.id));
+
+    expect(selectQueueConversations(store.getState())).toEqual([]);
+    expect(store.getState().inbox.replyId).toBe("conversation-a");
+
+    store.dispatch(
+      editVisitorProfile(firstConversation.id, { tagsText: "保修；回访" }),
+    );
+    await store.dispatch(saveVisitorProfile(firstConversation.id));
+
+    expect(
+      selectQueueConversations(store.getState()).map(({ id }) => id),
+    ).toEqual(["conversation-a"]);
+    expect(store.getState().inbox.queue.query.search).toBe("保修");
+  });
+
   it("does not overwrite concurrent server changes with an older editing baseline", async () => {
     let profile: VisitorProfile = {
       conversationId: firstConversation.id,

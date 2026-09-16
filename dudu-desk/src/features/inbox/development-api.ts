@@ -8,10 +8,16 @@ import {
   attachmentRestriction,
 } from "./attachment-rules";
 import {
+  compareConversations,
+  matchesConversationFilters,
+  matchesConversationText,
+} from "./conversation-query";
+import {
   createDevelopmentDriver,
   findDevelopmentConversation as findConversation,
   resolveDevelopmentScenario,
 } from "./development-scenarios";
+import { messageSummary } from "./message-text";
 import type { InboxMessage, MediaReference, SendTarget } from "./types";
 
 export function createDevelopmentInboxApi({
@@ -35,32 +41,39 @@ export function createDevelopmentInboxApi({
         const fixtures = await session(input, "listConversations");
         const { cursor, query } = input;
         const start = Number(cursor ?? 0);
-        const term = query.search.trim().toLocaleLowerCase();
-        const items = fixtures.conversations.filter((conversation) => {
-          const identity = conversation.identity;
-          return (
-            (query.channelId === "all" ||
-              query.channelId === identity.channelId) &&
-            (query.status === "all" || query.status === conversation.status) &&
-            (!query.starred || conversation.starred) &&
-            (!term ||
-              [
-                identity.name,
-                identity.externalUserId,
-                identity.accountName,
-                conversation.preview,
-              ].some((part) => part?.toLocaleLowerCase().includes(term)))
-          );
-        });
-        items.sort(
-          (left, right) =>
-            right.updatedAt.localeCompare(left.updatedAt) ||
-            left.id.localeCompare(right.id),
+        const items = fixtures.conversations.filter(
+          (conversation) =>
+            matchesConversationFilters(conversation, query) &&
+            matchesConversationText(conversation, query.search, [
+              ...(fixtures.profiles[conversation.id]?.tags ?? []),
+              ...fixtures.messages[conversation.id].map((message) =>
+                messageSummary(message.body),
+              ),
+            ]),
         );
+        items.sort(compareConversations(query.order));
+        const all = fixtures.conversations;
         return {
           items: structuredClone(items.slice(start, start + 12)),
           nextCursor: start + 12 < items.length ? String(start + 12) : null,
           total: items.length,
+          counts: {
+            active: all.filter((item) => item.status !== "closed").length,
+            needsReply: all.filter((item) => item.status === "needs-reply")
+              .length,
+            waiting: all.filter((item) => item.status === "waiting").length,
+            closed: all.filter((item) => item.status === "closed").length,
+            starred: all.filter((item) => item.starred).length,
+          },
+          channels: Array.from(
+            new Map(
+              all.map(({ identity }) => [
+                identity.channelId,
+                identity.channelName,
+              ]),
+            ),
+            ([id, name]) => ({ id, name }),
+          ),
         };
       },
       listMessages: async (input) => {
@@ -118,6 +131,12 @@ export function createDevelopmentInboxApi({
       endConversation: async (input) => {
         const fixtures = await session(input, "endConversation");
         const conversation = findConversation(fixtures, input.conversationId);
+        if (conversation.status === "closed")
+          return structuredClone(conversation);
+        fixtures.receptionCapabilities.set(
+          conversation.id,
+          structuredClone(conversation.capability),
+        );
         conversation.status = "closed";
         conversation.capability = {
           state: "restricted",
@@ -125,6 +144,20 @@ export function createDevelopmentInboxApi({
           reason: "会话已结束",
           nextStep: "等待来访用户重新发起咨询",
         };
+        conversation.version += 1;
+        driver.emit(input.context, { type: "conversation", conversation });
+        return structuredClone(conversation);
+      },
+      resumeConversation: async (input) => {
+        const fixtures = await session(input, "resumeConversation");
+        const conversation = findConversation(fixtures, input.conversationId);
+        if (conversation.status !== "closed")
+          return structuredClone(conversation);
+        const capability = fixtures.receptionCapabilities.get(conversation.id);
+        if (capability) conversation.capability = capability;
+        fixtures.receptionCapabilities.delete(conversation.id);
+        conversation.status = "needs-reply";
+        conversation.waitingSince ??= now();
         conversation.version += 1;
         driver.emit(input.context, { type: "conversation", conversation });
         return structuredClone(conversation);
@@ -265,6 +298,8 @@ export function createDevelopmentInboxApi({
           message,
         });
         conversation.status = "waiting";
+        delete conversation.waitingSince;
+        conversation.messageCount = messages.length;
         conversation.preview = text || "[附件]";
         conversation.updatedAt = message.createdAt;
         conversation.version += 1;
@@ -272,7 +307,7 @@ export function createDevelopmentInboxApi({
           fixtures.unconfirmedSend = false;
           throw new DeskApiError(
             "network",
-            "开发场景：暂未确认发送结果，请查询回执或重试同一条消息",
+            "发送结果暂未确认，请稍后查看发送状态",
           );
         }
         driver.emit(input.context, { type: "message", message });

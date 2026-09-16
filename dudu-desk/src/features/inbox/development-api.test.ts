@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { InboxApi } from "./api";
 import { createDevelopmentInboxApi } from "./development-api";
 import type {
   Conversation,
@@ -20,6 +21,7 @@ const query: ConversationQuery = {
   channelId: "all",
   status: "all",
   starred: false,
+  order: "wait",
 };
 const targetFor = (conversation: Conversation): SendTarget => ({
   conversationId: conversation.id,
@@ -29,22 +31,35 @@ const targetFor = (conversation: Conversation): SendTarget => ({
   externalUserId: conversation.identity.externalUserId,
 });
 
+async function allConversations(api: InboxApi, context = options()) {
+  const conversations: Conversation[] = [];
+  const seen = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const page = await api.listConversations({ ...context, query, cursor });
+    conversations.push(...page.items);
+    cursor = page.nextCursor ?? undefined;
+    if (cursor) {
+      expect(seen.has(cursor)).toBe(false);
+      seen.add(cursor);
+    }
+  } while (cursor);
+  return conversations;
+}
+
 describe("development InboxApi", () => {
   it("keeps same-name visitors separate and reads every conversation page", async () => {
     const { api } = createDevelopmentInboxApi();
-    const first = await api.listConversations({ ...options(), query });
-    expect(first.items[0].identity.name).toBe("林小满");
-    expect(first.items[1].identity.name).toBe("林小满");
-    expect(first.items[0].identity.accountId).not.toBe(
-      first.items[1].identity.accountId,
+    const conversations = await allConversations(api);
+    const sameName = conversations.filter(
+      (item) => item.identity.name === "林小满",
     );
-    expect(first.nextCursor).not.toBeNull();
-    const next = await api.listConversations({
-      ...options(),
-      query,
-      cursor: first.nextCursor ?? undefined,
-    });
-    const ids = [...first.items, ...next.items].map((item) => item.id);
+    expect(sameName).toHaveLength(3);
+    expect(new Set(sameName.map((item) => item.identity.accountId)).size).toBe(
+      3,
+    );
+    expect(conversations).toHaveLength(36);
+    const ids = conversations.map((item) => item.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -190,8 +205,8 @@ describe("development InboxApi", () => {
         },
       }),
     ).rejects.toMatchObject({ kind: "business" });
-    const restricted = items.find(
-      (item) => item.capability.state === "restricted",
+    const restricted = (await allConversations(api, context)).find(
+      (item) => item.id === "dev-conversation-05",
     );
     expect(restricted).toBeDefined();
     if (!restricted) throw new Error("Missing restricted fixture");

@@ -6,6 +6,10 @@ export {
   retryAttachment,
 } from "./stores/attachments";
 export {
+  cancelConversationChoices,
+  readConversationChoices,
+} from "./stores/choices";
+export {
   discardProfileEdits,
   editVisitorProfile,
   saveVisitorProfile,
@@ -32,6 +36,7 @@ export {
   loadHistory,
   loadProfile,
   resetContext,
+  retryConversations,
   selectConversation,
 } from "./stores/reading";
 export {
@@ -41,12 +46,14 @@ export {
   selectProfile,
   selectQueue,
   selectQueueConversations,
+  selectQuickQueueConversations,
   selectReplyConversation,
 } from "./stores/selectors";
 export {
   editDraft,
   endReception,
   focusReply,
+  resumeReception,
   retryReply,
   sendReply,
 } from "./stores/sending";
@@ -59,6 +66,7 @@ export {
 export type {
   ConnectionState,
   Conversation,
+  ConversationPage,
   ConversationQuery,
   InboxEvent,
   InboxMessage,

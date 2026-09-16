@@ -6,9 +6,8 @@ import {
   PanelRightClose,
   RefreshCw,
   Star,
-  Tag,
 } from "lucide-react";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +17,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
@@ -32,6 +31,7 @@ import { loadProfile } from "../stores/reading";
 import type { ProfileField } from "../types";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
 import { InboxEmpty, InboxError } from "./inbox-state";
+import { VisitorTags } from "./visitor-tags";
 
 function ProfileValue({ field }: { field: ProfileField }) {
   if (field.state === "available") return <span>{field.value}</span>;
@@ -63,6 +63,7 @@ export function VisitorInfo({
     (state) => state.inbox.starUpdates[conversationId],
   );
   const id = useId();
+  const [tagInputReset, setTagInputReset] = useState(0);
   const profile = loaded?.data;
   const dirty = !!edit && edit.revision !== edit.savedRevision;
   const saving = edit?.status === "saving";
@@ -81,14 +82,27 @@ export function VisitorInfo({
       />
     );
   const name = visitorName(conversation.identity);
+  const starLabel =
+    star?.status === "saving"
+      ? `正在保存 ${name} 的星标`
+      : conversation.starred
+        ? `取消星标 ${name}`
+        : `星标 ${name}`;
 
   return (
     <aside
-      className="flex h-full min-h-0 flex-col bg-card"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-l-3xl border-l border-border bg-sidebar text-sidebar-foreground"
       aria-label={`${name} 的来访资料`}
     >
-      <header className="flex shrink-0 items-center justify-between gap-2 px-5 py-4">
-        <h2 className="text-sm font-semibold">来访资料</h2>
+      <header className="flex shrink-0 items-center justify-between gap-2 px-5 pt-[22px] pb-3.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="shrink-0 text-sm font-semibold">来访资料</h2>
+          {(dirty || saving) && (
+            <Badge variant="secondary" className="text-[10px]">
+              {saving ? "保存中" : "未保存"}
+            </Badge>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -111,19 +125,22 @@ export function VisitorInfo({
           )}
         </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-6">
-        <div className="flex flex-col items-center gap-2 py-2 text-center">
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3.5 pb-5">
+        <div className="relative mb-[3px] flex flex-col items-center gap-[7px] rounded-xl bg-sidebar-accent px-2 pt-[18px] pb-[17px] text-center">
           <VisitorAvatar identity={conversation.identity} large />
-          <h3 className="max-w-full break-words text-base font-semibold">
+          <h3 className="mt-[3px] max-w-full break-words text-[19px] font-semibold tracking-[-0.4px]">
             {name}
           </h3>
           <SourceBadge identity={conversation.identity} />
-          <p className="max-w-full break-words text-xs text-muted-foreground">
+          <p className="max-w-full break-words text-[11px] text-muted-foreground">
             {conversation.identity.accountName}
           </p>
           <Button
             variant={conversation.starred ? "secondary" : "ghost"}
-            size="sm"
+            size="icon-xs"
+            className="absolute top-2 right-2"
+            aria-label={starLabel}
+            title={starLabel}
             aria-pressed={conversation.starred}
             disabled={star?.status === "saving"}
             onClick={() =>
@@ -143,14 +160,9 @@ export function VisitorInfo({
                 className={conversation.starred ? "fill-current" : undefined}
               />
             )}
-            {star?.status === "saving"
-              ? "正在保存星标"
-              : conversation.starred
-                ? "已加星标"
-                : "添加星标"}
           </Button>
           {star?.status === "saved" && (
-            <p role="status" className="text-xs text-muted-foreground">
+            <p role="status" className="text-[10px] text-muted-foreground">
               星标已保存
             </p>
           )}
@@ -167,18 +179,15 @@ export function VisitorInfo({
           )}
         </div>
 
-        <section className="flex flex-col gap-3" aria-label="渠道资料">
+        <section
+          className="flex flex-col gap-3 rounded-xl border-t border-border bg-card px-3.5 py-4 text-card-foreground"
+          aria-label="渠道资料"
+        >
           <h4 className="flex items-center gap-2 text-xs font-semibold">
-            <Info className="size-3.5" />
+            <Info className="size-3.5 text-muted-foreground" />
             渠道资料
           </h4>
-          <dl className="flex flex-col gap-3 text-xs">
-            <div className="flex flex-col gap-1">
-              <dt className="text-muted-foreground">来源身份</dt>
-              <dd className="break-all font-mono text-[11px]">
-                {conversation.identity.externalUserId}
-              </dd>
-            </div>
+          <dl className="flex flex-col gap-3 text-[11px]">
             <div className="flex justify-between gap-3">
               <dt className="shrink-0 text-muted-foreground">渠道账号</dt>
               <dd className="break-words text-right">
@@ -195,6 +204,13 @@ export function VisitorInfo({
                 </dd>
               </div>
             ))}
+          </dl>
+          <Separator />
+          <dl className="flex flex-col gap-1 text-[10px]">
+            <dt className="text-muted-foreground">来源身份</dt>
+            <dd className="break-all font-mono">
+              {conversation.identity.externalUserId}
+            </dd>
           </dl>
           {profile && !profile.fields.length && (
             <p className="text-xs leading-relaxed text-muted-foreground">
@@ -223,63 +239,35 @@ export function VisitorInfo({
 
         {profile && (
           <form
-            className="flex flex-col gap-4"
+            className="flex flex-col gap-3"
+            aria-label={`编辑 ${name} 的接待资料`}
+            aria-describedby={`${id}-save-status`}
             onSubmit={(event) => {
               event.preventDefault();
               void dispatch(saveVisitorProfile(conversationId));
             }}
           >
-            <FieldGroup className="gap-5">
-              <Field className="gap-2">
-                <FieldLabel htmlFor={`${id}-tags`} className="text-xs">
-                  <Tag className="size-3.5" />
-                  来访标签
-                </FieldLabel>
-                {!dirty && profile.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {profile.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="max-w-full truncate"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-                <Input
-                  id={`${id}-tags`}
-                  value={
-                    showEdit ? (edit?.tagsText ?? "") : profile.tags.join("，")
-                  }
-                  placeholder="例如：待回访，重点咨询"
-                  onChange={(event) =>
-                    dispatch(
-                      editVisitorProfile(conversationId, {
-                        tagsText: event.target.value,
-                      }),
-                    )
-                  }
-                  aria-describedby={`${id}-tags-help`}
-                />
-                <FieldDescription
-                  id={`${id}-tags-help`}
-                  className="text-[11px]"
-                >
-                  多个标签用逗号分隔，清空后保存可移除全部标签。
-                </FieldDescription>
-              </Field>
-              <Field className="gap-2">
+            <FieldGroup className="gap-2.5">
+              <VisitorTags
+                key={`${conversationId}:${tagInputReset}`}
+                id={`${id}-tags`}
+                value={
+                  showEdit ? (edit?.tagsText ?? "") : profile.tags.join("，")
+                }
+                onChange={(tagsText) =>
+                  dispatch(editVisitorProfile(conversationId, { tagsText }))
+                }
+              />
+              <Field className="gap-3 rounded-xl border-t border-border bg-accent px-3.5 py-4 text-accent-foreground focus-within:ring-1 focus-within:ring-ring/25">
                 <FieldLabel htmlFor={`${id}-note`} className="text-xs">
-                  <FilePenLine className="size-3.5" />
+                  <FilePenLine className="size-3.5 text-muted-foreground" />
                   接待备注
                 </FieldLabel>
                 <Textarea
                   id={`${id}-note`}
                   value={showEdit ? (edit?.note ?? "") : profile.note}
                   placeholder="记下来访用户的偏好与待办事项…"
-                  className="min-h-28 resize-y text-xs leading-relaxed"
+                  className="min-h-[70px] resize-y border-0 bg-transparent p-0 text-xs leading-[1.85] shadow-none focus-visible:ring-0"
                   onChange={(event) =>
                     dispatch(
                       editVisitorProfile(conversationId, {
@@ -291,13 +279,17 @@ export function VisitorInfo({
                 />
                 <FieldDescription
                   id={`${id}-note-help`}
-                  className="text-[11px]"
+                  className="text-[10px]"
                 >
                   内部接待记录，不作为聊天消息发送。
                 </FieldDescription>
               </Field>
             </FieldGroup>
-            <div aria-live="polite" className="flex flex-col gap-2">
+            <div
+              id={`${id}-save-status`}
+              aria-live="polite"
+              className="flex flex-col gap-2 px-1"
+            >
               <FieldError>{edit?.error?.message}</FieldError>
               <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 {!dirty && edit?.status === "saved" && (
@@ -314,7 +306,7 @@ export function VisitorInfo({
                         : "资料已读取"}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 px-1">
               <Button type="submit" size="sm" disabled={!dirty || saving}>
                 {saving && (
                   <LoaderCircle
@@ -333,7 +325,10 @@ export function VisitorInfo({
                 variant="ghost"
                 size="sm"
                 disabled={!dirty || saving}
-                onClick={() => dispatch(discardProfileEdits(conversationId))}
+                onClick={() => {
+                  dispatch(discardProfileEdits(conversationId));
+                  setTagInputReset((value) => value + 1);
+                }}
               >
                 撤销修改
               </Button>

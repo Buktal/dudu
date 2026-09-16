@@ -1,4 +1,11 @@
 import { en, Faker, zh_CN } from "@faker-js/faker";
+import { relativeIso } from "@/lib/time";
+import {
+  type DevelopmentTurn,
+  developmentEarlierTurns,
+  developmentScene,
+} from "./mock-conversations";
+import { developmentPortrait } from "./mock-portraits";
 import type {
   Conversation,
   InboxMessage,
@@ -12,17 +19,16 @@ const sources = [
   ["telegram", "Telegram", "telegram-service", "海外服务"],
   ["wechat-kf", "微信客服", "wechat-outlet", "官方折扣店"],
   ["web", "在线咨询", "web-main", "品牌官网"],
+  ["douyin", "抖音", "douyin-live", "木禾生活直播间"],
+  ["xiaohongshu", "小红书", "redbook-main", "木禾生活号"],
+  ["wecom", "企业微信", "wecom-main", "企业礼赠服务"],
+  ["whatsapp", "WhatsApp", "whatsapp-service", "Morrow Studio"],
+  ["wechat-mp", "微信公众号", "wechat-mp-main", "木禾生活服务号"],
 ] as const;
-const topics = [
-  "你好，想确认一下这款还有现货吗？",
-  "收货地址可以帮我调整一下吗？",
-  "已经收到啦，谢谢你的耐心解答。",
-  "刚刚上传了照片，麻烦帮忙看一下。",
-  "预计什么时候可以收到快递呢？",
-  "想了解一下售后的处理进度。",
-] as const;
+const historyCounts = [34, 52, 26, 38, 30, 44, 28, 32, 42, 24, 36, 46];
+const firstWaitingMinutes = [18, 4, 11];
 const screenshot = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400"><rect width="640" height="400" rx="28" fill="#f2ece2"/><rect x="48" y="48" width="544" height="304" rx="20" fill="#fffdf8"/><rect x="80" y="88" width="180" height="150" rx="16" fill="#ceb99a"/><path d="M124 124h92v80h-92z" fill="#faf7ef"/><text x="290" y="135" font-size="24" fill="#443f39">订单资料</text><text x="290" y="181" font-size="18" fill="#777066">开发联调图片</text><text x="80" y="300" font-size="16" fill="#777066">此图片仅用于开发环境展示</text></svg>',
+  '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="460" viewBox="0 0 640 460"><rect width="640" height="460" rx="28" fill="#e8eae3"/><path d="M460 0h180v460h-95Z" fill="#d6dcd2"/><path d="m0 370 640-65v155H0Z" fill="#dfe2d8"/><ellipse cx="310" cy="392" rx="170" ry="24" fill="#747e6f" opacity=".14"/><path d="M245 185v-52c0-105 144-105 144 0v52" fill="none" stroke="#c4bba5" stroke-width="23"/><path d="M245 185v-52c0-105 144-105 144 0v52" fill="none" stroke="#f1ecdb" stroke-width="14"/><path d="m170 170 285 3-16 206c-55 33-190 34-251-3Z" fill="#e6dfcd" stroke="#c9c1ae" stroke-width="2"/><path d="M200 180c9 48 13 132 3 175m225-175c-9 55-13 130-4 178" fill="none" stroke="#c5bca9" stroke-width="3" opacity=".7"/><path d="M272 278h88v47h-88Z" fill="#f5f0df"/><text x="316" y="307" text-anchor="middle" font-family="sans-serif" font-size="18" letter-spacing="3" fill="#847962">MORROW</text><text x="32" y="434" font-family="sans-serif" font-size="14" fill="#777066">米白色云朵托特包 · 细节图</text></svg>',
 )}`;
 
 function capability(index: number): ReplyCapability {
@@ -66,9 +72,9 @@ function mediaBodies(): MessageBody[] {
       media: {
         id: "sample-image",
         kind: "image",
-        name: "订单资料.svg",
+        name: "云朵托特包_米白.svg",
         mimeType: "image/svg+xml",
-        size: 720,
+        size: 1450,
         url: screenshot,
       },
     },
@@ -77,10 +83,10 @@ function mediaBodies(): MessageBody[] {
       media: {
         id: "sample-file",
         kind: "file",
-        name: "售后说明.txt",
+        name: "托特包保养说明.txt",
         mimeType: "text/plain",
         size: 42,
-        url: `data:text/plain;charset=utf-8,${encodeURIComponent("开发联调文件：请保留订单编号与收货照片。")}`,
+        url: `data:text/plain;charset=utf-8,${encodeURIComponent("保养建议：清洁前先核对洗标，保留订单编号便于后续咨询。")}`,
       },
     },
     {
@@ -88,7 +94,7 @@ function mediaBodies(): MessageBody[] {
       media: {
         id: "sample-audio",
         kind: "audio",
-        name: "语音咨询.wav",
+        name: "肩带问题语音.wav",
         mimeType: "audio/wav",
         size: 32044,
       },
@@ -98,16 +104,16 @@ function mediaBodies(): MessageBody[] {
       media: {
         id: "sample-video",
         kind: "video",
-        name: "商品情况.mp4",
+        name: "托特包细节.mp4",
         mimeType: "video/mp4",
         size: 2400000,
       },
     },
     {
       type: "link",
-      title: "订单查询帮助",
-      url: "https://example.com/help/orders",
-      description: "请以渠道提供的订单资料为准。",
+      title: "通勤包尺寸与保养说明",
+      url: "https://example.com/help/canvas-tote",
+      description: "按商品款式核对尺寸、材质与洗标。",
     },
     {
       type: "location",
@@ -117,15 +123,15 @@ function mediaBodies(): MessageBody[] {
     },
     {
       type: "quote",
-      text: "是这一款吗？",
-      quotedText: "可以帮你确认库存。",
+      text: "是这一款米白色吗？",
+      quotedText: "米白和雾灰两个颜色都可以先确认库存。",
       messageId: "earlier-message",
     },
     {
       type: "card",
       kind: "product",
-      externalId: "SKU-DEVELOPMENT",
-      title: "燕麦随行杯 · 原色款",
+      externalId: "SKU-DEVELOPMENT-TOTE-IVORY",
+      title: "云朵轻量托特包 · 米白",
       url: "https://example.com/products/demo",
     },
     {
@@ -136,14 +142,14 @@ function mediaBodies(): MessageBody[] {
     },
     {
       type: "reply",
-      text: "资料已补充，请查收。",
+      text: "包身细节已补充，可以先看看米白的纹理。",
       attachments: [
         {
           id: "reply-image",
           kind: "image",
-          name: "补充资料.svg",
+          name: "米白包身细节.svg",
           mimeType: "image/svg+xml",
-          size: 720,
+          size: 1450,
           url: screenshot,
         },
       ],
@@ -158,7 +164,9 @@ export type DevelopmentFixtures = {
 };
 
 /** Fixed seed; each adapter/context receives independent objects. Never imported in production. */
-export function createDevelopmentFixtures(): DevelopmentFixtures {
+export function createDevelopmentFixtures(
+  now = "2026-09-16T02:00:00.000Z",
+): DevelopmentFixtures {
   const faker = new Faker({ locale: [zh_CN, en] });
   faker.seed(20260916);
   const conversations: Conversation[] = [];
@@ -167,6 +175,44 @@ export function createDevelopmentFixtures(): DevelopmentFixtures {
   for (let index = 0; index < 36; index += 1) {
     const source = sources[index % sources.length];
     const id = `dev-conversation-${String(index + 1).padStart(2, "0")}`;
+    const status =
+      index > 31
+        ? "closed"
+        : index >= 3 && index % 3 === 2
+          ? "waiting"
+          : "needs-reply";
+    const scene = developmentScene(index, status);
+    const updatedAt = relativeIso(now, -(30 + index * 5));
+    const waitingMinutes = firstWaitingMinutes[index] ?? 5 + ((index * 7) % 13);
+    const waitingSince =
+      status === "needs-reply"
+        ? relativeIso(now, -waitingMinutes * 60)
+        : undefined;
+    const messageCount =
+      historyCounts[index % historyCounts.length] -
+      Math.floor(index / historyCounts.length) * 2;
+    const earlier = developmentEarlierTurns(messageCount - scene.recent.length);
+    if (index === 0) {
+      // Keep every media contract reachable in older history, outside the latest exchange.
+      for (const [position, body] of mediaBodies().entries()) {
+        earlier[position * 2] = {
+          direction: body.type === "reply" ? "outgoing" : "incoming",
+          body,
+        };
+      }
+    }
+    const turns = [...earlier, ...scene.recent];
+    messages[id] = turns.map((turn, position) =>
+      developmentMessage({
+        conversationId: id,
+        turn,
+        position,
+        earlierCount: earlier.length,
+        now,
+        updatedAt,
+        waitingSince,
+      }),
+    );
     const conversation: Conversation = {
       id,
       identity: {
@@ -178,40 +224,23 @@ export function createDevelopmentFixtures(): DevelopmentFixtures {
             : index === 7
               ? undefined
               : faker.person.fullName(),
+        avatarUrl: index === 7 ? undefined : developmentPortrait(index),
         channelId: source[0],
         channelName: source[1],
         accountId: source[2],
         accountName: source[3],
       },
-      status:
-        index > 31 ? "closed" : index % 3 === 2 ? "waiting" : "needs-reply",
-      unread: index % 3 === 2 ? 0 : (index % 4) + 1,
+      status,
+      unread: status === "needs-reply" ? (index % 2) + 1 : 0,
       starred: index % 7 === 0,
-      preview: topics[index % topics.length],
-      updatedAt: `2026-09-15T17:${String(59 - index).padStart(2, "0")}:00Z`,
+      preview: scene.preview,
+      updatedAt,
+      waitingSince,
+      messageCount: messages[id].length,
       version: 1,
       capability: capability(index),
     };
     conversations.push(conversation);
-    const bodies: MessageBody[] = Array.from({ length: 28 }, (_, position) => ({
-      type: "text",
-      text:
-        position % 2 === 0
-          ? topics[position % topics.length]
-          : "收到，我来帮你查看，请稍等片刻。",
-    }));
-    if (index === 0) bodies.push(...mediaBodies());
-    bodies.push({ type: "text", text: conversation.preview });
-    messages[id] = bodies.map((body, position) => ({
-      id: `${id}-message-${position + 1}`,
-      conversationId: id,
-      direction: position % 2 === 0 ? "incoming" : "outgoing",
-      body,
-      createdAt: `2026-09-15T16:${String(position).padStart(2, "0")}:00Z`,
-      sequence: position + 1,
-      version: 1,
-      ...(position % 2 === 1 ? { delivery: { state: "read" as const } } : {}),
-    }));
     profiles[id] = {
       conversationId: id,
       version: 1,
@@ -230,12 +259,53 @@ export function createDevelopmentFixtures(): DevelopmentFixtures {
               ? { state: "available", value: "上海" }
               : { state: "not-provided" },
         },
+        {
+          label: "本次咨询",
+          value: { state: "available", value: scene.product },
+        },
         { label: "手机号", value: { state: "not-provided" } },
         { label: "邮箱", value: { state: "empty" } },
       ],
-      tags: index % 3 === 0 ? ["售后咨询", "需跟进"] : [],
-      note: index === 0 ? "来访用户正在确认商品库存，优先核对同款颜色。" : "",
+      tags: [...scene.tags],
+      note: index === 1 ? "" : scene.note,
     };
   }
   return { conversations, messages, profiles };
+}
+
+function developmentMessage({
+  conversationId,
+  turn,
+  position,
+  earlierCount,
+  now,
+  updatedAt,
+  waitingSince,
+}: {
+  conversationId: string;
+  turn: DevelopmentTurn;
+  position: number;
+  earlierCount: number;
+  now: string;
+  updatedAt: string;
+  waitingSince?: string;
+}): InboxMessage {
+  const recentPosition = position - earlierCount;
+  const createdAt =
+    position < earlierCount
+      ? relativeIso(now, -86400 - (earlierCount - position) * 95)
+      : waitingSince && recentPosition < 7
+        ? relativeIso(waitingSince, (recentPosition - 6) * 75)
+        : relativeIso(updatedAt, (recentPosition - 7) * 75);
+  return {
+    id: `${conversationId}-message-${position + 1}`,
+    conversationId,
+    ...turn,
+    createdAt,
+    sequence: position + 1,
+    version: 1,
+    ...(turn.direction === "outgoing"
+      ? { delivery: { state: "read" as const } }
+      : {}),
+  };
 }

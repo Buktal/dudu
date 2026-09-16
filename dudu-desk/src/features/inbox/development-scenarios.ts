@@ -50,6 +50,7 @@ export type DevelopmentSession = DevelopmentFixtures & {
     { submission: SendSubmission; message: InboxMessage }
   >;
   readThrough: Map<string, number>;
+  receptionCapabilities: Map<string, ReplyCapability>;
   events: InboxEvent[];
   subscribers: Set<Subscription>;
   failures: Map<DevelopmentOperation, DeskApiError[]>;
@@ -69,14 +70,15 @@ export function createDevelopmentDriver(
   const releases = new Set<() => void>();
   let disposed = false;
   function session(context: WorkContext) {
-    if (disposed) throw new DeskApiError("aborted", "开发会话已结束");
+    if (disposed) throw new DeskApiError("aborted", "操作已取消");
     const key = JSON.stringify([context.workspaceId, context.agentId]);
     let fixtures = sessions.get(key);
     if (!fixtures) {
       fixtures = {
-        ...createDevelopmentFixtures(),
+        ...createDevelopmentFixtures(now()),
         submissions: new Map(),
         readThrough: new Map(),
+        receptionCapabilities: new Map(),
         events: [],
         subscribers: new Set(),
         failures: new Map(),
@@ -159,6 +161,11 @@ export function createDevelopmentDriver(
         conversationId,
       );
       conversation.capability = structuredClone(capability);
+      if (conversation.status === "closed")
+        fixtures.receptionCapabilities.set(
+          conversationId,
+          structuredClone(capability),
+        );
       conversation.version += 1;
       emit(context, {
         type: "capability",
@@ -178,6 +185,7 @@ export function createDevelopmentDriver(
       );
       delete fixtures.messages[conversationId];
       delete fixtures.profiles[conversationId];
+      fixtures.receptionCapabilities.delete(conversationId);
       emit(context, {
         type: "removed",
         conversationId,
@@ -230,7 +238,13 @@ export function createDevelopmentDriver(
         version: 1,
       };
       messages.push(message);
+      const capability = fixtures.receptionCapabilities.get(conversationId);
+      if (capability) conversation.capability = capability;
+      fixtures.receptionCapabilities.delete(conversationId);
       conversation.unread += 1;
+      if (conversation.status !== "needs-reply" || !conversation.waitingSince)
+        conversation.waitingSince = message.createdAt;
+      conversation.messageCount = messages.length;
       conversation.status = "needs-reply";
       conversation.preview = text;
       conversation.updatedAt = message.createdAt;
@@ -290,7 +304,7 @@ export function createDevelopmentDriver(
       if (signal.aborted || disposed)
         throw new DeskApiError("aborted", "操作已取消");
       if (fixtures.transportOffline)
-        throw new DeskApiError("network", "开发场景：网络连接已断开");
+        throw new DeskApiError("network", "网络连接已断开");
       const failure = fixtures.failures.get(operation)?.shift();
       if (failure) throw failure;
       return fixtures;
@@ -309,29 +323,29 @@ function configureDevelopmentScenario(
       "send",
       new DeskApiError(
         "business",
-        "开发场景：渠道拒绝了本次回复，可保留内容后重试",
+        "渠道拒绝了本次回复，可保留内容后重试",
         14001,
       ),
     ],
     "list-error": [
       "listConversations",
-      new DeskApiError("network", "开发场景：会话列表暂时读取失败"),
+      new DeskApiError("network", "会话列表暂时读取失败"),
     ],
     "read-error": [
       "listMessages",
-      new DeskApiError("network", "开发场景：消息历史暂时读取失败"),
+      new DeskApiError("network", "消息历史暂时读取失败"),
     ],
     "profile-error": [
       "readProfile",
-      new DeskApiError("network", "开发场景：来访资料暂时读取失败"),
+      new DeskApiError("network", "来访资料暂时读取失败"),
     ],
     "upload-error": [
       "prepareAttachment",
-      new DeskApiError("network", "开发场景：附件上传中断，请重试"),
+      new DeskApiError("network", "附件上传中断，请重试"),
     ],
     "auth-expired": [
       "listConversations",
-      new DeskApiError("authentication", "开发场景：登录已过期", 10101),
+      new DeskApiError("authentication", "登录已过期", 10101),
     ],
   };
   const failure = failures[scenario];

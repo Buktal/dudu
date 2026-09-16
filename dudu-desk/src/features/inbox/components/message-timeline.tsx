@@ -26,6 +26,9 @@ function HistoryList({
   const history = useInboxSelector(
     (state) => state.inbox.histories[conversationId],
   );
+  const identity = useInboxSelector(
+    (state) => state.inbox.conversations[conversationId]?.identity,
+  );
   const virtuoso = useRef<VirtuosoHandle>(null);
   const [initialFirstId] = useState(messages[0].id);
   const [atBottom, setAtBottom] = useState(true);
@@ -52,7 +55,7 @@ function HistoryList({
     <div className="relative min-h-0 flex-1">
       <Virtuoso
         ref={virtuoso}
-        className="h-full"
+        className="h-full [scrollbar-gutter:stable]"
         data={messages}
         computeItemKey={(_, message) => message.id}
         firstItemIndex={firstItemIndex}
@@ -63,7 +66,7 @@ function HistoryList({
         startReached={() => void dispatch(loadHistory(conversationId, true))}
         components={{
           Header: () => (
-            <div className="px-5 py-4 text-center">
+            <div className="mx-auto max-w-[910px] px-6 pt-[22px] pb-[15px] text-center max-[760px]:px-[11px]">
               {history?.nextCursor && (
                 <Button
                   variant="ghost"
@@ -76,20 +79,28 @@ function HistoryList({
                   {history.status === "loading" ? "正在读取…" : "查看更早消息"}
                 </Button>
               )}
-              <Marker variant="separator">
+              <Marker
+                variant="separator"
+                className="justify-center gap-3 before:mr-0 before:w-7 before:flex-none after:ml-0 after:w-7 after:flex-none"
+              >
                 <MarkerContent>
-                  {messageDate(messages[0].createdAt)}
+                  <span className="text-[11px]">
+                    {messageDate(messages[0].createdAt)}
+                  </span>
                 </MarkerContent>
               </Marker>
             </div>
           ),
-          Footer: () => <div className="h-4" />,
+          Footer: () => <div className="h-3" />,
         }}
         itemContent={(_, message) => (
-          <MessageView
-            message={message}
-            onRetry={onRetry ? () => onRetry(message.id) : undefined}
-          />
+          <div className="mx-auto max-w-[910px] px-6 max-[760px]:px-[11px]">
+            <MessageView
+              message={message}
+              identity={identity}
+              onRetry={onRetry ? () => onRetry(message.id) : undefined}
+            />
+          </div>
         )}
       />
       {!atBottom && (
@@ -105,7 +116,7 @@ function HistoryList({
             })
           }
         >
-          <ChevronDown />
+          <ChevronDown data-icon="inline-start" />
           查看最新消息
         </Button>
       )}

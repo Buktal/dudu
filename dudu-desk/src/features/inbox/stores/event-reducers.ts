@@ -3,6 +3,7 @@ import type { ApiFailure } from "@/lib/api-response";
 import type {
   ConnectionState,
   Conversation,
+  ConversationPage,
   InboxEvent,
   InboxMessage,
   Page,
@@ -26,13 +27,19 @@ export const eventReducers = {
   },
   conversationsReconciled(
     state: InboxState,
-    action: PayloadAction<Page<Conversation>>,
+    action: PayloadAction<ConversationPage>,
   ) {
     const page = action.payload;
     for (const conversation of page.items)
       mergeConversation(state, conversation);
+    const recoveredIds = new Set(page.items.map((item) => item.id));
     state.queue.ids = [
-      ...new Set([...state.queue.ids, ...page.items.map((item) => item.id)]),
+      ...new Set([
+        ...state.queue.ids.filter(
+          (id) => !state.queue.query.search.trim() || recoveredIds.has(id),
+        ),
+        ...recoveredIds,
+      ]),
     ].filter((id) =>
       matchesConversationQuery(state.conversations[id], state.queue.query),
     );
@@ -41,6 +48,8 @@ export const eventReducers = {
     state.queue.error = null;
     state.queue.nextCursor = page.nextCursor;
     state.queue.total = page.total ?? state.queue.total;
+    state.queue.counts = page.counts ?? state.queue.counts;
+    state.queue.channels = page.channels ?? state.queue.channels;
   },
   historyReconciled(
     state: InboxState,
@@ -145,6 +154,12 @@ export const eventReducers = {
     if (event.type === "message") {
       const message = event.message;
       if (state.events.removed[message.conversationId] !== undefined) return;
+      if (message.direction === "incoming") {
+        state.events.incomingSequence[message.conversationId] = Math.max(
+          state.events.incomingSequence[message.conversationId] ?? 0,
+          message.sequence,
+        );
+      }
       const id = mergeMessage(state, message);
       state.histories[message.conversationId] ??= {
         ...emptyLoad(),
@@ -227,6 +242,7 @@ export const eventReducers = {
       delete state.ending[id];
       delete state.sendingByConversation[id];
       delete state.events.readingThrough[id];
+      delete state.events.incomingSequence[id];
       for (const message of Object.values(state.messages)) {
         if (message.conversationId !== id) continue;
         delete state.messages[message.id];

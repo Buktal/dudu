@@ -2,14 +2,18 @@ import { Columns2, Star } from "lucide-react";
 import { Virtuoso } from "react-virtuoso";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { messageTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import { loadConversations, selectConversation } from "../stores/reading";
+import {
+  loadConversations,
+  retryConversations,
+  selectConversation,
+} from "../stores/reading";
 import { selectQueue, selectQueueConversations } from "../stores/selectors";
 import type { Conversation } from "../types";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
 import { InboxEmpty, InboxError, InboxLoading } from "./inbox-state";
+import { WaitingTime } from "./waiting-time";
 
 function ConversationRow({
   conversation,
@@ -26,6 +30,7 @@ function ConversationRow({
   const draft = useInboxSelector(
     (state) => state.inbox.drafts[conversation.id],
   );
+  const order = useInboxSelector((state) => state.inbox.queue.query.order);
   return (
     <div
       className={cn(
@@ -48,9 +53,9 @@ function ConversationRow({
             {conversation.starred && (
               <Star className="size-3 shrink-0 fill-primary text-primary" />
             )}
-            <time className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">
-              {messageTime(conversation.updatedAt)}
-            </time>
+            <span className="ml-auto shrink-0">
+              <WaitingTime conversation={conversation} />
+            </span>
           </span>
           <span className="truncate text-xs text-muted-foreground">
             {draft?.text ? (
@@ -69,6 +74,15 @@ function ConversationRow({
             <span className="min-w-0 truncate text-[10px] text-muted-foreground">
               {conversation.identity.accountName}
             </span>
+            {order === "messages" &&
+              conversation.messageCount !== undefined && (
+                <span
+                  className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground"
+                  title="完整会话消息数量"
+                >
+                  {conversation.messageCount} 条
+                </span>
+              )}
             {conversation.unread > 0 && (
               <Badge
                 className="ml-auto min-w-4 px-1 text-[10px]"
@@ -109,14 +123,14 @@ export function ConversationQueue({
   const hasFilters =
     !!queue.query.search ||
     queue.query.channelId !== "all" ||
-    queue.query.status !== "all" ||
+    queue.query.status !== "active" ||
     queue.query.starred;
   if (!queue.hasLoaded && queue.status === "loading") return <InboxLoading />;
   if (!queue.ids.length && queue.error)
     return (
       <InboxError
         error={queue.error}
-        onRetry={() => void dispatch(loadConversations())}
+        onRetry={() => void dispatch(retryConversations())}
       />
     );
   if (!queue.ids.length)
@@ -136,7 +150,7 @@ export function ConversationQueue({
       aria-label="来访用户会话列表"
     >
       <Virtuoso
-        className="min-h-0 flex-1"
+        className="min-h-0 flex-1 [scrollbar-gutter:stable]"
         data={conversations}
         computeItemKey={(_, conversation) => conversation.id}
         endReached={() => void dispatch(loadConversations({ more: true }))}
@@ -157,17 +171,15 @@ export function ConversationQueue({
           <InboxError
             compact
             error={queue.error}
-            onRetry={() => void dispatch(loadConversations({ more: true }))}
+            onRetry={() => void dispatch(retryConversations())}
           />
         </div>
       )}
-      <p className="px-5 py-3 text-[10px] text-muted-foreground">
-        {queue.status === "loading"
-          ? "正在读取更多会话…"
-          : queue.nextCursor
-            ? "向下滚动，继续查看"
-            : `已加载 ${conversations.length} 段会话`}
-      </p>
+      {queue.status === "loading" && (
+        <p role="status" className="px-4 py-2 text-xs text-muted-foreground">
+          正在加载…
+        </p>
+      )}
     </section>
   );
 }

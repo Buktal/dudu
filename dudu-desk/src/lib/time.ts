@@ -22,6 +22,27 @@ export function nowIso(): string {
   return dayjs().toISOString();
 }
 
+export function relativeIso(value: string, seconds: number): string {
+  return dayjs(value).add(seconds, "second").toISOString();
+}
+
+export function elapsedSeconds(
+  since: string,
+  now = nowIso(),
+): number | undefined {
+  const start = dayjs(since);
+  const end = dayjs(now);
+  return start.isValid() && end.isValid()
+    ? Math.max(0, end.diff(start, "second"))
+    : undefined;
+}
+
+export function timestamp(value?: string): number | undefined {
+  if (!value) return;
+  const time = dayjs(value);
+  return time.isValid() ? time.valueOf() : undefined;
+}
+
 export function isTimeAfter(value: string, reference: string): boolean | null {
   const time = dayjs(value);
   const boundary = dayjs(reference);

@@ -1,4 +1,5 @@
 import { createSelector } from "@reduxjs/toolkit";
+import { compareConversations } from "../conversation-query";
 import type { InboxRootState } from "./store";
 
 export const selectInbox = (state: InboxRootState) => state.inbox;
@@ -11,12 +12,20 @@ export const selectReplyConversation = (state: InboxRootState) =>
   state.inbox.replyId
     ? state.inbox.conversations[state.inbox.replyId]
     : undefined;
-export const selectQueueConversations = createSelector(
+export const selectQuickQueueConversations = createSelector(
   [
     (state: InboxRootState) => state.inbox.queue.ids,
     (state: InboxRootState) => state.inbox.conversations,
   ],
   (ids, conversations) => ids.map((id) => conversations[id]).filter(Boolean),
+);
+export const selectQueueConversations = createSelector(
+  [
+    selectQuickQueueConversations,
+    (state: InboxRootState) => state.inbox.queue.query.order,
+  ],
+  (conversations, order) =>
+    [...conversations].sort(compareConversations(order)),
 );
 const emptyIds: string[] = [];
 export const selectMessages = createSelector(

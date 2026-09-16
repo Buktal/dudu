@@ -1,6 +1,13 @@
 import { DeskApiError } from "@/lib/api-response";
-import type { Conversation, InboxEvent, InboxMessage, Page } from "../types";
+import type {
+  ConversationPage,
+  ConversationQuery,
+  InboxEvent,
+  InboxMessage,
+  Page,
+} from "../types";
 import { receiptKeys } from "./event-state";
+import { loadConversations } from "./reading";
 import {
   beginRequest,
   failureOf,
@@ -19,6 +26,31 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
       reconnecting ||
       ["disconnected", "unavailable"].includes(getState().inbox.connection);
     let recovery: Promise<void> | undefined;
+    let queryRefreshQueued = false;
+    let pendingQuery: ConversationQuery | undefined;
+    const scheduleQueryRefresh = () => {
+      if (queryRefreshQueued || !pendingQuery) return;
+      queryRefreshQueued = true;
+      queueMicrotask(() => {
+        queryRefreshQueued = false;
+        const state = getState().inbox;
+        if (!request.current() || state.queue.query !== pendingQuery) {
+          pendingQuery = undefined;
+          return;
+        }
+        if (
+          state.connection !== "connected" ||
+          runtime.requests.has("queue") ||
+          state.queue.error
+        )
+          return;
+        pendingQuery = undefined;
+        void dispatch(loadConversations());
+      });
+    };
+    runtime.queueEvents.addEventListener("settled", scheduleQueryRefresh, {
+      signal: request.signal,
+    });
     dispatch(
       inboxActions.connectionChanged(
         reconnecting ? "reconnecting" : "connecting",
@@ -30,7 +62,18 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
         signal: request.signal,
         cursor: getState().inbox.events.cursor ?? undefined,
         onEvent: (event) => {
-          if (request.current()) dispatch(receiveInboxEvent(event));
+          if (!request.current()) return;
+          const previous = getState().inbox;
+          dispatch(receiveInboxEvent(event));
+          const state = getState().inbox;
+          if (
+            state === previous ||
+            !["conversation", "message", "removed"].includes(event.type) ||
+            (!state.queue.query.search.trim() && !state.queue.counts)
+          )
+            return;
+          pendingQuery = state.queue.query;
+          scheduleQueryRefresh();
         },
         onConnection: (connection) => {
           if (!request.current()) return;
@@ -44,9 +87,15 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
               const task = dispatch(reconcileInbox(request.current));
               recovery = task;
               void task.finally(() => {
-                if (recovery === task) recovery = undefined;
+                if (recovery === task) {
+                  recovery = undefined;
+                  scheduleQueryRefresh();
+                }
               });
-            } else dispatch(inboxActions.connectionChanged("connected"));
+            } else {
+              dispatch(inboxActions.connectionChanged("connected"));
+              scheduleQueryRefresh();
+            }
           } else {
             needsRecovery = true;
             runtime.requests.get("recovery")?.abort();
@@ -222,7 +271,7 @@ function reconcileInbox(
     try {
       let cursor: string | undefined;
       const seenCursors = new Set<string>();
-      const queuePage: Page<Conversation> = { items: [], nextCursor: null };
+      const queuePage: ConversationPage = { items: [], nextCursor: null };
       do {
         const page = await runtime.api.listConversations({
           context: request.context,
@@ -235,6 +284,8 @@ function reconcileInbox(
         queuePage.items.push(...page.items);
         queuePage.nextCursor = page.nextCursor;
         queuePage.total = page.total ?? queuePage.total;
+        queuePage.counts = page.counts ?? queuePage.counts;
+        queuePage.channels = page.channels ?? queuePage.channels;
         cursor = nextCursor(page.nextCursor, seenCursors);
       } while (cursor);
       if (getState().inbox.queue.query === query)

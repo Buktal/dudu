@@ -1,4 +1,4 @@
-import { ArrowLeft, ListFilter } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxSelector } from "../hooks/use-inbox-store";
+import { useVisitorPanel } from "../hooks/use-visitor-panel";
 import { ConversationPane } from "./conversation-pane";
 import { ConversationQueue } from "./conversation-queue";
 import { InboxEmpty } from "./inbox-state";
@@ -22,21 +23,26 @@ export function CalmWorkspace() {
     (state) => state.inbox.replyId ?? state.inbox.activeId,
   );
   const replyId = useInboxSelector((state) => state.inbox.replyId);
+  const total = useInboxSelector((state) => state.inbox.queue.total);
   const [showQueue, setShowQueue] = useState(true);
-  const [showInfo, setShowInfo] = useState(false);
+  const info = useVisitorPanel();
   useInboxSearch(() => setShowQueue(true));
   return (
-    <div className="flex min-h-0 flex-1 gap-3 pb-2 max-[760px]:gap-1">
+    <div className="flex min-h-0 flex-1 gap-3.5 max-[1360px]:gap-2.5 max-[760px]:gap-1">
       <aside
         className={cn(
-          "flex w-[290px] shrink-0 flex-col overflow-hidden rounded-2xl bg-card text-card-foreground max-[1000px]:w-[254px] max-[760px]:w-full",
+          "flex w-[304px] shrink-0 flex-col overflow-hidden rounded-r-3xl bg-card text-card-foreground max-[1360px]:w-[274px] max-[1090px]:w-[250px] max-[760px]:w-full",
           activeId && !showQueue && "max-[760px]:hidden",
         )}
         aria-label="会话队列"
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <h1 className="text-base font-semibold">会话</h1>
-          <ListFilter className="size-4 text-muted-foreground" />
+        <div className="flex items-center gap-2 px-4 py-3.5">
+          <h1 className="text-lg font-semibold tracking-tight">消息</h1>
+          {total !== undefined && (
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {total}
+            </span>
+          )}
         </div>
         <QueueTools />
         <ConversationQueue onSelected={() => setShowQueue(false)} />
@@ -59,22 +65,22 @@ export function CalmWorkspace() {
           </Button>
         )}
         {activeId ? (
-          <ConversationPane
-            conversationId={activeId}
-            onInfo={() => setShowInfo(true)}
-          />
+          <ConversationPane conversationId={activeId} onInfo={info.toggle} />
         ) : (
           <InboxEmpty />
         )}
       </div>
-      {replyId && (
-        <aside className="hidden w-[276px] shrink-0 overflow-hidden rounded-2xl bg-card text-card-foreground min-[1380px]:block">
-          <VisitorInfo conversationId={replyId} />
+      {replyId && info.inline && info.open && (
+        <aside className="w-[286px] shrink-0 overflow-hidden rounded-l-3xl max-[1360px]:w-[264px]">
+          <VisitorInfo
+            conversationId={replyId}
+            onClose={() => info.setOpen(false)}
+          />
         </aside>
       )}
-      <Sheet open={showInfo} onOpenChange={setShowInfo}>
-        <SheetContent className="w-[min(380px,90vw)]">
-          <SheetHeader>
+      <Sheet open={info.open && !info.inline} onOpenChange={info.setOpen}>
+        <SheetContent className="w-[min(380px,90vw)]" showCloseButton={false}>
+          <SheetHeader className="sr-only">
             <SheetTitle>访客资料</SheetTitle>
             <SheetDescription>
               当前回复对象的渠道资料与接待记录
@@ -83,7 +89,7 @@ export function CalmWorkspace() {
           {replyId && (
             <VisitorInfo
               conversationId={replyId}
-              onClose={() => setShowInfo(false)}
+              onClose={() => info.setOpen(false)}
             />
           )}
         </SheetContent>

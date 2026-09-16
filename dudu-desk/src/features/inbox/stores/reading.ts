@@ -1,5 +1,9 @@
 import { DeskApiError } from "@/lib/api-response";
-import type { ConversationQuery, WorkContext } from "../types";
+import type {
+  ConversationPage,
+  ConversationQuery,
+  WorkContext,
+} from "../types";
 import { beginRequest, cancelRequests, failureOf } from "./requests";
 import { inboxActions } from "./slice";
 import type { InboxCommand } from "./store";
@@ -21,13 +25,46 @@ export function loadConversations(
     const request = beginRequest(runtime, "queue", getState);
     dispatch(inboxActions.queueLoading(options.query));
     try {
-      const page = await runtime.api.listConversations({
-        context: request.context,
-        signal: request.signal,
-        query: options.query ?? queue.query,
-        cursor: options.more ? (queue.nextCursor ?? undefined) : undefined,
-      });
-      if (!request.current()) return;
+      const page: ConversationPage = { items: [], nextCursor: null };
+      // Re-find mounted cards before pruning service-owned search membership.
+      const remainingIds = new Set(
+        options.more || options.query ? [] : queue.ids,
+      );
+      const loadedIds = new Set<string>();
+      const cursors = new Set<string>();
+      let cursor = options.more ? (queue.nextCursor ?? undefined) : undefined;
+      do {
+        if (cursor) cursors.add(cursor);
+        const nextPage = await runtime.api.listConversations({
+          context: request.context,
+          signal: request.signal,
+          query: options.query ?? queue.query,
+          cursor,
+        });
+        if (!request.current()) return;
+        if (nextPage.nextCursor && cursors.has(nextPage.nextCursor))
+          throw new DeskApiError(
+            "invalid-response",
+            "会话列表返回了重复游标，请刷新后重试",
+          );
+        page.items.push(...nextPage.items);
+        const previousSize = loadedIds.size;
+        for (const item of nextPage.items) {
+          loadedIds.add(item.id);
+          remainingIds.delete(item.id);
+        }
+        page.nextCursor = nextPage.nextCursor;
+        page.total = nextPage.total ?? page.total;
+        page.counts = nextPage.counts ?? page.counts;
+        page.channels = nextPage.channels ?? page.channels;
+        if (!page.nextCursor || !remainingIds.size) break;
+        if (loadedIds.size === previousSize)
+          throw new DeskApiError(
+            "invalid-response",
+            "会话列表分页没有继续前进，请刷新后重试",
+          );
+        cursor = page.nextCursor;
+      } while (cursor);
       const latest = getState().inbox;
       const preserveIds = latest.queue.ids.filter(
         (id) => latest.conversations[id].version > (versions.get(id) ?? -1),
@@ -45,10 +82,28 @@ export function loadConversations(
       }
     } catch (error) {
       if (request.current())
-        dispatch(inboxActions.queueFailed(failureOf(error)));
+        dispatch(
+          inboxActions.queueFailed({
+            error: failureOf(error),
+            more: !!options.more,
+          }),
+        );
     } finally {
       request.finish();
+      runtime.queueEvents.dispatchEvent(new Event("settled"));
     }
+  };
+}
+
+export function retryConversations(): InboxCommand<Promise<void>> {
+  return async (dispatch, getState) => {
+    const queue = getState().inbox.queue;
+    if (!queue.error || queue.status === "loading") return;
+    await dispatch(
+      loadConversations({
+        more: queue.failedRead === "more" && !!queue.nextCursor,
+      }),
+    );
   };
 }
 

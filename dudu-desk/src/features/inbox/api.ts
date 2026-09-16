@@ -2,6 +2,7 @@ import { DeskApiError } from "@/lib/api-response";
 import type {
   ConnectionState,
   Conversation,
+  ConversationPage,
   ConversationQuery,
   InboxEvent,
   InboxMessage,
@@ -18,7 +19,7 @@ export type InboxApi = {
   dispose?: () => void;
   listConversations: (
     input: RequestOptions & { query: ConversationQuery; cursor?: string },
-  ) => Promise<Page<Conversation>>;
+  ) => Promise<ConversationPage>;
   listMessages: (
     input: RequestOptions & { conversationId: string; cursor?: string },
   ) => Promise<Page<InboxMessage>>;
@@ -49,6 +50,9 @@ export type InboxApi = {
   endConversation: (
     input: RequestOptions & { conversationId: string },
   ) => Promise<Conversation>;
+  resumeConversation: (
+    input: RequestOptions & { conversationId: string },
+  ) => Promise<Conversation>;
   subscribe: (
     input: RequestOptions & {
       cursor?: string;
@@ -74,6 +78,7 @@ export const unavailableInboxApi: InboxApi = {
   setStarred: unavailable,
   saveProfile: unavailable,
   endConversation: unavailable,
+  resumeConversation: unavailable,
   subscribe: ({ onConnection }) => {
     onConnection("unavailable");
     return () => {};

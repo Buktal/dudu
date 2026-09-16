@@ -1,42 +1,41 @@
-import { ArrowRight, MessageSquareText, Send, Smile } from "lucide-react";
-import { useRef } from "react";
+import { ArrowUp, ArrowUpRight, History, LockKeyhole } from "lucide-react";
+import { type CSSProperties, useId, useRef } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from "@/components/ui/input-group";
 import { nowIso } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { attachmentBatchRestriction } from "../attachment-rules";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { composerIntent, sendRestriction } from "../sending-rules";
+import { resumeReception } from "../stores/reception";
 import { editDraft, focusReply, sendReply } from "../stores/sending";
 import { blankDraft } from "../stores/sending-state";
 import { AttachmentDrafts } from "./attachment-drafts";
-import { AttachmentPicker } from "./attachment-picker";
-import { visitorName } from "./identity";
-
-const quickReplies = [
-  "您好，请问有什么可以帮您？",
-  "收到，我先帮您核实一下，请稍等。",
-  "还有其他需要帮助的地方吗？",
-];
-const emoji = ["😊", "👍", "🙏", "❤️", "✨", "🌷", "👌", "🎉"];
+import { ComposerTools } from "./composer-tools";
+import { SourceBadge, visitorName } from "./identity";
 
 export function Composer({
   conversationId,
   compact = false,
   onFocus,
+  onHistory,
 }: {
   conversationId: string;
   compact?: boolean;
   onFocus?: () => void;
+  onHistory?: () => void;
 }) {
   const dispatch = useInboxDispatch();
   const input = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
+  const id = useId();
   const conversation = useInboxSelector(
     (state) => state.inbox.conversations[conversationId],
   );
@@ -48,9 +47,13 @@ export function Composer({
   const busy = useInboxSelector(
     (state) => !!state.inbox.sendingByConversation[conversationId],
   );
+  const reception = useInboxSelector(
+    (state) => state.inbox.ending[conversationId],
+  );
   const pendingAttachments = useInboxSelector((state) =>
     draft.attachmentIds.some(
-      (id) => state.inbox.attachments[id]?.status !== "ready",
+      (attachmentId) =>
+        state.inbox.attachments[attachmentId]?.status !== "ready",
     ),
   );
   if (!conversation) return null;
@@ -64,7 +67,9 @@ export function Composer({
     attachmentBatchRestriction(
       conversation,
       connection,
-      draft.attachmentIds.map((id) => attachments[id]).filter(Boolean),
+      draft.attachmentIds
+        .map((attachmentId) => attachments[attachmentId])
+        .filter(Boolean),
       nowIso(),
     );
   const disabled =
@@ -72,7 +77,9 @@ export function Composer({
     busy ||
     pendingAttachments ||
     (!draft.text.trim() && !draft.attachmentIds.length);
+  const ended = conversation.status === "closed";
   const name = visitorName(conversation.identity);
+  const target = `${name}，${conversation.identity.channelName}，${conversation.identity.accountName}`;
   function focus() {
     dispatch(focusReply(conversationId));
     onFocus?.();
@@ -100,160 +107,166 @@ export function Composer({
     void dispatch(sendReply(conversationId, next));
   }
   return (
-    <div
+    <Field
       className={cn(
-        "shrink-0 p-4 pt-2 max-[760px]:p-2 max-[760px]:pt-1",
-        compact && "p-3 pt-1",
+        "shrink-0 gap-2 px-3 pt-2 pb-3 max-[760px]:px-2",
+        compact && "px-4 pt-0 pb-3",
       )}
     >
-      <div className="overflow-hidden rounded-xl border border-input bg-background shadow-xs focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/10">
-        <p className="flex flex-wrap items-center gap-x-1.5 px-3 pt-2.5 text-[10px] text-muted-foreground">
-          回复 <strong className="font-medium text-foreground">{name}</strong>
-          <span>
-            · {conversation.identity.channelName} ·{" "}
-            {conversation.identity.accountName}
-          </span>
-        </p>
-        <Textarea
-          ref={input}
-          value={draft.text}
-          aria-label={`回复 ${name}，${conversation.identity.channelName}，${conversation.identity.accountName}`}
-          placeholder={
-            restriction
-              ? "可继续编辑，连接或能力恢复后再发送"
-              : "认真回应每一份期待…"
-          }
-          className={cn(
-            "resize-none rounded-none border-0 bg-transparent p-3 shadow-none focus-visible:ring-0 dark:bg-transparent",
-            compact ? "min-h-16" : "min-h-24 max-[760px]:min-h-16",
-          )}
-          onFocus={focus}
-          onChange={(event) =>
-            dispatch(editDraft(conversationId, event.target.value))
-          }
-          onCompositionStart={() => {
-            composing.current = true;
-          }}
-          onCompositionEnd={() => {
-            composing.current = false;
-          }}
-          onKeyDown={(event) => {
-            const intent = composerIntent({
-              key: event.key,
-              shiftKey: event.shiftKey,
-              ctrlKey: event.ctrlKey,
-              metaKey: event.metaKey,
-              isComposing: composing.current || event.nativeEvent.isComposing,
-              keyCode: event.nativeEvent.keyCode,
-            });
-            if (intent && !event.repeat) {
-              event.preventDefault();
-              submit(intent === "next");
-            }
-          }}
-        />
-        <div className="max-h-24 overflow-y-auto max-[760px]:max-h-16">
-          <AttachmentDrafts conversationId={conversationId} />
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-2">
-          <div className="flex items-center gap-0.5">
-            <AttachmentPicker conversationId={conversationId} />
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="插入表情"
-                  />
+      <FieldLabel className="sr-only" htmlFor={id}>
+        回复 {target}
+      </FieldLabel>
+      {restriction && (
+        <Alert
+          role="status"
+          className="rounded-lg px-3 py-2"
+          id={`${id}-restriction`}
+        >
+          <LockKeyhole />
+          <AlertTitle>
+            {ended ? "本次接待已结束" : "当前暂时无法发送"}
+          </AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs">
+              {ended ? "记录和当前草稿仍然保留。" : restriction}
+              {!ended &&
+                conversation.capability.nextStep &&
+                ` · ${conversation.capability.nextStep}`}
+            </span>
+            {ended && (
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={
+                  reception?.status === "saving" || connection !== "connected"
                 }
+                onClick={() => void dispatch(resumeReception(conversationId))}
               >
-                <Smile />
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-60">
-                <p className="mb-2 text-xs text-muted-foreground">插入表情</p>
-                <div className="grid grid-cols-4 gap-1">
-                  {emoji.map((item) => (
-                    <Button
-                      key={item}
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => insert(item)}
-                      aria-label={`插入 ${item}`}
-                    >
-                      {item}
-                    </Button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="快捷回复"
-                  />
-                }
-              >
-                <MessageSquareText />
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-72">
-                <p className="mb-2 text-xs text-muted-foreground">
-                  快捷回复 · 点击插入后可编辑
-                </p>
-                <div className="flex flex-col gap-1">
-                  {quickReplies.map((reply) => (
-                    <Button
-                      key={reply}
-                      variant="ghost"
-                      className="h-auto justify-start px-2 py-2 text-left text-xs whitespace-normal"
-                      onClick={() => insert(reply)}
-                    >
-                      {reply}
-                    </Button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="ghost"
-              size="xs"
-              title="Ctrl + Enter"
-              disabled={disabled}
-              onClick={() => submit(true)}
-            >
-              发送并下一位
-              <ArrowRight />
-            </Button>
-            <Button
-              size="sm"
-              disabled={disabled}
-              title="Enter 发送，Shift + Enter 换行"
-              onClick={() => submit(false)}
-            >
-              <Send />
-              {busy ? "发送中" : "发送"}
-            </Button>
-          </div>
-        </div>
-      </div>
-      {restriction ? (
-        <p role="status" className="mt-2 text-xs text-warning-foreground">
-          {restriction}
-          {conversation.capability.nextStep &&
-            ` · ${conversation.capability.nextStep}`}
-        </p>
-      ) : (
-        !compact && (
-          <p className="mt-2 text-[10px] text-muted-foreground max-[760px]:hidden">
-            Enter 发送 · Shift + Enter 换行 · Ctrl + Enter 发送并下一位
-          </p>
-        )
+                {reception?.status === "saving" ? "正在恢复…" : "继续接待"}
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
-    </div>
+      <div
+        className="rounded-xl border border-border bg-card shadow-xs"
+        style={{ "--input": "var(--card)" } as CSSProperties}
+      >
+        <InputGroup
+          className="rounded-xl"
+          aria-label={`给 ${target} 的回复编辑器`}
+        >
+          <InputGroupAddon
+            align="block-start"
+            className="flex-wrap justify-between gap-x-1 gap-y-1 px-2 pt-1.5 pb-0"
+          >
+            <ComposerTools
+              conversationId={conversationId}
+              compact={compact}
+              onInsert={insert}
+            />
+            <span
+              title={`回复给 ${target}`}
+              className="ml-auto flex min-w-0 max-w-full items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-[10px] font-normal text-muted-foreground"
+            >
+              <span className="truncate">
+                回复给{" "}
+                <strong className="font-medium text-foreground">{name}</strong>
+              </span>
+              <SourceBadge identity={conversation.identity} />
+            </span>
+          </InputGroupAddon>
+          <InputGroupTextarea
+            ref={input}
+            id={id}
+            value={draft.text}
+            aria-label={`回复 ${target}`}
+            aria-describedby={restriction ? `${id}-restriction` : undefined}
+            placeholder={
+              restriction ? "可以保留草稿，恢复接待后发送" : `回复 ${name}…`
+            }
+            className={cn(
+              "max-h-36 px-4 py-2",
+              compact || restriction ? "min-h-12" : "min-h-[77px]",
+            )}
+            onFocus={focus}
+            onChange={(event) =>
+              dispatch(editDraft(conversationId, event.target.value))
+            }
+            onCompositionStart={() => {
+              composing.current = true;
+            }}
+            onCompositionEnd={() => {
+              composing.current = false;
+            }}
+            onKeyDown={(event) => {
+              const intent = composerIntent({
+                key: event.key,
+                shiftKey: event.shiftKey,
+                ctrlKey: event.ctrlKey,
+                metaKey: event.metaKey,
+                isComposing: composing.current || event.nativeEvent.isComposing,
+                keyCode: event.nativeEvent.keyCode,
+              });
+              if (intent && !event.repeat) {
+                event.preventDefault();
+                submit(intent === "next");
+              }
+            }}
+          />
+          <InputGroupAddon
+            align="block-end"
+            className="flex-col items-stretch gap-0 px-2 pt-0 pb-2"
+          >
+            {draft.attachmentIds.length > 0 && (
+              <div className="max-h-24 overflow-y-auto max-[760px]:max-h-16">
+                <AttachmentDrafts conversationId={conversationId} />
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-2">
+              {onHistory ? (
+                <InputGroupButton
+                  size="xs"
+                  onClick={onHistory}
+                  aria-label={`查看与 ${name} 的完整对话`}
+                >
+                  <History data-icon="inline-start" />
+                  完整对话
+                </InputGroupButton>
+              ) : (
+                <span className="pl-2 text-[10px] font-normal text-muted-foreground">
+                  Enter 发送
+                  <span className="max-[1360px]:hidden">
+                    {" "}
+                    · Shift + Enter 换行
+                  </span>
+                </span>
+              )}
+              <div className="flex shrink-0 items-center gap-1">
+                <InputGroupButton
+                  size="icon-sm"
+                  title="发送并接待下一位 · Ctrl + Enter"
+                  aria-label={`发送给 ${name} 并接待下一位`}
+                  disabled={disabled}
+                  onClick={() => submit(true)}
+                >
+                  <ArrowUpRight data-icon="inline-start" />
+                </InputGroupButton>
+                <Button
+                  size="sm"
+                  className="rounded-lg"
+                  disabled={disabled}
+                  title="Enter 发送，Shift + Enter 换行"
+                  onClick={() => submit(false)}
+                >
+                  {busy ? "发送中" : "发送"}
+                  <ArrowUp data-icon="inline-end" />
+                </Button>
+              </div>
+            </div>
+          </InputGroupAddon>
+        </InputGroup>
+      </div>
+    </Field>
   );
 }

@@ -1,9 +1,10 @@
-import { Check } from "lucide-react";
+import { Check, RotateCcw } from "lucide-react";
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { markConversationRead } from "../stores/events";
-import { endReception, focusReply, retryReply } from "../stores/sending";
+import { endReception, resumeReception } from "../stores/reception";
+import { focusReply, retryReply } from "../stores/sending";
 import { ChatPanel } from "./chat-panel";
 import { Composer } from "./composer";
 
@@ -50,12 +51,22 @@ export function ConversationPane({
         <Button
           variant="ghost"
           size="icon-sm"
-          disabled={ended || ending || !connected}
-          aria-label="结束本次接待"
-          title="结束本次接待"
-          onClick={() => void dispatch(endReception(conversationId))}
+          disabled={ending || !connected}
+          aria-label={ended ? "继续接待" : "结束本次接待"}
+          title={ended ? "继续接待" : "结束本次接待"}
+          onClick={() =>
+            void dispatch(
+              ended
+                ? resumeReception(conversationId)
+                : endReception(conversationId),
+            )
+          }
         >
-          <Check />
+          {ended ? (
+            <RotateCcw data-icon="inline-start" />
+          ) : (
+            <Check data-icon="inline-start" />
+          )}
         </Button>
       }
     />

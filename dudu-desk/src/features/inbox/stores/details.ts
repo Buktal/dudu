@@ -68,6 +68,8 @@ export function saveVisitorProfile(
       dispatch(
         inboxActions.profileSaved({ profile: result, revision: edit.revision }),
       );
+      if (getState().inbox.queue.query.search.trim())
+        await dispatch(loadConversations());
     } catch (error) {
       if (request.current()) {
         dispatch(

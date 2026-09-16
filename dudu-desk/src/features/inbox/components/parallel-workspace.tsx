@@ -1,4 +1,4 @@
-import { ArrowLeft, ListFilter, Pin } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { hasOpenOverlay, useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
+import { useVisitorPanel } from "../hooks/use-visitor-panel";
 import {
   enterParallel,
   focusPane,
@@ -22,7 +23,8 @@ import { ConversationPane } from "./conversation-pane";
 import { ConversationQueue } from "./conversation-queue";
 import { visitorName } from "./identity";
 import { InboxEmpty } from "./inbox-state";
-import { ParallelToolbar, PinnedConversationPicker } from "./parallel-toolbar";
+import { ParallelToolbar } from "./parallel-toolbar";
+import { PinnedConversationPicker } from "./pin-picker";
 import { QueueTools } from "./queue-tools";
 import { VisitorInfo } from "./visitor-info";
 
@@ -32,6 +34,9 @@ export function ParallelWorkspace() {
   const pinnedId = useInboxSelector((state) => state.inbox.pinnedId);
   const collapsed = useInboxSelector((state) => state.inbox.pinCollapsed);
   const replyId = useInboxSelector((state) => state.inbox.replyId);
+  const queueCount = useInboxSelector(
+    (state) => state.inbox.queue.total ?? state.inbox.queue.ids.length,
+  );
   const primary = useInboxSelector((state) =>
     primaryId ? state.inbox.conversations[primaryId] : undefined,
   );
@@ -41,12 +46,16 @@ export function ParallelWorkspace() {
   const [showQueue, setShowQueue] = useState(
     !primaryId && !pinnedId && !replyId,
   );
-  const [showInfo, setShowInfo] = useState(false);
+  const [queueCollapsed, setQueueCollapsed] = useState(false);
+  const info = useVisitorPanel();
   const [pickerOpen, setPickerOpen] = useState(false);
   const pinnedVisible = !!pinned && !collapsed;
   const focusedPane: ReceptionPane =
     replyId === pinnedId && pinnedVisible ? "pinned" : "primary";
-  const openQueue = useCallback(() => setShowQueue(true), []);
+  const openQueue = useCallback(() => {
+    setQueueCollapsed(false);
+    setShowQueue(true);
+  }, []);
   useInboxSearch(openQueue);
 
   useEffect(() => {
@@ -90,17 +99,20 @@ export function ParallelWorkspace() {
   }, [activatePane]);
 
   return (
-    <div className="flex min-h-0 flex-1 gap-3 pb-2 max-[760px]:gap-1">
+    <div className="relative flex min-h-0 flex-1 gap-3.5 max-[1360px]:gap-2.5 max-[760px]:gap-0">
       <aside
         className={cn(
-          "flex w-[264px] shrink-0 flex-col overflow-hidden rounded-2xl bg-card text-card-foreground max-[1280px]:w-[244px] max-[760px]:w-full",
+          "flex min-h-0 w-[246px] shrink-0 flex-col overflow-hidden rounded-r-2xl border-r bg-card text-card-foreground max-[1360px]:w-[224px] max-[1090px]:w-[225px] max-[760px]:w-full",
+          queueCollapsed && "min-[761px]:hidden",
           !showQueue && "max-[760px]:hidden",
         )}
         aria-label="会话队列"
       >
-        <header className="flex items-center justify-between gap-2 px-5 pt-5 pb-3">
-          <h1 className="text-base font-semibold">会话</h1>
-          <ListFilter className="size-4 text-muted-foreground" />
+        <header className="flex items-center gap-2 px-[18px] pt-[21px] pb-[11px]">
+          <h1 className="text-sm font-semibold">我的会话</h1>
+          <span className="text-[10px] text-muted-foreground">
+            {queueCount}
+          </span>
         </header>
         <QueueTools />
         <ConversationQueue
@@ -110,15 +122,11 @@ export function ParallelWorkspace() {
             setShowQueue(false);
           }}
         />
-        <p className="flex items-center gap-1.5 px-5 pb-3 text-[10px] leading-relaxed text-muted-foreground">
-          <Pin className="size-3 shrink-0" />
-          点击会话切换主窗，固定按钮留在右窗
-        </p>
       </aside>
 
       <div
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col",
+          "flex min-h-0 min-w-0 flex-1 flex-col pt-2 max-[760px]:pt-[5px] max-[760px]:pr-0.5 max-[760px]:pl-2.5",
           showQueue && "max-[760px]:hidden",
         )}
       >
@@ -132,11 +140,13 @@ export function ParallelWorkspace() {
           返回会话列表
         </Button>
         <ParallelToolbar
+          queueCollapsed={queueCollapsed}
+          onToggleQueue={() => setQueueCollapsed((collapsed) => !collapsed)}
           onPick={() => setPickerOpen(true)}
           onPinned={() => setShowQueue(false)}
         />
         <ToggleGroup
-          className="mb-3 w-full min-[1180px]:hidden"
+          className="mb-2 w-full min-[761px]:hidden"
           value={[focusedPane]}
           onValueChange={(values) => {
             if (values[0] === "primary" || values[0] === "pinned")
@@ -148,7 +158,7 @@ export function ParallelWorkspace() {
           <ToggleGroupItem
             value="primary"
             disabled={!primary}
-            className="min-w-0 flex-1 text-xs"
+            className="min-w-0 flex-1"
             title="Alt + 1"
           >
             <span className="truncate">
@@ -159,7 +169,7 @@ export function ParallelWorkspace() {
           <ToggleGroupItem
             value="pinned"
             disabled={!pinned}
-            className="min-w-0 flex-1 text-xs"
+            className="min-w-0 flex-1"
             title="Alt + 2"
           >
             <span className="truncate">
@@ -173,23 +183,21 @@ export function ParallelWorkspace() {
         <div
           className={cn(
             "grid min-h-0 flex-1 grid-cols-1 gap-3",
-            pinnedVisible && "min-[1180px]:grid-cols-2",
+            pinnedVisible && "min-[761px]:grid-cols-2",
           )}
         >
           <div
             data-parallel-pane="primary"
             className={cn(
               "flex min-h-0 min-w-0 flex-col",
-              pinnedVisible &&
-                focusedPane === "pinned" &&
-                "max-[1179px]:hidden",
+              pinnedVisible && focusedPane === "pinned" && "max-[760px]:hidden",
             )}
           >
             {primaryId ? (
               <ConversationPane
                 conversationId={primaryId}
                 paneRole="primary"
-                onInfo={() => setShowInfo(true)}
+                onInfo={() => info.setOpen(true)}
               />
             ) : (
               <div className="flex min-h-0 flex-1 rounded-2xl bg-card">
@@ -209,27 +217,30 @@ export function ParallelWorkspace() {
               data-parallel-pane="pinned"
               className={cn(
                 "flex min-h-0 min-w-0 flex-col",
-                focusedPane !== "pinned" && "max-[1179px]:hidden",
+                focusedPane !== "pinned" && "max-[760px]:hidden",
               )}
             >
               <ConversationPane
                 conversationId={pinnedId}
                 paneRole="pinned"
-                onInfo={() => setShowInfo(true)}
+                onInfo={() => info.setOpen(true)}
               />
             </div>
           )}
         </div>
       </div>
 
-      {replyId && (
-        <aside className="hidden w-[272px] shrink-0 overflow-hidden rounded-2xl bg-card min-[1680px]:block">
-          <VisitorInfo conversationId={replyId} />
+      {replyId && info.inline && info.open && (
+        <aside className="w-[264px] shrink-0 overflow-hidden rounded-l-3xl max-[1360px]:w-[240px]">
+          <VisitorInfo
+            conversationId={replyId}
+            onClose={() => info.setOpen(false)}
+          />
         </aside>
       )}
-      <Sheet open={showInfo} onOpenChange={setShowInfo}>
+      <Sheet open={info.open && !info.inline} onOpenChange={info.setOpen}>
         <SheetContent className="w-[min(380px,90vw)]" showCloseButton={false}>
-          <SheetHeader>
+          <SheetHeader className="sr-only">
             <SheetTitle>来访资料</SheetTitle>
             <SheetDescription>
               当前回复对象的渠道资料与接待记录
@@ -238,7 +249,7 @@ export function ParallelWorkspace() {
           {replyId && (
             <VisitorInfo
               conversationId={replyId}
-              onClose={() => setShowInfo(false)}
+              onClose={() => info.setOpen(false)}
             />
           )}
         </SheetContent>

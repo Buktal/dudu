@@ -1,9 +1,7 @@
-import type {
-  Conversation,
-  ConversationQuery,
-  InboxMessage,
-  ReplyCapability,
-} from "../types";
+import type { InboxMessage, ReplyCapability } from "../types";
+
+// Full-text membership is owned by the service; unloaded history and tags cannot be inferred here.
+export { matchesConversationFilters as matchesConversationQuery } from "../conversation-query";
 
 export type ReceiptEvidence = {
   version: number;
@@ -18,6 +16,7 @@ export type InboxEventState = {
   receipts: Record<string, Record<string, ReceiptEvidence>>;
   readThrough: Record<string, number>;
   readingThrough: Record<string, number>;
+  incomingSequence: Record<string, number>;
 };
 
 export function initialInboxEventState(): InboxEventState {
@@ -29,6 +28,7 @@ export function initialInboxEventState(): InboxEventState {
     receipts: {},
     readThrough: {},
     readingThrough: {},
+    incomingSequence: {},
   };
 }
 
@@ -81,25 +81,4 @@ export function rememberReceipt(
   }
   if (newest) for (const key of keys) receipts[key] = newest;
   return newest;
-}
-
-export function matchesConversationQuery(
-  conversation: Conversation | undefined,
-  query: ConversationQuery,
-): boolean {
-  if (!conversation) return false;
-  const { identity } = conversation;
-  const term = query.search.trim().toLocaleLowerCase();
-  return (
-    (query.channelId === "all" || query.channelId === identity.channelId) &&
-    (query.status === "all" || query.status === conversation.status) &&
-    (!query.starred || conversation.starred) &&
-    (!term ||
-      [
-        identity.name,
-        identity.externalUserId,
-        identity.accountName,
-        conversation.preview,
-      ].some((part) => part?.toLocaleLowerCase().includes(term)))
-  );
 }

@@ -26,7 +26,7 @@ describe("Desk application smoke", () => {
       </ThemeProvider>,
     );
     expect(
-      await screen.findByRole("heading", { name: "会话" }),
+      await screen.findByRole("heading", { name: "消息" }),
     ).toBeInTheDocument();
     expect(await screen.findAllByText("接待服务未连接")).not.toHaveLength(0);
     expect(screen.getByRole("button", { name: "并肩模式" })).toBeEnabled();

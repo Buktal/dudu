@@ -274,6 +274,7 @@ describe("reading conversations through the inbox workflow", () => {
           channelId: "all",
           status: "needs-reply",
           starred: true,
+          order: "wait",
         },
       }),
     );

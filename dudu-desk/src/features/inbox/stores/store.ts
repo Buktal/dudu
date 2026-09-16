@@ -14,6 +14,7 @@ export type InboxRuntime = {
   now: () => string;
   id: () => string;
   requests: Map<string, AbortController>;
+  queueEvents: EventTarget;
   files: Map<string, File>;
   previews: Map<string, string>;
   unsubscribe?: () => void;
@@ -38,6 +39,7 @@ export function createInboxStore(options: {
     now: options.now ?? nowIso,
     id: options.id ?? (() => crypto.randomUUID()),
     requests: new Map(),
+    queueEvents: new EventTarget(),
     files: new Map(),
     previews: new Map(),
   };

@@ -10,7 +10,13 @@ async function setup() {
   };
   const { items } = await driver.api.listConversations({
     ...options,
-    query: { search: "", channelId: "all", status: "all", starred: false },
+    query: {
+      search: "",
+      channelId: "all",
+      status: "all",
+      starred: false,
+      order: "wait",
+    },
   });
   const conversation = items[0];
   const target: SendTarget = {

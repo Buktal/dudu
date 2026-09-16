@@ -37,7 +37,7 @@ export function ThemePicker({
         title={`主题色：${palettes[value].name}`}
       >
         <PaletteIcon data-icon="inline-start" />
-        <span>主题色</span>
+        <span className="max-[960px]:hidden">主题色</span>
       </PopoverTrigger>
       <PopoverContent
         align="end"

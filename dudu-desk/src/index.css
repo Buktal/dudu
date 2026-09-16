@@ -315,6 +315,69 @@
   --destructive: oklch(0.7725 0.1047 14.56);
 }
 
+/* Channel identity colors remain stable across workspace palettes. */
+:root,
+[data-palette] {
+  --channel-xiaohongshu-foreground: light-dark(
+    #e6445c,
+    color-mix(in srgb, #e6445c 55%, var(--foreground))
+  );
+  --channel-xiaohongshu-surface: light-dark(
+    #fff0f2,
+    color-mix(in srgb, #e6445c 12%, var(--card))
+  );
+  --channel-wechat-foreground: light-dark(
+    #22946b,
+    color-mix(in srgb, #22946b 55%, var(--foreground))
+  );
+  --channel-wechat-surface: light-dark(
+    #eaf7f1,
+    color-mix(in srgb, #22946b 12%, var(--card))
+  );
+  --channel-douyin-foreground: light-dark(
+    #364054,
+    color-mix(in srgb, #364054 55%, var(--foreground))
+  );
+  --channel-douyin-surface: light-dark(
+    #edf0f5,
+    color-mix(in srgb, #364054 12%, var(--card))
+  );
+  --channel-whatsapp-foreground: light-dark(
+    #258565,
+    color-mix(in srgb, #258565 55%, var(--foreground))
+  );
+  --channel-whatsapp-surface: light-dark(
+    #eaf6ee,
+    color-mix(in srgb, #258565 12%, var(--card))
+  );
+  --channel-telegram-foreground: light-dark(
+    #358bb5,
+    color-mix(in srgb, #358bb5 55%, var(--foreground))
+  );
+  --channel-telegram-surface: light-dark(
+    #edf6fc,
+    color-mix(in srgb, #358bb5 12%, var(--card))
+  );
+  --channel-wechat-mp-foreground: light-dark(
+    #419663,
+    color-mix(in srgb, #419663 55%, var(--foreground))
+  );
+  --channel-wechat-mp-surface: light-dark(
+    #eff7ee,
+    color-mix(in srgb, #419663 12%, var(--card))
+  );
+  --channel-wecom-foreground: light-dark(
+    #3978b4,
+    color-mix(in srgb, #3978b4 55%, var(--foreground))
+  );
+  --channel-wecom-surface: light-dark(
+    #ecf4fb,
+    color-mix(in srgb, #3978b4 12%, var(--card))
+  );
+  --channel-neutral-foreground: var(--muted-foreground);
+  --channel-neutral-surface: var(--muted);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

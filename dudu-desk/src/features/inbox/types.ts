@@ -34,6 +34,8 @@ export type Conversation = {
   starred: boolean;
   preview: string;
   updatedAt: string;
+  waitingSince?: string;
+  messageCount?: number;
   version: number;
   capability: ReplyCapability;
 };
@@ -105,11 +107,22 @@ export type InboxMessage = {
 export type ConversationQuery = {
   search: string;
   channelId: string;
-  status: ConversationStatus | "all";
+  status: ConversationStatus | "all" | "active";
   starred: boolean;
+  order: "wait" | "messages";
 };
 
 export type Page<T> = { items: T[]; nextCursor: string | null; total?: number };
+export type ConversationPage = Page<Conversation> & {
+  counts?: {
+    active: number;
+    needsReply: number;
+    waiting: number;
+    closed: number;
+    starred: number;
+  };
+  channels?: { id: string; name: string }[];
+};
 export type RequestOptions = { context: WorkContext; signal: AbortSignal };
 export type SendTarget = {
   conversationId: string;

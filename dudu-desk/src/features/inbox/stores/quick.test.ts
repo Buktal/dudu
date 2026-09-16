@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { InboxEvent } from "../types";
 import { closeQuickHistory, openQuickHistory } from "./quick";
 import { loadConversations } from "./reading";
-import { selectQueueConversations } from "./selectors";
+import { selectQuickQueueConversations } from "./selectors";
 import { editDraft } from "./sending";
 import {
   firstConversation,
@@ -72,7 +72,7 @@ describe("quick-card and full-history workflow", () => {
       conversation: { ...secondConversation, id: "conversation-c", version: 3 },
     });
     expect(
-      selectQueueConversations(store.getState()).map((item) => item.id),
+      selectQuickQueueConversations(store.getState()).map((item) => item.id),
     ).toEqual(["conversation-a", "conversation-b", "conversation-c"]);
     expect(store.getState().inbox.replyId).toBe("conversation-b");
     expect(store.getState().inbox.drafts["conversation-b"].text).toBe(

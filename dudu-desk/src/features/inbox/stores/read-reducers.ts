@@ -2,6 +2,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
 import type {
   Conversation,
+  ConversationPage,
   ConversationQuery,
   InboxMessage,
   Page,
@@ -17,6 +18,7 @@ import { emptyLoad, type InboxState } from "./state";
 export function mergeConversation(
   state: InboxState,
   conversation: Conversation,
+  updateQueue = true,
 ) {
   const removed = state.events.removed[conversation.id];
   if (removed !== undefined && conversation.version <= removed) return;
@@ -32,13 +34,17 @@ export function mergeConversation(
     };
     if (removed !== undefined) delete state.events.removed[conversation.id];
   }
+  if (!updateQueue) return;
   if (
     matchesConversationQuery(
       state.conversations[conversation.id],
       state.queue.query,
     )
   ) {
-    if (!state.queue.ids.includes(conversation.id))
+    if (
+      !state.queue.query.search.trim() &&
+      !state.queue.ids.includes(conversation.id)
+    )
       state.queue.ids.push(conversation.id);
   } else {
     state.queue.ids = state.queue.ids.filter((id) => id !== conversation.id);
@@ -136,20 +142,34 @@ export function orderMessages(state: InboxState, ids: string[]): string[] {
 }
 
 export const readReducers = {
+  conversationsDiscovered(
+    state: InboxState,
+    action: PayloadAction<Conversation[]>,
+  ) {
+    for (const conversation of action.payload)
+      mergeConversation(state, conversation, false);
+  },
   queueLoading(
     state: InboxState,
     action: PayloadAction<ConversationQuery | undefined>,
   ) {
     if (action.payload) {
-      state.queue = { ...emptyLoad(), ids: [], query: action.payload };
+      state.queue = {
+        ...emptyLoad(),
+        ids: [],
+        query: action.payload,
+        counts: state.queue.counts,
+        channels: state.queue.channels,
+      };
     }
     state.queue.status = "loading";
     state.queue.error = null;
+    delete state.queue.failedRead;
   },
   queueLoaded(
     state: InboxState,
     action: PayloadAction<{
-      page: Page<Conversation>;
+      page: ConversationPage;
       append: boolean;
       preserveIds: string[];
     }>,
@@ -174,16 +194,20 @@ export const readReducers = {
     state.queue.hasLoaded = true;
     state.queue.nextCursor = page.nextCursor;
     state.queue.total = page.total;
+    state.queue.counts = page.counts ?? state.queue.counts;
+    state.queue.channels = page.channels ?? state.queue.channels;
     state.queue.error = null;
   },
-  queueFailed(state: InboxState, action: PayloadAction<ApiFailure>) {
+  queueFailed(
+    state: InboxState,
+    action: PayloadAction<{ error: ApiFailure; more: boolean }>,
+  ) {
+    const { error, more } = action.payload;
     state.queue.status = "error";
-    state.queue.error = action.payload;
-    if (action.payload.kind === "unavailable") state.connection = "unavailable";
-    if (
-      action.payload.kind === "network" ||
-      action.payload.kind === "authentication"
-    )
+    state.queue.error = error;
+    state.queue.failedRead = more ? "more" : "refresh";
+    if (error.kind === "unavailable") state.connection = "unavailable";
+    if (error.kind === "network" || error.kind === "authentication")
       state.connection = "disconnected";
   },
   conversationSelected(
