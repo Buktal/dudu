@@ -24,7 +24,7 @@ pub(crate) use crate::connections::util::now_secs;
 pub(crate) use crate::connections::wechat_common::build_callback_signature;
 
 use super::{
-    request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome, WechatMpMode,
+    handshake_echo_outcome, ConnectionConfig, DispatchOutcome, HandshakeOutcome, WechatMpMode,
 };
 
 /// echostr 握手的随机明文：32 位 hex（官方仅要求原样回显，无内容约束）。
@@ -58,40 +58,13 @@ fn verify_handshake(
         ("echostr", echostr.as_str()),
     ]);
 
-    let response = match response.send() {
-        Ok(response) => response,
-        Err(err) => {
-            return HandshakeOutcome {
-                ok: false,
-                message: format!(
-                    "{}：{err}",
-                    request_error_reason(&err, "（官方要求 5 秒内应答）")
-                ),
-            };
-        }
-    };
-
-    let status = response.status();
-    if !status.is_success() {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("目标返回 HTTP {status}，echostr 握手未通过"),
-        };
-    }
-
-    let body = response.bytes().unwrap_or_default();
-    if body.as_ref() == echostr.as_bytes() {
-        HandshakeOutcome {
-            ok: true,
-            message: "echostr 握手成功：三参 sha1 验签 GET，echostr 原样回显（HTTP 200）".into(),
-        }
-    } else {
-        let echoed = String::from_utf8_lossy(&body).to_string();
-        HandshakeOutcome {
-            ok: false,
-            message: format!("HTTP 200 但回显与 echostr 不一致：{echoed:?}"),
-        }
-    }
+    handshake_echo_outcome(
+        response.send(),
+        echostr.as_bytes(),
+        "（官方要求 5 秒内应答）",
+        "echostr 握手成功：三参 sha1 验签 GET，echostr 原样回显（HTTP 200）",
+        "回显与 echostr 不一致",
+    )
 }
 
 /// 公众号直发路由：明文逐字节交 [`push`]，三模式差异（query 参数集、信封）

@@ -31,7 +31,7 @@ use crate::connections::util::{callback_signature as build_callback_signature, n
 use crate::connections::wecom::crypto;
 
 use super::{
-    request_error_reason, send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
+    handshake_echo_outcome, send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
     XiaohongshuSystem,
 };
 
@@ -102,40 +102,13 @@ fn verify_handshake(
         ("echostr", echostr.as_str()),
     ]);
 
-    let response = match response.send() {
-        Ok(response) => response,
-        Err(err) => {
-            return HandshakeOutcome {
-                ok: false,
-                message: format!(
-                    "{}：{err}",
-                    request_error_reason(&err, RESPONSE_WINDOW_NOTE)
-                ),
-            };
-        }
-    };
-
-    let status = response.status();
-    if !status.is_success() {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("目标返回 HTTP {status}，echostr 握手未通过"),
-        };
-    }
-
-    let body = response.bytes().unwrap_or_default();
-    if body.as_ref() == echostr.as_bytes() {
-        HandshakeOutcome {
-            ok: true,
-            message: "echostr 握手成功：三参 sha1 验签 GET，echostr 原样回显（HTTP 200）".into(),
-        }
-    } else {
-        let echoed = String::from_utf8_lossy(&body).to_string();
-        HandshakeOutcome {
-            ok: false,
-            message: format!("HTTP 200 但回显与 echostr 不一致：{echoed:?}"),
-        }
-    }
+    handshake_echo_outcome(
+        response.send(),
+        echostr.as_bytes(),
+        RESPONSE_WINDOW_NOTE,
+        "echostr 握手成功：三参 sha1 验签 GET，echostr 原样回显（HTTP 200）",
+        "回显与 echostr 不一致",
+    )
 }
 
 /// 构造一次小程序通道加密推送的全部要素：明文 → 加密信封 body（签名在内）。

@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use crate::connections::util::now_secs;
 
-use super::{ConnectionConfig, DispatchOutcome, HandshakeOutcome, WecomSystem};
+use super::{handshake_echo_outcome, ConnectionConfig, DispatchOutcome, HandshakeOutcome, WecomSystem};
 
 /// 16 字节随机数：复用 uuid v4（已在依赖内），一个 v4 即 16 随机字节。
 pub(super) fn random_16() -> [u8; 16] {
@@ -65,41 +65,13 @@ fn echo_handshake(
         ])
         .send();
 
-    let response = match response {
-        Ok(response) => response,
-        Err(err) => {
-            return HandshakeOutcome {
-                ok: false,
-                message: format!(
-                    "{}：{err}",
-                    super::request_error_reason(&err, "（官方要求 1 秒内应答）")
-                ),
-            };
-        }
-    };
-
-    let status = response.status();
-    if !status.is_success() {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("目标返回 HTTP {status}，echostr 握手未通过"),
-        };
-    }
-
-    let body = response.bytes().unwrap_or_default();
-    if body.as_ref() == plaintext.as_bytes() {
-        HandshakeOutcome {
-            ok: true,
-            message: "echostr 握手成功：随机明文经 AES 加密签名 GET，解密明文原样回显（HTTP 200）"
-                .into(),
-        }
-    } else {
-        let echoed = String::from_utf8_lossy(&body).to_string();
-        HandshakeOutcome {
-            ok: false,
-            message: format!("HTTP 200 但回显与解密明文不一致：{echoed:?}"),
-        }
-    }
+    handshake_echo_outcome(
+        response,
+        plaintext.as_bytes(),
+        "（官方要求 1 秒内应答）",
+        "echostr 握手成功：随机明文经 AES 加密签名 GET，解密明文原样回显（HTTP 200）",
+        "回显与解密明文不一致",
+    )
 }
 
 /// 企微通道握手路由：XML 与机器人通道同走 GET echostr 流程，差异只在

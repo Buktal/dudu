@@ -211,6 +211,51 @@ pub(crate) fn send_measured(
     (status, receipt, error, elapsed_ms)
 }
 
+/// GET echostr 握手应答判定骨架（Reuse-first 审计退件：此判定段曾在 5 处
+/// 逐字复制——发送失败 → 超时文案；非 2xx → 握手未通过；2xx → 响应体与
+/// 期望值逐字节比对）。差异（期望值、超时补充、成功文案、逐字节不符说明）
+/// 留在调用侧；whatsapp 变体（非 2xx 文案含 verify_token 说明、不符文案含
+/// JSON 信封警示）保留自有判定。
+pub(crate) fn handshake_echo_outcome(
+    response: Result<reqwest::blocking::Response, reqwest::Error>,
+    expected: &[u8],
+    timeout_note: &str,
+    success_message: &str,
+    mismatch_note: &str,
+) -> HandshakeOutcome {
+    let response = match response {
+        Ok(response) => response,
+        Err(err) => {
+            return HandshakeOutcome {
+                ok: false,
+                message: format!("{}：{err}", request_error_reason(&err, timeout_note)),
+            };
+        }
+    };
+
+    let status = response.status();
+    if !status.is_success() {
+        return HandshakeOutcome {
+            ok: false,
+            message: format!("目标返回 HTTP {status}，echostr 握手未通过"),
+        };
+    }
+
+    let body = response.bytes().unwrap_or_default();
+    if body.as_ref() == expected {
+        HandshakeOutcome {
+            ok: true,
+            message: success_message.to_string(),
+        }
+    } else {
+        let echoed = String::from_utf8_lossy(&body).to_string();
+        HandshakeOutcome {
+            ok: false,
+            message: format!("HTTP 200 但{mismatch_note}：{echoed:?}"),
+        }
+    }
+}
+
 /// 读取全部持久化连接（无文件时返回空列表）。
 #[tauri::command]
 pub fn connections_load(app: tauri::AppHandle) -> Result<Vec<ConnectionConfig>, String> {
