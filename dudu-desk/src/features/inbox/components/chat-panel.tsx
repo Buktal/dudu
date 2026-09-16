@@ -3,6 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { WorkspaceView } from "@/components/workspace-motion";
 import { cn } from "@/lib/utils";
 import { useInboxSelector } from "../hooks/use-inbox-store";
+import { selectConversationById } from "../stores/selectors";
 import { ConversationHeader } from "./conversation-header";
 import { visitorName } from "./identity";
 import { InboxEmpty } from "./inbox-state";
@@ -29,8 +30,8 @@ export function ChatPanel({
   onRetry?: (id: string) => void;
   onAtBottom?: (sequence: number) => void;
 }) {
-  const conversation = useInboxSelector(
-    (state) => state.inbox.conversations[conversationId],
+  const conversation = useInboxSelector((state) =>
+    selectConversationById(state, conversationId),
   );
   if (!conversation)
     return (

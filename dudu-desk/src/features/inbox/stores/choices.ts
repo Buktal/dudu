@@ -1,6 +1,6 @@
 import { matchesConversationFilters } from "../conversation-query";
 import type { Conversation, ConversationQuery, Page } from "../types";
-import { beginRequest } from "./requests";
+import { runOperation } from "./requests";
 import { inboxActions } from "./slice";
 import type { InboxCommand } from "./store";
 
@@ -15,28 +15,27 @@ export function readConversationChoices({
   scope?: string;
 }): InboxCommand<Promise<Page<Conversation> | undefined>> {
   return async (dispatch, getState, runtime) => {
-    const request = beginRequest(runtime, `choices:${scope}`, getState);
-    try {
-      const page = await runtime.api.listConversations({
-        query,
-        cursor,
-        context: request.context,
-        signal: request.signal,
-      });
-      if (!request.current()) return;
-      dispatch(inboxActions.conversationsDiscovered(page.items));
-      const state = getState().inbox;
-      return {
-        ...page,
-        items: page.items
-          .map(({ id }) => state.conversations[id])
-          .filter((item) => matchesConversationFilters(item, query)),
-      };
-    } catch (error) {
-      if (request.current()) throw error;
-    } finally {
-      request.finish();
-    }
+    return runOperation(runtime, `choices:${scope}`, getState, async (op) => {
+      try {
+        const page = await runtime.api.listConversations({
+          query,
+          cursor,
+          context: op.context,
+          signal: op.signal,
+        });
+        if (!op.current()) return;
+        dispatch(inboxActions.conversationsDiscovered(page.items));
+        const state = getState().inbox;
+        return {
+          ...page,
+          items: page.items
+            .map(({ id }) => state.conversations[id])
+            .filter((item) => matchesConversationFilters(item, query)),
+        };
+      } catch (error) {
+        if (op.current()) throw error;
+      }
+    });
   };
 }
 

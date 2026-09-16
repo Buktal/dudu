@@ -1,9 +1,10 @@
 import { type InboxApi, unavailableInboxApi } from "../api";
+import { defineConversation } from "../fixtures";
 import type { Conversation, InboxMessage, SendSubmission } from "../types";
 import { startInboxUpdates } from "./events";
 import { createInboxStore } from "./store";
 
-export const firstConversation: Conversation = {
+export const firstConversation: Conversation = defineConversation({
   id: "conversation-a",
   identity: {
     id: "visitor-a",
@@ -16,12 +17,9 @@ export const firstConversation: Conversation = {
   },
   status: "needs-reply",
   unread: 1,
-  starred: false,
   preview: "你好，想问一下",
   updatedAt: "2026-09-16T00:00:00Z",
-  version: 1,
-  capability: { state: "allowed", kinds: ["text"] },
-};
+});
 export const secondConversation: Conversation = {
   ...firstConversation,
   id: "conversation-b",

@@ -1,9 +1,8 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
 import type { Conversation, VisitorProfile } from "../types";
-import type { ProfileChanges } from "./detail-state";
 import { mergeConversation } from "./read-reducers";
-import type { InboxState } from "./state";
+import type { InboxState, ProfileChanges } from "./state";
 
 export const detailReducers = {
   profileEdited(

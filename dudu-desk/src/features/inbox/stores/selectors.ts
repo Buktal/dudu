@@ -4,6 +4,12 @@ import type { InboxRootState } from "./store";
 
 export const selectInbox = (state: InboxRootState) => state.inbox;
 export const selectQueue = (state: InboxRootState) => state.inbox.queue;
+export const selectConversationById = (
+  state: InboxRootState,
+  conversationId: string,
+) => state.inbox.conversations[conversationId];
+export const selectFocusedId = (state: InboxRootState) =>
+  state.inbox.replyId ?? state.inbox.activeId;
 export const selectActiveConversation = (state: InboxRootState) =>
   state.inbox.activeId
     ? state.inbox.conversations[state.inbox.activeId]
@@ -11,6 +17,10 @@ export const selectActiveConversation = (state: InboxRootState) =>
 export const selectReplyConversation = (state: InboxRootState) =>
   state.inbox.replyId
     ? state.inbox.conversations[state.inbox.replyId]
+    : undefined;
+export const selectPinnedConversation = (state: InboxRootState) =>
+  state.inbox.pinnedId
+    ? state.inbox.conversations[state.inbox.pinnedId]
     : undefined;
 export const selectQuickQueueConversations = createSelector(
   [

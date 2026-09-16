@@ -1,22 +1,16 @@
 import { describe, expect, it } from "vitest";
+import type { InboxMessage, Page, SendSubmission } from "../types";
 import {
   collapsePinned,
-  destroyInbox,
-  editDraft,
   enterParallel,
   focusPane,
-  focusReply,
-  type InboxMessage,
-  loadConversations,
-  type Page,
   pinConversation,
   restorePinned,
-  type SendSubmission,
-  selectConversation,
-  selectInbox,
-  sendReply,
   unpinConversation,
-} from "../index";
+} from "./parallel";
+import { destroyInbox, loadConversations, selectConversation } from "./reading";
+import { selectInbox } from "./selectors";
+import { editDraft, focusReply, sendReply } from "./sending";
 import {
   acceptedMessage,
   deferred,

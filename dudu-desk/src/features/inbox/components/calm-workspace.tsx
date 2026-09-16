@@ -5,15 +5,14 @@ import { cn } from "@/lib/utils";
 import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxSelector } from "../hooks/use-inbox-store";
 import { useVisitorPanel } from "../hooks/use-visitor-panel";
+import { selectFocusedId } from "../stores/selectors";
 import { ConversationPane } from "./conversation-pane";
 import { ConversationSidebar } from "./conversation-sidebar";
 import { InboxEmpty } from "./inbox-state";
 import { VisitorInfoPanel } from "./visitor-info-panel";
 
 export function CalmWorkspace() {
-  const activeId = useInboxSelector(
-    (state) => state.inbox.replyId ?? state.inbox.activeId,
-  );
+  const activeId = useInboxSelector(selectFocusedId);
   const [showQueue, setShowQueue] = useState(true);
   const info = useVisitorPanel();
   useInboxSearch(() => setShowQueue(true));

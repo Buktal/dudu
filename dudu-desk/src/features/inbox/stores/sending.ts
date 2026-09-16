@@ -1,19 +1,19 @@
 import { DeskApiError } from "@/lib/api-response";
-import { attachmentBatchRestriction } from "../attachment-rules";
-import { sendRestriction, sendTarget } from "../sending-rules";
-import type { InboxMessage, SendKind } from "../types";
+import { replyRestriction } from "../reply-policy";
+import { sendTarget } from "../sending-rules";
+import type { InboxMessage } from "../types";
 import { receiveNext } from "./next-reception";
 import {
-  beginRequest,
   failureOf,
   releaseAttachmentResources,
+  runOperation,
 } from "./requests";
+import { inboxActions } from "./slice";
 import {
   blankDraft,
   latestIncomingSequence,
   type ReplySubmission,
-} from "./sending-state";
-import { inboxActions } from "./slice";
+} from "./state";
 import type { InboxCommand } from "./store";
 
 export function editDraft(conversationId: string, text: string): InboxCommand {
@@ -36,57 +36,60 @@ function deliver(
 ): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
     const { target } = submission.request;
-    const request = beginRequest(
+    await runOperation(
       runtime,
       `send:${target.conversationId}`,
       getState,
+      async (op) => {
+        dispatch(inboxActions.submissionStarted({ submission, message }));
+        try {
+          const response = await runtime.api.send({
+            ...submission.request,
+            context: op.context,
+            signal: op.signal,
+          });
+          if (!op.current()) return;
+          if (
+            response.conversationId !== target.conversationId ||
+            response.direction !== "outgoing" ||
+            !response.delivery ||
+            !["accepted", "sent", "delivered", "read"].includes(
+              response.delivery.state,
+            ) ||
+            (response.clientRequestId &&
+              response.clientRequestId !== submission.request.clientRequestId)
+          ) {
+            throw new DeskApiError(
+              "invalid-response",
+              "服务未返回可确认的发送结果",
+            );
+          }
+          dispatch(
+            inboxActions.submissionAccepted({
+              messageId: message.id,
+              response,
+            }),
+          );
+          const state = getState().inbox;
+          if (state.submissions[message.id]?.status === "accepted")
+            releaseAttachmentResources(runtime, submission.draftAttachmentIds);
+          if (submission.next)
+            await dispatch(receiveNext(submission, op.current));
+        } catch (error) {
+          if (!op.current()) return;
+          const failure = failureOf(error);
+          dispatch(
+            inboxActions.submissionFailed({
+              messageId: message.id,
+              error: failure,
+              uncertain: ["network", "invalid-response", "aborted"].includes(
+                failure.kind,
+              ),
+            }),
+          );
+        }
+      },
     );
-    dispatch(inboxActions.submissionStarted({ submission, message }));
-    try {
-      const response = await runtime.api.send({
-        ...submission.request,
-        context: request.context,
-        signal: request.signal,
-      });
-      if (!request.current()) return;
-      if (
-        response.conversationId !== target.conversationId ||
-        response.direction !== "outgoing" ||
-        !response.delivery ||
-        !["accepted", "sent", "delivered", "read"].includes(
-          response.delivery.state,
-        ) ||
-        (response.clientRequestId &&
-          response.clientRequestId !== submission.request.clientRequestId)
-      ) {
-        throw new DeskApiError(
-          "invalid-response",
-          "服务未返回可确认的发送结果",
-        );
-      }
-      dispatch(
-        inboxActions.submissionAccepted({ messageId: message.id, response }),
-      );
-      const state = getState().inbox;
-      if (state.submissions[message.id]?.status === "accepted")
-        releaseAttachmentResources(runtime, submission.draftAttachmentIds);
-      if (submission.next)
-        await dispatch(receiveNext(submission, request.current));
-    } catch (error) {
-      if (!request.current()) return;
-      const failure = failureOf(error);
-      dispatch(
-        inboxActions.submissionFailed({
-          messageId: message.id,
-          error: failure,
-          uncertain: ["network", "invalid-response", "aborted"].includes(
-            failure.kind,
-          ),
-        }),
-      );
-    } finally {
-      request.finish();
-    }
   };
 }
 
@@ -101,18 +104,12 @@ export function sendReply(
     const conversation = state.conversations[conversationId];
     const attachments = draft.attachmentIds.map((id) => state.attachments[id]);
     if (!draft.text.trim() && !attachments.length) return;
-    const kinds: SendKind[] = [
-      ...(draft.text.trim() ? ["text" as const] : []),
-      ...attachments.filter(Boolean).map((attachment) => attachment.kind),
-    ];
-    const restriction =
-      sendRestriction(conversation, state.connection, kinds, runtime.now()) ||
-      attachmentBatchRestriction(
-        conversation,
-        state.connection,
-        attachments.filter(Boolean),
-        runtime.now(),
-      );
+    const restriction = replyRestriction(
+      conversation,
+      state.connection,
+      { text: draft.text, files: attachments.filter(Boolean) },
+      runtime.now(),
+    );
     if (
       restriction ||
       attachments.some(
@@ -183,23 +180,12 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
     )
       return;
     const { target, attachments, text } = original.request;
-    const kinds: SendKind[] = [
-      ...(text.trim() ? ["text" as const] : []),
-      ...attachments.map((attachment) => attachment.kind),
-    ];
-    const restriction =
-      sendRestriction(
-        state.conversations[target.conversationId],
-        state.connection,
-        kinds,
-        runtime.now(),
-      ) ||
-      attachmentBatchRestriction(
-        state.conversations[target.conversationId],
-        state.connection,
-        attachments,
-        runtime.now(),
-      );
+    const restriction = replyRestriction(
+      state.conversations[target.conversationId],
+      state.connection,
+      { text, files: attachments },
+      runtime.now(),
+    );
     if (restriction) {
       dispatch(inboxActions.noticeChanged(restriction));
       return;
@@ -213,4 +199,79 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
   };
 }
 
-export { endReception, resumeReception } from "./reception";
+export function endReception(
+  conversationId: string,
+): InboxCommand<Promise<void>> {
+  return changeReception(conversationId, "end");
+}
+
+export function resumeReception(
+  conversationId: string,
+): InboxCommand<Promise<void>> {
+  return changeReception(conversationId, "resume");
+}
+
+function changeReception(
+  conversationId: string,
+  action: "end" | "resume",
+): InboxCommand<Promise<void>> {
+  return async (dispatch, getState, runtime) => {
+    const state = getState().inbox;
+    const current = state.conversations[conversationId];
+    if (
+      !current ||
+      state.ending[conversationId]?.status === "saving" ||
+      (action === "end" && current.status === "closed") ||
+      (action === "resume" && current.status !== "closed")
+    )
+      return;
+    await runOperation(
+      runtime,
+      `end:${conversationId}`,
+      getState,
+      async (op) => {
+        dispatch(inboxActions.endStarted(conversationId));
+        try {
+          const operation =
+            action === "end" ? "endConversation" : "resumeConversation";
+          const conversation = await runtime.api[operation]({
+            context: op.context,
+            signal: op.signal,
+            conversationId,
+          });
+          if (!op.current()) return;
+          const latest = getState().inbox.conversations[conversationId];
+          const confirmedStatuses =
+            action === "end" ? ["closed"] : ["needs-reply", "waiting"];
+          if (
+            conversation.id !== conversationId ||
+            !confirmedStatuses.includes(conversation.status) ||
+            (latest &&
+              latest.version >= conversation.version &&
+              !confirmedStatuses.includes(latest.status))
+          )
+            throw new DeskApiError(
+              "invalid-response",
+              action === "end"
+                ? "服务未确认本次接待已结束"
+                : "服务未确认本次接待已恢复",
+            );
+          dispatch(
+            action === "end"
+              ? inboxActions.endSucceeded(conversation)
+              : inboxActions.resumeSucceeded(conversation),
+          );
+        } catch (error) {
+          op.settle(() =>
+            dispatch(
+              inboxActions.endFailed({
+                conversationId,
+                error: failureOf(error),
+              }),
+            ),
+          );
+        }
+      },
+    );
+  };
+}

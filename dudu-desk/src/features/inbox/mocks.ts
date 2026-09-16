@@ -1,5 +1,6 @@
 import { en, Faker, zh_CN } from "@faker-js/faker";
 import { relativeIso } from "@/lib/time";
+import { defineConversation } from "./fixtures";
 import {
   type DevelopmentTurn,
   developmentEarlierTurns,
@@ -213,7 +214,7 @@ export function createDevelopmentFixtures(
         waitingSince,
       }),
     );
-    const conversation: Conversation = {
+    const conversation: Conversation = defineConversation({
       id,
       identity: {
         id: faker.string.uuid(),
@@ -237,9 +238,8 @@ export function createDevelopmentFixtures(
       updatedAt,
       waitingSince,
       messageCount: messages[id].length,
-      version: 1,
       capability: capability(index),
-    };
+    });
     conversations.push(conversation);
     profiles[id] = {
       conversationId: id,

@@ -27,6 +27,7 @@ import {
   setConversationStarred,
 } from "../stores/details";
 import { loadProfile } from "../stores/reading";
+import { selectConversationById } from "../stores/selectors";
 import type { ProfileField } from "../types";
 import { ConversationStarAction } from "./conversation-actions";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
@@ -50,8 +51,8 @@ export function VisitorInfo({
   closeAction?: ReactNode;
 }) {
   const dispatch = useInboxDispatch();
-  const conversation = useInboxSelector(
-    (state) => state.inbox.conversations[conversationId],
+  const conversation = useInboxSelector((state) =>
+    selectConversationById(state, conversationId),
   );
   const loaded = useInboxSelector(
     (state) => state.inbox.profiles[conversationId],

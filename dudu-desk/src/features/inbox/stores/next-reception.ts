@@ -1,9 +1,8 @@
 import { sendRestriction } from "../sending-rules";
 import { readConversationChoices } from "./choices";
 import { selectConversation } from "./reading";
-import type { ReplySubmission } from "./sending-state";
 import { inboxActions } from "./slice";
-import { emptyQuery } from "./state";
+import { emptyQuery, type ReplySubmission } from "./state";
 import type { InboxCommand } from "./store";
 
 /** Finding another visitor must never change the outcome of an accepted reply. */

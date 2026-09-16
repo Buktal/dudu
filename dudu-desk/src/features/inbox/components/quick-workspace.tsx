@@ -12,13 +12,14 @@ import { cn } from "@/lib/utils";
 import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { useVisitorPanel } from "../hooks/use-visitor-panel";
-import { closeQuickHistory, openQuickHistory } from "../stores/quick";
+import { closeQuickHistory, openQuickHistory } from "../stores/parallel";
 import {
   loadConversations,
   loadProfile,
   retryConversations,
 } from "../stores/reading";
 import {
+  selectConversationById,
   selectQueue,
   selectQuickQueueConversations,
 } from "../stores/selectors";
@@ -54,7 +55,7 @@ export function QuickWorkspace() {
   const historyId = useInboxSelector((state) => state.inbox.quickHistoryId);
   const replyId = useInboxSelector((state) => state.inbox.replyId);
   const historyConversation = useInboxSelector((state) =>
-    historyId ? state.inbox.conversations[historyId] : undefined,
+    historyId ? selectConversationById(state, historyId) : undefined,
   );
   const info = useVisitorPanel();
   const grid = useRef<VirtuosoGridHandle>(null);

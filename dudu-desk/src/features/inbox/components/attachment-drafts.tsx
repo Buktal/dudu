@@ -23,7 +23,8 @@ import { nowIso } from "@/lib/time";
 import { attachmentRestriction } from "../attachment-rules";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { removeAttachment, retryAttachment } from "../stores/attachments";
-import type { DraftAttachment } from "../stores/sending-state";
+import { selectConversationById } from "../stores/selectors";
+import type { DraftAttachment } from "../stores/state";
 
 const icons = {
   image: ImageIcon,
@@ -45,8 +46,8 @@ export function AttachmentDrafts({
   const dispatch = useInboxDispatch();
   const draft = useInboxSelector((state) => state.inbox.drafts[conversationId]);
   const attachments = useInboxSelector((state) => state.inbox.attachments);
-  const conversation = useInboxSelector(
-    (state) => state.inbox.conversations[conversationId],
+  const conversation = useInboxSelector((state) =>
+    selectConversationById(state, conversationId),
   );
   const connection = useInboxSelector((state) => state.inbox.connection);
   if (!draft?.attachmentIds.length) return null;

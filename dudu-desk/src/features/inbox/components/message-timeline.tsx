@@ -6,7 +6,7 @@ import { Marker, MarkerContent } from "@/components/ui/marker";
 import { messageDate } from "@/lib/time";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { loadHistory } from "../stores/reading";
-import { selectMessages } from "../stores/selectors";
+import { selectConversationById, selectMessages } from "../stores/selectors";
 import type { InboxMessage } from "../types";
 import { InboxEmpty, InboxError, InboxLoading } from "./inbox-state";
 import { MessageView } from "./message-view";
@@ -27,7 +27,7 @@ function HistoryList({
     (state) => state.inbox.histories[conversationId],
   );
   const identity = useInboxSelector(
-    (state) => state.inbox.conversations[conversationId]?.identity,
+    (state) => selectConversationById(state, conversationId)?.identity,
   );
   const virtuoso = useRef<VirtuosoHandle>(null);
   const [initialFirstId] = useState(messages[0].id);

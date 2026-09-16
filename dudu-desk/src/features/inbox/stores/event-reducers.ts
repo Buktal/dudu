@@ -1,5 +1,6 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
+import { matchesConversationFilters } from "../conversation-query";
 import type {
   ConnectionState,
   Conversation,
@@ -10,16 +11,16 @@ import type {
   ReplyCapability,
 } from "../types";
 import {
-  matchesConversationQuery,
-  receiptKeys,
-  rememberReceipt,
-} from "./event-state";
-import {
   mergeConversation,
   mergeMessage,
   orderMessages,
 } from "./read-reducers";
-import { emptyLoad, type InboxState } from "./state";
+import {
+  emptyLoad,
+  type InboxState,
+  receiptKeys,
+  rememberReceipt,
+} from "./state";
 
 export const eventReducers = {
   connectionChanged(state: InboxState, action: PayloadAction<ConnectionState>) {
@@ -41,7 +42,7 @@ export const eventReducers = {
         ...recoveredIds,
       ]),
     ].filter((id) =>
-      matchesConversationQuery(state.conversations[id], state.queue.query),
+      matchesConversationFilters(state.conversations[id], state.queue.query),
     );
     state.queue.hasLoaded = true;
     state.queue.status = "ready";

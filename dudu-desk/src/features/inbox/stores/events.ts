@@ -1,17 +1,16 @@
 import { DeskApiError } from "@/lib/api-response";
-import type {
-  ConversationPage,
-  ConversationQuery,
-  InboxEvent,
-  InboxMessage,
-  Page,
-} from "../types";
-import { receiptKeys } from "./event-state";
+import type { ConversationQuery, InboxEvent } from "../types";
 import { loadConversations } from "./reading";
+import {
+  connectionFromFailure,
+  reconcileInbox,
+  settleConfirmedReplies,
+} from "./reconciler";
 import {
   beginRequest,
   failureOf,
   releaseAttachmentResources,
+  runOperation,
 } from "./requests";
 import { inboxActions } from "./slice";
 import type { InboxCommand } from "./store";
@@ -127,9 +126,7 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
       if (current)
         dispatch(
           inboxActions.connectionChanged(
-            failureOf(error).kind === "unavailable"
-              ? "unavailable"
-              : "disconnected",
+            connectionFromFailure(failureOf(error)),
           ),
         );
     }
@@ -181,41 +178,6 @@ function receiveInboxEvent(event: InboxEvent): InboxCommand {
   };
 }
 
-function settleConfirmedReplies(): InboxCommand {
-  return (dispatch, getState, runtime) => {
-    for (const submission of Object.values(getState().inbox.submissions)) {
-      if (submission.status !== "accepted") continue;
-      const state = getState().inbox;
-      const draft = state.drafts[submission.request.target.conversationId];
-      const response = state.messages[submission.messageId];
-      if (!response) continue;
-      if (
-        draft &&
-        (draft.textRevision === submission.textRevision ||
-          draft.attachmentIds.some((id) =>
-            submission.draftAttachmentIds.includes(id),
-          ))
-      ) {
-        dispatch(
-          inboxActions.submissionAccepted({
-            messageId: submission.messageId,
-            response,
-          }),
-        );
-      }
-      releaseAttachmentResources(runtime, submission.draftAttachmentIds);
-    }
-    const state = getState().inbox;
-    if (
-      state.notice?.kind === "unconfirmed-send" &&
-      !Object.values(state.submissions).some(
-        (item) => item.status === "unconfirmed",
-      )
-    )
-      dispatch(inboxActions.noticeChanged(null));
-  };
-}
-
 export function markConversationRead(
   conversationId: string,
   throughSequence: number,
@@ -234,159 +196,40 @@ export function markConversationRead(
         )
     )
       return;
-    const request = beginRequest(runtime, `read:${conversationId}`, getState);
-    dispatch(inboxActions.readStarted({ conversationId, throughSequence }));
-    try {
-      const conversation = await runtime.api.markRead({
-        context: request.context,
-        signal: request.signal,
-        conversationId,
-        throughSequence,
-      });
-      if (!request.current() || !getState().inbox.conversations[conversationId])
-        return;
-      if (conversation.id !== conversationId)
-        throw new DeskApiError("invalid-response", "已读确认未关联到当前会话");
-      dispatch(inboxActions.readConfirmed({ conversation, throughSequence }));
-    } catch (error) {
-      if (request.current())
-        dispatch(
-          inboxActions.readFailed({ conversationId, error: failureOf(error) }),
-        );
-    } finally {
-      request.finish();
-    }
-  };
-}
-
-function reconcileInbox(
-  sourceCurrent: () => boolean,
-): InboxCommand<Promise<void>> {
-  return async (dispatch, getState, runtime) => {
-    const request = beginRequest(runtime, "recovery", getState);
-    const controller = runtime.requests.get("recovery");
-    const current = () => request.current() && sourceCurrent();
-    const query = getState().inbox.queue.query;
-    dispatch(inboxActions.connectionChanged("reconnecting"));
-    try {
-      let cursor: string | undefined;
-      const seenCursors = new Set<string>();
-      const queuePage: ConversationPage = { items: [], nextCursor: null };
-      do {
-        const page = await runtime.api.listConversations({
-          context: request.context,
-          signal: request.signal,
-          query,
-          cursor,
-        });
-        if (!current()) return;
-        if (getState().inbox.queue.query !== query) break;
-        queuePage.items.push(...page.items);
-        queuePage.nextCursor = page.nextCursor;
-        queuePage.total = page.total ?? queuePage.total;
-        queuePage.counts = page.counts ?? queuePage.counts;
-        queuePage.channels = page.channels ?? queuePage.channels;
-        cursor = nextCursor(page.nextCursor, seenCursors);
-      } while (cursor);
-      if (getState().inbox.queue.query === query)
-        dispatch(inboxActions.conversationsReconciled(queuePage));
-
-      const historyIds = Object.keys(getState().inbox.histories).filter(
-        (id) => getState().inbox.conversations[id],
-      );
-      const histories = historyIds.map(async (conversationId) => {
-        const previous = getState().inbox.histories[conversationId];
-        const known = new Set(
-          previous.ids.flatMap((id) => {
-            const message = getState().inbox.messages[id];
-            return message ? receiptKeys(message) : [];
-          }),
-        );
-        const cursors = new Set<string>();
-        let historyCursor: string | undefined;
-        const historyPage: Page<InboxMessage> = { items: [], nextCursor: null };
-        do {
-          const page = await runtime.api.listMessages({
-            context: request.context,
-            signal: request.signal,
+    await runOperation(
+      runtime,
+      `read:${conversationId}`,
+      getState,
+      async (op) => {
+        dispatch(inboxActions.readStarted({ conversationId, throughSequence }));
+        try {
+          const conversation = await runtime.api.markRead({
+            context: op.context,
+            signal: op.signal,
             conversationId,
-            cursor: historyCursor,
+            throughSequence,
           });
-          if (!current() || !getState().inbox.conversations[conversationId])
+          if (!op.current() || !getState().inbox.conversations[conversationId])
             return;
-          historyPage.items.push(...page.items);
-          historyPage.nextCursor = page.nextCursor;
-          if (
-            page.items.some((message) =>
-              receiptKeys(message).some((key) => known.has(key)),
-            )
-          )
-            break;
-          historyCursor = nextCursor(page.nextCursor, cursors);
-        } while (historyCursor);
-        dispatch(
-          inboxActions.historyReconciled({
-            conversationId,
-            page: historyPage,
-            preserveCursor:
-              previous.hasLoaded ||
-              getState().inbox.histories[conversationId]?.hasLoaded,
-          }),
-        );
-        dispatch(settleConfirmedReplies());
-      });
-      const capabilities = Object.keys(getState().inbox.conversations).map(
-        async (conversationId) => {
-          const expectedVersion =
-            getState().inbox.conversations[conversationId].version;
-          const expectedCapabilityVersion =
-            getState().inbox.events.capabilities[conversationId]?.version ??
-            null;
-          const capability = await runtime.api.getCapability({
-            context: request.context,
-            signal: request.signal,
-            conversationId,
-          });
-          if (current())
-            dispatch(
-              inboxActions.capabilityRefreshed({
-                conversationId,
-                capability,
-                expectedVersion,
-                expectedCapabilityVersion,
-              }),
+          if (conversation.id !== conversationId)
+            throw new DeskApiError(
+              "invalid-response",
+              "已读确认未关联到当前会话",
             );
-        },
-      );
-      await Promise.all([...histories, ...capabilities]);
-      if (current()) dispatch(inboxActions.connectionChanged("connected"));
-    } catch (error) {
-      if (current()) {
-        const failure = failureOf(error);
-        dispatch(
-          inboxActions.connectionChanged(
-            failure.kind === "unavailable" ? "unavailable" : "disconnected",
-          ),
-        );
-        dispatch(inboxActions.noticeChanged(failure.message));
-      }
-      controller?.abort();
-    } finally {
-      request.finish();
-    }
-  };
-}
-
-function nextCursor(
-  cursor: string | null,
-  seen: Set<string>,
-): string | undefined {
-  if (!cursor) return;
-  if (seen.has(cursor))
-    throw new DeskApiError(
-      "invalid-response",
-      "恢复读取返回了重复游标，请重新连接",
+          dispatch(
+            inboxActions.readConfirmed({ conversation, throughSequence }),
+          );
+        } catch (error) {
+          op.settle(() =>
+            dispatch(
+              inboxActions.readFailed({
+                conversationId,
+                error: failureOf(error),
+              }),
+            ),
+          );
+        }
+      },
     );
-  seen.add(cursor);
-  return cursor;
+  };
 }

@@ -6,8 +6,12 @@ import {
   mergeMessage,
   orderMessages,
 } from "./read-reducers";
-import { blankDraft, type StartSubmission } from "./sending-state";
-import { emptyLoad, type InboxState } from "./state";
+import {
+  blankDraft,
+  emptyLoad,
+  type InboxState,
+  type StartSubmission,
+} from "./state";
 
 export const sendReducers = {
   draftEdited(

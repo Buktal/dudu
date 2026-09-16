@@ -10,6 +10,7 @@ import {
 } from "../attachment-rules";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { addAttachments } from "../stores/attachments";
+import { selectConversationById } from "../stores/selectors";
 import { focusReply } from "../stores/sending";
 
 export function AttachmentPicker({
@@ -19,8 +20,8 @@ export function AttachmentPicker({
 }) {
   const dispatch = useInboxDispatch();
   const input = useRef<HTMLInputElement>(null);
-  const conversation = useInboxSelector(
-    (state) => state.inbox.conversations[conversationId],
+  const conversation = useInboxSelector((state) =>
+    selectConversationById(state, conversationId),
   );
   const connection = useInboxSelector((state) => state.inbox.connection);
   const count = useInboxSelector(

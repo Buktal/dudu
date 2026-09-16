@@ -1,5 +1,6 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
+import { matchesConversationFilters } from "../conversation-query";
 import type {
   Conversation,
   ConversationPage,
@@ -9,11 +10,11 @@ import type {
   VisitorProfile,
 } from "../types";
 import {
-  matchesConversationQuery,
+  emptyLoad,
+  type InboxState,
   receiptKeys,
   rememberReceipt,
-} from "./event-state";
-import { emptyLoad, type InboxState } from "./state";
+} from "./state";
 
 export function mergeConversation(
   state: InboxState,
@@ -36,7 +37,7 @@ export function mergeConversation(
   }
   if (!updateQueue) return;
   if (
-    matchesConversationQuery(
+    matchesConversationFilters(
       state.conversations[conversation.id],
       state.queue.query,
     )
@@ -188,7 +189,7 @@ export const readReducers = {
     ].filter(
       (id) =>
         !!state.conversations[id] &&
-        matchesConversationQuery(state.conversations[id], state.queue.query),
+        matchesConversationFilters(state.conversations[id], state.queue.query),
     );
     state.queue.status = "ready";
     state.queue.hasLoaded = true;

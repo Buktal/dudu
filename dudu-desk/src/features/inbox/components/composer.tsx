@@ -11,12 +11,17 @@ import {
 } from "@/components/ui/input-group";
 import { nowIso } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { attachmentBatchRestriction } from "../attachment-rules";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import { composerIntent, sendRestriction } from "../sending-rules";
-import { resumeReception } from "../stores/reception";
-import { editDraft, focusReply, sendReply } from "../stores/sending";
-import { blankDraft } from "../stores/sending-state";
+import { replyRestriction } from "../reply-policy";
+import { composerIntent } from "../sending-rules";
+import { selectConversationById } from "../stores/selectors";
+import {
+  editDraft,
+  focusReply,
+  resumeReception,
+  sendReply,
+} from "../stores/sending";
+import { blankDraft } from "../stores/state";
 import { AttachmentDrafts } from "./attachment-drafts";
 import { ComposerTools } from "./composer-tools";
 import { SourceBadge, visitorName } from "./identity";
@@ -36,8 +41,8 @@ export function Composer({
   const input = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const id = useId();
-  const conversation = useInboxSelector(
-    (state) => state.inbox.conversations[conversationId],
+  const conversation = useInboxSelector((state) =>
+    selectConversationById(state, conversationId),
   );
   const draft = useInboxSelector(
     (state) => state.inbox.drafts[conversationId] ?? blankDraft,
@@ -57,21 +62,18 @@ export function Composer({
     ),
   );
   if (!conversation) return null;
-  const restriction =
-    sendRestriction(
-      conversation,
-      connection,
-      draft.text.trim() || !draft.attachmentIds.length ? ["text"] : [],
-      nowIso(),
-    ) ||
-    attachmentBatchRestriction(
-      conversation,
-      connection,
-      draft.attachmentIds
+  // One clock read per decision: the policy answers send+attachment together.
+  const restriction = replyRestriction(
+    conversation,
+    connection,
+    {
+      text: draft.text,
+      files: draft.attachmentIds
         .map((attachmentId) => attachments[attachmentId])
         .filter(Boolean),
-      nowIso(),
-    );
+    },
+    nowIso(),
+  );
   const disabled =
     !!restriction ||
     busy ||

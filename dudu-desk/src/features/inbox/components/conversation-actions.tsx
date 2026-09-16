@@ -3,8 +3,8 @@ import { WorkspaceAction } from "@/components/workspace-action";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { setConversationStarred } from "../stores/details";
-import { endReception, resumeReception } from "../stores/reception";
-import { focusReply } from "../stores/sending";
+import { selectConversationById } from "../stores/selectors";
+import { endReception, focusReply, resumeReception } from "../stores/sending";
 import { VisitorInfoToggle } from "./visitor-info-toggle";
 
 export function ConversationStarAction({
@@ -15,8 +15,8 @@ export function ConversationStarAction({
   className?: string;
 }) {
   const dispatch = useInboxDispatch();
-  const conversation = useInboxSelector(
-    (state) => state.inbox.conversations[conversationId],
+  const conversation = useInboxSelector((state) =>
+    selectConversationById(state, conversationId),
   );
   const busy = useInboxSelector(
     (state) => state.inbox.starUpdates[conversationId]?.status === "saving",
@@ -55,9 +55,9 @@ export function ConversationActions({
   onInfo?: () => void;
 }) {
   const dispatch = useInboxDispatch();
-  const ended = useInboxSelector(
-    (state) => state.inbox.conversations[conversationId]?.status === "closed",
-  );
+  const ended =
+    useInboxSelector((state) => selectConversationById(state, conversationId))
+      ?.status === "closed";
   const ending = useInboxSelector(
     (state) => state.inbox.ending[conversationId]?.status === "saving",
   );

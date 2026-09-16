@@ -1,7 +1,6 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { MediaReference } from "../types";
-import { blankDraft, type DraftAttachment } from "./sending-state";
-import type { InboxState } from "./state";
+import { blankDraft, type DraftAttachment, type InboxState } from "./state";
 
 export const attachmentReducers = {
   attachmentAdded(state: InboxState, action: PayloadAction<DraftAttachment>) {

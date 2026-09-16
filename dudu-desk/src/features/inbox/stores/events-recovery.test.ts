@@ -6,8 +6,7 @@ import {
   reconnectInbox,
   startInboxUpdates,
 } from "./events";
-import { focusPane, pinConversation } from "./parallel";
-import { openQuickHistory } from "./quick";
+import { focusPane, openQuickHistory, pinConversation } from "./parallel";
 import { destroyInbox, loadConversations, resetContext } from "./reading";
 import { selectMessages, selectQueueConversations } from "./selectors";
 import { editDraft } from "./sending";

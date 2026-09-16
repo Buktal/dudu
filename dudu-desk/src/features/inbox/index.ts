@@ -1,44 +1,8 @@
 export { type InboxApi, unavailableInboxApi } from "./api";
 export { InboxWorkspace } from "./inbox-workspace";
-export {
-  addAttachments,
-  removeAttachment,
-  retryAttachment,
-} from "./stores/attachments";
-export {
-  cancelConversationChoices,
-  readConversationChoices,
-} from "./stores/choices";
-export {
-  discardProfileEdits,
-  editVisitorProfile,
-  saveVisitorProfile,
-  setConversationStarred,
-} from "./stores/details";
-export {
-  markConversationRead,
-  reconnectInbox,
-  startInboxUpdates,
-} from "./stores/events";
-export {
-  collapsePinned,
-  enterParallel,
-  focusPane,
-  pinConversation,
-  restorePinned,
-  unpinConversation,
-} from "./stores/parallel";
-export { closeQuickHistory, openQuickHistory } from "./stores/quick";
-export {
-  destroyInbox,
-  ensureConversationLoaded,
-  loadConversations,
-  loadHistory,
-  loadProfile,
-  resetContext,
-  retryConversations,
-  selectConversation,
-} from "./stores/reading";
+// Public interface of the inbox module: workspace, store seam, selectors and
+// types. Command thunks are feature internals, imported via their domain
+// modules (./stores/reading, ./stores/sending, …), not re-exported here.
 export {
   selectActiveConversation,
   selectInbox,
@@ -49,14 +13,6 @@ export {
   selectQuickQueueConversations,
   selectReplyConversation,
 } from "./stores/selectors";
-export {
-  editDraft,
-  endReception,
-  focusReply,
-  resumeReception,
-  retryReply,
-  sendReply,
-} from "./stores/sending";
 export {
   createInboxStore,
   type InboxDispatch,

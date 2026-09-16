@@ -14,6 +14,10 @@ import {
   pinConversation,
   type ReceptionPane,
 } from "../stores/parallel";
+import {
+  selectActiveConversation,
+  selectPinnedConversation,
+} from "../stores/selectors";
 import { ConversationPane } from "./conversation-pane";
 import { ConversationSidebar } from "./conversation-sidebar";
 import { visitorName } from "./identity";
@@ -29,12 +33,8 @@ export function ParallelWorkspace() {
   const pinnedId = useInboxSelector((state) => state.inbox.pinnedId);
   const collapsed = useInboxSelector((state) => state.inbox.pinCollapsed);
   const replyId = useInboxSelector((state) => state.inbox.replyId);
-  const primary = useInboxSelector((state) =>
-    primaryId ? state.inbox.conversations[primaryId] : undefined,
-  );
-  const pinned = useInboxSelector((state) =>
-    pinnedId ? state.inbox.conversations[pinnedId] : undefined,
-  );
+  const primary = useInboxSelector(selectActiveConversation);
+  const pinned = useInboxSelector(selectPinnedConversation);
   const [showQueue, setShowQueue] = useState(
     !primaryId && !pinnedId && !replyId,
   );

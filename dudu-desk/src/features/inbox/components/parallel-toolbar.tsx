@@ -10,6 +10,10 @@ import {
   restorePinned,
   unpinConversation,
 } from "../stores/parallel";
+import {
+  selectActiveConversation,
+  selectReplyConversation,
+} from "../stores/selectors";
 import { visitorName } from "./identity";
 
 export function ParallelToolbar({
@@ -24,18 +28,10 @@ export function ParallelToolbar({
   onPinned: () => void;
 }) {
   const dispatch = useInboxDispatch();
-  const primary = useInboxSelector((state) =>
-    state.inbox.activeId
-      ? state.inbox.conversations[state.inbox.activeId]
-      : undefined,
-  );
+  const primary = useInboxSelector(selectActiveConversation);
   const pinnedId = useInboxSelector((state) => state.inbox.pinnedId);
   const collapsed = useInboxSelector((state) => state.inbox.pinCollapsed);
-  const reply = useInboxSelector((state) =>
-    state.inbox.replyId
-      ? state.inbox.conversations[state.inbox.replyId]
-      : undefined,
-  );
+  const reply = useInboxSelector(selectReplyConversation);
 
   return (
     <div className="shrink-0">

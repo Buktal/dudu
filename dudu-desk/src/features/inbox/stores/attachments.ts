@@ -7,9 +7,9 @@ import {
 } from "../attachment-rules";
 import { sendTarget } from "../sending-rules";
 import {
-  beginRequest,
   failureOf,
   releaseAttachmentResources,
+  runOperation,
 } from "./requests";
 import { inboxActions } from "./slice";
 import type { InboxCommand } from "./store";
@@ -84,45 +84,47 @@ function prepareDraftAttachment(id: string): InboxCommand<Promise<void>> {
       return;
     }
     const target = sendTarget(conversation);
-    const request = beginRequest(runtime, `attachment:${id}`, getState);
-    dispatch(inboxActions.attachmentPreparing(id));
-    try {
-      const response = await runtime.api.prepareAttachment({
-        target,
-        file,
-        context: request.context,
-        signal: request.signal,
-      });
-      if (!request.current() || !getState().inbox.attachments[id]) return;
-      const media = readPreparedAttachment(response, attachment.kind);
-      const current = getState().inbox.conversations[attachment.conversationId];
-      if (!current || !isEqual(sendTarget(current), target)) {
-        releaseAttachmentResources(runtime, [id]);
-        dispatch(inboxActions.attachmentRemoved(id));
-        return;
-      }
-      const latest = getState().inbox;
-      const restriction = attachmentRestriction(
-        current,
-        latest.connection,
-        media,
-        latest.drafts[attachment.conversationId]?.attachmentIds.length ?? 0,
-        runtime.now(),
-      );
-      if (restriction) throw new DeskApiError("business", restriction);
-      dispatch(inboxActions.attachmentReady({ id, media }));
-    } catch (error) {
-      if (request.current() && getState().inbox.attachments[id]) {
-        dispatch(
-          inboxActions.attachmentFailed({
-            id,
-            error: failureOf(error).message,
-          }),
+    await runOperation(runtime, `attachment:${id}`, getState, async (op) => {
+      dispatch(inboxActions.attachmentPreparing(id));
+      try {
+        const response = await runtime.api.prepareAttachment({
+          target,
+          file,
+          context: op.context,
+          signal: op.signal,
+        });
+        if (!op.current() || !getState().inbox.attachments[id]) return;
+        const media = readPreparedAttachment(response, attachment.kind);
+        const current =
+          getState().inbox.conversations[attachment.conversationId];
+        if (!current || !isEqual(sendTarget(current), target)) {
+          releaseAttachmentResources(runtime, [id]);
+          dispatch(inboxActions.attachmentRemoved(id));
+          return;
+        }
+        const latest = getState().inbox;
+        const restriction = attachmentRestriction(
+          current,
+          latest.connection,
+          media,
+          latest.drafts[attachment.conversationId]?.attachmentIds.length ?? 0,
+          runtime.now(),
         );
+        if (restriction) throw new DeskApiError("business", restriction);
+        dispatch(inboxActions.attachmentReady({ id, media }));
+      } catch (error) {
+        if (getState().inbox.attachments[id]) {
+          op.settle(() =>
+            dispatch(
+              inboxActions.attachmentFailed({
+                id,
+                error: failureOf(error).message,
+              }),
+            ),
+          );
+        }
       }
-    } finally {
-      request.finish();
-    }
+    });
   };
 }
 
