@@ -32,9 +32,6 @@ pub(super) const GOLDEN_SIGNATURE_BODY: &str =
 pub(super) const GOLDEN_SIGNATURE: &str =
     "d6022e3ed080491cf61a26d64a132f8dcf090e73d2d0411c8a6f002e8e990941";
 
-/// 事实库 §3.2 验证请求三参样本（challenge/token/type 逐字；token 为占位原文）。
-pub(super) const GOLDEN_VERIFICATION_TOKEN: &str = "xxxxxx";
-
 /// 事件 header token（事实库 §5.4–§5.7 官方样本逐字；Verification Token 明文
 /// 比对形态）。
 pub(super) const GOLDEN_EVENT_TOKEN: &str = "rvaYgkND1GOiu5MM0E1rncYC6PLtF7JV";

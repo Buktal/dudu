@@ -15,8 +15,6 @@ use super::*;
 
 /// 官方 §5.3 deauthorize 样本 client_id（16 位小写 hex，即 x-bili-accesskeyid）。
 pub(super) const GOLDEN_CLIENT_ID: &str = "395c8275dd674f17";
-/// 官方 §5.3 样本 openid（32 位字母数字混淆串，尾部空格原文照录）。
-pub(super) const GOLDEN_OPENID: &str = "9205eeaa1879skxys969ed47874f225c3 ";
 /// 官方示例 timestamp（§5 示例占位，yyyy-MM-dd HH:mm:ss、UTC+8 字符串形态）。
 pub(super) const GOLDEN_TIMESTAMP: &str = "2021-01-01 12:01:01";
 /// 官方 §3.2 verify_webhooks 样本 data（镜像原文逐字，10 位整数占位）。
