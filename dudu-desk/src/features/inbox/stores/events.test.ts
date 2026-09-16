@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { InboxApi } from "../api";
 import type { InboxEvent, InboxMessage, SendSubmission } from "../types";
-import { markConversationRead, startInboxUpdates } from "./events";
-import { loadConversations, loadHistory } from "./reading";
+import { startInboxUpdates } from "./events";
+import { loadConversations } from "./queue";
+import { loadHistory, markConversationRead } from "./reading";
 import { selectMessages, selectQueueConversations } from "./selectors";
 import { editDraft, retryReply, sendReply } from "./sending";
 import {

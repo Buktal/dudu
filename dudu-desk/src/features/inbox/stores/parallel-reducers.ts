@@ -1,6 +1,12 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { InboxState } from "./state";
 
+/**
+ * Reception workspace placement reducers: own every pinned/parallel/
+ * quick-history transition. The layout mode (calm/parallel/quick) is a
+ * separate seam owned by the theme module; this module only owns *which*
+ * conversations sit in the primary/pinned/history slots.
+ */
 export const parallelReducers = {
   parallelEntered(state: InboxState) {
     const replyId = state.replyId;
@@ -40,5 +46,8 @@ export const parallelReducers = {
     state.replyId = state.pinnedId;
     state.selectionRevision++;
     state.notice = null;
+  },
+  quickHistoryChanged(state: InboxState, action: PayloadAction<string | null>) {
+    state.quickHistoryId = action.payload;
   },
 };

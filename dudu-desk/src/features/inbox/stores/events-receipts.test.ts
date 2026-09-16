@@ -3,7 +3,7 @@ import { DeskApiError } from "@/lib/api-response";
 import type { InboxApi } from "../api";
 import type { Conversation, InboxMessage, SendSubmission } from "../types";
 import { addAttachments } from "./attachments";
-import { loadConversations } from "./reading";
+import { loadConversations } from "./queue";
 import { selectMessages } from "./selectors";
 import { editDraft, sendReply } from "./sending";
 import {

@@ -6,7 +6,8 @@ import {
   removeAttachment,
   retryAttachment,
 } from "./attachments";
-import { loadConversations, resetContext, selectConversation } from "./reading";
+import { loadConversations } from "./queue";
+import { resetContext, selectConversation } from "./reading";
 import { editDraft, retryReply, sendReply } from "./sending";
 import {
   acceptedMessage,

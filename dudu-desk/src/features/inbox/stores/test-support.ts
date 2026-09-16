@@ -1,5 +1,5 @@
 import { type InboxApi, unavailableInboxApi } from "../api";
-import { defineConversation } from "../fixtures";
+import { defineConversation, defineMessage, defineProfile } from "../fixtures";
 import type { Conversation, InboxMessage, SendSubmission } from "../types";
 import { startInboxUpdates } from "./events";
 import { createInboxStore } from "./store";
@@ -20,34 +20,31 @@ export const firstConversation: Conversation = defineConversation({
   preview: "你好，想问一下",
   updatedAt: "2026-09-16T00:00:00Z",
 });
-export const secondConversation: Conversation = {
-  ...firstConversation,
+export const secondConversation: Conversation = defineConversation({
+  // Same-name visitor as firstConversation on a different account: keep the
+  // shared literals (name, preview, unread) in sync when either card changes.
   id: "conversation-b",
   identity: {
-    ...firstConversation.identity,
     id: "visitor-b",
     externalUserId: "external-b",
+    name: "林小满",
     channelId: "telegram",
     channelName: "Telegram",
     accountId: "account-b",
     accountName: "海外服务",
   },
-};
+  status: "needs-reply",
+  unread: 1,
+  preview: "你好，想问一下",
+  updatedAt: "2026-09-16T00:00:00Z",
+});
 
 export function incomingMessage(conversationId: string): InboxMessage {
-  return {
-    id: `${conversationId}-message`,
-    conversationId,
-    direction: "incoming",
-    body: { type: "text", text: "请帮我确认一下" },
-    createdAt: "2026-09-16T00:00:00Z",
-    sequence: 1,
-    version: 1,
-  };
+  return defineMessage({ id: `${conversationId}-message`, conversationId });
 }
 
 export function acceptedMessage(input: SendSubmission): InboxMessage {
-  return {
+  return defineMessage({
     id: `server:${input.clientRequestId}`,
     clientRequestId: input.clientRequestId,
     conversationId: input.target.conversationId,
@@ -59,7 +56,7 @@ export function acceptedMessage(input: SendSubmission): InboxMessage {
     sequence: 2,
     version: 1,
     delivery: { state: "accepted" },
-  };
+  });
 }
 
 export function deferred<T>() {
@@ -90,13 +87,8 @@ export function testStore(api: Partial<InboxApi> = {}, startUpdates = true) {
         items: [incomingMessage(conversationId)],
         nextCursor: null,
       }),
-      readProfile: async ({ conversationId }) => ({
-        conversationId,
-        version: 1,
-        fields: [],
-        tags: [],
-        note: "",
-      }),
+      readProfile: async ({ conversationId }) =>
+        defineProfile({ conversationId }),
       ...api,
     },
     now: () => "2026-09-16T00:01:00Z",

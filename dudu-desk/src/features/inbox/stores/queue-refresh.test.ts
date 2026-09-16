@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadConversations } from "./reading";
+import { loadConversations } from "./queue";
 import {
   selectQueue,
   selectQueueConversations,

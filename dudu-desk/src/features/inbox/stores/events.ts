@@ -1,6 +1,5 @@
-import { DeskApiError } from "@/lib/api-response";
 import type { ConversationQuery, InboxEvent } from "../types";
-import { loadConversations } from "./reading";
+import { loadConversations } from "./queue";
 import {
   connectionFromFailure,
   reconcileInbox,
@@ -10,7 +9,6 @@ import {
   beginRequest,
   failureOf,
   releaseAttachmentResources,
-  runOperation,
 } from "./requests";
 import { inboxActions } from "./slice";
 import type { InboxCommand } from "./store";
@@ -175,61 +173,5 @@ function receiveInboxEvent(event: InboxEvent): InboxCommand {
     }
     if (event.type === "message" || event.type === "receipt")
       dispatch(settleConfirmedReplies());
-  };
-}
-
-export function markConversationRead(
-  conversationId: string,
-  throughSequence: number,
-): InboxCommand<Promise<void>> {
-  return async (dispatch, getState, runtime) => {
-    const state = getState().inbox;
-    if (
-      !state.conversations[conversationId] ||
-      state.connection !== "connected" ||
-      !Number.isSafeInteger(throughSequence) ||
-      throughSequence <= 0 ||
-      throughSequence <=
-        Math.max(
-          state.events.readThrough[conversationId] ?? 0,
-          state.events.readingThrough[conversationId] ?? 0,
-        )
-    )
-      return;
-    await runOperation(
-      runtime,
-      `read:${conversationId}`,
-      getState,
-      async (op) => {
-        dispatch(inboxActions.readStarted({ conversationId, throughSequence }));
-        try {
-          const conversation = await runtime.api.markRead({
-            context: op.context,
-            signal: op.signal,
-            conversationId,
-            throughSequence,
-          });
-          if (!op.current() || !getState().inbox.conversations[conversationId])
-            return;
-          if (conversation.id !== conversationId)
-            throw new DeskApiError(
-              "invalid-response",
-              "已读确认未关联到当前会话",
-            );
-          dispatch(
-            inboxActions.readConfirmed({ conversation, throughSequence }),
-          );
-        } catch (error) {
-          op.settle(() =>
-            dispatch(
-              inboxActions.readFailed({
-                conversationId,
-                error: failureOf(error),
-              }),
-            ),
-          );
-        }
-      },
-    );
   };
 }

@@ -3,6 +3,12 @@ import { focusReply } from "./sending";
 import { inboxActions } from "./slice";
 import type { InboxCommand } from "./store";
 
+/**
+ * Reception workspace placement commands: the single seam for pinning,
+ * pane focus and quick-history. Every command guards the slot, moves the
+ * reply target through focusReply, and ensures the conversation is loaded —
+ * callers never coordinate pinnedId/activeId/replyId themselves.
+ */
 export type ReceptionPane = "primary" | "pinned";
 
 export function enterParallel(): InboxCommand<Promise<void>> {

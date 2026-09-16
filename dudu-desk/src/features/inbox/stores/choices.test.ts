@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ConversationPage } from "../types";
 import { cancelConversationChoices, readConversationChoices } from "./choices";
-import { loadConversations } from "./reading";
+import { loadConversations } from "./queue";
 import { selectQueue, selectReplyConversation } from "./selectors";
 import { emptyQuery } from "./state";
 import {

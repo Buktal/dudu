@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { InboxApi } from "../api";
 import type { ConversationPage } from "../types";
 import { reconnectInbox } from "./events";
-import { loadConversations } from "./reading";
+import { loadConversations } from "./queue";
 import { selectQueue, selectQueueConversations } from "./selectors";
 import { editDraft } from "./sending";
 import { emptyQuery } from "./state";

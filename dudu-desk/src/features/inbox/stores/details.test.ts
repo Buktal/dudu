@@ -7,12 +7,8 @@ import {
   saveVisitorProfile,
   setConversationStarred,
 } from "./details";
-import {
-  loadConversations,
-  loadProfile,
-  resetContext,
-  selectConversation,
-} from "./reading";
+import { loadConversations } from "./queue";
+import { loadProfile, resetContext, selectConversation } from "./reading";
 import { selectQueueConversations } from "./selectors";
 import { emptyQuery } from "./state";
 import {

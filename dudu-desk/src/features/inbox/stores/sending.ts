@@ -1,5 +1,5 @@
 import { DeskApiError } from "@/lib/api-response";
-import { replyRestriction } from "../reply-policy";
+import { replyReadiness } from "../reply-pipeline";
 import { sendTarget } from "../sending-rules";
 import type { InboxMessage } from "../types";
 import { receiveNext } from "./next-reception";
@@ -99,28 +99,22 @@ export function sendReply(
 ): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
     const state = getState().inbox;
-    if (state.sendingByConversation[conversationId]) return;
     const draft = state.drafts[conversationId] ?? blankDraft;
     const conversation = state.conversations[conversationId];
     const attachments = draft.attachmentIds.map((id) => state.attachments[id]);
-    if (!draft.text.trim() && !attachments.length) return;
-    const restriction = replyRestriction(
+    // One clock value per decision: the pipeline owns the
+    // restriction + pending + empty + busy composition.
+    const readiness = replyReadiness({
       conversation,
-      state.connection,
-      { text: draft.text, files: attachments.filter(Boolean) },
-      runtime.now(),
-    );
-    if (
-      restriction ||
-      attachments.some(
-        (attachment) => attachment?.status !== "ready" || !attachment.media,
-      )
-    ) {
-      dispatch(
-        inboxActions.noticeChanged(
-          restriction || "请等待附件准备完成，或移除失败附件",
-        ),
-      );
+      connection: state.connection,
+      text: draft.text,
+      files: attachments.filter(Boolean),
+      sending: !!state.sendingByConversation[conversationId],
+      now: runtime.now(),
+    });
+    if (!readiness.sendable) {
+      if (readiness.notice)
+        dispatch(inboxActions.noticeChanged(readiness.notice));
       return;
     }
     const clientRequestId = runtime.id();
@@ -180,14 +174,23 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
     )
       return;
     const { target, attachments, text } = original.request;
-    const restriction = replyRestriction(
-      state.conversations[target.conversationId],
-      state.connection,
-      { text, files: attachments },
-      runtime.now(),
-    );
-    if (restriction) {
-      dispatch(inboxActions.noticeChanged(restriction));
+    const readiness = replyReadiness({
+      conversation: state.conversations[target.conversationId],
+      connection: state.connection,
+      text,
+      files: attachments.map((media) => ({
+        name: media.name,
+        size: media.size,
+        mimeType: media.mimeType,
+        status: "ready" as const,
+        media,
+      })),
+      sending: false,
+      now: runtime.now(),
+    });
+    if (!readiness.sendable) {
+      if (readiness.notice)
+        dispatch(inboxActions.noticeChanged(readiness.notice));
       return;
     }
     await dispatch(

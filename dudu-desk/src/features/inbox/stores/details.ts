@@ -1,6 +1,6 @@
 import { uniq } from "lodash-es";
 import { DeskApiError } from "@/lib/api-response";
-import { loadConversations } from "./reading";
+import { loadConversations } from "./queue";
 import { failureOf, runOperation } from "./requests";
 import { inboxActions } from "./slice";
 import type { ProfileChanges } from "./state";

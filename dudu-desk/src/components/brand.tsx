@@ -1,10 +1,12 @@
 import { motion, useReducedMotion } from "motion/react";
-import logo from "@/assets/dudu-logo.svg";
-import darkLogo from "@/assets/dudu-logo-dark.svg";
-import mark from "@/assets/dudu-mark.svg";
 import { palettes } from "@/lib/theme-palette";
 import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
+
+const baseUrl = import.meta.env.BASE_URL;
+const logo = `${baseUrl}dudu-logo.svg`;
+const darkLogo = `${baseUrl}dudu-logo-dark.svg`;
+const mark = `${baseUrl}logo.svg`;
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   const { theme } = useTheme();

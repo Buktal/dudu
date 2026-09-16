@@ -14,6 +14,12 @@ export type InboxRuntime = {
   now: () => string;
   id: () => string;
   requests: Map<string, AbortController>;
+  /**
+   * Coordination seam between the Conversation queue and Live events modules:
+   * the queue dispatches "settled" after every refresh/more settles (see
+   * queue.ts), and Live events listens to schedule a query refresh once the
+   * queue is idle (see events.ts). No other module touches this target.
+   */
   queueEvents: EventTarget;
   files: Map<string, File>;
   previews: Map<string, string>;

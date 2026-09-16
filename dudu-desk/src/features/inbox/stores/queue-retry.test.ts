@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
-import { loadConversations, retryConversations } from "./reading";
+import { loadConversations, retryConversations } from "./queue";
 import { selectQueue, selectQuickQueueConversations } from "./selectors";
 import {
   firstConversation,

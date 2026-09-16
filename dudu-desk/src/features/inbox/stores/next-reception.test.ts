@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { InboxEvent, InboxMessage, Page, SendSubmission } from "../types";
-import { loadConversations, loadHistory } from "./reading";
+import { loadConversations } from "./queue";
+import { loadHistory } from "./reading";
 import { selectMessages } from "./selectors";
 import { editDraft, sendReply } from "./sending";
 import { emptyQuery } from "./state";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDevelopmentInboxApi } from "./development-api";
-import { loadConversations } from "./stores/reading";
+import { loadConversations } from "./stores/queue";
 import { emptyQuery } from "./stores/state";
 import { createInboxStore } from "./stores/store";
 

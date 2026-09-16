@@ -13,11 +13,8 @@ import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { useVisitorPanel } from "../hooks/use-visitor-panel";
 import { closeQuickHistory, openQuickHistory } from "../stores/parallel";
-import {
-  loadConversations,
-  loadProfile,
-  retryConversations,
-} from "../stores/reading";
+import { loadConversations, retryConversations } from "../stores/queue";
+import { loadProfile } from "../stores/reading";
 import {
   selectConversationById,
   selectQueue,

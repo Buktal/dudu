@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import { markConversationRead } from "../stores/events";
+import { markConversationRead } from "../stores/reading";
 import { focusReply, retryReply } from "../stores/sending";
 import { ChatPanel } from "./chat-panel";
 import { Composer } from "./composer";

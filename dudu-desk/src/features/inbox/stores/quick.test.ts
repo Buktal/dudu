@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { InboxEvent } from "../types";
 import { closeQuickHistory, openQuickHistory } from "./parallel";
-import { loadConversations } from "./reading";
+import { loadConversations } from "./queue";
 import { selectQuickQueueConversations } from "./selectors";
 import { editDraft } from "./sending";
 import {

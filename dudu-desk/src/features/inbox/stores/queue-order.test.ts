@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InboxApi } from "../api";
-import { loadConversations } from "./reading";
+import { loadConversations } from "./queue";
 import {
   selectQueueConversations,
   selectQuickQueueConversations,

@@ -24,7 +24,7 @@ import {
   queueCountLabel,
   queueStatuses as statuses,
 } from "../presentation";
-import { loadConversations } from "../stores/reading";
+import { loadConversations } from "../stores/queue";
 import { emptyQuery } from "../stores/state";
 import type { ConversationQuery } from "../types";
 

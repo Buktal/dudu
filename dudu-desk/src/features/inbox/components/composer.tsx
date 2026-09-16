@@ -12,8 +12,7 @@ import {
 import { nowIso } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import { replyRestriction } from "../reply-policy";
-import { composerIntent } from "../sending-rules";
+import { composerIntent, replyReadiness } from "../reply-pipeline";
 import { selectConversationById } from "../stores/selectors";
 import {
   editDraft,
@@ -55,30 +54,20 @@ export function Composer({
   const reception = useInboxSelector(
     (state) => state.inbox.ending[conversationId],
   );
-  const pendingAttachments = useInboxSelector((state) =>
-    draft.attachmentIds.some(
-      (attachmentId) =>
-        state.inbox.attachments[attachmentId]?.status !== "ready",
-    ),
-  );
   if (!conversation) return null;
-  // One clock read per decision: the policy answers send+attachment together.
-  const restriction = replyRestriction(
+  // One clock read per decision: the pipeline answers send+attachment together.
+  const readiness = replyReadiness({
     conversation,
     connection,
-    {
-      text: draft.text,
-      files: draft.attachmentIds
-        .map((attachmentId) => attachments[attachmentId])
-        .filter(Boolean),
-    },
-    nowIso(),
-  );
-  const disabled =
-    !!restriction ||
-    busy ||
-    pendingAttachments ||
-    (!draft.text.trim() && !draft.attachmentIds.length);
+    text: draft.text,
+    files: draft.attachmentIds
+      .map((attachmentId) => attachments[attachmentId])
+      .filter(Boolean),
+    sending: busy,
+    now: nowIso(),
+  });
+  const notice = readiness.notice;
+  const disabled = !readiness.sendable;
   const ended = conversation.status === "closed";
   const name = visitorName(conversation.identity);
   const target = `${name}，${conversation.identity.channelName}，${conversation.identity.accountName}`;
@@ -118,11 +107,11 @@ export function Composer({
       <FieldLabel className="sr-only" htmlFor={id}>
         回复 {target}
       </FieldLabel>
-      {restriction && (
+      {notice && (
         <Alert
           role="status"
           className="rounded-lg px-3 py-2"
-          id={`${id}-restriction`}
+          id={`${id}-notice`}
         >
           <LockKeyhole />
           <AlertTitle>
@@ -130,7 +119,7 @@ export function Composer({
           </AlertTitle>
           <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs">
-              {ended ? "记录和当前草稿仍然保留。" : restriction}
+              {ended ? "记录和当前草稿仍然保留。" : notice}
               {!ended &&
                 conversation.capability.nextStep &&
                 ` · ${conversation.capability.nextStep}`}
@@ -183,13 +172,13 @@ export function Composer({
             id={id}
             value={draft.text}
             aria-label={`回复 ${target}`}
-            aria-describedby={restriction ? `${id}-restriction` : undefined}
+            aria-describedby={notice ? `${id}-notice` : undefined}
             placeholder={
-              restriction ? "可以保留草稿，恢复接待后发送" : `回复 ${name}…`
+              notice ? "可以保留草稿，恢复接待后发送" : `回复 ${name}…`
             }
             className={cn(
               "max-h-36 px-4 py-2",
-              compact || restriction ? "min-h-12" : "min-h-[77px]",
+              compact || notice ? "min-h-12" : "min-h-[77px]",
             )}
             onFocus={focus}
             onChange={(event) =>

@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { InboxApi } from "../api";
 import type { InboxEvent, Page, ReplyCapability } from "../types";
-import {
-  markConversationRead,
-  reconnectInbox,
-  startInboxUpdates,
-} from "./events";
+import { reconnectInbox, startInboxUpdates } from "./events";
 import { focusPane, openQuickHistory, pinConversation } from "./parallel";
-import { destroyInbox, loadConversations, resetContext } from "./reading";
+import { loadConversations } from "./queue";
+import { destroyInbox, markConversationRead, resetContext } from "./reading";
 import { selectMessages, selectQueueConversations } from "./selectors";
 import { editDraft } from "./sending";
 import {

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
 import type { InboxMessage, ReplyCapability, SendSubmission } from "../types";
-import { loadConversations, resetContext, selectConversation } from "./reading";
+import { loadConversations } from "./queue";
+import { resetContext, selectConversation } from "./reading";
 import { selectMessages } from "./selectors";
 import { editDraft, endReception, retryReply, sendReply } from "./sending";
 import {

@@ -4,11 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import {
-  loadConversations,
-  retryConversations,
-  selectConversation,
-} from "../stores/reading";
+import { loadConversations, retryConversations } from "../stores/queue";
+import { selectConversation } from "../stores/reading";
 import { selectQueue, selectQueueConversations } from "../stores/selectors";
 import type { Conversation } from "../types";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";

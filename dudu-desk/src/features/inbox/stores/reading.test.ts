@@ -3,11 +3,11 @@ import { DeskApiError } from "@/lib/api-response";
 import { type InboxApi, unavailableInboxApi } from "../api";
 import type { Conversation, InboxMessage, Page } from "../types";
 import { setConversationStarred } from "./details";
-import { markConversationRead } from "./events";
 import { pinConversation } from "./parallel";
+import { loadConversations } from "./queue";
 import {
-  loadConversations,
   loadHistory,
+  markConversationRead,
   resetContext,
   selectConversation,
 } from "./reading";

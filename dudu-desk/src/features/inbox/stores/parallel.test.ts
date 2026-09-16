@@ -8,7 +8,8 @@ import {
   restorePinned,
   unpinConversation,
 } from "./parallel";
-import { destroyInbox, loadConversations, selectConversation } from "./reading";
+import { loadConversations } from "./queue";
+import { destroyInbox, selectConversation } from "./reading";
 import { selectInbox } from "./selectors";
 import { editDraft, focusReply, sendReply } from "./sending";
 import {
