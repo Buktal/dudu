@@ -29,7 +29,7 @@ mod tests;
 
 use crate::connections::util::{append_absent, md5_wrapped_sign, now_secs};
 
-use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
 /// 官方订单状态样本明文（§2.1 照录状态 1-待发货 + §5.1 order_status 参数
 /// 词汇；JSON number 形态同官方 §5.1 请求 body 逐字）：推送探针复用该样本
@@ -115,8 +115,8 @@ fn post_json(
     let borrowed: Vec<(&str, &str)> =
         params.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
     let signature = pdd_sign(&borrowed, client_secret);
-    let started = std::time::Instant::now();
-    let response = client
+    let (status, receipt, error, elapsed_ms) = send_measured(
+        client
         .post(url)
         .query(&[
             ("client_id", client_id),
@@ -124,21 +124,9 @@ fn post_json(
             ("sign", signature.as_str()),
         ])
         .header("Content-Type", "application/json")
-        .body(body.to_string())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let (status, receipt, error) = match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            (status, receipt, None)
-        }
-        Err(err) => (
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, RETRY_NOTE))),
-        ),
-    };
+        .body(body.to_string()),
+        RETRY_NOTE,
+    );
     DispatchOutcome {
         msg_id: message_id_of(body),
         signature,

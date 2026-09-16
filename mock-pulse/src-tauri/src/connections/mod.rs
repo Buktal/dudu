@@ -28,7 +28,7 @@ pub mod wecom;
 pub mod whatsapp;
 pub mod xiaohongshu;
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
@@ -183,6 +183,32 @@ pub(crate) fn request_error_reason(err: &reqwest::Error, timeout_note: &str) -> 
     } else {
         "请求发送失败".to_string()
     }
+}
+
+/// 直发骨架（Reuse-first 审计退件：此收口块曾在 15+ 渠道逐字复制——计时 →
+/// 发送 → 状态/回执/错误/耗时四元组）：各渠道差异（headers/query/body/快照
+/// 字段/超时补充文案）留在调用侧。分支内直接构造 DispatchOutcome 的渠道
+/// （Ok 分支另有解密等专属逻辑）保留自有收口。
+pub(crate) fn send_measured(
+    request: reqwest::blocking::RequestBuilder,
+    timeout_note: &str,
+) -> (u16, String, Option<String>, u64) {
+    let started = Instant::now();
+    let response = request.send();
+    let elapsed_ms = started.elapsed().as_millis() as u64;
+    let (status, receipt, error) = match response {
+        Ok(response) => {
+            let status = response.status().as_u16();
+            let receipt = response.text().unwrap_or_default();
+            (status, receipt, None)
+        }
+        Err(err) => (
+            0,
+            String::new(),
+            Some(format!("{}：{err}", request_error_reason(&err, timeout_note))),
+        ),
+    };
+    (status, receipt, error, elapsed_ms)
 }
 
 /// 读取全部持久化连接（无文件时返回空列表）。

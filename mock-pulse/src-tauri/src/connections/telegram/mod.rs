@@ -25,7 +25,7 @@
 #[cfg(test)]
 mod tests;
 
-use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
 /// 恒等头名（§4.1 官方拼写逐字）：接收侧按配置的 secret_token 做字符串
 /// 相等比较，缺失/不匹配即伪造请求。
@@ -103,26 +103,14 @@ fn post_json(
             "Secret Token 不合法（官方 secret_token 限 1–256 字符，仅 A-Z a-z 0-9 _ -，越限 token 真实 setWebhook 配不出来）",
         );
     }
-    let started = std::time::Instant::now();
-    let response = client
+    let (status, receipt, error, elapsed_ms) = send_measured(
+        client
         .post(url)
         .header(SECRET_TOKEN_HEADER, secret_token)
         .header("Content-Type", "application/json")
-        .body(body.to_string())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let (status, receipt, error) = match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            (status, receipt, None)
-        }
-        Err(err) => (
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, RETRY_NOTE))),
-        ),
-    };
+        .body(body.to_string()),
+        RETRY_NOTE,
+    );
     DispatchOutcome {
         msg_id: update_id_of(body),
         signature: secret_token.to_string(),

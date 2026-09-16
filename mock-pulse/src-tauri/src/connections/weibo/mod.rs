@@ -23,7 +23,7 @@ use std::time::Duration;
 use crate::connections::util::{callback_signature as build_callback_signature, now_millis};
 
 use super::{
-    request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
+    request_error_reason, send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
 };
 
 /// 握手 nonce：8 位数字（官方算例 nonce=57155157 同形态）——rand Uniform
@@ -129,24 +129,12 @@ fn dispatch_event(
         ("timestamp", timestamp.as_str()),
         ("nonce", nonce.as_str()),
     ]);
-    let started = std::time::Instant::now();
-    let response = response
+    let (status, receipt, error, elapsed_ms) = send_measured(
+        response
         .header("Content-Type", "application/json")
-        .body(plaintext.to_string())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let (status, receipt, error) = match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            (status, receipt, None)
-        }
-        Err(err) => (
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, ""))),
-        ),
-    };
+        .body(plaintext.to_string()),
+        "",
+    );
     DispatchOutcome {
         msg_id: nonce,
         signature,

@@ -31,7 +31,7 @@ use crate::connections::util::{callback_signature as build_callback_signature, n
 use crate::connections::wecom::crypto;
 
 use super::{
-    request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
+    request_error_reason, send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
     XiaohongshuSystem,
 };
 
@@ -205,25 +205,13 @@ fn miniapp_dispatch(
         Ok(push) => push,
         Err(reason) => return DispatchOutcome::not_sent(format!("事件加密封装失败：{reason}")),
     };
-    let started = std::time::Instant::now();
-    let response = client
+    let (status, receipt, error, elapsed_ms) = send_measured(
+        client
         .post(url)
         .header("Content-Type", "application/json")
-        .body(push.body.clone())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let (status, receipt, error) = match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            (status, receipt, None)
-        }
-        Err(err) => (
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, ""))),
-        ),
-    };
+        .body(push.body.clone()),
+        "",
+    );
     DispatchOutcome {
         msg_id: push.nonce,
         signature: push.signature,

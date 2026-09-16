@@ -36,7 +36,7 @@ use percent_encoding::utf8_percent_encode;
 
 use crate::connections::util::{append_absent, form_pairs, now_secs, sha1_hex, strip_sig, SIG_ENCODE_SET};
 
-use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
 /// 官方订单状态核验样本明文（§5.2 order-signal 全文逐字，键序/JSON
 /// number/string 形态照录：push_action=2、extra 为 JSON 字符串 "{}"、
@@ -157,8 +157,8 @@ fn post_signed(
     let borrowed: Vec<(&str, &str)> =
         params.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
     let signature = ele_sign(url, &borrowed, secret);
-    let started = std::time::Instant::now();
-    let response = client
+    let (status, receipt, error, elapsed_ms) = send_measured(
+        client
         .post(url)
         .query(&[
             ("consumer_key", consumer_key),
@@ -173,21 +173,9 @@ fn post_signed(
                 "application/x-www-form-urlencoded"
             },
         )
-        .body(body.clone())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let (status, receipt, error) = match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            (status, receipt, None)
-        }
-        Err(err) => (
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, RETRY_NOTE))),
-        ),
-    };
+        .body(body.clone()),
+        RETRY_NOTE,
+    );
     DispatchOutcome {
         msg_id: message_id_of(plaintext),
         signature,

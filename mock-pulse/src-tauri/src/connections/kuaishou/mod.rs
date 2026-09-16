@@ -22,7 +22,7 @@ use std::time::Duration;
 
 use crate::connections::util::{md5_hex, now_millis};
 
-use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
 /// 失败重试口径（附录2 支付回调 16 次重试表 / accessGuide 通用 webhook 重试）：
 /// 官方未给统一应答时限，超时文案附重试提示。
@@ -56,26 +56,14 @@ fn post_json(
     body: &str,
 ) -> DispatchOutcome {
     let signature = kwaisign(body, app_secret);
-    let started = std::time::Instant::now();
-    let response = client
+    let (status, receipt, error, elapsed_ms) = send_measured(
+        client
         .post(url)
         .header("kwaisign", signature.clone())
         .header("Content-Type", "application/json")
-        .body(body.to_string())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let (status, receipt, error) = match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            (status, receipt, None)
-        }
-        Err(err) => (
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, RETRY_NOTE))),
-        ),
-    };
+        .body(body.to_string()),
+        RETRY_NOTE,
+    );
     DispatchOutcome {
         msg_id: message_id_of(body),
         signature,

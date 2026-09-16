@@ -27,7 +27,7 @@ mod tests;
 
 use crate::connections::util::hmac_sha256_hex;
 
-use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{request_error_reason, send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
 /// 失败重试口径（§3.3 逐字）：非 200 或不可达即失败，Meta 以递减频率重试
 /// 直到成功、最长 7 天；超时文案附该语义。
@@ -155,26 +155,14 @@ fn post_json(
     body: &str,
 ) -> DispatchOutcome {
     let signature = x_hub_signature(body, app_secret);
-    let started = std::time::Instant::now();
-    let response = client
+    let (status, receipt, error, elapsed_ms) = send_measured(
+        client
         .post(url)
         .header("X-Hub-Signature-256", signature.clone())
         .header("Content-Type", "application/json")
-        .body(body.to_string())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let (status, receipt, error) = match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            (status, receipt, None)
-        }
-        Err(err) => (
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, RETRY_NOTE))),
-        ),
-    };
+        .body(body.to_string()),
+        RETRY_NOTE,
+    );
     DispatchOutcome {
         msg_id: message_id_of(body),
         signature,

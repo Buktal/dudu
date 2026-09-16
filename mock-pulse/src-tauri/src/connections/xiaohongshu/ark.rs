@@ -9,7 +9,7 @@
 
 use crate::connections::ConnectionConfig;
 
-use super::{request_error_reason, DispatchOutcome, HandshakeOutcome};
+use super::{send_measured, DispatchOutcome, HandshakeOutcome};
 
 /// ark 连接测试探针（事实库 §5.4 官方构造示例逐字，掩码值不携带真实业务）。
 const PROBE_ENVELOPE: &str = r#"{"msgTag":"msg_fulfillment_status_change","sellerId":"5e8e****","data":"{\"orderId\":\"P01****\",\"updateTime\":1693500000,\"orderStatus\":4}"}"#;
@@ -44,25 +44,13 @@ fn post_envelope_array(
     // 官方 body 为 JSON 数组（批量推送）：前端逐字节拼装的单条信封按协议
     // 包裹进数组（包裹属通道报文形态，不重排元素内容，ADR-0001）
     let body = format!("[{}]", plaintext.trim());
-    let started = std::time::Instant::now();
-    let response = client
+    let (status, receipt, error, elapsed_ms) = send_measured(
+        client
         .post(url)
         .header("Content-Type", "application/json")
-        .body(body.clone())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let (status, receipt, error) = match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            (status, receipt, None)
-        }
-        Err(err) => (
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, ""))),
-        ),
-    };
+        .body(body.clone()),
+        "",
+    );
     // ark 推送无唯一标识/签名要素（官方无消息 ID、无签名头），快照不落值
     DispatchOutcome {
         msg_id: String::new(),

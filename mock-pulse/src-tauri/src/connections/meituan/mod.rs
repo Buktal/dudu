@@ -32,7 +32,7 @@ mod tests;
 
 use crate::connections::util::{append_absent, form_encode_value, form_pairs, md5_hex, now_secs, strip_sig};
 
-use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
 /// 官方订单核验样本表单（§5.3 docDetail/177/180 字段值逐字；form 字节，前端
 /// 模板骨架同款）：推送探针复用该样本（官方验证握手正文待核验(09-27)，以带
@@ -128,25 +128,13 @@ fn post_form(
         wire.push('=');
         wire.push_str(&form_encode_value(value));
     }
-    let started = std::time::Instant::now();
-    let response = client
+    let (status, receipt, error, elapsed_ms) = send_measured(
+        client
         .post(url)
         .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(wire.clone())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let (status, receipt, error) = match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            (status, receipt, None)
-        }
-        Err(err) => (
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, RETRY_NOTE))),
-        ),
-    };
+        .body(wire.clone()),
+        RETRY_NOTE,
+    );
     DispatchOutcome {
         msg_id: message_id_of(&pairs),
         signature,
