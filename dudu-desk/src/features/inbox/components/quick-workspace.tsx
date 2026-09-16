@@ -1,8 +1,6 @@
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { forwardRef, type HTMLAttributes, useEffect, useRef } from "react";
 import { VirtuosoGrid, type VirtuosoGridHandle } from "react-virtuoso";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { receptionModes } from "@/lib/reception-mode";
 import { cn } from "@/lib/utils";
 import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
@@ -37,7 +29,8 @@ import { visitorName } from "./identity";
 import { InboxEmpty, InboxError, InboxLoading } from "./inbox-state";
 import { QueueTools } from "./queue-tools";
 import { QuickCard } from "./quick-card";
-import { VisitorInfo } from "./visitor-info";
+import { VisitorInfoPanel } from "./visitor-info-panel";
+import { VisitorInfoToggle } from "./visitor-info-toggle";
 
 const CardGrid = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ children, className, ...props }, ref) => (
@@ -97,7 +90,9 @@ export function QuickWorkspace() {
         <div className="mb-2 shrink-0">
           <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
             <header className="flex h-8 shrink-0 items-center gap-2">
-              <h1 className="text-sm font-semibold">速答</h1>
+              <h1 className="text-sm font-semibold">
+                {receptionModes.quick.name}
+              </h1>
               {queue.hasLoaded && (
                 <Badge
                   variant="secondary"
@@ -114,17 +109,12 @@ export function QuickWorkspace() {
             <div className="order-last min-w-0 basis-full min-[1360px]:order-none min-[1360px]:flex-1 min-[1360px]:basis-0">
               <QueueTools compact showOrder={false} />
             </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
+            <VisitorInfoToggle
               className="ml-auto"
               disabled={!replyId}
-              aria-label={info.open ? "收起来访资料" : "展开来访资料"}
-              title={info.open ? "收起来访资料" : "展开来访资料"}
-              onClick={info.toggle}
-            >
-              {info.open ? <PanelRightClose /> : <PanelRightOpen />}
-            </Button>
+              open={info.open && !!replyId}
+              onToggle={info.toggle}
+            />
           </div>
           <Separator />
         </div>
@@ -167,14 +157,12 @@ export function QuickWorkspace() {
           />
         )}
       </main>
-      {replyId && info.inline && info.open && (
-        <aside className="w-[286px] shrink-0 overflow-hidden rounded-l-3xl max-[1360px]:w-[260px]">
-          <VisitorInfo
-            conversationId={replyId}
-            onClose={() => info.setOpen(false)}
-          />
-        </aside>
-      )}
+      <VisitorInfoPanel
+        conversationId={replyId}
+        open={info.open}
+        inline={info.inline}
+        onOpenChange={info.setOpen}
+      />
       <Dialog
         open={!!historyConversation}
         onOpenChange={(open) => {
@@ -210,22 +198,6 @@ export function QuickWorkspace() {
           </div>
         </DialogContent>
       </Dialog>
-      <Sheet open={info.open && !info.inline} onOpenChange={info.setOpen}>
-        <SheetContent className="w-[min(380px,90vw)]" showCloseButton={false}>
-          <SheetHeader className="sr-only">
-            <SheetTitle>访客资料</SheetTitle>
-            <SheetDescription>
-              当前回复对象的渠道资料与接待记录
-            </SheetDescription>
-          </SheetHeader>
-          {replyId && (
-            <VisitorInfo
-              conversationId={replyId}
-              onClose={() => info.setOpen(false)}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

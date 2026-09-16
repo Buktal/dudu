@@ -55,7 +55,7 @@ export function QuickCard({
         "flex h-[380px] min-w-0 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-xl border bg-card text-card-foreground shadow-xs transition-[border-color,box-shadow] duration-200 hover:border-ring/40 motion-reduce:transition-none",
         selected ? "border-ring/40 shadow-md" : "border-border",
       )}
-      aria-label={`${name} 的速答卡，${conversation.identity.channelName}，${conversation.identity.accountName}`}
+      aria-label={`${name} 的接待卡，${conversation.identity.channelName}，${conversation.identity.accountName}`}
     >
       <header className="flex shrink-0 items-start gap-2 px-5 pt-[18px] max-[1260px]:px-4 max-[760px]:pt-4">
         <button

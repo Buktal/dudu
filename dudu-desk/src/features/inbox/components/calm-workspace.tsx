@@ -1,13 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxSelector } from "../hooks/use-inbox-store";
@@ -16,13 +9,12 @@ import { ConversationPane } from "./conversation-pane";
 import { ConversationQueue } from "./conversation-queue";
 import { InboxEmpty } from "./inbox-state";
 import { QueueTools } from "./queue-tools";
-import { VisitorInfo } from "./visitor-info";
+import { VisitorInfoPanel } from "./visitor-info-panel";
 
 export function CalmWorkspace() {
   const activeId = useInboxSelector(
     (state) => state.inbox.replyId ?? state.inbox.activeId,
   );
-  const replyId = useInboxSelector((state) => state.inbox.replyId);
   const total = useInboxSelector((state) => state.inbox.queue.total);
   const [showQueue, setShowQueue] = useState(true);
   const info = useVisitorPanel();
@@ -60,40 +52,26 @@ export function CalmWorkspace() {
             className="mb-1 justify-start min-[761px]:hidden"
             onClick={() => setShowQueue(true)}
           >
-            <ArrowLeft />
+            <ArrowLeft data-icon="inline-start" />
             返回会话列表
           </Button>
         )}
         {activeId ? (
-          <ConversationPane conversationId={activeId} onInfo={info.toggle} />
+          <ConversationPane
+            conversationId={activeId}
+            onInfo={info.toggle}
+            infoOpen={info.open}
+          />
         ) : (
           <InboxEmpty />
         )}
       </div>
-      {replyId && info.inline && info.open && (
-        <aside className="w-[286px] shrink-0 overflow-hidden rounded-l-3xl max-[1360px]:w-[264px]">
-          <VisitorInfo
-            conversationId={replyId}
-            onClose={() => info.setOpen(false)}
-          />
-        </aside>
-      )}
-      <Sheet open={info.open && !info.inline} onOpenChange={info.setOpen}>
-        <SheetContent className="w-[min(380px,90vw)]" showCloseButton={false}>
-          <SheetHeader className="sr-only">
-            <SheetTitle>访客资料</SheetTitle>
-            <SheetDescription>
-              当前回复对象的渠道资料与接待记录
-            </SheetDescription>
-          </SheetHeader>
-          {replyId && (
-            <VisitorInfo
-              conversationId={replyId}
-              onClose={() => info.setOpen(false)}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
+      <VisitorInfoPanel
+        conversationId={activeId}
+        open={info.open}
+        inline={info.inline}
+        onOpenChange={info.setOpen}
+      />
     </div>
   );
 }

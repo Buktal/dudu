@@ -1,18 +1,12 @@
-import { Columns2, MessageCircle, Zap } from "lucide-react";
+import { Columns2, LayoutGrid, MessageCircle } from "lucide-react";
 import { LayoutGroup, MotionConfig, motion } from "motion/react";
-import { type ReactNode, useId, useRef } from "react";
+import { type ReactNode, useId } from "react";
 import { Brand } from "@/components/brand";
 import { DesktopWindowControls } from "@/components/desktop-window-controls";
 import { ThemePicker } from "@/components/theme-picker";
 import { useTheme } from "@/components/theme-provider";
-import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { isDesktopWindow } from "@/lib/desktop-window";
 import {
   isReceptionMode,
@@ -22,14 +16,17 @@ import {
 } from "@/lib/reception-mode";
 import { cn } from "@/lib/utils";
 
-const modeIcons = { calm: MessageCircle, parallel: Columns2, quick: Zap };
+const modeIcons = {
+  calm: MessageCircle,
+  parallel: Columns2,
+  quick: LayoutGrid,
+};
 
 export type WorkspaceShellProps = {
   mode: ReceptionMode;
   onModeChange: (mode: ReceptionMode) => void;
   children: ReactNode;
   toolbarActions?: ReactNode;
-  navigation?: ReactNode;
 };
 
 export function WorkspaceShell({
@@ -37,11 +34,9 @@ export function WorkspaceShell({
   onModeChange,
   children,
   toolbarActions,
-  navigation,
 }: WorkspaceShellProps) {
   const { theme, setTheme } = useTheme();
   const modeLabelId = useId();
-  const contentRef = useRef<HTMLElement>(null);
 
   return (
     <MotionConfig reducedMotion="user">
@@ -118,30 +113,8 @@ export function WorkspaceShell({
               <DesktopWindowControls className="ml-1 -mr-[22px] max-[760px]:-mr-3" />
             </div>
           </header>
-          <div className="flex min-h-0 flex-1 pr-3 max-[760px]:pr-1">
-            {mode === "calm" && (
-              <nav
-                aria-label="工作台导航"
-                className="flex w-16 shrink-0 flex-col items-center gap-4 border-r border-border/50 bg-card py-6 text-muted-foreground max-[760px]:hidden"
-              >
-                {navigation ?? (
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={<Button variant="default" size="icon-lg" />}
-                      className="rounded-lg"
-                      aria-label="所有会话"
-                      aria-current="page"
-                      onClick={() => contentRef.current?.focus()}
-                    >
-                      <MessageCircle data-icon="inline-start" />
-                    </TooltipTrigger>
-                    <TooltipContent side="right">所有会话</TooltipContent>
-                  </Tooltip>
-                )}
-              </nav>
-            )}
+          <div className="flex min-h-0 flex-1">
             <motion.main
-              ref={contentRef}
               aria-label="接待工作区"
               tabIndex={-1}
               className="flex min-h-0 min-w-0 flex-1 flex-col outline-none"

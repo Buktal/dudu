@@ -8,10 +8,7 @@ import { type InboxApi, unavailableInboxApi } from "./api";
 import { CalmWorkspace } from "./components/calm-workspace";
 import { ConnectionStatus } from "./components/connection-status";
 import { InboxLoading } from "./components/inbox-state";
-import {
-  KeyboardHelp,
-  WorkspaceNavigation,
-} from "./components/workspace-navigation";
+import { WorkspaceHelp } from "./components/workspace-help";
 import { useInboxDispatch, useInboxSelector } from "./hooks/use-inbox-store";
 import { loadInboxApi } from "./runtime";
 import { startInboxUpdates } from "./stores/events";
@@ -47,11 +44,10 @@ function InboxSession() {
     <WorkspaceShell
       mode={mode}
       onModeChange={setMode}
-      navigation={<WorkspaceNavigation />}
       toolbarActions={
         <>
           <ConnectionStatus />
-          <KeyboardHelp />
+          <WorkspaceHelp />
         </>
       }
     >

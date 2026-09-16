@@ -1,4 +1,4 @@
-import { PanelRight, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -8,6 +8,7 @@ import { setConversationStarred } from "../stores/details";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
 import { InboxEmpty } from "./inbox-state";
 import { MessageTimeline } from "./message-timeline";
+import { VisitorInfoToggle } from "./visitor-info-toggle";
 
 export function ChatPanel({
   conversationId,
@@ -15,6 +16,7 @@ export function ChatPanel({
   paneRole,
   onFocus,
   onInfo,
+  infoOpen = false,
   composer,
   actions,
   onRetry,
@@ -25,6 +27,7 @@ export function ChatPanel({
   paneRole?: "primary" | "pinned";
   onFocus?: () => void;
   onInfo?: () => void;
+  infoOpen?: boolean;
   composer: ReactNode;
   actions?: ReactNode;
   onRetry?: (id: string) => void;
@@ -122,17 +125,13 @@ export function ChatPanel({
           </Button>
           {actions}
           {onInfo && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`查看 ${name} 的访客资料`}
-              onClick={() => {
+            <VisitorInfoToggle
+              open={infoOpen}
+              onToggle={() => {
                 onFocus?.();
                 onInfo();
               }}
-            >
-              <PanelRight />
-            </Button>
+            />
           )}
         </div>
       </header>

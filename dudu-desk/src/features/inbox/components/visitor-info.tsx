@@ -3,11 +3,10 @@ import {
   FilePenLine,
   Info,
   LoaderCircle,
-  PanelRightClose,
   RefreshCw,
   Star,
 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,10 +43,10 @@ function ProfileValue({ field }: { field: ProfileField }) {
 
 export function VisitorInfo({
   conversationId,
-  onClose,
+  closeAction,
 }: {
   conversationId: string;
-  onClose?: () => void;
+  closeAction?: ReactNode;
 }) {
   const dispatch = useInboxDispatch();
   const conversation = useInboxSelector(
@@ -76,10 +75,15 @@ export function VisitorInfo({
 
   if (!conversation)
     return (
-      <InboxEmpty
-        title="会话已不可用"
-        description="请选择其他会话查看来访资料。"
-      />
+      <div className="flex h-full min-h-0 flex-col">
+        {closeAction && (
+          <div className="flex justify-end px-5 pt-5">{closeAction}</div>
+        )}
+        <InboxEmpty
+          title="会话已不可用"
+          description="请选择其他会话查看来访资料。"
+        />
+      </div>
     );
   const name = visitorName(conversation.identity);
   const starLabel =
@@ -106,23 +110,15 @@ export function VisitorInfo({
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             aria-label="刷新来访资料"
+            title="刷新来访资料"
             disabled={loaded?.status === "loading"}
             onClick={() => void dispatch(loadProfile(conversationId))}
           >
             <RefreshCw data-icon="inline-start" />
           </Button>
-          {onClose && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label="收起来访资料"
-              onClick={onClose}
-            >
-              <PanelRightClose data-icon="inline-start" />
-            </Button>
-          )}
+          {closeAction}
         </div>
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3.5 pb-5">

@@ -1,4 +1,4 @@
-import { Columns2, Star } from "lucide-react";
+import { Pin, Star } from "lucide-react";
 import { Virtuoso } from "react-virtuoso";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,9 +100,10 @@ function ConversationRow({
           size="icon-xs"
           className="absolute right-2 bottom-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           aria-label={`固定接待 ${name}`}
+          title="固定到右窗"
           onClick={onPin}
         >
-          <Columns2 />
+          <Pin data-icon="inline-start" />
         </Button>
       )}
     </div>

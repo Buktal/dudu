@@ -1,13 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { hasOpenOverlay, useInboxSearch } from "../hooks/use-inbox-shortcuts";
@@ -26,7 +19,7 @@ import { InboxEmpty } from "./inbox-state";
 import { ParallelToolbar } from "./parallel-toolbar";
 import { PinnedConversationPicker } from "./pin-picker";
 import { QueueTools } from "./queue-tools";
-import { VisitorInfo } from "./visitor-info";
+import { VisitorInfoPanel } from "./visitor-info-panel";
 
 export function ParallelWorkspace() {
   const dispatch = useInboxDispatch();
@@ -153,7 +146,7 @@ export function ParallelWorkspace() {
               activatePane(values[0]);
           }}
           size="sm"
-          aria-label="选择并肩接待窗口"
+          aria-label="选择并排接待窗口"
         >
           <ToggleGroupItem
             value="primary"
@@ -197,7 +190,8 @@ export function ParallelWorkspace() {
               <ConversationPane
                 conversationId={primaryId}
                 paneRole="primary"
-                onInfo={() => info.setOpen(true)}
+                infoOpen={info.open && replyId === primaryId}
+                onInfo={() => info.setOpen(!info.open || replyId !== primaryId)}
               />
             ) : (
               <div className="flex min-h-0 flex-1 rounded-2xl bg-card">
@@ -206,7 +200,7 @@ export function ParallelWorkspace() {
                   description={
                     pinnedVisible
                       ? "右窗会保持固定，继续从列表选择另一段会话。"
-                      : "从会话列表选择来访用户，开始并肩接待。"
+                      : "从会话列表选择来访用户，开始并排接待。"
                   }
                 />
               </div>
@@ -223,37 +217,20 @@ export function ParallelWorkspace() {
               <ConversationPane
                 conversationId={pinnedId}
                 paneRole="pinned"
-                onInfo={() => info.setOpen(true)}
+                infoOpen={info.open && replyId === pinnedId}
+                onInfo={() => info.setOpen(!info.open || replyId !== pinnedId)}
               />
             </div>
           )}
         </div>
       </div>
 
-      {replyId && info.inline && info.open && (
-        <aside className="w-[264px] shrink-0 overflow-hidden rounded-l-3xl max-[1360px]:w-[240px]">
-          <VisitorInfo
-            conversationId={replyId}
-            onClose={() => info.setOpen(false)}
-          />
-        </aside>
-      )}
-      <Sheet open={info.open && !info.inline} onOpenChange={info.setOpen}>
-        <SheetContent className="w-[min(380px,90vw)]" showCloseButton={false}>
-          <SheetHeader className="sr-only">
-            <SheetTitle>来访资料</SheetTitle>
-            <SheetDescription>
-              当前回复对象的渠道资料与接待记录
-            </SheetDescription>
-          </SheetHeader>
-          {replyId && (
-            <VisitorInfo
-              conversationId={replyId}
-              onClose={() => info.setOpen(false)}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
+      <VisitorInfoPanel
+        conversationId={replyId}
+        open={info.open}
+        inline={info.inline}
+        onOpenChange={info.setOpen}
+      />
       <PinnedConversationPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}

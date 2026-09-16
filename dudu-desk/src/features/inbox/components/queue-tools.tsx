@@ -1,4 +1,4 @@
-import { Search, Star, X } from "lucide-react";
+import { FilterX, Search, Star } from "lucide-react";
 import { useId, useMemo } from "react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
@@ -26,8 +26,8 @@ import type { ConversationQuery } from "../types";
 const statuses = [
   { value: "active", label: "全部", count: "active" },
   { value: "needs-reply", label: "待回复", count: "needsReply" },
-  { value: "waiting", label: "等待" },
-  { value: "closed", label: "已结束" },
+  { value: "waiting", label: "等待", count: "waiting" },
+  { value: "closed", label: "已结束", count: "closed" },
 ] as const;
 const orders = [
   { value: "wait", label: "等待最久" },
@@ -91,27 +91,43 @@ export function QueueTools({
           if (status) change({ status: status.value, starred: false });
         }}
         size="sm"
-        spacing={0.5}
-        className={cn("w-full", compact && "min-[1100px]:w-auto")}
+        spacing={1.5}
+        className={cn(
+          "grid w-full grid-cols-2",
+          compact &&
+            "min-[761px]:grid-cols-4 min-[1100px]:w-auto min-[1100px]:shrink-0",
+        )}
         aria-label="按会话状态筛选"
       >
-        {statuses.map((status) => (
-          <ToggleGroupItem
-            key={status.value}
-            value={status.value}
-            className="min-w-0 flex-1 gap-1 rounded-md px-1.5"
-          >
-            <span className="text-xs">{status.label}</span>
-            {counts && "count" in status && (
-              <span
-                className="text-[10px] tabular-nums"
-                title="当前坐席的全部会话统计"
-              >
-                {counts[status.count]}
-              </span>
-            )}
-          </ToggleGroupItem>
-        ))}
+        {statuses.map((status) => {
+          const count = counts?.[status.count];
+          const label =
+            count === undefined
+              ? status.label
+              : `${status.label}，${count.toLocaleString("zh-CN")} 个会话`;
+          return (
+            <ToggleGroupItem
+              key={status.value}
+              value={status.value}
+              aria-label={label}
+              title={count === undefined ? label : `${label}（全部来源）`}
+              className={cn(
+                "min-w-0 justify-between gap-2 rounded-lg px-2.5",
+                compact && "min-[1100px]:min-w-[92px]",
+              )}
+            >
+              <span className="shrink-0 text-xs">{status.label}</span>
+              {count !== undefined && (
+                <span
+                  aria-hidden="true"
+                  className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
+                >
+                  {count > 999 ? "999+" : count}
+                </span>
+              )}
+            </ToggleGroupItem>
+          );
+        })}
       </ToggleGroup>
       <Field
         className={cn(
@@ -146,7 +162,10 @@ export function QueueTools({
               title="星标会话（包含已结束）"
               className="size-6 min-w-6 shrink-0 rounded-md p-0"
             >
-              <Star data-icon="inline-start" />
+              <Star
+                data-icon="inline-start"
+                className={cn(query.starred && "fill-current")}
+              />
             </Toggle>
             {hasFilters && (
               <InputGroupButton
@@ -161,7 +180,7 @@ export function QueueTools({
                   )
                 }
               >
-                <X data-icon="inline-start" />
+                <FilterX data-icon="inline-start" />
               </InputGroupButton>
             )}
           </InputGroupAddon>
@@ -170,7 +189,7 @@ export function QueueTools({
       <div
         className={cn(
           "flex min-w-0 items-center gap-1.5",
-          compact && "min-[1100px]:shrink-0",
+          compact && "min-[1100px]:w-32 min-[1100px]:shrink-0",
         )}
       >
         <Field className="min-w-0 flex-1">

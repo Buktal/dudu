@@ -12,10 +12,12 @@ export function ConversationPane({
   conversationId,
   paneRole,
   onInfo,
+  infoOpen = false,
 }: {
   conversationId: string;
   paneRole?: "primary" | "pinned";
   onInfo: () => void;
+  infoOpen?: boolean;
 }) {
   const dispatch = useInboxDispatch();
   const focused = useInboxSelector(
@@ -44,6 +46,7 @@ export function ConversationPane({
       focused={focused}
       onFocus={() => dispatch(focusReply(conversationId))}
       onInfo={onInfo}
+      infoOpen={infoOpen}
       onRetry={(id) => void dispatch(retryReply(id))}
       onAtBottom={markVisible}
       composer={<Composer conversationId={conversationId} />}

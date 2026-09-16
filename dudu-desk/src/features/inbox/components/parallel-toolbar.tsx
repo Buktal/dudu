@@ -1,11 +1,11 @@
 import {
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightClose,
   PanelRightOpen,
   Pin,
   PinOff,
   Plus,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
@@ -67,23 +67,28 @@ export function ParallelToolbar({
         <div className="ml-auto flex items-center gap-1">
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             className="max-[760px]:hidden"
             aria-expanded={!queueCollapsed}
             aria-label={queueCollapsed ? "展开会话列表" : "收起会话列表"}
             title={queueCollapsed ? "展开会话列表" : "收起会话列表"}
             onClick={onToggleQueue}
           >
-            {queueCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            {queueCollapsed ? (
+              <PanelLeftOpen data-icon="inline-start" />
+            ) : (
+              <PanelLeftClose data-icon="inline-start" />
+            )}
           </Button>
-          <Button variant="ghost" size="xs" onClick={onPick}>
+          <Button variant="ghost" size="sm" onClick={onPick}>
             <Plus data-icon="inline-start" />
             {pinnedId ? "更换固定会话" : "添加并排对话"}
           </Button>
           {pinnedId && (
             <Button
               variant="ghost"
-              size="xs"
+              size="sm"
+              aria-expanded={!collapsed}
               onClick={() => {
                 if (collapsed) {
                   void dispatch(restorePinned());
@@ -94,14 +99,14 @@ export function ParallelToolbar({
               {collapsed ? (
                 <PanelRightOpen data-icon="inline-start" />
               ) : (
-                <X data-icon="inline-start" />
+                <PanelRightClose data-icon="inline-start" />
               )}
-              {collapsed ? "恢复固定窗" : "收起第二窗"}
+              {collapsed ? "展开固定窗" : "收起固定窗"}
             </Button>
           )}
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             disabled={!primary || primary.status === "closed"}
             aria-label="将主接待固定到右窗"
             title="将主接待固定到右窗"
@@ -112,17 +117,17 @@ export function ParallelToolbar({
               }
             }}
           >
-            <Pin />
+            <Pin data-icon="inline-start" />
           </Button>
           {pinnedId && (
             <Button
               variant="ghost"
-              size="icon-xs"
+              size="icon-sm"
               aria-label="解除固定会话"
               title="解除固定会话"
               onClick={() => dispatch(unpinConversation())}
             >
-              <PinOff />
+              <PinOff data-icon="inline-start" />
             </Button>
           )}
         </div>

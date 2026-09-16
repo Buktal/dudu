@@ -1,7 +1,7 @@
 export const receptionModes = {
-  calm: { name: "自在", description: "熟悉的聊天式接待" },
-  parallel: { name: "并肩", description: "主接待与一位固定来访用户" },
-  quick: { name: "速答", description: "先看问题，就地回复" },
+  calm: { name: "专注", description: "一次查看一段完整对话。" },
+  parallel: { name: "并排", description: "左侧切换会话，右侧固定访客。" },
+  quick: { name: "卡片", description: "多位访客同屏，直接在卡片回复。" },
 } as const;
 
 export type ReceptionMode = keyof typeof receptionModes;
