@@ -23,6 +23,12 @@ Monorepo。规范唯一入口为本文件，子目录不建 AGENTS.md / CLAUDE.m
 - Research → `docs/research/<主题>/`。
 - Prototype → `docs/prototype/`，只新增文件，不改业务代码。
 
+## 通用规范 — Reuse-first（不重复造轮子，全语言适用）
+
+- 凡主流生态库（高知名度、活跃维护）能覆盖的场景不手写实现；算法、加解密、编解码、日期历法、随机等通用工具尤其如此。
+- 「新增依赖需报备」对称适用于「手写通用实现」：手写同样要报理由。仅两类成立：a) 业务/渠道语义本身；b) 库无法表达的官方字节语义（如企微 PKCS#7-32 私有补位），须在代码注释注明。
+- Rust（Tauri 项目 `src-tauri`）选型：哈希/HMAC/RSA/Ed25519 → RustCrypto 家族（`sha1`/`md-5`/`sha2`/`hmac`/`rsa`/`ed25519-dalek`）；时间 → `time`；随机 → `rand`；hex/Base64 → `hex`/`base64`。
+
 ## 前端规范 — React 19 + Vite 家族
 
 适用子项目表中全部前端项目，路径相对各项目根。Tauri 项目含 `src-tauri` Rust 后端，Rust 改动跑 `check:rust`。
