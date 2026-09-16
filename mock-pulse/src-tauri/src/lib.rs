@@ -6,6 +6,7 @@ mod plans;
 mod runs;
 mod scenarios;
 mod sends;
+mod store_io;
 
 use tauri::Manager;
 

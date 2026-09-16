@@ -217,28 +217,11 @@ fn query_param(query: &str, name: &str) -> Option<String> {
         let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
         if key == name {
             // form-urlencoded 还原：+ 为空格、%XX 为字节（timestamp 的冒号即 %3A）
-            return Some(percent_decode(&value.replace('+', " ")));
+            // ——复用 util 单点（Reuse-first 审计退件：测试内曾逐字重复一份）
+            return Some(crate::connections::util::percent_decode(value));
         }
     }
     None
-}
-
-fn percent_decode(value: &str) -> String {
-    let bytes = value.as_bytes();
-    let mut out = Vec::new();
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] == b'%' && index + 2 < bytes.len() + 1 && index + 3 <= bytes.len() {
-            if let Ok(byte) = u8::from_str_radix(&value[index + 1..index + 3], 16) {
-                out.push(byte);
-                index += 3;
-                continue;
-            }
-        }
-        out.push(bytes[index]);
-        index += 1;
-    }
-    String::from_utf8(out).unwrap_or_default()
 }
 
 /// 官方格式 timestamp 的日期部分（仅形态断言用：与当前时刻同日即视为同值）。

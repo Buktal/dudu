@@ -1,7 +1,6 @@
 //! 事件素材库的本地文件持久化：events.json 存于应用数据目录。
 //! 文件读写函数接受目录参数，测试用临时目录。
 
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::StoredEvent;
@@ -13,33 +12,18 @@ pub fn events_file(dir: &Path) -> PathBuf {
 }
 
 pub fn load_events(dir: &Path) -> std::io::Result<Vec<StoredEvent>> {
-    let path = events_file(dir);
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
-    let raw = fs::read_to_string(&path)?;
-    serde_json::from_str(&raw).map_err(|err| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("{} 解析失败：{err}", path.display()),
-        )
-    })
+    crate::store_io::load_json(&events_file(dir))
 }
 
 pub fn save_events(dir: &Path, events: &[StoredEvent]) -> std::io::Result<()> {
-    fs::create_dir_all(dir)?;
-    let path = events_file(dir);
-    let raw = serde_json::to_string_pretty(events)?;
-    // 先写临时文件再原子替换，避免写一半损坏
-    let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, raw)?;
-    fs::rename(&tmp, &path)
+    crate::store_io::save_json_atomic(dir, &events_file(dir), events)
 }
 
 #[cfg(test)]
 mod tests {
     use super::super::{ExpectedReceipt, StoredVersion};
     use super::*;
+    use std::fs;
     use serde_json::json;
 
     fn temp_dir(tag: &str) -> PathBuf {

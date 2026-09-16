@@ -38,14 +38,7 @@ pub fn load_plans(root: &Path) -> std::io::Result<Vec<StoredPlan>> {
 
     let mut plans = Vec::new();
     for file in files {
-        let raw = fs::read_to_string(&file)?;
-        let parsed: StoredPlan = serde_json::from_str(&raw).map_err(|err| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!("{} 解析失败：{err}", file.display()),
-            )
-        })?;
-        plans.push(parsed);
+        plans.push(crate::store_io::parse_json_file::<StoredPlan>(&file)?);
     }
     Ok(plans)
 }
@@ -53,12 +46,7 @@ pub fn load_plans(root: &Path) -> std::io::Result<Vec<StoredPlan>> {
 /// 保存单个编排：原子写 `plans/<id>.json`（先写临时文件再 rename，避免写一半损坏）。
 pub fn save_plan(root: &Path, plan: &StoredPlan) -> std::io::Result<()> {
     let dir = plans_dir(root);
-    fs::create_dir_all(&dir)?;
-    let path = plan_file(&dir, &plan.id);
-    let raw = serde_json::to_string_pretty(plan)?;
-    let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, raw)?;
-    fs::rename(&tmp, &path)
+    crate::store_io::save_json_atomic(&dir, &plan_file(&dir, &plan.id), plan)
 }
 
 /// 按 id 删除编排；不存在视为成功。

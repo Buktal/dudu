@@ -25,8 +25,10 @@ use super::super::{ConnectionConfig, DispatchOutcome};
 
 /// 小程序回执信封密文提取（无则 None）。双信封形态——族内差异点（公众号仅
 /// XML 形态）：
-/// - XML（公众号同族）：`<Encrypt><![CDATA[密文]]></Encrypt>`
-/// - JSON（事实库 §5.6 官方样本）：`"Encrypt": "密文"`
+/// - XML（公众号同族）：`<Encrypt><![CDATA[密文]]></Encrypt>`（保持 find 定位，
+///   库无源字节 span 等价表达）
+/// - JSON（事实库 §5.6 官方样本）：`"Encrypt": "密文"`（serde_json 零拷贝
+///   反序列化取键；Reuse-first 审计退件：曾手写 find 索引算术）
 fn extract_reply_encrypt(body: &str) -> Option<&str> {
     const XML_OPEN: &str = "<Encrypt><![CDATA[";
     if let Some(start) = body.find(XML_OPEN) {
@@ -34,12 +36,12 @@ fn extract_reply_encrypt(body: &str) -> Option<&str> {
         let end = start + body[start..].find("]]>")?;
         return Some(&body[start..end]);
     }
-    const JSON_KEY: &str = "\"Encrypt\"";
-    let key_at = body.find(JSON_KEY)?;
-    let colon_at = key_at + body[key_at..].find(':')? + 1;
-    let quote_at = colon_at + body[colon_at..].find('"')? + 1;
-    let end = quote_at + body[quote_at..].find('"')?;
-    Some(&body[quote_at..end])
+    #[derive(serde::Deserialize)]
+    struct CipherEnvelope<'a> {
+        #[serde(rename = "Encrypt")]
+        encrypt: Option<&'a str>,
+    }
+    serde_json::from_str::<CipherEnvelope<'_>>(body).ok()?.encrypt
 }
 
 /// 连接配置 → 族共享直发凭证（WechatMini 四字段投影）。配置不是小程序渠道时

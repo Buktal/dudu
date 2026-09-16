@@ -1,7 +1,6 @@
 //! 运行记录的本地文件持久化：runs.json 存于应用数据目录。
 //! 文件读写函数接受目录参数，测试用临时目录。
 
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -14,27 +13,11 @@ pub fn runs_file(dir: &Path) -> PathBuf {
 }
 
 pub fn load_runs(dir: &Path) -> std::io::Result<Vec<RunRecord>> {
-    let path = runs_file(dir);
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
-    let raw = fs::read_to_string(&path)?;
-    serde_json::from_str(&raw).map_err(|err| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("{} 解析失败：{err}", path.display()),
-        )
-    })
+    crate::store_io::load_json(&runs_file(dir))
 }
 
 pub fn save_runs(dir: &Path, runs: &[RunRecord]) -> std::io::Result<()> {
-    fs::create_dir_all(dir)?;
-    let path = runs_file(dir);
-    let raw = serde_json::to_string_pretty(runs)?;
-    // 先写临时文件再原子替换，避免写一半损坏
-    let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, raw)?;
-    fs::rename(&tmp, &path)
+    crate::store_io::save_json_atomic(dir, &runs_file(dir), runs)
 }
 
 /// 同一条运行可重试保存；串行化读改写，避免重试与后台完成互相覆盖。
@@ -55,6 +38,7 @@ pub fn upsert_run(dir: &Path, run: RunRecord) -> std::io::Result<Vec<RunRecord>>
 mod tests {
     use super::super::tests::sample_run;
     use super::*;
+    use std::fs;
 
     fn temp_dir(tag: &str) -> PathBuf {
         let dir = std::env::temp_dir()

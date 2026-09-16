@@ -49,13 +49,7 @@ pub fn load_scenarios(root: &Path) -> std::io::Result<Vec<StoredScenario>> {
             .collect();
         files.sort();
         for file in files {
-            let raw = fs::read_to_string(&file)?;
-            let parsed: ScenarioFile = serde_json::from_str(&raw).map_err(|err| {
-                std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    format!("{} 解析失败：{err}", file.display()),
-                )
-            })?;
+            let parsed = crate::store_io::parse_json_file::<ScenarioFile>(&file)?;
             scenarios.push(parsed.with_channel(channel.clone()));
         }
     }
@@ -75,12 +69,11 @@ pub fn save_scenario(root: &Path, scenario: &StoredScenario) -> std::io::Result<
         }
     }
 
-    let path = scenario_file(&target_dir, &scenario.id);
-    let raw = serde_json::to_string_pretty(&ScenarioFile::from(scenario))?;
-    // 先写临时文件再原子替换，避免写一半损坏
-    let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, raw)?;
-    fs::rename(&tmp, &path)
+    crate::store_io::save_json_atomic(
+        &target_dir,
+        &scenario_file(&target_dir, &scenario.id),
+        &ScenarioFile::from(scenario),
+    )
 }
 
 /// 按 id 删除剧本：扫描各渠道目录移除对应文件；不存在视为成功。

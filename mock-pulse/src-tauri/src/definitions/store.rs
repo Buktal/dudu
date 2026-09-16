@@ -1,7 +1,6 @@
 //! 字段说明持久化：`field-definitions.json` 存于应用数据目录，camelCase 契约。
 //! 文件读写函数接受目录参数，测试用临时目录；先写临时文件再原子替换。
 
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::{DefinitionsDoc, StoredSchemaDefinition};
@@ -13,17 +12,7 @@ pub fn definitions_file(dir: &Path) -> PathBuf {
 }
 
 pub fn load_definitions(dir: &Path) -> std::io::Result<DefinitionsDoc> {
-    let path = definitions_file(dir);
-    if !path.exists() {
-        return Ok(DefinitionsDoc::default());
-    }
-    let raw = fs::read_to_string(&path)?;
-    serde_json::from_str(&raw).map_err(|err| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("{} 解析失败：{err}", path.display()),
-        )
-    })
+    crate::store_io::load_json(&definitions_file(dir))
 }
 
 /// 按 schemaId 整体覆写该模板的用户定义（原子写），返回保存后的完整文档。
@@ -35,13 +24,7 @@ pub fn save_definition(
     let mut doc = load_definitions(dir)?;
     doc.schemas.insert(schema_id.to_string(), definition);
 
-    fs::create_dir_all(dir)?;
-    let path = definitions_file(dir);
-    let raw = serde_json::to_string_pretty(&doc)?;
-    // 先写临时文件再原子替换，避免写一半损坏
-    let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, raw)?;
-    fs::rename(&tmp, &path)?;
+    crate::store_io::save_json_atomic(dir, &definitions_file(dir), &doc)?;
     Ok(doc)
 }
 
@@ -49,6 +32,7 @@ pub fn save_definition(
 mod tests {
     use super::*;
     use serde_json::Value;
+    use std::fs;
 
     fn temp_dir(tag: &str) -> PathBuf {
         let dir = std::env::temp_dir()

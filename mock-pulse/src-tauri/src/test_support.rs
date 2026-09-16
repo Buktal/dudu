@@ -6,7 +6,7 @@
 use std::io::{Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::{Duration, Instant};
 
 /// 串行/并发 server 共用的 responder：收到（序号, 请求行, body），
@@ -78,6 +78,36 @@ pub(crate) fn ok_responder() -> Responder {
     Arc::new(|_index, _line, _body| ("HTTP/1.1 200 OK".to_string(), "ok".to_string()))
 }
 
+/// 单连接处理骨架（serial/concurrent 两入口共用，Reuse-first 审计退件：
+/// 曾逐字重复两份）：读全 → responder 决定响应 → delay → 写出 → 录制。
+fn serve_connection(
+    mut stream: TcpStream,
+    index: usize,
+    responder: &Responder,
+    delay: Duration,
+    tx: &Sender<RecordedPost>,
+) {
+    let arrived_at = Instant::now();
+    let (head, body) = read_head_and_body(&mut stream);
+    let request_line = request_line_of(&head);
+    let (status_line, response_body) = responder(index, &request_line, &body);
+    std::thread::sleep(delay);
+    let response = format!(
+        "{status_line}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}",
+        response_body.len()
+    );
+    stream.write_all(response.as_bytes()).unwrap();
+    stream.shutdown(Shutdown::Both).unwrap();
+    tx.send(RecordedPost {
+        request_line,
+        head,
+        body,
+        arrived_at,
+        responded_at: Instant::now(),
+    })
+    .unwrap();
+}
+
 /// 串行监听：一个线程依次处理 count 个请求（accept → 读全 → delay → 响应）。
 /// responder 收到 (序号, 请求行, body) 决定状态行与响应体（可捕获测试上下文）。
 /// 顺序处理保证：第 k+1 个请求的 accept 发生在第 k 个响应写出之后——
@@ -92,26 +122,8 @@ pub(crate) fn start_serial_server(
     let (tx, rx) = channel();
     std::thread::spawn(move || {
         for index in 0..count {
-            let (mut stream, _) = listener.accept().unwrap();
-            let arrived_at = Instant::now();
-            let (head, body) = read_head_and_body(&mut stream);
-            let request_line = request_line_of(&head);
-            let (status_line, response_body) = responder(index, &request_line, &body);
-            std::thread::sleep(delay);
-            let response = format!(
-                "{status_line}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}",
-                response_body.len()
-            );
-            stream.write_all(response.as_bytes()).unwrap();
-            stream.shutdown(Shutdown::Both).unwrap();
-            tx.send(RecordedPost {
-                request_line,
-                head,
-                body,
-                arrived_at,
-                responded_at: Instant::now(),
-            })
-            .unwrap();
+            let (stream, _) = listener.accept().unwrap();
+            serve_connection(stream, index, &responder, delay, &tx);
         }
     });
     (addr, rx)
@@ -129,30 +141,10 @@ pub(crate) fn start_concurrent_server(
     let (tx, rx) = channel();
     std::thread::spawn(move || {
         for index in 0..count {
-            let (mut stream, _) = listener.accept().unwrap();
+            let (stream, _) = listener.accept().unwrap();
             let tx = tx.clone();
             let responder = responder.clone();
-            std::thread::spawn(move || {
-                let arrived_at = Instant::now();
-                let (head, body) = read_head_and_body(&mut stream);
-                let request_line = request_line_of(&head);
-                let (status_line, response_body) = responder(index, &request_line, &body);
-                std::thread::sleep(delay);
-                let response = format!(
-                    "{status_line}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}",
-                    response_body.len()
-                );
-                stream.write_all(response.as_bytes()).unwrap();
-                stream.shutdown(Shutdown::Both).unwrap();
-                tx.send(RecordedPost {
-                    request_line,
-                    head,
-                    body,
-                    arrived_at,
-                    responded_at: Instant::now(),
-                })
-                .unwrap();
-            });
+            std::thread::spawn(move || serve_connection(stream, index, &responder, delay, &tx));
         }
     });
     (addr, rx)
