@@ -28,15 +28,10 @@ use super::{
 const CALLBACK_USER_AGENT: &str = "QQBot-Callback";
 
 /// op13 plain_token 长度：官方样本 `Arq0D5A61EgUu4OxUvOp` 为 20 位字母数字，
-/// 从 uuid v4 字节按 62 字符表派生同形态随机串。
+/// rand Alphanumeric（A-Za-z0-9 恰 62 字符，均匀采样无模偏差）取同形态。
 fn random_plain_token() -> String {
-    const ALPHABET: &[u8; 62] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    const LENGTH: usize = 20;
-    let uuid = uuid::Uuid::new_v4();
-    let bytes = uuid.as_bytes();
-    (0..LENGTH)
-        .map(|index| ALPHABET[bytes[index % bytes.len()] as usize % 62] as char)
-        .collect()
+    use rand::distributions::{Alphanumeric, DistString};
+    Alphanumeric.sample_string(&mut rand::thread_rng(), 20)
 }
 
 fn unix_timestamp_secs() -> u64 {

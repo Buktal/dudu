@@ -34,7 +34,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::{hmac_sha256_hex, md5_hex};
+use crate::connections::util::{hmac_sha256_hex, md5_hex, utc8_timestamp};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -95,27 +95,9 @@ pub(crate) fn authorization(app_secret: &str, headers: &[(&str, String)]) -> Str
 
 /// 事件 timestamp 的 UTC+8 字符串形态（§2.2 官方包络表实锤
 /// yyyy-MM-dd HH:mm:ss、UTC+8；与 x-bili-timestamp 的 unix 秒并存）：
-/// epoch 秒 + 8 小时偏移后按 civil_from_days（Howard Hinnant 算法）转日期。
+/// 历法换算复用 [`utc8_timestamp`]（civil_from_days 不手写）。
 pub(crate) fn timestamp_utc8(epoch_secs: u64) -> String {
-    let shifted = epoch_secs + 8 * 3600;
-    let days = (shifted / 86_400) as i64;
-    let secs_of_day = shifted % 86_400;
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let year = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = doy - (153 * mp + 2) / 5 + 1;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = if month <= 2 { year + 1 } else { year };
-    format!(
-        "{year:04}-{month:02}-{day:02} {:02}:{:02}:{:02}",
-        secs_of_day / 3600,
-        (secs_of_day % 3600) / 60,
-        secs_of_day % 60
-    )
+    utc8_timestamp(epoch_secs)
 }
 
 fn unix_timestamp_secs() -> u64 {

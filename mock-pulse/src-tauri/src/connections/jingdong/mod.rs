@@ -26,7 +26,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::md5_hex;
+use crate::connections::util::{md5_hex, utc8_timestamp};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -61,30 +61,10 @@ pub(crate) fn jos_sign(params: &[(&str, &str)], app_secret: &str) -> String {
 }
 
 /// JOS timestamp（§4.1/§4.2 官方格式逐字）：`yyyy-MM-dd HH:mm:ss`（如
-/// `2019-05-01 00:00:00`）；京东按东八区校验 10 分钟窗口，这里按 UTC+8 生成。
+/// `2019-05-01 00:00:00`）；京东按东八区校验 10 分钟窗口，这里按 UTC+8
+/// 生成（历法换算复用 [`utc8_timestamp`]，civil_from_days 不手写）。
 pub(crate) fn jos_timestamp(unix_secs: u64) -> String {
-    // 儒略日数 → 城市历（Howard Hinnant civil_from_days，公有领域算法）
-    fn civil_from_days(days: i64) -> (i64, u32, u32) {
-        let z = days + 719_468;
-        let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
-        let doe = (z - era * 146_097) as u64;
-        let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
-        let y = yoe as i64 + era * 400;
-        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-        let mp = (5 * doy + 2) / 153;
-        let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
-        let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
-        (if m <= 2 { y + 1 } else { y }, m, d)
-    }
-    let beijing = unix_secs as i64 + 8 * 3600;
-    let secs_of_day = beijing.rem_euclid(86_400);
-    let (year, month, day) = civil_from_days(beijing.div_euclid(86_400));
-    format!(
-        "{year:04}-{month:02}-{day:02} {:02}:{:02}:{:02}",
-        secs_of_day / 3_600,
-        secs_of_day % 3_600 / 60,
-        secs_of_day % 60
-    )
+    utc8_timestamp(unix_secs)
 }
 
 /// 当前 Unix 秒（探针/直发的 timestamp 取现值，10 分钟窗口内即有效）。

@@ -7,11 +7,15 @@
 //! - [`md5_hex`]：按给定顺序拼接各段后 md5 → 32 位小写 hex（快手 kwaisign）
 //! - [`sha256_hex`]：按给定顺序拼接各段（字节串）后 sha256 → 64 位小写 hex
 //!   （飞书 X-Lark-Signature：timestamp+nonce+encrypt_key+原始 body 字节）
-//! - [`hmac_sha256_base64`]：HMAC-SHA256（RFC 2104，sha2 自实现免新依赖）→
+//! - [`hmac_sha256_base64`]：HMAC-SHA256（RFC 2104，RustCrypto hmac 构造）→
 //!   标准 base64（钉钉机器人 sign 头）
+//! - [`utc8_timestamp`]：epoch 秒 → 东八区 `yyyy-MM-dd HH:mm:ss`（历法换算
+//!   由 time crate 完成；京东 JOS timestamp §4.1/§4.2 与 B站事件 timestamp
+//!   §2.2 官方逐字同形）
 //! - [`percent_decode`]/[`form_encode_value`]/[`form_pairs`]/[`strip_sig`]：
 //!   form-urlencoded 编解码原语（RFC 3986 非保留字集、大写 hex、+ 还原空格，
-//!   与前端 form.ts 单点同一语义；美团/饿了么表单线共用，#45 自美团提炼）
+//!   与前端 form.ts 单点同一语义；美团/饿了么表单线共用，#45 自美团提炼；
+//!   不换库的原因见 [`percent_decode`] 注）
 //!
 //! 拼接序/密钥来源等渠道语义由各 adapter 组合，本模块只提供纯原语。
 
@@ -20,6 +24,14 @@ use base64::Engine;
 use md5::Md5;
 use sha1::{Digest, Sha1};
 use sha2::Sha256;
+use time::format_description::FormatItem;
+use time::macros::format_description;
+use time::{OffsetDateTime, UtcOffset};
+
+/// `yyyy-MM-dd HH:mm:ss`（京东 JOS timestamp §4.1/§4.2 与 B站事件 timestamp
+/// §2.2 官方逐字同形的派生格式描述）。
+const UTC8_TIMESTAMP_FORMAT: &[FormatItem<'static>] =
+    &format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
 
 /// 按给定顺序拼接各段后取 sha1，输出 40 位小写 hex。
 pub(crate) fn sha1_hex(parts: &[&str]) -> String {
@@ -62,31 +74,14 @@ pub(crate) fn md5_hex(parts: &[&str]) -> String {
     hex::encode(hasher.finalize())
 }
 
-/// HMAC-SHA256（RFC 2104，sha2 块运算自实现：key 过长先散列、ipad/opad 双轮），
-/// 输出 32 字节摘要（RFC 4231 向量验收）。
+/// HMAC-SHA256（RFC 2104，RustCrypto hmac 构造：key pad / 过长先散列 /
+/// ipad-opad 双轮由库实现），输出 32 字节摘要（RFC 4231 向量验收）。
 pub(crate) fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
-    const BLOCK: usize = 64;
-    let mut padded = [0u8; BLOCK];
-    if key.len() > BLOCK {
-        let mut hasher = Sha256::new();
-        hasher.update(key);
-        padded[..32].copy_from_slice(&hasher.finalize());
-    } else {
-        padded[..key.len()].copy_from_slice(key);
-    }
-    let mut ipad = [0x36u8; BLOCK];
-    let mut opad = [0x5cu8; BLOCK];
-    for (index, byte) in padded.iter().enumerate() {
-        ipad[index] ^= byte;
-        opad[index] ^= byte;
-    }
-    let mut inner = Sha256::new();
-    inner.update(ipad);
-    inner.update(data);
-    let mut outer = Sha256::new();
-    outer.update(opad);
-    outer.update(inner.finalize());
-    outer.finalize().into()
+    use hmac::{Hmac, Mac};
+    type HmacSha256 = Hmac<Sha256>;
+    let mut mac = HmacSha256::new_from_slice(key).expect("HMAC 接受任意长度 key");
+    mac.update(data);
+    mac.finalize().into_bytes().into()
 }
 
 /// HMAC-SHA256 → 标准 base64（钉钉机器人 sign =
@@ -102,9 +97,28 @@ pub(crate) fn hmac_sha256_hex(key: &str, data: &str) -> String {
     hex::encode(hmac_sha256(key.as_bytes(), data.as_bytes()))
 }
 
+/// epoch 秒 → 东八区 `yyyy-MM-dd HH:mm:ss`（京东 JOS timestamp §4.1/§4.2
+/// 与 B站事件 timestamp §2.2 官方逐字同形）：历法换算（civil_from_days 曾
+/// 在京东/B站两处手写，退件纠正）由 time crate 单点完成，固定 +08:00 偏移
+/// 不随运行机器时区漂移。
+pub(crate) fn utc8_timestamp(unix_secs: u64) -> String {
+    OffsetDateTime::from_unix_timestamp(unix_secs as i64)
+        .expect("输入为 Unix 秒（当前时刻/官方向量），不越界")
+        .to_offset(UtcOffset::from_hms(8, 0, 0).expect("固定 +08:00 恒合法"))
+        .format(UTC8_TIMESTAMP_FORMAT)
+        .expect("固定格式化描述不可能失败")
+}
+
 /// 表单值百分号解码（RFC 3986 字节还原 + form 惯例「+」还原空格）：与前端
 /// form.ts 单点同一语义（大写 hex 编码、UTF-8 字节序）。#45 自美团渠道提炼
 /// 为跨渠道原语（美团/饿了么表单线共用）。
+///
+/// 为何不换 `percent-encoding` crate：其 percent_decode 语义本可覆盖（非法
+/// % 序列原样保留、大小写 hex 均收），「+」补一次前置 replace 也等价——但
+/// 前端同语义单点（form.ts）没有对应标准 API（encodeURIComponent 额外不
+/// 编码 `!~*'()`、decodeURIComponent 不还原「+」；URLSearchParams 只解析
+/// 整段 query 且空格写「+」），两端无法同时等价换库。按「同一字节语义
+/// 单点、官方载荷逐字对齐」的设计约束，两侧都保留手写，由对拍测试锚定。
 pub(crate) fn percent_decode(input: &str) -> String {
     let bytes = input.as_bytes();
     let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
@@ -136,7 +150,10 @@ pub(crate) fn percent_decode(input: &str) -> String {
 }
 
 /// 表单值百分号编码（RFC 3986 非保留字集原样，其余按 UTF-8 字节输出大写
-/// %XX）：美团直发追加系统级参数与饿了么 H5 表单线共用。
+/// %XX）：美团直发追加系统级参数与饿了么 H5 表单线共用。为何不换库同
+/// [`percent_decode`] 注（percent-encoding 自定义 AsciiSet 本可表达且恒
+/// 输出大写 hex，form_urlencoded 则空格写「+」语义不匹配；前端无对应
+/// 标准 API，两端都保留手写）。
 pub(crate) fn form_encode_value(text: &str) -> String {
     let mut out = String::new();
     for byte in text.as_bytes() {
@@ -281,6 +298,18 @@ mod tests {
             hmac_sha256_hex("Jefe", "what do ya want for nothing?"),
             hex::encode(hmac_sha256(b"Jefe", b"what do ya want for nothing?"))
         );
+    }
+
+    #[test]
+    fn utc8_timestamp_matches_official_channel_vectors() {
+        // 独立来源：京东 JOS golden（2021-05-07 09:20:39）与 B站包络 golden
+        // （2021-01-01 12:01:01）、epoch 与闰日、跨日瞬间的官方同形向量
+        assert_eq!(utc8_timestamp(0), "1970-01-01 08:00:00");
+        assert_eq!(utc8_timestamp(1_620_350_439), "2021-05-07 09:20:39");
+        assert_eq!(utc8_timestamp(1_609_473_661), "2021-01-01 12:01:01");
+        assert_eq!(utc8_timestamp(1_709_179_200), "2024-02-29 12:00:00");
+        assert_eq!(utc8_timestamp(1_609_516_799), "2021-01-01 23:59:59");
+        assert_eq!(utc8_timestamp(1_609_516_800), "2021-01-02 00:00:00");
     }
 
     #[test]

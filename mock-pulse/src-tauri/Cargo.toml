@@ -29,14 +29,23 @@ sha1 = "0.10"
 md-5 = "0.10"
 # 飞书渠道（#35）：X-Lark-Signature 验签 + AES key 派生（sha256(encrypt_key)），同族 digest 0.10
 sha2 = "0.10"
+# HMAC-SHA256 构造（钉钉机器人 sign / 淘宝 Authorization / WhatsApp / B站，RFC 2104）：
+# 密码学构造不手写（#36 曾自实现 ipad/opad 构造，退件纠正），取 RustCrypto hmac
+# （与 sha2 同 digest 0.10 家族；RFC 4231 向量在 util 层验收）
+hmac = "0.12"
 # QQ 渠道（#37）：Webhook Ed25519 验签（官方 sign 页 §4）——椭圆曲线签名体系
-# 无法像 sha/hmac 一样薄封装自实现，取纯 Rust 标准库 ed25519-dalek（RFC 8032 实现）
+# 无法自实现，取纯 Rust ed25519-dalek（RFC 8032 实现）
 ed25519-dalek = "2"
 # 支付宝渠道（#46）：notify_url 表单异步通知 RSA2 签名/验签（官方 rsaCheckV1，
 # 事实库 §4.3）——RSA-SHA256(PKCS#1 v1.5) 非对称签名无法自实现，取 RustCrypto
 # rsa（配合既有 sha2，ed25519-dalek #37 同族先例）；rand 供测试密钥生成
 rsa = { version = "0.9", features = ["pem", "sha2"] }
 rand = "0.8"
+# 京东 JOS timestamp / B站事件 timestamp：epoch 秒 → 东八区 `yyyy-MM-dd
+# HH:mm:ss`（官方逐字格式）——历法换算不手写（civil_from_days 曾在京东/B站
+# 两处自实现，退件纠正），取轻量 time crate（formatting 输出、macros 固化
+# 格式描述与固定偏移）
+time = { version = "0.3", features = ["formatting", "macros"] }
 hex = "0.4"
 uuid = { version = "1", features = ["v4"] }
 # 企微回调加解密（#17）：AES-256-CBC 底层块运算（补位按官方 PKCS#7-32 自实现）+ Base64

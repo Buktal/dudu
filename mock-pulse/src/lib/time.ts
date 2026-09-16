@@ -1,6 +1,10 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 
 /** 时间格式化唯一入口（dayjs 封装） */
+
+// 固定 UTC+8 换算需要 utc 插件（随 dayjs 包发行，零新依赖），入口处启用一次
+dayjs.extend(utc);
 
 export function formatDateTime(iso: string | undefined | null): string {
   if (!iso) return "—";
@@ -31,14 +35,9 @@ export function taobaoModified(): string {
 /**
  * B站事件 timestamp 的线上格式（事实库 §2.2 公共包络表逐字：
  * `yyyy-MM-dd HH:mm:ss`，UTC+8 固定偏移；与主调方机器时区无关）。
- * 固定偏移直接按 UTC 毫秒 + 8h 用 Date.UTC getters 取数——dayjs core 的
- * utcOffset(8) 写入需 utc 插件，不为此引插件（#49）。
+ * 固定偏移经 dayjs utc 插件换算（utcOffset(8) 为固定偏移写入，非机器时区），
+ * 不手写 Date 换算。
  */
 export function bilibiliTimestamp(now = Date.now()): string {
-  const shifted = new Date(now + 8 * 60 * 60 * 1000);
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return (
-    `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}` +
-    ` ${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(shifted.getUTCSeconds())}`
-  );
+  return dayjs(now).utcOffset(8).format("YYYY-MM-DD HH:mm:ss");
 }

@@ -33,7 +33,13 @@ function isUnreserved(byte: number): boolean {
   );
 }
 
-/** 单值百分号编码：非保留字原样，其余按 UTF-8 字节输出大写 %XX。 */
+/**
+ * 单值百分号编码：非保留字原样，其余按 UTF-8 字节输出大写 %XX。
+ * 为何不用标准 API（与 Rust 侧 util 同一手写语义、逐字节对拍是设计约束）：
+ * encodeURIComponent 额外不编码 `!~*'()` 六字符（本规范要求照编码）；
+ * URLSearchParams 序列化把空格写「+」且编码集不同（本规范写 %20）；
+ * 二者均无法在不动字节输出的前提下替换，故保留手写（Rust 侧同注）。
+ */
 export function formEncodeValue(text: string): string {
   const bytes = new TextEncoder().encode(text);
   let out = "";
@@ -45,7 +51,12 @@ export function formEncodeValue(text: string): string {
   return out;
 }
 
-/** 单值百分号解码：%XX 还原字节（非法序列报可读错误）、「+」还原空格。 */
+/**
+ * 单值百分号解码：%XX 还原字节（非法序列报可读错误）、「+」还原空格。
+ * 为何不用标准 API：decodeURIComponent 不还原「+」为空格，也无法对非法
+ * % 序列报可读错误；URLSearchParams 只解析整段 query（按 &/= 切分），
+ * 没有单值入口且对空段/非法序列静默容忍——语义均不匹配，保留手写。
+ */
 export function formDecodeValue(text: string): string {
   const bytes = new TextEncoder().encode(text);
   const out: number[] = [];

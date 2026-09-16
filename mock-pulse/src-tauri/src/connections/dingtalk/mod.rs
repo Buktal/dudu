@@ -38,14 +38,10 @@ const HANDSHAKE_PLAINTEXT: &str = r#"{"EventType":"check_url"}"#;
 const RESPONSE_WINDOW_NOTE: &str = "（官方要求 1500ms 内回加密 success 包）";
 
 /// 随机 nonce：官方样本为 16 位字母数字形态（FAQ 向量 A7Co0cJLMzIDtMMI），
-/// 从 uuid v4 字节按 62 字符表派生。
+/// rand Alphanumeric（A-Za-z0-9 恰 62 字符，均匀采样无模偏差）取同形态。
 fn random_nonce() -> String {
-    const ALPHABET: &[u8; 62] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    uuid::Uuid::new_v4()
-        .as_bytes()
-        .iter()
-        .map(|byte| ALPHABET[*byte as usize % 62] as char)
-        .collect()
+    use rand::distributions::{Alphanumeric, DistString};
+    Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
 }
 
 fn unix_timestamp_ms() -> u128 {

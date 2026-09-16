@@ -55,15 +55,11 @@ fn random_nonce() -> String {
 }
 
 /// 官方验证请求样例 echostr `dnPdpTZz85` 为 10 位大小写字母数字混合串：
-/// 随机派生同形态（官方仅要求原样回显，无内容约束）。
+/// rand Alphanumeric（A-Za-z0-9 恰 62 字符，均匀采样无模偏差）取同形态
+/// （官方仅要求原样回显，无内容约束）。
 fn random_echostr() -> String {
-    const ALPHABET: &[u8; 62] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    const LENGTH: usize = 10;
-    let uuid = uuid::Uuid::new_v4();
-    let bytes = uuid.as_bytes();
-    (0..LENGTH)
-        .map(|index| ALPHABET[bytes[index % bytes.len()] as usize % 62] as char)
-        .collect()
+    use rand::distributions::{Alphanumeric, DistString};
+    Alphanumeric.sample_string(&mut rand::thread_rng(), 10)
 }
 
 /// GET 首次校验握手（事实库 §3.1 四参）：生成随机 nonce/echostr → 三参字典序
