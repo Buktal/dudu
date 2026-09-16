@@ -5,7 +5,7 @@
   "identifier": "com.dudu.mockpulse",
   "build": {
     "beforeDevCommand": "yarn dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:1421",
     "beforeBuildCommand": "yarn build",
     "frontendDist": "../dist"
   },
