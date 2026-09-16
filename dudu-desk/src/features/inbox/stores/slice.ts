@@ -9,6 +9,12 @@ import { readReducers } from "./read-reducers";
 import { sendReducers } from "./send-reducers";
 import { initialInboxState } from "./state";
 
+/**
+ * Single assembly seam for the inbox store: reducer transition shells stay in
+ * their owning modules (queue, send, read, event, parallel, attachment,
+ * detail) and spread here so dispatch and the root reducer see one interface.
+ * The spread adds no behavior by design — depth lives in the owning modules.
+ */
 const inboxSlice = createSlice({
   name: "inbox",
   initialState: initialInboxState({

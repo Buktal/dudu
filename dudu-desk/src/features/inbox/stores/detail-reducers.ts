@@ -1,7 +1,7 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
 import type { Conversation, VisitorProfile } from "../types";
-import { mergeConversation } from "./read-reducers";
+import { mergeConversation } from "./live-merge";
 import type { InboxState, ProfileChanges } from "./state";
 
 export const detailReducers = {

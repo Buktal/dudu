@@ -1,6 +1,5 @@
 import { DeskApiError } from "@/lib/api-response";
-import { replyReadiness } from "../reply-pipeline";
-import { sendTarget } from "../sending-rules";
+import { buildReplySubmission, replyReadiness } from "../reply-pipeline";
 import type { InboxMessage } from "../types";
 import { receiveNext } from "./next-reception";
 import {
@@ -121,45 +120,29 @@ export function sendReply(
     const media = attachments.flatMap((attachment) =>
       attachment.media ? [attachment.media] : [],
     );
-    const message: InboxMessage = {
-      id: `client:${clientRequestId}`,
-      clientRequestId,
-      conversationId,
-      direction: "outgoing",
-      body: media.length
-        ? { type: "reply", text: draft.text, attachments: media }
-        : { type: "text", text: draft.text },
-      createdAt: runtime.now(),
-      sequence:
-        Math.max(
-          0,
-          ...Object.values(state.messages)
-            .filter((item) => item.conversationId === conversationId)
-            .map((item) => item.sequence),
-        ) + 1,
-      version: 0,
-      delivery: { state: "sending" },
-    };
-    const submission: ReplySubmission = {
-      request: {
-        clientRequestId,
-        target: sendTarget(conversation),
-        text: draft.text,
-        attachments: media,
-      },
-      messageId: message.id,
+    // Compare events with what was known at submission, even if history arrives first.
+    const { submission, message } = buildReplySubmission({
+      conversation,
+      text: draft.text,
       draftRevision: draft.revision,
       textRevision: draft.textRevision,
       draftAttachmentIds: [...draft.attachmentIds],
-      selectionRevision: state.selectionRevision,
-      // Compare events with what was known at submission, even if history arrives first.
+      media,
+      maxSequence: Math.max(
+        0,
+        ...Object.values(state.messages)
+          .filter((item) => item.conversationId === conversationId)
+          .map((item) => item.sequence),
+      ),
       incomingSequence: Math.max(
         state.events.incomingSequence[conversationId] ?? 0,
         latestIncomingSequence(state.messages, conversationId),
       ),
+      selectionRevision: state.selectionRevision,
+      clientRequestId,
+      now: runtime.now(),
       next,
-      status: "sending",
-    };
+    });
     await dispatch(deliver(submission, message));
   };
 }

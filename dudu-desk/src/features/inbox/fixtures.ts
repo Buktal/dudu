@@ -1,4 +1,10 @@
-import type { Conversation, InboxMessage, VisitorProfile } from "./types";
+import type {
+  Conversation,
+  InboxMessage,
+  ReplyCapability,
+  SendKind,
+  VisitorProfile,
+} from "./types";
 
 /**
  * FixtureBuilder module: one place that knows what a valid Conversation
@@ -47,4 +53,45 @@ export function defineProfile(
     note: "",
     ...input,
   };
+}
+
+/**
+ * Test-world card: the paired conversations the store suites share. Litmus
+ * (name, preview, unread) lives here, so the two cards cannot drift apart by
+ * editing only one of them.
+ */
+export function defineTestConversation(
+  input: Pick<Conversation, "id" | "identity"> & Partial<Conversation>,
+): Conversation {
+  return defineConversation({
+    status: "needs-reply",
+    unread: 1,
+    preview: "你好，想问一下",
+    ...input,
+  });
+}
+
+export function allowedCapability(
+  kinds: SendKind[],
+  attachments?: ReplyCapability["attachments"],
+): ReplyCapability {
+  return {
+    state: "allowed",
+    kinds,
+    ...(attachments ? { attachments } : {}),
+  };
+}
+
+export function restrictedCapability(
+  reason: string,
+  nextStep: string,
+): ReplyCapability {
+  return { state: "restricted", kinds: [], reason, nextStep };
+}
+
+export function unknownCapability(
+  reason: string,
+  nextStep: string,
+): ReplyCapability {
+  return { state: "unknown", kinds: [], reason, nextStep };
 }

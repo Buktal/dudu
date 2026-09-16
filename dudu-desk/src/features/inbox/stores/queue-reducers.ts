@@ -1,12 +1,12 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
-import { matchesConversationFilters } from "../conversation-query";
+import { isQueueMember } from "../conversation-query";
 import type {
   Conversation,
   ConversationPage,
   ConversationQuery,
 } from "../types";
-import { mergeConversation } from "./read-reducers";
+import { mergeConversation } from "./live-merge";
 import { emptyLoad, type InboxState } from "./state";
 
 /**
@@ -58,11 +58,7 @@ export const queueReducers = {
         ...previousIds.filter((id) => append || retained.has(id)),
         ...ids,
       ]),
-    ].filter(
-      (id) =>
-        !!state.conversations[id] &&
-        matchesConversationFilters(state.conversations[id], state.queue.query),
-    );
+    ].filter((id) => isQueueMember(state.conversations, id, state.queue.query));
     state.queue.status = "ready";
     state.queue.hasLoaded = true;
     state.queue.nextCursor = page.nextCursor;

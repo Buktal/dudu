@@ -1,11 +1,7 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
 import type { Conversation, InboxMessage } from "../types";
-import {
-  mergeConversation,
-  mergeMessage,
-  orderMessages,
-} from "./read-reducers";
+import { mergeConversation, mergeMessage, orderMessages } from "./live-merge";
 import {
   blankDraft,
   emptyLoad,

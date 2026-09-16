@@ -1,21 +1,17 @@
-import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxSelector } from "../hooks/use-inbox-store";
 import { useVisitorPanel } from "../hooks/use-visitor-panel";
 import { selectFocusedId } from "../stores/selectors";
 import { ConversationPane } from "./conversation-pane";
 import { ConversationSidebar } from "./conversation-sidebar";
 import { InboxEmpty } from "./inbox-state";
+import { ReceptionBackButton, useListPane } from "./reception-shell";
 import { VisitorInfoPanel } from "./visitor-info-panel";
 
 export function CalmWorkspace() {
   const activeId = useInboxSelector(selectFocusedId);
-  const [showQueue, setShowQueue] = useState(true);
+  const [showQueue, setShowQueue] = useListPane({ initial: true });
   const info = useVisitorPanel();
-  useInboxSearch(() => setShowQueue(true));
   return (
     <div className="flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:14px] max-[1360px]:[--workspace-gap:10px] max-[760px]:[--workspace-gap:4px]">
       <div
@@ -32,17 +28,7 @@ export function CalmWorkspace() {
           showQueue && "max-[760px]:hidden",
         )}
       >
-        {activeId && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mb-1 justify-start min-[761px]:hidden"
-            onClick={() => setShowQueue(true)}
-          >
-            <ArrowLeft data-icon="inline-start" />
-            返回会话列表
-          </Button>
-        )}
+        {activeId && <ReceptionBackButton onBack={() => setShowQueue(true)} />}
         {activeId ? (
           <ConversationPane
             conversationId={activeId}

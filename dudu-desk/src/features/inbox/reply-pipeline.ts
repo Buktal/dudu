@@ -1,5 +1,12 @@
 import { replyRestriction } from "./reply-policy";
-import type { ConnectionState, Conversation } from "./types";
+import { sendTarget } from "./sending-rules";
+import type { StartSubmission } from "./stores/state";
+import type {
+  ConnectionState,
+  Conversation,
+  InboxMessage,
+  MediaReference,
+} from "./types";
 
 export { composerIntent } from "./sending-rules";
 
@@ -61,4 +68,62 @@ export function replyReadiness(input: {
       notice: "请等待附件准备完成，或移除失败附件",
     };
   return { sendable: true, notice: null };
+}
+
+export type ReplySubmissionInput = {
+  conversation: Conversation;
+  text: string;
+  draftRevision: number;
+  textRevision: number;
+  draftAttachmentIds: string[];
+  media: MediaReference[];
+  maxSequence: number;
+  incomingSequence: number;
+  selectionRevision: number;
+  clientRequestId: string;
+  now: string;
+  next: boolean;
+};
+
+/**
+ * Build the optimistic message + submission pair for one accepted draft. Owns
+ * the body shape (text vs reply), the client id correlation and the
+ * at-submission watermarks, so sendReply and retryReply share one
+ * construction site instead of rebuilding it at each call site.
+ */
+export function buildReplySubmission(
+  input: ReplySubmissionInput,
+): StartSubmission {
+  const message: InboxMessage = {
+    id: `client:${input.clientRequestId}`,
+    clientRequestId: input.clientRequestId,
+    conversationId: input.conversation.id,
+    direction: "outgoing",
+    body: input.media.length
+      ? { type: "reply", text: input.text, attachments: input.media }
+      : { type: "text", text: input.text },
+    createdAt: input.now,
+    sequence: input.maxSequence + 1,
+    version: 0,
+    delivery: { state: "sending" },
+  };
+  return {
+    message,
+    submission: {
+      request: {
+        clientRequestId: input.clientRequestId,
+        target: sendTarget(input.conversation),
+        text: input.text,
+        attachments: input.media,
+      },
+      messageId: message.id,
+      draftRevision: input.draftRevision,
+      textRevision: input.textRevision,
+      draftAttachmentIds: [...input.draftAttachmentIds],
+      selectionRevision: input.selectionRevision,
+      incomingSequence: input.incomingSequence,
+      next: input.next,
+      status: "sending",
+    },
+  };
 }

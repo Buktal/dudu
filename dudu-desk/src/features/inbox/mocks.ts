@@ -1,6 +1,11 @@
 import { en, Faker, zh_CN } from "@faker-js/faker";
 import { relativeIso } from "@/lib/time";
-import { defineConversation } from "./fixtures";
+import {
+  allowedCapability,
+  defineConversation,
+  restrictedCapability,
+  unknownCapability,
+} from "./fixtures";
 import {
   type DevelopmentTurn,
   developmentEarlierTurns,
@@ -34,25 +39,17 @@ const screenshot = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
 
 function capability(index: number): ReplyCapability {
   if (index === 4) {
-    return {
-      state: "restricted",
-      kinds: [],
-      reason: "渠道回复窗口已关闭",
-      nextStep: "等待来访用户再次发起咨询",
-    };
+    return restrictedCapability(
+      "渠道回复窗口已关闭",
+      "等待来访用户再次发起咨询",
+    );
   }
   if (index === 5) {
-    return {
-      state: "unknown",
-      kinds: [],
-      reason: "暂未获取到渠道的回复权限",
-      nextStep: "请刷新会话后重试",
-    };
+    return unknownCapability("暂未获取到渠道的回复权限", "请刷新会话后重试");
   }
-  return {
-    state: "allowed",
-    kinds: index === 6 ? ["text"] : ["text", "image", "file", "audio", "video"],
-    attachments: {
+  return allowedCapability(
+    index === 6 ? ["text"] : ["text", "image", "file", "audio", "video"],
+    {
       maxBytes: 20 * 1024 * 1024,
       maxCount: 4,
       mimeTypes: [
@@ -63,7 +60,7 @@ function capability(index: number): ReplyCapability {
         "text/plain",
       ],
     },
-  };
+  );
 }
 
 function mediaBodies(): MessageBody[] {

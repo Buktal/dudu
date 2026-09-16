@@ -1,6 +1,14 @@
 import { createSelector } from "@reduxjs/toolkit";
-import { compareConversations } from "../conversation-query";
 import type { InboxRootState } from "./store";
+
+/**
+ * Re-exported from the Conversation queue module (queue.ts), which owns the
+ * queue read interface alongside the refresh/more/retry lifecycle.
+ */
+export {
+  selectQueueConversations,
+  selectQuickQueueConversations,
+} from "./queue";
 
 export const selectInbox = (state: InboxRootState) => state.inbox;
 export const selectQueue = (state: InboxRootState) => state.inbox.queue;
@@ -22,21 +30,6 @@ export const selectPinnedConversation = (state: InboxRootState) =>
   state.inbox.pinnedId
     ? state.inbox.conversations[state.inbox.pinnedId]
     : undefined;
-export const selectQuickQueueConversations = createSelector(
-  [
-    (state: InboxRootState) => state.inbox.queue.ids,
-    (state: InboxRootState) => state.inbox.conversations,
-  ],
-  (ids, conversations) => ids.map((id) => conversations[id]).filter(Boolean),
-);
-export const selectQueueConversations = createSelector(
-  [
-    selectQuickQueueConversations,
-    (state: InboxRootState) => state.inbox.queue.query.order,
-  ],
-  (conversations, order) =>
-    [...conversations].sort(compareConversations(order)),
-);
 const emptyIds: string[] = [];
 export const selectMessages = createSelector(
   [

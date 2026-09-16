@@ -10,7 +10,15 @@ export type DeskRequest<T> = {
   fetcher?: typeof fetch;
 };
 
-/** Routes and response parsers belong to the adapter implementing InboxApi. */
+/**
+ * Routes and response parsers belong to the adapter implementing InboxApi.
+ *
+ * Seam status: the InboxApi seam itself is real (development + unavailable
+ * adapters), but the production HTTP adapter is not built yet, so this
+ * transport helper has no production caller. Kept intentionally — the future
+ * production adapter is constructed on it — and exercised by desk-http.test.ts
+ * until that second caller arrives.
+ */
 export async function requestDesk<T>(request: DeskRequest<T>): Promise<T> {
   throwIfAborted(request.signal);
   const response = await (request.fetcher ?? fetch)(request.url, {

@@ -1,10 +1,14 @@
 import { type InboxApi, unavailableInboxApi } from "../api";
-import { defineConversation, defineMessage, defineProfile } from "../fixtures";
+import {
+  defineMessage,
+  defineProfile,
+  defineTestConversation,
+} from "../fixtures";
 import type { Conversation, InboxMessage, SendSubmission } from "../types";
 import { startInboxUpdates } from "./events";
 import { createInboxStore } from "./store";
 
-export const firstConversation: Conversation = defineConversation({
+export const firstConversation: Conversation = defineTestConversation({
   id: "conversation-a",
   identity: {
     id: "visitor-a",
@@ -15,14 +19,11 @@ export const firstConversation: Conversation = defineConversation({
     accountId: "account-a",
     accountName: "品牌旗舰店",
   },
-  status: "needs-reply",
-  unread: 1,
-  preview: "你好，想问一下",
   updatedAt: "2026-09-16T00:00:00Z",
 });
-export const secondConversation: Conversation = defineConversation({
-  // Same-name visitor as firstConversation on a different account: keep the
-  // shared literals (name, preview, unread) in sync when either card changes.
+export const secondConversation: Conversation = defineTestConversation({
+  // Same-name visitor as firstConversation on a different account; shared
+  // litmus comes from defineTestConversation, not from editing both cards.
   id: "conversation-b",
   identity: {
     id: "visitor-b",
@@ -33,9 +34,6 @@ export const secondConversation: Conversation = defineConversation({
     accountId: "account-b",
     accountName: "海外服务",
   },
-  status: "needs-reply",
-  unread: 1,
-  preview: "你好，想问一下",
   updatedAt: "2026-09-16T00:00:00Z",
 });
 

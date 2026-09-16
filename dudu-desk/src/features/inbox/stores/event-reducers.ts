@@ -1,6 +1,6 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
-import { matchesConversationFilters } from "../conversation-query";
+import { isQueueMember } from "../conversation-query";
 import type {
   ConnectionState,
   Conversation,
@@ -11,10 +11,11 @@ import type {
   ReplyCapability,
 } from "../types";
 import {
+  detachConversation,
   mergeConversation,
   mergeMessage,
   orderMessages,
-} from "./read-reducers";
+} from "./live-merge";
 import {
   emptyLoad,
   type InboxState,
@@ -41,9 +42,7 @@ export const eventReducers = {
         ),
         ...recoveredIds,
       ]),
-    ].filter((id) =>
-      matchesConversationFilters(state.conversations[id], state.queue.query),
-    );
+    ].filter((id) => isQueueMember(state.conversations, id, state.queue.query));
     state.queue.hasLoaded = true;
     state.queue.status = "ready";
     state.queue.error = null;
@@ -215,47 +214,12 @@ export const eventReducers = {
       );
       if (event.version < newest) return;
       state.events.removed[id] = event.version;
-      const selected =
-        state.activeId === id ||
-        state.replyId === id ||
-        state.pinnedId === id ||
-        state.quickHistoryId === id;
-      if (state.activeId === id) state.activeId = null;
-      if (state.replyId === id) state.replyId = null;
-      if (state.quickHistoryId === id) state.quickHistoryId = null;
-      if (state.pinnedId === id) {
-        state.pinnedId = null;
-        state.pinCollapsed = false;
-      }
-      if (selected) {
+      if (detachConversation(state, id)) {
         state.selectionRevision++;
         state.notice = {
           kind: "information",
           message: "这段会话已不可用，请选择其他会话继续接待。",
         };
-      }
-      state.queue.ids = state.queue.ids.filter((item) => item !== id);
-      delete state.conversations[id];
-      delete state.histories[id];
-      delete state.profiles[id];
-      delete state.profileEdits[id];
-      delete state.starUpdates[id];
-      delete state.ending[id];
-      delete state.sendingByConversation[id];
-      delete state.events.readingThrough[id];
-      delete state.events.incomingSequence[id];
-      for (const message of Object.values(state.messages)) {
-        if (message.conversationId !== id) continue;
-        delete state.messages[message.id];
-        delete state.submissions[message.id];
-      }
-      for (const attachment of Object.values(state.attachments))
-        if (attachment.conversationId === id)
-          delete state.attachments[attachment.id];
-      const draft = state.drafts[id];
-      if (draft?.attachmentIds.length) {
-        draft.attachmentIds = [];
-        draft.revision++;
       }
     }
   },

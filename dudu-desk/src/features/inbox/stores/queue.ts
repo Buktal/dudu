@@ -1,9 +1,32 @@
+import { createSelector } from "@reduxjs/toolkit";
 import { DeskApiError } from "@/lib/api-response";
+import { compareConversations } from "../conversation-query";
 import type { ConversationPage, ConversationQuery } from "../types";
 import { selectConversation } from "./reading";
 import { failureOf, runOperation } from "./requests";
 import { inboxActions } from "./slice";
-import type { InboxCommand } from "./store";
+import type { InboxCommand, InboxRootState } from "./store";
+
+/**
+ * Conversation queue read interface: queue order and the sorted queue view.
+ * Lives with the queue lifecycle above, so query/cursors/counts and their
+ * sorted projection change in one module.
+ */
+export const selectQuickQueueConversations = createSelector(
+  [
+    (state: InboxRootState) => state.inbox.queue.ids,
+    (state: InboxRootState) => state.inbox.conversations,
+  ],
+  (ids, conversations) => ids.map((id) => conversations[id]).filter(Boolean),
+);
+export const selectQueueConversations = createSelector(
+  [
+    selectQuickQueueConversations,
+    (state: InboxRootState) => state.inbox.queue.query.order,
+  ],
+  (conversations, order) =>
+    [...conversations].sort(compareConversations(order)),
+);
 
 /**
  * Conversation queue module: owns the queue query, cursors, counts and the

@@ -17,6 +17,18 @@ export function matchesConversationFilters(
   );
 }
 
+/**
+ * One predicate for queue membership, shared by the queue reducers, the Live
+ * events reconciler and the merge kernel. Missing conversations never belong.
+ */
+export function isQueueMember(
+  conversations: Record<string, Conversation | undefined>,
+  id: string,
+  query: ConversationQuery,
+): boolean {
+  return matchesConversationFilters(conversations[id], query);
+}
+
 export function matchesConversationText(
   conversation: Conversation,
   search: string,

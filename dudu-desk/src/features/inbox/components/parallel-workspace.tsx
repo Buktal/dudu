@@ -1,11 +1,9 @@
-import { ArrowLeft } from "lucide-react";
 import { useIsPresent } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WorkspacePanel } from "@/components/workspace-motion";
 import { cn } from "@/lib/utils";
-import { hasOpenOverlay, useInboxSearch } from "../hooks/use-inbox-shortcuts";
+import { hasOpenOverlay } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { useVisitorPanel } from "../hooks/use-visitor-panel";
 import {
@@ -24,6 +22,7 @@ import { visitorName } from "./identity";
 import { InboxEmpty } from "./inbox-state";
 import { ParallelToolbar } from "./parallel-toolbar";
 import { PinnedConversationPicker } from "./pin-picker";
+import { ReceptionBackButton, useListPane } from "./reception-shell";
 import { VisitorInfoPanel } from "./visitor-info-panel";
 
 export function ParallelWorkspace() {
@@ -35,9 +34,10 @@ export function ParallelWorkspace() {
   const replyId = useInboxSelector((state) => state.inbox.replyId);
   const primary = useInboxSelector(selectActiveConversation);
   const pinned = useInboxSelector(selectPinnedConversation);
-  const [showQueue, setShowQueue] = useState(
-    !primaryId && !pinnedId && !replyId,
-  );
+  const [showQueue, setShowQueue] = useListPane({
+    initial: !primaryId && !pinnedId && !replyId,
+    onOpen: () => setQueueCollapsed(false),
+  });
   const [queueCollapsed, setQueueCollapsed] = useState(false);
   const info = useVisitorPanel();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -47,8 +47,7 @@ export function ParallelWorkspace() {
   const openQueue = useCallback(() => {
     setQueueCollapsed(false);
     setShowQueue(true);
-  }, []);
-  useInboxSearch(openQueue);
+  }, [setShowQueue]);
 
   useEffect(() => {
     void dispatch(enterParallel());
@@ -67,7 +66,7 @@ export function ParallelWorkspace() {
           ?.focus();
       });
     },
-    [dispatch, primaryId, pinnedId],
+    [dispatch, primaryId, pinnedId, setShowQueue],
   );
 
   useEffect(() => {
@@ -116,15 +115,7 @@ export function ParallelWorkspace() {
           showQueue && "max-[760px]:hidden",
         )}
       >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mb-1 justify-start min-[761px]:hidden"
-          onClick={openQueue}
-        >
-          <ArrowLeft data-icon="inline-start" />
-          返回会话列表
-        </Button>
+        <ReceptionBackButton onBack={openQueue} />
         <ParallelToolbar
           queueCollapsed={queueCollapsed}
           onToggleQueue={() => setQueueCollapsed((collapsed) => !collapsed)}

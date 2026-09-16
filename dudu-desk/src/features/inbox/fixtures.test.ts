@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { defineConversation } from "./fixtures";
-import { firstConversation } from "./stores/test-support";
+import {
+  allowedCapability,
+  defineConversation,
+  defineTestConversation,
+  restrictedCapability,
+  unknownCapability,
+} from "./fixtures";
+import { firstConversation, secondConversation } from "./stores/test-support";
 
 const identity = {
   id: "visitor-a",
@@ -32,6 +38,39 @@ describe("fixture builder", () => {
       preview: "你好，想问一下",
       version: 1,
       capability: { state: "allowed", kinds: ["text"] },
+    });
+  });
+
+  it("shares litmus between the paired test cards", () => {
+    expect(secondConversation).toMatchObject({
+      status: firstConversation.status,
+      unread: firstConversation.unread,
+      preview: firstConversation.preview,
+    });
+    expect(
+      defineTestConversation({
+        id: "x",
+        identity: firstConversation.identity,
+      }).preview,
+    ).toBe("你好，想问一下");
+  });
+
+  it("builds capability variants through one site", () => {
+    expect(allowedCapability(["text"])).toEqual({
+      state: "allowed",
+      kinds: ["text"],
+    });
+    expect(restrictedCapability("r", "n")).toEqual({
+      state: "restricted",
+      kinds: [],
+      reason: "r",
+      nextStep: "n",
+    });
+    expect(unknownCapability("r", "n")).toEqual({
+      state: "unknown",
+      kinds: [],
+      reason: "r",
+      nextStep: "n",
     });
   });
 });

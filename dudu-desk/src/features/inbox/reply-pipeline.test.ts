@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineConversation } from "./fixtures";
-import { replyReadiness } from "./reply-pipeline";
+import { buildReplySubmission, replyReadiness } from "./reply-pipeline";
 import type { Conversation } from "./types";
 
 const NOW = "2026-09-16T00:01:00Z";
@@ -179,5 +179,75 @@ describe("Reply pipeline readiness", () => {
         now: NOW,
       }),
     ).toEqual({ sendable: true, notice: null });
+  });
+});
+
+describe("Reply pipeline submission builder", () => {
+  it("builds a text message one sequence past the max", () => {
+    const { message, submission } = buildReplySubmission({
+      conversation: conversation(),
+      text: "你好",
+      draftRevision: 3,
+      textRevision: 2,
+      draftAttachmentIds: [],
+      media: [],
+      maxSequence: 7,
+      incomingSequence: 7,
+      selectionRevision: 1,
+      clientRequestId: "request-1",
+      now: NOW,
+      next: false,
+    });
+    expect(message).toMatchObject({
+      id: "client:request-1",
+      conversationId: "conversation-a",
+      direction: "outgoing",
+      body: { type: "text", text: "你好" },
+      sequence: 8,
+      delivery: { state: "sending" },
+    });
+    expect(submission).toMatchObject({
+      messageId: "client:request-1",
+      draftRevision: 3,
+      textRevision: 2,
+      incomingSequence: 7,
+      selectionRevision: 1,
+      next: false,
+      status: "sending",
+    });
+    expect(submission.request.target.conversationId).toBe("conversation-a");
+  });
+
+  it("builds a reply body carrying the prepared media", () => {
+    const media = [
+      {
+        id: "m1",
+        kind: "image" as const,
+        name: "a.png",
+        mimeType: "image/png",
+        size: 10,
+      },
+    ];
+    const { message, submission } = buildReplySubmission({
+      conversation: conversation(),
+      text: "见图",
+      draftRevision: 1,
+      textRevision: 1,
+      draftAttachmentIds: ["draft-1"],
+      media,
+      maxSequence: 0,
+      incomingSequence: 0,
+      selectionRevision: 0,
+      clientRequestId: "request-2",
+      now: NOW,
+      next: true,
+    });
+    expect(message.body).toEqual({
+      type: "reply",
+      text: "见图",
+      attachments: media,
+    });
+    expect(submission.next).toBe(true);
+    expect(submission.draftAttachmentIds).toEqual(["draft-1"]);
   });
 });
