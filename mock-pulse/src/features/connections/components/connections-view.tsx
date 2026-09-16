@@ -1,3 +1,4 @@
+import { isEqual } from "lodash-es";
 import {
   CheckCircle2Icon,
   KeyRoundIcon,
@@ -60,7 +61,7 @@ export function ConnectionsView() {
     state.drafts?.[channel] ??
     saved ??
     channelTraits(channel).defaultConnection;
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const dirty = !isEqual(draft, saved);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
   const staleTest = changedSinceTest[channel];

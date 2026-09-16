@@ -1,5 +1,7 @@
+import { get, toPath } from "lodash-es";
+
 import { buildFormBody, parseFormBody } from "./form";
-import { keyParts, safePath } from "./paths";
+import { safePath } from "./paths";
 import type { EventSchema, WireForm, WirePayload } from "./schemas";
 import { buildXmlBody, parseXmlBody } from "./xml";
 
@@ -8,7 +10,7 @@ import { buildXmlBody, parseXmlBody } from "./xml";
  * 发送者 ID 同步。全部为纯函数。
  * 线上形态按 schema.wire 分发：抖音 JSON（紧凑序列化）、企微 XML（确定性
  * 拼装）、美团 form（确定性拼装，./form 单点）。
- * 路径工具（keyParts/safePath）见 ./paths，各模块直接导入；
+ * 路径安全守卫（safePath）见 ./paths，各模块直接导入；
  * 表单字段解析（描述符 ∪ 载荷叶子 + 用户定义合并）见 ./definitions/resolve。
  */
 
@@ -20,14 +22,13 @@ export function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+/**
+ * 按点路径读取载荷值。safePath 守卫前置：lodash get 会沿
+ * `a[__proto__]`/`constructor.prototype` 穿透原型（实测返回
+ * Object.prototype），守卫拒绝保留名段后读取不穿透，与写侧 setAt 对称。
+ */
 export function getAt(obj: unknown, path: string): unknown {
-  return keyParts(path).reduce<unknown>(
-    (value, key) =>
-      value != null && typeof value === "object"
-        ? (value as Record<string, unknown>)[key]
-        : undefined,
-    obj,
-  );
+  return safePath(path) ? get(obj, path) : undefined;
 }
 
 /** 剧本卡片展示消息内容，完整载荷仍由版本与运行快照保存。 */
@@ -113,7 +114,7 @@ export function setAt(
   if (!safePath(path)) {
     throw new Error(`字段路径不能包含保留名称：${path}`);
   }
-  const keys = keyParts(path);
+  const keys = toPath(path);
   let current: Record<string, unknown> = obj;
   keys.forEach((key, index) => {
     if (index === keys.length - 1) {

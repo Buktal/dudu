@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { isEqual } from "lodash-es";
 
 import { liveStarted, type RunPhase, runProgress } from "@/features/runs";
 import type { ChannelId } from "@/lib/channels";
@@ -248,7 +249,7 @@ export function selectPlanDirty(state: PlansState): boolean {
     saved.mode !== state.draft.mode ||
     saved.failure !== state.draft.failure ||
     saved.favorite !== state.draft.favorite ||
-    JSON.stringify(saved.items) !== JSON.stringify(state.draft.items)
+    !isEqual(saved.items, state.draft.items)
   );
 }
 

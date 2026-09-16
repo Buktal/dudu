@@ -1,3 +1,5 @@
+import { isEqual } from "lodash-es";
+
 import { discardConnectionDraft, saveConnection } from "@/features/connections";
 import { discardDraft, saveEvent, selectDraftDirty } from "@/features/events";
 import { discardPlanDraft, savePlan, selectPlanDirty } from "@/features/plans";
@@ -48,11 +50,7 @@ const VIEW_BEHAVIORS: Record<ViewId, ViewBehavior> = {
     isDirty: (root) => {
       const channel = root.connections.selectedChannel;
       const draft = root.connections.drafts?.[channel];
-      return (
-        !!draft &&
-        JSON.stringify(draft) !==
-          JSON.stringify(root.connections.items[channel])
-      );
+      return !!draft && !isEqual(draft, root.connections.items[channel]);
     },
     save: (root, dispatch) => {
       const draft = root.connections.drafts?.[root.connections.selectedChannel];

@@ -12,6 +12,20 @@ export function randomBytes(length: number): Uint8Array {
 }
 
 /**
+ * [0, span) 均匀随机整数：拒绝采样消模偏差——256 % span ≠ 0 时直接取模
+ * 会让前 256 % span 个值多出现一次，只接受 [0, 256 - 256 % span) 内的
+ * 字节，其余重抽（span 整除 256 时零拒绝）。
+ */
+function uniformBelow(span: number): number {
+  const limit = 256 - (256 % span);
+  let byte = randomBytes(1)[0];
+  while (byte >= limit) {
+    byte = randomBytes(1)[0];
+  }
+  return byte % span;
+}
+
+/**
  * 生成 length 位数字串（全程字符串不经 number，防 2^53 精度丢失）。
  * 首位约束决定数值上限语义：{min,max} 区间取样（如 {min:1,max:6} 保证
  * 恒小于 2^63-1）或固定首位（如 1，保证恒在 2^53 内）；缺省 1~9 非零。
@@ -20,26 +34,26 @@ export function randomDigits(
   length: number,
   firstDigit: number | { min: number; max: number } = { min: 1, max: 9 },
 ): string {
-  const bytes = randomBytes(length);
   const head =
     typeof firstDigit === "number"
       ? String(firstDigit)
       : String(
-          (bytes[0] % (firstDigit.max - firstDigit.min + 1)) + firstDigit.min,
+          uniformBelow(firstDigit.max - firstDigit.min + 1) + firstDigit.min,
         );
   let digits = head;
   for (let i = 1; i < length; i += 1) {
-    digits += String(bytes[i] % 10);
+    digits += String(uniformBelow(10));
   }
   return digits;
 }
 
-/** 从字符集均匀采样 length 位（byte % charset.length） */
+/** 从字符集均匀采样 length 位（拒绝采样，消 byte % length 的模偏差） */
 export function randomFromChars(charset: string, length: number): string {
-  return Array.from(
-    randomBytes(length),
-    (byte) => charset[byte % charset.length],
-  ).join("");
+  let sampled = "";
+  for (let i = 0; i < length; i += 1) {
+    sampled += charset[uniformBelow(charset.length)];
+  }
+  return sampled;
 }
 
 const HEX_CHARS = "0123456789abcdef";

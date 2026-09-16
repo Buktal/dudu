@@ -1,4 +1,5 @@
-import { keyParts } from "../paths";
+import { toPath } from "lodash-es";
+
 import { editorPayload, flattenPayload, type PayloadLeaf } from "../payload";
 import type {
   EventSchema,
@@ -104,7 +105,7 @@ export function resolveFields(
     a.path.localeCompare(b.path),
   );
   for (const leaf of extras) {
-    const parts = keyParts(leaf.path);
+    const parts = toPath(leaf.path);
     fields.push({
       path: leaf.path,
       title: parts[parts.length - 1] || leaf.path,

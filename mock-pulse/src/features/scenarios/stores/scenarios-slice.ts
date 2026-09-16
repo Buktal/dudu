@@ -3,6 +3,7 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
+import { isEqual } from "lodash-es";
 import {
   EVENT_SCHEMAS,
   type EventItem,
@@ -413,7 +414,7 @@ export function selectScenarioDirty(state: ScenariosState): boolean {
     saved.channelId !== state.draft.channelId ||
     !!saved.favorite !== !!state.draft.favorite ||
     (saved.failure ?? "stop") !== (state.draft.failure ?? "stop") ||
-    JSON.stringify(saved.steps) !== JSON.stringify(state.draft.steps)
+    !isEqual(saved.steps, state.draft.steps)
   );
 }
 
