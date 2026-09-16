@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { elapsedSeconds, fullTime, messageTime, nowIso } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { conversationStatusLabels } from "../presentation";
 import type { Conversation } from "../types";
 
 const listeners = new Set<() => void>();
@@ -30,7 +31,11 @@ function WaitingDuration({ since }: { since: string }) {
   const now = useSyncExternalStore(subscribe, snapshot, snapshot);
   const seconds = elapsedSeconds(since, now);
   if (seconds === undefined)
-    return <span className="text-[10px] text-muted-foreground">待回复</span>;
+    return (
+      <span className="text-[10px] text-muted-foreground">
+        {conversationStatusLabels["needs-reply"]}
+      </span>
+    );
   const duration =
     seconds >= 3600
       ? `${Math.floor(seconds / 3600)} 小时`
@@ -61,7 +66,7 @@ export function WaitingTime({ conversation }: { conversation: Conversation }) {
       className="shrink-0 text-[10px] tabular-nums text-muted-foreground"
     >
       {conversation.status === "needs-reply"
-        ? "待回复"
+        ? conversationStatusLabels["needs-reply"]
         : messageTime(conversation.updatedAt)}
     </time>
   );

@@ -1,13 +1,8 @@
+import { Pin, PinOff, Plus } from "lucide-react";
 import {
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
-  Pin,
-  PinOff,
-  Plus,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+  WorkspaceAction,
+  WorkspacePanelToggle,
+} from "@/components/workspace-action";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import {
   collapsePinned,
@@ -65,70 +60,50 @@ export function ParallelToolbar({
           )}
         </p>
         <div className="ml-auto flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
+          <WorkspacePanelToggle
+            side="left"
+            open={!queueCollapsed}
+            label="会话列表"
             className="max-[760px]:hidden"
-            aria-expanded={!queueCollapsed}
-            aria-label={queueCollapsed ? "展开会话列表" : "收起会话列表"}
-            title={queueCollapsed ? "展开会话列表" : "收起会话列表"}
-            onClick={onToggleQueue}
-          >
-            {queueCollapsed ? (
-              <PanelLeftOpen data-icon="inline-start" />
-            ) : (
-              <PanelLeftClose data-icon="inline-start" />
-            )}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onPick}>
-            <Plus data-icon="inline-start" />
-            {pinnedId ? "更换固定会话" : "添加并排对话"}
-          </Button>
+            onToggle={onToggleQueue}
+          />
+          <WorkspaceAction
+            icon={Plus}
+            label={pinnedId ? "更换固定会话" : "添加并排对话"}
+            onClick={onPick}
+            showLabel
+          />
           {pinnedId && (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={!collapsed}
-              onClick={() => {
+            <WorkspacePanelToggle
+              side="right"
+              open={!collapsed}
+              label="固定窗"
+              showLabel
+              onToggle={() => {
                 if (collapsed) {
                   void dispatch(restorePinned());
                   onPinned();
                 } else dispatch(collapsePinned());
               }}
-            >
-              {collapsed ? (
-                <PanelRightOpen data-icon="inline-start" />
-              ) : (
-                <PanelRightClose data-icon="inline-start" />
-              )}
-              {collapsed ? "展开固定窗" : "收起固定窗"}
-            </Button>
+            />
           )}
-          <Button
-            variant="ghost"
-            size="icon-sm"
+          <WorkspaceAction
+            icon={Pin}
             disabled={!primary || primary.status === "closed"}
-            aria-label="将主接待固定到右窗"
-            title="将主接待固定到右窗"
+            label="将主接待固定到右窗"
             onClick={() => {
               if (primary) {
                 void dispatch(pinConversation(primary.id));
                 onPinned();
               }
             }}
-          >
-            <Pin data-icon="inline-start" />
-          </Button>
+          />
           {pinnedId && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="解除固定会话"
-              title="解除固定会话"
+            <WorkspaceAction
+              icon={PinOff}
+              label="解除固定会话"
               onClick={() => dispatch(unpinConversation())}
-            >
-              <PinOff data-icon="inline-start" />
-            </Button>
+            />
           )}
         </div>
       </div>

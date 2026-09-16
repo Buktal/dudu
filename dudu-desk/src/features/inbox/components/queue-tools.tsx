@@ -19,28 +19,16 @@ import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
+import {
+  queueOrders as orders,
+  queueCountLabel,
+  queueStatuses as statuses,
+} from "../presentation";
 import { loadConversations } from "../stores/reading";
 import { emptyQuery } from "../stores/state";
 import type { ConversationQuery } from "../types";
 
-const statuses = [
-  { value: "active", label: "全部", count: "active" },
-  { value: "needs-reply", label: "待回复", count: "needsReply" },
-  { value: "waiting", label: "等待", count: "waiting" },
-  { value: "closed", label: "已结束", count: "closed" },
-] as const;
-const orders = [
-  { value: "wait", label: "等待最久" },
-  { value: "messages", label: "消息最多" },
-];
-
-export function QueueTools({
-  compact = false,
-  showOrder = true,
-}: {
-  compact?: boolean;
-  showOrder?: boolean;
-}) {
+export function QueueTools({ compact = false }: { compact?: boolean }) {
   const dispatch = useInboxDispatch();
   const {
     query,
@@ -122,7 +110,7 @@ export function QueueTools({
                   aria-hidden="true"
                   className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
                 >
-                  {count > 999 ? "999+" : count}
+                  {queueCountLabel(count)}
                 </span>
               )}
             </ToggleGroupItem>
@@ -189,7 +177,7 @@ export function QueueTools({
       <div
         className={cn(
           "flex min-w-0 items-center gap-1.5",
-          compact && "min-[1100px]:w-32 min-[1100px]:shrink-0",
+          compact && "min-[1100px]:w-[236px] min-[1100px]:shrink-0",
         )}
       >
         <Field className="min-w-0 flex-1">
@@ -224,42 +212,40 @@ export function QueueTools({
             </SelectContent>
           </Select>
         </Field>
-        {showOrder && (
-          <Field className="min-w-0 flex-1">
-            <FieldLabel className="sr-only" htmlFor={`${id}-order`}>
-              会话排序
-            </FieldLabel>
-            <Select
-              items={orders}
-              value={query.order}
-              onValueChange={(value) => {
-                if (value === "wait" || value === "messages")
-                  change({ order: value });
-              }}
+        <Field className="min-w-0 flex-1">
+          <FieldLabel className="sr-only" htmlFor={`${id}-order`}>
+            会话排序
+          </FieldLabel>
+          <Select
+            items={orders}
+            value={query.order}
+            onValueChange={(value) => {
+              if (value === "wait" || value === "messages")
+                change({ order: value });
+            }}
+          >
+            <SelectTrigger
+              id={`${id}-order`}
+              size="sm"
+              className="w-full min-w-0 gap-1 rounded-lg px-1.5"
             >
-              <SelectTrigger
-                id={`${id}-order`}
-                size="sm"
-                className="w-full min-w-0 gap-1 rounded-lg px-1.5"
-              >
-                <SelectValue>
-                  <span className="text-xs">
-                    {query.order === "wait" ? "等待最久" : "消息最多"}
-                  </span>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                <SelectGroup>
-                  {orders.map((order) => (
-                    <SelectItem key={order.value} value={order.value}>
-                      {order.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-        )}
+              <SelectValue>
+                <span className="text-xs">
+                  {orders.find((order) => order.value === query.order)?.label}
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent alignItemWithTrigger={false}>
+              <SelectGroup>
+                {orders.map((order) => (
+                  <SelectItem key={order.value} value={order.value}>
+                    {order.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
       </div>
     </FieldGroup>
   );

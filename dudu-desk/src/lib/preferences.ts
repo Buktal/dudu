@@ -4,6 +4,7 @@ import { isPalette, type Palette } from "./theme-palette";
 export type WorkspacePreferences = Readonly<{
   theme: Palette;
   mode: ReceptionMode;
+  reduceMotion?: true;
 }>;
 
 type PreferenceStorage = Pick<Storage, "getItem" | "setItem">;
@@ -42,6 +43,9 @@ function parsePreferences(
         "theme" in record && isPalette(record.theme) ? record.theme : "apricot",
       mode:
         "mode" in record && isReceptionMode(record.mode) ? record.mode : "calm",
+      ...("reduceMotion" in record && record.reduceMotion === true
+        ? { reduceMotion: true as const }
+        : {}),
     };
   } catch {
     return defaults;
@@ -71,7 +75,12 @@ export function createWorkspacePreferences({
     safely(() =>
       target?.setItem(
         PREFERENCES_STORAGE_KEY,
-        JSON.stringify({ version: 1, theme: next.theme, mode: next.mode }),
+        JSON.stringify({
+          version: 1,
+          theme: next.theme,
+          mode: next.mode,
+          ...(next.reduceMotion ? { reduceMotion: true } : {}),
+        }),
       ),
     );
     for (const listener of listeners) listener();
@@ -96,6 +105,15 @@ export function createWorkspacePreferences({
     setMode: (mode: ReceptionMode) => {
       if (isReceptionMode(mode) && mode !== snapshot.mode)
         save({ ...snapshot, mode });
+    },
+    setReduceMotion: (reduce: boolean) => {
+      if (typeof reduce !== "boolean" || reduce === !!snapshot.reduceMotion)
+        return;
+      save({
+        theme: snapshot.theme,
+        mode: snapshot.mode,
+        ...(reduce ? { reduceMotion: true } : {}),
+      });
     },
   };
 }

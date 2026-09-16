@@ -1,26 +1,13 @@
-import { Columns2, LayoutGrid, MessageCircle } from "lucide-react";
-import { LayoutGroup, MotionConfig, motion } from "motion/react";
-import { type ReactNode, useId } from "react";
+import type { ReactNode } from "react";
 import { Brand } from "@/components/brand";
 import { DesktopWindowControls } from "@/components/desktop-window-controls";
+import { ReceptionModeSwitch } from "@/components/reception-mode-switch";
 import { ThemePicker } from "@/components/theme-picker";
 import { useTheme } from "@/components/theme-provider";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { WorkspaceMotion } from "@/components/workspace-motion";
 import { isDesktopWindow } from "@/lib/desktop-window";
-import {
-  isReceptionMode,
-  type ReceptionMode,
-  receptionModeKeys,
-  receptionModes,
-} from "@/lib/reception-mode";
-import { cn } from "@/lib/utils";
-
-const modeIcons = {
-  calm: MessageCircle,
-  parallel: Columns2,
-  quick: LayoutGrid,
-};
+import type { ReceptionMode } from "@/lib/reception-mode";
 
 export type WorkspaceShellProps = {
   mode: ReceptionMode;
@@ -36,10 +23,9 @@ export function WorkspaceShell({
   toolbarActions,
 }: WorkspaceShellProps) {
   const { theme, setTheme } = useTheme();
-  const modeLabelId = useId();
 
   return (
-    <MotionConfig reducedMotion="user">
+    <WorkspaceMotion>
       <TooltipProvider>
         <div className="isolate flex h-dvh min-h-0 flex-col overflow-hidden bg-background text-foreground">
           <header
@@ -50,62 +36,14 @@ export function WorkspaceShell({
               <Brand />
             </div>
             <div className="flex items-center justify-center gap-3 max-[760px]:col-span-2 max-[760px]:row-start-2">
-              <span
-                id={modeLabelId}
-                className="text-[11px] whitespace-nowrap text-muted-foreground max-[1180px]:sr-only"
-              >
+              <span className="text-[11px] whitespace-nowrap text-muted-foreground max-[1180px]:sr-only">
                 接待方式
               </span>
-              <LayoutGroup id={modeLabelId}>
-                <div className="rounded-xl border border-border bg-card p-1 max-[760px]:w-full">
-                  <ToggleGroup
-                    value={[mode]}
-                    aria-labelledby={modeLabelId}
-                    spacing={1}
-                    className="gap-1 max-[760px]:grid max-[760px]:w-full max-[760px]:grid-cols-3"
-                    onValueChange={(values) => {
-                      if (isReceptionMode(values[0])) onModeChange(values[0]);
-                    }}
-                  >
-                    {receptionModeKeys.map((key) => {
-                      const Icon = modeIcons[key];
-                      return (
-                        <ToggleGroupItem
-                          key={key}
-                          value={key}
-                          aria-label={`${receptionModes[key].name}模式`}
-                          title={receptionModes[key].description}
-                          className="relative min-w-[91px] rounded-lg max-[760px]:min-w-0"
-                        >
-                          {mode === key && (
-                            <motion.span
-                              aria-hidden="true"
-                              layoutId="reception-mode-selection"
-                              className="pointer-events-none absolute inset-0 rounded-lg border border-ring/15 bg-accent"
-                              transition={{
-                                type: "spring",
-                                stiffness: 360,
-                                damping: 30,
-                              }}
-                            />
-                          )}
-                          <span
-                            className={cn(
-                              "relative flex items-center gap-2",
-                              mode === key
-                                ? "text-primary"
-                                : "text-muted-foreground",
-                            )}
-                          >
-                            <Icon data-icon="inline-start" />
-                            <span>{receptionModes[key].name}</span>
-                          </span>
-                        </ToggleGroupItem>
-                      );
-                    })}
-                  </ToggleGroup>
-                </div>
-              </LayoutGroup>
+              <ReceptionModeSwitch
+                value={mode}
+                onChange={onModeChange}
+                className="max-[760px]:w-full"
+              />
             </div>
             <div className="flex min-w-0 items-center justify-end gap-1.5 max-[760px]:col-start-2 max-[760px]:row-start-1">
               <ThemePicker value={theme} onChange={setTheme} />
@@ -114,19 +52,16 @@ export function WorkspaceShell({
             </div>
           </header>
           <div className="flex min-h-0 flex-1">
-            <motion.main
+            <main
               aria-label="接待工作区"
               tabIndex={-1}
               className="flex min-h-0 min-w-0 flex-1 flex-col outline-none"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
             >
               {children}
-            </motion.main>
+            </main>
           </div>
         </div>
       </TooltipProvider>
-    </MotionConfig>
+    </WorkspaceMotion>
   );
 }

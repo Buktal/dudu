@@ -5,7 +5,6 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { messageTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -13,21 +12,23 @@ import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { messageSummary } from "../message-text";
 import { loadHistory } from "../stores/reading";
 import { selectMessages } from "../stores/selectors";
-import { focusReply, retryReply } from "../stores/sending";
+import { retryReply } from "../stores/sending";
 import type { Conversation } from "../types";
 import { Composer } from "./composer";
-import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
+import { ConversationHeader } from "./conversation-header";
+import { visitorName } from "./identity";
 import { deliveryLabels } from "./message-view";
-import { WaitingTime } from "./waiting-time";
 
 export function QuickCard({
   conversation,
   onHistory,
   onInfo,
+  infoOpen,
 }: {
   conversation: Conversation;
   onHistory: () => void;
   onInfo: () => void;
+  infoOpen: boolean;
 }) {
   const dispatch = useInboxDispatch();
   const selected = useInboxSelector(
@@ -57,42 +58,12 @@ export function QuickCard({
       )}
       aria-label={`${name} 的接待卡，${conversation.identity.channelName}，${conversation.identity.accountName}`}
     >
-      <header className="flex shrink-0 items-start gap-2 px-5 pt-[18px] max-[1260px]:px-4 max-[760px]:pt-4">
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-[11px] rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={`查看 ${name} 的资料，${conversation.identity.accountName}`}
-          onClick={() => {
-            dispatch(focusReply(conversation.id));
-            onInfo();
-          }}
-        >
-          <VisitorAvatar identity={conversation.identity} />
-          <span className="flex min-w-0 flex-1 flex-col items-start gap-[5px]">
-            <strong className="max-w-full truncate text-[15px] font-semibold">
-              {name}
-            </strong>
-            <span className="flex max-w-full min-w-0 items-center gap-[7px]">
-              <SourceBadge identity={conversation.identity} />
-              <span
-                className="truncate text-[10px] text-muted-foreground"
-                title={conversation.identity.accountName}
-              >
-                {conversation.identity.accountName}
-              </span>
-            </span>
-          </span>
-        </button>
-        {conversation.status === "needs-reply" ? (
-          <span className="shrink-0 rounded-md bg-muted px-2 py-0.5">
-            <WaitingTime conversation={conversation} />
-          </span>
-        ) : (
-          <Badge variant="secondary" className="shrink-0">
-            {conversation.status === "closed" ? "已结束" : "等待中"}
-          </Badge>
-        )}
-      </header>
+      <ConversationHeader
+        conversation={conversation}
+        compact
+        infoOpen={infoOpen}
+        onInfo={onInfo}
+      />
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-hidden px-5 pt-[15px] pb-2.5 max-[760px]:px-4 max-[760px]:pt-[13px]">
           <p className="mb-[5px] flex items-center gap-[7px] text-[10px] text-muted-foreground">

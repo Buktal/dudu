@@ -2,7 +2,28 @@
 
 本文件说明 [规格 #50](https://github.com/Buktal/dudu/issues/50) 对应的前端接入边界。准确的方法签名以 [api.ts](../src/features/inbox/api.ts) 为准，领域字段以 [types.ts](../src/features/inbox/types.ts) 为准；跨 feature 使用 [公开入口](../src/features/inbox/index.ts)。
 
-当前正式适配器为 `unavailableInboxApi`。本阶段未提供真实会话、历史、发送、上传或订阅服务；下文方法名是前端契约，实际 HTTP 路由、传输协议、登录入口和 Server 实现由下一阶段确定。开发替身遵循相同接口，开关及场景见 [开发联调说明](development.md)。
+当前正式适配器为 `unavailableAccountApi` 与 `unavailableInboxApi`。本阶段未接入真实认证、会话、历史、发送、上传或订阅服务；下文方法名是前端契约，实际 HTTP 路由、传输协议和 Server 实现由下一阶段确定。开发替身遵循相同接口，开关及场景见 [开发联调说明](development.md)。
+
+## 账户与登录会话
+
+账户契约定义在 [account/api.ts](../src/features/account/api.ts)，经该 feature 的 `index.ts` 导出。它与接待 API 分离：`App` 负责把已确认的账户身份转换为 inbox 的工作上下文，布局组件不保存或传递认证凭据。
+
+| 方法 | 输入 | 结果 |
+| --- | --- | --- |
+| `getSession` | `AbortSignal` | 已验证的 `AgentSession`；没有有效登录时为 `null` |
+| `signIn` | `{ username, password }`、`AbortSignal` | 登录成功后的 `AgentSession`；失败抛 `DeskApiError` |
+| `signOut` | `AbortSignal` | `Promise<void>`；成功表示适配器已完成退出并清理所持凭据 |
+| `dispose?` | 无 | 同步清理实例资源，不代替用户退出操作 |
+
+`AgentSession` 只包含展示与上下文元数据：`agent: { id, name, username, roleName, avatarUrl? }` 与 `workspace: { id, name }`。账户适配器负责验证响应，持有凭据并向接待传输层提供授权；前端 store 和主题偏好不接收 token。账号首尾空白会在提交前去掉，密码原样交给适配器，表单提交完成后清空密码。
+
+`AccountProvider` 创建会话状态并调用 `getSession`。恢复身份期间显示加载状态，未登录显示登录表单，只有存在已确认身份才挂载 inbox。当前正式默认返回无会话，登录尝试明确失败，不会落回开发身份或匿名可发送工作台。
+
+登录与退出防止重复提交，后来的认证请求取消先前请求，过期响应不能覆盖新身份。退出期间保留当前工作区；成功后移除会话并卸载 inbox，取消在途工作、退订、撤销预览及清空临时编辑；退出失败保留身份和草稿，显示错误并允许重试。取消等待不代表远端退出已回滚；真实适配器应使退出可安全重试，并处理远端已失效的会话。
+
+通过 `loadAccountApi` 创建的自有适配器由 Provider 在卸载或更换时销毁；显式注入 `App accountApi={adapter}` 的实例由调用方拥有，Provider 只取消本次会话请求。`App inboxApi={adapter}` 遵循下文 inbox 的相同所有权规则。所有适配器引用应保持稳定，身份或所属工作台改变会创建新的 inbox 上下文。
+
+账户菜单统一提供坐席资料、工作台偏好与退出确认；设置使用现有主题／接待方式控件。用户偏好可跨退出恢复，账户元数据、密码、临时草稿与固定对象不会写入该偏好存储。真实 token 的存储、安全刷新、过期联动与 Server 会话撤销由下一阶段适配器接入完成。
 
 ## 工作上下文与身份
 
@@ -13,7 +34,7 @@ type WorkContext = { agentId: string; workspaceId: string };
 type RequestOptions = { context: WorkContext; signal: AbortSignal };
 ```
 
-`workspaceId` 与 `agentId` 限定本次坐席工作上下文。服务端必须结合 Bearer 凭据验证权限；客户端传入的标识本身不构成授权。默认未连接上下文仅用于打开工作台，不代表已登录身份。
+`workspaceId` 与 `agentId` 限定本次坐席工作上下文。服务端必须结合 Bearer 凭据验证权限；客户端传入的标识本身不构成授权。`App` 使用账户会话中的标识；独立挂载 `InboxWorkspace` 的默认未连接上下文只用于集成，不代表已登录身份。
 
 `VisitorIdentity` 分别保留稳定来访标识 `id`、渠道内用户标识 `externalUserId`、`channelId`、`accountId` 及真实取得的显示信息。同名但来源不同的来访用户保持独立，不通过昵称、头像或列表下标合并。
 
@@ -146,7 +167,7 @@ Redux 只保存可序列化元数据；本地文件、预览 URL 和取消控制
 
 通过 `store.dispatch` 执行的 `destroyInbox` 与 `resetContext` 命令会取消请求、退订、撤销本地预览并清空临时状态，不代替调用方销毁外部适配器。`InboxWorkspace` 依据 `api` 引用及 `context.agentId` / `context.workspaceId` 的变化重建运行上下文；传入稳定的适配器引用，避免普通渲染意外重置工作区。
 
-主题和模式由独立偏好入口保存；临时草稿、附件、固定对象和旧选择不跨运行恢复。临时断线不会销毁本次草稿。登出或身份切换时应更换工作上下文或卸载工作台，而非将原 store 交给新身份使用。
+主题、模式和减少动态效果由独立偏好入口保存；临时草稿、附件、固定对象和旧选择不跨运行恢复。临时断线不会销毁本次草稿。`App` 在登出时卸载工作台、身份切换时重建工作上下文，不会将原 store 交给新身份使用。
 
 ## HTTP 与失败语义
 
@@ -165,11 +186,11 @@ Redux 只保存可序列化元数据；本地文件、预览 URL 和取消控制
 
 [DeskApiError](../src/lib/api-response.ts) 携带 `kind`、`message` 和可选 `code`；状态层转换为可序列化的 `ApiFailure`。未知异常不会被默认为业务成功。发送结果未确认的处理仍遵循上文语义，不能直接把所有异常统一显示为确定失败。
 
-真实凭据由外部认证会话提供，不硬编码、不写入主题偏好，也不自动调用开发 token 端点。正式登录服务和凭据生命周期留给后续接入阶段。
+真实凭据由账户适配器提供，不硬编码、不写入主题偏好，也不自动调用开发 token 端点。账户前端流程已实现，正式登录服务和凭据生命周期留给后续接入阶段。
 
 ## 后续接入顺序
 
-1. 与 Server 对齐实际路由、认证来源、身份映射、版本域、发送幂等及事件恢复策略，逐项实现 `InboxApi`。
-2. 在适配器边界校验响应并转换为领域载体；通过 `runtime.ts` 或显式 `api` / `context` 注入接入同一工作台，保持布局组件不依赖传输协议。
+1. 与 Server 对齐实际路由、认证来源、身份映射、版本域、发送幂等及事件恢复策略，分别实现 `AccountApi` 与 `InboxApi`，共享同一授权来源。
+2. 在适配器边界校验响应并转换为领域载体；通过各 feature 的 `runtime.ts` 或向 `App` 显式注入 `accountApi` / `inboxApi` 接入同一工作台，保持布局组件不依赖传输协议。
 3. 使用可控请求与事件验证身份隔离、迟到结果、失败重试、重复与乱序、重连补偿和资源清理；现有开发场景见 [development.md](development.md)。
 4. 再进行真实渠道收发、附件与回执验收。前端构建或契约替身通过不能替代这一步，也不能作为真实服务已接通的声明。

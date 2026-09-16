@@ -8,6 +8,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { WorkspacePanel } from "@/components/workspace-motion";
 import { VisitorInfo } from "./visitor-info";
 
 export function VisitorInfoPanel({
@@ -23,11 +24,15 @@ export function VisitorInfoPanel({
 }) {
   if (!conversationId) return null;
   if (inline)
-    return open ? (
-      <div className="w-[286px] shrink-0 overflow-hidden rounded-l-3xl max-[1360px]:w-[264px]">
+    return (
+      <WorkspacePanel
+        side="right"
+        open={open}
+        className="rounded-l-3xl [--workspace-panel-width:286px] max-[1360px]:[--workspace-panel-width:264px]"
+      >
         <VisitorInfo conversationId={conversationId} />
-      </div>
-    ) : null;
+      </WorkspacePanel>
+    );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

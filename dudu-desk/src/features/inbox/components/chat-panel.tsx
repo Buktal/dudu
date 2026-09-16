@@ -1,14 +1,12 @@
-import { Star } from "lucide-react";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { WorkspaceView } from "@/components/workspace-motion";
 import { cn } from "@/lib/utils";
-import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import { setConversationStarred } from "../stores/details";
-import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
+import { useInboxSelector } from "../hooks/use-inbox-store";
+import { ConversationHeader } from "./conversation-header";
+import { visitorName } from "./identity";
 import { InboxEmpty } from "./inbox-state";
 import { MessageTimeline } from "./message-timeline";
-import { VisitorInfoToggle } from "./visitor-info-toggle";
 
 export function ChatPanel({
   conversationId,
@@ -18,7 +16,6 @@ export function ChatPanel({
   onInfo,
   infoOpen = false,
   composer,
-  actions,
   onRetry,
   onAtBottom,
 }: {
@@ -29,16 +26,11 @@ export function ChatPanel({
   onInfo?: () => void;
   infoOpen?: boolean;
   composer: ReactNode;
-  actions?: ReactNode;
   onRetry?: (id: string) => void;
   onAtBottom?: (sequence: number) => void;
 }) {
-  const dispatch = useInboxDispatch();
   const conversation = useInboxSelector(
     (state) => state.inbox.conversations[conversationId],
-  );
-  const starring = useInboxSelector(
-    (state) => state.inbox.starUpdates[conversationId]?.status === "saving",
   );
   if (!conversation)
     return (
@@ -56,91 +48,22 @@ export function ChatPanel({
       )}
       aria-label={`${name} 的聊天`}
     >
-      <header
-        className={cn(
-          "flex min-h-[84px] shrink-0 flex-wrap items-center gap-3 px-5 py-4 max-[760px]:gap-2 max-[760px]:px-3 max-[760px]:py-2.5",
-          paneRole && "gap-2.5 px-3 py-3",
-          paneRole && focused && "bg-accent/30",
-        )}
-      >
-        <VisitorAvatar identity={conversation.identity} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2
-              className={cn(
-                "truncate text-[17px] font-semibold tracking-tight",
-                paneRole && "text-[15px]",
-              )}
-            >
-              {name}
-            </h2>
-            <span className="text-[10px] text-muted-foreground">
-              {paneRole
-                ? paneRole === "primary"
-                  ? "主接待"
-                  : "固定接待"
-                : conversation.status === "closed"
-                  ? "已结束"
-                  : conversation.status === "waiting"
-                    ? "等待来访回复"
-                    : "待回复"}
-            </span>
-          </div>
-          <p className="mt-1 flex min-w-0 items-center gap-2">
-            <SourceBadge identity={conversation.identity} />
-            <span className="truncate text-xs text-muted-foreground">
-              {conversation.identity.accountName}
-            </span>
-          </p>
-        </div>
-        <div className="flex items-center gap-1">
-          {paneRole && (
-            <Button
-              size="xs"
-              variant={focused ? "secondary" : "ghost"}
-              aria-pressed={focused}
-              onClick={onFocus}
-            >
-              {focused ? "当前回复" : "切换回复"}
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            disabled={starring}
-            aria-label={conversation.starred ? "取消星标" : "标记星标"}
-            title={conversation.starred ? "取消星标" : "标记星标"}
-            onClick={() =>
-              void dispatch(
-                setConversationStarred(conversationId, !conversation.starred),
-              )
-            }
-          >
-            <Star
-              data-icon="inline-start"
-              className={cn(
-                conversation.starred && "fill-primary text-primary",
-              )}
-            />
-          </Button>
-          {actions}
-          {onInfo && (
-            <VisitorInfoToggle
-              open={infoOpen}
-              onToggle={() => {
-                onFocus?.();
-                onInfo();
-              }}
-            />
-          )}
-        </div>
-      </header>
-      {!paneRole && <Separator />}
-      <MessageTimeline
-        conversationId={conversationId}
-        onRetry={onRetry}
-        onAtBottom={onAtBottom}
+      <ConversationHeader
+        conversation={conversation}
+        paneRole={paneRole}
+        focused={focused}
+        onFocus={onFocus}
+        infoOpen={infoOpen}
+        onInfo={onInfo}
       />
+      {!paneRole && <Separator />}
+      <WorkspaceView key={conversationId}>
+        <MessageTimeline
+          conversationId={conversationId}
+          onRetry={onRetry}
+          onAtBottom={onAtBottom}
+        />
+      </WorkspaceView>
       {composer}
     </section>
   );

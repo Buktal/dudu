@@ -6,39 +6,27 @@ import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxSelector } from "../hooks/use-inbox-store";
 import { useVisitorPanel } from "../hooks/use-visitor-panel";
 import { ConversationPane } from "./conversation-pane";
-import { ConversationQueue } from "./conversation-queue";
+import { ConversationSidebar } from "./conversation-sidebar";
 import { InboxEmpty } from "./inbox-state";
-import { QueueTools } from "./queue-tools";
 import { VisitorInfoPanel } from "./visitor-info-panel";
 
 export function CalmWorkspace() {
   const activeId = useInboxSelector(
     (state) => state.inbox.replyId ?? state.inbox.activeId,
   );
-  const total = useInboxSelector((state) => state.inbox.queue.total);
   const [showQueue, setShowQueue] = useState(true);
   const info = useVisitorPanel();
   useInboxSearch(() => setShowQueue(true));
   return (
-    <div className="flex min-h-0 flex-1 gap-3.5 max-[1360px]:gap-2.5 max-[760px]:gap-1">
-      <aside
+    <div className="flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:14px] max-[1360px]:[--workspace-gap:10px] max-[760px]:[--workspace-gap:4px]">
+      <div
         className={cn(
-          "flex w-[304px] shrink-0 flex-col overflow-hidden rounded-r-3xl bg-card text-card-foreground max-[1360px]:w-[274px] max-[1090px]:w-[250px] max-[760px]:w-full",
+          "min-h-0 w-[304px] shrink-0 max-[1360px]:w-[274px] max-[1090px]:w-[250px] max-[760px]:w-full",
           activeId && !showQueue && "max-[760px]:hidden",
         )}
-        aria-label="会话队列"
       >
-        <div className="flex items-center gap-2 px-4 py-3.5">
-          <h1 className="text-lg font-semibold tracking-tight">消息</h1>
-          {total !== undefined && (
-            <span className="text-xs tabular-nums text-muted-foreground">
-              {total}
-            </span>
-          )}
-        </div>
-        <QueueTools />
-        <ConversationQueue onSelected={() => setShowQueue(false)} />
-      </aside>
+        <ConversationSidebar onSelected={() => setShowQueue(false)} />
+      </div>
       <div
         className={cn(
           "flex min-h-0 min-w-0 flex-1 flex-col",

@@ -1,6 +1,5 @@
 import { forwardRef, type HTMLAttributes, useEffect, useRef } from "react";
 import { VirtuosoGrid, type VirtuosoGridHandle } from "react-virtuoso";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +8,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { receptionModes } from "@/lib/reception-mode";
 import { cn } from "@/lib/utils";
 import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
@@ -25,6 +23,7 @@ import {
   selectQuickQueueConversations,
 } from "../stores/selectors";
 import { ConversationPane } from "./conversation-pane";
+import { QueueHeading } from "./conversation-sidebar";
 import { visitorName } from "./identity";
 import { InboxEmpty, InboxError, InboxLoading } from "./inbox-state";
 import { QueueTools } from "./queue-tools";
@@ -58,11 +57,6 @@ export function QuickWorkspace() {
     historyId ? state.inbox.conversations[historyId] : undefined,
   );
   const info = useVisitorPanel();
-  const pending =
-    queue.counts?.needsReply ??
-    conversations.filter(
-      (conversation) => conversation.status === "needs-reply",
-    ).length;
   const grid = useRef<VirtuosoGridHandle>(null);
   const historyTitle = useRef<HTMLHeadingElement>(null);
   const previousReply = useRef<string | null>(null);
@@ -85,29 +79,13 @@ export function QuickWorkspace() {
     info.setOpen(true);
   }
   return (
-    <div className="relative flex min-h-0 flex-1 gap-4">
+    <div className="relative flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:14px] max-[1360px]:[--workspace-gap:10px]">
       <main className="flex min-h-0 min-w-0 flex-1 flex-col pt-2.5 pr-2.5 pl-[25px] max-[1260px]:px-5 max-[760px]:pt-2 max-[760px]:pr-[5px] max-[760px]:pl-[13px]">
         <div className="mb-2 shrink-0">
           <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-            <header className="flex h-8 shrink-0 items-center gap-2">
-              <h1 className="text-sm font-semibold">
-                {receptionModes.quick.name}
-              </h1>
-              {queue.hasLoaded && (
-                <Badge
-                  variant="secondary"
-                  title={
-                    queue.counts
-                      ? "全部会话中的待回应数量"
-                      : "仅统计当前已加载列表中的待回应会话"
-                  }
-                >
-                  {queue.counts ? "全部" : "当前列表"} {pending} 位待回应
-                </Badge>
-              )}
-            </header>
+            <QueueHeading className="h-8 px-0" />
             <div className="order-last min-w-0 basis-full min-[1360px]:order-none min-[1360px]:flex-1 min-[1360px]:basis-0">
-              <QueueTools compact showOrder={false} />
+              <QueueTools compact />
             </div>
             <VisitorInfoToggle
               className="ml-auto"
@@ -144,7 +122,12 @@ export function QuickWorkspace() {
                 onHistory={() =>
                   void dispatch(openQuickHistory(conversation.id))
                 }
-                onInfo={() => details(conversation.id)}
+                infoOpen={info.open && replyId === conversation.id}
+                onInfo={() => {
+                  if (info.open && replyId === conversation.id)
+                    info.setOpen(false);
+                  else details(conversation.id);
+                }}
               />
             )}
           />

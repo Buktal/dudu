@@ -1,12 +1,16 @@
 # Desk 开发联调与服务接入
 
-本阶段交付 Desk 前端，规格见 [#50](https://github.com/Buktal/dudu/issues/50)。当前 Server 尚未提供会话、历史、发送、附件与订阅接口。正式入口使用 `unavailableInboxApi` 显示服务未连接；主题与接待模式仍可使用。后续实现真实适配器时，替换 `src/features/inbox/runtime.ts` 的注入入口即可复用接待界面及状态模型。
+本阶段交付 Desk 前端，规格见 [#50](https://github.com/Buktal/dudu/issues/50)。真实账户认证与会话收发服务留到下一阶段。正式入口使用 `unavailableAccountApi` 显示登录页，登录操作明确报服务不可用；注入确认过的账户后，未接入的 inbox 仍通过 `unavailableInboxApi` 表达服务未连接。后续分别实现 account 与 inbox 的适配器，通过各自 `runtime.ts` 或 `App` 注入复用界面与状态模型。
 
 ## 启动开发数据
 
 复制项目根 `.env.example` 为 `.env.development.local`，将 `VITE_DESK_MOCK` 改为 `true`，运行 `yarn dev` 或 `yarn tauri:dev`。修改环境变量后重启开发服务。开发与真实适配器使用同一套工作台 UI；页面不显示开发说明、演示标签或常驻健康状态栏。
 
 只有 `import.meta.env.DEV && import.meta.env.VITE_DESK_MOCK === "true"` 同时成立，运行时才动态导入开发适配器。`yarn build` 与 `yarn tauri:build` 生成的正式包不会导入开发工厂，即使构建环境误设了此开关也一样。开发开关不会获取登录令牌或访问真实渠道。
+
+开发模式首次自动进入“林舟 · 嘟嘟服务中心”的工作台，方便直接查看会话。可以从右上角头像打开账户信息或设置，也可完整体验退出与重新登录。开发账号为 `linzhou`，密码为 `desk123`；这两项只存在于开发适配器，不进入正式产物，不在产品页面展示提示。退出后，同一标签页刷新仍停留在登录页，重新登录恢复开发身份。此行为通过 `sessionStorage` 中的 `dudu-desk.development-signed-out` 标记实现，不保存密码或令牌；新标签页重新进入初始开发会话。
+
+退出成功会卸载 inbox，取消请求和订阅、清空草稿、附件与固定对象。主题、接待方式和减少动态效果保留在独立偏好中。账号资料由 `features/account/mocks.ts` 提供，来访会话由 `features/inbox/mocks.ts` 提供，均通过正式组件展示。
 
 `mocks.ts` 使用已安装的 Faker，固定 seed 为 `20260916`。默认 36 个会话，每页 12 个；消息历史每页 20 条，页内按 `sequence` 升序，`nextCursor` 指向更早的历史。前三个来访用户都叫“林小满”，但渠道或账号不同；第 5 个回复受限，第 6 个权限未知，第 7 个仅支持文字，第 8 个没有昵称。
 

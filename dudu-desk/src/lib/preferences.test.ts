@@ -14,6 +14,34 @@ function memoryStorage(entries: Record<string, string> = {}) {
 }
 
 describe("workspace preferences", () => {
+  it("restores reduced motion alongside existing preferences and can follow the system again", () => {
+    const storage = memoryStorage();
+    const first = createWorkspacePreferences({ storage: () => storage });
+    first.setTheme("midnight");
+    first.setMode("parallel");
+    first.setReduceMotion(true);
+    const restored = createWorkspacePreferences({ storage: () => storage });
+    expect(restored.getSnapshot()).toEqual({
+      theme: "midnight",
+      mode: "parallel",
+      reduceMotion: true,
+    });
+    restored.setReduceMotion(false);
+    expect(
+      createWorkspacePreferences({ storage: () => storage }).getSnapshot(),
+    ).toEqual({ theme: "midnight", mode: "parallel" });
+  });
+
+  it("ignores invalid motion values without discarding valid theme and mode preferences", () => {
+    const storage = memoryStorage({
+      "dudu-desk.preferences":
+        '{"version":1,"theme":"sea","mode":"quick","reduceMotion":"true"}',
+    });
+    const preferences = createWorkspacePreferences({ storage: () => storage });
+    preferences.setReduceMotion("true" as unknown as boolean);
+    expect(preferences.getSnapshot()).toEqual({ theme: "sea", mode: "quick" });
+  });
+
   it("starts a new workspace in apricot and calm without browser storage", () => {
     const preferences = createWorkspacePreferences({
       storage: () => undefined,

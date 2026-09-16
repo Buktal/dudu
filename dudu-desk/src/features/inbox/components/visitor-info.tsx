@@ -4,7 +4,6 @@ import {
   Info,
   LoaderCircle,
   RefreshCw,
-  Star,
 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +18,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { WorkspaceAction } from "@/components/workspace-action";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import {
   discardProfileEdits,
@@ -28,6 +28,7 @@ import {
 } from "../stores/details";
 import { loadProfile } from "../stores/reading";
 import type { ProfileField } from "../types";
+import { ConversationStarAction } from "./conversation-actions";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
 import { InboxEmpty, InboxError } from "./inbox-state";
 import { VisitorTags } from "./visitor-tags";
@@ -86,12 +87,6 @@ export function VisitorInfo({
       </div>
     );
   const name = visitorName(conversation.identity);
-  const starLabel =
-    star?.status === "saving"
-      ? `正在保存 ${name} 的星标`
-      : conversation.starred
-        ? `取消星标 ${name}`
-        : `星标 ${name}`;
 
   return (
     <aside
@@ -108,16 +103,12 @@ export function VisitorInfo({
           )}
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="刷新来访资料"
-            title="刷新来访资料"
+          <WorkspaceAction
+            icon={RefreshCw}
+            label="刷新来访资料"
             disabled={loaded?.status === "loading"}
             onClick={() => void dispatch(loadProfile(conversationId))}
-          >
-            <RefreshCw data-icon="inline-start" />
-          </Button>
+          />
           {closeAction}
         </div>
       </header>
@@ -131,32 +122,10 @@ export function VisitorInfo({
           <p className="max-w-full break-words text-[11px] text-muted-foreground">
             {conversation.identity.accountName}
           </p>
-          <Button
-            variant={conversation.starred ? "secondary" : "ghost"}
-            size="icon-xs"
+          <ConversationStarAction
+            conversationId={conversationId}
             className="absolute top-2 right-2"
-            aria-label={starLabel}
-            title={starLabel}
-            aria-pressed={conversation.starred}
-            disabled={star?.status === "saving"}
-            onClick={() =>
-              void dispatch(
-                setConversationStarred(conversationId, !conversation.starred),
-              )
-            }
-          >
-            {star?.status === "saving" ? (
-              <LoaderCircle
-                data-icon="inline-start"
-                className="animate-spin motion-reduce:animate-none"
-              />
-            ) : (
-              <Star
-                data-icon="inline-start"
-                className={conversation.starred ? "fill-current" : undefined}
-              />
-            )}
-          </Button>
+          />
           {star?.status === "saved" && (
             <p role="status" className="text-[10px] text-muted-foreground">
               星标已保存

@@ -421,3 +421,12 @@
     scroll-behavior: auto;
   }
 }
+
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms;
+  animation-iteration-count: 1;
+  transition-duration: 0.01ms;
+  scroll-behavior: auto;
+}

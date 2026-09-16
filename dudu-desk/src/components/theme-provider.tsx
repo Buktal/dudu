@@ -9,6 +9,7 @@ import { type Palette, palettes } from "@/lib/theme-palette";
 type ThemeProviderState = WorkspacePreferences & {
   setTheme: (theme: Palette) => void;
   setMode: (mode: ReceptionMode) => void;
+  setReduceMotion: (reduce: boolean) => void;
 };
 
 const ThemeProviderContext = React.createContext<
@@ -31,11 +32,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.colorScheme = scheme;
   }, [snapshot.theme]);
 
+  React.useLayoutEffect(() => {
+    document.documentElement.dataset.motion = snapshot.reduceMotion
+      ? "reduced"
+      : "system";
+  }, [snapshot.reduceMotion]);
+
   const value = React.useMemo(
     () => ({
       ...snapshot,
       setTheme: preferences.setTheme,
       setMode: preferences.setMode,
+      setReduceMotion: preferences.setReduceMotion,
     }),
     [snapshot, preferences],
   );

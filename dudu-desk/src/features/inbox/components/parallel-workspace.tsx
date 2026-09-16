@@ -1,7 +1,9 @@
 import { ArrowLeft } from "lucide-react";
+import { useIsPresent } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { WorkspacePanel } from "@/components/workspace-motion";
 import { cn } from "@/lib/utils";
 import { hasOpenOverlay, useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
@@ -13,23 +15,20 @@ import {
   type ReceptionPane,
 } from "../stores/parallel";
 import { ConversationPane } from "./conversation-pane";
-import { ConversationQueue } from "./conversation-queue";
+import { ConversationSidebar } from "./conversation-sidebar";
 import { visitorName } from "./identity";
 import { InboxEmpty } from "./inbox-state";
 import { ParallelToolbar } from "./parallel-toolbar";
 import { PinnedConversationPicker } from "./pin-picker";
-import { QueueTools } from "./queue-tools";
 import { VisitorInfoPanel } from "./visitor-info-panel";
 
 export function ParallelWorkspace() {
+  const present = useIsPresent();
   const dispatch = useInboxDispatch();
   const primaryId = useInboxSelector((state) => state.inbox.activeId);
   const pinnedId = useInboxSelector((state) => state.inbox.pinnedId);
   const collapsed = useInboxSelector((state) => state.inbox.pinCollapsed);
   const replyId = useInboxSelector((state) => state.inbox.replyId);
-  const queueCount = useInboxSelector(
-    (state) => state.inbox.queue.total ?? state.inbox.queue.ids.length,
-  );
   const primary = useInboxSelector((state) =>
     primaryId ? state.inbox.conversations[primaryId] : undefined,
   );
@@ -72,6 +71,7 @@ export function ParallelWorkspace() {
   );
 
   useEffect(() => {
+    if (!present) return;
     function handleKey(event: KeyboardEvent) {
       if (
         !event.altKey ||
@@ -89,33 +89,26 @@ export function ParallelWorkspace() {
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [activatePane]);
+  }, [activatePane, present]);
 
   return (
-    <div className="relative flex min-h-0 flex-1 gap-3.5 max-[1360px]:gap-2.5 max-[760px]:gap-0">
-      <aside
+    <div className="relative flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:14px] max-[1360px]:[--workspace-gap:10px] max-[760px]:[--workspace-gap:0px]">
+      <WorkspacePanel
+        side="left"
+        open={!queueCollapsed || info.narrow}
         className={cn(
-          "flex min-h-0 w-[246px] shrink-0 flex-col overflow-hidden rounded-r-2xl border-r bg-card text-card-foreground max-[1360px]:w-[224px] max-[1090px]:w-[225px] max-[760px]:w-full",
-          queueCollapsed && "min-[761px]:hidden",
+          "[--workspace-panel-width:246px] max-[1360px]:[--workspace-panel-width:224px] max-[1090px]:[--workspace-panel-width:225px] max-[760px]:[--workspace-panel-width:100vw]",
           !showQueue && "max-[760px]:hidden",
         )}
-        aria-label="会话队列"
       >
-        <header className="flex items-center gap-2 px-[18px] pt-[21px] pb-[11px]">
-          <h1 className="text-sm font-semibold">我的会话</h1>
-          <span className="text-[10px] text-muted-foreground">
-            {queueCount}
-          </span>
-        </header>
-        <QueueTools />
-        <ConversationQueue
+        <ConversationSidebar
           onSelected={() => setShowQueue(false)}
           onPin={(id) => {
             void dispatch(pinConversation(id));
             setShowQueue(false);
           }}
         />
-      </aside>
+      </WorkspacePanel>
 
       <div
         className={cn(

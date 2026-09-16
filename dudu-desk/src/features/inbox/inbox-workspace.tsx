@@ -1,8 +1,10 @@
 import { X } from "lucide-react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { AnimatePresence } from "motion/react";
+import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
 import { Provider } from "react-redux";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import { WorkspaceView } from "@/components/workspace-motion";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { type InboxApi, unavailableInboxApi } from "./api";
 import { CalmWorkspace } from "./components/calm-workspace";
@@ -29,7 +31,7 @@ const QuickWorkspace = lazy(() =>
   })),
 );
 
-function InboxSession() {
+function InboxSession({ accountMenu }: { accountMenu?: ReactNode }) {
   const { mode, setMode } = useTheme();
   const dispatch = useInboxDispatch();
   const notice = useInboxSelector((state) => state.inbox.notice);
@@ -48,18 +50,23 @@ function InboxSession() {
         <>
           <ConnectionStatus />
           <WorkspaceHelp />
+          {accountMenu}
         </>
       }
     >
-      <Suspense fallback={<InboxLoading label="正在切换接待布局…" />}>
-        {mode === "parallel" ? (
-          <ParallelWorkspace />
-        ) : mode === "quick" ? (
-          <QuickWorkspace />
-        ) : (
-          <CalmWorkspace />
-        )}
-      </Suspense>
+      <AnimatePresence initial={false} mode="wait">
+        <WorkspaceView key={mode}>
+          <Suspense fallback={<InboxLoading label="正在切换接待布局…" />}>
+            {mode === "parallel" ? (
+              <ParallelWorkspace />
+            ) : mode === "quick" ? (
+              <QuickWorkspace />
+            ) : (
+              <CalmWorkspace />
+            )}
+          </Suspense>
+        </WorkspaceView>
+      </AnimatePresence>
       {notice && (
         <div
           role="status"
@@ -83,9 +90,11 @@ function InboxSession() {
 export function InboxWorkspace({
   api,
   context = defaultContext,
+  accountMenu,
 }: {
   api?: InboxApi;
   context?: WorkContext;
+  accountMenu?: ReactNode;
 }) {
   const [store, setStore] = useState<InboxStore>();
   const { mode, setMode } = useTheme();
@@ -119,10 +128,14 @@ export function InboxWorkspace({
   }, [api, context.agentId, context.workspaceId]);
   return store ? (
     <Provider store={store}>
-      <InboxSession />
+      <InboxSession accountMenu={accountMenu} />
     </Provider>
   ) : (
-    <WorkspaceShell mode={mode} onModeChange={setMode}>
+    <WorkspaceShell
+      mode={mode}
+      onModeChange={setMode}
+      toolbarActions={accountMenu}
+    >
       <InboxLoading label="正在打开工作台…" />
     </WorkspaceShell>
   );
