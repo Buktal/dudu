@@ -5,7 +5,8 @@
 //! 握手与直发共用 super::crypto 原语与 super::echo_handshake。
 
 use super::super::{request_error_reason, ConnectionConfig, DispatchOutcome};
-use super::{build_signature, decrypt_msg, encrypt_msg, random_16, unix_timestamp_secs};
+use super::{build_signature, decrypt_msg, encrypt_msg, random_16};
+use crate::connections::util::now_secs;
 
 /// POST 业务推送信封（官方 §5.1 示例元素序：ToUserName → Encrypt → AgentID）。
 /// 明文 XML 字节透传进 Encrypt，不重排。
@@ -59,7 +60,7 @@ pub(super) fn dispatch_event(
         Ok(value) => value,
         Err(reason) => return DispatchOutcome::not_sent(reason),
     };
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let nonce = uuid::Uuid::new_v4().simple().to_string();
     let signature = build_signature(token, &timestamp, &nonce, &msg_encrypt);
     let envelope = build_envelope_xml(corp_id, &msg_encrypt, agent_id);

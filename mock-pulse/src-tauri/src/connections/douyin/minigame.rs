@@ -46,13 +46,6 @@ fn msg_type_of(body: &str) -> &'static str {
     }
 }
 
-fn now_millis() -> u128 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_millis())
-        .unwrap_or(0)
-}
-
 /// 小游戏推送直发公共体：body 逐字节透传，五头按官方算法生成
 /// （x-nonce-str/x-timestamp 每次推送重生成）。期望回执按官方语义：
 /// 验签通过目标回 HTTP 200 即成功，响应体不校验。
@@ -66,7 +59,7 @@ fn post(
     token: &str,
 ) -> DispatchOutcome {
     let nonce = uuid::Uuid::new_v4().simple().to_string();
-    let timestamp = now_millis().to_string();
+    let timestamp = util::now_millis().to_string();
     let signature = signature(app_id, msg_type, &nonce, &timestamp, body, token);
     let started = std::time::Instant::now();
 

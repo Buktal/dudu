@@ -21,13 +21,6 @@ pub fn build_sign(app_secret: &str, timestamp: &str) -> String {
     util::hmac_sha256_base64(app_secret, &format!("{timestamp}\n{app_secret}"))
 }
 
-fn unix_timestamp_ms() -> u128 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_millis())
-        .unwrap_or(0)
-}
-
 /// 明文 POST（§3.3）：头只带 Content-Type + timestamp/sign，body 逐字节透传。
 fn post(
     client: &reqwest::blocking::Client,
@@ -35,7 +28,7 @@ fn post(
     body: &str,
     app_secret: &str,
 ) -> DispatchOutcome {
-    let timestamp = unix_timestamp_ms().to_string();
+    let timestamp = util::now_millis().to_string();
     let sign = build_sign(app_secret, &timestamp);
     let started = std::time::Instant::now();
     let response = client

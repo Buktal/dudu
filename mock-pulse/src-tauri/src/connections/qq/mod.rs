@@ -20,6 +20,8 @@ mod sign;
 #[cfg(test)]
 mod tests;
 
+use crate::connections::util::now_secs;
+
 use super::{
     client_with_timeout, request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
 };
@@ -32,13 +34,6 @@ const CALLBACK_USER_AGENT: &str = "QQBot-Callback";
 fn random_plain_token() -> String {
     use rand::distributions::{Alphanumeric, DistString};
     Alphanumeric.sample_string(&mut rand::thread_rng(), 20)
-}
-
-fn unix_timestamp_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
 }
 
 /// op13 请求体的 d 值（事实库 §3.2 信封形态 `{"d":{…},"op":13}`）。
@@ -144,7 +139,7 @@ fn verify_handshake(
         };
     };
     let plain_token = random_plain_token();
-    let event_ts = unix_timestamp_secs().to_string();
+    let event_ts = now_secs().to_string();
     let body = build_validation_body(&plain_token, &event_ts);
     let headers = vec![
         ("User-Agent", CALLBACK_USER_AGENT.to_string()),
@@ -193,7 +188,7 @@ fn dispatch_event(
         return dispatch_validation(client, url, app_id, app_secret, plaintext, &payload);
     }
     // 普通事件（事实库 §4.2/附速查）：签名三头 + 逐字节 body
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let signature = sign::sign_event(app_secret, &timestamp, plaintext.as_bytes());
     let headers = vec![
         ("X-Signature-Ed25519", signature.clone()),

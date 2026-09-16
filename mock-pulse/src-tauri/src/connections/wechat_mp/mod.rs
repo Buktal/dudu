@@ -20,7 +20,8 @@ use std::time::Duration;
 
 // 微信族共享原语单点在 wechat_common（本模块 GET 握手与 tests 经 re-export
 // 取用；POST 直发骨架由 [`push`] 消费族共享 dispatcher）。
-pub(crate) use crate::connections::wechat_common::{build_callback_signature, unix_timestamp_secs};
+pub(crate) use crate::connections::util::now_secs;
+pub(crate) use crate::connections::wechat_common::build_callback_signature;
 
 use super::{
     request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome, WechatMpMode,
@@ -46,7 +47,7 @@ fn verify_handshake(
         };
     };
     let echostr = random_echostr();
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let nonce = uuid::Uuid::new_v4().simple().to_string();
     let signature = build_callback_signature(token, &timestamp, &nonce);
 

@@ -27,7 +27,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::md5_hex;
+use crate::connections::util::{append_absent, md5_wrapped_sign, now_secs};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -46,26 +46,13 @@ pub(crate) fn pdd_timestamp(unix_secs: u64) -> String {
     unix_secs.to_string()
 }
 
-/// 当前 Unix 秒（探针/直发的 timestamp 取现值）。
-fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
-}
-
 /// 拼多多签名（事实库 §4.1 官方三步逐字规则）：所有请求参数按 ASCII 升序
 /// 排列（Rust 字符串比较即字节序 = ASCII 序），按 k+v 次序无缝拼接，
 /// client_secret 夹两端，MD5 大写。输入参数序不敏感（内部排序）。
+/// 算法与京东 JOS 签名同形，单点在 util（[`md5_wrapped_sign`]，审计退件
+/// 去重），本函数只承载拼多多侧协议名与 §4.1 官方向量口径。
 pub(crate) fn pdd_sign(params: &[(&str, &str)], client_secret: &str) -> String {
-    let mut sorted = params.to_vec();
-    sorted.sort_by(|a, b| a.0.cmp(b.0));
-    let mut concat = String::new();
-    for (key, value) in sorted {
-        concat.push_str(key);
-        concat.push_str(value);
-    }
-    md5_hex(&[client_secret, &concat, client_secret]).to_uppercase()
+    md5_wrapped_sign(params, client_secret)
 }
 
 /// 事件明文顶层 kv → 签名参数集（§4.1「所有请求参数」口径）：官方 §5.1 请求
@@ -109,11 +96,7 @@ fn sign_params(
     payload: &[(String, String)],
 ) -> Vec<(String, String)> {
     let mut params: Vec<(String, String)> = payload.to_vec();
-    for (key, value) in [("client_id", client_id), ("timestamp", timestamp)] {
-        if !params.iter().any(|(existing, _)| existing == key) {
-            params.push((key.to_string(), value.to_string()));
-        }
-    }
+    append_absent(&mut params, &[("client_id", client_id), ("timestamp", timestamp)]);
     params
 }
 

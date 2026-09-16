@@ -51,13 +51,6 @@ fn random_nonce() -> String {
         .to_string()
 }
 
-fn unix_timestamp_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
-}
-
 /// 校验目标按官方语义直接返回字符串 success（不带引号；容忍首尾空白）。
 fn check_success(response_body: &str) -> Result<(), String> {
     if response_body.trim() == "success" {
@@ -79,7 +72,7 @@ fn post(
     token: &str,
 ) -> DispatchOutcome {
     let nonce = random_nonce();
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = util::now_secs().to_string();
     let signature = msg_signature(token, &nonce, &timestamp, encrypt);
     let envelope = build_envelope(&nonce, &timestamp, encrypt, &signature);
     let started = std::time::Instant::now();

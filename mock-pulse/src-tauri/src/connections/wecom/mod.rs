@@ -15,6 +15,8 @@ pub(crate) use crypto::{build_signature, decrypt_msg, encrypt_msg};
 
 use std::time::Duration;
 
+use crate::connections::util::now_secs;
+
 use super::{ConnectionConfig, DispatchOutcome, HandshakeOutcome, WecomSystem};
 
 /// 16 字节随机数：复用 uuid v4（已在依赖内），一个 v4 即 16 随机字节。
@@ -25,13 +27,6 @@ pub(super) fn random_16() -> [u8; 16] {
 /// echostr 握手的随机明文：32 位 hex（可打印、无引号换行，官方仅要求原样回显）。
 fn random_plaintext() -> String {
     uuid::Uuid::new_v4().simple().to_string()
-}
-
-fn unix_timestamp_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
 }
 
 /// 两通道共用的 GET echostr 握手（官方 §3.2 流程相同，receiveid 语义不同）：
@@ -56,7 +51,7 @@ fn echo_handshake(
             }
         }
     };
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let nonce = uuid::Uuid::new_v4().simple().to_string();
     let signature = build_signature(token, &timestamp, &nonce, &echostr);
 

@@ -20,7 +20,7 @@ mod tests;
 
 use std::time::Duration;
 
-use crate::connections::util::md5_hex;
+use crate::connections::util::{md5_hex, now_millis};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -32,14 +32,6 @@ const RETRY_NOTE: &str = "（失败平台将按重试表重推，最长 16 次�
 /// body 必须是原始字符串（不得重序列化后再算），输出 32 位小写 hex。
 pub(crate) fn kwaisign(body: &str, app_secret: &str) -> String {
     md5_hex(&[body, app_secret])
-}
-
-/// 毫秒级 Unix 时间戳（官方样本 1631515320564 为 13 位毫秒形态）。
-fn unix_timestamp_millis() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_millis() as u64)
-        .unwrap_or(0)
 }
 
 /// 从明文 JSON 提取 message_id（幂等键快照）；非 JSON/缺字段不落值。
@@ -140,7 +132,7 @@ fn verify_handshake(
             message: "配置不是快手渠道，无法执行 TEST 事件握手".into(),
         };
     };
-    let timestamp = unix_timestamp_millis();
+    let timestamp = now_millis() as u64;
     let message_id = uuid::Uuid::new_v4().to_string();
     // TEST 事件信封（§2.1 事件页信封五字段键序 + §3.1 测试样本 data 只含时间戳）
     let body = serde_json::json!({

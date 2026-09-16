@@ -22,6 +22,8 @@ mod tests;
 
 use std::time::Duration;
 
+use crate::connections::util::now_secs;
+
 use super::{
     client_with_timeout, request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
 };
@@ -30,13 +32,6 @@ use super::{
 /// 为小写字母数字占位，卡片页样本为 uuid；mock 取 uuid simple 同风格无连字符）。
 fn random_challenge() -> String {
     uuid::Uuid::new_v4().simple().to_string()
-}
-
-fn unix_timestamp_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
 }
 
 /// 验证请求体的明文 JSON（官方 §3.2 逐字三参，键序随官方样本）。
@@ -102,7 +97,7 @@ fn verify_handshake(
             }
         };
         let body = serde_json::json!({ "encrypt": encrypt }).to_string();
-        let timestamp = unix_timestamp_secs().to_string();
+        let timestamp = now_secs().to_string();
         let nonce = uuid::Uuid::new_v4().simple().to_string();
         let signature = crypto::build_signature(&timestamp, &nonce, encrypt_key, &body);
         (
@@ -185,7 +180,7 @@ fn dispatch_event(
             Err(reason) => return DispatchOutcome::not_sent(format!("事件加密封装失败：{reason}")),
         };
         let body = serde_json::json!({ "encrypt": encrypt }).to_string();
-        let timestamp = unix_timestamp_secs().to_string();
+        let timestamp = now_secs().to_string();
         let nonce = uuid::Uuid::new_v4().simple().to_string();
         let signature = crypto::build_signature(&timestamp, &nonce, encrypt_key, &body);
         (body, signature, Some(timestamp), nonce)

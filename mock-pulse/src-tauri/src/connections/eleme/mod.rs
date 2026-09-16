@@ -34,7 +34,7 @@ mod tests;
 
 use percent_encoding::utf8_percent_encode;
 
-use crate::connections::util::{form_pairs, sha1_hex, strip_sig, SIG_ENCODE_SET};
+use crate::connections::util::{append_absent, form_pairs, now_secs, sha1_hex, strip_sig, SIG_ENCODE_SET};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -51,14 +51,6 @@ const RETRY_NOTE: &str = "（官方失败判重试：HTTP 200 + {\"message\":\"o
 /// 官方 timestamp 形态（§4.1/§6）：调用时的十进制 UNIX 秒字符串。
 pub(crate) fn ele_timestamp(unix_secs: u64) -> String {
     unix_secs.to_string()
-}
-
-/// 当前 Unix 秒（探针/直发的 timestamp 取现值；§6「timestamp 为调用时 unix 秒」）。
-fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
 }
 
 /// §4.1 步骤 1 的参数值 urlencode（逐字规则：未保留字符为字母数字与
@@ -134,11 +126,7 @@ fn sign_params(
         .filter(|(key, _)| key != "sig")
         .cloned()
         .collect();
-    for (key, value) in [("consumer_key", consumer_key), ("timestamp", timestamp)] {
-        if !params.iter().any(|(existing, _)| existing == key) {
-            params.push((key.to_string(), value.to_string()));
-        }
-    }
+    append_absent(&mut params, &[("consumer_key", consumer_key), ("timestamp", timestamp)]);
     params
 }
 

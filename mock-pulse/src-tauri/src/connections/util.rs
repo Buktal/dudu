@@ -17,6 +17,14 @@
 //!   与前端 form.ts 单点同一语义；美团/饿了么/支付宝表单线共用，#45 自美团
 //!   提炼；编码端走 percent-encoding crate，解码端不换库的原因见
 //!   [`percent_decode`] 注）
+//! - [`md5_wrapped_sign`]：secret 夹两端的排序 MD5 大写签名（京东 JOS / 拼多多
+//!   PMC 同一官方算法，曾在两渠道逐字双写）
+//! - [`callback_signature`]：GET echostr 握手三参 sha1 签名（微信族/小红书
+//!   小程序/微博同式，曾在三处换名薄包装）
+//! - [`append_absent`]：签名参数集追加缺失的系统参数（美团/饿了么/拼多多
+//!   「系统参数并入签名参数集」共用形态）
+//! - [`now_secs`]/[`now_millis`]：当前 Unix 秒/毫秒（各渠道 timestamp 取现值，
+//!   曾在 16 处渠道逐字复制）
 //!
 //! 拼接序/密钥来源等渠道语义由各 adapter 组合，本模块只提供纯原语。
 
@@ -85,6 +93,58 @@ pub(crate) fn md5_hex(parts: &[&str]) -> String {
         hasher.update(part.as_bytes());
     }
     hex::encode(hasher.finalize())
+}
+
+/// secret 夹两端的排序 MD5 大写签名（京东 JOS §4.1 与拼多多 PMC §4.1 同一
+/// 官方算法形态，曾在两渠道逐字双写，审计退件提炼单点）：所有请求参数按名
+/// 升序排列（Rust 字符串比较即字节序 = ASCII 序），k+v 次序无缝拼接，secret
+/// 夹在串的两端，MD5 后转大写 → 32 位大写 hex。输入参数序不敏感（内部排序）。
+pub(crate) fn md5_wrapped_sign(params: &[(&str, &str)], secret: &str) -> String {
+    let mut sorted = params.to_vec();
+    sorted.sort_by(|a, b| a.0.cmp(b.0));
+    let mut concat = String::new();
+    for (key, value) in sorted {
+        concat.push_str(key);
+        concat.push_str(value);
+    }
+    md5_hex(&[secret, &concat, secret]).to_uppercase()
+}
+
+/// GET echostr 握手三参签名（微信族三参 signature / 小红书小程序 / 微博同一
+/// 官方形态，曾在三处换名薄包装，审计退件收敛单点）：sha1(字典序排序三参后
+/// 拼接)，40 位小写 hex。渠道差异只在密钥来源（微信/小红书 = Token，微博 =
+/// App Secret）；官方黄金算例（微博 xyz123xyz/1397022061823/57155157 →
+/// 90e4c22c…、公众号数值例 899cf89e…、小程序算例 f464b24…）由各渠道测试锚定。
+pub(crate) fn callback_signature(first: &str, second: &str, third: &str) -> String {
+    sha1_sorted_hex(&[first, second, third])
+}
+
+/// 签名参数集追加缺失的系统参数（美团/饿了么/拼多多「系统参数并入签名参数
+/// 集」共用形态，审计退件提炼单点）：同名键以既有值为准（防重复键破坏排序
+/// 拼串），缺失才落尾部追加。
+pub(crate) fn append_absent(params: &mut Vec<(String, String)>, extras: &[(&str, &str)]) {
+    for (key, value) in extras {
+        if !params.iter().any(|(existing, _)| existing == key) {
+            params.push((key.to_string(), value.to_string()));
+        }
+    }
+}
+
+/// 当前 Unix 秒（各渠道 timestamp 系统参数取现值；曾在 16 处渠道逐字复制，
+/// 审计退件收敛单点）。
+pub(crate) fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs())
+        .unwrap_or(0)
+}
+
+/// 当前 Unix 毫秒（毫秒形态 timestamp 的渠道取现值，同 [`now_secs`] 收敛）。
+pub(crate) fn now_millis() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_millis())
+        .unwrap_or(0)
 }
 
 /// HMAC-SHA256（RFC 2104，RustCrypto hmac 构造：key pad / 过长先散列 /

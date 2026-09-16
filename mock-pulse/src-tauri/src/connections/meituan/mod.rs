@@ -30,7 +30,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::{form_encode_value, form_pairs, md5_hex, strip_sig};
+use crate::connections::util::{append_absent, form_encode_value, form_pairs, md5_hex, now_secs, strip_sig};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -44,16 +44,8 @@ pub(crate) const GOLDEN_PROBE_BODY: &str =
 /// 1 分钟重试共 3 次。超时文案附官方口径。
 const RETRY_NOTE: &str = "（官方应答窗口：订单类 2 秒内 / IM 类 4 秒内，失败 1 分钟×3 重试，事实库 §3.2/§3.3）";
 
-/// 当前 Unix 秒（直发的 timestamp 取现值；官方口径「timestamp（调用时
-/// 时间戳）」，guide/31 样本 1389751221 即十进制秒）。
-fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
-}
-
-/// 官方 timestamp 形态（§4.1/§6）：调用时的十进制 UNIX 秒字符串。
+/// 官方 timestamp 形态（§4.1/§6）：调用时的十进制 UNIX 秒字符串（取现值经
+/// util::now_secs，审计退件收敛）。
 pub(crate) fn mt_timestamp(unix_secs: u64) -> String {
     unix_secs.to_string()
 }
@@ -89,11 +81,7 @@ fn sign_params(
         .filter(|(key, _)| key != "sig")
         .cloned()
         .collect();
-    for (key, value) in [("app_id", app_id), ("timestamp", timestamp)] {
-        if !params.iter().any(|(existing, _)| existing == key) {
-            params.push((key.to_string(), value.to_string()));
-        }
-    }
+    append_absent(&mut params, &[("app_id", app_id), ("timestamp", timestamp)]);
     params
 }
 

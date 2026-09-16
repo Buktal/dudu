@@ -27,7 +27,7 @@ mod tests;
 
 use std::time::Duration;
 
-use crate::connections::util::sha1_sorted_hex;
+use crate::connections::util::{callback_signature as build_callback_signature, now_secs};
 use crate::connections::wecom::crypto;
 
 use super::{
@@ -38,13 +38,6 @@ use super::{
 /// 官方应答窗口（§10.5 镜像）：5 秒内未收到响应即断开重发，总共重试 3 次。
 const RESPONSE_WINDOW_NOTE: &str = "（官方 5 秒内无响应即断开重试，共 3 次）";
 
-fn unix_timestamp_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
-}
-
 /// 随机 nonce：32 位 hex（小程序语境与微信同族，官方未给样本形态）。
 fn random_nonce() -> String {
     uuid::Uuid::new_v4().simple().to_string()
@@ -53,12 +46,6 @@ fn random_nonce() -> String {
 /// GET 握手的随机 echostr：32 位 hex（官方仅要求原样回显，无内容约束）。
 fn random_echostr() -> String {
     uuid::Uuid::new_v4().simple().to_string()
-}
-
-/// GET 握手三参签名（§10.4 逐字）：sha1(字典序排序(token, timestamp, nonce)
-/// 后拼接)，40 位小写 hex。
-pub(crate) fn build_callback_signature(token: &str, timestamp: &str, nonce: &str) -> String {
-    sha1_sorted_hex(&[token, timestamp, nonce])
 }
 
 /// 推送 MsgSignature 四参签名（§11.3 官方 MsgSignature.getSignature 逐字）：
@@ -104,7 +91,7 @@ fn verify_handshake(
         return ark::probe_handshake(client, config);
     }
     let echostr = random_echostr();
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let nonce = random_nonce();
     let signature = build_callback_signature(token, &timestamp, &nonce);
 
@@ -168,7 +155,7 @@ fn build_crypto_push(
     app_id: &str,
 ) -> Result<CryptoPush, String> {
     let encrypt = crypto::encrypt_msg(encoding_aes_key, &random16(), plaintext.as_bytes(), app_id)?;
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let nonce = random_nonce();
     let signature = build_msg_signature(token, &timestamp, &nonce, &encrypt);
     let body = serde_json::json!({

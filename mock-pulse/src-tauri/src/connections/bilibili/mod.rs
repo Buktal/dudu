@@ -34,7 +34,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::{hmac_sha256_hex, md5_hex, utc8_timestamp};
+use crate::connections::util::{hmac_sha256_hex, md5_hex, now_secs, utc8_timestamp};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -100,13 +100,6 @@ pub(crate) fn timestamp_utc8(epoch_secs: u64) -> String {
     utc8_timestamp(epoch_secs)
 }
 
-fn unix_timestamp_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
-}
-
 /// POST 明文 JSON + 签名头表 + Authorization：body 逐字节透传不重排
 /// （ADR-0001），签名按现场生成的头表现算；nonce 落 msg_id 快照（官方无
 /// 幂等键字段，每请求唯一要素）、timestamp 落 x-bili-timestamp 快照。
@@ -128,7 +121,7 @@ fn post_json(
         );
     }
     let nonce = uuid::Uuid::new_v4().to_string();
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let headers = signing_headers(client_id, &content_md5(body), &timestamp, &nonce);
     let signature = authorization(app_secret, &headers);
     let started = std::time::Instant::now();
@@ -228,7 +221,7 @@ fn verify_handshake(
         };
     };
     let data = random_probe_data();
-    let body = probe_envelope(data, &timestamp_utc8(unix_timestamp_secs()));
+    let body = probe_envelope(data, &timestamp_utc8(now_secs()));
     let outcome = post_json(client, url, client_id, app_secret, &body);
     if let Some(error) = outcome.error {
         return HandshakeOutcome {

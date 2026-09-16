@@ -23,7 +23,8 @@
 //! 同例）；三参 signature 与四参 msg_signature 同 sha1 字典序排序族
 //! （util::sha1_sorted_hex）。
 
-use crate::connections::util::sha1_sorted_hex;
+pub(crate) use crate::connections::util::callback_signature as build_callback_signature;
+use crate::connections::util::{now_secs, sha1_sorted_hex};
 use crate::connections::wecom::crypto::{decrypt_msg, encrypt_msg};
 use crate::connections::wecom::random_16;
 
@@ -42,13 +43,6 @@ pub(crate) struct Creds<'a> {
     pub encoding_aes_key: &'a str,
 }
 
-/// GET 握手/直发共用的三参 signature：sha1(字典序排序(token, timestamp, nonce)
-/// 后拼接)，40 位小写 hex（公众号数值例 899cf89e…、小程序算例 f464b24…，
-/// 各自事实库）。
-pub(crate) fn build_callback_signature(token: &str, timestamp: &str, nonce: &str) -> String {
-    sha1_sorted_hex(&[token, timestamp, nonce])
-}
-
 /// 兼容/安全的四参 msg_signature：sha1(字典序排序(token, timestamp, nonce,
 /// Encrypt) 后拼接)（事实库 wechat-mp §4.3 / wechat-mini §4.2，与企微
 /// msg_signature 同族）。
@@ -65,14 +59,6 @@ pub(crate) fn build_msg_signature(
 /// mock 取 uuid simple 32 位 hex 同风格无连字符）。
 pub(crate) fn random_openid() -> String {
     uuid::Uuid::new_v4().simple().to_string()
-}
-
-/// UNIX 秒时间戳（三参 signature / 四参 msg_signature 的请求侧时间参数）。
-pub(crate) fn unix_timestamp_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
 }
 
 /// 解密加密回执并校验尾部 AppId（官方「appid 须校验」，与企微 receiveid 同位：
@@ -133,7 +119,7 @@ fn seal_plaintext(
         plaintext.as_bytes(),
         creds.app_id,
     )?;
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let nonce = uuid::Uuid::new_v4().simple().to_string();
     let signature = build_msg_signature(creds.token, &timestamp, &nonce, &msg_encrypt);
     Ok((msg_encrypt, timestamp, nonce, signature))
@@ -202,7 +188,7 @@ pub(crate) fn dispatch_plain(
     extract_reply_encrypt: fn(&str) -> Option<&str>,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let nonce = uuid::Uuid::new_v4().simple().to_string();
     let query = common_query(creds, &timestamp, &nonce);
     let signature = query

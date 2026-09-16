@@ -5,7 +5,8 @@
 //! （官方注明 nonce 需复用回调 url 中的 nonce）。明文 JSON 逐字节透传，不重排。
 
 use super::super::{request_error_reason, ConnectionConfig, DispatchOutcome};
-use super::{build_signature, decrypt_msg, encrypt_msg, random_16, unix_timestamp_secs};
+use super::{build_signature, decrypt_msg, encrypt_msg, random_16};
+use crate::connections::util::now_secs;
 
 /// POST 业务推送信封（官方 §3.5 JSON 版单字段信封；明文 JSON 密文原样入 encrypt）。
 fn build_envelope_json(msg_encrypt: &str) -> String {
@@ -44,7 +45,7 @@ pub(super) fn dispatch_event(
         Ok(value) => value,
         Err(reason) => return DispatchOutcome::not_sent(reason),
     };
-    let timestamp = unix_timestamp_secs().to_string();
+    let timestamp = now_secs().to_string();
     let nonce = uuid::Uuid::new_v4().simple().to_string();
     let signature = build_signature(token, &timestamp, &nonce, &msg_encrypt);
     let envelope = build_envelope_json(&msg_encrypt);

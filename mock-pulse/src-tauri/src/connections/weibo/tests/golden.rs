@@ -48,7 +48,7 @@ fn random_handshake_elements_match_official_sample_shape() {
     assert_eq!(echostr.len(), 10);
     assert!(echostr.chars().all(|c| c.is_ascii_alphanumeric()));
     // timestamp：官方算例 1397022061823 为 13 位毫秒
-    let timestamp = unix_timestamp_millis().to_string();
+    let timestamp = crate::connections::util::now_millis().to_string();
     assert_eq!(timestamp.len(), 13, "timestamp 为毫秒形态：{timestamp}");
     // 随机性抽查：两次生成不同
     assert_ne!(nonce, random_nonce());

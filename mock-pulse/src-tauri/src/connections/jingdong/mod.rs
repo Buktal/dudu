@@ -26,7 +26,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::{md5_hex, utc8_timestamp};
+use crate::connections::util::{md5_wrapped_sign, now_secs, utc8_timestamp};
 
 use super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
 
@@ -49,15 +49,10 @@ const RETRY_NOTE: &str = "（官方重试口径待核验(09-27)，listId=520 复
 
 /// JOS 签名（事实库 §4.1 官方步骤逐字规则）：所有请求参数按字母序排列，拼接
 /// 参数名与参数值，appSecret 夹两端，MD5 大写。输入参数序不敏感（内部排序）。
+/// 算法与拼多多 PMC 签名同形，单点在 util（[`md5_wrapped_sign`]，审计退件
+/// 去重），本函数只承载京东侧协议名与 §4.1 口径。
 pub(crate) fn jos_sign(params: &[(&str, &str)], app_secret: &str) -> String {
-    let mut sorted = params.to_vec();
-    sorted.sort_by(|a, b| a.0.cmp(b.0));
-    let mut concat = String::new();
-    for (key, value) in sorted {
-        concat.push_str(key);
-        concat.push_str(value);
-    }
-    md5_hex(&[app_secret, &concat, app_secret]).to_uppercase()
+    md5_wrapped_sign(params, app_secret)
 }
 
 /// JOS timestamp（§4.1/§4.2 官方格式逐字）：`yyyy-MM-dd HH:mm:ss`（如
@@ -65,14 +60,6 @@ pub(crate) fn jos_sign(params: &[(&str, &str)], app_secret: &str) -> String {
 /// 生成（历法换算复用 [`utc8_timestamp`]，civil_from_days 不手写）。
 pub(crate) fn jos_timestamp(unix_secs: u64) -> String {
     utc8_timestamp(unix_secs)
-}
-
-/// 当前 Unix 秒（探针/直发的 timestamp 取现值，10 分钟窗口内即有效）。
-fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_secs())
-        .unwrap_or(0)
 }
 
 /// 从明文 JSON 提取业务单号快照：order_id（订单推送）→ orderId（咚咚 push2）
