@@ -1,18 +1,18 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
-import { isQueueMember } from "../conversation-query";
 import type {
   Conversation,
   ConversationPage,
   ConversationQuery,
 } from "../types";
 import { mergeConversation } from "./live-merge";
+import { rewriteQueueIds } from "./queue-membership";
 import { emptyLoad, type InboxState } from "./state";
 
 /**
  * Conversation queue reducers: own queue membership, cursors and counts.
- * Entity merging stays in read-reducers.ts; recovery fan-out stays in
- * event-reducers.ts; both write through mergeConversation.
+ * Entity merging stays in the Live events merge kernel; the keep rules for a
+ * rewrite stay in the queue membership module.
  */
 export const queueReducers = {
   conversationsDiscovered(
@@ -49,16 +49,16 @@ export const queueReducers = {
   ) {
     const { page, append, preserveIds } = action.payload;
     const previousIds = [...state.queue.ids];
-    const ids = page.items.map((item) => item.id);
-    const retained = new Set([...ids, ...preserveIds]);
     for (const conversation of page.items)
       mergeConversation(state, conversation);
-    state.queue.ids = [
-      ...new Set([
-        ...previousIds.filter((id) => append || retained.has(id)),
-        ...ids,
-      ]),
-    ].filter((id) => isQueueMember(state.conversations, id, state.queue.query));
+    state.queue.ids = rewriteQueueIds({
+      conversations: state.conversations,
+      query: state.queue.query,
+      previousIds,
+      incomingIds: page.items.map((item) => item.id),
+      mode: append ? "append" : "refresh",
+      preserveIds,
+    });
     state.queue.status = "ready";
     state.queue.hasLoaded = true;
     state.queue.nextCursor = page.nextCursor;

@@ -6,7 +6,8 @@ naming a module after a concept not listed here means adding it here first.
 - **Reception workspace** — the agent-facing desk. Three modes: calm (one
   conversation), parallel (primary + pinned), quick (cards).
 - **Conversation queue** — the filterable, sortable list of conversations
-  awaiting or under reception. Owns query, cursors, counts.
+  awaiting or under reception. Owns query, cursors, counts, membership
+  (`rewriteQueueIds`) and re-read triggers.
 - **Reply pipeline** — draft → attach → send → advance-to-next. Owns the
   reply-allowed decision and submission lifecycle.
 - **Live events** — the subscription + reconnect + recovery flow. Owns cursor

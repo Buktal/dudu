@@ -1,5 +1,6 @@
 import type { ConversationQuery, InboxEvent } from "../types";
 import { loadConversations } from "./queue";
+import { needsQueueRefreshForEvent } from "./queue-membership";
 import {
   connectionFromFailure,
   reconcileInbox,
@@ -65,8 +66,11 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
           const state = getState().inbox;
           if (
             state === previous ||
-            !["conversation", "message", "removed"].includes(event.type) ||
-            (!state.queue.query.search.trim() && !state.queue.counts)
+            !needsQueueRefreshForEvent(
+              event.type,
+              state.queue.query,
+              state.queue.counts,
+            )
           )
             return;
           pendingQuery = state.queue.query;

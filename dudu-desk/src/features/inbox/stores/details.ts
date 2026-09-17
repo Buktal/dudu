@@ -1,6 +1,10 @@
 import { uniq } from "lodash-es";
 import { DeskApiError } from "@/lib/api-response";
 import { loadConversations } from "./queue";
+import {
+  needsQueueReloadAfterProfileSave,
+  needsQueueReloadAfterStarChange,
+} from "./queue-membership";
 import { failureOf, runOperation } from "./requests";
 import { inboxActions } from "./slice";
 import type { ProfileChanges } from "./state";
@@ -71,7 +75,7 @@ export function saveVisitorProfile(
               revision: edit.revision,
             }),
           );
-          if (getState().inbox.queue.query.search.trim())
+          if (needsQueueReloadAfterProfileSave(getState().inbox.queue.query))
             await dispatch(loadConversations());
         } catch (error) {
           op.settle(() =>
@@ -124,7 +128,7 @@ export function setConversationStarred(
             );
           }
           dispatch(inboxActions.starSaved(result));
-          if (getState().inbox.queue.query.starred)
+          if (needsQueueReloadAfterStarChange(getState().inbox.queue.query))
             await dispatch(loadConversations());
         } catch (error) {
           op.settle(() =>

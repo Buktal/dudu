@@ -1,6 +1,5 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
-import { isQueueMember } from "../conversation-query";
 import type {
   ConnectionState,
   Conversation,
@@ -16,6 +15,7 @@ import {
   mergeMessage,
   orderMessages,
 } from "./live-merge";
+import { rewriteQueueIds } from "./queue-membership";
 import {
   emptyLoad,
   type InboxState,
@@ -34,15 +34,13 @@ export const eventReducers = {
     const page = action.payload;
     for (const conversation of page.items)
       mergeConversation(state, conversation);
-    const recoveredIds = new Set(page.items.map((item) => item.id));
-    state.queue.ids = [
-      ...new Set([
-        ...state.queue.ids.filter(
-          (id) => !state.queue.query.search.trim() || recoveredIds.has(id),
-        ),
-        ...recoveredIds,
-      ]),
-    ].filter((id) => isQueueMember(state.conversations, id, state.queue.query));
+    state.queue.ids = rewriteQueueIds({
+      conversations: state.conversations,
+      query: state.queue.query,
+      previousIds: state.queue.ids,
+      incomingIds: page.items.map((item) => item.id),
+      mode: "reconcile",
+    });
     state.queue.hasLoaded = true;
     state.queue.status = "ready";
     state.queue.error = null;
