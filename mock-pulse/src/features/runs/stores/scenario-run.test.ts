@@ -18,6 +18,7 @@ import {
   scenariosReducer,
 } from "@/features/scenarios";
 import { appReducer } from "@/stores/app-slice";
+import { expectNeedConnection } from "@/test/thunk-outcomes";
 import * as api from "../api";
 import { runProgress, selectLiveRun } from "./live";
 import { runsReducer, selectRuns, selectScenarioRunPhase } from "./runs-slice";
@@ -197,11 +198,17 @@ describe("runs 剧本运行状态流转（scenario-run）", () => {
 
   it("未配置连接：不物化不调命令，phase 指引", async () => {
     const store = makeScenarioStore();
-    await store.dispatch(startScenarioRun({ scenario: scenarioDraft }));
+    const action = await store.dispatch(
+      startScenarioRun({ scenario: scenarioDraft }),
+    );
 
     expect(apiMock.startScenarioRun).not.toHaveBeenCalled();
     expect(phaseOf(store)).toBe("needConnection");
     expect(liveOf(store)).toBeNull();
+    // 统一词汇：缺失渠道随 outcome 带出（此前 scenario 侧丢弃该字段）
+    expectNeedConnection((a) => startScenarioRun.fulfilled.match(a), action, [
+      "douyin",
+    ]);
   });
 
   it("缺连接 + 坏 stepIndex：门禁先行，回 needConnection 不抛步骤错", async () => {

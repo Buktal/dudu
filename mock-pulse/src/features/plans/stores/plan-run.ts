@@ -2,11 +2,10 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 
 import {
   canStartRun,
-  type LiveRun,
   launchProjectedRun,
   liveFromPlanSnapshot,
+  type ProjectedOutcome,
 } from "@/features/runs";
-import type { ChannelId } from "@/lib/channels";
 import type { RootState } from "@/store";
 
 import { startPlanRun as startPlanRunApi } from "../api";
@@ -21,15 +20,10 @@ import { resolveLaneScenario, validatePlan } from "../model";
  * 启动互斥由运行会话模块裁决。
  */
 
-/** 编排运行结果：正常返回 noop/needConnection 分支或 started（异常走 rejected） */
-export type PlanRunResult =
-  | { kind: "noop" }
-  | { kind: "needConnection"; channels: ChannelId[] }
-  | { kind: "started"; live: LiveRun };
-
-/** 启动编排运行（当前选中的编排草稿）：引用剧本不存在时拒绝启动。 */
+/** 启动编排运行（当前选中的编排草稿）：引用剧本不存在时拒绝启动。
+ *  结果即统一词汇的投影子集（runs 域拥有），本域只做引用整形与校验。 */
 export const startPlanRun = createAsyncThunk<
-  PlanRunResult,
+  ProjectedOutcome,
   void,
   { state: RootState }
 >(
@@ -39,9 +33,12 @@ export const startPlanRun = createAsyncThunk<
     if (!plan) {
       return { kind: "noop" as const };
     }
-    validatePlan(plan, getState().scenarios.items);
+    // 单次状态快照：校验、门禁输入与物化读同一份剧本/事件表，
+    // 门禁与快照之间不因二次读取漂移。
+    const state = getState();
+    validatePlan(plan, state.scenarios.items);
     const laneScenarios = plan.items.map((item) => {
-      const scenario = resolveLaneScenario(item, getState().scenarios.items);
+      const scenario = resolveLaneScenario(item, state.scenarios.items);
       if (!scenario) {
         throw new Error(`编排引用的剧本不存在：${item.scenarioId}。`);
       }
@@ -58,8 +55,8 @@ export const startPlanRun = createAsyncThunk<
         materialize: () =>
           materializePlanRun({
             plan,
-            scenarios: getState().scenarios.items,
-            events: getState().events.items,
+            scenarios: state.scenarios.items,
+            events: state.events.items,
             startedAt: new Date().toISOString(),
           }),
         toLive: liveFromPlanSnapshot,

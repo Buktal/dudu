@@ -48,6 +48,10 @@ _Avoid_: 实时状态、进度状态（口语）
 编排运行中「某步失败后如何继续」的决策表：编织方式（串行 / 并行）× 失败语义（stop / continue）× 取消源（编排停 / 用户停）→ 执行或跳过（含跳过原因）。决策单点在 Rust runs/policy。
 _Avoid_: 旗标组合、失败标志（口语）
 
+**启动结果（LaunchOutcome）**:
+mock-pulse 三条启动路（模板直发 / 剧本运行 / 编排运行）共用的结果词汇：noop / needConnection（恒带缺失渠道）/ started / done。收敛单点在 runs 域 launch 模块，各 thunk 只取自己的子集。
+_Avoid_: 返回值（口语）
+
 **引用解析**:
 mock-pulse 中步骤/编排引用到注册表条目的查找与缺失分类单点：`{id, version}` → ok / id-missing / version-missing。事件素材版本、事件模板版本、编排 lane 剧本三处共用同一 kernel（events 域 resolve）；缺失含义（运行时钟抛错 / 展示时钟标记）归各调用时钟。
 _Avoid_: 查找、引用查找（口语）

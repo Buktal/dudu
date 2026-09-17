@@ -60,16 +60,30 @@ export type DispatchResult = {
   step: RunStep;
 };
 
-/** 直发结果：正常返回 needConnection/noop 分支或完整记录（异常走 rejected） */
-export type DirectDispatchResult =
+/** 启动结果统一词汇：直发 / 剧本 / 编排三条启动路共用同一 outcome 形状。
+ *  needConnection 恒携带缺失渠道（直发为单元素，投影为去重门禁输入），
+ *  两 slice 只认这一形状，不再各写一套 kind 映射。 */
+export type LaunchNeedConnection = {
+  kind: "needConnection";
+  channels: ChannelId[];
+};
+
+export type LaunchOutcome =
   | { kind: "noop" }
-  | { kind: "needConnection" }
+  | LaunchNeedConnection
+  | { kind: "started"; live: LiveRun }
   | {
       kind: "done";
       run: RunRecord;
       result: DispatchResult;
       persistenceError?: string;
     };
+
+/** 直发结果：统一词汇的子集（直发无 started，只有 done） */
+export type DirectDispatchResult = Extract<
+  LaunchOutcome,
+  { kind: "noop" | "needConnection" | "done" }
+>;
 
 /** 直发明文编译结果（门禁通过后一次 invoke 的全部输入） */
 export type DirectCompile = {
@@ -95,8 +109,9 @@ export async function launchDirectRun(
   }
   const connection = store.getState().connections.items[compiled.channel];
   if (!connection || !isConnectionReady(connection)) {
-    // 未配置连接（缺条目/缺地址/缺密钥）：不报错，面板给「前往平台连接」指引
-    return { kind: "needConnection" };
+    // 未配置连接（缺条目/缺地址/缺密钥）：不报错，面板给「前往平台连接」指引；
+    // 缺失渠道随 outcome 带出（统一词汇，调用方不再各自推导）
+    return { kind: "needConnection", channels: [compiled.channel] };
   }
   // 直发明文按渠道 wire 形态确定性拼装已在 compile 完成（抖音紧凑 JSON /
   // 企微 XML）；发送、期望比对与单步快照组装都在 Rust 直发命令完成
@@ -143,11 +158,11 @@ export type ProjectedLaunch<S> = {
   invoke: (snapshot: S, connections: ConnectionConfig[]) => Promise<unknown>;
 };
 
-/** 投影型启动结果：剧本/编排 thunk 各自映射为本域的结果形状 */
-export type ProjectedOutcome =
-  | { kind: "noop" }
-  | { kind: "needConnection"; channels: ChannelId[] }
-  | { kind: "started"; live: LiveRun };
+/** 投影型启动结果：统一词汇的子集（投影无 done，只有 started） */
+export type ProjectedOutcome = Extract<
+  LaunchOutcome,
+  { kind: "noop" | "needConnection" | "started" }
+>;
 
 /**
  * 投影型启动：连接门（去重渠道逐一确认）→ 按门禁解析连接 → 物化快照 →
@@ -163,10 +178,14 @@ export async function launchProjectedRun<S>(
   if (missing.length > 0) {
     return { kind: "needConnection", channels: missing };
   }
-  // 门禁已过：渠道连接必就绪；flatMap 兜住类型（缺席即空，不静默错配）
-  const connections = request.channels.flatMap((channel) => {
+  // 门禁已过：渠道连接必就绪；缺席即违反门禁不变式，直接抛错——
+  // 不静默丢弃，避免错配的连接表进入 invoke。
+  const connections = request.channels.map((channel) => {
     const connection = state.connections.items[channel];
-    return connection ? [connection] : [];
+    if (!connection) {
+      throw new Error(`连接缺失（门禁已过，不应发生）：${channel}。`);
+    }
+    return connection;
   });
   const snapshot = request.materialize();
   const live = request.toLive(snapshot);

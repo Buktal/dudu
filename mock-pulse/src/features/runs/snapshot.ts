@@ -64,6 +64,23 @@ function templateName(templates: readonly EventSchema[], id: string): string {
 }
 
 /**
+ * 单步运行的剧本形状（运行步骤详情「发送这一步」）：索引越界抛可读错误；
+ * 切出的单步等待恒为 0（单发不等待前序）。步骤切片知识住在物化侧，
+ * 调用方不再各自拼单步来源。
+ */
+export function snapshotSourceForStep(
+  scenario: SnapshotSource,
+  stepIndex: number | undefined,
+): SnapshotSource {
+  if (stepIndex === undefined) return scenario;
+  const step = scenario.steps[stepIndex];
+  if (!step) {
+    throw new Error("找不到要发送的步骤。");
+  }
+  return { ...scenario, steps: [{ ...step, wait: 0 }] };
+}
+
+/**
  * 物化剧本步骤为运行快照。解析失败（空步骤/悬空引用/缺版本/跨渠道/
  * 模板未注册或钉住版本不在注册表）抛可读错误，不产出半成品快照。
  */

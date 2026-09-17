@@ -15,6 +15,7 @@ import {
 import { plansReducer } from "@/features/plans";
 import { initialScenariosState, scenariosReducer } from "@/features/scenarios";
 import { appReducer } from "@/stores/app-slice";
+import { expectNeedConnection } from "@/test/thunk-outcomes";
 import * as api from "../api";
 import type { RunStep } from "../model";
 import { directDispatch } from "./direct-dispatch";
@@ -173,6 +174,19 @@ describe("runs 直发状态流转（direct-dispatch）", () => {
       expect(selectRuns(store.getState().runs)).toEqual([]);
     },
   );
+
+  it("未配置连接的 outcome 携带缺失渠道（统一词汇）", async () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "直发指引", schemaId: "dy-text" }));
+
+    const action = await store.dispatch(directDispatch());
+
+    expectNeedConnection((a) => directDispatch.fulfilled.match(a), action, [
+      "douyin",
+    ]);
+    expect(apiMock.dispatchDirect).not.toHaveBeenCalled();
+    expect(selectPanelPhase(store.getState().runs)).toBe("needConnection");
+  });
 
   it("直发命令抛错（invoke rejected）：面板呈现错误，不记运行记录", async () => {
     const store = makeStore(CONNECTION);
