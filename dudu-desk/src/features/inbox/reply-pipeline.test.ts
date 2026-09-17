@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { defineConversation } from "./fixtures";
-import { buildReplySubmission, replyReadiness } from "./reply-pipeline";
+import {
+  buildReplySubmission,
+  replyReadiness,
+  replyRestriction,
+} from "./reply-pipeline";
+import { firstConversation } from "./stores/test-support";
 import type { Conversation } from "./types";
 
 const NOW = "2026-09-16T00:01:00Z";
@@ -249,5 +254,116 @@ describe("Reply pipeline submission builder", () => {
     });
     expect(submission.next).toBe(true);
     expect(submission.draftAttachmentIds).toEqual(["draft-1"]);
+  });
+});
+
+describe("Reply policy", () => {
+  const attachable: Conversation = {
+    ...firstConversation,
+    capability: {
+      state: "allowed",
+      kinds: ["text", "image"],
+      attachments: { maxBytes: 10_000, maxCount: 3, mimeTypes: ["image/*"] },
+    },
+  };
+
+  it("allows text alone and empty drafts fall back to the text question", () => {
+    expect(
+      replyRestriction(
+        firstConversation,
+        "connected",
+        { text: "你好", files: [] },
+        NOW,
+      ),
+    ).toBeNull();
+    expect(
+      replyRestriction(
+        firstConversation,
+        "connected",
+        { text: "  ", files: [] },
+        NOW,
+      ),
+    ).toBeNull();
+  });
+
+  it("blocks the whole reply when the connection or conversation is gone", () => {
+    expect(
+      replyRestriction(
+        firstConversation,
+        "connecting",
+        { text: "你好", files: [] },
+        NOW,
+      ),
+    ).not.toBeNull();
+    expect(
+      replyRestriction(
+        undefined,
+        "connected",
+        { text: "你好", files: [] },
+        NOW,
+      ),
+    ).not.toBeNull();
+  });
+
+  it("derives kinds from content so attachments gate on capability", () => {
+    const image = { name: "a.png", size: 100, mimeType: "image/png" };
+    // text-only capability rejects the image even though text is fine.
+    expect(
+      replyRestriction(
+        firstConversation,
+        "connected",
+        { text: "", files: [image] },
+        NOW,
+      ),
+    ).not.toBeNull();
+    expect(
+      replyRestriction(
+        attachable,
+        "connected",
+        { text: "", files: [image] },
+        NOW,
+      ),
+    ).toBeNull();
+  });
+
+  it("enforces attachment limits with a single clock value", () => {
+    const big = { name: "a.png", size: 99_999, mimeType: "image/png" };
+    expect(
+      replyRestriction(
+        attachable,
+        "connected",
+        { text: "", files: [big] },
+        NOW,
+      ),
+    ).toMatch(/大小/);
+    const many = [0, 1, 2, 3].map((index) => ({
+      name: `${index}.png`,
+      size: 100,
+      mimeType: "image/png",
+    }));
+    expect(
+      replyRestriction(attachable, "connected", { text: "", files: many }, NOW),
+    ).toMatch(/最多添加/);
+  });
+
+  it("respects an expired reply window for the composed decision", () => {
+    const expired: Conversation = {
+      ...attachable,
+      capability: {
+        ...attachable.capability,
+        expiresAt: "2026-09-16T00:00:00Z",
+      },
+    };
+    expect(
+      replyRestriction(
+        expired,
+        "connected",
+        {
+          text: "",
+          files: [{ name: "a.png", size: 100, mimeType: "image/png" }],
+        },
+        NOW,
+      ),
+    ).toMatch(/窗口/);
   });
 });

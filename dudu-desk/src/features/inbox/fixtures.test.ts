@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   allowedCapability,
   defineConversation,
-  defineTestConversation,
   restrictedCapability,
   unknownCapability,
 } from "./fixtures";
-import { firstConversation, secondConversation } from "./stores/test-support";
+import {
+  defineTestConversation,
+  firstConversation,
+  secondConversation,
+} from "./stores/test-support";
 
 const identity = {
   id: "visitor-a",

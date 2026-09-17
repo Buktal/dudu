@@ -12,7 +12,8 @@ import {
 import { nowIso } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import { composerIntent, replyReadiness } from "../reply-pipeline";
+import { replyReadiness } from "../reply-pipeline";
+import { composerIntent } from "../sending-rules";
 import { selectConversationById } from "../stores/selectors";
 import {
   editDraft,

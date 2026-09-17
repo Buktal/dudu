@@ -1,16 +1,9 @@
-import { type ApiFailure, DeskApiError } from "@/lib/api-response";
 import type { WorkContext } from "../types";
 import type { InboxRootState, InboxRuntime } from "./store";
 
-export function failureOf(error: unknown): ApiFailure {
-  if (error instanceof DeskApiError) {
-    return { kind: error.kind, message: error.message, code: error.code };
-  }
-  if (error instanceof Error && error.name === "AbortError") {
-    return { kind: "aborted", message: "操作已取消" };
-  }
-  return { kind: "network", message: "暂时无法连接服务，请稍后重试" };
-}
+/** Canonical failure mapping lives in `@/lib/api-response` (shared with the
+ *  account session); re-exported here so inbox modules keep one import. */
+export { failureOf } from "@/lib/api-response";
 
 /** Escape hatch for long-lived operations (e.g. the inbox subscription) whose
  *  request outlives a single task. Scoped loads should use runOperation. */

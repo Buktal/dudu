@@ -1,5 +1,6 @@
 import { sendRestriction } from "../sending-rules";
 import { readConversationChoices } from "./choices";
+import { advancePageCursor } from "./page-cursor";
 import { selectConversation } from "./reading";
 import { inboxActions } from "./slice";
 import { emptyQuery, type ReplySubmission } from "./state";
@@ -53,10 +54,11 @@ export function receiveNext(
           await dispatch(selectConversation(next.id));
           return;
         }
-        cursor = page.nextCursor ?? undefined;
-        if (cursor && seenCursors.has(cursor))
-          throw new Error("The next-visitor cursor did not advance");
-        if (cursor) seenCursors.add(cursor);
+        cursor = advancePageCursor(
+          page.nextCursor,
+          seenCursors,
+          "The next-visitor cursor did not advance",
+        );
       } while (cursor);
       dispatch(inboxActions.noticeChanged("没有其他可回复的待接待会话"));
     } catch {

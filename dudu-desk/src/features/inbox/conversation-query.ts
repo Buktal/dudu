@@ -1,6 +1,12 @@
 import { timestamp } from "@/lib/time";
 import type { Conversation, ConversationQuery } from "./types";
 
+/**
+ * Client-side queue filters only: channel / status / starred. Full-text
+ * search stays server-side — a conversation the service returns is a search
+ * match by definition, so callers must not re-apply search here. The search
+ * carve-out for queue rewrites lives in the queue membership module.
+ */
 export function matchesConversationFilters(
   conversation: Conversation | undefined,
   query: ConversationQuery,
@@ -20,6 +26,7 @@ export function matchesConversationFilters(
 /**
  * One predicate for queue membership, shared by the queue reducers, the Live
  * events reconciler and the merge kernel. Missing conversations never belong.
+ * Search is deliberately excluded (see above): server-owned membership.
  */
 export function isQueueMember(
   conversations: Record<string, Conversation | undefined>,

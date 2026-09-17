@@ -1,26 +1,46 @@
-import { replyRestriction } from "./reply-policy";
-import { sendTarget } from "./sending-rules";
-import type { StartSubmission } from "./stores/state";
+import { attachmentBatchRestriction, attachmentKind } from "./attachment-rules";
+import { sendRestriction, sendTarget } from "./sending-rules";
+import type { DraftAttachment, StartSubmission } from "./stores/state";
 import type {
   ConnectionState,
   Conversation,
   InboxMessage,
   MediaReference,
+  SendKind,
 } from "./types";
 
-export { composerIntent } from "./sending-rules";
-
-export type ReplyFile = {
-  name: string;
-  size: number;
-  mimeType: string;
-  status?: "preparing" | "ready" | "failed";
-  media?: unknown;
-};
+export type ReplyFile = Pick<DraftAttachment, "name" | "size" | "mimeType"> &
+  Partial<Pick<DraftAttachment, "status">> & { media?: unknown };
 
 export type ReplyReadiness =
   | { sendable: true; notice: null }
   | { sendable: false; notice: string | null };
+
+/**
+ * Reply policy: the reply-allowed decision (Reply policy in CONTEXT.md).
+ * Owns kinds-derivation and the send+attachment composition, so every caller
+ * answers the same question with the same clock value.
+ */
+export function replyRestriction(
+  conversation: Conversation | undefined,
+  connection: ConnectionState,
+  content: {
+    text: string;
+    files: { name: string; size: number; mimeType: string }[];
+  },
+  now: string,
+): string | null {
+  const kinds: SendKind[] = [
+    ...(content.text.trim() || !content.files.length
+      ? (["text"] as const)
+      : []),
+    ...content.files.map((file) => attachmentKind(file.mimeType)),
+  ];
+  return (
+    sendRestriction(conversation, connection, kinds, now) ||
+    attachmentBatchRestriction(conversation, connection, content.files, now)
+  );
+}
 
 /**
  * Deep module for the Reply pipeline send decision. Owns the

@@ -2,10 +2,15 @@ import { createSelector } from "@reduxjs/toolkit";
 import { DeskApiError } from "@/lib/api-response";
 import { compareConversations } from "../conversation-query";
 import type { ConversationPage, ConversationQuery } from "../types";
+import { advancePageCursor } from "./page-cursor";
 import { selectConversation } from "./reading";
 import { failureOf, runOperation } from "./requests";
 import { inboxActions } from "./slice";
-import type { InboxCommand, InboxRootState } from "./store";
+import {
+  type InboxCommand,
+  type InboxRootState,
+  notifyQueueSettled,
+} from "./store";
 
 /**
  * Conversation queue read interface: queue order and the sorted queue view.
@@ -65,6 +70,9 @@ export function loadConversations(
             ? (queue.nextCursor ?? undefined)
             : undefined;
           do {
+            // Pre-add the outgoing cursor: a repeat can span two reads (the
+            // stored nextCursor re-requested as `more`), so the guard must
+            // know the request chain, not just returned cursors.
             if (cursor) cursors.add(cursor);
             const nextPage = await runtime.api.listConversations({
               context: op.context,
@@ -73,11 +81,12 @@ export function loadConversations(
               cursor,
             });
             if (!op.current()) return;
-            if (nextPage.nextCursor && cursors.has(nextPage.nextCursor))
-              throw new DeskApiError(
-                "invalid-response",
+            cursor =
+              advancePageCursor(
+                nextPage.nextCursor,
+                cursors,
                 "会话列表返回了重复游标，请刷新后重试",
-              );
+              ) ?? undefined;
             page.items.push(...nextPage.items);
             const previousSize = loadedIds.size;
             for (const item of nextPage.items) {
@@ -94,7 +103,6 @@ export function loadConversations(
                 "invalid-response",
                 "会话列表分页没有继续前进，请刷新后重试",
               );
-            cursor = page.nextCursor;
           } while (cursor);
           const latest = getState().inbox;
           const preserveIds = latest.queue.ids.filter(
@@ -129,7 +137,7 @@ export function loadConversations(
         }
       });
     } finally {
-      runtime.queueEvents.dispatchEvent(new Event("settled"));
+      notifyQueueSettled(runtime);
     }
   };
 }

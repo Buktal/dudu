@@ -47,3 +47,19 @@ export function readApiEnvelope(response: unknown): unknown {
   }
   return response.data;
 }
+
+/**
+ * Shared failure mapping: DeskApiError carries its kind/message/code through,
+ * aborts become "aborted", everything else is a "network" failure. Inbox
+ * operations (stores/requests.ts) and the account session answer through
+ * here, so user-facing failure copy changes in one module.
+ */
+export function failureOf(error: unknown): ApiFailure {
+  if (error instanceof DeskApiError) {
+    return { kind: error.kind, message: error.message, code: error.code };
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    return { kind: "aborted", message: "操作已取消" };
+  }
+  return { kind: "network", message: "暂时无法连接服务，请稍后重试" };
+}

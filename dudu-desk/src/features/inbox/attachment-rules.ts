@@ -8,6 +8,14 @@ import type {
   SendKind,
 } from "./types";
 
+/**
+ * Attachment gates: three entry points, one composition order.
+ * - `attachmentRestriction` gates a single file (send capability + limits).
+ * - `attachmentEntryRestriction` gates opening the picker (no file yet).
+ * - `attachmentBatchRestriction` gates a whole draft; the Reply pipeline
+ *   answers through here so per-file and batch decisions share one clock.
+ */
+
 export function attachmentKind(mimeType: string): Exclude<SendKind, "text"> {
   if (mimeType.startsWith("image/")) return "image";
   if (mimeType.startsWith("audio/")) return "audio";

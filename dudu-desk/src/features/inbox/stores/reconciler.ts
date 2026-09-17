@@ -1,10 +1,11 @@
-import { type ApiFailure, DeskApiError } from "@/lib/api-response";
+import type { ApiFailure } from "@/lib/api-response";
 import type {
   ConnectionState,
   ConversationPage,
   InboxMessage,
   Page,
 } from "../types";
+import { advancePageCursor } from "./page-cursor";
 import {
   failureOf,
   releaseAttachmentResources,
@@ -86,7 +87,11 @@ export function reconcileInbox(
           queuePage.total = page.total ?? queuePage.total;
           queuePage.counts = page.counts ?? queuePage.counts;
           queuePage.channels = page.channels ?? queuePage.channels;
-          cursor = nextCursor(page.nextCursor, seenCursors);
+          cursor = advancePageCursor(
+            page.nextCursor,
+            seenCursors,
+            "恢复读取返回了重复游标，请重新连接",
+          );
         } while (cursor);
         if (getState().inbox.queue.query === query)
           dispatch(inboxActions.conversationsReconciled(queuePage));
@@ -125,7 +130,11 @@ export function reconcileInbox(
               )
             )
               break;
-            historyCursor = nextCursor(page.nextCursor, cursors);
+            historyCursor = advancePageCursor(
+              page.nextCursor,
+              cursors,
+              "恢复读取返回了重复游标，请重新连接",
+            );
           } while (historyCursor);
           dispatch(
             inboxActions.historyReconciled({
@@ -175,18 +184,4 @@ export function reconcileInbox(
       }
     });
   };
-}
-
-function nextCursor(
-  cursor: string | null,
-  seen: Set<string>,
-): string | undefined {
-  if (!cursor) return;
-  if (seen.has(cursor))
-    throw new DeskApiError(
-      "invalid-response",
-      "恢复读取返回了重复游标，请重新连接",
-    );
-  seen.add(cursor);
-  return cursor;
 }

@@ -1,6 +1,5 @@
-import type { ConversationQuery, InboxEvent } from "../types";
-import { loadConversations } from "./queue";
-import { needsQueueRefreshForEvent } from "./queue-membership";
+import type { InboxEvent } from "../types";
+import { createRefreshScheduler } from "./live-refresh";
 import {
   connectionFromFailure,
   reconcileInbox,
@@ -12,7 +11,7 @@ import {
   releaseAttachmentResources,
 } from "./requests";
 import { inboxActions } from "./slice";
-import type { InboxCommand } from "./store";
+import { type InboxCommand, onQueueSettled } from "./store";
 
 function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
@@ -24,31 +23,13 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
       reconnecting ||
       ["disconnected", "unavailable"].includes(getState().inbox.connection);
     let recovery: Promise<void> | undefined;
-    let queryRefreshQueued = false;
-    let pendingQuery: ConversationQuery | undefined;
-    const scheduleQueryRefresh = () => {
-      if (queryRefreshQueued || !pendingQuery) return;
-      queryRefreshQueued = true;
-      queueMicrotask(() => {
-        queryRefreshQueued = false;
-        const state = getState().inbox;
-        if (!request.current() || state.queue.query !== pendingQuery) {
-          pendingQuery = undefined;
-          return;
-        }
-        if (
-          state.connection !== "connected" ||
-          runtime.requests.has("queue") ||
-          state.queue.error
-        )
-          return;
-        pendingQuery = undefined;
-        void dispatch(loadConversations());
-      });
-    };
-    runtime.queueEvents.addEventListener("settled", scheduleQueryRefresh, {
-      signal: request.signal,
+    const scheduler = createRefreshScheduler({
+      isCurrent: () => request.current(),
+      getState,
+      dispatch,
+      runtime,
     });
+    onQueueSettled(runtime, () => scheduler.noteSettled(), request.signal);
     dispatch(
       inboxActions.connectionChanged(
         reconnecting ? "reconnecting" : "connecting",
@@ -63,18 +44,7 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
           if (!request.current()) return;
           const previous = getState().inbox;
           dispatch(receiveInboxEvent(event));
-          const state = getState().inbox;
-          if (
-            state === previous ||
-            !needsQueueRefreshForEvent(
-              event.type,
-              state.queue.query,
-              state.queue.counts,
-            )
-          )
-            return;
-          pendingQuery = state.queue.query;
-          scheduleQueryRefresh();
+          scheduler.noteEvent(event, previous);
         },
         onConnection: (connection) => {
           if (!request.current()) return;
@@ -90,12 +60,12 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
               void task.finally(() => {
                 if (recovery === task) {
                   recovery = undefined;
-                  scheduleQueryRefresh();
+                  scheduler.noteSettled();
                 }
               });
             } else {
               dispatch(inboxActions.connectionChanged("connected"));
-              scheduleQueryRefresh();
+              scheduler.noteSettled();
             }
           } else {
             needsRecovery = true;

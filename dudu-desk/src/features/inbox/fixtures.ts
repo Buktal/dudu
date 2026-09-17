@@ -12,9 +12,12 @@ import type {
  * test world (stores/test-support.ts) build through here, so a new required
  * field or invariant lands in both universes at once.
  *
- * Defaults are frozen instants; live clocks stay injected by the caller
- * (testStore `now`, development driver `now`).
+ * Defaults are frozen instants (`FIXTURE_NOW`); live clocks stay injected by
+ * the caller (testStore `now`, development driver `now`). Only dev/test
+ * modules import this kernel — production never does.
  */
+export const FIXTURE_NOW = "2026-09-16T00:00:00Z";
+
 export function defineConversation(
   input: Pick<Conversation, "id" | "identity"> & Partial<Conversation>,
 ): Conversation {
@@ -23,7 +26,7 @@ export function defineConversation(
     unread: 0,
     starred: false,
     preview: "",
-    updatedAt: "2026-09-16T00:00:00Z",
+    updatedAt: FIXTURE_NOW,
     version: 1,
     capability: { state: "allowed", kinds: ["text"] },
     ...input,
@@ -36,7 +39,7 @@ export function defineMessage(
   return {
     direction: "incoming",
     body: { type: "text", text: "请帮我确认一下" },
-    createdAt: "2026-09-16T00:00:00Z",
+    createdAt: FIXTURE_NOW,
     sequence: 1,
     version: 1,
     ...input,
@@ -53,22 +56,6 @@ export function defineProfile(
     note: "",
     ...input,
   };
-}
-
-/**
- * Test-world card: the paired conversations the store suites share. Litmus
- * (name, preview, unread) lives here, so the two cards cannot drift apart by
- * editing only one of them.
- */
-export function defineTestConversation(
-  input: Pick<Conversation, "id" | "identity"> & Partial<Conversation>,
-): Conversation {
-  return defineConversation({
-    status: "needs-reply",
-    unread: 1,
-    preview: "你好，想问一下",
-    ...input,
-  });
 }
 
 export function allowedCapability(

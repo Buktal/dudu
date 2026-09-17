@@ -1,12 +1,29 @@
 import { type InboxApi, unavailableInboxApi } from "../api";
 import {
+  defineConversation,
   defineMessage,
   defineProfile,
-  defineTestConversation,
+  FIXTURE_NOW,
 } from "../fixtures";
 import type { Conversation, InboxMessage, SendSubmission } from "../types";
 import { startInboxUpdates } from "./events";
 import { createInboxStore } from "./store";
+
+/**
+ * Test-world card: the paired conversations the store suites share. Litmus
+ * (name, preview, unread) lives here — not in the shared kernel — so test
+ * semantics never load the production-importable graph.
+ */
+export function defineTestConversation(
+  input: Pick<Conversation, "id" | "identity"> & Partial<Conversation>,
+): Conversation {
+  return defineConversation({
+    status: "needs-reply",
+    unread: 1,
+    preview: "你好，想问一下",
+    ...input,
+  });
+}
 
 export const firstConversation: Conversation = defineTestConversation({
   id: "conversation-a",
@@ -19,7 +36,7 @@ export const firstConversation: Conversation = defineTestConversation({
     accountId: "account-a",
     accountName: "品牌旗舰店",
   },
-  updatedAt: "2026-09-16T00:00:00Z",
+  updatedAt: FIXTURE_NOW,
 });
 export const secondConversation: Conversation = defineTestConversation({
   // Same-name visitor as firstConversation on a different account; shared
@@ -34,7 +51,7 @@ export const secondConversation: Conversation = defineTestConversation({
     accountId: "account-b",
     accountName: "海外服务",
   },
-  updatedAt: "2026-09-16T00:00:00Z",
+  updatedAt: FIXTURE_NOW,
 });
 
 export function incomingMessage(conversationId: string): InboxMessage {

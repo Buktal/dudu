@@ -49,8 +49,10 @@ export const queueReducers = {
   ) {
     const { page, append, preserveIds } = action.payload;
     const previousIds = [...state.queue.ids];
+    // Merge entities without touching queue membership: the single rewrite
+    // below owns ids, so the merge kernel must not push/prune mid-flight.
     for (const conversation of page.items)
-      mergeConversation(state, conversation);
+      mergeConversation(state, conversation, false);
     state.queue.ids = rewriteQueueIds({
       conversations: state.conversations,
       query: state.queue.query,

@@ -1,4 +1,4 @@
-import { type ApiFailure, DeskApiError } from "@/lib/api-response";
+import { type ApiFailure, failureOf } from "@/lib/api-response";
 import type { AccountApi, AgentSession, LoginCredentials } from "../api";
 
 type AccountStatus =
@@ -33,11 +33,6 @@ export function createAccountSession(api: AccountApi) {
   function current(requested: AbortController) {
     return !disposed && request === requested && !requested.signal.aborted;
   }
-  function failure(error: unknown): ApiFailure {
-    return error instanceof DeskApiError
-      ? { kind: error.kind, message: error.message, code: error.code }
-      : { kind: "network", message: "暂时无法完成操作，请重试" };
-  }
   return {
     getSnapshot: () => snapshot,
     subscribe: (listener: () => void) => {
@@ -58,7 +53,7 @@ export function createAccountSession(api: AccountApi) {
           publish({
             status: "signed-out",
             session: null,
-            error: failure(error),
+            error: failureOf(error),
           });
       }
     },
@@ -89,7 +84,7 @@ export function createAccountSession(api: AccountApi) {
           publish({
             status: "signed-out",
             session: null,
-            error: failure(error),
+            error: failureOf(error),
           });
         return false;
       }
@@ -106,7 +101,7 @@ export function createAccountSession(api: AccountApi) {
         return true;
       } catch (error) {
         if (current(pending))
-          publish({ status: "signed-in", session, error: failure(error) });
+          publish({ status: "signed-in", session, error: failureOf(error) });
         return false;
       }
     },

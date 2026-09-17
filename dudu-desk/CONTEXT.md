@@ -13,7 +13,7 @@ naming a module after a concept not listed here means adding it here first.
 - **Live events** — the subscription + reconnect + recovery flow. Owns cursor
   dedup, receipt ranking and the queue/history/capability fan-out.
 - **Reply policy** — the reply-allowed decision: restriction + capability +
-  one clock value (`reply-policy.ts`).
+  one clock value (`replyRestriction` in `reply-pipeline.ts`).
 - **Operation** — a scoped inbox request: abort-previous + generation guard +
   guaranteed release (`runOperation` in `stores/requests.ts`).
 - **Fixture builder** — the shared kernel (`fixtures.ts`) both the seeded

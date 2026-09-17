@@ -37,18 +37,30 @@ const screenshot = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="460" viewBox="0 0 640 460"><rect width="640" height="460" rx="28" fill="#e8eae3"/><path d="M460 0h180v460h-95Z" fill="#d6dcd2"/><path d="m0 370 640-65v155H0Z" fill="#dfe2d8"/><ellipse cx="310" cy="392" rx="170" ry="24" fill="#747e6f" opacity=".14"/><path d="M245 185v-52c0-105 144-105 144 0v52" fill="none" stroke="#c4bba5" stroke-width="23"/><path d="M245 185v-52c0-105 144-105 144 0v52" fill="none" stroke="#f1ecdb" stroke-width="14"/><path d="m170 170 285 3-16 206c-55 33-190 34-251-3Z" fill="#e6dfcd" stroke="#c9c1ae" stroke-width="2"/><path d="M200 180c9 48 13 132 3 175m225-175c-9 55-13 130-4 178" fill="none" stroke="#c5bca9" stroke-width="3" opacity=".7"/><path d="M272 278h88v47h-88Z" fill="#f5f0df"/><text x="316" y="307" text-anchor="middle" font-family="sans-serif" font-size="18" letter-spacing="3" fill="#847962">MORROW</text><text x="32" y="434" font-family="sans-serif" font-size="14" fill="#777066">米白色云朵托特包 · 细节图</text></svg>',
 )}`;
 
+/**
+ * Seeded-world showcase slots: fixed positions keep the restricted, unknown
+ * and text-only reply policies visible in the dev world no matter how the
+ * channel order above changes. Editing a card's policy means moving its slot
+ * constant — never guessing an array position.
+ */
+const RESTRICTED_SLOT = 4;
+const UNKNOWN_SLOT = 5;
+const TEXT_ONLY_SLOT = 6;
+
 function capability(index: number): ReplyCapability {
-  if (index === 4) {
+  if (index === RESTRICTED_SLOT) {
     return restrictedCapability(
       "渠道回复窗口已关闭",
       "等待来访用户再次发起咨询",
     );
   }
-  if (index === 5) {
+  if (index === UNKNOWN_SLOT) {
     return unknownCapability("暂未获取到渠道的回复权限", "请刷新会话后重试");
   }
   return allowedCapability(
-    index === 6 ? ["text"] : ["text", "image", "file", "audio", "video"],
+    index === TEXT_ONLY_SLOT
+      ? ["text"]
+      : ["text", "image", "file", "audio", "video"],
     {
       maxBytes: 20 * 1024 * 1024,
       maxCount: 4,

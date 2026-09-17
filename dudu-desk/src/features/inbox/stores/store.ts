@@ -16,15 +16,35 @@ export type InboxRuntime = {
   requests: Map<string, AbortController>;
   /**
    * Coordination seam between the Conversation queue and Live events modules:
-   * the queue dispatches "settled" after every refresh/more settles (see
-   * queue.ts), and Live events listens to schedule a query refresh once the
-   * queue is idle (see events.ts). No other module touches this target.
+   * the queue notifies after every refresh/more settles (see queue.ts), and
+   * the Live events refresh scheduler listens to re-read once the queue is
+   * idle (see live-refresh.ts). Touch only through the helpers below so the
+   * event name stays in one module.
    */
   queueEvents: EventTarget;
   files: Map<string, File>;
   previews: Map<string, string>;
   unsubscribe?: () => void;
 };
+
+/** Name of the queue-settled signal on `InboxRuntime.queueEvents`. */
+export const QUEUE_SETTLED_EVENT = "settled";
+
+/** Notify Live events that a queue read settled (success or failure). */
+export function notifyQueueSettled(runtime: Pick<InboxRuntime, "queueEvents">) {
+  runtime.queueEvents.dispatchEvent(new Event(QUEUE_SETTLED_EVENT));
+}
+
+/** Listen for queue-settled signals; aborts with the given signal. */
+export function onQueueSettled(
+  runtime: Pick<InboxRuntime, "queueEvents">,
+  listener: () => void,
+  signal: AbortSignal,
+) {
+  runtime.queueEvents.addEventListener(QUEUE_SETTLED_EVENT, listener, {
+    signal,
+  });
+}
 
 export type InboxRootState = { inbox: InboxState };
 export type InboxCommand<R = void> = ThunkAction<

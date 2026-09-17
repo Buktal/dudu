@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { defineTestConversation } from "../fixtures";
 import type { Conversation, VisitorIdentity } from "../types";
 import {
   needsQueueRefreshForEvent,
@@ -8,6 +7,7 @@ import {
   rewriteQueueIds,
 } from "./queue-membership";
 import { emptyQuery } from "./state";
+import { defineTestConversation } from "./test-support";
 
 function card(
   id: string,
