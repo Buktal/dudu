@@ -1,6 +1,15 @@
 import type { EventItem, EventVersion } from "./model";
 import type { EventSchema } from "./schemas";
 
+export {
+  REF_CONSEQUENCES,
+  type RefConsequence,
+  type RefStatusName,
+  refEntryOf,
+  refRowOf,
+  refStatusForPresence,
+} from "./consequences";
+
 /**
  * 引用解析 kernel（C2：查找与缺失含义同一模块，挂在引用数据的 events 域）。
  *
@@ -14,9 +23,10 @@ import type { EventSchema } from "./schemas";
  * 统一词汇：ok = 行与版本双命中；id-missing = 注册表无此 id；
  * version-missing = id 在但钉住版本不在（row 带回同 id 见证行，
  * 事件侧为事件本体，模板侧为同 id 首个条目）。
- * 分类函数只回答「引用怎么了」，时钟 consequence（抛错文案 / 行标记）
- * 仍归各时钟——run 时钟要第 N 步前缀，view 时钟要 outdated 标记，
- * 这些是时钟的事，不是引用的事。
+ * 每个分类在各时钟里的后果（运行时钟拦不拦 / 展示时钟标什么 /
+ * 编辑时钟存不存 / 守卫拦不拦删）收敛到本模块旁的 consequence 表
+ * （./consequences，REF_CONSEQUENCES），各时钟查表不再按 status
+ * 自行分岔；本 kernel 只回答「引用怎么了」。
  *
  * 约定：events 不反向依赖任何 feature。kernel 只收结构化最小形状，
  * 素材库整行与校验侧的窄行都能进；返回把调用方自己的行类型带回。

@@ -4,6 +4,7 @@ import type { ChannelId } from "@/lib/channels";
 
 import type { RunRecord, RunStep } from "../model";
 import type { RunSnapshot } from "../snapshot";
+import { type PlanSnapshotLike, planLaneFacts } from "./plan-adapter";
 
 /**
  * 运行实况投影（单一出口）：Rust 执行器经 run-progress 事件实时回报，
@@ -13,6 +14,9 @@ import type { RunSnapshot } from "../snapshot";
  * plans 域监听同一组 action 只做编排运行的阶段簿记，实况展示经
  * selectLiveRunFor 从本域派生。种子构建（liveFromScenarioSnapshot /
  * liveFromPlanSnapshot）与启动骨架（startLiveRun）也单点在本模块。
+ * plans 侧最小形状单点见 plan-adapter.ts（本模块不再手写 Like）。
+ * fulfilled 是否进入 running 的竞态确认不在此决策，经 session 的
+ * shouldConfirmRunning（阶段归会话，投影只管收敛）。
  */
 
 /** 进行中运行的步骤状态（run-progress 事件驱动） */
@@ -117,31 +121,8 @@ export function liveRunFromLanes(seed: LiveRunSeed): LiveRun {
   };
 }
 
-/** 剧本快照的 lane 事实（RunSnapshot 的结构子集；编排 lane = 每个剧本一份） */
-type ScenarioSnapshotFacts = {
-  scenarioName: string;
-  steps: readonly { channel: ChannelId; eventName: string }[];
-};
-
-/** 编排快照的实况事实（plans 域 PlanRunSnapshot 的结构子集，runs 不依赖 plans） */
-export type PlanRunSnapshotLike = {
-  runId: string;
-  planId: string;
-  planName: string;
-  mode: "serial" | "parallel";
-  failure: "stop" | "continue";
-  startedAt: string;
-  scenarios: readonly ScenarioSnapshotFacts[];
-};
-
-/** 剧本快照 → lane 种子事实（首步渠道 + 每步事件名，两个快照 builder 共用） */
-function laneFacts(scenario: ScenarioSnapshotFacts) {
-  return {
-    name: scenario.scenarioName,
-    channel: scenario.steps[0]?.channel,
-    eventNames: scenario.steps.map((step) => step.eventName),
-  };
-}
+/** 编排快照的实况事实（旧名别名：单点见 plan-adapter.ts PlanSnapshotLike） */
+export type PlanRunSnapshotLike = PlanSnapshotLike;
 
 /** 剧本运行快照 → 实况（单 lane，kind 固定 scenario） */
 export function liveFromScenarioSnapshot(snapshot: RunSnapshot): LiveRun {
@@ -151,7 +132,7 @@ export function liveFromScenarioSnapshot(snapshot: RunSnapshot): LiveRun {
     sourceId: snapshot.scenarioId,
     name: snapshot.scenarioName,
     startedAt: snapshot.startedAt,
-    lanes: [laneFacts(snapshot)],
+    lanes: [planLaneFacts(snapshot)],
   });
 }
 
@@ -165,7 +146,7 @@ export function liveFromPlanSnapshot(snapshot: PlanRunSnapshotLike): LiveRun {
     mode: snapshot.mode,
     failure: snapshot.failure,
     startedAt: snapshot.startedAt,
-    lanes: snapshot.scenarios.map(laneFacts),
+    lanes: snapshot.scenarios.map(planLaneFacts),
   });
 }
 

@@ -1,3 +1,4 @@
+import { REF_CONSEQUENCES, refStatusForPresence } from "@/features/events";
 import { isTemplateStep } from "@/features/scenarios";
 import type { ChannelId } from "@/lib/channels";
 import { type Page, paginate as paginateList } from "@/lib/paginate";
@@ -48,8 +49,10 @@ type ResolvedLane = { channelId: ChannelId; steps: readonly unknown[] };
 export function planStats(
   laneScenarios: readonly (ResolvedLane | undefined)[],
 ): { platformCount: number; eventCount: number } {
+  // 展示时钟问 consequence 表：未解析的 lane（id-missing，无行）不计入。
   const referenced = laneScenarios.filter(
-    (scene): scene is ResolvedLane => scene !== undefined,
+    (scene): scene is ResolvedLane =>
+      REF_CONSEQUENCES[refStatusForPresence(scene !== undefined)].view.hasRow,
   );
   const platforms = new Set(referenced.map((scene) => scene.channelId));
   const eventCount = referenced.reduce(

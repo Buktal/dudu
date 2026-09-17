@@ -11,6 +11,7 @@ import type { RunRecord } from "../model";
 import type { RunFilters } from "../selectors";
 import type { DispatchPanelPhase, DispatchResult } from "./direct-dispatch";
 import { directDispatch, directStarted } from "./direct-dispatch";
+import { foldProjectedOutcome } from "./launch";
 import {
   applyLiveProgress,
   type LiveRun,
@@ -208,17 +209,13 @@ const runsSlice = createSlice({
         state.scenarioRunMessage = "";
       })
       .addCase(startScenarioRun.fulfilled, (state, action) => {
-        if (action.payload.kind === "noop") {
-          state.scenarioRunPhase = "idle";
-          return;
-        }
-        if (action.payload.kind === "needConnection") {
-          state.scenarioRunPhase = "needConnection";
-          return;
-        }
-        // 竞态守卫（恒例见 live.ts startLiveRun）：完成事件可能早于命令返回
-        if (state.live?.runId === action.payload.live.runId)
-          state.scenarioRunPhase = "running";
+        // 投影 outcome 折叠单点见 launch.ts foldProjectedOutcome（含
+        // shouldConfirmRunning 守卫：完成事件早于命令返回时不复活实况）
+        state.scenarioRunPhase = foldProjectedOutcome(
+          action.payload,
+          state.live?.runId,
+          state.scenarioRunPhase,
+        ).phase;
       })
       .addCase(startScenarioRun.rejected, (state, action) => {
         if (action.meta.condition) return;

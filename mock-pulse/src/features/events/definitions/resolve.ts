@@ -1,6 +1,7 @@
 import { toPath } from "lodash-es";
 
-import { editorPayload, flattenPayload, type PayloadLeaf } from "../payload";
+import { flattenPayload, type PayloadLeaf } from "../paths";
+import { editorPayload } from "../payload/json";
 import type {
   EventSchema,
   FieldDescriptor,

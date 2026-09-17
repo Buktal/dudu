@@ -6,19 +6,16 @@ import {
   draftFromItem,
   type EventItem,
 } from "./model";
-import { safePath } from "./paths";
+import { flattenPayload, safePath } from "./paths";
 import {
-  editorPayload,
-  flattenPayload,
   getAt,
   parseFieldText,
-  parseWirePayload,
   setAt,
   setPayloadField,
   syncSenderIdentity,
   wireBodyText,
-  wirePayload,
 } from "./payload";
+import { editorPayload, parseWirePayload, wirePayload } from "./payload/json";
 import { schemaById } from "./schemas";
 
 const dyText = schemaById("dy-text");

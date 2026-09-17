@@ -1,7 +1,11 @@
 import { useCallback } from "react";
 import { useStore } from "react-redux";
 
-import { deleteEvent } from "@/features/events";
+import {
+  deleteEvent,
+  REF_CONSEQUENCES,
+  refStatusForPresence,
+} from "@/features/events";
 import { fetchPlans, planNamesReferencingEvent } from "@/features/plans";
 import {
   fetchScenarios,
@@ -31,7 +35,10 @@ export function useDeleteEventGuarded(): (eventId: string) => Promise<void> {
         store.getState().plans,
         eventId,
       );
-      if (pinnedPlans.length)
+      const pinnedStatus = refStatusForPresence(pinnedPlans.length > 0);
+      // 守卫问 consequence 表：有引用（ok）即拦删，无引用（id-missing）
+      // 放行；引用按 id 匹配，落后 revision 同样拦（文案一字不动）。
+      if (REF_CONSEQUENCES[pinnedStatus].guard.eventBlocksDelete)
         throw new Error(
           `事件仍被编排快照引用：${pinnedPlans.map((name) => `「${name}」`).join("、")}。先同步或移除对应剧本，再删除事件。`,
         );
@@ -39,7 +46,8 @@ export function useDeleteEventGuarded(): (eventId: string) => Promise<void> {
         store.getState(),
         eventId,
       );
-      if (referencing.length > 0) {
+      const referencingStatus = refStatusForPresence(referencing.length > 0);
+      if (REF_CONSEQUENCES[referencingStatus].guard.eventBlocksDelete) {
         const names = referencing.map((name) => `「${name}」`).join("、");
         throw new Error(
           `事件被剧本引用：${names}。先删除或调整剧本，再删除事件。`,

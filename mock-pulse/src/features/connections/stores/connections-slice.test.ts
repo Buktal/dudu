@@ -1,7 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { describe, expect, it, vi } from "vitest";
 import type { ConnectionConfig } from "../api";
-import { defaultWecomConnection } from "../channel-defaults";
+import { defaultWecomConnection } from "../channel-traits";
 import {
   connectionsReducer,
   fetchConnections,

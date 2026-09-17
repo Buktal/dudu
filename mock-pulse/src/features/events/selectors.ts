@@ -1,22 +1,16 @@
 import { type ChannelId, channelById } from "@/lib/channels";
 import { type Page, paginate as paginateEvents } from "@/lib/paginate";
 
-import type { StoredSchemaDefinition } from "./api";
-import { type EventDraft, type EventItem, latestVersion } from "./model";
+import { type EventItem, latestVersion } from "./model";
 import {
   EVENT_SCHEMAS,
   type EventSchema,
   schemaById,
   schemasByChannel,
 } from "./schemas";
-import type { EventsState, FieldDefinitionsState } from "./stores/events-slice";
+import type { EventFilters, EventsState } from "./stores/events-slice";
 
-/** 素材库筛选：搜索 + 渠道 + 类型（纯 selector，列表渲染交给 react-virtuoso） */
-export type EventFilters = {
-  query: string;
-  channel: ChannelId | "all";
-  kind: "all" | "message" | "event" | "favorite";
-};
+export type { EventFilters };
 
 /** 用户素材区一行：已保存事件 + 可解析模板 + 最新版本时间 */
 export type EventRow = {
@@ -156,46 +150,20 @@ export function libraryRows(
   ];
 }
 
-// ---- 只读 selector：从 stores/events-slice 下沉（slice 文件只留状态机与簿记）----
+// ---- 只读 selector facade：取值实现住 stores/events-slice（状态定义处），
+// 此处只留重导出，存量 `../selectors` 导入不断；跨 feature 的 RootState 形适配
+//（selectDraftChannelId / selectDraftId）仍在此定义。 ----
 
-export function selectEvents(state: EventsState): EventItem[] {
-  return state.items;
-}
-
-export function selectDraft(state: EventsState): EventDraft | null {
-  return state.draft;
-}
-
-export function selectFilters(state: EventsState): EventFilters {
-  return state.filters;
-}
-
-export function selectPage(state: EventsState): number {
-  return state.page;
-}
-
-export function selectSelectedId(state: EventsState): string | null {
-  return state.selectedId;
-}
-
-export function selectLoaded(state: EventsState): boolean {
-  return state.loaded;
-}
-
-/** 全部用户字段定义 */
-export function selectFieldDefinitions(
-  state: EventsState,
-): FieldDefinitionsState {
-  return state.definitions;
-}
-
-/** 指定模板的用户字段定义（表单合并与字典弹窗的读取入口） */
-export function selectSchemaUserDefinition(
-  state: EventsState,
-  schemaId: string,
-): StoredSchemaDefinition | undefined {
-  return state.definitions.bySchemaId[schemaId];
-}
+export {
+  selectDraft,
+  selectEvents,
+  selectFieldDefinitions,
+  selectFilters,
+  selectLoaded,
+  selectPage,
+  selectSchemaUserDefinition,
+  selectSelectedId,
+} from "./stores/events-slice";
 
 /** 当前草稿渠道（跨 feature 消费：直发面板的未配置指引按渠道呈现）。
  *  入参收 RootState 形状（含 events 键即可），避免外部直读 draft 形状。 */

@@ -38,8 +38,12 @@ import { toast } from "@/components/ui/toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
 import { errorMessage } from "@/lib/errors";
-import type { ConnectionConfig } from "../api";
-import { channelTraits, channelWireFormat } from "../channel-traits";
+import {
+  type ConnectionFieldKey,
+  channelTraits,
+  channelWireFormat,
+  setConnectionField,
+} from "../channel-traits";
 import * as actions from "../stores/connections-slice";
 import { ConnectionFields } from "./connection-fields";
 
@@ -65,16 +69,11 @@ export function ConnectionsView() {
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
   const staleTest = changedSinceTest[channel];
-  const edit = (key: string, value: string) => {
+  const edit = (key: ConnectionFieldKey, value: string) => {
     setError("");
     if (key === "url") setUrlError("");
     setChangedSinceTest((value) => ({ ...value, [channel]: true }));
-    dispatch(
-      actions.setConnectionDraft({
-        ...draft,
-        [key]: value,
-      } as ConnectionConfig),
-    );
+    dispatch(actions.setConnectionDraft(setConnectionField(draft, key, value)));
   };
   const validateUrl = () => {
     try {

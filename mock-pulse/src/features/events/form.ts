@@ -1,4 +1,4 @@
-import { safePath } from "./paths";
+import { safePath, WIRE_FIELD_PATTERN } from "./paths";
 import type { WirePayload } from "./schemas";
 
 /**
@@ -18,8 +18,12 @@ import type { WirePayload } from "./schemas";
  *   backup_recipient_phone 等数组字段即以 JSON 结构进出编辑器。
  */
 
-/** 表单字段名：单个字段名（与 XML 元素名同族约束；\w 为 ASCII 词字符） */
-const FORM_FIELD_PATTERN = /^[A-Za-z_][\w.-]*$/;
+/** 表单字段名即扁平字段名单点约束（与 XML 元素名同族，见 ./paths） */
+function assertFieldName(key: string): void {
+  if (!WIRE_FIELD_PATTERN.test(key) || !safePath(key)) {
+    throw new Error(`无效的表单字段名：${key}`);
+  }
+}
 
 /**
  * 单值百分号编码：非保留字原样，其余按 UTF-8 字节输出大写 %XX。
@@ -91,12 +95,6 @@ function payloadValueOf(text: string): unknown {
     }
   }
   return text;
-}
-
-function assertFieldName(key: string): void {
-  if (!FORM_FIELD_PATTERN.test(key) || !safePath(key)) {
-    throw new Error(`无效的表单字段名：${key}`);
-  }
 }
 
 /**

@@ -23,10 +23,12 @@ export { lastRunFor } from "./selectors";
 export { materializeRunSnapshot, type RunSnapshot } from "./snapshot";
 export { directDispatch } from "./stores/direct-dispatch";
 export {
+  foldProjectedOutcome,
   type LaunchState,
   type LaunchStore,
   launchDirectRun,
   launchProjectedRun,
+  type ProjectedFold,
   type ProjectedLaunch,
   type ProjectedOutcome,
 } from "./stores/launch";
@@ -42,6 +44,12 @@ export {
   startLiveRun,
 } from "./stores/live";
 export {
+  type PlanLaneScenarioLike,
+  type PlanPhaseLike,
+  type PlanSnapshotLike,
+  planLaneFacts,
+} from "./stores/plan-adapter";
+export {
   fetchRuns,
   runsReducer,
   selectPanelPhase,
@@ -56,4 +64,5 @@ export {
   isStoppingRun,
   missingConnections,
   type RunPhase,
+  shouldConfirmRunning,
 } from "./stores/session";

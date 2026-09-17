@@ -1,5 +1,5 @@
 import { has } from "lodash-es";
-import { safePath } from "./paths";
+import { safePath, WIRE_FIELD_PATTERN } from "./paths";
 import type { WirePayload, XmlLayout } from "./schemas";
 
 /**
@@ -15,6 +15,13 @@ import type { WirePayload, XmlLayout } from "./schemas";
 /** 语法和文本语义交给原生 XML 解析器；此分词仅定位未知元素的原文边界。 */
 const XML_MARKUP_PATTERN =
   /<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<\/?(?:[^"'<>]|"[^"]*"|'[^']*')*>/g;
+
+/** XML 元素值谓词：元素值只能是文本/数字/布尔，null 与对象（含数组）不合法。
+ *  buildXmlBody 与 payload.ts 的 withCustomField / parseFieldText 共用此单点
+ *  判断（各自保留用户可见文案）。 */
+export function isXmlNonScalar(value: unknown): boolean {
+  return value == null || typeof value === "object";
+}
 
 function xmlDocument(text: string): XMLDocument {
   const document = new DOMParser().parseFromString(text, "application/xml");
@@ -80,9 +87,9 @@ export function buildXmlBody(
 ): string {
   const lines = ["<xml>"];
   for (const [tag, value] of Object.entries(payload)) {
-    if (!/^[A-Za-z_][\w.-]*$/.test(tag) || !safePath(tag))
+    if (!WIRE_FIELD_PATTERN.test(tag) || !safePath(tag))
       throw new Error(`无效的 XML 元素名：${tag}`);
-    if (value == null || typeof value === "object") {
+    if (isXmlNonScalar(value)) {
       throw new Error(`XML 元素 ${tag} 的值必须是文本。`);
     }
     lines.push(renderElement(layout, knownTags, tag, String(value)));
@@ -118,7 +125,7 @@ export function parseXmlBody(
   const payload: WirePayload = {};
   for (const [index, element] of Array.from(root.children).entries()) {
     const tag = element.tagName;
-    if (!/^[A-Za-z_][\w.-]*$/.test(tag))
+    if (!WIRE_FIELD_PATTERN.test(tag))
       throw new Error(`无效的 XML 元素名：${tag}`);
     if (!safePath(tag)) {
       throw new Error(`报文包含保留字段名：${tag}`);

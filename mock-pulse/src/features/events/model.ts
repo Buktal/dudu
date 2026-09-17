@@ -1,7 +1,8 @@
 import type { ChannelId } from "@/lib/channels";
 
 import { applyGeneratedIds } from "./ids";
-import { cloneJson, editorPayload, wirePayload } from "./payload";
+import { cloneJson } from "./paths";
+import { editorPayload, wirePayload } from "./payload/json";
 import type { EventSchema, ExpectedReceipt, WirePayload } from "./schemas";
 import { schemaById } from "./schemas";
 

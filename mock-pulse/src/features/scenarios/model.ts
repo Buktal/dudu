@@ -1,4 +1,9 @@
-import { describeTemplateVersion } from "@/features/events";
+import {
+  describeTemplateVersion,
+  REF_CONSEQUENCES,
+  refEntryOf,
+  refStatusForPresence,
+} from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
 
 /**
@@ -219,18 +224,25 @@ export function validateScenario(
     )
       throw new Error("发送前等待须为 0 到 60 秒。");
     if (isTemplateStep(step)) {
-      // 模板引用分类共用（events 域 describeTemplateVersion：未注册 id 与
-      // 版本更替的区分住在数据侧）；保存校验的缺失语义（抛错）留在这里。
+      // 模板引用分类共用（events 域 describeTemplateVersion）；编辑时钟问
+      // consequence 表拦不拦（两种缺失都拦），用哪份文案由 kernel 的
+      // 缺种（missingKind）定，文案一字不动。
       const status = describeTemplateVersion(templates, step);
-      if (status.status === "id-missing") {
-        throw new Error(`步骤引用的内置模板不存在：${step.templateId}。`);
-      }
-      if (status.status === "version-missing") {
+      const consequence = REF_CONSEQUENCES[status.status];
+      if (consequence.edit.templateBlocksSave) {
+        if (consequence.runtime.missingKind === "id") {
+          throw new Error(`步骤引用的内置模板不存在：${step.templateId}。`);
+        }
         throw new Error(
           `步骤引用的内置模板版本不存在：${step.templateId} v${step.templateVersion}。`,
         );
       }
-      const matched = status.entry;
+      // 查表取条目（blocksSave 为 false 即 ok，条目必存在；取不到为防御，
+      // 文案沿用 id 缺失款，表与 kernel 一致时不可达）。
+      const matched = refEntryOf(status);
+      if (!matched) {
+        throw new Error(`步骤引用的内置模板不存在：${step.templateId}。`);
+      }
       if (matched.channelId !== scenario.channelId) {
         throw new Error(
           `剧本渠道为${channelName(scenario.channelId)}，步骤引用了${channelName(matched.channelId)}的内置模板：${step.templateId}。`,
@@ -239,7 +251,10 @@ export function validateScenario(
       continue;
     }
     const event = events.find((item) => item.id === step.eventId);
-    if (!event) {
+    const eventStatus = refStatusForPresence(event !== undefined);
+    // 编辑时钟问表：事件保存只看行存在（窄行无版本维度，超前 revision
+    // 存得下、运行时钟再拦；文案一字不动）。后半为类型收窄，语义以查表为准。
+    if (REF_CONSEQUENCES[eventStatus].edit.eventBlocksSave || !event) {
       throw new Error(`步骤引用的事件不存在：${step.eventId}。`);
     }
     if (event.channelId !== scenario.channelId) {

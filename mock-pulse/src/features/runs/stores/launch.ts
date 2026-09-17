@@ -19,7 +19,12 @@ import {
   type RunStep,
 } from "../model";
 import { type LiveRun, startLiveRun } from "./live";
-import { missingConnections, type RunSessionState } from "./session";
+import {
+  missingConnections,
+  type RunPhase,
+  type RunSessionState,
+  shouldConfirmRunning,
+} from "./session";
 
 /**
  * 运行启动收敛：直发 / 剧本 / 编排三条启动路径的唯一编排点。
@@ -163,6 +168,33 @@ export type ProjectedOutcome = Extract<
   LaunchOutcome,
   { kind: "noop" | "needConnection" | "started" }
 >;
+
+/** 投影型 outcome 的阶段折叠结果：phase 为下一步阶段；channels 仅
+ *  needConnection 时携带（其余为 undefined = 保持原值，不碰指引字段）。 */
+export type ProjectedFold = {
+  phase: RunPhase;
+  channels?: ChannelId[] | undefined;
+};
+
+/**
+ * 投影型 outcome 折叠（两 slice fulfilled 共用唯一分支）：noop → idle；
+ * needConnection → needConnection（缺失渠道随结果带出）；started →
+ * 竞态守卫 shouldConfirmRunning 通过才进入 running，否则保持当前阶段
+ * （finished 已收束的 idle 不被复活）。守卫住在本函数内，slices 不再
+ * 各自写相等判断。
+ */
+export function foldProjectedOutcome(
+  outcome: ProjectedOutcome,
+  currentRunId: string | null | undefined,
+  currentPhase: RunPhase,
+): ProjectedFold {
+  if (outcome.kind === "noop") return { phase: "idle" };
+  if (outcome.kind === "needConnection")
+    return { phase: "needConnection", channels: outcome.channels };
+  if (shouldConfirmRunning(currentRunId, outcome.live.runId))
+    return { phase: "running" };
+  return { phase: currentPhase };
+}
 
 /**
  * 投影型启动：连接门（去重渠道逐一确认）→ 按门禁解析连接 → 物化快照 →

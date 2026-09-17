@@ -101,21 +101,16 @@ pub(super) fn dispatch_event(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-    use std::io::Write;
-    use std::net::{Shutdown, SocketAddr, TcpListener};
     use std::sync::Arc;
-    use std::sync::mpsc::{channel, Receiver};
     use std::time::Duration;
 
     use super::super::crypto::{
         GOLDEN_ENCODING_AES_KEY, GOLDEN_TOKEN, GOLDEN_CORP_ID,
     };
-    use crate::connections::util::percent_decode;
     use crate::connections::{ConnectionConfig, WecomSystem};
     use crate::test_support::{
-        quick_client, read_head_and_body, start_single_server, start_serial_server, RecordedPost,
-        Responder,
+        quick_client, query_params, run_dispatch_case, run_handshake_case, start_serial_server,
+        status_responder, Responder,
     };
 
     use super::*;
@@ -132,55 +127,35 @@ mod tests {
         }
     }
 
-    fn query_of(request_line: &str) -> HashMap<String, String> {
-        let url = request_line.split_whitespace().nth(1).unwrap_or_default();
-        let query = url.split_once('?').map(|(_, q)| q).unwrap_or_default();
-        query
-            .split('&')
-            .filter(|kv| !kv.is_empty())
-            .map(|kv| {
-                let (key, value) = kv.split_once('=').unwrap_or((kv, ""));
-                (percent_decode(key), percent_decode(value))
-            })
-            .collect()
-    }
-
-    /// 起一个只处理一次 GET 的本地监听；忠实实现官方四步回显解密明文。
-    fn start_get_server() -> (SocketAddr, Receiver<(String, HashMap<String, String>)>) {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-        let (tx, rx) = channel();
-        std::thread::spawn(move || {
-            let (mut stream, _) = listener.accept().unwrap();
-            let (head, _body) = read_head_and_body(&mut stream);
-            let request_line = head.lines().next().unwrap_or_default().to_string();
-            let query = query_of(&request_line);
-            tx.send((request_line, query.clone())).unwrap();
-            let echostr = &query["echostr"];
-            let decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, echostr).unwrap();
-            // 机器人通道语义：receiveid 必须是空串（官方 §4.4/101033）
-            assert_eq!(decrypted.receiveid, "", "机器人握手 receiveid 应为空串");
-            let body = String::from_utf8(decrypted.msg).unwrap();
-            let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                body.len()
-            );
-            stream.write_all(response.as_bytes()).unwrap();
-            stream.shutdown(Shutdown::Both).unwrap();
-        });
-        (addr, rx)
-    }
-
     #[test]
     fn handshake_encrypts_with_empty_receiveid_and_expects_echo() {
-        let (addr, rx) = start_get_server();
-        let config = aibot_config(format!("http://{addr}/aibot"));
-        let outcome = super::super::verify_handshake(&quick_client(Duration::from_secs(2)), &config);
+        let (_outcome, request) = run_handshake_case(
+            |request| {
+                let query = query_params(&request.request_line);
+                let decrypted =
+                    decrypt_msg(GOLDEN_ENCODING_AES_KEY, &query["echostr"]).unwrap();
+                // 机器人通道语义：receiveid 必须是空串（官方 §4.4/101033）
+                assert_eq!(decrypted.receiveid, "", "机器人握手 receiveid 应为空串");
+                (
+                    "HTTP/1.1 200 OK".into(),
+                    String::from_utf8(decrypted.msg).unwrap(),
+                )
+            },
+            Duration::ZERO,
+            Duration::from_secs(2),
+            |addr| aibot_config(format!("http://{addr}/aibot")),
+            super::super::verify_handshake,
+            true,
+            &[],
+        );
 
-        assert!(outcome.ok, "应成功：{outcome:?}");
-        let (request_line, query) = rx.recv_timeout(Duration::from_secs(2)).unwrap();
-        assert!(request_line.starts_with("GET /aibot"), "{request_line}");
+        assert!(
+            request.request_line.starts_with("GET /aibot"),
+            "{}",
+            request.request_line
+        );
         // echostr 可解出非空明文且 receiveid 为空（与 XML 通道的关键差异）
+        let query = query_params(&request.request_line);
         let decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, &query["echostr"]).unwrap();
         assert!(!decrypted.msg.is_empty());
         assert_eq!(decrypted.receiveid, "");
@@ -216,15 +191,13 @@ mod tests {
 
     #[test]
     fn dispatch_delivers_json_envelope_independently_decryptable() {
-        let empty_receipt: fn(&RecordedPost) -> (String, String) =
-            |_| ("HTTP/1.1 200 OK".into(), String::new());
-        let (addr, rx) = start_single_server(empty_receipt, Duration::ZERO);
-        let config = aibot_config(format!("http://{addr}/aibot"));
-
-        let outcome = dispatch_event(
-            &quick_client(Duration::from_secs(2)),
-            &config,
+        let (outcome, request) = run_dispatch_case(
+            status_responder("HTTP/1.1 200 OK", ""),
             GOLDEN_AIBOT_JSON,
+            Duration::ZERO,
+            Duration::from_secs(2),
+            |addr| aibot_config(format!("http://{addr}/aibot")),
+            dispatch_event,
         );
 
         assert_eq!(outcome.status, 200);
@@ -232,9 +205,8 @@ mod tests {
         assert_eq!(outcome.reply, None);
         assert_eq!(outcome.error, None);
 
-        let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
         assert!(request.request_line.starts_with("POST /aibot?"));
-        let query = query_of(&request.request_line);
+        let query = query_params(&request.request_line);
         for key in ["msg_signature", "timestamp", "nonce"] {
             assert!(query.contains_key(key), "缺少 {key} 参数：{query:?}");
         }

@@ -3,6 +3,7 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
+import type { ChannelId } from "@/lib/channels";
 
 import {
   type DefinitionsDoc,
@@ -24,15 +25,21 @@ import {
   isDraftDirty,
 } from "../model";
 import {
-  editorPayload,
   parseFieldText,
   parseWireDraft,
   setPayloadField,
   syncSenderIdentity,
 } from "../payload";
+import { editorPayload } from "../payload/json";
 import type { FieldDescriptor } from "../schemas";
 import { schemaById, type WirePayload } from "../schemas";
-import type { EventFilters } from "../selectors";
+
+/** 素材库筛选：搜索 + 渠道 + 类型（纯 selector，列表渲染交给 react-virtuoso） */
+export type EventFilters = {
+  query: string;
+  channel: ChannelId | "all";
+  kind: "all" | "message" | "event" | "favorite";
+};
 
 /** 用户编辑的字段定义（#22）：按 schemaId 覆写随应用分发的渠道描述文件基线 */
 export type FieldDefinitionsState = {
@@ -439,4 +446,45 @@ export function selectDraftDirty(state: EventsState): boolean {
 /** 持久化文档 → slice 内 definitions 状态 */
 function definitionsFromDoc(doc: DefinitionsDoc): FieldDefinitionsState {
   return { loaded: true, bySchemaId: doc.schemas };
+}
+
+// ---- 只读 selector（状态定义处实现，selectors.ts 只留 facade 重导出）----
+
+export function selectEvents(state: EventsState): EventItem[] {
+  return state.items;
+}
+
+export function selectDraft(state: EventsState): EventDraft | null {
+  return state.draft;
+}
+
+export function selectFilters(state: EventsState): EventFilters {
+  return state.filters;
+}
+
+export function selectPage(state: EventsState): number {
+  return state.page;
+}
+
+export function selectSelectedId(state: EventsState): string | null {
+  return state.selectedId;
+}
+
+export function selectLoaded(state: EventsState): boolean {
+  return state.loaded;
+}
+
+/** 全部用户字段定义 */
+export function selectFieldDefinitions(
+  state: EventsState,
+): FieldDefinitionsState {
+  return state.definitions;
+}
+
+/** 指定模板的用户字段定义（表单合并与字典弹窗的读取入口） */
+export function selectSchemaUserDefinition(
+  state: EventsState,
+  schemaId: string,
+): StoredSchemaDefinition | undefined {
+  return state.definitions.bySchemaId[schemaId];
 }

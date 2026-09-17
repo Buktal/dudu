@@ -4,9 +4,9 @@ import type { ConnectionConfig } from "../api";
 import {
   defaultWechatMiniConnection,
   defaultWechatMpConnection,
-} from "../channel-defaults";
+  isConnectionReady,
+} from "../channel-traits";
 import { initialConnectionsState, selectConnection } from "./connections-slice";
-import { isConnectionReady } from "./is-connection-ready";
 
 /**
  * 「已配置」的内容判定（isConnectionReady）按渠道必填集的单测。

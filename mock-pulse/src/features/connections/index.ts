@@ -6,7 +6,7 @@ export type {
 export {
   defaultDouyinConnection,
   defaultWecomConnection,
-} from "./channel-defaults";
+} from "./channel-traits";
 export { ConnectionsView } from "./components/connections-view";
 export type {
   ConnectionsState,

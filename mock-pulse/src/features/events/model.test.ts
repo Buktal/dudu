@@ -14,7 +14,8 @@ import {
   resolveEventVersion,
   resolveTemplateVersion,
 } from "./model";
-import { editorPayload, setPayloadField } from "./payload";
+import { setPayloadField } from "./payload";
+import { editorPayload } from "./payload/json";
 import { type EventSchema, schemaById } from "./schemas";
 
 const dyText = schemaById("dy-text");

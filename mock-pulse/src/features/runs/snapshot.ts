@@ -5,6 +5,9 @@ import {
   type EventItem,
   type EventSchema,
   type ExpectedReceipt,
+  REF_CONSEQUENCES,
+  refEntryOf,
+  refRowOf,
   schemaById,
   wireBodyText,
 } from "@/features/events";
@@ -98,12 +101,13 @@ export function materializeRunSnapshot(input: {
   }
   const steps = scenario.steps.map((step, index) => {
     if ("templateId" in step) {
-      // 模板引用分类共用（events 域 describeTemplateVersion：未注册 id 与
-      // 钉住版本不在注册表的区分住在数据侧）；缺失语义（抛可读错误，
-      // 拒绝启动）留在本运行时钟。
+      // 模板引用分类共用（events 域 describeTemplateVersion）；运行时钟问
+      // consequence 表拦不拦（REF_CONSEQUENCES），用哪份文案由表的
+      // missingKind 定，文案本体仍在这里（一字不动）。
       const status = describeTemplateVersion(templates, step);
-      if (status.status !== "ok") {
-        if (status.status === "id-missing") {
+      const consequence = REF_CONSEQUENCES[status.status];
+      if (consequence.runtime.blocks) {
+        if (consequence.runtime.missingKind === "id") {
           throw new Error(
             `第 ${index + 1} 步引用的内置模板不存在：${step.templateId}。先删除该步骤或更新剧本。`,
           );
@@ -112,7 +116,14 @@ export function materializeRunSnapshot(input: {
           `第 ${index + 1} 步引用的模板版本不存在：${templateName(templates, step.templateId)} v${step.templateVersion}。`,
         );
       }
-      const template = status.entry;
+      // 查表取条目（blocks 为 false 即 ok，条目必存在；取不到为防御，
+      // 文案沿用 id 缺失款，表与 kernel 一致时不可达）。
+      const template = refEntryOf(status);
+      if (!template) {
+        throw new Error(
+          `第 ${index + 1} 步引用的内置模板不存在：${step.templateId}。先删除该步骤或更新剧本。`,
+        );
+      }
       if (template.channelId !== scenario.channelId) {
         throw new Error(
           `第 ${index + 1} 步引用了${channelName(template.channelId)}的内置模板：${template.id}（剧本渠道为${channelName(scenario.channelId)}）。`,
@@ -128,26 +139,44 @@ export function materializeRunSnapshot(input: {
         ...(step.wait === undefined ? {} : { wait: step.wait }),
       };
     }
-    // 引用分类共用（events 域 describeEventVersion）；缺失语义（抛错
-    // 拒绝启动、不产半成品快照）留在本运行时钟。
+    // 引用分类共用（events 域 describeEventVersion）；运行时钟问
+    // consequence 表（拦不拦、用哪份文案），文案本体仍在这里（一字不动）。
+    // 顺序保持原语义：id 缺失先于渠道检查拒绝，版本缺失在渠道检查后拒绝。
     const refStatus = describeEventVersion(events, step);
-    if (refStatus.status === "id-missing") {
+    const consequence = REF_CONSEQUENCES[refStatus.status];
+    // id 缺失先于渠道检查拒绝（问表用哪份文案，文案一字不动）。
+    if (consequence.runtime.missingKind === "id") {
       throw new Error(
         `第 ${index + 1} 步引用的事件不存在：${step.eventId}。先删除该步骤或调整素材库。`,
       );
     }
-    const event = refStatus.row;
+    // 查表取行（missingKind 为 id 时已抛，此处行必存在；取不到为防御，
+    // 文案沿用 id 缺失款，表与 kernel 一致时不可达）。
+    const event = refRowOf(refStatus);
+    if (!event) {
+      throw new Error(
+        `第 ${index + 1} 步引用的事件不存在：${step.eventId}。先删除该步骤或调整素材库。`,
+      );
+    }
     if (event.channelId !== scenario.channelId) {
       throw new Error(
         `第 ${index + 1} 步引用了${channelName(event.channelId)}的事件：${event.name}（剧本渠道为${channelName(scenario.channelId)}）。`,
       );
     }
-    if (refStatus.status === "version-missing") {
+    // 版本缺失在渠道检查后拒绝（问表，文案一字不动）。
+    if (consequence.runtime.missingKind === "version") {
       throw new Error(
         `第 ${index + 1} 步引用的版本不存在：${event.name} v${step.revision}。`,
       );
     }
-    const referenced = refStatus.entry;
+    // 查表取条目（version 缺失已抛，此处条目必存在；取不到为防御，
+    // 文案沿用版本缺失款，表与 kernel 一致时不可达）。
+    const referenced = refEntryOf(refStatus);
+    if (!referenced) {
+      throw new Error(
+        `第 ${index + 1} 步引用的版本不存在：${event.name} v${step.revision}。`,
+      );
+    }
     const schema = schemaById(event.schemaId);
     return {
       eventName: event.name,

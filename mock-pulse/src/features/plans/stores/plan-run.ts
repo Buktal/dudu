@@ -4,13 +4,21 @@ import {
   canStartRun,
   launchProjectedRun,
   liveFromPlanSnapshot,
+  type PlanSnapshotLike,
   type ProjectedOutcome,
 } from "@/features/runs";
 import type { RootState } from "@/store";
 
 import { startPlanRun as startPlanRunApi } from "../api";
-import { materializePlanRun } from "../materialize";
+import { materializePlanRun, type PlanRunSnapshot } from "../materialize";
 import { resolveLaneScenario, validatePlan } from "../model";
+
+// 编译期契约：编排快照满足 runs 实况所需的最小形状（单点见 plan-adapter.ts）。
+type _PlanSnapshotConformsToLive = PlanRunSnapshot extends PlanSnapshotLike
+  ? true
+  : never;
+const _planSnapshotConformsToLive: _PlanSnapshotConformsToLive = true;
+void _planSnapshotConformsToLive;
 
 /**
  * 编排运行流：引用整形与校验在此，启动顺序（门禁 → 物化 → 投影 →

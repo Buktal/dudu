@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useStore } from "react-redux";
 
+import { REF_CONSEQUENCES, refStatusForPresence } from "@/features/events";
 import { fetchPlans, planNamesReferencingScenario } from "@/features/plans";
 import { deleteScenario } from "@/features/scenarios";
 import type { RootState } from "@/store";
@@ -29,7 +30,10 @@ export function useDeleteScenarioGuarded(): (
         store.getState(),
         scenarioId,
       );
-      if (referencing.length > 0) {
+      const referencingStatus = refStatusForPresence(referencing.length > 0);
+      // 守卫问 consequence 表：有引用（ok）即拦删，无引用（id-missing）
+      // 放行（文案一字不动）。
+      if (REF_CONSEQUENCES[referencingStatus].guard.laneBlocksDelete) {
         const names = referencing.map((name) => `「${name}」`).join("、");
         throw new Error(
           `剧本被编排引用：${names}。先删除或调整编排，再删除剧本。`,

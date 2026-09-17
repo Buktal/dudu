@@ -24,6 +24,12 @@ export {
   describeEventVersion,
   describeTemplateVersion,
   type EventRefStatus,
+  REF_CONSEQUENCES,
+  type RefConsequence,
+  type RefStatusName,
+  refEntryOf,
+  refRowOf,
+  refStatusForPresence,
   resolveRow,
   type TemplateRefStatus,
 } from "./resolve";

@@ -5,7 +5,10 @@
 use std::time::Duration;
 
 use crate::connections::ConnectionConfig;
-use crate::test_support::{quick_client, start_single_server};
+use crate::test_support::{
+    ExpectedSnapshots, assert_dispatch_error, assert_dispatch_receipt, assert_snapshots,
+    run_dispatch_case, run_handshake_case, status_responder,
+};
 
 use super::*;
 
@@ -22,7 +25,7 @@ fn result_reply(request_body: &str) -> (String, String) {
 
 #[test]
 fn handshake_posts_test_event_and_accepts_official_result_reply() {
-    let (addr, rx) = start_single_server(
+    let (_outcome, request) = run_handshake_case(
         |request| {
             // 接收侧按官方协议验签（§4.1）：header kwaisign = MD5(原始 body + secret)
             assert_eq!(
@@ -40,16 +43,14 @@ fn handshake_posts_test_event_and_accepts_official_result_reply() {
             result_reply(&request.body)
         },
         Duration::ZERO,
+        Duration::from_secs(2),
+        |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
+        verify_handshake,
+        true,
+        &["TEST", "result=1"],
     );
-    let config = kuaishou_config(format!("http://{addr}/webhooks/kuaishou"));
-    let outcome = verify_handshake(&client(), &config);
-
-    assert!(outcome.ok, "应成功：{outcome:?}");
-    assert!(outcome.message.contains("TEST"), "{outcome:?}");
-    assert!(outcome.message.contains("result=1"), "{outcome:?}");
 
     // 请求侧逐项核对官方协议要素（§2.1 信封五字段键序）
-    let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     assert_eq!(
         request.header("content-type").as_deref(),
         Some("application/json")
@@ -72,59 +73,60 @@ fn handshake_posts_test_event_and_accepts_official_result_reply() {
 #[test]
 fn handshake_fails_when_result_is_not_one() {
     // 官方口径：result=1 之外一律失败（平台重试）
-    let zero_result = |request: &crate::test_support::RecordedPost| {
-        let echoed = message_id_of(&request.body);
-        (
-            "HTTP/1.1 200 OK".into(),
-            format!(r#"{{"result":0,"message_id":"{echoed}"}}"#),
-        )
-    };
-    let (addr, _rx) = start_single_server(zero_result, Duration::ZERO);
-    let config = kuaishou_config(format!("http://{addr}/webhooks/kuaishou"));
-    let outcome = verify_handshake(&client(), &config);
-
-    assert!(!outcome.ok);
-    assert!(outcome.message.contains("result"), "{outcome:?}");
+    run_handshake_case(
+        |request| {
+            let echoed = message_id_of(&request.body);
+            (
+                "HTTP/1.1 200 OK".into(),
+                format!(r#"{{"result":0,"message_id":"{echoed}"}}"#),
+            )
+        },
+        Duration::ZERO,
+        Duration::from_secs(2),
+        |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
+        verify_handshake,
+        false,
+        &["result"],
+    );
 }
 
 #[test]
 fn handshake_fails_when_message_id_not_echoed() {
     // 官方要求回传收到的 message_id（回传别的值即验证失败）
-    let wrong_echo = |_request: &crate::test_support::RecordedPost| {
-        (
-            "HTTP/1.1 200 OK".into(),
-            r#"{"result":1,"message_id":"other"}"#.to_string(),
-        )
-    };
-    let (addr, _rx) = start_single_server(wrong_echo, Duration::ZERO);
-    let config = kuaishou_config(format!("http://{addr}/webhooks/kuaishou"));
-    let outcome = verify_handshake(&client(), &config);
-
-    assert!(!outcome.ok);
-    assert!(outcome.message.contains("message_id"), "{outcome:?}");
+    run_handshake_case(
+        |_request| {
+            (
+                "HTTP/1.1 200 OK".into(),
+                r#"{"result":1,"message_id":"other"}"#.to_string(),
+            )
+        },
+        Duration::ZERO,
+        Duration::from_secs(2),
+        |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
+        verify_handshake,
+        false,
+        &["message_id"],
+    );
 }
 
 #[test]
 fn handshake_fails_on_non_200() {
-    let boom = |_request: &crate::test_support::RecordedPost| {
-        (
-            "HTTP/1.1 500 Internal Server Error".into(),
-            "boom".to_string(),
-        )
-    };
-    let (addr, _rx) = start_single_server(boom, Duration::ZERO);
-    let config = kuaishou_config(format!("http://{addr}/webhooks/kuaishou"));
-    let outcome = verify_handshake(&client(), &config);
-
-    assert!(!outcome.ok);
-    assert!(outcome.message.contains("500"), "{outcome:?}");
+    run_handshake_case(
+        status_responder("HTTP/1.1 500 Internal Server Error", "boom"),
+        Duration::ZERO,
+        Duration::from_secs(2),
+        |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
+        verify_handshake,
+        false,
+        &["500"],
+    );
 }
 
 // ---- 明文 JSON 直发全链路（两域共用同一传输） ----
 
 #[test]
 fn dispatch_posts_plaintext_with_kwaisign_header_and_snapshots_elements() {
-    let (addr, rx) = start_single_server(
+    let (outcome, request) = run_dispatch_case(
         |request| {
             assert_eq!(
                 request.header("kwaisign").as_deref(),
@@ -132,11 +134,12 @@ fn dispatch_posts_plaintext_with_kwaisign_header_and_snapshots_elements() {
             );
             result_reply(&request.body)
         },
+        GOLDEN_EVENT_PLAINTEXT,
         Duration::ZERO,
+        Duration::from_secs(2),
+        |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
+        dispatch_event,
     );
-    let config = kuaishou_config(format!("http://{addr}/webhooks/kuaishou"));
-
-    let outcome = dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -146,53 +149,47 @@ fn dispatch_posts_plaintext_with_kwaisign_header_and_snapshots_elements() {
         outcome.request_body.as_deref(),
         Some(GOLDEN_EVENT_PLAINTEXT)
     );
-    // 幂等键快照：message_id 取自明文载荷；签名快照即 kwaisign
-    assert_eq!(outcome.msg_id, GOLDEN_MESSAGE_ID);
-    assert_eq!(
-        outcome.signature,
-        kwaisign(GOLDEN_EVENT_PLAINTEXT, GOLDEN_APP_SECRET)
-    );
+    // 幂等键快照：message_id 取自明文载荷；签名快照即 kwaisign；
     // 官方请求无独立时间戳要素（timestamp 在载荷信封内），快照不落值
-    assert_eq!(outcome.timestamp, None);
+    assert_snapshots(
+        &outcome,
+        ExpectedSnapshots {
+            msg_id: GOLDEN_MESSAGE_ID,
+            signature: &kwaisign(GOLDEN_EVENT_PLAINTEXT, GOLDEN_APP_SECRET),
+            timestamp: None,
+        },
+    );
 
-    let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     assert_eq!(request.body, GOLDEN_EVENT_PLAINTEXT);
 }
 
 #[test]
 fn dispatch_reports_non_200_status_and_body() {
-    let boom = |_request: &crate::test_support::RecordedPost| {
-        (
-            "HTTP/1.1 500 Internal Server Error".into(),
-            "boom".to_string(),
-        )
-    };
-    let (addr, _rx) = start_single_server(boom, Duration::ZERO);
-    let config = kuaishou_config(format!("http://{addr}/webhooks/kuaishou"));
+    let (outcome, _request) = run_dispatch_case(
+        status_responder("HTTP/1.1 500 Internal Server Error", "boom"),
+        GOLDEN_EVENT_PLAINTEXT,
+        Duration::ZERO,
+        Duration::from_secs(2),
+        |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
+        dispatch_event,
+    );
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
-
-    assert_eq!(outcome.status, 500);
-    assert_eq!(outcome.body, "boom");
-    assert_eq!(outcome.error, None, "非 200 是回执事实，不是发送错误");
+    assert_dispatch_receipt(&outcome, 500, "boom");
 }
 
 #[test]
 fn dispatch_reports_timeout_without_response() {
     // 官方失败即按重试表重推（最长 16 次）；客户端 200ms 超时 vs 服务器 1s 延迟
-    let slow = |_request: &crate::test_support::RecordedPost| {
-        ("HTTP/1.1 200 OK".to_string(), result_reply("{}").1)
-    };
-    let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
-    let config = kuaishou_config(format!("http://{addr}/webhooks/kuaishou"));
+    let (outcome, _request) = run_dispatch_case(
+        |_request| ("HTTP/1.1 200 OK".to_string(), result_reply("{}").1),
+        "{}",
+        Duration::from_secs(1),
+        Duration::from_millis(200),
+        |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
+        dispatch_event,
+    );
 
-    let outcome = dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
-
-    assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
-    let error = outcome.error.clone().expect("应有错误原因");
-    assert!(error.contains("超时"), "{outcome:?}");
-    assert!(error.contains("重试"), "{outcome:?}");
-    assert_eq!(outcome.body, "");
+    assert_dispatch_error(&outcome, &["超时", "重试"]);
 }
 
 // ---- 配置判别 ----

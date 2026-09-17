@@ -1,26 +1,27 @@
 import { get, toPath } from "lodash-es";
 
-import { buildFormBody, parseFormBody } from "./form";
-import { safePath } from "./paths";
+import { cloneJson, safePath, WIRE_FIELD_PATTERN } from "./paths";
+import { formWireText, parseFormDraft } from "./payload/form";
+import {
+  editorPayload,
+  jsonDraftText,
+  jsonWireText,
+  parseWirePayload,
+} from "./payload/json";
+import { parseXmlDraft, xmlWireText } from "./payload/xml";
 import type { EventSchema, WireForm, WirePayload } from "./schemas";
-import { buildXmlBody, parseXmlBody } from "./xml";
+import { isXmlNonScalar } from "./xml";
 
 /**
- * 报文载荷领域逻辑：路径读写、叶子展开、表单/线上双向转换、
+ * 报文载荷编排：路径读写、叶子展开之外的编辑入口、表单/线上分发、
  * 发送者 ID 同步。全部为纯函数。
- * 线上形态按 schema.wire 分发：抖音 JSON（紧凑序列化）、企微 XML（确定性
- * 拼装）、美团 form（确定性拼装，./form 单点）。
- * 路径安全守卫（safePath）见 ./paths，各模块直接导入；
+ * 线上形态按 schema.wire 分发到 wire 自有分支（./payload/json|form|xml）：
+ * 抖音 JSON（紧凑序列化）、企微 XML（确定性拼装）、美团 form（确定性拼装）；
+ * 深层字节语义单点仍在 ./form 与 ./xml（Rust 对拍注释随逻辑，不随分发走）。
+ * 路径安全守卫（safePath）、扁平字段名单点（WIRE_FIELD_PATTERN）、深拷贝与
+ * 叶子展开（cloneJson/flattenPayload）见 ./paths，各模块直接导入；
  * 表单字段解析（描述符 ∪ 载荷叶子 + 用户定义合并）见 ./definitions/resolve。
  */
-
-/**
- * 载荷深拷贝：载荷是 JSON 契约值（经 Rust serde_json 往返），
- * 用 JSON 克隆以兼容 Immer 代理（structuredClone 无法克隆 Proxy）。
- */
-export function cloneJson<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
 
 /**
  * 按点路径读取载荷值。safePath 守卫前置：lodash get 会沿
@@ -47,12 +48,6 @@ export function payloadPreview(
   return schema.name;
 }
 
-/** XML 元素值谓词：元素值只能是文本/数字/布尔，null 与对象（含数组）不合法。
- *  withCustomField 与 parseFieldText 共用此单点判断（各自保留用户可见文案）。 */
-function isXmlNonScalar(value: unknown): boolean {
-  return value == null || typeof value === "object";
-}
-
 export function withCustomField(
   schema: EventSchema,
   payload: WirePayload,
@@ -62,7 +57,7 @@ export function withCustomField(
   const key = path.trim();
   if (!key || !safePath(key)) throw new Error("请填写有效的字段路径。");
   if (schema.wire === "xml") {
-    if (!/^[A-Za-z_][\w.-]*$/.test(key))
+    if (!WIRE_FIELD_PATTERN.test(key))
       throw new Error("XML 参数名须为单个元素名。");
     if (isXmlNonScalar(value))
       throw new Error("XML 参数值须为文本、数字或布尔值。");
@@ -71,7 +66,7 @@ export function withCustomField(
   if (schema.wire === "form") {
     // form 模板载荷为扁平 kv：字段名单层、值不收 null（对象/数组拼装时
     // JSON 字符串化，见 ./form）
-    if (!/^[A-Za-z_][\w.-]*$/.test(key))
+    if (!WIRE_FIELD_PATTERN.test(key))
       throw new Error("表单参数名须为单个字段名。");
     if (value == null) throw new Error("表单参数值不能为空。");
     return { ...cloneJson(payload), [key]: value };
@@ -85,7 +80,7 @@ export function withCustomField(
  * - json / boolean：JSON.parse，解析错误原样抛出（调用方落为字段错误）；
  * - 其余类型：文本透传。
  * XML 模板（wire === "xml"）下 null/对象不能作元素值，与 withCustomField
- * 共用同一谓词；两处报错文案沿用各自措辞。
+ * 共用 ./xml 的同一谓词；两处报错文案沿用各自措辞。
  */
 export function parseFieldText(
   type: string,
@@ -129,91 +124,6 @@ export function setAt(
   });
 }
 
-export type PayloadLeaf = {
-  path: string;
-  value: unknown;
-};
-
-/** 展开载荷到叶子（原始值/空容器终止），路径含数组下标。 */
-export function flattenPayload(
-  value: unknown,
-  prefix = "",
-  out: PayloadLeaf[] = [],
-): PayloadLeaf[] {
-  if (
-    value != null &&
-    typeof value === "object" &&
-    Object.keys(value).length > 0
-  ) {
-    for (const [key, child] of Object.entries(value)) {
-      const path = Array.isArray(value)
-        ? `${prefix}[${key}]`
-        : prefix
-          ? `${prefix}.${key}`
-          : key;
-      flattenPayload(child, path, out);
-    }
-  } else if (prefix) {
-    out.push({ path: prefix, value });
-  }
-  return out;
-}
-
-/**
- * contentString 模板专用转换（editorPayload / wirePayload / applyGeneratedIds
- * 共用的单点实现）：
- * - parse：线上 JSON 字符串 → 对象；非法 JSON 原样返回（完整报文页可修）
- * - stringify：对象 → 线上 JSON 字符串；非对象原样返回
- */
-export function parseContentString(
-  schema: EventSchema,
-  content: unknown,
-): unknown {
-  if (schema.contentString && typeof content === "string") {
-    try {
-      return JSON.parse(content);
-    } catch {
-      return content;
-    }
-  }
-  return content;
-}
-
-export function stringifyContentString(
-  schema: EventSchema,
-  content: unknown,
-): unknown {
-  if (schema.contentString && content != null && typeof content === "object") {
-    return JSON.stringify(content);
-  }
-  return content;
-}
-
-/** 表单编辑用的载荷：contentString 模板把 content 字符串解析为对象。 */
-export function editorPayload(
-  schema: EventSchema,
-  payload: WirePayload,
-): WirePayload {
-  const draft = cloneJson(payload);
-  // 仅当载荷确有 content 键时转换（XML 模板无 content，不能造出 undefined 键）
-  if ("content" in draft) {
-    draft.content = parseContentString(schema, draft.content);
-  }
-  return draft;
-}
-
-/** 线上发送用的载荷：contentString 模板把 content 对象序列化回字符串。 */
-export function wirePayload(
-  schema: EventSchema,
-  payload: WirePayload,
-): WirePayload {
-  const draft = cloneJson(payload);
-  if ("content" in draft) {
-    draft.content = stringifyContentString(schema, draft.content);
-  }
-  return draft;
-}
-
 /**
  * 直发明文：按 schema.wire 产出逐字节稳定的报文文本。
  *
@@ -231,16 +141,12 @@ export function wireBodyText(
   payload: WirePayload,
 ): string {
   if (schema.wire === "xml") {
-    return buildXmlBody(
-      requireXmlLayout(schema),
-      schema.fields.map((field) => field.path),
-      payload,
-    );
+    return xmlWireText(schema, payload);
   }
   if (schema.wire === "form") {
-    return buildFormBody(wirePayload(schema, payload));
+    return formWireText(schema, payload);
   }
-  return JSON.stringify(wirePayload(schema, payload));
+  return jsonWireText(schema, payload);
 }
 
 /**
@@ -254,45 +160,18 @@ export function wireDraftText(
   if (schema.wire === "xml" || schema.wire === "form") {
     return wireBodyText(schema, payload);
   }
-  return JSON.stringify(wirePayload(schema, payload), null, 2);
+  return jsonDraftText(schema, payload);
 }
 
 /** 完整报文文本 → 载荷（JSON 对象/XML 扁平元素/form 扁平字段三形态）。 */
 export function parseWireDraft(schema: EventSchema, text: string): WirePayload {
   if (schema.wire === "xml") {
-    return parseXmlBody(
-      schema.fields.map((field) => field.path),
-      text,
-    );
+    return parseXmlDraft(schema, text);
   }
   if (schema.wire === "form") {
-    return parseFormBody(text);
+    return parseFormDraft(text);
   }
   return parseWirePayload(text);
-}
-
-function requireXmlLayout(schema: EventSchema) {
-  if (!schema.xmlLayout) {
-    throw new Error(`模板 ${schema.id} 缺少 XML 排版规则。`);
-  }
-  return schema.xmlLayout;
-}
-
-/** 完整报文文本 → 载荷（JSON 校验：最外层必须是对象，路径安全）。 */
-export function parseWirePayload(text: string): WirePayload {
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error("报文不是合法的 JSON。");
-  }
-  if (data == null || Array.isArray(data) || typeof data !== "object") {
-    throw new Error("报文最外层必须是对象。");
-  }
-  if (flattenPayload(data).some((leaf) => !safePath(leaf.path))) {
-    throw new Error("报文包含保留字段名。");
-  }
-  return cloneJson(data) as WirePayload;
 }
 
 /** 表单中修改一个字段（在表单载荷上操作，返回新载荷）。 */

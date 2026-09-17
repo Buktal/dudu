@@ -1,7 +1,13 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { isEqual } from "lodash-es";
 
-import { liveStarted, type RunPhase, runProgress } from "@/features/runs";
+import {
+  foldProjectedOutcome,
+  liveStarted,
+  type PlanPhaseLike,
+  type RunPhase,
+  runProgress,
+} from "@/features/runs";
 import type { ChannelId } from "@/lib/channels";
 
 import {
@@ -68,6 +74,11 @@ export const initialPlansState: PlansState = {
   needConnectionChannels: [],
   activeRunId: null,
 };
+
+// 编译期契约：PlansState 满足 runs 会话所需的最小形状（单点见 plan-adapter.ts）。
+type _PlansConformsToSession = PlansState extends PlanPhaseLike ? true : never;
+const _plansConformsToSession: _PlansConformsToSession = true;
+void _plansConformsToSession;
 
 /** 装载已保存编排为独立草稿副本（编辑不影响库内对象）。 */
 function draftFromPlan(item: Plan): Plan {
@@ -202,18 +213,16 @@ const plansSlice = createSlice({
         state.planRunMessage = "";
       })
       .addCase(startPlanRun.fulfilled, (state, action) => {
-        if (action.payload.kind === "noop") {
-          state.planRunPhase = "idle";
-          return;
-        }
-        if (action.payload.kind === "needConnection") {
-          state.planRunPhase = "needConnection";
-          state.needConnectionChannels = action.payload.channels;
-          return;
-        }
-        // 竞态守卫（恒例见 runs 域 live.ts startLiveRun）：完成事件可能早于命令返回
-        if (state.activeRunId === action.payload.live.runId)
-          state.planRunPhase = "running";
+        // 投影 outcome 折叠单点见 runs 域 launch.ts foldProjectedOutcome（含
+        // shouldConfirmRunning 守卫：完成事件早于命令返回时不复活运行）
+        const folded = foldProjectedOutcome(
+          action.payload,
+          state.activeRunId,
+          state.planRunPhase,
+        );
+        state.planRunPhase = folded.phase;
+        if (folded.channels !== undefined)
+          state.needConnectionChannels = folded.channels;
       })
       .addCase(startPlanRun.rejected, (state, action) => {
         if (action.meta.condition) return;

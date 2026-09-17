@@ -4,6 +4,9 @@ import {
   type EventItem,
   type EventSchema,
   type EventVersion,
+  REF_CONSEQUENCES,
+  refEntryOf,
+  refRowOf,
 } from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
 import { type Page, paginate as paginateList } from "@/lib/paginate";
@@ -87,11 +90,11 @@ export function resolveSteps(
 ): StepRow[] {
   return steps.map((step, index) => {
     if (isTemplateStep(step)) {
-      // 模板引用分类共用（events 域 describeTemplateVersion）；钉住
-      // 语义：只按步骤存下的 id + 版本精确解析，缺失留给本侧标记
-      //（未注册 id 与版本更替同样 missing）。
+      // 模板引用分类共用（events 域 describeTemplateVersion）；展示时钟问
+      // consequence 表拿条目（钉住语义：只按步骤存下的 id + 版本精确解析）。
+      // 模板行 missing = 无条目，未注册 id 与版本更替同样 missing。
       const refStatus = describeTemplateVersion(templates, step);
-      const template = refStatus.status === "ok" ? refStatus.entry : undefined;
+      const template = refEntryOf(refStatus);
       return {
         index,
         step,
@@ -104,12 +107,13 @@ export function resolveSteps(
         missing: !template,
       };
     }
-    // 引用分类共用（events 域 describeEventVersion）；展示时钟特有的
-    // missing / outdated 标记与最新版本号留在本侧。注意钉住版本不在
-    // （version-missing）不标 missing——行照常展示，拒绝启动是运行时钟的事。
+    // 引用分类共用（events 域 describeEventVersion）；展示时钟问 consequence
+    // 表拿行与条目。注意钉住版本不在（version-missing）不标 missing——行
+    // 照常展示（表 view.hasRow 为 true），拒绝启动是运行时钟的事。
     const refStatus = describeEventVersion(events, step);
-    const event = refStatus.status === "id-missing" ? undefined : refStatus.row;
-    const referenced = refStatus.status === "ok" ? refStatus.entry : undefined;
+    const consequence = REF_CONSEQUENCES[refStatus.status];
+    const event = refRowOf(refStatus);
+    const referenced = refEntryOf(refStatus);
     const latest = event?.versions[event.versions.length - 1];
     const latestRevision = latest?.revision ?? 0;
     return {
@@ -120,7 +124,10 @@ export function resolveSteps(
       referenced,
       template: undefined,
       latestRevision,
-      outdated: Boolean(referenced) && latestRevision > step.revision,
+      outdated:
+        consequence.view.mayOutdate &&
+        referenced !== undefined &&
+        latestRevision > step.revision,
       missing: !event,
     };
   });

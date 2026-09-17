@@ -1,32 +1,23 @@
-import {
-  cloneJson,
-  getAt,
-  parseContentString,
-  setAt,
-  stringifyContentString,
-} from "../payload";
+import { cloneJson } from "../paths";
+import { getAt, setAt } from "../payload";
+import { parseContentString, stringifyContentString } from "../payload/json";
 import type { EventSchema, IdKind } from "../schemas";
 import {
+  generateAibotMsgId,
+  generateAliNotifyId,
   generateBiliBvId,
   generateBiliClientId,
   generateBiliOpenId,
   generateBiliTimestamp,
-  generateTgUpdateId,
-  generateWaAccountId,
-  generateWaConversationId,
-  generateWaPhone,
-  generateWaTemplateId,
-  generateWaWamid,
-} from "./global";
-import {
-  generateAibotMsgId,
   generateCreateTimeMs,
   generateCreateTimeMsString,
   generateCreateTimeSec,
   generateCreateTimeSecNumber,
   generateDingtalkMsgId,
+  generateEleBizId,
   generateEncryptedId,
   generateHexId32,
+  generateJdBizId,
   generateKsMessageId,
   generateLarkChatId,
   generateLarkMessageId,
@@ -34,23 +25,24 @@ import {
   generateLarkUnionId,
   generateLogId,
   generateMsgId64,
+  generateMtBizId,
   generateOpenId,
+  generateOpenimMsgId,
+  generatePddBizId,
   generateQqOpenId,
   generateQqRobotMsgId,
+  generateTaobaoBizId,
+  generateTaobaoModified,
+  generateTgUpdateId,
+  generateWaAccountId,
+  generateWaConversationId,
+  generateWaPhone,
+  generateWaTemplateId,
+  generateWaWamid,
   generateWeiboCreatedAt,
   generateWeiboUid,
   generateXhsMsgId,
-} from "./platform";
-import {
-  generateAliNotifyId,
-  generateEleBizId,
-  generateJdBizId,
-  generateMtBizId,
-  generateOpenimMsgId,
-  generatePddBizId,
-  generateTaobaoBizId,
-  generateTaobaoModified,
-} from "./trade";
+} from "./generators";
 import type { Generator as IdGenerator } from "./types";
 
 /**
@@ -126,14 +118,11 @@ import type { Generator as IdGenerator } from "./types";
  *   字符串、UTC+8——与请求签名 x-bili-timestamp 的 unix 秒并存口径，事实库
  *   §7-9；经 lib/time 封装固定偏移格式化，新建事件即事件发生时刻）
  *
- * 模块按渠道族拆分（单文件 ≤ 500 行，code-review 退件）：共享随机基础件在
- * ./random，平台/IM 系在 ./platform，电商/交易系在 ./trade，海外/全域在
- * ./global；本模块只收生成器注册表与载荷替换。
+ * 模块按单点收敛（C6 合并）：生成实现全员住 ./generators，
+ * 共享随机基础件在 ./random；本模块只收生成器注册表与载荷替换。
  */
 
-export * from "./global";
-export * from "./platform";
-export * from "./trade";
+export * from "./generators";
 
 const GENERATORS: Record<IdKind, IdGenerator> = {
   openId: generateOpenId,

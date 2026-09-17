@@ -9,6 +9,8 @@ import {
   type EventItem,
   type EventsState,
   type EventVersion,
+  REF_CONSEQUENCES,
+  refStatusForPresence,
   schemaById,
 } from "@/features/events";
 import type { ChannelId } from "@/lib/channels";
@@ -66,10 +68,14 @@ function latestVersionOf(
   eventId: string,
 ): { event: EventItem; version: EventVersion } {
   const event = events.find((item) => item.id === eventId);
-  if (!event) {
+  const eventStatus = refStatusForPresence(event !== undefined);
+  // 编辑时钟（同步门）问 consequence 表：无行即 id 缺失，拒绝同步
+  // （文案一字不动）。后半为类型收窄，语义以查表为准（两者一致）。
+  if (REF_CONSEQUENCES[eventStatus].edit.blocksSync || !event) {
     throw new Error(`事件不存在：${eventId}。`);
   }
   const version = event.versions[event.versions.length - 1];
+  // 非引用分类边：行在但零版本（无 ref 可判，不归表），文案不变。
   if (!version) {
     throw new Error(`事件还没有保存过版本：${event.name}。`);
   }

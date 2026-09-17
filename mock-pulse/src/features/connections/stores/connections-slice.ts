@@ -131,10 +131,10 @@ export const {
 
 /**
  * 「已配置」的内容判定（isConnectionReady）：直发前置条件，发送入口与指引
- * 展示共用。按职责拆出到 ./is-connection-ready（单文件 ≤ 500 行），
- * 此处仅保持既有导入路径稳定。
+ * 展示共用。实现收敛在 ../channel-traits（C1 深化：url 公共前置 + 行内必填集
+ * 查表），此处仅保持既有导入路径稳定。
  */
-export { isConnectionReady } from "./is-connection-ready";
+export { isConnectionReady } from "../channel-traits";
 
 /** 按渠道字面量取对应形状的连接配置类型 */
 type ConfigOfChannel<C extends ChannelId> = Extract<
