@@ -86,7 +86,7 @@ export function materializeRunSnapshot(input: {
       // 拒绝启动）留在本运行时钟。
       const status = describeTemplateVersion(templates, step);
       if (status.status !== "ok") {
-        if (status.status === "template-missing") {
+        if (status.status === "id-missing") {
           throw new Error(
             `第 ${index + 1} 步引用的内置模板不存在：${step.templateId}。先删除该步骤或更新剧本。`,
           );
@@ -95,7 +95,7 @@ export function materializeRunSnapshot(input: {
           `第 ${index + 1} 步引用的模板版本不存在：${templateName(templates, step.templateId)} v${step.templateVersion}。`,
         );
       }
-      const template = status.template;
+      const template = status.entry;
       if (template.channelId !== scenario.channelId) {
         throw new Error(
           `第 ${index + 1} 步引用了${channelName(template.channelId)}的内置模板：${template.id}（剧本渠道为${channelName(scenario.channelId)}）。`,
@@ -114,23 +114,23 @@ export function materializeRunSnapshot(input: {
     // 引用分类共用（events 域 describeEventVersion）；缺失语义（抛错
     // 拒绝启动、不产半成品快照）留在本运行时钟。
     const refStatus = describeEventVersion(events, step);
-    if (refStatus.status === "event-missing") {
+    if (refStatus.status === "id-missing") {
       throw new Error(
         `第 ${index + 1} 步引用的事件不存在：${step.eventId}。先删除该步骤或调整素材库。`,
       );
     }
-    const event = refStatus.event;
+    const event = refStatus.row;
     if (event.channelId !== scenario.channelId) {
       throw new Error(
         `第 ${index + 1} 步引用了${channelName(event.channelId)}的事件：${event.name}（剧本渠道为${channelName(scenario.channelId)}）。`,
       );
     }
-    if (refStatus.status === "revision-missing") {
+    if (refStatus.status === "version-missing") {
       throw new Error(
         `第 ${index + 1} 步引用的版本不存在：${event.name} v${step.revision}。`,
       );
     }
-    const referenced = refStatus.version;
+    const referenced = refStatus.entry;
     const schema = schemaById(event.schemaId);
     return {
       eventName: event.name,

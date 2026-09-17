@@ -6,6 +6,7 @@
  * items 只存剧本引用（scenarioId），运行时经引用解析物化（与剧本步骤同一引用哲学）。
  */
 
+import { resolveRow } from "@/features/events";
 import type { Scenario } from "@/features/scenarios";
 
 export type PlanMode = "parallel" | "serial";
@@ -137,16 +138,19 @@ export function validatePlan(
   }
 }
 
-/** 库内按 id 查剧本（lane 解析 / 同步快照 / 校验共用的底层查找原语）。 */
+/** 库内按 id 查剧本（lane 解析 / 同步快照 / 校验共用的底层查找原语，
+ *  经 events 域引用解析 kernel 委托行查找）。 */
 export function scenarioById<T extends { id: string }>(
   scenarios: readonly T[],
   scenarioId: string,
 ): T | undefined {
-  return scenarios.find((scenario) => scenario.id === scenarioId);
+  return resolveRow(scenarios, scenarioId);
 }
 
 /**
  * lane 引用解析单点：「快照优先、库内兜底、双缺 undefined」。
+ * 库内兜底经 events 域引用解析 kernel（resolveRow）委托行查找，
+ * 与事件版本 / 模板版本共用同一 kernel。
  * 运行物化（materialize / plan-run）、编辑器展示、保存钉快照共用。
  * 同步 lane 快照（syncPlanLane）不走它——同步的语义就是用库内最新
  * 版本覆盖过期快照，那里直接走 scenarioById 的库内查找。

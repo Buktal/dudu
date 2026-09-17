@@ -24,6 +24,7 @@ export {
   describeEventVersion,
   describeTemplateVersion,
   type EventRefStatus,
+  resolveRow,
   type TemplateRefStatus,
 } from "./resolve";
 export {

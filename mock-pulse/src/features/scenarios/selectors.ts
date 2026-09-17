@@ -91,8 +91,7 @@ export function resolveSteps(
       // 语义：只按步骤存下的 id + 版本精确解析，缺失留给本侧标记
       //（未注册 id 与版本更替同样 missing）。
       const refStatus = describeTemplateVersion(templates, step);
-      const template =
-        refStatus.status === "ok" ? refStatus.template : undefined;
+      const template = refStatus.status === "ok" ? refStatus.entry : undefined;
       return {
         index,
         step,
@@ -107,12 +106,10 @@ export function resolveSteps(
     }
     // 引用分类共用（events 域 describeEventVersion）；展示时钟特有的
     // missing / outdated 标记与最新版本号留在本侧。注意钉住版本不在
-    // （revision-missing）不标 missing——行照常展示，拒绝启动是运行时钟的事。
+    // （version-missing）不标 missing——行照常展示，拒绝启动是运行时钟的事。
     const refStatus = describeEventVersion(events, step);
-    const event =
-      refStatus.status === "event-missing" ? undefined : refStatus.event;
-    const referenced =
-      refStatus.status === "ok" ? refStatus.version : undefined;
+    const event = refStatus.status === "id-missing" ? undefined : refStatus.row;
+    const referenced = refStatus.status === "ok" ? refStatus.entry : undefined;
     const latest = event?.versions[event.versions.length - 1];
     const latestRevision = latest?.revision ?? 0;
     return {

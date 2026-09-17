@@ -222,7 +222,7 @@ export function validateScenario(
       // 模板引用分类共用（events 域 describeTemplateVersion：未注册 id 与
       // 版本更替的区分住在数据侧）；保存校验的缺失语义（抛错）留在这里。
       const status = describeTemplateVersion(templates, step);
-      if (status.status === "template-missing") {
+      if (status.status === "id-missing") {
         throw new Error(`步骤引用的内置模板不存在：${step.templateId}。`);
       }
       if (status.status === "version-missing") {
@@ -230,7 +230,7 @@ export function validateScenario(
           `步骤引用的内置模板版本不存在：${step.templateId} v${step.templateVersion}。`,
         );
       }
-      const matched = status.template;
+      const matched = status.entry;
       if (matched.channelId !== scenario.channelId) {
         throw new Error(
           `剧本渠道为${channelName(scenario.channelId)}，步骤引用了${channelName(matched.channelId)}的内置模板：${step.templateId}。`,
