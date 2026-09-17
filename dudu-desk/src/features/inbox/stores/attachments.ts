@@ -118,7 +118,7 @@ function prepareDraftAttachment(id: string): InboxCommand<Promise<void>> {
             dispatch(
               inboxActions.attachmentFailed({
                 id,
-                error: failureOf(error).message,
+                error: failureOf(error, "暂时无法连接服务，请稍后重试").message,
               }),
             ),
           );

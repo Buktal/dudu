@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { InboxMessage, Page, SendSubmission } from "../types";
 import {
   collapsePinned,
@@ -217,7 +217,9 @@ describe("parallel reception", () => {
       },
     });
     const loading = store.dispatch(loadConversations());
-    await Promise.resolve();
+    // State-driven wait: the auto-select chain resolves in a tick count that
+    // paging refactors may shift, so wait for the in-flight read itself.
+    await vi.waitFor(() => expect(primarySignal).toBeDefined());
     await store.dispatch(pinConversation(secondConversation.id));
     await store.dispatch(selectConversation(secondConversation.id));
     expect(primarySignal?.aborted).toBe(false);

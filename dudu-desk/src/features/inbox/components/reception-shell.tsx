@@ -1,7 +1,19 @@
 import { ArrowLeft } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence } from "motion/react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
+import { WorkspaceView } from "@/components/workspace-motion";
+import type { ReceptionMode } from "@/lib/reception-mode";
 import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
+import { CalmWorkspace } from "./calm-workspace";
+import { InboxLoading } from "./inbox-state";
 
 /**
  * Reception workspace shared skeleton: the list-pane visibility both calm and
@@ -40,5 +52,42 @@ export function ReceptionBackButton({ onBack }: { onBack: () => void }) {
       <ArrowLeft data-icon="inline-start" />
       返回会话列表
     </Button>
+  );
+}
+
+const ParallelWorkspace = lazy(() =>
+  import("./parallel-workspace").then((module) => ({
+    default: module.ParallelWorkspace,
+  })),
+);
+const QuickWorkspace = lazy(() =>
+  import("./quick-workspace").then((module) => ({
+    default: module.QuickWorkspace,
+  })),
+);
+
+/**
+ * Reception workspace mode switch. Owns the mounting ritual shared by all
+ * three modes (exit/enter transition + suspense fallback + workspace switch)
+ * so the session keeps only store-bound concerns (effects, notice bar).
+ * Mode itself stays a prop: it is a persisted workspace preference owned by
+ * the shared shell (`@/lib/reception-mode`), which also renders before the
+ * inbox store exists — moving it into the inbox store would split ownership.
+ */
+export function ReceptionWorkspace({ mode }: { mode: ReceptionMode }) {
+  return (
+    <AnimatePresence initial={false} mode="wait">
+      <WorkspaceView key={mode}>
+        <Suspense fallback={<InboxLoading label="正在切换接待布局…" />}>
+          {mode === "parallel" ? (
+            <ParallelWorkspace />
+          ) : mode === "quick" ? (
+            <QuickWorkspace />
+          ) : (
+            <CalmWorkspace />
+          )}
+        </Suspense>
+      </WorkspaceView>
+    </AnimatePresence>
   );
 }

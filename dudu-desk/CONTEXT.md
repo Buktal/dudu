@@ -15,6 +15,7 @@ naming a module after a concept not listed here means adding it here first.
 - **Reply policy** — the reply-allowed decision: restriction + capability +
   one clock value (`replyRestriction` in `reply-pipeline.ts`).
 - **Operation** — a scoped inbox request: abort-previous + generation guard +
-  guaranteed release (`runOperation` in `stores/requests.ts`).
+  guaranteed release (`runOperation` in `stores/requests.ts`, single-flight
+  primitive in `src/lib/request-scope.ts`, also answering the account session).
 - **Fixture builder** — the shared kernel (`fixtures.ts`) both the seeded
   development world and the hand-built test world build conversations through.

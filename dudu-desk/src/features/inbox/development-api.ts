@@ -15,11 +15,21 @@ import {
 import {
   createDevelopmentDriver,
   findDevelopmentConversation as findConversation,
+  isDevelopmentScenario,
   resolveDevelopmentScenario,
 } from "./development-scenarios";
 import { messageSummary } from "./message-text";
 import type { InboxMessage, MediaReference, SendTarget } from "./types";
 
+export { isDevelopmentScenario };
+
+/**
+ * Development inbox adapter (dev-only, never ships): method semantics over
+ * the driver below. Every method opens with the session gate, so holds,
+ * offline, injected failures and disposal behave identically across methods.
+ * Kept separate from the driver because merging would breach the single-file
+ * line limit; the seam is state-behind-gates (driver) vs method semantics.
+ */
 export function createDevelopmentInboxApi({
   now = nowIso,
   scenario = "default",

@@ -23,6 +23,28 @@ export function attachmentKind(mimeType: string): Exclude<SendKind, "text"> {
   return "file";
 }
 
+export type AttachmentLimits = NonNullable<ReplyCapability["attachments"]>;
+
+/**
+ * Limits validation behind one seam: every attachment gate answers through
+ * here, so the finite/maxBytes/maxCount shape changes in one module instead
+ * of drifting across the single-file, entry and batch checks.
+ */
+export function readAttachmentLimits(
+  conversation: Conversation | undefined,
+): AttachmentLimits | null {
+  const limits = conversation?.capability.attachments;
+  if (
+    !limits ||
+    !Number.isFinite(limits.maxBytes) ||
+    limits.maxBytes < 0 ||
+    !Number.isInteger(limits.maxCount) ||
+    limits.maxCount < 1
+  )
+    return null;
+  return limits;
+}
+
 export function attachmentRestriction(
   conversation: Conversation | undefined,
   connection: ConnectionState,
@@ -37,15 +59,8 @@ export function attachmentRestriction(
     now,
   );
   if (restriction) return restriction;
-  const limits = conversation?.capability.attachments;
+  const limits = readAttachmentLimits(conversation);
   if (!limits) return "渠道附件限制尚未确认";
-  if (
-    !Number.isFinite(limits.maxBytes) ||
-    limits.maxBytes < 0 ||
-    !Number.isInteger(limits.maxCount) ||
-    limits.maxCount < 1
-  )
-    return "渠道附件限制尚未确认";
   if (count > limits.maxCount)
     return `本会话最多添加 ${limits.maxCount} 个附件`;
   if (file.size > limits.maxBytes) return "附件超过本会话允许的大小";
@@ -74,15 +89,8 @@ export function attachmentEntryRestriction(
   if (restriction) return restriction;
   if (!conversation?.capability.kinds.some((kind) => kind !== "text"))
     return "当前会话仅支持文字回复";
-  const limits = conversation.capability.attachments;
-  if (
-    !limits ||
-    !Number.isFinite(limits.maxBytes) ||
-    limits.maxBytes < 0 ||
-    !Number.isInteger(limits.maxCount) ||
-    limits.maxCount < 1
-  )
-    return "渠道附件限制尚未确认";
+  const limits = readAttachmentLimits(conversation);
+  if (!limits) return "渠道附件限制尚未确认";
   if (!limits.mimeTypes.length) return "当前会话暂未开放附件格式";
   if (count >= limits.maxCount)
     return `本会话最多添加 ${limits.maxCount} 个附件`;

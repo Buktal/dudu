@@ -1,3 +1,4 @@
+import { createRequestScope } from "@/lib/request-scope";
 import type { WorkContext } from "../types";
 import type { InboxRootState, InboxRuntime } from "./store";
 
@@ -12,26 +13,36 @@ export function beginRequest(
   key: string,
   getState: () => InboxRootState,
 ) {
-  runtime.requests.get(key)?.abort();
-  const controller = new AbortController();
-  runtime.requests.set(key, controller);
+  let scope = runtime.requests.get(key);
+  if (!scope) {
+    scope = createRequestScope();
+    runtime.requests.set(key, scope);
+  }
+  const signal = scope.begin();
   const { context, generation } = getState().inbox;
   return {
     context,
-    signal: controller.signal,
+    signal,
     current: () =>
-      !controller.signal.aborted &&
-      runtime.requests.get(key) === controller &&
+      scope.isCurrent(signal) &&
+      runtime.requests.get(key) === scope &&
       getState().inbox.generation === generation,
     finish: () => {
-      if (runtime.requests.get(key) === controller)
+      // Release-only: the original ritual deleted the key without aborting,
+      // and callers (e.g. queue pagination tests) observe the completed
+      // signal as un-aborted. Disposing here would abort our own just-settled
+      // signal as a side effect. The scope is dropped from the map so it is
+      // never reused; late current() checks fail closed on the map mismatch.
+      // Abort remains explicit via scope.abort()/cancelRequests.
+      if (runtime.requests.get(key) === scope && scope.isCurrent(signal)) {
         runtime.requests.delete(key);
+      }
     },
   };
 }
 
 export function cancelRequests(runtime: InboxRuntime) {
-  for (const controller of runtime.requests.values()) controller.abort();
+  for (const scope of runtime.requests.values()) scope.dispose();
   runtime.requests.clear();
   runtime.unsubscribe?.();
   runtime.unsubscribe = undefined;

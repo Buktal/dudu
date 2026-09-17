@@ -2,7 +2,7 @@ import { createSelector } from "@reduxjs/toolkit";
 import { DeskApiError } from "@/lib/api-response";
 import { compareConversations } from "../conversation-query";
 import type { ConversationPage, ConversationQuery } from "../types";
-import { advancePageCursor } from "./page-cursor";
+import { collectPaged } from "./page-cursor";
 import { selectConversation } from "./reading";
 import { failureOf, runOperation } from "./requests";
 import { inboxActions } from "./slice";
@@ -65,45 +65,41 @@ export function loadConversations(
             options.more || options.query ? [] : queue.ids,
           );
           const loadedIds = new Set<string>();
-          const cursors = new Set<string>();
-          let cursor = options.more
-            ? (queue.nextCursor ?? undefined)
-            : undefined;
-          do {
-            // Pre-add the outgoing cursor: a repeat can span two reads (the
-            // stored nextCursor re-requested as `more`), so the guard must
-            // know the request chain, not just returned cursors.
-            if (cursor) cursors.add(cursor);
-            const nextPage = await runtime.api.listConversations({
-              context: op.context,
-              signal: op.signal,
-              query: options.query ?? queue.query,
-              cursor,
-            });
-            if (!op.current()) return;
-            cursor =
-              advancePageCursor(
-                nextPage.nextCursor,
-                cursors,
-                "会话列表返回了重复游标，请刷新后重试",
-              ) ?? undefined;
-            page.items.push(...nextPage.items);
-            const previousSize = loadedIds.size;
-            for (const item of nextPage.items) {
-              loadedIds.add(item.id);
-              remainingIds.delete(item.id);
-            }
-            page.nextCursor = nextPage.nextCursor;
-            page.total = nextPage.total ?? page.total;
-            page.counts = nextPage.counts ?? page.counts;
-            page.channels = nextPage.channels ?? page.channels;
-            if (!page.nextCursor || !remainingIds.size) break;
-            if (loadedIds.size === previousSize)
-              throw new DeskApiError(
-                "invalid-response",
-                "会话列表分页没有继续前进，请刷新后重试",
-              );
-          } while (cursor);
+          await collectPaged({
+            fetch: (cursor) =>
+              runtime.api.listConversations({
+                context: op.context,
+                signal: op.signal,
+                query: options.query ?? queue.query,
+                cursor,
+              }),
+            duplicateMessage: "会话列表返回了重复游标，请刷新后重试",
+            startCursor: options.more
+              ? (queue.nextCursor ?? undefined)
+              : undefined,
+            isCurrent: op.current,
+            shouldStop: (all) => {
+              const latest = all[all.length - 1];
+              page.items.push(...latest.items);
+              const previousSize = loadedIds.size;
+              for (const item of latest.items) {
+                loadedIds.add(item.id);
+                remainingIds.delete(item.id);
+              }
+              page.nextCursor = latest.nextCursor;
+              page.total = latest.total ?? page.total;
+              page.counts = latest.counts ?? page.counts;
+              page.channels = latest.channels ?? page.channels;
+              if (!page.nextCursor || !remainingIds.size) return true;
+              if (loadedIds.size === previousSize)
+                throw new DeskApiError(
+                  "invalid-response",
+                  "会话列表分页没有继续前进，请刷新后重试",
+                );
+              return false;
+            },
+          });
+          if (!op.current()) return;
           const latest = getState().inbox;
           const preserveIds = latest.queue.ids.filter(
             (id) => latest.conversations[id].version > (versions.get(id) ?? -1),
@@ -129,7 +125,7 @@ export function loadConversations(
           op.settle(() =>
             dispatch(
               inboxActions.queueFailed({
-                error: failureOf(error),
+                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
                 more: !!options.more,
               }),
             ),

@@ -3,9 +3,11 @@ import {
   type ThunkAction,
   type UnknownAction,
 } from "@reduxjs/toolkit";
+import type { RequestScope } from "@/lib/request-scope";
 import { nowIso } from "@/lib/time";
 import type { InboxApi } from "../api";
 import type { WorkContext } from "../types";
+import { createSettledBus, type SettledBus } from "./live-refresh";
 import { inboxReducer } from "./slice";
 import { type InboxState, initialInboxState } from "./state";
 
@@ -13,26 +15,22 @@ export type InboxRuntime = {
   api: InboxApi;
   now: () => string;
   id: () => string;
-  requests: Map<string, AbortController>;
+  requests: Map<string, RequestScope>;
   /**
    * Coordination seam between the Conversation queue and Live events modules:
    * the queue notifies after every refresh/more settles (see queue.ts), and
    * the Live events refresh scheduler listens to re-read once the queue is
-   * idle (see live-refresh.ts). Touch only through the helpers below so the
-   * event name stays in one module.
+   * idle (see live-refresh.ts). Touch only through the helpers below.
    */
-  queueEvents: EventTarget;
+  queueEvents: SettledBus;
   files: Map<string, File>;
   previews: Map<string, string>;
   unsubscribe?: () => void;
 };
 
-/** Name of the queue-settled signal on `InboxRuntime.queueEvents`. */
-export const QUEUE_SETTLED_EVENT = "settled";
-
 /** Notify Live events that a queue read settled (success or failure). */
 export function notifyQueueSettled(runtime: Pick<InboxRuntime, "queueEvents">) {
-  runtime.queueEvents.dispatchEvent(new Event(QUEUE_SETTLED_EVENT));
+  runtime.queueEvents.notify();
 }
 
 /** Listen for queue-settled signals; aborts with the given signal. */
@@ -41,9 +39,7 @@ export function onQueueSettled(
   listener: () => void,
   signal: AbortSignal,
 ) {
-  runtime.queueEvents.addEventListener(QUEUE_SETTLED_EVENT, listener, {
-    signal,
-  });
+  runtime.queueEvents.subscribe(listener, signal);
 }
 
 export type InboxRootState = { inbox: InboxState };
@@ -65,7 +61,7 @@ export function createInboxStore(options: {
     now: options.now ?? nowIso,
     id: options.id ?? (() => crypto.randomUUID()),
     requests: new Map(),
-    queueEvents: new EventTarget(),
+    queueEvents: createSettledBus(),
     files: new Map(),
     previews: new Map(),
   };

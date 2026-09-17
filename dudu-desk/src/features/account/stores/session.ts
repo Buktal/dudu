@@ -1,4 +1,5 @@
 import { type ApiFailure, failureOf } from "@/lib/api-response";
+import { createRequestScope } from "@/lib/request-scope";
 import type { AccountApi, AgentSession, LoginCredentials } from "../api";
 
 type AccountStatus =
@@ -15,7 +16,10 @@ export type AccountSnapshot = Readonly<{
 
 export function createAccountSession(api: AccountApi) {
   let snapshot: AccountSnapshot = { status: "loading", session: null };
-  let request: AbortController | undefined;
+  // Abort-previous + currency lives in the shared scope (see
+  // src/lib/request-scope.ts); the disposed flag stays local for the publish
+  // guard and the entry checks below.
+  const scope = createRequestScope();
   let disposed = false;
   const listeners = new Set<() => void>();
   function publish(next: AccountSnapshot) {
@@ -24,14 +28,12 @@ export function createAccountSession(api: AccountApi) {
     for (const listener of listeners) listener();
   }
   function begin(next: AccountSnapshot) {
-    request?.abort();
-    const current = new AbortController();
-    request = current;
+    const signal = scope.begin();
     publish(next);
-    return current;
+    return signal;
   }
-  function current(requested: AbortController) {
-    return !disposed && request === requested && !requested.signal.aborted;
+  function current(requested: AbortSignal) {
+    return !disposed && scope.isCurrent(requested);
   }
   return {
     getSnapshot: () => snapshot,
@@ -45,7 +47,7 @@ export function createAccountSession(api: AccountApi) {
       if (disposed || snapshot.session) return;
       const pending = begin({ status: "loading", session: null });
       try {
-        const session = await api.getSession(pending.signal);
+        const session = await api.getSession(pending);
         if (current(pending))
           publish({ status: session ? "signed-in" : "signed-out", session });
       } catch (error) {
@@ -53,7 +55,7 @@ export function createAccountSession(api: AccountApi) {
           publish({
             status: "signed-out",
             session: null,
-            error: failureOf(error),
+            error: failureOf(error, "暂时无法完成操作，请重试"),
           });
       }
     },
@@ -62,7 +64,7 @@ export function createAccountSession(api: AccountApi) {
         return false;
       const username = credentials.username.trim();
       if (!username || !credentials.password) {
-        request?.abort();
+        scope.abort();
         publish({
           status: "signed-out",
           session: null,
@@ -74,7 +76,7 @@ export function createAccountSession(api: AccountApi) {
       try {
         const session = await api.signIn(
           { username, password: credentials.password },
-          pending.signal,
+          pending,
         );
         if (!current(pending)) return false;
         publish({ status: "signed-in", session });
@@ -84,7 +86,7 @@ export function createAccountSession(api: AccountApi) {
           publish({
             status: "signed-out",
             session: null,
-            error: failureOf(error),
+            error: failureOf(error, "暂时无法完成操作，请重试"),
           });
         return false;
       }
@@ -95,19 +97,23 @@ export function createAccountSession(api: AccountApi) {
         return false;
       const pending = begin({ status: "signing-out", session });
       try {
-        await api.signOut(pending.signal);
+        await api.signOut(pending);
         if (!current(pending)) return false;
         publish({ status: "signed-out", session: null });
         return true;
       } catch (error) {
         if (current(pending))
-          publish({ status: "signed-in", session, error: failureOf(error) });
+          publish({
+            status: "signed-in",
+            session,
+            error: failureOf(error, "暂时无法完成操作，请重试"),
+          });
         return false;
       }
     },
     dispose: () => {
       disposed = true;
-      request?.abort();
+      scope.dispose();
       listeners.clear();
       snapshot = { status: "signed-out", session: null };
     },

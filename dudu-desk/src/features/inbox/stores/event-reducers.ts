@@ -32,8 +32,10 @@ export const eventReducers = {
     action: PayloadAction<ConversationPage>,
   ) {
     const page = action.payload;
+    // Merge entities without touching queue membership: the reconcile rewrite
+    // below owns ids, mirroring the queueLoaded transaction.
     for (const conversation of page.items)
-      mergeConversation(state, conversation);
+      mergeConversation(state, conversation, false);
     state.queue.ids = rewriteQueueIds({
       conversations: state.conversations,
       query: state.queue.query,

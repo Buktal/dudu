@@ -98,7 +98,9 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
       if (current)
         dispatch(
           inboxActions.connectionChanged(
-            connectionFromFailure(failureOf(error)),
+            connectionFromFailure(
+              failureOf(error, "暂时无法连接服务，请稍后重试"),
+            ),
           ),
         );
     }

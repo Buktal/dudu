@@ -5,12 +5,13 @@ import type {
   InboxMessage,
   Page,
 } from "../types";
-import { advancePageCursor } from "./page-cursor";
+import { collectPaged } from "./page-cursor";
 import {
   failureOf,
   releaseAttachmentResources,
   runOperation,
 } from "./requests";
+import { acceptSubmission } from "./sending";
 import { inboxActions } from "./slice";
 import { receiptKeys } from "./state";
 import type { InboxCommand } from "./store";
@@ -35,14 +36,10 @@ export function settleConfirmedReplies(): InboxCommand {
             submission.draftAttachmentIds.includes(id),
           ))
       ) {
-        dispatch(
-          inboxActions.submissionAccepted({
-            messageId: submission.messageId,
-            response,
-          }),
-        );
+        acceptSubmission(dispatch, runtime, submission, response);
+      } else {
+        releaseAttachmentResources(runtime, submission.draftAttachmentIds);
       }
-      releaseAttachmentResources(runtime, submission.draftAttachmentIds);
     }
     const state = getState().inbox;
     if (
@@ -70,29 +67,28 @@ export function reconcileInbox(
       const query = getState().inbox.queue.query;
       dispatch(inboxActions.connectionChanged("reconnecting"));
       try {
-        let cursor: string | undefined;
-        const seenCursors = new Set<string>();
         const queuePage: ConversationPage = { items: [], nextCursor: null };
-        do {
-          const page = await runtime.api.listConversations({
-            context: op.context,
-            signal: op.signal,
-            query,
-            cursor,
-          });
-          if (!current()) return;
-          if (getState().inbox.queue.query !== query) break;
-          queuePage.items.push(...page.items);
-          queuePage.nextCursor = page.nextCursor;
-          queuePage.total = page.total ?? queuePage.total;
-          queuePage.counts = page.counts ?? queuePage.counts;
-          queuePage.channels = page.channels ?? queuePage.channels;
-          cursor = advancePageCursor(
-            page.nextCursor,
-            seenCursors,
-            "恢复读取返回了重复游标，请重新连接",
-          );
-        } while (cursor);
+        await collectPaged({
+          fetch: (cursor) =>
+            runtime.api.listConversations({
+              context: op.context,
+              signal: op.signal,
+              query,
+              cursor,
+            }),
+          duplicateMessage: "恢复读取返回了重复游标，请重新连接",
+          isCurrent: () => current() && getState().inbox.queue.query === query,
+          shouldStop: (all) => {
+            const latest = all[all.length - 1];
+            queuePage.items.push(...latest.items);
+            queuePage.nextCursor = latest.nextCursor;
+            queuePage.total = latest.total ?? queuePage.total;
+            queuePage.counts = latest.counts ?? queuePage.counts;
+            queuePage.channels = latest.channels ?? queuePage.channels;
+            return false;
+          },
+        });
+        if (!current()) return;
         if (getState().inbox.queue.query === query)
           dispatch(inboxActions.conversationsReconciled(queuePage));
 
@@ -107,35 +103,32 @@ export function reconcileInbox(
               return message ? receiptKeys(message) : [];
             }),
           );
-          const cursors = new Set<string>();
-          let historyCursor: string | undefined;
           const historyPage: Page<InboxMessage> = {
             items: [],
             nextCursor: null,
           };
-          do {
-            const page = await runtime.api.listMessages({
-              context: op.context,
-              signal: op.signal,
-              conversationId,
-              cursor: historyCursor,
-            });
-            if (!current() || !getState().inbox.conversations[conversationId])
-              return;
-            historyPage.items.push(...page.items);
-            historyPage.nextCursor = page.nextCursor;
-            if (
-              page.items.some((message) =>
+          await collectPaged({
+            fetch: (historyCursor) =>
+              runtime.api.listMessages({
+                context: op.context,
+                signal: op.signal,
+                conversationId,
+                cursor: historyCursor,
+              }),
+            duplicateMessage: "恢复读取返回了重复游标，请重新连接",
+            isCurrent: () =>
+              current() && !!getState().inbox.conversations[conversationId],
+            shouldStop: (all) => {
+              const latest = all[all.length - 1];
+              historyPage.items.push(...latest.items);
+              historyPage.nextCursor = latest.nextCursor;
+              return latest.items.some((message) =>
                 receiptKeys(message).some((key) => known.has(key)),
-              )
-            )
-              break;
-            historyCursor = advancePageCursor(
-              page.nextCursor,
-              cursors,
-              "恢复读取返回了重复游标，请重新连接",
-            );
-          } while (historyCursor);
+              );
+            },
+          });
+          if (!current() || !getState().inbox.conversations[conversationId])
+            return;
           dispatch(
             inboxActions.historyReconciled({
               conversationId,
@@ -174,7 +167,7 @@ export function reconcileInbox(
         if (current()) dispatch(inboxActions.connectionChanged("connected"));
       } catch (error) {
         if (current()) {
-          const failure = failureOf(error);
+          const failure = failureOf(error, "暂时无法连接服务，请稍后重试");
           dispatch(
             inboxActions.connectionChanged(connectionFromFailure(failure)),
           );

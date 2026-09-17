@@ -1,15 +1,13 @@
 import { X } from "lucide-react";
-import { AnimatePresence } from "motion/react";
-import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Provider } from "react-redux";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
-import { WorkspaceView } from "@/components/workspace-motion";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { type InboxApi, unavailableInboxApi } from "./api";
-import { CalmWorkspace } from "./components/calm-workspace";
 import { ConnectionStatus } from "./components/connection-status";
 import { InboxLoading } from "./components/inbox-state";
+import { ReceptionWorkspace } from "./components/reception-shell";
 import { WorkspaceHelp } from "./components/workspace-help";
 import { useInboxDispatch, useInboxSelector } from "./hooks/use-inbox-store";
 import { loadInboxApi } from "./runtime";
@@ -21,16 +19,6 @@ import { createInboxStore, type InboxStore } from "./stores/store";
 import type { WorkContext } from "./types";
 
 const defaultContext = { agentId: "unconnected", workspaceId: "desk" };
-const ParallelWorkspace = lazy(() =>
-  import("./components/parallel-workspace").then((module) => ({
-    default: module.ParallelWorkspace,
-  })),
-);
-const QuickWorkspace = lazy(() =>
-  import("./components/quick-workspace").then((module) => ({
-    default: module.QuickWorkspace,
-  })),
-);
 
 function InboxSession({ accountMenu }: { accountMenu?: ReactNode }) {
   const { mode, setMode } = useTheme();
@@ -55,19 +43,7 @@ function InboxSession({ accountMenu }: { accountMenu?: ReactNode }) {
         </>
       }
     >
-      <AnimatePresence initial={false} mode="wait">
-        <WorkspaceView key={mode}>
-          <Suspense fallback={<InboxLoading label="正在切换接待布局…" />}>
-            {mode === "parallel" ? (
-              <ParallelWorkspace />
-            ) : mode === "quick" ? (
-              <QuickWorkspace />
-            ) : (
-              <CalmWorkspace />
-            )}
-          </Suspense>
-        </WorkspaceView>
-      </AnimatePresence>
+      <ReceptionWorkspace mode={mode} />
       {notice && (
         <div
           role="status"

@@ -44,6 +44,13 @@ export function resolveDevelopmentScenario(value: string): DevelopmentScenario {
   );
 }
 
+/** Fail-loud guard for the dev/prod seam: a typo'd scenario must not boot. */
+export function isDevelopmentScenario(
+  value: string,
+): value is DevelopmentScenario {
+  return developmentScenarioKeys.some((scenario) => scenario === value);
+}
+
 export type DevelopmentSession = DevelopmentFixtures & {
   submissions: Map<
     string,

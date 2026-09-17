@@ -10,6 +10,12 @@ import { type InboxState, receiptKeys, rememberReceipt } from "./state";
  * Read, queue, send, detail and event reducers all write through here, so a
  * change to merge semantics lands in every universe at once. Reducer files
  * keep only their transition shells; this module owns the how.
+ *
+ * Queue-membership discipline: single live entities merge with
+ * `updateQueue` (the default) so arrivals join/leave the visible queue
+ * immediately. Bulk paths (`queueLoaded`, `conversationsReconciled`) pass
+ * `false` and finish with one `rewriteQueueIds` transaction instead, so ids
+ * are never written twice for the same payload.
  */
 export function mergeConversation(
   state: InboxState,

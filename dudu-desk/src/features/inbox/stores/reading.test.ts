@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
 import { type InboxApi, unavailableInboxApi } from "../api";
 import type { Conversation, InboxMessage, Page } from "../types";
@@ -110,7 +110,9 @@ describe("reading conversations through the inbox workflow", () => {
       },
     });
     const initial = store.dispatch(loadConversations());
-    await Promise.resolve();
+    // State-driven wait: the auto-select chain resolves in a tick count that
+    // paging refactors may shift, so wait for the in-flight read itself.
+    await vi.waitFor(() => expect(signal).toBeDefined());
     await store.dispatch(selectConversation("conversation-b"));
     expect(signal?.aborted).toBe(true);
     pending.resolve({

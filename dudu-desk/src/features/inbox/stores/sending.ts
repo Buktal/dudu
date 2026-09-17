@@ -13,7 +13,7 @@ import {
   latestIncomingSequence,
   type ReplySubmission,
 } from "./state";
-import type { InboxCommand } from "./store";
+import type { InboxCommand, InboxDispatch, InboxRuntime } from "./store";
 
 export function editDraft(conversationId: string, text: string): InboxCommand {
   return (dispatch, getState) => {
@@ -27,6 +27,28 @@ export function focusReply(conversationId: string): InboxCommand {
     if (getState().inbox.conversations[conversationId])
       dispatch(inboxActions.replyFocused(conversationId));
   };
+}
+
+/**
+ * Accepted-settlement seam: an accepted send means exactly this — record the
+ * server response on the submission and release its draft attachments. Both
+ * the send lifecycle (deliver below) and the Live events reconciler settle
+ * through here, so accepted-means-cleaned-up lives in one module instead of
+ * drifting across send / reconciler / merge writers.
+ */
+export function acceptSubmission(
+  dispatch: InboxDispatch,
+  runtime: InboxRuntime,
+  submission: ReplySubmission,
+  response: InboxMessage,
+) {
+  dispatch(
+    inboxActions.submissionAccepted({
+      messageId: submission.messageId,
+      response,
+    }),
+  );
+  releaseAttachmentResources(runtime, submission.draftAttachmentIds);
 }
 
 function deliver(
@@ -63,20 +85,12 @@ function deliver(
               "服务未返回可确认的发送结果",
             );
           }
-          dispatch(
-            inboxActions.submissionAccepted({
-              messageId: message.id,
-              response,
-            }),
-          );
-          const state = getState().inbox;
-          if (state.submissions[message.id]?.status === "accepted")
-            releaseAttachmentResources(runtime, submission.draftAttachmentIds);
+          acceptSubmission(dispatch, runtime, submission, response);
           if (submission.next)
             await dispatch(receiveNext(submission, op.current));
         } catch (error) {
           if (!op.current()) return;
-          const failure = failureOf(error);
+          const failure = failureOf(error, "暂时无法连接服务，请稍后重试");
           dispatch(
             inboxActions.submissionFailed({
               messageId: message.id,
@@ -252,7 +266,7 @@ function changeReception(
             dispatch(
               inboxActions.endFailed({
                 conversationId,
-                error: failureOf(error),
+                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
               }),
             ),
           );

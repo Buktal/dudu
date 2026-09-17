@@ -35,7 +35,7 @@ export function loadHistory(
               dispatch(
                 inboxActions.historyFailed({
                   conversationId,
-                  error: failureOf(error),
+                  error: failureOf(error, "暂时无法连接服务，请稍后重试"),
                 }),
               ),
             );
@@ -75,7 +75,7 @@ export function loadProfile(
               dispatch(
                 inboxActions.profileFailed({
                   conversationId,
-                  error: failureOf(error),
+                  error: failureOf(error, "暂时无法连接服务，请稍后重试"),
                 }),
               ),
             );
@@ -193,7 +193,7 @@ export function markConversationRead(
             dispatch(
               inboxActions.readFailed({
                 conversationId,
-                error: failureOf(error),
+                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
               }),
             ),
           );

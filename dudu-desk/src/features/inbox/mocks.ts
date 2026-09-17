@@ -41,7 +41,8 @@ const screenshot = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
  * Seeded-world showcase slots: fixed positions keep the restricted, unknown
  * and text-only reply policies visible in the dev world no matter how the
  * channel order above changes. Editing a card's policy means moving its slot
- * constant — never guessing an array position.
+ * constant — never guessing an array position. Positions are pinned by
+ * development-api.test.ts (e.g. dev-conversation-05 is restricted).
  */
 const RESTRICTED_SLOT = 4;
 const UNKNOWN_SLOT = 5;
@@ -173,9 +174,12 @@ export type DevelopmentFixtures = {
   profiles: Record<string, VisitorProfile>;
 };
 
+/** Seeded-world clock: every timestamp in the dev world derives from here. */
+export const DEVELOPMENT_NOW = "2026-09-16T02:00:00.000Z";
+
 /** Fixed seed; each adapter/context receives independent objects. Never imported in production. */
 export function createDevelopmentFixtures(
-  now = "2026-09-16T02:00:00.000Z",
+  now = DEVELOPMENT_NOW,
 ): DevelopmentFixtures {
   const faker = new Faker({ locale: [zh_CN, en] });
   faker.seed(20260916);

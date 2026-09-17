@@ -5,6 +5,34 @@ import type { InboxState } from "./state";
 import type { InboxDispatch, InboxRootState, InboxRuntime } from "./store";
 
 /**
+ * Typed settled bus: the coordination seam between the Conversation queue and
+ * Live events modules. The queue notifies after every refresh/more settles;
+ * the refresh scheduler subscribes to re-read once the queue is idle. A small
+ * typed module — not an EventTarget string — so the signal cannot typo-drift
+ * and no other module can listen in by accident.
+ */
+export type SettledBus = {
+  notify: () => void;
+  subscribe: (listener: () => void, signal: AbortSignal) => void;
+};
+
+export function createSettledBus(): SettledBus {
+  const listeners = new Set<() => void>();
+  return {
+    notify() {
+      for (const listener of [...listeners]) listener();
+    },
+    subscribe(listener, signal) {
+      if (signal.aborted) return;
+      listeners.add(listener);
+      signal.addEventListener("abort", () => listeners.delete(listener), {
+        once: true,
+      });
+    },
+  };
+}
+
+/**
  * Live events refresh scheduler: the single module that decides *when* live
  * activity triggers a Conversation queue re-read.
  *

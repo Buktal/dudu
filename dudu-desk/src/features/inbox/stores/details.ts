@@ -82,7 +82,7 @@ export function saveVisitorProfile(
             dispatch(
               inboxActions.profileSaveFailed({
                 conversationId,
-                error: failureOf(error),
+                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
               }),
             ),
           );
@@ -135,7 +135,7 @@ export function setConversationStarred(
             dispatch(
               inboxActions.starFailed({
                 conversationId,
-                error: failureOf(error),
+                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
               }),
             ),
           );

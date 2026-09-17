@@ -1,6 +1,7 @@
 import { sendRestriction } from "../sending-rules";
+import type { Conversation } from "../types";
 import { readConversationChoices } from "./choices";
-import { advancePageCursor } from "./page-cursor";
+import { collectPaged } from "./page-cursor";
 import { selectConversation } from "./reading";
 import { inboxActions } from "./slice";
 import { emptyQuery, type ReplySubmission } from "./state";
@@ -29,38 +30,40 @@ export function receiveNext(
     };
     if (!canAdvance()) return;
     try {
-      let cursor: string | undefined;
-      const seenCursors = new Set<string>();
-      do {
-        const page = await dispatch(
-          readConversationChoices({
-            query: { ...emptyQuery, status: "needs-reply", order: "wait" },
-            cursor,
-            scope: `next:${submission.messageId}`,
-          }),
-        );
-        if (!page || !canAdvance()) return;
-        const next = page.items.find(
-          (conversation) =>
-            conversation.id !== conversationId &&
-            !sendRestriction(
-              conversation,
-              getState().inbox.connection,
-              ["text"],
-              runtime.now(),
-            ),
-        );
-        if (next) {
-          await dispatch(selectConversation(next.id));
-          return;
-        }
-        cursor = advancePageCursor(
-          page.nextCursor,
-          seenCursors,
-          "The next-visitor cursor did not advance",
-        );
-      } while (cursor);
-      dispatch(inboxActions.noticeChanged("没有其他可回复的待接待会话"));
+      let picked: Conversation | undefined;
+      await collectPaged({
+        fetch: (cursor) =>
+          dispatch(
+            readConversationChoices({
+              query: { ...emptyQuery, status: "needs-reply", order: "wait" },
+              cursor,
+              scope: `next:${submission.messageId}`,
+            }),
+          ),
+        duplicateMessage: "The next-visitor cursor did not advance",
+        isCurrent: canAdvance,
+        shouldStop: (all) => {
+          const latest = all[all.length - 1];
+          picked = latest.items.find(
+            (conversation) =>
+              conversation.id !== conversationId &&
+              !sendRestriction(
+                conversation,
+                getState().inbox.connection,
+                ["text"],
+                runtime.now(),
+              ),
+          );
+          return picked !== undefined;
+        },
+      });
+      if (!canAdvance()) return;
+      if (!picked) {
+        dispatch(inboxActions.noticeChanged("没有其他可回复的待接待会话"));
+        return;
+      }
+      await dispatch(selectConversation(picked.id));
+      return;
     } catch {
       if (canAdvance())
         dispatch(

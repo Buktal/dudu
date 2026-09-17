@@ -106,7 +106,7 @@ function PinChoices({
           setResult((previous) => ({
             ...previous,
             loading: false,
-            error: failureOf(error),
+            error: failureOf(error, "暂时无法连接服务，请稍后重试"),
           }));
       });
     return () => {
