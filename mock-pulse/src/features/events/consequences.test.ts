@@ -25,6 +25,11 @@ import {
   refRowOf,
   refStatusForPresence,
 } from "./consequences";
+import {
+  interpretEventStep,
+  interpretPresence,
+  interpretTemplateStep,
+} from "./interpret";
 import type { EventItem } from "./model";
 import { describeEventVersion, describeTemplateVersion } from "./resolve";
 import { schemaById } from "./schemas";
@@ -377,5 +382,195 @@ describe("guard 问表（拦删语义不变）", () => {
     );
     expect(names).toEqual(["回归"]);
     expect(plansReferencingScenario("scn-gone", [plan])).toEqual([]);
+  });
+});
+
+/**
+ * interpreter 单点断言（C1）：调用时钟只传引用与时钟，{row, entry, blocks,
+ * missingKind, missing, outdated} 一次给齐——替代五处重复的 status 分岔测试。
+ * 期望值与上方各时钟行为测试逐字对齐（只换消费口径，不换语义）。
+ */
+describe("interpreter 单点（各时钟一次断言）", () => {
+  const events = [douyinEvent([1, 2])];
+  const registry = [schemaById("dy-text")];
+
+  it("runtime·事件三态：blocks / missingKind / 行列带回（版本缺失留行）", () => {
+    const ok = interpretEventStep(
+      events,
+      { eventId: "evt-dy-1", revision: 2 },
+      "runtime",
+    );
+    expect(ok).toMatchObject({
+      status: "ok",
+      blocks: false,
+      missingKind: null,
+      missing: false,
+      outdated: false,
+    });
+    expect(ok.row?.id).toBe("evt-dy-1");
+    expect(ok.entry?.revision).toBe(2);
+
+    const idMissing = interpretEventStep(
+      events,
+      { eventId: "evt-gone", revision: 1 },
+      "runtime",
+    );
+    expect(idMissing).toMatchObject({
+      status: "id-missing",
+      blocks: true,
+      missingKind: "id",
+      missing: true,
+    });
+    expect(idMissing.row).toBeUndefined();
+    expect(idMissing.entry).toBeUndefined();
+
+    const versionMissing = interpretEventStep(
+      events,
+      { eventId: "evt-dy-1", revision: 9 },
+      "runtime",
+    );
+    expect(versionMissing).toMatchObject({
+      status: "version-missing",
+      blocks: true,
+      missingKind: "version",
+      missing: false,
+    });
+    expect(versionMissing.row?.id).toBe("evt-dy-1");
+    expect(versionMissing.entry).toBeUndefined();
+  });
+
+  it("runtime·模板三态：版本更替同样 missing（区别于事件留行）", () => {
+    const ok = interpretTemplateStep(
+      registry,
+      { templateId: "dy-text", templateVersion: TEMPLATE_VERSION },
+      "runtime",
+    );
+    expect(ok).toMatchObject({
+      status: "ok",
+      blocks: false,
+      missingKind: null,
+      missing: false,
+      outdated: false,
+    });
+    expect(ok.entry?.id).toBe("dy-text");
+
+    const idMissing = interpretTemplateStep(
+      registry,
+      { templateId: "dy-gone", templateVersion: TEMPLATE_VERSION },
+      "runtime",
+    );
+    expect(idMissing).toMatchObject({
+      status: "id-missing",
+      blocks: true,
+      missingKind: "id",
+      missing: true,
+    });
+
+    const versionMissing = interpretTemplateStep(
+      registry,
+      { templateId: "dy-text", templateVersion: "2999.01" },
+      "runtime",
+    );
+    expect(versionMissing).toMatchObject({
+      status: "version-missing",
+      blocks: true,
+      missingKind: "version",
+      missing: true,
+    });
+    expect(versionMissing.entry).toBeUndefined();
+  });
+
+  it("view·事件：落后标 outdated、版本缺失留行不标 missing；模板恒不标 outdated", () => {
+    const behind = interpretEventStep(
+      events,
+      { eventId: "evt-dy-1", revision: 1 },
+      "view",
+    );
+    expect(behind).toMatchObject({
+      missing: false,
+      outdated: true,
+      blocks: false,
+    });
+
+    const current = interpretEventStep(
+      events,
+      { eventId: "evt-dy-1", revision: 2 },
+      "view",
+    );
+    expect(current).toMatchObject({ missing: false, outdated: false });
+
+    const versionMissing = interpretEventStep(
+      events,
+      { eventId: "evt-dy-1", revision: 9 },
+      "view",
+    );
+    expect(versionMissing).toMatchObject({ missing: false, outdated: false });
+    expect(versionMissing.row?.id).toBe("evt-dy-1");
+
+    const idMissing = interpretEventStep(
+      events,
+      { eventId: "evt-gone", revision: 1 },
+      "view",
+    );
+    expect(idMissing).toMatchObject({ missing: true, outdated: false });
+
+    const templateOk = interpretTemplateStep(
+      registry,
+      { templateId: "dy-text", templateVersion: TEMPLATE_VERSION },
+      "view",
+    );
+    expect(templateOk).toMatchObject({ missing: false, outdated: false });
+  });
+
+  it("edit·事件只看行存在（超前 revision 放行）、模板两种缺失都拦", () => {
+    expect(
+      interpretEventStep(events, { eventId: "evt-gone", revision: 1 }, "edit")
+        .blocks,
+    ).toBe(true);
+    expect(
+      interpretEventStep(events, { eventId: "evt-dy-1", revision: 9 }, "edit")
+        .blocks,
+    ).toBe(false);
+    expect(
+      interpretTemplateStep(
+        registry,
+        { templateId: "dy-gone", templateVersion: TEMPLATE_VERSION },
+        "edit",
+      ).blocks,
+    ).toBe(true);
+    expect(
+      interpretTemplateStep(
+        registry,
+        { templateId: "dy-text", templateVersion: "2999.01" },
+        "edit",
+      ).blocks,
+    ).toBe(true);
+    expect(
+      interpretTemplateStep(
+        registry,
+        { templateId: "dy-text", templateVersion: TEMPLATE_VERSION },
+        "edit",
+      ).blocks,
+    ).toBe(false);
+  });
+
+  it("存在性引用（lane / 窄行）：双缺拦、命中放行，missing 与存在性一致", () => {
+    expect(interpretPresence(false, "runtime")).toMatchObject({
+      status: "id-missing",
+      blocks: true,
+      missingKind: "id",
+      missing: true,
+      outdated: false,
+    });
+    expect(interpretPresence(true, "runtime")).toMatchObject({
+      status: "ok",
+      blocks: false,
+      missingKind: null,
+      missing: false,
+    });
+    expect(interpretPresence(false, "edit").blocks).toBe(true);
+    expect(interpretPresence(true, "edit").blocks).toBe(false);
+    expect(interpretPresence(false, "view").missing).toBe(true);
+    expect(interpretPresence(true, "view").missing).toBe(false);
   });
 });

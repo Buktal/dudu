@@ -1,9 +1,4 @@
-import {
-  describeTemplateVersion,
-  REF_CONSEQUENCES,
-  refEntryOf,
-  refStatusForPresence,
-} from "@/features/events";
+import { interpretPresence, interpretTemplateStep } from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
 
 /**
@@ -224,22 +219,20 @@ export function validateScenario(
     )
       throw new Error("发送前等待须为 0 到 60 秒。");
     if (isTemplateStep(step)) {
-      // 模板引用分类共用（events 域 describeTemplateVersion）；编辑时钟问
-      // consequence 表拦不拦（两种缺失都拦），用哪份文案由 kernel 的
-      // 缺种（missingKind）定，文案一字不动。
-      const status = describeTemplateVersion(templates, step);
-      const consequence = REF_CONSEQUENCES[status.status];
-      if (consequence.edit.templateBlocksSave) {
-        if (consequence.runtime.missingKind === "id") {
+      // 编辑时钟问 interpreter（events 域唯一分岔点）：拦不拦、用哪份文案由
+      // blocks / missingKind 定，文案一字不动。
+      const interpreted = interpretTemplateStep(templates, step, "edit");
+      if (interpreted.blocks) {
+        if (interpreted.missingKind === "id") {
           throw new Error(`步骤引用的内置模板不存在：${step.templateId}。`);
         }
         throw new Error(
           `步骤引用的内置模板版本不存在：${step.templateId} v${step.templateVersion}。`,
         );
       }
-      // 查表取条目（blocksSave 为 false 即 ok，条目必存在；取不到为防御，
+      // 解释取条目（blocks 为 false 即 ok，条目必存在；取不到为防御，
       // 文案沿用 id 缺失款，表与 kernel 一致时不可达）。
-      const matched = refEntryOf(status);
+      const matched = interpreted.entry;
       if (!matched) {
         throw new Error(`步骤引用的内置模板不存在：${step.templateId}。`);
       }
@@ -251,10 +244,10 @@ export function validateScenario(
       continue;
     }
     const event = events.find((item) => item.id === step.eventId);
-    const eventStatus = refStatusForPresence(event !== undefined);
-    // 编辑时钟问表：事件保存只看行存在（窄行无版本维度，超前 revision
-    // 存得下、运行时钟再拦；文案一字不动）。后半为类型收窄，语义以查表为准。
-    if (REF_CONSEQUENCES[eventStatus].edit.eventBlocksSave || !event) {
+    // 编辑时钟问 interpreter（events 域唯一分岔点；窄行只有存在性：事件保存
+    // 只看行存在，超前 revision 存得下、运行时钟再拦；文案一字不动）。
+    // 后半为类型收窄，语义以解释为准。
+    if (interpretPresence(event !== undefined, "edit").blocks || !event) {
       throw new Error(`步骤引用的事件不存在：${step.eventId}。`);
     }
     if (event.channelId !== scenario.channelId) {

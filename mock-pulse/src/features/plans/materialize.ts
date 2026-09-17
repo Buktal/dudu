@@ -1,8 +1,4 @@
-import {
-  type EventItem,
-  REF_CONSEQUENCES,
-  refStatusForPresence,
-} from "@/features/events";
+import { type EventItem, interpretPresence } from "@/features/events";
 import { materializeRunSnapshot, type RunSnapshot } from "@/features/runs";
 import type { Scenario } from "@/features/scenarios";
 
@@ -51,11 +47,10 @@ export function materializePlanRun(input: {
   }
   const lanes = plan.items.map((item, lane) => {
     const scenario = resolveLaneScenario(item, scenarios);
-    const laneStatus = refStatusForPresence(scenario !== undefined);
-    // 运行时钟问 consequence 表拦不拦（lane 只有快照/库内命中与双缺两态，
-    // 经存在性映射后查表；文案一字不动）。
+    // 运行时钟问 interpreter（events 域唯一分岔点；存在性引用：快照优先解析
+    // 命中即放行，双缺即拦截；文案一字不动）。
     // blocks 为 false 即 ok，ok 即 lane 解析命中，下方断言成立。
-    if (REF_CONSEQUENCES[laneStatus].runtime.blocks) {
+    if (interpretPresence(scenario !== undefined, "runtime").blocks) {
       throw new Error(
         `编排第 ${lane + 1} 条引用的剧本不存在：${item.scenarioId}。先移除该剧本或调整剧本库。`,
       );

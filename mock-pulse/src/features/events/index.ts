@@ -1,6 +1,14 @@
 export { EventEditor, type EventEditorSlots } from "./components/event-editor";
 export { EventsView } from "./components/events-view";
 export {
+  type InterpretClock,
+  type InterpretedStep,
+  type InterpretMissingKind,
+  interpretEventStep,
+  interpretPresence,
+  interpretTemplateStep,
+} from "./interpret";
+export {
   DEFAULT_EXPECTED,
   type EventDraft,
   type EventItem,

@@ -1,12 +1,9 @@
 import {
-  describeEventVersion,
-  describeTemplateVersion,
   type EventItem,
   type EventSchema,
   type EventVersion,
-  REF_CONSEQUENCES,
-  refEntryOf,
-  refRowOf,
+  interpretEventStep,
+  interpretTemplateStep,
 } from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
 import { type Page, paginate as paginateList } from "@/lib/paginate";
@@ -90,45 +87,38 @@ export function resolveSteps(
 ): StepRow[] {
   return steps.map((step, index) => {
     if (isTemplateStep(step)) {
-      // 模板引用分类共用（events 域 describeTemplateVersion）；展示时钟问
-      // consequence 表拿条目（钉住语义：只按步骤存下的 id + 版本精确解析）。
-      // 模板行 missing = 无条目，未注册 id 与版本更替同样 missing。
-      const refStatus = describeTemplateVersion(templates, step);
-      const template = refEntryOf(refStatus);
+      // 展示时钟问 interpreter（events 域唯一分岔点；版本钉住：只按步骤存下的
+      // id + 版本精确解析，missing = 无条目，未注册 id 与版本更替同样 missing）。
+      const interpreted = interpretTemplateStep(templates, step, "view");
       return {
         index,
         step,
         kind: "template",
         event: undefined,
         referenced: undefined,
-        template,
+        template: interpreted.entry,
         latestRevision: 0,
         outdated: false,
-        missing: !template,
+        missing: interpreted.missing,
       };
     }
-    // 引用分类共用（events 域 describeEventVersion）；展示时钟问 consequence
-    // 表拿行与条目。注意钉住版本不在（version-missing）不标 missing——行
+    // 展示时钟问 interpreter（events 域唯一分岔点）：行与条目、missing·outdated
+    // 都由解释直接给出。注意钉住版本不在（version-missing）不标 missing——行
     // 照常展示（表 view.hasRow 为 true），拒绝启动是运行时钟的事。
-    const refStatus = describeEventVersion(events, step);
-    const consequence = REF_CONSEQUENCES[refStatus.status];
-    const event = refRowOf(refStatus);
-    const referenced = refEntryOf(refStatus);
-    const latest = event?.versions[event.versions.length - 1];
+    const interpreted = interpretEventStep(events, step, "view");
+    const latest =
+      interpreted.row?.versions[interpreted.row.versions.length - 1];
     const latestRevision = latest?.revision ?? 0;
     return {
       index,
       step,
       kind: "event",
-      event,
-      referenced,
+      event: interpreted.row,
+      referenced: interpreted.entry,
       template: undefined,
       latestRevision,
-      outdated:
-        consequence.view.mayOutdate &&
-        referenced !== undefined &&
-        latestRevision > step.revision,
-      missing: !event,
+      outdated: interpreted.outdated,
+      missing: interpreted.missing,
     };
   });
 }
