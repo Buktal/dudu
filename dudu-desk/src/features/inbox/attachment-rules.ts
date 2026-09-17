@@ -1,4 +1,5 @@
 import { DeskApiError } from "@/lib/api-response";
+import { mediaKindOfMime } from "./message-content";
 import { sendRestriction } from "./sending-rules";
 import type {
   ConnectionState,
@@ -16,11 +17,12 @@ import type {
  *   answers through here so per-file and batch decisions share one clock.
  */
 
+/**
+ * Mime → 媒体 kind 映射由 `./message-content` 深 module 拥有，
+ * 这里只保留 Reply pipeline 侧的调用签名并委托，避免同形分派漂移。
+ */
 export function attachmentKind(mimeType: string): Exclude<SendKind, "text"> {
-  if (mimeType.startsWith("image/")) return "image";
-  if (mimeType.startsWith("audio/")) return "audio";
-  if (mimeType.startsWith("video/")) return "video";
-  return "file";
+  return mediaKindOfMime(mimeType);
 }
 
 export type AttachmentLimits = NonNullable<ReplyCapability["attachments"]>;

@@ -1,12 +1,8 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  AudioLines,
   Download,
   ExternalLink,
-  FileText,
-  Film,
-  ImageIcon,
   MapPin,
   Package,
   Quote,
@@ -35,22 +31,16 @@ import {
   safeAssetUrl,
   safeExternalUrl,
 } from "@/lib/attachment-utils";
+import {
+  assetPurposeOf,
+  describeMessageBody,
+  mediaIcon,
+  mediaLabel,
+} from "../message-content";
 import type { MessageBody as Body, MediaReference } from "../types";
 
-const mediaLabels = {
-  image: "图片",
-  audio: "音频",
-  video: "视频",
-  file: "文件",
-};
-const mediaIcons = {
-  image: ImageIcon,
-  audio: AudioLines,
-  video: Film,
-  file: FileText,
-};
-
 export function MessageBody({ body }: { body: Body }) {
+  const descriptor = describeMessageBody(body);
   if (body.type === "text")
     return <p className="whitespace-pre-wrap break-words">{body.text}</p>;
   if (body.type === "reply")
@@ -59,16 +49,18 @@ export function MessageBody({ body }: { body: Body }) {
         {body.text && (
           <p className="whitespace-pre-wrap break-words">{body.text}</p>
         )}
-        {body.attachments.map((media) => (
+        {descriptor.media.map((media) => (
           <MessageMedia key={`${media.id}:${media.url}`} media={media} />
         ))}
       </div>
     );
+  // 纯收窄守卫（无分派知识）：数据以 descriptor 为准，
+  // message-content 保证媒体承载体对应恰好一项。
   if ("media" in body)
     return (
       <MessageMedia
-        key={`${body.media.id}:${body.media.url}`}
-        media={body.media}
+        key={`${descriptor.media[0].id}:${descriptor.media[0].url}`}
+        media={descriptor.media[0]}
       />
     );
   if (body.type === "link")
@@ -81,7 +73,7 @@ export function MessageBody({ body }: { body: Body }) {
           </p>
         )}
         <p className="break-all text-xs opacity-80">{body.url}</p>
-        <ExternalAction url={safeExternalUrl(body.url)} label="打开链接" />
+        <ExternalAction url={descriptor.externalUrl} label="打开链接" />
       </div>
     );
   if (body.type === "location") {
@@ -126,7 +118,7 @@ export function MessageBody({ body }: { body: Body }) {
           {body.externalId && (
             <p className="break-all text-xs">编号：{body.externalId}</p>
           )}
-          <ExternalAction url={safeExternalUrl(body.url)} label="查看来源" />
+          <ExternalAction url={descriptor.externalUrl} label="查看来源" />
         </div>
       </div>
     );
@@ -136,22 +128,21 @@ export function MessageBody({ body }: { body: Body }) {
       <p className="whitespace-pre-wrap break-words text-xs opacity-70">
         {body.explanation || "已保留这条来信，详情暂不可读。"}
       </p>
-      <ExternalAction url={safeExternalUrl(body.sourceUrl)} label="查看来源" />
+      <ExternalAction url={descriptor.externalUrl} label="查看来源" />
     </div>
   );
 }
 
 function MessageMedia({ media }: { media: MediaReference }) {
   const [failed, setFailed] = useState(false);
+  const purpose = assetPurposeOf(media.kind);
   const source =
-    !failed && media.kind !== "file"
-      ? safeAssetUrl(media.url, media.kind)
-      : null;
+    !failed && purpose !== "download" ? safeAssetUrl(media.url, purpose) : null;
   if (!source)
     return (
-      <MediaFile media={media} unavailable={failed || media.kind !== "file"} />
+      <MediaFile media={media} unavailable={failed || purpose !== "download"} />
     );
-  if (media.kind === "image")
+  if (purpose === "image")
     return (
       <MessageImage
         media={media}
@@ -161,7 +152,7 @@ function MessageMedia({ media }: { media: MediaReference }) {
     );
   return (
     <div className="flex w-72 max-w-full min-w-0 flex-col gap-2">
-      {media.kind === "audio" ? (
+      {purpose === "audio" ? (
         // biome-ignore lint/a11y/useMediaCaption: The channel contract has no transcript or caption asset; do not fabricate one.
         <audio
           controls
@@ -262,7 +253,7 @@ function MediaFile({
   media: MediaReference;
   unavailable: boolean;
 }) {
-  const Icon = mediaIcons[media.kind];
+  const Icon = mediaIcon(media.kind);
   const source = !unavailable ? safeAssetUrl(media.url, "download") : null;
   return (
     <Attachment className="w-full max-w-72" size="sm">
@@ -272,7 +263,7 @@ function MediaFile({
       <AttachmentContent>
         <AttachmentTitle title={media.name}>{media.name}</AttachmentTitle>
         <AttachmentDescription>
-          {mediaLabels[media.kind]} · {formatFileSize(media.size)}
+          {mediaLabel(media.kind)} · {formatFileSize(media.size)}
         </AttachmentDescription>
         {!source && (
           <p className="mt-1 text-xs text-muted-foreground">素材暂不可读取</p>
