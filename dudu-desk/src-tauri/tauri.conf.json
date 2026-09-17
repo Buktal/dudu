@@ -19,7 +19,6 @@
         "minHeight": 520,
         "center": true,
         "decorations": false,
-        "shadow": false,
         "resizable": true
       }
     ],
