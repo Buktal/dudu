@@ -1,4 +1,4 @@
-import { useId, useRef } from "react";
+import { type RefObject, useId, useRef } from "react";
 import { nowIso } from "@/lib/time";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { replyReadiness } from "../reply-pipeline";
@@ -24,14 +24,17 @@ export function Composer({
   compact = false,
   onFocus,
   onHistory,
+  inputRef,
 }: {
   conversationId: string;
   compact?: boolean;
   onFocus?: () => void;
   onHistory?: () => void;
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
 }) {
   const dispatch = useInboxDispatch();
-  const input = useRef<HTMLTextAreaElement>(null);
+  const fallbackInput = useRef<HTMLTextAreaElement>(null);
+  const input = inputRef ?? fallbackInput;
   const composing = useRef(false);
   const id = useId();
   const conversation = useInboxSelector((state) =>

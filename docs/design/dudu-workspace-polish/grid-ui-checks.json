@@ -1,0 +1,206 @@
+{
+  "date": "2026-09-18",
+  "smallQueuePause": {
+    "viewport": [
+      1920,
+      1032
+    ],
+    "pauseMilliseconds": 5000,
+    "before": {
+      "cards": 32,
+      "top": 2064
+    },
+    "after": {
+      "cards": 32,
+      "top": 2064
+    }
+  },
+  "largeQueue": {
+    "total": 68,
+    "samples": [
+      {
+        "renderedCards": 15,
+        "scroll": [
+          2064,
+          903,
+          3152
+        ],
+        "firstIndex": 9,
+        "lastIndex": 23
+      },
+      {
+        "renderedCards": 27,
+        "scroll": [
+          2249,
+          903,
+          6320
+        ],
+        "firstIndex": 9,
+        "lastIndex": 35
+      },
+      {
+        "renderedCards": 27,
+        "scroll": [
+          4313,
+          903,
+          7904
+        ],
+        "firstIndex": 24,
+        "lastIndex": 50
+      },
+      {
+        "renderedCards": 24,
+        "scroll": [
+          6377,
+          903,
+          9092
+        ],
+        "firstIndex": 42,
+        "lastIndex": 65
+      },
+      {
+        "renderedCards": 14,
+        "scroll": [
+          8189,
+          903,
+          9092
+        ],
+        "firstIndex": 54,
+        "lastIndex": 67
+      },
+      {
+        "renderedCards": 14,
+        "scroll": [
+          8189,
+          903,
+          9092
+        ],
+        "firstIndex": 54,
+        "lastIndex": 67
+      }
+    ]
+  },
+  "pin": {
+    "rows": [
+      {
+        "avatarGap": 7,
+        "centerDelta": [
+          0,
+          0
+        ],
+        "height": 108,
+        "id": "dev-conversation-01",
+        "overlap": false,
+        "pin": [
+          28,
+          28
+        ]
+      },
+      {
+        "avatarGap": 7,
+        "centerDelta": [
+          0,
+          0
+        ],
+        "height": 108,
+        "id": "dev-conversation-25",
+        "overlap": false,
+        "pin": [
+          28,
+          28
+        ]
+      },
+      {
+        "avatarGap": 7,
+        "centerDelta": [
+          0,
+          0
+        ],
+        "height": 108,
+        "id": "dev-conversation-10",
+        "overlap": false,
+        "pin": [
+          28,
+          28
+        ]
+      },
+      {
+        "avatarGap": 7,
+        "centerDelta": [
+          0,
+          0
+        ],
+        "height": 108,
+        "id": "dev-conversation-23",
+        "overlap": false,
+        "pin": [
+          28,
+          28
+        ]
+      },
+      {
+        "avatarGap": 7,
+        "centerDelta": [
+          0,
+          0
+        ],
+        "height": 108,
+        "id": "dev-conversation-08",
+        "overlap": false,
+        "pin": [
+          28,
+          28
+        ]
+      },
+      {
+        "avatarGap": 7,
+        "centerDelta": [
+          0,
+          0
+        ],
+        "height": 108,
+        "id": "dev-conversation-19",
+        "overlap": false,
+        "pin": [
+          28,
+          28
+        ]
+      },
+      {
+        "avatarGap": 7,
+        "centerDelta": [
+          0,
+          0
+        ],
+        "height": 108,
+        "id": "dev-conversation-32",
+        "overlap": false,
+        "pin": [
+          28,
+          28
+        ]
+      }
+    ],
+    "sidebarWidth": 225
+  },
+  "narrow": {
+    "anchor": "none",
+    "cards": 32,
+    "columns": "356px",
+    "documentWidth": 390,
+    "scroll": [
+      844,
+      597,
+      12532
+    ],
+    "viewport": [
+      390,
+      844
+    ]
+  },
+  "info": {
+    "opened": true,
+    "closed": true
+  },
+  "testDraftEmpty": true
+}

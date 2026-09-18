@@ -1,5 +1,15 @@
-import { FilterX, Search, Star } from "lucide-react";
+import { ArrowDownWideNarrow, FilterX, Search, Star } from "lucide-react";
 import { useId, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   InputGroup,
@@ -16,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import {
@@ -66,62 +75,16 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
   return (
     <FieldGroup
       className={cn(
-        "shrink-0 gap-2.5 px-3 pb-2",
+        "shrink-0 gap-2 px-3 pb-2",
         compact &&
-          "flex-wrap px-0 min-[1100px]:flex-row min-[1100px]:items-center",
+          "w-full flex-wrap px-0 pb-0 min-[761px]:w-auto min-[761px]:flex-row min-[761px]:items-center",
       )}
       aria-label="查找会话"
     >
-      <ToggleGroup
-        value={query.starred ? [] : [query.status]}
-        onValueChange={(values) => {
-          const status = statuses.find((item) => item.value === values[0]);
-          if (status) change({ status: status.value, starred: false });
-        }}
-        size="sm"
-        spacing={1.5}
-        className={cn(
-          "grid w-full grid-cols-2",
-          compact &&
-            "min-[761px]:grid-cols-4 min-[1100px]:w-auto min-[1100px]:shrink-0",
-        )}
-        aria-label="按会话状态筛选"
-      >
-        {statuses.map((status) => {
-          const count = counts?.[status.count];
-          const label =
-            count === undefined
-              ? status.label
-              : `${status.label}，${count.toLocaleString("zh-CN")} 个会话`;
-          return (
-            <ToggleGroupItem
-              key={status.value}
-              value={status.value}
-              aria-label={label}
-              title={count === undefined ? label : `${label}（全部来源）`}
-              className={cn(
-                "min-w-0 justify-between gap-2 rounded-lg px-2.5",
-                compact && "min-[1100px]:min-w-[92px]",
-              )}
-            >
-              <span className="shrink-0 text-xs">{status.label}</span>
-              {count !== undefined && (
-                <span
-                  aria-hidden="true"
-                  className="shrink-0 text-[11px] tabular-nums text-muted-foreground"
-                >
-                  {queueCountLabel(count)}
-                </span>
-              )}
-            </ToggleGroupItem>
-          );
-        })}
-      </ToggleGroup>
       <Field
         className={cn(
           "min-w-0 gap-1",
-          compact &&
-            "min-[1100px]:w-auto min-[1100px]:min-w-44 min-[1100px]:flex-1",
+          compact && "min-[761px]:w-64 min-[761px]:max-w-72",
         )}
       >
         <FieldLabel className="sr-only" htmlFor={`${id}-search`}>
@@ -168,7 +131,7 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
                   )
                 }
               >
-                <FilterX data-icon="inline-start" />
+                <FilterX />
               </InputGroupButton>
             )}
           </InputGroupAddon>
@@ -176,10 +139,57 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
       </Field>
       <div
         className={cn(
-          "flex min-w-0 items-center gap-1.5",
-          compact && "min-[1100px]:w-[236px] min-[1100px]:shrink-0",
+          "grid min-w-0 grid-cols-[70px_minmax(0,1fr)_auto] items-center gap-1.5",
+          compact && "min-[761px]:w-[252px] min-[761px]:shrink-0",
         )}
       >
+        <Field className="min-w-0">
+          <FieldLabel className="sr-only" htmlFor={`${id}-status`}>
+            按会话状态筛选
+          </FieldLabel>
+          <Select
+            items={statuses}
+            value={query.starred ? null : query.status}
+            onValueChange={(value) => {
+              const status = statuses.find((item) => item.value === value);
+              if (status) change({ status: status.value, starred: false });
+            }}
+          >
+            <SelectTrigger
+              id={`${id}-status`}
+              size="sm"
+              className="w-full min-w-0 gap-1 rounded-lg px-1.5"
+            >
+              <SelectValue className="truncate text-xs" placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent
+              align="start"
+              alignItemWithTrigger={false}
+              className="w-48"
+            >
+              <SelectGroup>
+                {statuses.map((status) => {
+                  const count = counts?.[status.count];
+                  return (
+                    <SelectItem key={status.value} value={status.value}>
+                      <span className="flex min-w-0 flex-1 items-center justify-between gap-4">
+                        {status.label}
+                        {count !== undefined && (
+                          <span
+                            className="shrink-0 text-right text-xs tabular-nums text-muted-foreground"
+                            title="全部来源"
+                          >
+                            {queueCountLabel(count)}
+                          </span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
         <Field className="min-w-0 flex-1">
           <FieldLabel className="sr-only" htmlFor={`${id}-channel`}>
             按消息来源筛选
@@ -212,40 +222,33 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
             </SelectContent>
           </Select>
         </Field>
-        <Field className="min-w-0 flex-1">
-          <FieldLabel className="sr-only" htmlFor={`${id}-order`}>
-            会话排序
-          </FieldLabel>
-          <Select
-            items={orders}
-            value={query.order}
-            onValueChange={(value) => {
-              if (value === "wait" || value === "messages")
-                change({ order: value });
-            }}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" size="icon-sm" />}
+            aria-label={`会话排序，当前${orders.find((order) => order.value === query.order)?.label}`}
+            title={`排序：${orders.find((order) => order.value === query.order)?.label}`}
           >
-            <SelectTrigger
-              id={`${id}-order`}
-              size="sm"
-              className="w-full min-w-0 gap-1 rounded-lg px-1.5"
-            >
-              <SelectValue>
-                <span className="text-xs">
-                  {orders.find((order) => order.value === query.order)?.label}
-                </span>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent alignItemWithTrigger={false}>
-              <SelectGroup>
+            <ArrowDownWideNarrow data-icon="inline-start" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>会话排序</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={query.order}
+                onValueChange={(value) => {
+                  if (value === "wait" || value === "messages")
+                    change({ order: value });
+                }}
+              >
                 {orders.map((order) => (
-                  <SelectItem key={order.value} value={order.value}>
+                  <DropdownMenuRadioItem key={order.value} value={order.value}>
                     {order.label}
-                  </SelectItem>
+                  </DropdownMenuRadioItem>
                 ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </FieldGroup>
   );

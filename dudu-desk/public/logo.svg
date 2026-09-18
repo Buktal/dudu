@@ -1,5 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="dudu-ai-mark-title dudu-ai-mark-desc">
-  <title id="dudu-ai-mark-title">DuDu — 表情 D / U 形眼睛版</title>
-  <desc id="dudu-ai-mark-desc">A soft D-inspired message bubble contains two rounded U-shaped eyes, open at the top. Both eyes are transparent cutouts. The D and U forms reference the DuDu name.</desc>
-  <path d="M73 44C48 43 33 59 32 85L28 197C27 210 39 218 50 211L78 194C90 198 108 200 126 200C186 200 226 167 228 124C230 79 191 44 133 42C112 41 91 42 73 44Z M 68.68 113.02 C 72.1 127.75 79.3 134.4 91 134.4 C 102.7 134.4 109.9 127.75 113.32 113.02 C 114.13 109.41 112.06 105.9 108.64 105.14 C 105.22 104.28 101.89 106.47 101.08 110.08 C 99.19 118.44 96.04 121.1 91 121.1 C 85.96 121.1 82.81 118.44 80.92 110.08 C 80.11 106.47 76.78 104.28 73.36 105.14 C 69.94 105.9 67.87 109.41 68.68 113.02 Z M 142.68 113.02 C 146.1 127.75 153.3 134.4 165 134.4 C 176.7 134.4 183.9 127.75 187.32 113.02 C 188.13 109.41 186.06 105.9 182.64 105.14 C 179.22 104.28 175.89 106.47 175.08 110.08 C 173.19 118.44 170.04 121.1 165 121.1 C 159.96 121.1 156.81 118.44 154.92 110.08 C 154.11 106.47 150.78 104.28 147.36 105.14 C 143.94 105.9 141.87 109.41 142.68 113.02 Z" fill="#F2673C" fill-rule="evenodd"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="dudu-desktop-title dudu-desktop-desc">
+  <title id="dudu-desktop-title">DuDu — 桌面应用图标</title>
+  <desc id="dudu-desktop-desc">An ivory D-shaped conversation bubble with coral U-shaped eyes on a rounded orange-to-coral square.</desc>
+  <defs>
+    <linearGradient id="dudu-desktop-gradient" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF984F"/>
+      <stop offset="0.5" stop-color="#F2673C"/>
+      <stop offset="1" stop-color="#E85038"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#dudu-desktop-gradient)"/>
+  <g transform="translate(22 22) scale(.82)">
+    <path d="M72 20H132C198 20 238 61 238 120C238 179 199 217 135 217H90L39 240C29 244 19 237 20 226L25 74C26 39 40 20 72 20Z" fill="#FFF9F5"/>
+    <path d="M80.4 111.2C82 122.4 88.4 128.8 98 128.8C107.6 128.8 114 122.4 115.6 111.2M148.4 111.2C150 122.4 156.4 128.8 166 128.8C175.6 128.8 182 122.4 183.6 111.2" fill="none" stroke="#E85038" stroke-width="14.4" stroke-linecap="round"/>
+  </g>
 </svg>

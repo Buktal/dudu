@@ -56,14 +56,16 @@ export function ReceptionModeSwitch({
                   <motion.span
                     aria-hidden="true"
                     layoutId="mode-selection"
-                    className="pointer-events-none absolute inset-0 rounded-lg border border-ring/15 bg-accent"
+                    className="pointer-events-none absolute inset-0 rounded-lg bg-selection"
                     transition={transition}
                   />
                 )}
                 <span
                   className={cn(
                     "relative flex items-center gap-2",
-                    value === key ? "text-primary" : "text-muted-foreground",
+                    value === key
+                      ? "text-selection-foreground"
+                      : "text-muted-foreground",
                   )}
                 >
                   <Icon data-icon="inline-start" />

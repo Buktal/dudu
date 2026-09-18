@@ -1,7 +1,6 @@
 import { useIsPresent } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { WorkspacePanel } from "@/components/workspace-motion";
 import { cn } from "@/lib/utils";
 import { hasOpenOverlay } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
@@ -20,7 +19,7 @@ import { ConversationPane } from "./conversation-pane";
 import { ConversationSidebar } from "./conversation-sidebar";
 import { visitorName } from "./identity";
 import { InboxEmpty } from "./inbox-state";
-import { ParallelToolbar } from "./parallel-toolbar";
+import { ParallelPaneActions } from "./parallel-pane-actions";
 import { PinnedConversationPicker } from "./pin-picker";
 import { ReceptionBackButton, useListPane } from "./reception-shell";
 import { VisitorInfoPanel } from "./visitor-info-panel";
@@ -36,16 +35,13 @@ export function ParallelWorkspace() {
   const pinned = useInboxSelector(selectPinnedConversation);
   const [showQueue, setShowQueue] = useListPane({
     initial: !primaryId && !pinnedId && !replyId,
-    onOpen: () => setQueueCollapsed(false),
   });
-  const [queueCollapsed, setQueueCollapsed] = useState(false);
   const info = useVisitorPanel();
   const [pickerOpen, setPickerOpen] = useState(false);
   const pinnedVisible = !!pinned && !collapsed;
   const focusedPane: ReceptionPane =
     replyId === pinnedId && pinnedVisible ? "pinned" : "primary";
   const openQueue = useCallback(() => {
-    setQueueCollapsed(false);
     setShowQueue(true);
   }, [setShowQueue]);
 
@@ -91,12 +87,10 @@ export function ParallelWorkspace() {
   }, [activatePane, present]);
 
   return (
-    <div className="relative flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:14px] max-[1360px]:[--workspace-gap:10px] max-[760px]:[--workspace-gap:0px]">
-      <WorkspacePanel
-        side="left"
-        open={!queueCollapsed || info.narrow}
+    <div className="relative flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:16px] max-[1360px]:[--workspace-gap:12px] max-[760px]:[--workspace-gap:0px]">
+      <div
         className={cn(
-          "[--workspace-panel-width:246px] max-[1360px]:[--workspace-panel-width:224px] max-[1090px]:[--workspace-panel-width:225px] max-[760px]:[--workspace-panel-width:100vw]",
+          "min-h-0 w-[246px] shrink-0 max-[1360px]:w-[224px] max-[1090px]:w-[225px] max-[760px]:w-full",
           !showQueue && "max-[760px]:hidden",
         )}
       >
@@ -107,7 +101,7 @@ export function ParallelWorkspace() {
             setShowQueue(false);
           }}
         />
-      </WorkspacePanel>
+      </div>
 
       <div
         className={cn(
@@ -116,12 +110,6 @@ export function ParallelWorkspace() {
         )}
       >
         <ReceptionBackButton onBack={openQueue} />
-        <ParallelToolbar
-          queueCollapsed={queueCollapsed}
-          onToggleQueue={() => setQueueCollapsed((collapsed) => !collapsed)}
-          onPick={() => setPickerOpen(true)}
-          onPinned={() => setShowQueue(false)}
-        />
         <ToggleGroup
           className="mb-2 w-full min-[761px]:hidden"
           value={[focusedPane]}
@@ -174,6 +162,13 @@ export function ParallelWorkspace() {
               <ConversationPane
                 conversationId={primaryId}
                 paneRole="primary"
+                paneActions={
+                  <ParallelPaneActions
+                    conversationId={primaryId}
+                    paneRole="primary"
+                    onPick={() => setPickerOpen(true)}
+                  />
+                }
                 infoOpen={info.open && replyId === primaryId}
                 onInfo={() => info.setOpen(!info.open || replyId !== primaryId)}
               />
@@ -201,6 +196,13 @@ export function ParallelWorkspace() {
               <ConversationPane
                 conversationId={pinnedId}
                 paneRole="pinned"
+                paneActions={
+                  <ParallelPaneActions
+                    conversationId={pinnedId}
+                    paneRole="pinned"
+                    onPick={() => setPickerOpen(true)}
+                  />
+                }
                 infoOpen={info.open && replyId === pinnedId}
                 onInfo={() => info.setOpen(!info.open || replyId !== pinnedId)}
               />

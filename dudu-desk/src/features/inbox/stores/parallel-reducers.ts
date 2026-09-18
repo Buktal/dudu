@@ -25,6 +25,7 @@ export const parallelReducers = {
   },
   pinnedReleased(state: InboxState) {
     if (!state.pinnedId) return;
+    if (!state.activeId) state.activeId = state.pinnedId;
     if (state.replyId === state.pinnedId) state.replyId = state.activeId;
     state.pinnedId = null;
     state.pinCollapsed = false;

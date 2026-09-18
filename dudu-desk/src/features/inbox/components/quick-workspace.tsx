@@ -1,4 +1,10 @@
-import { forwardRef, type HTMLAttributes, useEffect, useRef } from "react";
+import {
+  forwardRef,
+  type HTMLAttributes,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { VirtuosoGrid, type VirtuosoGridHandle } from "react-virtuoso";
 import {
   Dialog,
@@ -35,7 +41,7 @@ const CardGrid = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
       {...props}
       ref={ref}
       className={cn(
-        "grid grid-cols-1 gap-[17px] pt-[3px] pr-[5px] pb-[22px] pl-px min-[761px]:grid-cols-2 min-[1750px]:grid-cols-3 max-[760px]:gap-[13px]",
+        "grid grid-cols-1 gap-4 p-1 pb-5 min-[761px]:grid-cols-2 min-[1750px]:grid-cols-3 max-[760px]:gap-3",
         className,
       )}
     >
@@ -44,11 +50,19 @@ const CardGrid = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ),
 );
 const gridComponents = { List: CardGrid };
+const retainedCardLimit = 36;
 
 export function QuickWorkspace() {
   const dispatch = useInboxDispatch();
   const conversations = useInboxSelector(selectQuickQueueConversations);
   const queue = useInboxSelector(selectQueue);
+  // Keep short queues mounted to avoid reinitializing editors on the scroll path.
+  // A 400 px buffer per card also covers the single-column layout's 380 px cards.
+  const viewportBuffer =
+    queue.total !== undefined &&
+    Math.max(queue.total, conversations.length) <= retainedCardLimit
+      ? Math.max(queue.total, conversations.length) * 400
+      : 800;
   const historyId = useInboxSelector((state) => state.inbox.quickHistoryId);
   const replyId = useInboxSelector((state) => state.inbox.replyId);
   const historyConversation = useInboxSelector((state) =>
@@ -68,21 +82,46 @@ export function QuickWorkspace() {
     const index = conversations.findIndex(
       (conversation) => conversation.id === replyId,
     );
-    if (index >= 0)
-      grid.current?.scrollToIndex({ index, align: "center", behavior: "auto" });
-    else if (replyId) void dispatch(openQuickHistory(replyId));
+    if (index >= 0) {
+      // Keep a card under the pointer when its own controls select the reply target.
+      const focusedCard = document.activeElement?.closest(
+        "[data-reception-card]",
+      );
+      if (focusedCard?.getAttribute("data-reception-card") !== replyId)
+        grid.current?.scrollToIndex({
+          index,
+          align: "center",
+          behavior: "auto",
+        });
+    } else if (replyId) void dispatch(openQuickHistory(replyId));
   }, [conversations, dispatch, replyId]);
-  function details(id: string) {
-    void dispatch(loadProfile(id));
-    info.setOpen(true);
-  }
+  const details = useCallback(
+    (id: string) => {
+      void dispatch(loadProfile(id));
+      info.setOpen(true);
+    },
+    [dispatch, info.setOpen],
+  );
+  const showHistory = useCallback(
+    (id: string) => {
+      void dispatch(openQuickHistory(id));
+    },
+    [dispatch],
+  );
+  const setCardInfoOpen = useCallback(
+    (id: string, open: boolean) => {
+      if (open) details(id);
+      else info.setOpen(false);
+    },
+    [details, info.setOpen],
+  );
   return (
-    <div className="relative flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:14px] max-[1360px]:[--workspace-gap:10px]">
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col pt-2.5 pr-2.5 pl-[25px] max-[1260px]:px-5 max-[760px]:pt-2 max-[760px]:pr-[5px] max-[760px]:pl-[13px]">
-        <div className="mb-2 shrink-0">
-          <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
+    <div className="relative flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:16px] max-[1360px]:[--workspace-gap:12px]">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col pt-3 pr-2 pl-5 max-[760px]:px-2 max-[760px]:pt-2">
+        <div className="mb-2 flex shrink-0 flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1">
             <QueueHeading className="h-8 px-0" />
-            <div className="order-last min-w-0 basis-full min-[1360px]:order-none min-[1360px]:flex-1 min-[1360px]:basis-0">
+            <div className="w-[516px] min-w-0 max-w-full max-[760px]:order-last max-[760px]:w-full">
               <QueueTools compact />
             </div>
             <VisitorInfoToggle
@@ -92,7 +131,7 @@ export function QuickWorkspace() {
               onToggle={info.toggle}
             />
           </div>
-          <Separator />
+          <Separator className="mx-1 w-auto" />
         </div>
         {!queue.hasLoaded && queue.status === "loading" ? (
           <InboxLoading />
@@ -107,25 +146,22 @@ export function QuickWorkspace() {
             description="试试更换会话状态或消息来源。"
           />
         ) : (
+          // WebView2 scroll anchoring otherwise fights Virtuoso's virtual padding.
           <VirtuosoGrid
             ref={grid}
-            className="min-h-0 flex-1 overscroll-y-contain [scrollbar-gutter:stable]"
+            className="min-h-0 flex-1 overscroll-y-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
             data={conversations}
             components={gridComponents}
+            increaseViewportBy={viewportBuffer}
+            overscan={400}
             computeItemKey={(_, conversation) => conversation.id}
             endReached={() => void dispatch(loadConversations({ more: true }))}
             itemContent={(_, conversation) => (
               <QuickCard
                 conversation={conversation}
-                onHistory={() =>
-                  void dispatch(openQuickHistory(conversation.id))
-                }
+                onHistory={showHistory}
                 infoOpen={info.open && replyId === conversation.id}
-                onInfo={() => {
-                  if (info.open && replyId === conversation.id)
-                    info.setOpen(false);
-                  else details(conversation.id);
-                }}
+                onInfo={setCardInfoOpen}
               />
             )}
           />

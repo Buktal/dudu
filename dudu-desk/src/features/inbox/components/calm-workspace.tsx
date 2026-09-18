@@ -13,7 +13,7 @@ export function CalmWorkspace() {
   const [showQueue, setShowQueue] = useListPane({ initial: true });
   const info = useVisitorPanel();
   return (
-    <div className="flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:14px] max-[1360px]:[--workspace-gap:10px] max-[760px]:[--workspace-gap:4px]">
+    <div className="flex min-h-0 flex-1 gap-(--workspace-gap) [--workspace-gap:16px] max-[1360px]:[--workspace-gap:12px] max-[760px]:[--workspace-gap:4px]">
       <div
         className={cn(
           "min-h-0 w-[304px] shrink-0 max-[1360px]:w-[274px] max-[1090px]:w-[250px] max-[760px]:w-full",

@@ -122,29 +122,9 @@ export function ComposerView({
         style={{ "--input": "var(--card)" } as CSSProperties}
       >
         <InputGroup
-          className="rounded-xl"
+          className="rounded-xl border-0 has-[[data-slot=input-group-control]:focus-visible]:ring-0"
           aria-label={`给 ${target} 的回复编辑器`}
         >
-          <InputGroupAddon
-            align="block-start"
-            className="flex-wrap justify-between gap-x-1 gap-y-1 px-2 pt-1.5 pb-0"
-          >
-            <ComposerTools
-              conversationId={conversationId}
-              compact={compact}
-              onInsert={actions.onInsert}
-            />
-            <span
-              title={`回复给 ${target}`}
-              className="ml-auto flex min-w-0 max-w-full items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-[10px] font-normal text-muted-foreground"
-            >
-              <span className="truncate">
-                回复给{" "}
-                <strong className="font-medium text-foreground">{name}</strong>
-              </span>
-              <SourceBadge identity={identity} />
-            </span>
-          </InputGroupAddon>
           <InputGroupTextarea
             ref={actions.inputRef}
             id={id}
@@ -165,6 +145,26 @@ export function ComposerView({
             onKeyDown={actions.onKeyDown}
           />
           <InputGroupAddon
+            align="block-start"
+            className="flex-wrap justify-between gap-x-1 gap-y-1 px-2 pt-1.5 pb-0"
+          >
+            <ComposerTools
+              conversationId={conversationId}
+              compact={compact}
+              onInsert={actions.onInsert}
+            />
+            <span
+              title={`回复给 ${target}`}
+              className="ml-auto flex min-w-0 max-w-full items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-[10px] font-normal text-muted-foreground"
+            >
+              <span className="truncate">
+                回复给{" "}
+                <strong className="font-medium text-foreground">{name}</strong>
+              </span>
+              <SourceBadge identity={identity} />
+            </span>
+          </InputGroupAddon>
+          <InputGroupAddon
             align="block-end"
             className="flex-col items-stretch gap-0 px-2 pt-0 pb-2"
           >
@@ -177,6 +177,7 @@ export function ComposerView({
               {onHistory ? (
                 <InputGroupButton
                   size="xs"
+                  className="h-8"
                   onClick={onHistory}
                   aria-label={`查看与 ${name} 的完整对话`}
                 >
@@ -200,7 +201,7 @@ export function ComposerView({
                   disabled={disabled}
                   onClick={() => actions.onSubmit(true)}
                 >
-                  <ArrowUpRight data-icon="inline-start" />
+                  <ArrowUpRight />
                 </InputGroupButton>
                 <Button
                   size="sm"

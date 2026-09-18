@@ -1,5 +1,5 @@
 import { isReceptionMode, type ReceptionMode } from "./reception-mode";
-import { isPalette, type Palette } from "./theme-palette";
+import { isPalette, type Palette, restorePalette } from "./theme-palette";
 
 export type WorkspacePreferences = Readonly<{
   theme: Palette;
@@ -40,7 +40,8 @@ function parsePreferences(
     }
     return {
       theme:
-        "theme" in record && isPalette(record.theme) ? record.theme : "apricot",
+        restorePalette("theme" in record ? record.theme : undefined) ??
+        defaults.theme,
       mode:
         "mode" in record && isReceptionMode(record.mode) ? record.mode : "calm",
       ...("reduceMotion" in record && record.reduceMotion === true

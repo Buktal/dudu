@@ -60,7 +60,7 @@ export function VisitorTags({
 
   return (
     <Field
-      className="gap-3 rounded-xl border-t border-border bg-card px-3.5 py-4 text-card-foreground"
+      className="gap-3 rounded-xl bg-card p-4 text-card-foreground"
       aria-labelledby={`${id}-label`}
       data-invalid={!!error}
     >
@@ -77,7 +77,7 @@ export function VisitorTags({
           ref={toggle}
           type="button"
           variant="ghost"
-          size="icon-xs"
+          size="icon-sm"
           aria-label={adding ? "收起标签输入" : "添加访客标签"}
           aria-expanded={adding}
           aria-controls={adding ? `${id}-add` : undefined}
@@ -98,7 +98,7 @@ export function VisitorTags({
           <Badge
             key={tag}
             variant="secondary"
-            className="h-auto max-w-full gap-1 rounded-md py-0 pr-0.5 pl-2 even:bg-accent even:text-accent-foreground"
+            className="h-auto max-w-full gap-1 rounded-md py-0 pr-0.5 pl-2"
           >
             <span className="min-w-0 break-words whitespace-normal">{tag}</span>
             <Button

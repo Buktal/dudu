@@ -1,3 +1,4 @@
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useInboxSelector } from "../hooks/use-inbox-store";
 import { queueCountLabel } from "../presentation";
@@ -42,6 +43,7 @@ export function ConversationSidebar({
     >
       <QueueHeading />
       <QueueTools />
+      <Separator className="mx-3 mb-1 w-auto" />
       <ConversationQueue onSelected={onSelected} onPin={onPin} />
     </aside>
   );

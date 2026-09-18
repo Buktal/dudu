@@ -74,6 +74,14 @@ describe("workspace preferences", () => {
       { theme: "sea", mode: "calm" },
     ],
     [
+      '{"version":1,"theme":"graphite","mode":"parallel","reduceMotion":true}',
+      { theme: "daylight", mode: "parallel", reduceMotion: true },
+    ],
+    [
+      '{"version":1,"theme":"fog","mode":"quick"}',
+      { theme: "daylight", mode: "quick" },
+    ],
+    [
       '{"version":1,"theme":"constructor","mode":"parallel"}',
       { theme: "apricot", mode: "parallel" },
     ],
@@ -94,6 +102,23 @@ describe("workspace preferences", () => {
       });
 
       expect(preferences.getSnapshot()).toEqual(expected);
+    },
+  );
+
+  it.each(["crimson", "citrus"] as const)(
+    "restores the new %s theme without changing other preferences",
+    (theme) => {
+      const storage = memoryStorage();
+      const preferences = createWorkspacePreferences({
+        storage: () => storage,
+      });
+      preferences.setMode("parallel");
+      preferences.setReduceMotion(true);
+      preferences.setTheme(theme);
+
+      expect(
+        createWorkspacePreferences({ storage: () => storage }).getSnapshot(),
+      ).toEqual({ theme, mode: "parallel", reduceMotion: true });
     },
   );
 
@@ -175,7 +200,7 @@ describe("workspace preferences", () => {
     preferences.setTheme("berry");
     preferences.setMode("quick");
     unsubscribe();
-    preferences.setTheme("fog");
+    preferences.setTheme("daylight");
 
     expect(observed).toEqual([
       { theme: "berry", mode: "calm" },

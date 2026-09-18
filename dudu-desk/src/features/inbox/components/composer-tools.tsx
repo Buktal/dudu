@@ -31,7 +31,7 @@ export function ComposerTools({
     setOpen(null);
   }
   return (
-    <div className="flex shrink-0 items-center gap-0.5">
+    <div className="flex shrink-0 items-center gap-1">
       <Popover
         open={open === "emoji"}
         onOpenChange={(value) => setOpen(value ? "emoji" : null)}
@@ -45,11 +45,17 @@ export function ComposerTools({
             />
           }
         >
-          <Smile data-icon="inline-start" />
+          <Smile />
         </PopoverTrigger>
-        <PopoverContent side="top" align="start" className="w-60">
-          <p className="mb-2 text-xs text-muted-foreground">插入表情</p>
-          <div className="grid grid-cols-4 gap-1">
+        <PopoverContent
+          side="top"
+          sideOffset={8}
+          align="start"
+          aria-label="插入表情"
+          className="w-52 gap-2 rounded-xl p-3"
+        >
+          <p className="text-xs text-muted-foreground">插入表情</p>
+          <div className="grid grid-cols-4 justify-items-center gap-1">
             {emoji.map((item) => (
               <Button
                 key={item}
@@ -73,20 +79,23 @@ export function ComposerTools({
           render={
             <InputGroupButton
               size={compact ? "icon-sm" : "xs"}
+              className="h-8"
               aria-label="快捷回复"
               title="快捷回复"
             />
           }
         >
-          <MessageSquareText data-icon="inline-start" />
+          <MessageSquareText data-icon={compact ? undefined : "inline-start"} />
           {!compact && "快捷回复"}
         </PopoverTrigger>
         <PopoverContent
           side="top"
+          sideOffset={8}
           align="start"
-          className="w-80 max-w-[calc(100vw-24px)]"
+          aria-label="快捷回复"
+          className="w-80 max-w-[calc(100vw-24px)] gap-1 rounded-xl p-2"
         >
-          <p className="mb-2 text-xs text-muted-foreground">
+          <p className="px-2 py-1.5 text-xs text-muted-foreground">
             快捷回复 · 插入后可编辑
           </p>
           <div className="flex flex-col gap-1">

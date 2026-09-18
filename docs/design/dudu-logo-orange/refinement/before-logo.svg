@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="672" height="192" viewBox="0 0 672 192" role="img" aria-labelledby="dudu-ai-logo-title dudu-ai-logo-desc">
+  <title id="dudu-ai-logo-title">DuDu — 嘟嘟 / 表情 D</title>
+  <desc id="dudu-ai-logo-desc">The orange-to-coral DuDu expression-D mark with opaque ivory U-shaped eyes and the custom outlined DuDu wordmark. Transparent background.</desc>
+  <defs>
+    <linearGradient id="dudu-ai-logo-gradient" x1="40" y1="20" x2="218" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF984F"/>
+      <stop offset="0.5" stop-color="#F2673C"/>
+      <stop offset="1" stop-color="#E85038"/>
+    </linearGradient>
+  </defs>
+  <g transform="scale(.75)">
+    <path d="M72 20H132C198 20 238 61 238 120C238 179 199 217 135 217H90L39 240C29 244 19 237 20 226L25 74C26 39 40 20 72 20Z" fill="url(#dudu-ai-logo-gradient)"/>
+    <path d="M72 109C74 123 82 131 94 131C106 131 114 123 116 109M148 109C150 123 158 131 170 131C182 131 190 123 192 109" fill="none" stroke="#FFF9F5" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(216 40)"><g id="dudu-wordmark" fill="#232B33" fill-rule="evenodd">
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(120)"/>
+    <path d="M6 0H44C82 0 106 21 106 56C106 91 82 112 44 112H6Q2 112 2 108V4Q2 0 6 0ZM28 25V87H44C67 87 80 76 80 56C80 36 67 25 44 25Z" transform="translate(226)"/>
+    <path d="M0 32H24V75C24 86 31 92 42 92C53 92 60 86 60 75V32H84V76C84 100 67 114 42 114C17 114 0 100 0 76Z" transform="translate(346)"/>
+  </g></g>
+</svg>

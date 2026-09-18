@@ -1,3 +1,5 @@
+import { Pin } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { conversationStatusLabels } from "../presentation";
@@ -10,6 +12,7 @@ export function ConversationHeader({
   conversation,
   compact = false,
   paneRole,
+  paneActions,
   focused = true,
   onFocus,
   onInfo,
@@ -18,6 +21,7 @@ export function ConversationHeader({
   conversation: Conversation;
   compact?: boolean;
   paneRole?: "primary" | "pinned";
+  paneActions?: ReactNode;
   focused?: boolean;
   onFocus?: () => void;
   onInfo?: () => void;
@@ -26,15 +30,15 @@ export function ConversationHeader({
   return (
     <header
       className={cn(
-        "flex min-h-[84px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 max-[760px]:px-3",
-        (compact || paneRole) && "gap-x-2 px-3",
-        paneRole && focused && "bg-accent/30",
+        "flex min-h-[84px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 transition-colors max-[760px]:px-3",
+        compact && "px-4",
+        paneRole && "gap-x-2 px-3",
+        (compact || paneRole) &&
+          focused &&
+          "bg-sidebar-accent text-sidebar-accent-foreground",
       )}
     >
-      <VisitorAvatar
-        identity={conversation.identity}
-        size={compact ? "small" : "normal"}
-      />
+      <VisitorAvatar identity={conversation.identity} />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
           <h2 className="max-w-full truncate text-[15px] font-semibold tracking-tight">
@@ -65,15 +69,22 @@ export function ConversationHeader({
       />
       {paneRole && (
         <div className="flex basis-full items-center justify-between gap-2 text-[10px] text-muted-foreground">
-          <span>{paneRole === "primary" ? "主接待" : "固定接待"}</span>
-          <Button
-            size="xs"
-            variant={focused ? "secondary" : "ghost"}
-            aria-pressed={focused}
-            onClick={onFocus}
-          >
-            {focused ? "当前回复" : "切换回复"}
-          </Button>
+          <span className="flex shrink-0 items-center gap-1">
+            {paneRole === "pinned" && <Pin className="size-3 text-primary" />}
+            {paneRole === "primary" ? "主接待" : "固定接待"}
+          </span>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
+            {paneActions}
+            <Button
+              size="xs"
+              className="h-7 rounded-md"
+              variant={focused ? "secondary" : "ghost"}
+              aria-pressed={focused}
+              onClick={onFocus}
+            >
+              {focused ? "当前回复" : "切换回复"}
+            </Button>
+          </div>
         </div>
       )}
     </header>

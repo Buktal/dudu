@@ -1,0 +1,14 @@
+[
+  { "id": "crimson", "name": "朱砂红", "base": "#D63D46", "family": "红" },
+  { "id": "apricot", "name": "杏桃橙", "base": "#EF792D", "family": "橙" },
+  { "id": "amber", "name": "琥珀黄", "base": "#DDB313", "family": "金黄" },
+  { "id": "citrus", "name": "青柠绿", "base": "#9BB51C", "family": "黄绿" },
+  { "id": "pine", "name": "松柏绿", "base": "#12835A", "family": "森林绿" },
+  { "id": "sea", "name": "冰川青", "base": "#069DBB", "family": "蓝青" },
+  { "id": "ocean", "name": "钴蓝", "base": "#3264D9", "family": "蓝" },
+  { "id": "iris", "name": "鸢尾紫", "base": "#8244C6", "family": "紫" },
+  { "id": "berry", "name": "莓果粉", "base": "#D43186", "family": "玫粉" },
+  { "id": "oat", "name": "可可棕", "base": "#78513D", "family": "深棕" },
+  { "id": "daylight", "name": "极昼白", "base": "#FFFFFF", "family": "白" },
+  { "id": "midnight", "name": "极夜黑", "base": "#191A1D", "family": "黑" }
+]

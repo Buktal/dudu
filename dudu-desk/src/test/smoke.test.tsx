@@ -143,7 +143,7 @@ describe("Desk application smoke", () => {
     expect(screen.getByRole("button", { name: "并排模式" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "卡片模式" })).toBeEnabled();
     expect(
-      screen.getByRole("button", { name: "主题色，当前杏桃橙" }),
+      screen.getByRole("button", { name: "主题色，当前珊瑚橙" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /^接待 / }),

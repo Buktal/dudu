@@ -51,7 +51,7 @@ export function ThemePicker({
             <span className="text-xs text-muted-foreground">12 款配色</span>
           </div>
           <PopoverDescription>
-            按色系成对排列，可连续切换比较。
+            选择喜欢的色系，预览整个工作台。
           </PopoverDescription>
         </PopoverHeader>
         <ToggleGroup
@@ -76,10 +76,10 @@ export function ThemePicker({
                 aria-hidden="true"
                 className="flex size-9 shrink-0 overflow-hidden rounded-md border border-border bg-background"
               >
-                <span className="w-2.5 bg-sidebar-accent" />
+                <span className="w-2.5 bg-palette-base" />
                 <span className="flex flex-1 flex-col justify-center gap-1 p-1">
                   <span className="h-1.5 rounded-sm bg-primary" />
-                  <span className="h-1.5 w-2/3 rounded-sm bg-accent" />
+                  <span className="h-1.5 w-2/3 rounded-sm bg-selection" />
                 </span>
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -95,14 +95,6 @@ export function ThemePicker({
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <div className="flex shrink-0 items-center justify-between gap-2 px-2 pb-1">
-          <p className="text-[11px] text-muted-foreground">
-            自动保存 · 三种模式通用
-          </p>
-          <Button variant="secondary" size="xs" onClick={() => setOpen(false)}>
-            完成
-          </Button>
-        </div>
       </PopoverContent>
     </Popover>
   );

@@ -68,8 +68,19 @@ export function ConversationActions({
     <div className="flex shrink-0 items-center gap-1">
       <ConversationStarAction conversationId={conversationId} />
       <WorkspaceAction
-        icon={ended ? RotateCcw : Check}
-        label={ended ? "继续接待" : "结束本次接待"}
+        icon={ending ? LoaderCircle : ended ? RotateCcw : Check}
+        iconClassName={
+          ending ? "animate-spin motion-reduce:animate-none" : undefined
+        }
+        label={
+          ending
+            ? ended
+              ? "正在恢复接待"
+              : "正在结束接待"
+            : ended
+              ? "继续接待"
+              : "结束本次接待"
+        }
         disabled={ending || !connected}
         onClick={() =>
           void dispatch(

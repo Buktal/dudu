@@ -4,7 +4,8 @@ import {
   MessageCircle,
   RotateCcw,
 } from "lucide-react";
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
+import { shallowEqual } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { messageTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -19,23 +20,24 @@ import { ConversationHeader } from "./conversation-header";
 import { visitorName } from "./identity";
 import { deliveryLabels } from "./message-view";
 
-export function QuickCard({
+export const QuickCard = memo(function QuickCard({
   conversation,
   onHistory,
   onInfo,
   infoOpen,
 }: {
   conversation: Conversation;
-  onHistory: () => void;
-  onInfo: () => void;
+  onHistory: (id: string) => void;
+  onInfo: (id: string, open: boolean) => void;
   infoOpen: boolean;
 }) {
   const dispatch = useInboxDispatch();
   const selected = useInboxSelector(
     (state) => state.inbox.replyId === conversation.id,
   );
-  const messages = useInboxSelector((state) =>
-    selectMessages(state, conversation.id),
+  const messages = useInboxSelector(
+    (state) => selectMessages(state, conversation.id),
+    shallowEqual,
   );
   const history = useInboxSelector(
     (state) => state.inbox.histories[conversation.id],
@@ -50,23 +52,25 @@ export function QuickCard({
     .reverse()
     .find((message) => message.direction === "outgoing");
   const name = visitorName(conversation.identity);
+  function showHistory() {
+    onHistory(conversation.id);
+  }
   return (
     <article
-      className={cn(
-        "flex h-[380px] min-w-0 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-xl border bg-card text-card-foreground shadow-xs transition-[border-color,box-shadow] duration-200 hover:border-ring/40 motion-reduce:transition-none",
-        selected ? "border-ring/40 shadow-md" : "border-border",
-      )}
+      className="flex h-[380px] min-w-0 flex-col overflow-x-hidden overflow-y-auto rounded-xl bg-card text-card-foreground shadow-xs"
+      data-reception-card={conversation.id}
       aria-label={`${name} 的接待卡，${conversation.identity.channelName}，${conversation.identity.accountName}`}
     >
       <ConversationHeader
         conversation={conversation}
         compact
+        focused={selected}
         infoOpen={infoOpen}
-        onInfo={onInfo}
+        onInfo={() => onInfo(conversation.id, !infoOpen)}
       />
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 overflow-hidden px-5 pt-[15px] pb-2.5 max-[760px]:px-4 max-[760px]:pt-[13px]">
-          <p className="mb-[5px] flex items-center gap-[7px] text-[10px] text-muted-foreground">
+        <div className="min-h-0 flex-1 overflow-hidden px-4 pt-4 pb-3 max-[760px]:pt-3">
+          <p className="mb-2 flex items-center gap-2 text-[11px] text-muted-foreground">
             最新来信
             <time className="opacity-70">
               {messageTime(incoming?.createdAt ?? conversation.updatedAt)}
@@ -79,7 +83,7 @@ export function QuickCard({
               variant="secondary"
               size="sm"
               className="h-auto w-full justify-start gap-2 px-3 py-3"
-              onClick={onHistory}
+              onClick={showHistory}
               aria-label={`在完整对话中查看 ${name} 的最新来信`}
             >
               {incoming.body.type === "image" ? (
@@ -113,18 +117,21 @@ export function QuickCard({
         {reply && (
           <div
             className={cn(
-              "mx-5 mb-3 flex shrink-0 items-center gap-2 border-l-2 pl-2 text-[11px] max-[760px]:mx-4",
+              "mx-4 mb-3 flex shrink-0 items-center gap-2 text-[11px]",
               reply.delivery?.state === "failed"
-                ? "border-destructive text-destructive"
-                : "border-border text-muted-foreground",
+                ? "text-destructive"
+                : "text-muted-foreground",
             )}
           >
-            <span className="shrink-0 text-[9px]">
+            <span className="shrink-0 text-[10px]">
               {reply.delivery
                 ? deliveryLabels[reply.delivery.state]
                 : "上次回复"}
             </span>
-            <p className="min-w-0 flex-1 truncate">
+            <p
+              className="min-w-0 flex-1 truncate"
+              title={messageSummary(reply.body)}
+            >
               {messageSummary(reply.body)}
             </p>
             {reply.delivery?.state === "failed" && (
@@ -143,8 +150,8 @@ export function QuickCard({
       <Composer
         conversationId={conversation.id}
         compact
-        onHistory={onHistory}
+        onHistory={showHistory}
       />
     </article>
   );
-}
+});

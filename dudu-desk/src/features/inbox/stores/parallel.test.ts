@@ -179,6 +179,23 @@ describe("parallel reception", () => {
     });
   });
 
+  it("keeps the conversation open when releasing the only pinned pane", async () => {
+    const store = testStore();
+    await store.dispatch(loadConversations());
+    store.dispatch(editDraft(firstConversation.id, "保留正在写的回复"));
+    await store.dispatch(pinConversation(firstConversation.id));
+
+    store.dispatch(unpinConversation());
+
+    expect(store.getState().inbox).toMatchObject({
+      activeId: firstConversation.id,
+      replyId: firstConversation.id,
+      pinnedId: null,
+      pinCollapsed: false,
+      drafts: { [firstConversation.id]: { text: "保留正在写的回复" } },
+    });
+  });
+
   it("moves the current conversation into the pinned pane and never duplicates it", async () => {
     const store = testStore();
     await store.dispatch(loadConversations());

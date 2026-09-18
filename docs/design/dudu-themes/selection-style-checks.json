@@ -1,0 +1,31 @@
+{
+  "queue": {
+    "border": "0px",
+    "shadow": "none",
+    "outline": "none",
+    "leftMarkers": 0,
+    "selected": "true"
+  },
+  "keyboard": {
+    "border": "0px",
+    "focusVisible": true,
+    "focused": true,
+    "nameDecoration": "underline",
+    "shadow": "none"
+  },
+  "card": {
+    "cardBorder": "0px",
+    "editorBorder": "0px",
+    "editorShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.442 -0.0020272 0.0879766 / 0.3) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+    "headerBackground": "oklch(0.914 0.027 91.32)",
+    "inputFocusVisible": true,
+    "inputFocused": true,
+    "outerEditorBorder": "1px"
+  },
+  "mode": {
+    "buttonBorder": "0px",
+    "groupBorder": "1px",
+    "highlightBorder": "0px",
+    "selected": "true"
+  }
+}

@@ -36,9 +36,6 @@ export function WorkspaceShell({
               <Brand />
             </div>
             <div className="flex items-center justify-center gap-3 max-[760px]:col-span-2 max-[760px]:row-start-2">
-              <span className="text-[11px] whitespace-nowrap text-muted-foreground max-[1180px]:sr-only">
-                接待方式
-              </span>
               <ReceptionModeSwitch
                 value={mode}
                 onChange={onModeChange}

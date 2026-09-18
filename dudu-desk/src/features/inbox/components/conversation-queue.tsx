@@ -28,11 +28,14 @@ function ConversationRow({
     (state) => state.inbox.drafts[conversation.id],
   );
   const order = useInboxSelector((state) => state.inbox.queue.query.order);
+  const canPin = !!onPin && conversation.status !== "closed";
   return (
     <div
       className={cn(
-        "group relative mx-2 my-1 flex rounded-xl transition-colors",
-        selected ? "bg-accent text-accent-foreground" : "hover:bg-muted/60",
+        "group mx-2 my-1 grid grid-cols-[41px_minmax(0,1fr)] gap-x-3 rounded-xl px-3 py-4 transition-colors",
+        selected
+          ? "bg-selection text-selection-foreground"
+          : "hover:bg-muted/60",
       )}
     >
       <button
@@ -40,13 +43,18 @@ function ConversationRow({
         onClick={onSelect}
         aria-pressed={selected}
         aria-label={`接待 ${name}，${conversation.identity.channelName}，${conversation.identity.accountName}`}
-        className="flex min-w-0 flex-1 gap-3 rounded-xl px-3 py-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={cn(
+          "col-span-2 col-start-1 row-start-1 flex min-w-0 gap-3 rounded-lg text-left outline-none focus-visible:[&_strong]:underline focus-visible:[&_strong]:underline-offset-4",
+          canPin && "min-h-[76px]",
+        )}
         data-conversation-id={conversation.id}
       >
         <VisitorAvatar identity={conversation.identity} />
         <span className="flex min-w-0 flex-1 flex-col gap-1.5">
           <span className="flex items-center gap-1.5">
-            <strong className="truncate text-sm font-semibold">{name}</strong>
+            <strong className="truncate text-sm font-semibold" title={name}>
+              {name}
+            </strong>
             {conversation.starred && (
               <Star className="size-3 shrink-0 fill-primary text-primary" />
             )}
@@ -57,18 +65,21 @@ function ConversationRow({
           <span className="truncate text-xs text-muted-foreground">
             {draft?.text ? (
               <>
-                <span className="text-primary">草稿 · </span>
+                <span className="text-accent-foreground">草稿 · </span>
                 {draft.text}
               </>
             ) : draft?.attachmentIds.length ? (
-              <span className="text-primary">草稿 · 待发送附件</span>
+              <span className="text-accent-foreground">草稿 · 待发送附件</span>
             ) : (
               conversation.preview || "暂无消息"
             )}
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
             <SourceBadge identity={conversation.identity} />
-            <span className="min-w-0 truncate text-[10px] text-muted-foreground">
+            <span
+              className="min-w-0 truncate text-[10px] text-muted-foreground"
+              title={conversation.identity.accountName}
+            >
               {conversation.identity.accountName}
             </span>
             {order === "messages" &&
@@ -91,11 +102,11 @@ function ConversationRow({
           </span>
         </span>
       </button>
-      {onPin && (
+      {canPin && (
         <Button
           variant="ghost"
           size="icon-xs"
-          className="absolute right-2 bottom-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+          className="col-start-1 row-start-1 size-7 self-end justify-self-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
           aria-label={`固定接待 ${name}`}
           title="固定到右窗"
           onClick={onPin}
