@@ -1,6 +1,6 @@
 # dudu-server 认证链路：Hutool JWT 单密钥 + default-deny + ArgumentResolver
 
-dudu-server 认证不引入 Spring Security/JJWT：Hutool JWT（已在栈内）只承担签发/验签，payload 读写走 Jackson（全仓唯一 JSON 栈，Hutool JSONUtil 禁用）；签名密钥 `dudu.auth.jwt-secret` 入配置、缺省即启动失败（生产走环境变量 `DUDU_AUTH_JWT_SECRET`）。`/api/**` 默认全拦（default-deny），白名单走 yml；token 装标准 `Authorization: Bearer` 头；Controller 经 `@CurrentUser JwtUser` 由 HandlerMethodArgumentResolver 注入当前用户——替代老项目 BangBu 的 TokenAspect（AOP 改写入参塞用户）。dev-only 假登录端点 `POST /api/dev/token` 由 `dudu.auth.dev-token-enabled` 控制，默认关；真登录（用户表/密码/角色拦截/多租户）等数据库与客户端就绪后另起。来源：地图 #6 决策（Q2/Q3/Q4/Q10/Q11/Q12）。
+dudu-server 认证不引入 Spring Security/JJWT：Hutool JWT（已在栈内）只承担签发/验签，payload 读写走 Jackson（全仓唯一 JSON 栈，Hutool JSONUtil 禁用）；签名密钥 `dudu.auth.jwt-secret` 入配置、缺省即启动失败（生产走环境变量 `DUDU_AUTH_JWT_SECRET`）。`/api/**` 默认全拦（default-deny），白名单走 yml；token 装标准 `Authorization: Bearer` 头；Controller 经 `@Me JwtUser` 由 HandlerMethodArgumentResolver 注入当前用户——替代老项目 BangBu 的 TokenAspect（AOP 改写入参塞用户）。不设 dev-only 假登录端点：真登录（用户表/密码/角色拦截/多租户）等数据库与客户端就绪后另起，此前开发联调直接经 `JwtManager.createToken` 造 token。来源：地图 #6 决策（Q2/Q3/Q4/Q10/Q11/Q12）。
 
 ## Considered Options
 

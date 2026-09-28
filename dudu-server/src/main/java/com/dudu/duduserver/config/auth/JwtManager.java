@@ -4,7 +4,7 @@ import cn.hutool.jwt.JWTException;
 import cn.hutool.jwt.JWTUtil;
 import com.dudu.duduserver.common.JwtUser;
 import com.dudu.duduserver.constant.ApiEnum;
-import com.dudu.duduserver.exception.AuthException;
+import com.dudu.duduserver.exception.BizException;
 import java.io.IOException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,24 +44,24 @@ public class JwtManager {
     public JwtUser parseToken(String token) {
         String raw = Optional.ofNullable(token)
                 .filter(s -> !s.isBlank())
-                .orElseThrow(() -> new AuthException(ApiEnum.TOKEN_EMPTY));
+                .orElseThrow(() -> new BizException(ApiEnum.TOKEN_EMPTY));
 
         if (!verifySignature(raw)) {
-            throw new AuthException(ApiEnum.TOKEN_VERIFY);
+            throw new BizException(ApiEnum.TOKEN_VERIFY);
         }
 
         JsonNode claims = readClaims(raw);
         long exp = claims.path("exp").asLong(0);
         if (exp <= 0 || Instant.now().getEpochSecond() >= exp) {
-            throw new AuthException(ApiEnum.TOKEN_EXPIRE);
+            throw new BizException(ApiEnum.TOKEN_EXPIRE);
         }
 
         try {
             return Optional.of(objectMapper.treeToValue(claims, JwtUser.class))
                     .filter(user -> user.userId() != null)
-                    .orElseThrow(() -> new AuthException(ApiEnum.TOKEN_VERIFY));
+                    .orElseThrow(() -> new BizException(ApiEnum.TOKEN_VERIFY));
         } catch (IOException e) {
-            throw new AuthException(ApiEnum.TOKEN_VERIFY);
+            throw new BizException(ApiEnum.TOKEN_VERIFY);
         }
     }
 
@@ -79,12 +79,12 @@ public class JwtManager {
     private JsonNode readClaims(String token) {
         String[] parts = token.split("\\.");
         if (parts.length != 3) {
-            throw new AuthException(ApiEnum.TOKEN_VERIFY);
+            throw new BizException(ApiEnum.TOKEN_VERIFY);
         }
         try {
             return objectMapper.readTree(Base64.getUrlDecoder().decode(parts[1]));
         } catch (IllegalArgumentException | IOException e) {
-            throw new AuthException(ApiEnum.TOKEN_VERIFY);
+            throw new BizException(ApiEnum.TOKEN_VERIFY);
         }
     }
 }

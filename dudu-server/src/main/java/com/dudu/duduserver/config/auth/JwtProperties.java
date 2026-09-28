@@ -12,8 +12,7 @@ import java.util.Optional;
 public record JwtProperties(
         String jwtSecret,
         Integer jwtExpireDays,
-        List<String> whitelist,
-        Boolean devTokenEnabled) {
+        List<String> whitelist) {
 
     public JwtProperties {
         jwtSecret = Optional.ofNullable(jwtSecret)
@@ -21,6 +20,5 @@ public record JwtProperties(
                 .orElseThrow(() -> new IllegalStateException("dudu.auth.jwt-secret 未配置（生产用 DUDU_AUTH_JWT_SECRET 覆盖）"));
         jwtExpireDays = Optional.ofNullable(jwtExpireDays).orElse(7);
         whitelist = Optional.ofNullable(whitelist).map(List::copyOf).orElse(List.of());
-        devTokenEnabled = Boolean.TRUE.equals(devTokenEnabled);
     }
 }

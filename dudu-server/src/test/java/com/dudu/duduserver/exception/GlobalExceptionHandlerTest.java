@@ -36,26 +36,26 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void bizExceptionCarriesFamilyCodeAndCustomMsg() {
-        R<Void> r = handler.onBiz(new ParamException("name 不能为空"));
+    void bizExceptionCarriesCodeAndCustomMsg() {
+        R<Void> r = handler.onBiz(new BizException(ApiEnum.PARAM_ERROR, "name 不能为空"));
 
         assertThat(r.code()).isEqualTo(ApiEnum.PARAM_ERROR.code);
         assertThat(r.msg()).isEqualTo("name 不能为空");
     }
 
     @Test
-    void bizExceptionEachFamilyRoutesToItsOwnCode() {
-        assertThat(handler.onBiz(new AuthException(ApiEnum.TOKEN_EXPIRE)).code())
+    void bizExceptionRoutesToItsEnumCode() {
+        assertThat(handler.onBiz(new BizException(ApiEnum.TOKEN_EXPIRE)).code())
                 .isEqualTo(ApiEnum.TOKEN_EXPIRE.code);
-        assertThat(handler.onBiz(new DataException(ApiEnum.DATA_NOT_EXIST)).code())
+        assertThat(handler.onBiz(new BizException(ApiEnum.DATA_NOT_EXIST)).code())
                 .isEqualTo(ApiEnum.DATA_NOT_EXIST.code);
-        assertThat(handler.onBiz(new ThirdException(ApiEnum.THIRD_ERROR)).code())
+        assertThat(handler.onBiz(new BizException(ApiEnum.THIRD_ERROR)).code())
                 .isEqualTo(ApiEnum.THIRD_ERROR.code);
     }
 
     @Test
     void nullMsgFallsBackToEnumDesc() {
-        assertThat(new ParamException((String) null).getMessage())
+        assertThat(new BizException(ApiEnum.PARAM_ERROR, null).getMessage())
                 .isEqualTo(ApiEnum.PARAM_ERROR.desc);
     }
 

@@ -1,7 +1,7 @@
 package com.dudu.duduserver.config.auth;
 
 import com.dudu.duduserver.constant.ApiEnum;
-import com.dudu.duduserver.exception.AuthException;
+import com.dudu.duduserver.exception.BizException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -29,7 +29,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         String token = Optional.ofNullable(request.getHeader("Authorization"))
                 .filter(header -> header.startsWith("Bearer "))
                 .map(header -> header.substring("Bearer ".length()))
-                .orElseThrow(() -> new AuthException(ApiEnum.TOKEN_EMPTY));
+                .orElseThrow(() -> new BizException(ApiEnum.TOKEN_EMPTY));
         request.setAttribute(ATTR_CURRENT_USER, jwtManager.parseToken(token));
         return true;
     }

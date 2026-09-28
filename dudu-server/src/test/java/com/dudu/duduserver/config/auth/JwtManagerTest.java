@@ -2,7 +2,7 @@ package com.dudu.duduserver.config.auth;
 
 import com.dudu.duduserver.common.JwtUser;
 import com.dudu.duduserver.constant.ApiEnum;
-import com.dudu.duduserver.exception.AuthException;
+import com.dudu.duduserver.exception.BizException;
 import cn.hutool.jwt.JWTUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -19,7 +19,7 @@ class JwtManagerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private JwtManager manager(int expireDays) {
-        return new JwtManager(new JwtProperties("test-secret", expireDays, null, null), objectMapper);
+        return new JwtManager(new JwtProperties("test-secret", expireDays, null), objectMapper);
     }
 
     @Test
@@ -38,8 +38,8 @@ class JwtManagerTest {
         String token = manager(-1).createToken(new JwtUser(5L, "agent"));
 
         assertThatThrownBy(() -> manager(-1).parseToken(token))
-                .isInstanceOf(AuthException.class)
-                .extracting(e -> ((AuthException) e).apiEnum())
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).apiEnum())
                 .isEqualTo(ApiEnum.TOKEN_EXPIRE);
     }
 
@@ -47,23 +47,23 @@ class JwtManagerTest {
     void wrongSecretThrowsTokenVerify() {
         String token = manager(7).createToken(new JwtUser(5L, "agent"));
         JwtManager other = new JwtManager(
-                new JwtProperties("another-secret", 7, null, null), objectMapper);
+                new JwtProperties("another-secret", 7, null), objectMapper);
 
         assertThatThrownBy(() -> other.parseToken(token))
-                .isInstanceOf(AuthException.class)
-                .extracting(e -> ((AuthException) e).apiEnum())
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).apiEnum())
                 .isEqualTo(ApiEnum.TOKEN_VERIFY);
     }
 
     @Test
     void blankTokenThrowsTokenEmpty() {
         assertThatThrownBy(() -> manager(7).parseToken(null))
-                .isInstanceOf(AuthException.class)
-                .extracting(e -> ((AuthException) e).apiEnum())
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).apiEnum())
                 .isEqualTo(ApiEnum.TOKEN_EMPTY);
         assertThatThrownBy(() -> manager(7).parseToken("  "))
-                .isInstanceOf(AuthException.class)
-                .extracting(e -> ((AuthException) e).apiEnum())
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).apiEnum())
                 .isEqualTo(ApiEnum.TOKEN_EMPTY);
     }
 

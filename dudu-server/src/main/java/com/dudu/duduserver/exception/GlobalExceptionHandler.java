@@ -15,7 +15,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 
 /**
  * 全局异常处理器：HTTP 恒 200（#6 决策），业务语义由 R.code 表达。
- * 业务异常按家族记 warn 不带栈；未知异常记 error 带栈。
+ * 业务异常记 warn 不带栈；未知异常记 error 带栈。
  */
 @Slf4j
 @RestControllerAdvice
@@ -23,13 +23,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BizException.class)
     public R<Void> onBiz(BizException e) {
-        String tag = switch (e) {
-            case AuthException ignored -> "auth";
-            case ParamException ignored -> "param";
-            case DataException ignored -> "data";
-            case ThirdException ignored -> "third";
-        };
-        log.warn("[{}] {} {}", tag, e.apiEnum().code, e.getMessage());
+        log.warn("[biz] {} {}", e.apiEnum().code, e.getMessage());
         return R.err(e.apiEnum(), e.getMessage());
     }
 

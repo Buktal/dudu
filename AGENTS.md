@@ -99,9 +99,8 @@
 ### 接口与认证
 
 - 响应：`common/R<T>` record，HTTP 恒 200，业务语义由 `code` 表达；错误码使用 `constant/ApiEnum`，新增码按既有分段扩展
-- 业务异常：`exception/BizException` sealed 家族；服务层抛出子类，全局异常处理器分流
-- 认证：`Authorization: Bearer`；`/api/**` 默认拦截，白名单由 `dudu.auth.whitelist` 配置；Controller 通过 `@CurrentUser JwtUser` 注入当前用户
-- 开发登录：端点由 `dudu.auth.dev-token-enabled` 控制，默认关闭
+- 业务异常：`exception/BizException` 携带 `ApiEnum` 错误码；校验失败处抛出，全局异常处理器统一转 `R`
+- 认证：`Authorization: Bearer`；`/api/**` 默认拦截，白名单由 `dudu.auth.whitelist` 配置；Controller 通过 `@Me JwtUser` 注入当前用户
 
 ### 空值安全
 
