@@ -6,6 +6,7 @@ export function ReceptionModePreview({ mode }: { mode: ReceptionMode }) {
     <svg
       aria-hidden="true"
       viewBox="0 0 144 76"
+      preserveAspectRatio="xMinYMid meet"
       className="h-14 w-full max-w-44"
     >
       <rect

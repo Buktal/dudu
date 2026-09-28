@@ -59,7 +59,9 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
       );
     return [
       { value: "all", label: "全部来源" },
-      ...known.map((channel) => ({ value: channel.id, label: channel.name })),
+      ...known
+        .map((channel) => ({ value: channel.id, label: channel.name }))
+        .sort((a, b) => a.label.localeCompare(b.label, "zh-Hans-CN-u-kn-true")),
     ];
   }, [catalog, conversations]);
   const hasFilters =

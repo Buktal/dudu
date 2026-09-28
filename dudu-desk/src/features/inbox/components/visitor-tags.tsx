@@ -3,12 +3,7 @@ import { Plus, Tag, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 export function VisitorTags({
@@ -131,7 +126,7 @@ export function VisitorTags({
               placeholder="输入标签，回车添加"
               aria-label="新标签名称"
               aria-invalid={!!error}
-              aria-describedby={error ? `${id}-help ${id}-error` : `${id}-help`}
+              aria-describedby={error ? `${id}-error` : undefined}
               onChange={(event) => {
                 setText(event.target.value);
                 setError(null);
@@ -163,9 +158,6 @@ export function VisitorTags({
               添加
             </Button>
           </div>
-          <FieldDescription id={`${id}-help`} className="text-[10px]">
-            回车添加，保存资料后生效。
-          </FieldDescription>
           <FieldError id={`${id}-error`}>{error}</FieldError>
         </div>
       )}

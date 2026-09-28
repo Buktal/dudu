@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -252,14 +251,7 @@ export function VisitorInfo({
                       }),
                     )
                   }
-                  aria-describedby={`${id}-note-help`}
                 />
-                <FieldDescription
-                  id={`${id}-note-help`}
-                  className="text-[10px]"
-                >
-                  内部接待记录，不作为聊天消息发送。
-                </FieldDescription>
               </Field>
             </FieldGroup>
             {saveStatus && (
