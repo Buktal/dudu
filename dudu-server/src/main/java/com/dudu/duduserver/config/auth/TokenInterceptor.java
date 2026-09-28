@@ -1,22 +1,18 @@
 package com.dudu.duduserver.config.auth;
 
-import com.dudu.duduserver.constant.ApiEnum;
-import com.dudu.duduserver.exception.BizException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.NonNull;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import java.util.Optional;
-
 /**
- * /api/** 默认全拦（default-deny），白名单由 WebConfig 按 dudu.auth.whitelist 排除。
+ * /api/** 默认全拦（default-deny）；放行路径将来在 WebConfig 写死（当前无）。
  * token 取自标准 Authorization: Bearer 头。
  */
 @Component
 public class TokenInterceptor implements HandlerInterceptor {
-
-    public static final String ATTR_CURRENT_USER = "dudu.currentUser";
 
     private final JwtManager jwtManager;
 
@@ -25,12 +21,8 @@ public class TokenInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        String token = Optional.ofNullable(request.getHeader("Authorization"))
-                .filter(header -> header.startsWith("Bearer "))
-                .map(header -> header.substring("Bearer ".length()))
-                .orElseThrow(() -> new BizException(ApiEnum.TOKEN_EMPTY));
-        request.setAttribute(ATTR_CURRENT_USER, jwtManager.parseToken(token));
+    public boolean preHandle(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) {
+        jwtManager.parseAuthorization(request.getHeader(HttpHeaders.AUTHORIZATION));
         return true;
     }
 }

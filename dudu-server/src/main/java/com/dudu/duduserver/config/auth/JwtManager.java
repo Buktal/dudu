@@ -1,90 +1,62 @@
 package com.dudu.duduserver.config.auth;
 
-import cn.hutool.jwt.JWTException;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.json.JSONUtil;
+import cn.hutool.jwt.JWT;
 import cn.hutool.jwt.JWTUtil;
-import com.dudu.duduserver.common.JwtUser;
+import cn.hutool.jwt.JWTValidator;
+import cn.hutool.jwt.signers.JWTSignerUtil;
 import com.dudu.duduserver.constant.ApiEnum;
-import com.dudu.duduserver.exception.BizException;
-import java.io.IOException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.dudu.duduserver.config.exception.BizException;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 
 /**
- * Hutool JWT 只承担签发/验签；payload 读写走 Jackson（全仓唯一 JSON 栈）。
- * 过期用标准 exp claim（epoch 秒），不进 JwtUser 业务字段。
+ * 签发/验签与 payload 读写全部走 Hutool：实体转 JSONUtil.parseObj 签发，toBean 直接绑定解析。
+ * 过期 exp 为 JwtUser 字段，校验用 epoch 秒。
  */
 @Component
 public class JwtManager {
 
-    private final JwtProperties properties;
-    private final ObjectMapper objectMapper;
+    private final byte[] key;
 
-    public JwtManager(JwtProperties properties, ObjectMapper objectMapper) {
-        this.properties = properties;
-        this.objectMapper = objectMapper;
+    public JwtManager(JwtProperties properties) {
+        this.key = properties.jwtSecret().getBytes(StandardCharsets.UTF_8);
     }
 
     public String createToken(JwtUser user) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("userId", user.userId());
-        payload.put("role", user.role());
-        payload.put("exp", Instant.now().plus(properties.jwtExpireDays(), ChronoUnit.DAYS).getEpochSecond());
-        return JWTUtil.createToken(payload, properties.jwtSecret().getBytes(StandardCharsets.UTF_8));
+        return JWTUtil.createToken(JSONUtil.parseObj(user), key);
+    }
+
+    public JwtUser parseAuthorization(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            throw new BizException(ApiEnum.TOKEN_EMPTY);
+        }
+        return parseToken(authorization.substring("Bearer ".length()));
     }
 
     public JwtUser parseToken(String token) {
-        String raw = Optional.ofNullable(token)
-                .filter(s -> !s.isBlank())
-                .orElseThrow(() -> new BizException(ApiEnum.TOKEN_EMPTY));
+        if (token == null || token.isBlank()) {
+            throw new BizException(ApiEnum.TOKEN_EMPTY);
+        }
 
-        if (!verifySignature(raw)) {
+        JwtUser user;
+        try {
+            JWT jwt = JWT.of(token);
+            JWTValidator.of(jwt).validateAlgorithm(JWTSignerUtil.hs256(key));
+            user = jwt.getPayloads().toBean(JwtUser.class);
+        } catch (RuntimeException e) {
+            // 畸形 JSON、签名/算法错误和载荷类型错误统一归为无效 token。
             throw new BizException(ApiEnum.TOKEN_VERIFY);
         }
 
-        JsonNode claims = readClaims(raw);
-        long exp = claims.path("exp").asLong(0);
-        if (exp <= 0 || Instant.now().getEpochSecond() >= exp) {
+        if (user == null || user.userId() == null) {
+            throw new BizException(ApiEnum.TOKEN_VERIFY);
+        }
+        if (user.exp() == null || DateUtil.currentSeconds() >= user.exp()) {
             throw new BizException(ApiEnum.TOKEN_EXPIRE);
         }
-
-        try {
-            return Optional.of(objectMapper.treeToValue(claims, JwtUser.class))
-                    .filter(user -> user.userId() != null)
-                    .orElseThrow(() -> new BizException(ApiEnum.TOKEN_VERIFY));
-        } catch (IOException e) {
-            throw new BizException(ApiEnum.TOKEN_VERIFY);
-        }
-    }
-
-    /**
-     * Hutool 对畸形 token（缺段/坏 Base64）抛 JWTException 而非返回 false，结构错误同视为验签失败。
-     */
-    private boolean verifySignature(String token) {
-        try {
-            return JWTUtil.verify(token, properties.jwtSecret().getBytes(StandardCharsets.UTF_8));
-        } catch (JWTException e) {
-            return false;
-        }
-    }
-
-    private JsonNode readClaims(String token) {
-        String[] parts = token.split("\\.");
-        if (parts.length != 3) {
-            throw new BizException(ApiEnum.TOKEN_VERIFY);
-        }
-        try {
-            return objectMapper.readTree(Base64.getUrlDecoder().decode(parts[1]));
-        } catch (IllegalArgumentException | IOException e) {
-            throw new BizException(ApiEnum.TOKEN_VERIFY);
-        }
+        return user;
     }
 }

@@ -1,0 +1,3 @@
+dudu:
+  auth:
+    jwt-secret: ${DUDU_AUTH_JWT_SECRET:dudu-dev-only-signing-key-change-me}

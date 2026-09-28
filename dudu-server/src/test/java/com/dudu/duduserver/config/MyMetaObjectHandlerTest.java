@@ -58,16 +58,18 @@ class MyMetaObjectHandlerTest {
 
         assertThat(entity.getCreateTime()).isNotNull();
         assertThat(entity.getUpdateTime()).isNotNull();
+        assertThat(entity.getUpdateTime()).isEqualTo(entity.getCreateTime());
     }
 
     @Test
     void updateFillTouchesUpdateTimeOnly() {
         FillFixture entity = new FillFixture();
         entity.setCreateTime(LocalDateTime.of(2026, 1, 1, 0, 0));
+        entity.setUpdateTime(LocalDateTime.of(2026, 1, 1, 0, 0));
 
         handler.updateFill(SystemMetaObject.forObject(entity));
 
-        assertThat(entity.getUpdateTime()).isNotNull();
+        assertThat(entity.getUpdateTime()).isAfter(LocalDateTime.of(2026, 1, 1, 0, 0));
         assertThat(entity.getCreateTime()).isEqualTo(LocalDateTime.of(2026, 1, 1, 0, 0));
     }
 }

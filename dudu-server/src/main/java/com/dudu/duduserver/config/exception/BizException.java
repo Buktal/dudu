@@ -1,4 +1,4 @@
-package com.dudu.duduserver.exception;
+package com.dudu.duduserver.config.exception;
 
 import com.dudu.duduserver.constant.ApiEnum;
 

@@ -1,6 +1,6 @@
-package com.dudu.duduserver.exception;
+package com.dudu.duduserver.config.exception;
 
-import com.dudu.duduserver.common.R;
+import com.dudu.duduserver.config.response.R;
 import com.dudu.duduserver.constant.ApiEnum;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -11,13 +11,13 @@ import org.springframework.core.MethodParameter;
 import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.validation.method.MethodValidationResult;
 import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -77,7 +77,7 @@ class GlobalExceptionHandlerTest {
         Method method = Sample.class.getDeclaredMethod("handler", String.class);
         MethodParameter parameter = new MethodParameter(method, 0);
         ParameterValidationResult validationResult = new ParameterValidationResult(
-                parameter, null, List.of(new FieldError("req", "name", "不能为空")));
+                parameter, null, List.of(new FieldError("req", "name", "不能为空")), null, null, null, null);
         HandlerMethodValidationException e = new HandlerMethodValidationException(
                 MethodValidationResult.create(new Object(), method, List.of(validationResult)));
 
@@ -115,6 +115,16 @@ class GlobalExceptionHandlerTest {
 
         assertThat(r.code()).isEqualTo(ApiEnum.PARAM_MISSING.code);
         assertThat(r.msg()).isEqualTo("缺少参数 userId");
+    }
+
+    @Test
+    void wrongParamTypeMapsToParamError() throws NoSuchMethodException {
+        MethodParameter parameter = new MethodParameter(Sample.class.getDeclaredMethod("handler", String.class), 0);
+        R<Void> r = handler.onTypeMismatch(new MethodArgumentTypeMismatchException(
+                "abc", Long.class, "userId", parameter, new NumberFormatException()));
+
+        assertThat(r.code()).isEqualTo(ApiEnum.PARAM_ERROR.code);
+        assertThat(r.msg()).isEqualTo("参数 userId 类型错误");
     }
 
     @Test

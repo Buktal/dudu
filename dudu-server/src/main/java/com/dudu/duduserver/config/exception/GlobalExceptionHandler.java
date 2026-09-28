@@ -1,6 +1,6 @@
-package com.dudu.duduserver.exception;
+package com.dudu.duduserver.config.exception;
 
-import com.dudu.duduserver.common.R;
+import com.dudu.duduserver.config.response.R;
 import com.dudu.duduserver.constant.ApiEnum;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.validation.BindException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * 全局异常处理器：HTTP 恒 200（#6 决策），业务语义由 R.code 表达。
@@ -38,7 +39,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HandlerMethodValidationException.class)
     public R<Void> onMethodValidation(HandlerMethodValidationException e) {
-        String msg = e.getAllValidationResults().stream()
+        String msg = e.getParameterValidationResults().stream()
                 .flatMap(result -> result.getResolvableErrors().stream())
                 .findFirst()
                 .map(MessageSourceResolvable::getDefaultMessage)
@@ -64,6 +65,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public R<Void> onMissingParam(MissingServletRequestParameterException e) {
         return R.err(ApiEnum.PARAM_MISSING, "缺少参数 " + e.getParameterName());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public R<Void> onTypeMismatch(MethodArgumentTypeMismatchException e) {
+        return R.err(ApiEnum.PARAM_ERROR, "参数 " + e.getName() + " 类型错误");
     }
 
     @ExceptionHandler(Exception.class)

@@ -9,9 +9,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class MybatisPlusConfig {
 
-    /**
-     * 多插件场景分页必须最后添加（MP 官方要求）。
-     */
+    // 多插件场景分页必须最后添加（MP 官方要求）。
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();

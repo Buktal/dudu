@@ -1,4 +1,4 @@
-package com.dudu.duduserver.common;
+package com.dudu.duduserver.config.response;
 
 import com.dudu.duduserver.constant.ApiEnum;
 
