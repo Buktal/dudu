@@ -171,7 +171,11 @@ flowchart LR
 
 ## 本地环境与分工
 
-用户负责安装 Windows Docker Desktop，并采用 WSL 2 后端运行 MySQL 容器。建议 MySQL 8.4 LTS、数据库 `dudu`、字符集 `utf8mb4`，配置持久化卷并使用实际可用的本机端口。Docker 运行后可由执行者准备可复现的 Compose 与本地连接配置；本轮尚未创建这些配置，也未验证 Docker 或 MySQL 已可用。
+用户已安装 Windows Docker Desktop，并授权执行者完成 MySQL 搭建。2026-09-29 明确选择 MySQL 8.4 LTS，最终决定所有环境沿用默认 C 盘位置，不迁移 E 盘。已补装 WSL 2.7.14；Windows 虚拟机组件要求重启后生效。无需额外安装 Ubuntu。
+
+已准备 [本地 Compose](../../../dudu-server/compose.yaml)、无密码的环境模板和 Server `dev` 连接配置，固定镜像 `mysql:8.4.11`、数据库 `dudu`、字符集 `utf8mb4`、仅本机端口及持久化命名卷。真实本地凭据已生成并被 Git 忽略；操作与线上部署边界见 [Server README](../../../dudu-server/README.md)。当前尚未启动 MySQL，也未完成实际连接、持久化和 Flyway 集成验证；重启后继续拉取镜像、启动容器及验收。
+
+本机状态：Docker Desktop 4.93.0 已按原来的仅当前用户方式恢复在 `%LOCALAPPDATA%\Programs\DockerDesktop`，原偏好设置及 CLI 配置已恢复；已移除安装配置中的 E 盘数据目录覆盖，Docker 数据使用默认 `%LOCALAPPDATA%\Docker\wsl`。E 盘仅暂存本次下载的安装包和设置备份，没有镜像、容器或 MySQL 数据。Compose 静态校验及 Server 51 项测试已通过；测试仍排除数据源，不能代替数据库验收。
 
 业务表由 Server 的 Flyway 迁移维护，无需用户手工建表。真实凭据保存在本地环境配置，设计文档和 Git 中不保存真实密码。数据库未就绪不阻塞规划，但会阻塞真实连接、迁移和数据库集成验收。
 

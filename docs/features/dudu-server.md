@@ -10,7 +10,8 @@
 | 当前用户注入 | `@Me JwtUser user` | MeResolver 直接读取 Authorization，无 request attribute 或 ThreadLocal；载荷字段定义在 JwtUser，未知字段忽略 |
 | 接口保护 | `dudu-server/src/main/java/com/dudu/duduserver/config/WebConfig.java` | `/api/**` 默认全拦，没有 @Me 也需认证；带 @Me 的接口由拦截器和解析器各验证一次；目前无放行路径 |
 | 校验分组 | `dudu-server/src/main/java/com/dudu/duduserver/config/validate/` | Save、Query 继承 Default，保留公共约束并支持各自分组约束；暂无业务 DTO |
-| 数据访问 | `dudu-server/src/main/java/com/dudu/duduserver/config/MybatisPlusConfig.java` | MySQL 分页拦截器已配置；实体、Mapper、数据源和迁移尚未落地 |
+| 数据访问 | `dudu-server/src/main/java/com/dudu/duduserver/config/MybatisPlusConfig.java` | MySQL 分页拦截器已配置；本地 dev 数据源读取 `.env`；实体、Mapper 和业务迁移尚未落地 |
+| 本地数据库环境 | `dudu-server/compose.yaml`、`dudu-server/.env.example` | MySQL 8.4.11、仅本机端口、应用账号、命名卷和鉴权 SQL 健康检查；仅供开发，需可用的 Docker Linux 引擎 |
 | 时间填充 | `dudu-server/src/main/java/com/dudu/duduserver/config/MyMetaObjectHandler.java` | 插入填充 createTime、updateTime；更新填充时刷新已有 updateTime；实体需启用对应自动填充，纯 Wrapper 更新不保证触发 |
 
 错误码保留既有分段：101xx 认证、11xxx 参数、13xxx 数据、14xxx 外部服务；DuduDesk 按 101xx 识别认证失败。新增业务码随实际业务定义。

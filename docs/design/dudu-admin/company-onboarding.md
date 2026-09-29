@@ -16,7 +16,7 @@
 - 企业、员工与管理员权限以 [企业隔离决策](../../adr/0011-enterprise-group-access.md) 为准。
 - 后续接待沿用 [固定会话决策](../../adr/0010-persistent-visitor-conversation.md)，首阶段不实现会话和消息业务。
 - 后续两个代表性渠道协议的模拟联调及出站模拟缺口，统一记录在 [Server 总体设计](../dudu-server/README.md)，不属于本阶段企业开通验收。
-- 用户负责 Docker Desktop 与 MySQL 环境；Server 用已有 Flyway 能力维护业务表，手工建业务表不作为安装前置条件。
+- 用户已安装 Docker Desktop，并授权执行者完成 MySQL 环境搭建；进度统一见 Server 总体设计。Server 用已有 Flyway 能力维护业务表，手工建业务表不作为安装前置条件。
 
 ## 页面与操作草案
 
