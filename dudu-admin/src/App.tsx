@@ -1,22 +1,58 @@
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { AdminClient } from "@/api/client";
+import { AdminContext } from "@/api/context";
+import { AdminLayout } from "@/components/admin-layout";
+import { LoadingState } from "@/components/feedback";
+import { AccountPage } from "@/features/account/AccountPage";
+import { LoginPage } from "@/features/auth/LoginPage";
+import { CompaniesPage } from "@/features/companies/CompaniesPage";
+import { LogsPage } from "@/features/operations/LogsPage";
+import { OverviewPage } from "@/features/overview/OverviewPage";
+import { ResourcesPage } from "@/features/resources/ResourcesPage";
+import { navigate, useRoute } from "@/navigation";
 
-function App() {
+function Workspace() {
+  const route = useRoute();
   return (
-    <main className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">dudu-admin</h1>
-          <p className="text-muted-foreground">
-            shadcn 主题已就绪，业务界面待搭建。
-          </p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          （按 <kbd>d</kbd> 切换深浅色）
-        </div>
-      </div>
-    </main>
+    <AdminLayout view={route.view}>
+      {route.view === "companies" && (
+        <CompaniesPage
+          selectedId={route.selectedId}
+          creating={route.creating}
+          navigate={navigate}
+        />
+      )}
+      {route.view === "overview" && <OverviewPage navigate={navigate} />}
+      {route.view === "resources" && (
+        <ResourcesPage
+          key={route.selectedId}
+          companyId={route.selectedId}
+          navigate={navigate}
+        />
+      )}
+      {route.view === "logs" && <LogsPage />}
+      {route.view === "account" && <AccountPage />}
+    </AdminLayout>
   );
 }
 
-export default App;
+export default function App() {
+  const [client] = useState(() => new AdminClient());
+  const session = useSyncExternalStore(client.subscribe, client.getSnapshot);
+  useEffect(() => {
+    const controller = new AbortController();
+    void client.restore(controller.signal);
+    return () => controller.abort();
+  }, [client]);
+  return (
+    <AdminContext value={client}>
+      {session.restoring ? (
+        <LoadingState />
+      ) : session.user ? (
+        <Workspace key={session.generation} />
+      ) : (
+        <LoginPage key={session.generation} />
+      )}
+    </AdminContext>
+  );
+}

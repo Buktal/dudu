@@ -6,7 +6,7 @@ import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <ThemeProvider>
+    <ThemeProvider defaultTheme="light" storageKey="dudu-admin.theme">
       <App />
     </ThemeProvider>
   </React.StrictMode>,
