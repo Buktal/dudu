@@ -1,6 +1,6 @@
 # Rebuild the selected desktop icon and DuduDesk's bundled icon resources.
 $ErrorActionPreference = 'Stop'
-$deskProjectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../../../dudu-desk')).Path
+$deskProjectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../../../../dudu-desk')).Path
 $desktopSource = Join-Path $PSScriptRoot 'desktop.svg'
 $desktopExport = Join-Path $PSScriptRoot 'desktop-generated'
 $desktopPreviewSizes = Join-Path $PSScriptRoot 'desktop-preview-sizes'

@@ -1,7 +1,7 @@
 # Compare DuDu's U-eye proportions using the existing Tauri SVG renderer.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
-$deskProjectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../../../dudu-desk')).Path
+$deskProjectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../../../../dudu-desk')).Path
 $refinementRoot = Join-Path $PSScriptRoot 'refinement'
 $beforeSvg = Get-Content -LiteralPath (Join-Path $refinementRoot 'before-desktop.svg') -Raw
 $beforeEyes = 'M72 109C74 123 82 131 94 131C106 131 114 123 116 109M148 109C150 123 158 131 170 131C182 131 190 123 192 109'

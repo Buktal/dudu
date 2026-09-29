@@ -63,7 +63,7 @@
 
 既有队列来源去重与固定会话选择器分页去重可分别复用 `lodash-es` 的 `uniqBy`、`uniq`，本轮保持原实现。
 
-实现入口见 [DuduDesk 功能图谱](../../features/dudu-desk.md)。
+实现入口见 [DuduDesk 功能图谱](../../../features/dudu-desk.md)。
 
 ## 状态下拉菜单补验
 
@@ -131,9 +131,9 @@
 
 ```powershell
 # 修复前记录：FAIL，81 次无输入位置变化，退出码 1
-node docs/design/dudu-workspace-polish/check-grid-scroll.mjs auto
+node docs/design/dudu-desk/workspace-polish/check-grid-scroll.mjs auto
 # 修复后记录：PASS，0 次无输入位置变化
-node docs/design/dudu-workspace-polish/check-grid-scroll.mjs none
+node docs/design/dudu-desk/workspace-polish/check-grid-scroll.mjs none
 # 按 native、stage、viewport 区分耗时采样
-node docs/design/dudu-workspace-polish/grid-performance-summary.mjs
+node docs/design/dudu-desk/workspace-polish/grid-performance-summary.mjs
 ```

@@ -125,7 +125,7 @@ Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、�
 ## 相关资料
 
 - [功能图谱](../docs/features/dudu-desk.md)
-- [工作台交互调整与验收截图](../docs/design/dudu-workspace-polish/README.md)
+- [工作台交互调整与验收截图](../docs/design/dudu-desk/workspace-polish/README.md)
 - [正式规格 #50](https://github.com/Buktal/dudu/issues/50)
 - [API 契约与后续接入](docs/api-contract.md)
 - [开发数据与异常场景](docs/development.md)

@@ -1,7 +1,7 @@
 # Render the selected DuDu refinement, including both transparent wordmarks.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
-$deskProjectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../../../dudu-desk')).Path
+$deskProjectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../../../../dudu-desk')).Path
 $refinementRoot = Join-Path $PSScriptRoot 'refinement'
 $wordmarks = @(
   @{ name = 'light'; source = 'dudu-logo.svg' },

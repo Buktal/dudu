@@ -37,9 +37,9 @@
 从仓库根运行 PowerShell：
 
 ```powershell
-& ./docs/design/dudu-logo-orange/explore-eyes.ps1
-& ./docs/design/dudu-logo-orange/generate-desktop.ps1
-& ./docs/design/dudu-logo-orange/preview-refinement.ps1
+& ./docs/design/brand/logo-orange/explore-eyes.ps1
+& ./docs/design/brand/logo-orange/generate-desktop.ps1
+& ./docs/design/brand/logo-orange/preview-refinement.ps1
 ```
 
 复用仓库现有 Tauri CLI 渲染 SVG，以 .NET System.Drawing 排版预览，无新增依赖。

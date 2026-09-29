@@ -31,4 +31,4 @@
 
 正式入口不使用模拟登录或假收发成功；开发数据需要按 [开发联调说明](../../dudu-desk/docs/development.md) 显式开启。当前功能可通过开发适配器验证，真实服务端认证、会话和收发接口仍待接入。
 
-本轮工作台调整的对应截图、滚动检查与构建结果见 [设计验收记录](../design/dudu-workspace-polish/README.md)。
+本轮工作台调整的对应截图、滚动检查与构建结果见 [设计验收记录](../design/dudu-desk/workspace-polish/README.md)。
