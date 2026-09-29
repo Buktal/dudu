@@ -3,6 +3,8 @@
 > dudu-admin 是**嘟嘟（DuDu）的管理后台子项目**：纯 Web 前端（Vite + React 19 + shadcn，无桌面端）。
 > 基于 vite-react-app 模板起步，业务模块待规划。
 
+[功能规划与设计交接](../docs/design/dudu-admin/README.md)：先确认功能与数据契约，独立设计会话完成正式前端，随后实现后端并联调。Admin 不使用模拟数据；开发可选择接口环境，生产固定线上地址。表结构与环境入口目前仍为设计，尚未实现。
+
 ## 快速开始
 
 ```powershell

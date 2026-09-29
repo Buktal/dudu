@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | `brand/` | Logo、字标、品牌探索及图标导出 | [品牌资料](brand/README.md) |
 | `dudu-desk/` | 工作台主题、布局、交互及验收记录 | [Desk 设计资料](dudu-desk/README.md) |
-| `dudu-admin/` | 运营管理后台的企业开通规划 | [Admin 企业开通草案](dudu-admin/company-onboarding.md) |
+| `dudu-admin/` | 运营管理功能清单、决策及前端设计交接 | [Admin 功能规划](dudu-admin/README.md) |
 | `dudu-server/` | 多企业后端模型、接口方向、实施阶段与待定问题 | [Server 总体设计](dudu-server/README.md) |
 
 品牌资料中的各版探索独立保留；Desk 资料按主题与工作台交互分开。后续同一主题的迭代继续放入相应专题目录。
