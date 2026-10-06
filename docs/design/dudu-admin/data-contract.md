@@ -1,6 +1,6 @@
 # DuduAdmin 表结构与接口字段草案
 
-状态：首版候选设计，尚未创建业务表、迁移或接口。已确认的业务规则与工程建议分开记录；待定项收敛后才能发布最终契约。范围限于 Admin 首版及其真实资源汇总所需的数据，不展开消息、访客和会话全库。
+状态：首版候选设计。首版后端已按本契约实现（2026-09-30，dudu-server `controller/admin/` + 迁移 V1，验证范围见[功能图谱](../../features/dudu-server.md)）：`/api/admin` 下的登录、账号、企业、概览与操作记录接口，company/user/operation_log/reception_group/channel_account 五表，业务 ID 十进制字符串序列化与 UTC `Z` 时间格式均已落地；企业登录接口与企业侧字段保留给后续阶段。其余待定项收敛后才能发布最终契约。范围限于 Admin 首版及其真实资源汇总所需的数据，不展开消息、访客和会话全库。
 
 决策跟踪：[Admin 表结构与接口字段如何统一？](https://github.com/Buktal/dudu/issues/67)。
 
@@ -27,7 +27,7 @@
 - 表名已确认不加产品前缀：独立的 `dudu` 数据库已经限定项目归属，直接采用业务名称。表名建议使用单数下划线命名；SQL 列用下划线，Java、JSON、Admin 用同一套小驼峰字段名。语义、空值和枚举同时统一。
 - 数据库与 Java 的命名差异交由既有 MyBatis-Plus 映射；不在前端增加 `company_name → companyName` 等通用转换层。HTTP DTO 仅暴露公开字段，不能把实体直接序列化以省略安全边界。
 - 数据库 ID 建议 `BIGINT`、Java `Long`；企业 ID 显式指定，不设 `AUTO_INCREMENT`，MyBatis-Plus 使用输入主键策略，不能自动生成自增或雪花 ID。用户、操作记录等其他 ID 保留各自的自增候选方案。HTTP 和 TypeScript 中业务 ID 统一十进制字符串，避免 JavaScript 大整数丢精度。该 HTTP 序列化尚未实现；JWT `exp` 仍是数字秒值。
-- 日期列建议 `DATETIME(3)`，Java 沿用 `createTime/updateTime`；存储和写入统一 UTC，HTTP 使用带 `Z` 的 ISO 8601 字符串，前端按用户时区显示。
+- 日期列建议 `DATETIME(3)`，Java 沿用 `createTime/updateTime`；存储和写入统一 UTC，HTTP 输出 `yyyy-MM-dd HH:mm:ss`（到秒，无时区标记，前端按 UTC 解析后转本地显示）。
 - 当前时间填充使用 JVM 本地时间，dev JDBC 会话使用 UTC，HTTP 时间格式也未统一。实施时须一起修正并验证，不能只给旧本地时间字符串追加 `Z`。
 - 名称为非空文本；选填联系资料和备注，在响应中统一用 `null` 表示未填写。完整编辑表单提交 `null` 表示清空；不能用省略字段同时表达保留与清空。
 - 下列长度是候选存储上限，最终表单校验和接口校验必须采用相同值。用户名大小写规则、名称重名规则等业务选择仍见末尾待定项。
@@ -43,7 +43,7 @@
 | `contact_name` | `contactName` | VARCHAR(100)，可空 | 联系人 |
 | `contact_info` | `contactInfo` | VARCHAR(200)，可空 | 联系方式，首版按文本表达，不限定只有手机号 |
 | `remark` | `remark` | VARCHAR(1000)，可空 | 运营备注 |
-| `status` | `status` | VARCHAR(16)，非空 | 候选代码 `enabled` / `disabled` |
+| `status` | `status` | TINYINT，非空 | 数据库与接口统一 1/0（启用/停用） |
 | `disable_reason` | `disableReason` | VARCHAR(500)，可空，候选字段 | 停用原因；必填与恢复后显示规则待停用流程确认 |
 | `create_time` | `createTime` | DATETIME(3)，非空 | 创建时间 |
 | `update_time` | `updateTime` | DATETIME(3)，非空 | 最后修改时间 |
@@ -77,7 +77,7 @@
 - 输入变化、切换服务环境或重新生成时，旧的检测结果失效；只应用仍匹配当前输入、环境和请求次序的结果。随机请求期间若用户改了输入，迟到响应不能覆盖手输值。
 - 同一个 ID 即使刚检测可用，也可能在提交前被另一请求占用；成功开通以创建事务提交结果为准。
 
-拟定接口形态如下，供前后端按同一字段对接；路径随完整接口清单一同定稿。响应继续使用 `{ code, msg, data }`。
+拟定接口形态如下，供前后端按同一字段对接；路径随完整接口清单一同定稿。响应继续使用 `{ code, msg, data }`，分页响应平铺为 `{ code, msg, list, total, page, pageSize }`。
 
 | 接口候选 | 成功数据 | 约束 |
 | --- | --- | --- |
@@ -95,8 +95,8 @@
 | `username` | `username` | VARCHAR(64)，非空 | 登录名，企业范围内唯一 |
 | `name` | `name` | VARCHAR(100)，非空，候选字段 | 显示名称，不参与登录名唯一性判断 |
 | `password_hash` | `passwordHash`，仅后端 | VARCHAR(255)，非空 | 密码哈希，绝不进入响应或操作记录 |
-| `role` | `role` | VARCHAR(32)，非空 | 候选代码 `platform_admin` / `company_admin` / `employee` |
-| `status` | `status` | VARCHAR(16)，非空 | 候选代码 `enabled` / `disabled` |
+| `role` | `role` | VARCHAR(32)，非空 | 按客户端命名：`admin` / `console` / `user` |
+| `status` | `status` | TINYINT，非空 | 数据库与接口统一 1/0（启用/停用） |
 | `create_time` | `createTime` | DATETIME(3)，非空 | 创建时间 |
 | `update_time` | `updateTime` | DATETIME(3)，非空 | 最后修改时间 |
 

@@ -25,30 +25,30 @@
 
 ## 当前 HTTP 对接契约
 
-源地址由环境模块选定，请求层追加 `/api`；除登录外使用 `Authorization: Bearer <token>`。统一响应 `{ code, msg, data }`，`code=0` 为成功；空成功数据为 `null`。响应数据在单一 HTTP 边界校验，不增加字段改名层。ID 为字符串；时间为带 `Z` 的 ISO 8601 UTC 字符串，展示采用浏览器本地时区。
+源地址由环境模块选定，请求层追加 `/api`；除登录外使用 `Authorization: Bearer <token>`。统一响应 `{ code, msg, data }`，`code=0` 为成功；空成功数据为 `null`。响应数据在单一 HTTP 边界校验，不增加字段改名层。ID 为字符串；时间为 UTC 语义的 `yyyy-MM-dd HH:mm:ss` 字符串（无时区标记），解析时按 UTC（补 `Z`）再转浏览器本地时区展示。
 
 | 方法与路径（含 /api） | 请求或查询 | 成功 data |
 | --- | --- | --- |
-| POST `/api/admin/auth/login` | username、password | token、exp（秒）、user |
-| POST `/api/admin/auth/logout` | 无业务入参 | null |
-| GET `/api/admin/account` | 无 | userId、username、name、role |
-| PUT `/api/admin/account/password` | oldPassword、newPassword | null |
-| GET `/api/admin/companies` | keyword、status、page、pageSize | list、total、page、pageSize |
-| GET `/api/admin/companies/{companyId}` | 路径中的企业 ID | company、initialAdmin（可为 null） |
+| POST `/api/admin/login` | username、password | token、exp（秒）、user |
+| POST `/api/admin/logout` | 无业务入参 | null |
+| GET `/api/admin/detail` | 无 | userId、username、name、role |
+| PUT `/api/admin/password` | oldPassword、newPassword | null |
+| GET `/api/admin/companies/list` | keyword、status、page、pageSize | list、total、page、pageSize |
+| GET `/api/admin/companies/{companyId}/detail` | 路径中的企业 ID | company、initialAdmin（可为 null） |
 | POST `/api/admin/companies/id-candidates` | 无 | companyId |
 | GET `/api/admin/companies/id-availability` | companyId | companyId、available |
-| POST `/api/admin/companies` | companyId、企业资料、initialAdmin | Company |
-| PUT `/api/admin/companies/{companyId}` | 完整企业资料 | Company |
+| POST `/api/admin/companies/create` | companyId、企业资料、initialAdmin | Company |
+| PUT `/api/admin/companies/{companyId}/update` | 完整企业资料 | Company |
 | POST `/api/admin/companies/{companyId}/disable` | disableReason | null |
 | POST `/api/admin/companies/{companyId}/enable` | 无 | null |
 | POST `/api/admin/companies/{companyId}/admin-password-reset` | newPassword | null |
 | GET `/api/admin/companies/{companyId}/resource-summary` | 无 | companyId、employeeCount、enabledEmployeeCount、groupCount、channelAccountCount |
 | GET `/api/admin/overview` | 无 | totalCompanies、enabledCompanies、disabledCompanies、recentCreatedCount、recentCompanies |
-| GET `/api/admin/operation-logs` | companyId、action、result、page、pageSize | list、total、page、pageSize |
+| GET `/api/admin/operation-logs/list` | companyId、action、result、page、pageSize | list、total、page、pageSize |
 
 公司资料字段：companyName（必填，100）、contactName（100）、contactInfo（200）、remark（1000）。括号内为最大长度。选填未填或清空提交 null。初始管理员传 username、password、name（可空，100）。企业 ID 限 100000–999999，创建后只读。
 
-分页采用 page=1、pageSize=20；排序由现有服务端负责。状态为 enabled/disabled，结果为 success/failure。操作码采用 company.create、company.update、company.disable、company.enable、admin.password_reset、account.password_change。
+分页采用 page=1、pageSize=20；排序由现有服务端负责。状态为 1/0（启用/停用），结果为 success/failure。操作码采用 company.create、company.update、company.disable、company.enable、admin.password_reset、admin.password_change。
 
 10100–10103 与 10106 会清除已认证会话；登录失败 10104 留在登录页；创建冲突 13300 清除 ID 可用状态并保留表单；原密码错误 13310 保留改密表单。网关、网络、超时、非法响应独立显示，不当作空列表或零统计。
 

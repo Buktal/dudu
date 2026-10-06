@@ -1,0 +1,6 @@
+{
+  "name": "DuduAdmin 运营管理后台",
+  "description": "DuDu 平台运营方管理后台，提供企业开通与维护、六位企业 ID 查重检测、运营概览、资源汇总与操作审计日志，支持开发与生产接口环境切换。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
