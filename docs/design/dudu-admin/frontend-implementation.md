@@ -25,7 +25,7 @@
 
 ## 当前 HTTP 对接契约
 
-源地址由环境模块选定，请求层追加 `/api`；除登录外使用 `Authorization: Bearer <token>`。统一响应 `{ code, msg, data }`，`code=0` 为成功；空成功数据为 `null`。响应数据在单一 HTTP 边界校验，不增加字段改名层。ID 为字符串；时间为 UTC 语义的 `yyyy-MM-dd HH:mm:ss` 字符串（无时区标记），解析时按 UTC（补 `Z`）再转浏览器本地时区展示。
+源地址由环境模块选定，请求层追加 `/api`；除登录外使用 `Authorization: Bearer <token>`。统一响应 `{ code, msg, data }`，`code=0` 为成功；空成功数据为 `null`。响应数据在单一 HTTP 边界校验，不增加字段改名层。ID 为字符串；时间为北京时间的 `yyyy-MM-dd HH:mm:ss` 字符串（无时区标记），即为最终展示文本，直接展示、不做时区换算（见 [ADR 0012](../../adr/0012-beijing-time-end-to-end.md)）。
 
 | 方法与路径（含 /api） | 请求或查询 | 成功 data |
 | --- | --- | --- |

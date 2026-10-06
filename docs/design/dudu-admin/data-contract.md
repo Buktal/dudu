@@ -1,6 +1,6 @@
 # DuduAdmin 表结构与接口字段草案
 
-状态：首版候选设计。首版后端已按本契约实现（2026-09-30，dudu-server `controller/admin/` + 迁移 V1，验证范围见[功能图谱](../../features/dudu-server.md)）：`/api/admin` 下的登录、账号、企业、概览与操作记录接口，company/user/operation_log/reception_group/channel_account 五表，业务 ID 十进制字符串序列化与 UTC `Z` 时间格式均已落地；企业登录接口与企业侧字段保留给后续阶段。其余待定项收敛后才能发布最终契约。范围限于 Admin 首版及其真实资源汇总所需的数据，不展开消息、访客和会话全库。
+状态：首版候选设计。首版后端已按本契约实现（2026-09-30，dudu-server `controller/admin/` + 迁移 V1，验证范围见[功能图谱](../../features/dudu-server.md)）：`/api/admin` 下的登录、账号、企业、概览与操作记录接口，company/user/operation_log/reception_group/channel_account 五表，业务 ID 十进制字符串序列化与北京时间 `yyyy-MM-dd HH:mm:ss` 时间格式均已落地；企业登录接口与企业侧字段保留给后续阶段。其余待定项收敛后才能发布最终契约。范围限于 Admin 首版及其真实资源汇总所需的数据，不展开消息、访客和会话全库。
 
 决策跟踪：[Admin 表结构与接口字段如何统一？](https://github.com/Buktal/dudu/issues/67)。
 
@@ -27,8 +27,7 @@
 - 表名已确认不加产品前缀：独立的 `dudu` 数据库已经限定项目归属，直接采用业务名称。表名建议使用单数下划线命名；SQL 列用下划线，Java、JSON、Admin 用同一套小驼峰字段名。语义、空值和枚举同时统一。
 - 数据库与 Java 的命名差异交由既有 MyBatis-Plus 映射；不在前端增加 `company_name → companyName` 等通用转换层。HTTP DTO 仅暴露公开字段，不能把实体直接序列化以省略安全边界。
 - 数据库 ID 建议 `BIGINT`、Java `Long`；企业 ID 显式指定，不设 `AUTO_INCREMENT`，MyBatis-Plus 使用输入主键策略，不能自动生成自增或雪花 ID。用户、操作记录等其他 ID 保留各自的自增候选方案。HTTP 和 TypeScript 中业务 ID 统一十进制字符串，避免 JavaScript 大整数丢精度。该 HTTP 序列化尚未实现；JWT `exp` 仍是数字秒值。
-- 日期列建议 `DATETIME(3)`，Java 沿用 `createTime/updateTime`；存储和写入统一 UTC，HTTP 输出 `yyyy-MM-dd HH:mm:ss`（到秒，无时区标记，前端按 UTC 解析后转本地显示）。
-- 当前时间填充使用 JVM 本地时间，dev JDBC 会话使用 UTC，HTTP 时间格式也未统一。实施时须一起修正并验证，不能只给旧本地时间字符串追加 `Z`。
+- 日期列建议 `DATETIME(3)`，Java 沿用 `createTime/updateTime`；存储与 HTTP 输出统一用服务器本地时间（北京时间，见 [ADR 0012](../../adr/0012-beijing-time-end-to-end.md)），格式 `yyyy-MM-dd HH:mm:ss`（到秒，无时区标记，前端直接展示）。
 - 名称为非空文本；选填联系资料和备注，在响应中统一用 `null` 表示未填写。完整编辑表单提交 `null` 表示清空；不能用省略字段同时表达保留与清空。
 - 下列长度是候选存储上限，最终表单校验和接口校验必须采用相同值。用户名大小写规则、名称重名规则等业务选择仍见末尾待定项。
 
@@ -148,6 +147,6 @@
 2. 管理员显示资料、稳定定位、凭据交付和重置目标，以及密码校验规则。
 3. 企业停用原因、恢复后的显示与可操作范围；用户和资源的状态代码与统计口径。
 4. 列表分页、排序、请求字段及操作记录查询契约；再写完整 DTO 和接口清单。
-5. 将上述候选类型、索引和 UTC / ID 序列化要求落实到最终 DDL、Flyway 迁移与契约测试，验证空库和已有版本升级。
+5. 将上述候选类型、索引和北京时间 / ID 序列化要求落实到最终 DDL、Flyway 迁移与契约测试，验证空库和已有版本升级。
 
 这份草案用于先对齐字段和发现约束，不代表已完成最终表结构或接口验收。
