@@ -115,20 +115,18 @@ export function CompanyDetailSheet({
                   <h3 id="initial-admin-title" className="font-semibold">
                     初始企业管理员
                   </h3>
-                  {detail.initialAdmin ? (
+                  {detail.adminInit ? (
                     <>
                       <dl className="detail-grid">
                         <dt>显示名称</dt>
-                        <dd>{detail.initialAdmin.name}</dd>
+                        <dd>{detail.adminInit.name}</dd>
                         <dt>登录名</dt>
-                        <dd>{detail.initialAdmin.username}</dd>
+                        <dd>{detail.adminInit.username}</dd>
                         <dt>员工 ID</dt>
-                        <dd className="font-mono">
-                          {detail.initialAdmin.userId}
-                        </dd>
+                        <dd className="font-mono">{detail.adminInit.userId}</dd>
                         <dt>状态</dt>
                         <dd>
-                          <StatusBadge status={detail.initialAdmin.status} />
+                          <StatusBadge status={detail.adminInit.status} />
                         </dd>
                       </dl>
                       <Button

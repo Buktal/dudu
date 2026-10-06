@@ -38,7 +38,7 @@ it.each(["100000", "999999"])(
     fireEvent.click(screen.getByRole("button", { name: "检测" }));
     expect(await screen.findByText("当前可用")).toBeInTheDocument();
     expect(request.mock.calls[0][0]).toBe(
-      `http://127.0.0.1:8080/api/admin/companies/id-availability?companyId=${id}`,
+      `http://127.0.0.1:8080/api/admin/companies/id_availability?companyId=${id}`,
     );
     fireEvent.change(screen.getByLabelText("企业 ID"), {
       target: { value: "234567" },

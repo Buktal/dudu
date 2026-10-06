@@ -36,7 +36,7 @@ it("概览显示真实返回统计，创建按钮打开开通表单", async () =
 
 it("资源请求失败时显示失败而非补零", async () => {
   installHttp((url) =>
-    url.pathname.endsWith("/resource-summary")
+    url.pathname.endsWith("/resource_summary")
       ? failure(13000, "资源汇总暂不可用")
       : success(page()),
   );
@@ -61,5 +61,5 @@ it("操作记录查询使用企业 ID 与服务端操作码，空查询有明确
   const call = request.mock.calls.find(([url]) =>
     String(url).includes("companyId=123456"),
   );
-  expect(String(call?.[0])).toContain("/api/admin/operation-logs?");
+  expect(String(call?.[0])).toContain("/api/admin/operation_logs?");
 });

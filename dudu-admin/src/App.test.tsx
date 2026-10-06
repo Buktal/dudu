@@ -37,7 +37,7 @@ it("通过真实 HTTP 登录，业务认证失败时保留登录表单", async (
   fireEvent.click(screen.getByRole("button", { name: "登录" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("账号或密码错误");
   expect(fetchRequest.mock.calls[0][0]).toBe(
-    "http://127.0.0.1:8080/api/admin/auth/login",
+    "http://127.0.0.1:8080/api/admin/login",
   );
   expect(JSON.parse(fetchRequest.mock.calls[0][1].body)).toEqual({
     username: "operator",
@@ -143,11 +143,9 @@ it("切换环境取消在途请求，旧令牌与迟到响应均不能进入新�
   fireEvent.click(screen.getByRole("button", { name: "登录" }));
   await screen.findByRole("heading", { name: "企业管理" });
   const login = fetchRequest.mock.calls.find(([url]) =>
-    String(url).endsWith("/auth/login"),
+    String(url).endsWith("/login"),
   );
-  expect(String(login?.[0])).toBe(
-    "https://api.dudu.example/api/admin/auth/login",
-  );
+  expect(String(login?.[0])).toBe("https://api.dudu.example/api/admin/login");
   expect(new Headers(login?.[1].headers).has("Authorization")).toBe(false);
 });
 

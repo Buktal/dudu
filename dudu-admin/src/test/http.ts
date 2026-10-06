@@ -15,12 +15,12 @@ export const company: Company = {
   remark: "优先联系负责人",
   status: "enabled",
   disableReason: null,
-  createTime: "2026-09-28T08:00:00.000Z",
-  updateTime: "2026-09-29T09:00:00.000Z",
+  createTime: "2026-09-28 16:00:00",
+  updateTime: "2026-09-29 17:00:00",
 };
 export const detail: CompanyDetail = {
   company,
-  initialAdmin: {
+  adminInit: {
     userId: "9007199254740993",
     username: "admin",
     name: "企业管理员",
@@ -45,12 +45,12 @@ export function installHttp(
   const fetchRequest = vi.fn(
     (input: string | URL | Request, init: RequestInit) => {
       const url = new URL(String(input));
-      if (url.pathname === "/api/admin/auth/login")
+      if (url.pathname === "/api/admin/login")
         return Promise.resolve(
           success({ token: "test-token", exp: 2000000000, user: account }),
         );
       if (
-        url.pathname === "/api/admin/account" &&
+        url.pathname === "/api/admin/profile" &&
         (init.method ?? "GET") === "GET"
       )
         return Promise.resolve(success(account));

@@ -14,13 +14,9 @@ import {
 } from "./ui/select";
 
 export const PAGE_SIZE = 20;
+// 时间串已是北京时间展示文本（yyyy-MM-dd HH:mm:ss），直接截取日期或到分钟
 export const formatDate = (value: string, includeTime = false) =>
-  new Date(value).toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    ...(includeTime ? ({ hour: "2-digit", minute: "2-digit" } as const) : {}),
-  });
+  includeTime ? value.slice(0, 16) : value.slice(0, 10);
 
 export function PageHeader({
   title,

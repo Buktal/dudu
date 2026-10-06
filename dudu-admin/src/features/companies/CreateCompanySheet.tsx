@@ -79,7 +79,7 @@ export function CreateCompanySheet({
                   {
                     ...cleaned,
                     companyId: selection.value,
-                    initialAdmin: {
+                    adminInit: {
                       username: username.trim(),
                       password,
                       name: name.trim() || null,

@@ -15,10 +15,10 @@ const count = (value: unknown): value is number =>
 const status = (value: unknown) => value === "enabled" || value === "disabled";
 export const validCompanyId = (value: unknown): value is string =>
   typeof value === "string" && /^[1-9]\d{5}$/.test(value);
+// 后端时间为北京时间展示文本：yyyy-MM-dd HH:mm:ss
 const time = (value: unknown) =>
   typeof value === "string" &&
-  value.endsWith("Z") &&
-  Number.isFinite(Date.parse(value));
+  /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value);
 
 export function isCompany(data: unknown): data is Company {
   return (
@@ -37,7 +37,7 @@ export function isCompany(data: unknown): data is Company {
 
 export function isDetail(data: unknown): data is CompanyDetail {
   if (!isRecord(data) || !isCompany(data.company)) return false;
-  const admin = data.initialAdmin;
+  const admin = data.adminInit;
   return (
     admin === null ||
     (isRecord(admin) &&

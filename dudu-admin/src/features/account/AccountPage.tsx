@@ -33,7 +33,7 @@ export function AccountPage() {
   const query = useQuery(
     useCallback(
       (signal: AbortSignal) =>
-        client.request("/admin/account", { signal, validate: isAccount }),
+        client.request("/admin/profile", { signal, validate: isAccount }),
       [client],
     ),
   );

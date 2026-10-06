@@ -36,7 +36,7 @@ it("生产构建忽略开发存储和 URL 覆盖，只向发布地址登录", as
   fireEvent.click(screen.getByRole("button", { name: "登录" }));
   await screen.findByRole("alert");
   expect(request.mock.calls[0][0]).toBe(
-    "https://admin-api.example.org/api/admin/auth/login",
+    "https://admin-api.example.org/api/admin/login",
   );
 });
 
@@ -68,6 +68,6 @@ it("可以从下拉菜单修改本地 IP，拒绝带凭据和路径的地址", a
   fireEvent.click(screen.getByRole("button", { name: "登录" }));
   await screen.findByRole("alert");
   expect(request.mock.calls[0][0]).toBe(
-    "http://192.168.1.25:9080/api/admin/auth/login",
+    "http://192.168.1.25:9080/api/admin/login",
   );
 });

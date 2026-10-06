@@ -28,7 +28,7 @@ export interface Company extends CompanyProfile {
   updateTime: string;
 }
 
-export interface InitialAdmin {
+export interface AdminInit {
   userId: string;
   username: string;
   name: string;
@@ -38,12 +38,12 @@ export interface InitialAdmin {
 
 export interface CompanyDetail {
   company: Company;
-  initialAdmin: InitialAdmin | null;
+  adminInit: AdminInit | null;
 }
 
 export interface CreateCompany extends CompanyProfile {
   companyId: string;
-  initialAdmin: { username: string; password: string; name: string | null };
+  adminInit: { username: string; password: string; name: string | null };
 }
 
 export interface Page<T> {

@@ -219,7 +219,7 @@ export class AdminClient {
 
   async login(username: string, password: string, signal?: AbortSignal) {
     const generation = this.state.generation;
-    const result = await this.request("/admin/auth/login", {
+    const result = await this.request("/admin/login", {
       method: "POST",
       body: { username, password },
       anonymous: true,
@@ -247,7 +247,7 @@ export class AdminClient {
   async restore(signal: AbortSignal) {
     if (!this.token) return;
     try {
-      const user = await this.request("/admin/account", {
+      const user = await this.request("/admin/profile", {
         signal,
         validate: isAccount,
       });
@@ -259,7 +259,7 @@ export class AdminClient {
 
   async logout() {
     try {
-      await this.request("/admin/auth/logout", {
+      await this.request("/admin/logout", {
         method: "POST",
         validate: isEmpty,
       });

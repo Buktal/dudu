@@ -35,7 +35,7 @@ export function CompanyActions({
 }) {
   const client = useAdmin();
   const mutation = useMutation();
-  const { company, initialAdmin } = detail;
+  const { company, adminInit } = detail;
   const [profile, setProfile] = useState(cleanProfile(company));
   const [reason, setReason] = useState("");
   const [password, setPassword] = useState("");
@@ -84,7 +84,7 @@ export function CompanyActions({
                 mutation.setError(error);
                 return;
               }
-              if (!initialAdmin) {
+              if (!adminInit) {
                 mutation.setError("该企业尚无可重置的管理员");
                 return;
               }
@@ -161,10 +161,10 @@ export function CompanyActions({
               <dl className="detail-grid">
                 <dt>管理员</dt>
                 <dd>
-                  {initialAdmin?.name}（{initialAdmin?.username}）
+                  {adminInit?.name}（{adminInit?.username}）
                 </dd>
                 <dt>员工 ID</dt>
-                <dd className="font-mono">{initialAdmin?.userId}</dd>
+                <dd className="font-mono">{adminInit?.userId}</dd>
               </dl>
               <PasswordFields
                 password={password}

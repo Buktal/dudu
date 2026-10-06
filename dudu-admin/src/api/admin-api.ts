@@ -22,6 +22,10 @@ function queryString(query: CompanyQuery | LogQuery) {
   return params.toString();
 }
 
+// 企业启停状态值，与后端 EnableStatusEnum 对齐：0 停用、1 恢复
+const STATUS_DISABLED = 0;
+const STATUS_ENABLED = 1;
+
 export const adminApi = {
   companies: (client: AdminClient, query: CompanyQuery, signal: AbortSignal) =>
     client.request(`/admin/companies?${queryString(query)}`, {
@@ -53,7 +57,7 @@ export const adminApi = {
       validate: isCompany,
     }),
   candidate: (client: AdminClient, signal: AbortSignal) =>
-    client.request("/admin/companies/id-candidates", {
+    client.request("/admin/companies/id_candidates", {
       method: "POST",
       signal,
       validate: (data): data is { companyId: string } =>
@@ -61,7 +65,7 @@ export const adminApi = {
     }),
   availability: (client: AdminClient, companyId: string, signal: AbortSignal) =>
     client.request(
-      `/admin/companies/id-availability?companyId=${encodeURIComponent(companyId)}`,
+      `/admin/companies/id_availability?companyId=${encodeURIComponent(companyId)}`,
       {
         signal,
         validate: (data): data is { companyId: string; available: boolean } =>
@@ -76,15 +80,16 @@ export const adminApi = {
     disableReason: string,
     signal: AbortSignal,
   ) =>
-    client.request(`/admin/companies/${encodeURIComponent(id)}/disable`, {
-      method: "POST",
-      body: { disableReason },
+    client.request(`/admin/companies/${encodeURIComponent(id)}/status`, {
+      method: "PUT",
+      body: { status: STATUS_DISABLED, disableReason },
       signal,
       validate: isEmpty,
     }),
   enable: (client: AdminClient, id: string, signal: AbortSignal) =>
-    client.request(`/admin/companies/${encodeURIComponent(id)}/enable`, {
-      method: "POST",
+    client.request(`/admin/companies/${encodeURIComponent(id)}/status`, {
+      method: "PUT",
+      body: { status: STATUS_ENABLED },
       signal,
       validate: isEmpty,
     }),
@@ -95,14 +100,14 @@ export const adminApi = {
     signal: AbortSignal,
   ) =>
     client.request(
-      `/admin/companies/${encodeURIComponent(id)}/admin-password-reset`,
-      { method: "POST", body: { newPassword }, signal, validate: isEmpty },
+      `/admin/companies/${encodeURIComponent(id)}/admin_password`,
+      { method: "PUT", body: { newPassword }, signal, validate: isEmpty },
     ),
   overview: (client: AdminClient, signal: AbortSignal) =>
     client.request("/admin/overview", { signal, validate: isOverview }),
   resources: (client: AdminClient, id: string, signal: AbortSignal) =>
     client.request(
-      `/admin/companies/${encodeURIComponent(id)}/resource-summary`,
+      `/admin/companies/${encodeURIComponent(id)}/resource_summary`,
       {
         signal,
         validate: (data): data is import("./types").Resources =>
@@ -110,7 +115,7 @@ export const adminApi = {
       },
     ),
   logs: (client: AdminClient, query: LogQuery, signal: AbortSignal) =>
-    client.request(`/admin/operation-logs?${queryString(query)}`, {
+    client.request(`/admin/operation_logs?${queryString(query)}`, {
       signal,
       validate: pageOf(isLog),
     }),
@@ -120,7 +125,7 @@ export const adminApi = {
     newPassword: string,
     signal: AbortSignal,
   ) =>
-    client.request("/admin/account/password", {
+    client.request("/admin/password", {
       method: "PUT",
       body: { oldPassword, newPassword },
       signal,

@@ -38,7 +38,7 @@ it("取消创建后恢复到创建入口的键盘焦点", async () => {
 it("创建冲突保留资料并要求重新检测，成功后打开相同企业的详情", async () => {
   let conflict = true;
   const request = installHttp((url, init) => {
-    if (url.pathname.endsWith("/id-availability"))
+    if (url.pathname.endsWith("/id_availability"))
       return success({
         companyId: url.searchParams.get("companyId"),
         available: true,
@@ -87,7 +87,7 @@ it("创建冲突保留资料并要求重新检测，成功后打开相同企业�
     contactName: "林先生",
     contactInfo: null,
     remark: null,
-    initialAdmin: { username: "admin", password: "Password-123", name: null },
+    adminInit: { username: "admin", password: "Password-123", name: null },
   });
 });
 
