@@ -13,7 +13,7 @@
 | 企业领域 | `dudu-server/src/main/java/com/dudu/duduserver/service/` | 企业 ID 严格六位 100000–999999（CompanyIdPolicy），显式主键不自增、创建后固定；创建企业与初始管理员同事务，主键冲突唯一约束最终裁决并整体回滚；停用原因必填、恢复时清空；完整编辑 null 清空字段；近期开通为近 7 天 + 最近 10 家，概览与汇总实时聚合、不建统计表 |
 | 操作记录 | `dudu-server/src/main/java/com/dudu/duduserver/service/OperationLogService.java` | 只追加成功操作（失败留痕待决策票 #64），summary 记录业务要点、不含密码；查询按企业、动作与结果过滤，时间倒序分页 |
 | 数据访问 | `dudu-server/src/main/java/com/dudu/duduserver/{entity,mapper,service}/` | 全部经 MyBatis-Plus `IService` 与 Lambda 条件构造器表达，无 XML 或注解 SQL；登录名唯一性由函数唯一索引 `(COALESCE(company_id,0), username)` 保证，utf8mb4_0900_ai_ci 大小写不敏感，跨企业允许同名 |
-| 业务迁移 | `dudu-server/src/main/resources/db/migration/V1__admin_core_tables.sql` | 首版五表：company、user、operation_log、reception_group、channel_account；企业显式主键、用户自增主键、操作记录只追加；`initial_admin_user_id` 为稳定定位候选列，待 #62 表结构收敛 |
+| 业务迁移 | `dudu-server/src/main/resources/db/migration/V1__admin_core_tables.sql` | 首版五表：company、user、operation_log、reception_group、channel_account；企业显式主键、用户自增主键、操作记录只追加；`init_user_id` 为稳定定位候选列，待 #62 表结构收敛 |
 | 时间约定 | `dudu-server/src/main/java/com/dudu/duduserver/config/{JacksonConfig,MyMetaObjectHandler}.java` | 统一服务器本地时间（北京时间，见 [ADR 0012](../adr/0012-beijing-time-end-to-end.md)）：存储与 HTTP 输出同形 `uuuu-MM-dd HH:mm:ss`（到秒，无时区标记，前端直接展示）；Wrapper 显式 set 更新时手工写 updateTime |
 | 平台管理员初始化 | `dudu-server/src/main/java/com/dudu/duduserver/config/AdminInitializer.java` | 启动时无平台账号则以内置凭据 Admin/Admin 创建（非生产凭据，首登后改密）；幂等可重复执行；不开放自注册 |
 | 校验分组 | `dudu-server/src/main/java/com/dudu/duduserver/config/validate/` | Save、Query 继承 Default，保留公共约束并支持各自分组约束 |

@@ -80,28 +80,8 @@ _Avoid_: 接待系统（口语别名）
 供企业内部管理员管理本企业员工、接待组和渠道接入账号的自有前端，即 DuduConsole。
 _Avoid_: 管理后台（指 DUDU 运营方使用的 DuduAdmin）
 
-**Admin 接口路径**:
-`/api/admin` 下直接挂资源与动作：/login、/logout、/detail、/password、/companies/create、/companies/list、/companies/{companyId}/detail、/companies/{companyId}/update、/overview、/operation-logs/list。
-_Avoid_: /auth/*、/account/* 中间层（模块概念不进路径）
-
-**角色值**:
-单用户表 role 的三个规范值：`admin`（平台管理员）、`console`（企业管理员）、`user`（员工/坐席）。按客户端身份命名，不借产品名或模块路径另造值。
-_Avoid_: dudu（产品名误作角色值）、account（不是角色）
-
-**操作码**:
-平台操作记录 action 的代码，前缀为目标对象域，点后为动词短语：`company.*` 企业对象操作、`admin.*` 平台管理员凭据操作（如 admin.password_reset、admin.password_change）。只有 company 与 admin 两个域。
-_Avoid_: account. 前缀（账号不是对象域）、user. 前缀（目标是人时按操作者域记 admin）
-
-**启停状态值**:
-企业与用户 status 的存储与接口统一值：1 启用、0 停用，纯数字，无 enabled/disabled 字符串形式。
-_Avoid_: enabled/disabled（不存在的字符串形式）
-
-**HTTP 时间格式**:
-接口出入参时间的统一格式 `yyyy-MM-dd HH:mm:ss`：到秒、无时区标记、语义恒为 UTC；前端解析时按 UTC 补时区再转本地展示。
-_Avoid_: 带 Z 的 ISO 8601（曾用已废）、毫秒（不输出）
-
 **运行会话（RunSession）**:
-mock-pulse 中「同一时刻只能有一个运行」的全局互斥与在途状态：能否启动、正在跑什么（直发 / 剧本 / 编排）、缺哪个渠道的连接、是否停止中。唯一裁决点在 runs 域 session 模块，thunk 与按钮都只问它。
+mock-pulse 中「同一时刻只能有一个运行」的全局互斥与在途状态：能否启动、正在跑什么（直发 / 剧本 / 编排）、缺哪个渠道的连接、是否停止中。
 _Avoid_: busy 状态、互斥标志（口语）
 
 **运行实况（LiveRun）**:

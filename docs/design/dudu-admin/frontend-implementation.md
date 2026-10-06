@@ -31,20 +31,21 @@
 | --- | --- | --- |
 | POST `/api/admin/login` | username、password | token、exp（秒）、user |
 | POST `/api/admin/logout` | 无业务入参 | null |
-| GET `/api/admin/detail` | 无 | userId、username、name、role |
+| GET `/api/admin/profile` | 无 | userId、username、name、role |
 | PUT `/api/admin/password` | oldPassword、newPassword | null |
-| GET `/api/admin/companies/list` | keyword、status、page、pageSize | list、total、page、pageSize |
-| GET `/api/admin/companies/{companyId}/detail` | 路径中的企业 ID | company、initialAdmin（可为 null） |
-| POST `/api/admin/companies/id-candidates` | 无 | companyId |
-| GET `/api/admin/companies/id-availability` | companyId | companyId、available |
-| POST `/api/admin/companies/create` | companyId、企业资料、initialAdmin | Company |
-| PUT `/api/admin/companies/{companyId}/update` | 完整企业资料 | Company |
-| POST `/api/admin/companies/{companyId}/disable` | disableReason | null |
-| POST `/api/admin/companies/{companyId}/enable` | 无 | null |
-| POST `/api/admin/companies/{companyId}/admin-password-reset` | newPassword | null |
-| GET `/api/admin/companies/{companyId}/resource-summary` | 无 | companyId、employeeCount、enabledEmployeeCount、groupCount、channelAccountCount |
+| GET `/api/admin/companies` | keyword、status、page、pageSize | list、total、page、pageSize |
+| GET `/api/admin/companies/{companyId}` | 路径中的企业 ID | company、adminInit（可为 null） |
+| POST `/api/admin/companies/id_candidates` | 无 | companyId |
+| GET `/api/admin/companies/id_availability` | companyId | companyId、available |
+| POST `/api/admin/companies` | companyId、企业资料、adminInit | Company |
+| PUT `/api/admin/companies/{companyId}` | 完整企业资料 | Company |
+| PUT `/api/admin/companies/{companyId}/status` | status（1/0）、disableReason（停用必填） | null |
+| PUT `/api/admin/companies/{companyId}/admin_password` | newPassword | null |
+| GET `/api/admin/companies/{companyId}/resource_summary` | 无 | companyId、employeeCount、enabledEmployeeCount、groupCount、channelAccountCount |
 | GET `/api/admin/overview` | 无 | totalCompanies、enabledCompanies、disabledCompanies、recentCreatedCount、recentCompanies |
-| GET `/api/admin/operation-logs/list` | companyId、action、result、page、pageSize | list、total、page、pageSize |
+| GET `/api/admin/operation_logs` | companyId、action、result、page、pageSize | list、total、page、pageSize |
+
+2026-10-07 更新：路径按《阿里巴巴 Java 开发手册》风格调整（小写下划线、纯名词、动作用 HTTP 方法表达），`login`/`logout` 为既定例外（不对应可独立命名的资源）；`disable`/`enable` 合并为 `status` 端点。
 
 公司资料字段：companyName（必填，100）、contactName（100）、contactInfo（200）、remark（1000）。括号内为最大长度。选填未填或清空提交 null。初始管理员传 username、password、name（可空，100）。企业 ID 限 100000–999999，创建后只读。
 

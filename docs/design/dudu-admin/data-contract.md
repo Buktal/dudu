@@ -1,6 +1,6 @@
 # DuduAdmin 表结构与接口字段草案
 
-状态：首版候选设计。首版后端已按本契约实现（2026-09-30，dudu-server `controller/admin/` + 迁移 V1，验证范围见[功能图谱](../../features/dudu-server.md)）：`/api/admin` 下的登录、账号、企业、概览与操作记录接口，company/user/operation_log/reception_group/channel_account 五表，业务 ID 十进制字符串序列化与北京时间 `yyyy-MM-dd HH:mm:ss` 时间格式均已落地；企业登录接口与企业侧字段保留给后续阶段。其余待定项收敛后才能发布最终契约。范围限于 Admin 首版及其真实资源汇总所需的数据，不展开消息、访客和会话全库。
+状态：首版候选设计。首版后端已按本契约实现（2026-09-30，dudu-server `controller/admin/` + 迁移 V1，验证范围见[功能图谱](../../features/dudu-server.md)）：`/api/admin` 下的登录、账号、企业、概览与操作记录接口，company/user/operation_log/reception_group/channel_account 五表，业务 ID 十进制字符串序列化与北京时间 `yyyy-MM-dd HH:mm:ss` 时间格式均已落地；企业登录接口与企业侧字段保留给后续阶段。2026-10-07 路径整体调整为手册风格（小写下划线、资源化动作），disable/enable 合并为 status 端点，前后端同步实施。其余待定项收敛后才能发布最终契约。范围限于 Admin 首版及其真实资源汇总所需的数据，不展开消息、访客和会话全库。
 
 决策跟踪：[Admin 表结构与接口字段如何统一？](https://github.com/Buktal/dudu/issues/67)。
 
@@ -26,7 +26,7 @@
 
 - 表名已确认不加产品前缀：独立的 `dudu` 数据库已经限定项目归属，直接采用业务名称。表名建议使用单数下划线命名；SQL 列用下划线，Java、JSON、Admin 用同一套小驼峰字段名。语义、空值和枚举同时统一。
 - 数据库与 Java 的命名差异交由既有 MyBatis-Plus 映射；不在前端增加 `company_name → companyName` 等通用转换层。HTTP DTO 仅暴露公开字段，不能把实体直接序列化以省略安全边界。
-- 数据库 ID 建议 `BIGINT`、Java `Long`；企业 ID 显式指定，不设 `AUTO_INCREMENT`，MyBatis-Plus 使用输入主键策略，不能自动生成自增或雪花 ID。用户、操作记录等其他 ID 保留各自的自增候选方案。HTTP 和 TypeScript 中业务 ID 统一十进制字符串，避免 JavaScript 大整数丢精度。该 HTTP 序列化尚未实现；JWT `exp` 仍是数字秒值。
+- 数据库 ID 建议 `BIGINT`、Java `Long`；企业 ID 显式指定，不设 `AUTO_INCREMENT`，MyBatis-Plus 使用输入主键策略，不能自动生成自增或雪花 ID。用户、操作记录等其他 ID 保留各自的自增候选方案。HTTP 和 TypeScript 中业务 ID 统一十进制字符串，避免 JavaScript 大整数丢精度；业务 ID 在 VO 层以 `String` 类型表达，序列化即为十进制字符串（已落地）。JWT `exp` 仍是数字秒值。
 - 日期列建议 `DATETIME(3)`，Java 沿用 `createTime/updateTime`；存储与 HTTP 输出统一用服务器本地时间（北京时间，见 [ADR 0012](../../adr/0012-beijing-time-end-to-end.md)），格式 `yyyy-MM-dd HH:mm:ss`（到秒，无时区标记，前端直接展示）。
 - 名称为非空文本；选填联系资料和备注，在响应中统一用 `null` 表示未填写。完整编辑表单提交 `null` 表示清空；不能用省略字段同时表达保留与清空。
 - 下列长度是候选存储上限，最终表单校验和接口校验必须采用相同值。用户名大小写规则、名称重名规则等业务选择仍见末尾待定项。
@@ -55,7 +55,7 @@
 
 候选索引：按 `status, create_time, company_id` 支持状态列表和稳定分页。不预先给 `company_name` 加唯一索引，待同名规则确认。
 
-企业与初始管理员需要稳定关联，不能用“查出第一个管理员”代替。候选是企业记录关联 `initial_admin_user_id`，与创建事务共同维护；该字段及复合外键要等管理员定位和重置目标流程确认后定稿，当前不将它视为已批准 DDL。
+企业与初始管理员需要稳定关联，不能用“查出第一个管理员”代替。候选是企业记录关联 `init_user_id`，与创建事务共同维护；该字段及复合外键要等管理员定位和重置目标流程确认后定稿，当前不将它视为已批准 DDL。
 
 ### 创建前的企业 ID 选择与检测
 
@@ -76,12 +76,12 @@
 - 输入变化、切换服务环境或重新生成时，旧的检测结果失效；只应用仍匹配当前输入、环境和请求次序的结果。随机请求期间若用户改了输入，迟到响应不能覆盖手输值。
 - 同一个 ID 即使刚检测可用，也可能在提交前被另一请求占用；成功开通以创建事务提交结果为准。
 
-拟定接口形态如下，供前后端按同一字段对接；路径随完整接口清单一同定稿。响应继续使用 `{ code, msg, data }`，分页响应平铺为 `{ code, msg, list, total, page, pageSize }`。
+拟定接口形态如下，供前后端按同一字段对接；完整路径清单见「接口与前端字段边界」。响应继续使用 `{ code, msg, data }`，分页响应平铺为 `{ code, msg, list, total, page, pageSize }`。
 
 | 接口候选 | 成功数据 | 约束 |
 | --- | --- | --- |
-| `POST /api/admin/companies/id-candidates` | `{ companyId: string }` | 后端随机并查重后返回六位数字字符串，不预留 |
-| `GET /api/admin/companies/id-availability?companyId=六位数字` | `{ companyId: string, available: boolean }` | 不缓存检测结果；占用属于正常查询结果，网络或数据库失败单独返回错误 |
+| `POST /api/admin/companies/id_candidates` | `{ companyId: string }` | 后端随机并查重后返回六位数字字符串，不预留 |
+| `GET /api/admin/companies/id_availability?companyId=六位数字` | `{ companyId: string, available: boolean }` | 不缓存检测结果；占用属于正常查询结果，网络或数据库失败单独返回错误 |
 
 实现验收需覆盖六位上下界与越界、随机碰撞后重试、有限次生成失败、手输可用与占用、服务不可达、修改输入后的旧响应、检测后并发抢占、创建失败的完整回滚。测试不得用“随机尝试恰好无碰撞”代替稳定的冲突场景验证。
 
@@ -110,7 +110,7 @@
 | `operation_log_id` | `operationLogId` | BIGINT，主键自增 | 记录标识 |
 | `operator_user_id` | `operatorUserId` | BIGINT，非空 | 已认证的实际操作者 |
 | `company_id` | `companyId` | BIGINT，可空 | 企业操作的目标；个人账号操作可为空 |
-| `action` | `action` | VARCHAR(64)，非空 | 创建、修改、停用、恢复、管理员重置或自身改密等操作代码，清单待定 |
+| `action` | `action` | VARCHAR(64)，非空 | 操作代码，前缀为目标对象域、点后为动词短语，只有 `company` 与 `admin` 两个域：`company.create` / `company.update` / `company.disable` / `company.enable` / `admin.password_reset` / `admin.password_change`；不用 `account.`、`user.` 前缀 |
 | `target_type` | `targetType` | VARCHAR(32)，非空 | 企业或用户等目标类型 |
 | `target_id` | `targetId` | BIGINT，可空 | 已存在的目标标识；创建失败可能尚无标识 |
 | `result` | `result` | VARCHAR(16)，非空 | 候选代码 `success` / `failure` |
@@ -134,9 +134,15 @@
 ## 接口与前端字段边界
 
 - 继续使用 `/api` 和 `{ code, msg, data }`；应用结果按既有业务码表达，网络和网关失败单独处理。
+- 首版已实现的完整路径清单（15 个），资源与动作直接挂在 `/api/admin` 下，不设 `/auth/*`、`/account/*` 中间层（模块概念不进路径）。路径遵循《阿里巴巴 Java 开发手册》风格：全小写、下划线分隔、纯名词、不在 URL 中暴露 create/list/disable 等动词，动作用 HTTP 方法表达：
+  - 管理员自身：`POST /api/admin/login`、`POST /api/admin/logout`、`GET /api/admin/profile`、`PUT /api/admin/password`。`login`/`logout` 是「URL 不含动词」的既定例外：登录返回 token+exp+user 的组合结果、退出无服务端状态可清理，二者都不对应可独立命名的资源（tokens/sessions 会虚构资源），保留动词命名
+  - 概览：`GET /api/admin/overview`
+  - 操作记录：`GET /api/admin/operation_logs`
+  - 企业：`POST /api/admin/companies`（创建）、`GET /api/admin/companies`（分页查询）、`POST /api/admin/companies/id_candidates`（随机候选）、`GET /api/admin/companies/id_availability`（可用性检测）、`GET /api/admin/companies/{companyId}`（详情）、`PUT /api/admin/companies/{companyId}`（编辑资料）、`PUT /api/admin/companies/{companyId}/status`（启停合并，请求体 `{ status, disableReason? }`：`0` 停用且原因必填，`1` 恢复并忽略清空原因）、`PUT /api/admin/companies/{companyId}/admin_password`（重置初始管理员密码）、`GET /api/admin/companies/{companyId}/resource_summary`
+  - 查询参数与请求体字段保持小驼峰（如 `companyId`、`disableReason`），路径段才用下划线
 - 平台登录请求：`{ username, password }`。企业登录请求：`{ companyId, username, password }`，直接按企业 ID 定位，不先查询另一套代码。不能让客户端传入 `role` 决定登录权限。
 - 企业查询与维护使用上表的 `companyId/companyName/contactName/contactInfo/remark/status/createTime/updateTime`，不另起 `tenantId/enterpriseName/createdAt` 等同义字段。
-- 创建企业请求包含选定的 `companyId`、企业资料与 `initialAdmin` 对象；`initialAdmin` 内使用 `username/password` 及最终确认的显示资料。密码是只写入参，不属于企业响应。编辑企业资料不允许变更 `companyId`。
+- 创建企业请求包含选定的 `companyId`、企业资料与 `adminInit` 对象；`adminInit` 内使用 `username/password` 及最终确认的显示资料。密码是只写入参，不属于企业响应。编辑企业资料不允许变更 `companyId`。
 - 企业详情可以组合企业与管理员的非敏感资料；初始管理员目标和最终对象结构在凭据流程确定后冻结。实体、创建入参、编辑入参和详情返回可以是不同的字段子集，不能因“统一字段名”把只读 ID、角色或哈希放开给客户端写入。
 - 前端只对日期、状态文案等做展示格式化，不改接口字段名。统计结果是聚合 DTO，不为每个统计字段新建数据库列。
 - 当前 Desk 使用 `id/agentId/workspaceId`、`createdAt/updatedAt` 等既有契约。本次不重命名这些代码；企业登录增加 `companyId` 是后续明确需要同步的界面与契约变更，不能顺带假定 `workspaceId` 的映射已经完成。
