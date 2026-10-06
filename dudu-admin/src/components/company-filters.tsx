@@ -45,8 +45,8 @@ export function CompanyFilters({
         value={query.status ?? "all"}
         options={[
           { value: "all", label: "全部状态" },
-          { value: "enabled", label: "正常启用" },
-          { value: "disabled", label: "已停用" },
+          { value: 1, label: "正常启用" },
+          { value: 0, label: "已停用" },
         ]}
         onChange={(status) =>
           onChange({
@@ -56,7 +56,7 @@ export function CompanyFilters({
           })
         }
       />
-      {(query.keyword || query.status) && (
+      {(query.keyword || query.status !== undefined) && (
         <Button
           variant="ghost"
           onClick={() => {

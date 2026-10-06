@@ -22,13 +22,13 @@ it("取消停用不发送写请求，失败保持状态，成功后可恢复", a
       if (failDisable) return failure(13200, "暂时无法停用");
       current = {
         ...current,
-        status: "disabled",
+        status: 0,
         disableReason: body().disableReason,
       };
       return success(null);
     }
     if (url.pathname.endsWith("/status") && body().status === 1) {
-      current = { ...current, status: "enabled", disableReason: null };
+      current = { ...current, status: 1, disableReason: null };
       return success(null);
     }
     return url.pathname.endsWith("/123456")
@@ -60,7 +60,7 @@ it("取消停用不发送写请求，失败保持状态，成功后可恢复", a
 
 it("重置密码明确展示初始管理员，不匹配时不提交，成功后清除输入", async () => {
   const request = installHttp((url) => {
-    if (url.pathname.endsWith("/admin_password")) return success(null);
+    if (url.pathname.endsWith("/initial_admin/password")) return success(null);
     return url.pathname.endsWith("/123456") ? success(detail) : success(page());
   });
   authenticatedSession("#/companies?companyId=123456");
@@ -88,7 +88,7 @@ it("重置密码明确展示初始管理员，不匹配时不提交，成功后�
   await screen.findByRole("button", { name: "重置密码" });
   const mutation = request.mock.calls.find(([, init]) => init.method === "PUT");
   expect(String(mutation?.[0])).toBe(
-    "http://127.0.0.1:8080/api/admin/companies/123456/admin_password",
+    "http://127.0.0.1:8080/api/admin/companies/123456/initial_admin/password",
   );
   expect(JSON.parse(String(mutation?.[1].body))).toEqual({
     newPassword: "Changed-123",

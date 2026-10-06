@@ -4,7 +4,7 @@ import com.dudu.duduserver.constant.EnableStatusEnum;
 import com.dudu.duduserver.constant.UserRoleEnum;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.service.UserService;
-import com.dudu.duduserver.util.PasswordCodec;
+import com.dudu.duduserver.util.PasswordHasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -22,14 +22,14 @@ public class AdminInitializer implements ApplicationRunner {
 
     // 内置初始化凭据（与前端登录表单预填约定一致，非生产凭据），首登后经改密接口更换
     private static final String INIT_USERNAME = "Admin";
-    private static final String INIT_PASSWORD = "Admin";
+    private static final String INIT_PASSWORD = "admin";
 
     private final UserService userService;
 
     @Override
     public void run(ApplicationArguments args) {
         boolean exists = userService.lambdaQuery()
-            .eq(UserDO::getRole, UserRoleEnum.ADMIN.code)
+            .eq(UserDO::getRole, UserRoleEnum.ADMIN)
             .isNull(UserDO::getCompanyId)
             .count() > 0;
         if (exists) {
@@ -39,9 +39,9 @@ public class AdminInitializer implements ApplicationRunner {
         UserDO admin = new UserDO();
         admin.setUsername(INIT_USERNAME);
         admin.setName(INIT_USERNAME);
-        admin.setPasswordHash(PasswordCodec.hash(INIT_PASSWORD));
-        admin.setRole(UserRoleEnum.ADMIN.code);
-        admin.setStatus(EnableStatusEnum.ENABLED.code);
+        admin.setPasswordHash(PasswordHasher.hash(INIT_PASSWORD));
+        admin.setRole(UserRoleEnum.ADMIN);
+        admin.setStatus(EnableStatusEnum.ENABLED);
         userService.save(admin);
         log.info("[admin-init] 平台管理员已初始化, username={}", INIT_USERNAME);
     }

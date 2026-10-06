@@ -7,7 +7,7 @@ import com.dudu.duduserver.dto.CompanyAdminInitDTO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.mapper.UserMapper;
 import com.dudu.duduserver.service.impl.UserServiceImpl;
-import com.dudu.duduserver.util.PasswordCodec;
+import com.dudu.duduserver.util.PasswordHasher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -41,8 +41,8 @@ class UserServiceImplTest {
         UserDO saved = captor.getValue();
         assertThat(saved.getName()).isEqualTo("boss");
         assertThat(saved.getCompanyId()).isEqualTo(100001L);
-        assertThat(saved.getRole()).isEqualTo(UserRoleEnum.CONSOLE.code);
-        assertThat(PasswordCodec.matches("secret123", saved.getPasswordHash())).isTrue();
+        assertThat(saved.getRole()).isEqualTo(UserRoleEnum.CONSOLE);
+        assertThat(PasswordHasher.matches("secret123", saved.getPasswordHash())).isTrue();
     }
 
     @Test
@@ -74,6 +74,6 @@ class UserServiceImplTest {
         verify(userMapper).updateById(captor.capture());
         UserDO patch = captor.getValue();
         assertThat(patch.getUserId()).isEqualTo(9L);
-        assertThat(PasswordCodec.matches("new-secret", patch.getPasswordHash())).isTrue();
+        assertThat(PasswordHasher.matches("new-secret", patch.getPasswordHash())).isTrue();
     }
 }

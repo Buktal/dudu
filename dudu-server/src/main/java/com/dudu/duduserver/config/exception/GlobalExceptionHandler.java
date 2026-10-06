@@ -1,6 +1,6 @@
 package com.dudu.duduserver.config.exception;
 
-import com.dudu.duduserver.config.response.R;
+import com.dudu.duduserver.common.R;
 import com.dudu.duduserver.constant.ApiEnum;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BizException.class)
     public R<Void> onBiz(BizException e) {
-        log.warn("[biz] {} {}", e.apiEnum().code, e.getMessage());
+        log.warn("[biz] 业务请求失败, code={}, message={}", e.apiEnum().code, e.getMessage());
         return R.err(e.apiEnum(), e.getMessage());
     }
 
@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public R<Void> onBodyUnreadable(HttpMessageNotReadableException e) {
-        log.warn("[param] 请求体不可读 {}", e.getMessage());
+        log.warn("[param] 请求体不可读, exception={}", e.getClass().getSimpleName());
         return R.err(ApiEnum.PARAM_ERROR, "请求体不可读");
     }
 
@@ -74,7 +74,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public R<Void> onUnknown(Exception e) {
-        log.error("[unknown] {}", e.getMessage(), e);
+        log.error("[unknown] 请求处理失败", e);
         return R.err(ApiEnum.UNKNOWN);
     }
 }

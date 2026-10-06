@@ -12,7 +12,7 @@ const nullableText = (value: unknown) =>
   value === null || typeof value === "string";
 const count = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-const status = (value: unknown) => value === "enabled" || value === "disabled";
+const status = (value: unknown) => value === 1 || value === 0;
 export const validCompanyId = (value: unknown): value is string =>
   typeof value === "string" && /^[1-9]\d{5}$/.test(value);
 // 后端时间为北京时间展示文本：yyyy-MM-dd HH:mm:ss
@@ -64,10 +64,10 @@ export function pageOf<T>(isItem: (value: unknown) => value is T) {
 export function isOverview(data: unknown): data is Overview {
   return (
     isRecord(data) &&
-    count(data.totalCompanies) &&
-    count(data.enabledCompanies) &&
-    count(data.disabledCompanies) &&
-    count(data.recentCreatedCount) &&
+    count(data.companyCount) &&
+    count(data.companyEnabledCount) &&
+    count(data.companyDisabledCount) &&
+    count(data.companyCreatedLast7DaysCount) &&
     Array.isArray(data.recentCompanies) &&
     data.recentCompanies.every(isCompany)
   );
@@ -77,11 +77,11 @@ export function isResources(data: unknown): data is Resources {
   return (
     isRecord(data) &&
     validCompanyId(data.companyId) &&
-    count(data.employeeCount) &&
-    count(data.enabledEmployeeCount) &&
-    data.enabledEmployeeCount <= data.employeeCount &&
-    count(data.groupCount) &&
-    count(data.channelAccountCount)
+    count(data.userCount) &&
+    count(data.userEnabledCount) &&
+    data.userEnabledCount <= data.userCount &&
+    count(data.userGroupCount) &&
+    count(data.companyChannelCount)
   );
 }
 
@@ -92,9 +92,8 @@ export function isLog(data: unknown): data is OperationLog {
     typeof data.operatorUserId === "string" &&
     (data.companyId === null || validCompanyId(data.companyId)) &&
     typeof data.action === "string" &&
-    (data.targetType === "company" || data.targetType === "user") &&
+    (data.target === "company" || data.target === "user") &&
     nullableText(data.targetId) &&
-    (data.result === "success" || data.result === "failure") &&
     nullableText(data.summary) &&
     time(data.createTime)
   );

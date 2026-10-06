@@ -6,13 +6,13 @@ import com.dudu.duduserver.config.auth.JwtProperties;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.*;
-import com.dudu.duduserver.dto.AdminPasswordChangeDTO;
 import com.dudu.duduserver.dto.AdminLoginDTO;
+import com.dudu.duduserver.dto.AdminPasswordChangeDTO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.service.AuthService;
 import com.dudu.duduserver.service.OperationLogService;
 import com.dudu.duduserver.service.UserService;
-import com.dudu.duduserver.util.PasswordCodec;
+import com.dudu.duduserver.util.PasswordHasher;
 import com.dudu.duduserver.vo.AdminDetailVO;
 import com.dudu.duduserver.vo.AdminLoginVO;
 import lombok.RequiredArgsConstructor;
@@ -34,11 +34,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AdminLoginVO login(AdminLoginDTO request) {
         UserDO user = userService.findPlatformUser(request.username());
-        if (user == null || !PasswordCodec.matches(request.password(), user.getPasswordHash())) {
+        if (user == null || !PasswordHasher.matches(request.password(), user.getPasswordHash())) {
             throw new BizException(ApiEnum.LOGIN_FAILED);
         }
-        if (!UserRoleEnum.ADMIN.code.equals(user.getRole())
-            || user.getStatus() == null || user.getStatus() != EnableStatusEnum.ENABLED.code) {
+        if (user.getRole() != UserRoleEnum.ADMIN
+            || user.getStatus() == null || user.getStatus() != EnableStatusEnum.ENABLED) {
             throw new BizException(ApiEnum.LOGIN_FAILED);
         }
 
@@ -63,11 +63,11 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "账号不存在");
         }
-        if (!PasswordCodec.matches(request.oldPassword(), user.getPasswordHash())) {
+        if (!PasswordHasher.matches(request.oldPassword(), user.getPasswordHash())) {
             throw new BizException(ApiEnum.PASSWORD_WRONG);
         }
         userService.updatePassword(user.getUserId(), request.newPassword());
         operationLogService.appendSuccess(user.getUserId(), null, OperationActionEnum.ADMIN_PASSWORD_CHANGE,
-            TargetTypeEnum.USER, user.getUserId(), "修改自己的密码");
+            user.getUserId(), "修改自己的密码");
     }
 }

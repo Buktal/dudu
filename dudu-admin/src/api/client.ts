@@ -8,7 +8,7 @@ import type { Account, LoginResult } from "./types";
 
 const SESSION_KEY = "dudu-admin.session";
 const REQUEST_TIMEOUT_MS = 20_000;
-export const COMPANY_ID_CONFLICT = 13300;
+export const COMPANY_ID_CONFLICT = 12300;
 const EXPIRED_CODES = new Set([10100, 10101, 10102, 10103, 10106]);
 
 export class ApiError extends Error {
@@ -131,6 +131,7 @@ export class AdminClient {
       body?: unknown;
       signal?: AbortSignal;
       anonymous?: boolean;
+      paginated?: boolean;
       validate: (data: unknown) => data is T;
     },
   ): Promise<T> {
@@ -189,7 +190,7 @@ export class AdminClient {
         !isRecord(envelope) ||
         typeof envelope.code !== "number" ||
         typeof envelope.msg !== "string" ||
-        !("data" in envelope)
+        (!options.paginated && !("data" in envelope))
       ) {
         throw new ApiError("服务响应异常，请重试");
       }
@@ -198,9 +199,9 @@ export class AdminClient {
           this.clearSession("登录已失效，请重新登录");
         throw new ApiError(envelope.msg || "操作失败，请重试", envelope.code);
       }
-      if (!options.validate(envelope.data))
-        throw new ApiError("服务响应异常，请重试");
-      return envelope.data;
+      const data = options.paginated ? envelope : envelope.data;
+      if (!options.validate(data)) throw new ApiError("服务响应异常，请重试");
+      return data;
     } catch (error) {
       if (
         generation !== this.state.generation ||
@@ -279,4 +280,4 @@ export const isAccount = (data: unknown): data is Account =>
   typeof data.userId === "string" &&
   typeof data.username === "string" &&
   typeof data.name === "string" &&
-  data.role === "platform_admin";
+  data.role === "admin";

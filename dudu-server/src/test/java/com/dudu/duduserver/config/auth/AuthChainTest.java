@@ -1,7 +1,7 @@
 package com.dudu.duduserver.config.auth;
 
 import cn.hutool.core.date.DateUtil;
-import com.dudu.duduserver.config.response.R;
+import com.dudu.duduserver.common.R;
 import com.dudu.duduserver.testutil.NoDatasourceSpringTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -60,20 +60,20 @@ class AuthChainTest extends NoDatasourceSpringTest {
     @ValueSource(strings = {"/api/ping", "/identity"})
     void validTokenUnlocksEndpointAndResolverInjectsUser(String path) throws Exception {
         long exp = DateUtil.currentSeconds() + 3600;
-        String token = jwtManager.createToken(new JwtUser(null, 5L, "agent", exp));
+        String token = jwtManager.createToken(new JwtUser(null, 5L, com.dudu.duduserver.constant.UserRoleEnum.USER, exp));
 
         mockMvc.perform(get(path).header("Authorization", "Bearer " + token)
                 .param("userId", "999").param("role", "admin"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
             .andExpect(jsonPath("$.data.userId").value(5))
-            .andExpect(jsonPath("$.data.role").value("agent"))
+            .andExpect(jsonPath("$.data.role").value("user"))
             .andExpect(jsonPath("$.data.exp").value(exp));
     }
 
     @Test
     void validTokenUnlocksEndpointWithoutMe() throws Exception {
-        String token = jwtManager.createToken(new JwtUser(null, 5L, "agent", DateUtil.currentSeconds() + 3600));
+        String token = jwtManager.createToken(new JwtUser(null, 5L, com.dudu.duduserver.constant.UserRoleEnum.USER, DateUtil.currentSeconds() + 3600));
 
         mockMvc.perform(get("/api/plain").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())

@@ -1,12 +1,12 @@
 package com.dudu.duduserver.service;
 
 import com.baomidou.mybatisplus.spring.service.IService;
-import com.dudu.duduserver.config.response.P;
+import com.dudu.duduserver.common.P;
 import com.dudu.duduserver.dto.*;
 import com.dudu.duduserver.entity.CompanyDO;
 import com.dudu.duduserver.vo.CompanyDetailVO;
+import com.dudu.duduserver.vo.CompanyIdAvailabilityVO;
 import com.dudu.duduserver.vo.CompanyVO;
-import com.dudu.duduserver.vo.IdAvailabilityVO;
 
 /**
  * 企业领域服务：Admin 首版的开通与维护闭环；企业 ID 显式选定、创建后固定。
@@ -15,7 +15,7 @@ import com.dudu.duduserver.vo.IdAvailabilityVO;
 public interface CompanyService extends IService<CompanyDO> {
 
     // 创建企业并初始化企业管理员，同一事务共同成功或共同失败；ID 冲突整体回滚
-    CompanyVO save(CompanyCreateDTO request, Long operatorUserId);
+    CompanyVO createCompany(CompanyCreateDTO request, Long operatorUserId);
 
     // 企业详情：企业资料与初始管理员非敏感资料
     CompanyDetailVO getDetail(String companyId);
@@ -39,5 +39,5 @@ public interface CompanyService extends IService<CompanyDO> {
     String generateIdCandidate();
 
     // 检测企业 ID 是否可用；不缓存、不占号
-    IdAvailabilityVO checkIdAvailability(String companyId);
+    CompanyIdAvailabilityVO checkIdAvailability(String companyId);
 }

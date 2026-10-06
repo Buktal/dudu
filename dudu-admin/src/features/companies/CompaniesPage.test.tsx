@@ -45,7 +45,7 @@ it("创建冲突保留资料并要求重新检测，成功后打开相同企业�
       });
     if (url.pathname === "/api/admin/companies" && init.method === "POST")
       return conflict
-        ? failure(13300, "企业 ID 已被占用，请重新选择")
+        ? failure(12300, "企业 ID 已被占用，请重新选择")
         : success(company);
     if (url.pathname === "/api/admin/companies/123456") return success(detail);
     return success(page());
@@ -129,9 +129,10 @@ it("保存完整资料时空字段传 null，详情和列表刷新为新资料",
 
 it("搜索和分页传递冻结的查询字段，迟到搜索不覆盖新结果", async () => {
   const old = deferred<Response>();
-  const request = installHttp((url) => {
-    if (url.searchParams.get("keyword") === "旧查询") return old.promise;
-    if (url.searchParams.get("keyword") === "新查询")
+  const request = installHttp((_url, init) => {
+    const query = JSON.parse(String(init.body ?? "{}"));
+    if (query.keyword === "旧查询") return old.promise;
+    if (query.keyword === "新查询")
       return success(page([{ ...company, companyName: "新查询企业" }]));
     return success({ ...page(), total: 21 });
   });
@@ -141,7 +142,7 @@ it("搜索和分页传递冻结的查询字段，迟到搜索不覆盖新结果"
   await waitFor(() =>
     expect(
       request.mock.calls.some(
-        ([url]) => new URL(String(url)).searchParams.get("page") === "2",
+        ([, init]) => JSON.parse(String(init.body ?? "{}")).page === 2,
       ),
     ).toBe(true),
   );
@@ -150,8 +151,8 @@ it("搜索和分页传递冻结的查询字段，迟到搜索不覆盖新结果"
   await waitFor(() =>
     expect(
       request.mock.calls.some(
-        ([url]) =>
-          new URL(String(url)).searchParams.get("keyword") === "旧查询",
+        ([, init]) =>
+          JSON.parse(String(init.body ?? "{}")).keyword === "旧查询",
       ),
     ).toBe(true),
   );
@@ -166,9 +167,12 @@ it("搜索和分页传递冻结的查询字段，迟到搜索不覆盖新结果"
   expect(
     screen.queryByRole("button", { name: "旧结果" }),
   ).not.toBeInTheDocument();
-  const latest = new URL(String(request.mock.calls.slice(-1)[0]?.[0]));
-  expect(latest.searchParams.get("page")).toBe("1");
-  expect(latest.searchParams.get("pageSize")).toBe("20");
+  const latest = request.mock.calls.slice(-1)[0];
+  expect(latest?.[1].method).toBe("POST");
+  expect(JSON.parse(String(latest?.[1].body))).toMatchObject({
+    page: 1,
+    pageSize: 20,
+  });
 });
 
 it("列表失败不冒充空数据，重试为空时才显示开通入口", async () => {

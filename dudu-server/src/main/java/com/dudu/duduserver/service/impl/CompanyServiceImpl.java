@@ -3,12 +3,11 @@ package com.dudu.duduserver.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import com.dudu.duduserver.common.P;
 import com.dudu.duduserver.config.exception.BizException;
-import com.dudu.duduserver.config.response.P;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.EnableStatusEnum;
 import com.dudu.duduserver.constant.OperationActionEnum;
-import com.dudu.duduserver.constant.TargetTypeEnum;
 import com.dudu.duduserver.dto.*;
 import com.dudu.duduserver.entity.CompanyDO;
 import com.dudu.duduserver.entity.UserDO;
@@ -17,10 +16,10 @@ import com.dudu.duduserver.service.CompanyService;
 import com.dudu.duduserver.service.OperationLogService;
 import com.dudu.duduserver.service.UserService;
 import com.dudu.duduserver.util.CompanyIdPolicy;
-import com.dudu.duduserver.vo.CompanyDetailVO;
-import com.dudu.duduserver.vo.CompanyVO;
-import com.dudu.duduserver.vo.IdAvailabilityVO;
 import com.dudu.duduserver.vo.CompanyAdminInitVO;
+import com.dudu.duduserver.vo.CompanyDetailVO;
+import com.dudu.duduserver.vo.CompanyIdAvailabilityVO;
+import com.dudu.duduserver.vo.CompanyVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -51,8 +50,8 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public CompanyVO save(CompanyCreateDTO request, Long operatorUserId) {
-        Long companyId = CompanyIdPolicy.parseValid(request.companyId());
+    public CompanyVO createCompany(CompanyCreateDTO request, Long operatorUserId) {
+        Long companyId = CompanyIdPolicy.parseCompanyId(request.companyId());
         if (getById(companyId) != null) {
             throw new BizException(ApiEnum.DATA_EXIST, MSG_COMPANY_ID_OCCUPIED);
         }
@@ -63,7 +62,7 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
         company.setContactName(request.contactName());
         company.setContactInfo(request.contactInfo());
         company.setRemark(request.remark());
-        company.setStatus(EnableStatusEnum.ENABLED.code);
+        company.setStatus(EnableStatusEnum.ENABLED);
         try {
             save(company);
         } catch (DuplicateKeyException e) {
@@ -78,7 +77,7 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
         updateById(link);
 
         operationLogService.appendSuccess(operatorUserId, companyId, OperationActionEnum.COMPANY_CREATE,
-            TargetTypeEnum.COMPANY, companyId,
+            companyId,
             "创建企业「" + request.companyName() + "」，初始管理员 " + request.adminInit().username());
         return CompanyVO.of(getById(companyId));
     }
@@ -116,7 +115,10 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
 
         // 先计数供 P 钳位页码（超出总页数取最后一页），分页查询本身不再重复计数
         long total = count(wrapper);
-        Page<CompanyDO> result = page(P.page(query, total), wrapper);
+        Page<CompanyDO> result = query.toPage(total);
+        if (total > 0) {
+            result = page(result, wrapper);
+        }
         result.setTotal(total);
         List<CompanyVO> views = result.getRecords().stream().map(CompanyVO::of).toList();
         return P.ok(result, views);
@@ -138,7 +140,7 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
             .update();
 
         operationLogService.appendSuccess(operatorUserId, id, OperationActionEnum.COMPANY_UPDATE,
-            TargetTypeEnum.COMPANY, id, "编辑企业「" + request.companyName() + "」基础资料");
+            id, "编辑企业「" + request.companyName() + "」基础资料");
         return CompanyVO.of(getById(id));
     }
 
@@ -149,17 +151,21 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
             throw new BizException(ApiEnum.PARAM_ERROR, "停用原因不能为空");
         }
         CompanyDO company = requireCompany(companyId);
-        if (company.getStatus() != null && company.getStatus() == EnableStatusEnum.DISABLED.code) {
+        if (company.getStatus() != null && company.getStatus() == EnableStatusEnum.DISABLED) {
             throw new BizException(ApiEnum.DATA_NOT_ALLOW, "企业已停用");
         }
-        lambdaUpdate()
+        boolean updated = lambdaUpdate()
             .eq(CompanyDO::getCompanyId, company.getCompanyId())
-            .set(CompanyDO::getStatus, EnableStatusEnum.DISABLED.code)
+            .eq(CompanyDO::getStatus, EnableStatusEnum.ENABLED)
+            .set(CompanyDO::getStatus, EnableStatusEnum.DISABLED)
             .set(CompanyDO::getDisableReason, disableReason)
             .set(CompanyDO::getUpdateTime, LocalDateTime.now())
             .update();
+        if (!updated) {
+            throw new BizException(ApiEnum.DATA_NOT_ALLOW, "企业状态已改变，请刷新后重试");
+        }
         operationLogService.appendSuccess(operatorUserId, company.getCompanyId(),
-            OperationActionEnum.COMPANY_DISABLE, TargetTypeEnum.COMPANY, company.getCompanyId(),
+            OperationActionEnum.COMPANY_DISABLE, company.getCompanyId(),
             "停用企业「" + company.getCompanyName() + "」：" + disableReason);
     }
 
@@ -167,17 +173,21 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
     @Transactional(rollbackFor = Exception.class)
     public void enable(String companyId, Long operatorUserId) {
         CompanyDO company = requireCompany(companyId);
-        if (company.getStatus() != null && company.getStatus() == EnableStatusEnum.ENABLED.code) {
+        if (company.getStatus() != null && company.getStatus() == EnableStatusEnum.ENABLED) {
             throw new BizException(ApiEnum.DATA_NOT_ALLOW, "企业已启用");
         }
-        lambdaUpdate()
+        boolean updated = lambdaUpdate()
             .eq(CompanyDO::getCompanyId, company.getCompanyId())
-            .set(CompanyDO::getStatus, EnableStatusEnum.ENABLED.code)
+            .eq(CompanyDO::getStatus, EnableStatusEnum.DISABLED)
+            .set(CompanyDO::getStatus, EnableStatusEnum.ENABLED)
             .set(CompanyDO::getDisableReason, null)
             .set(CompanyDO::getUpdateTime, LocalDateTime.now())
             .update();
+        if (!updated) {
+            throw new BizException(ApiEnum.DATA_NOT_ALLOW, "企业状态已改变，请刷新后重试");
+        }
         operationLogService.appendSuccess(operatorUserId, company.getCompanyId(),
-            OperationActionEnum.COMPANY_ENABLE, TargetTypeEnum.COMPANY, company.getCompanyId(),
+            OperationActionEnum.COMPANY_ENABLE, company.getCompanyId(),
             "恢复企业「" + company.getCompanyName() + "」");
     }
 
@@ -198,7 +208,7 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
         }
         userService.updatePassword(adminId, request.newPassword());
         operationLogService.appendSuccess(operatorUserId, company.getCompanyId(),
-            OperationActionEnum.ADMIN_PASSWORD_RESET, TargetTypeEnum.USER, adminId,
+            OperationActionEnum.ADMIN_PASSWORD_RESET, adminId,
             "重置企业「" + company.getCompanyName() + "」初始管理员 " + admin.getUsername() + " 的密码");
     }
 
@@ -215,14 +225,14 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
     }
 
     @Override
-    public IdAvailabilityVO checkIdAvailability(String companyId) {
-        Long id = CompanyIdPolicy.parseValid(companyId);
-        return new IdAvailabilityVO(String.valueOf(id), getById(id) == null);
+    public CompanyIdAvailabilityVO checkIdAvailability(String companyId) {
+        Long id = CompanyIdPolicy.parseCompanyId(companyId);
+        return new CompanyIdAvailabilityVO(String.valueOf(id), getById(id) == null);
     }
 
     // 解析并校验企业 ID，不存在时报数据不存在
     private CompanyDO requireCompany(String companyId) {
-        Long id = CompanyIdPolicy.parseValid(companyId);
+        Long id = CompanyIdPolicy.parseCompanyId(companyId);
         CompanyDO company = getById(id);
         if (company == null) {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "企业不存在");

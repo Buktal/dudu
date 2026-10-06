@@ -1,8 +1,11 @@
 package com.dudu.duduserver.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.dudu.duduserver.constant.EnableStatusEnum;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -31,7 +34,7 @@ public class CompanyDO {
     private String remark;
 
     // 启停状态，0/1，见 EnableStatusEnum
-    private Integer status;
+    private EnableStatusEnum status;
 
     // 最近一次停用原因，恢复时清空
     private String disableReason;
@@ -39,9 +42,11 @@ public class CompanyDO {
     // 创建事务写入的初始企业管理员（Console 账号）ID，稳定定位重置目标
     private Long initUserId;
 
-    // 创建时间    @TableField(value = "create_time", fill = FieldFill.INSERT)
+    // 创建时间
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    // 最后修改时间    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    // 最后修改时间
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

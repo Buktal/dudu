@@ -1,9 +1,14 @@
 package com.dudu.duduserver.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.dudu.duduserver.constant.EnableStatusEnum;
+import com.dudu.duduserver.constant.UserRoleEnum;
 import lombok.Data;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 
@@ -29,17 +34,20 @@ public class UserDO {
     private String name;
 
     // Bcrypt 哈希
+    @ToString.Exclude
     private String passwordHash;
 
     // 角色，见 UserRoleEnum
-    private String role;
+    private UserRoleEnum role;
 
     // 启停状态，0/1，见 EnableStatusEnum
-    private Integer status;
+    private EnableStatusEnum status;
 
-    // 创建时间    @TableField(value = "create_time", fill = FieldFill.INSERT)
+    // 创建时间
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    // 最后修改时间    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    // 最后修改时间
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

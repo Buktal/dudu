@@ -1,10 +1,10 @@
-export type CompanyStatus = "enabled" | "disabled";
+export type CompanyStatus = 1 | 0;
 
 export interface Account {
   userId: string;
   username: string;
   name: string;
-  role: "platform_admin";
+  role: "admin";
 }
 
 export interface LoginResult {
@@ -61,19 +61,19 @@ export interface CompanyQuery {
 }
 
 export interface Overview {
-  totalCompanies: number;
-  enabledCompanies: number;
-  disabledCompanies: number;
-  recentCreatedCount: number;
+  companyCount: number;
+  companyEnabledCount: number;
+  companyDisabledCount: number;
+  companyCreatedLast7DaysCount: number;
   recentCompanies: Company[];
 }
 
 export interface Resources {
   companyId: string;
-  employeeCount: number;
-  enabledEmployeeCount: number;
-  groupCount: number;
-  channelAccountCount: number;
+  userCount: number;
+  userEnabledCount: number;
+  userGroupCount: number;
+  companyChannelCount: number;
 }
 
 export const operationActions = {
@@ -82,7 +82,7 @@ export const operationActions = {
   "company.disable": "停用企业",
   "company.enable": "恢复企业",
   "admin.password_reset": "重置管理员密码",
-  "account.password_change": "修改个人密码",
+  "admin.password_change": "修改个人密码",
 } as const;
 
 export interface OperationLog {
@@ -90,9 +90,8 @@ export interface OperationLog {
   operatorUserId: string;
   companyId: string | null;
   action: keyof typeof operationActions;
-  targetType: "company" | "user";
+  target: "company" | "user";
   targetId: string | null;
-  result: "success" | "failure";
   summary: string | null;
   createTime: string;
 }
@@ -100,7 +99,6 @@ export interface OperationLog {
 export interface LogQuery {
   companyId?: string;
   action?: keyof typeof operationActions;
-  result?: "success" | "failure";
   page: number;
   pageSize: number;
 }

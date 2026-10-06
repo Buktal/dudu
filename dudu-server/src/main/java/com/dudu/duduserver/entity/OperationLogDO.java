@@ -1,6 +1,8 @@
 package com.dudu.duduserver.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.dudu.duduserver.constant.OperationActionEnum;
+import com.dudu.duduserver.constant.OperationTargetEnum;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -23,16 +25,14 @@ public class OperationLogDO {
     private Long companyId;
 
     // 操作代码，见 OperationActionEnum
-    private String action;
+    private OperationActionEnum action;
 
-    // 目标类型，见 TargetTypeEnum
-    private String targetType;
+    // 目标类型，见 OperationTargetEnum
+    @TableField("target_type")
+    private OperationTargetEnum target;
 
-    // 目标标识；创建失败可能为 null
+    // 已完成操作的目标标识
     private Long targetId;
-
-    // 结果代码，见 OperationResultEnum
-    private String result;
 
     // 可展示的非敏感结果说明
     private String summary;

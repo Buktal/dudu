@@ -96,17 +96,17 @@ export function CompaniesPage({
               {query.data.list.length === 0 ? (
                 <EmptyState
                   title={
-                    filters.keyword || filters.status
+                    filters.keyword || filters.status !== undefined
                       ? "未找到符合条件的企业"
                       : "暂无企业"
                   }
                   description={
-                    filters.keyword || filters.status
+                    filters.keyword || filters.status !== undefined
                       ? "调整搜索关键词或状态后重试。"
                       : "创建第一家企业，开始提供服务。"
                   }
                 >
-                  {filters.keyword || filters.status ? (
+                  {filters.keyword || filters.status !== undefined ? (
                     <Button
                       variant="outline"
                       onClick={() =>
@@ -194,7 +194,7 @@ export function CompaniesPage({
                                     open(company.companyId, "status")
                                   }
                                 >
-                                  {company.status === "enabled"
+                                  {company.status === 1
                                     ? "停用企业"
                                     : "恢复企业"}
                                 </DropdownMenuItem>

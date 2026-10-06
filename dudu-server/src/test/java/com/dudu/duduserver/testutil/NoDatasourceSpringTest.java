@@ -25,6 +25,9 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 public abstract class NoDatasourceSpringTest {
 
     @MockitoBean
+    protected UserGroupMemberService userGroupMemberService;
+
+    @MockitoBean
     protected UserService userService;
 
     @MockitoBean
@@ -34,10 +37,10 @@ public abstract class NoDatasourceSpringTest {
     protected OperationLogService operationLogService;
 
     @MockitoBean
-    protected ReceptionGroupService receptionGroupService;
+    protected UserGroupService userGroupService;
 
     @MockitoBean
-    protected ChannelAccountService channelAccountService;
+    protected CompanyChannelService companyChannelService;
 
     @MockitoBean
     protected OverviewService overviewService;

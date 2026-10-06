@@ -40,7 +40,7 @@ export function CompanyActions({
   const [reason, setReason] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
-  const disabling = company.status === "enabled";
+  const disabling = company.status === 1;
   const title =
     action === "edit"
       ? "编辑企业资料"

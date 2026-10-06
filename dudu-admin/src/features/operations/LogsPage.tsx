@@ -15,7 +15,6 @@ import {
   Pagination,
   RefreshButton,
 } from "@/components/page-parts";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
 import {
@@ -100,23 +99,7 @@ export function LogsPage() {
               })
             }
           />
-          <FilterSelect<"all" | "success" | "failure">
-            label="操作结果"
-            value={filters.result ?? "all"}
-            options={[
-              { value: "all", label: "全部结果" },
-              { value: "success", label: "成功" },
-              { value: "failure", label: "失败" },
-            ]}
-            onChange={(result) =>
-              setFilters({
-                ...filters,
-                page: 1,
-                result: result === "all" ? undefined : result,
-              })
-            }
-          />
-          {(filters.companyId || filters.action || filters.result) && (
+          {(filters.companyId || filters.action) && (
             <Button
               variant="ghost"
               onClick={() => {
@@ -146,7 +129,6 @@ export function LogsPage() {
                       <TableHead>操作</TableHead>
                       <TableHead>操作对象</TableHead>
                       <TableHead>操作人 ID</TableHead>
-                      <TableHead>结果</TableHead>
                       <TableHead>说明</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -161,9 +143,9 @@ export function LogsPage() {
                         </TableCell>
                         <TableCell className="font-mono">
                           {log.targetId
-                            ? `${log.targetType === "company" ? "企业" : "用户"} ${log.targetId}`
+                            ? `${log.target === "company" ? "企业" : "用户"} ${log.targetId}`
                             : "—"}
-                          {log.companyId && log.targetType === "user" && (
+                          {log.companyId && log.target === "user" && (
                             <p className="mt-1 text-xs text-muted-foreground">
                               企业 {log.companyId}
                             </p>
@@ -171,17 +153,6 @@ export function LogsPage() {
                         </TableCell>
                         <TableCell className="font-mono">
                           {log.operatorUserId}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              log.result === "success"
-                                ? "secondary"
-                                : "destructive"
-                            }
-                          >
-                            {log.result === "success" ? "成功" : "失败"}
-                          </Badge>
                         </TableCell>
                         <TableCell className="min-w-48 max-w-md whitespace-normal break-words">
                           {log.summary ?? "—"}
@@ -194,7 +165,7 @@ export function LogsPage() {
                 <EmptyState
                   title="暂无操作记录"
                   description={
-                    filters.companyId || filters.action || filters.result
+                    filters.companyId || filters.action
                       ? "未找到符合筛选条件的记录。"
                       : "企业维护与账号操作完成后，可在这里回查结果。"
                   }

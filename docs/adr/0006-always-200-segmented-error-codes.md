@@ -1,6 +1,6 @@
 # dudu-server 统一返回：HTTP 恒 200 + 五位分段错误码 + 单一业务异常
 
-dudu-server 的 `/api/**` 应用层响应以 HTTP 200 和 `config.response.R<T>`（code/msg/data）表达结果；错误码 `constant.ApiEnum` 五位分段（0 成功、10001 未知、101xx 认证、11xxx 参数、13xxx 数据、14xxx 第三方，沿用 BangBu 模式重编）。业务异常统一使用携带错误码的 `config.exception.BizException`，全局异常处理器转换为返回体。网络和网关故障仍由客户端单独处理。来源：wayfinder 地图 #6 两轮 grilling 决策（Q5/Q15/Q16），以及后续基础模块简化。
+dudu-server 的 `/api/**` 应用层响应以 HTTP 200 和 `common.R<T>`（code/msg/data）表达结果；错误码 `constant.ApiEnum` 五位分段（0 成功、10001 未知、101xx 认证、11xxx 参数、13xxx 数据、14xxx 第三方，沿用 BangBu 模式重编）。业务异常统一使用携带错误码的 `config.exception.BizException`，全局异常处理器转换为返回体。网络和网关故障仍由客户端单独处理。来源：wayfinder 地图 #6 两轮 grilling 决策（Q5/Q15/Q16），以及后续基础模块简化。
 
 ## Considered Options
 

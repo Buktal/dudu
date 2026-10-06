@@ -119,12 +119,12 @@ it("切换环境取消在途请求，旧令牌与迟到响应均不能进入新�
   await waitFor(() =>
     expect(
       fetchRequest.mock.calls.some(([url]) =>
-        String(url).includes("/companies?"),
+        String(url).includes("/companies/query"),
       ),
     ).toBe(true),
   );
   const previousSignal = fetchRequest.mock.calls.find(([url]) =>
-    String(url).includes("/companies?"),
+    String(url).includes("/companies/query"),
   )?.[1].signal;
   fireEvent.click(screen.getByRole("button", { name: "选择环境" }));
   fireEvent.click(await screen.findByRole("menuitem", { name: /线上环境/ }));

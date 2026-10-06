@@ -66,18 +66,18 @@ export function StatusBadge({ status }: { status: CompanyStatus }) {
     <Badge variant="outline">
       <span
         className={
-          status === "enabled"
+          status === 1
             ? "status-dot status-enabled"
             : "status-dot status-disabled"
         }
         aria-hidden="true"
       />
-      {status === "enabled" ? "正常启用" : "已停用"}
+      {status === 1 ? "正常启用" : "已停用"}
     </Badge>
   );
 }
 
-export function FilterSelect<T extends string>({
+export function FilterSelect<T extends string | number>({
   label,
   value,
   options,

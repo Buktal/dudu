@@ -1,8 +1,7 @@
 package com.dudu.duduserver.config.exception;
 
+import cn.hutool.core.util.StrUtil;
 import com.dudu.duduserver.constant.ApiEnum;
-
-import java.util.Optional;
 
 /**
  * 业务异常：携带 ApiEnum 错误码，服务层抛出，全局异常处理器统一转 R。
@@ -17,7 +16,7 @@ public final class BizException extends RuntimeException {
     }
 
     public BizException(ApiEnum apiEnum, String msg) {
-        super(Optional.ofNullable(msg).filter(s -> !s.isBlank()).orElseGet(() -> apiEnum.desc));
+        super(StrUtil.blankToDefault(msg, apiEnum.desc));
         this.apiEnum = apiEnum;
     }
 

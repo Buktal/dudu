@@ -1,6 +1,7 @@
 package com.dudu.duduserver.config.auth;
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import cn.hutool.jwt.JWT;
 import cn.hutool.jwt.JWTUtil;
@@ -21,10 +22,12 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class JwtManager {
 
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final JwtProperties properties;
 
     private byte[] key() {
-        return properties.jwtSecret().getBytes(StandardCharsets.UTF_8);
+        return properties.secret().getBytes(StandardCharsets.UTF_8);
     }
 
     public String createToken(JwtUser user) {
@@ -32,14 +35,14 @@ public class JwtManager {
     }
 
     public JwtUser parseAuthorization(String authorization) {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
+        if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
             throw new BizException(ApiEnum.TOKEN_EMPTY);
         }
-        return parseToken(authorization.substring("Bearer ".length()));
+        return parseToken(authorization.substring(BEARER_PREFIX.length()));
     }
 
     public JwtUser parseToken(String token) {
-        if (token == null || token.isBlank()) {
+        if (StrUtil.isBlank(token)) {
             throw new BizException(ApiEnum.TOKEN_EMPTY);
         }
 
@@ -53,7 +56,7 @@ public class JwtManager {
             throw new BizException(ApiEnum.TOKEN_VERIFY);
         }
 
-        if (user == null || user.userId() == null) {
+        if (user == null || user.userId() == null || user.role() == null) {
             throw new BizException(ApiEnum.TOKEN_VERIFY);
         }
         if (user.exp() == null || DateUtil.currentSeconds() >= user.exp()) {

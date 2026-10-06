@@ -16,10 +16,10 @@ it("概览显示真实返回统计，创建按钮打开开通表单", async () =
   installHttp((url) =>
     url.pathname.endsWith("/overview")
       ? success({
-          totalCompanies: 37,
-          enabledCompanies: 30,
-          disabledCompanies: 7,
-          recentCreatedCount: 6,
+          companyCount: 37,
+          companyEnabledCount: 30,
+          companyDisabledCount: 7,
+          companyCreatedLast7DaysCount: 6,
           recentCompanies: [company],
         })
       : success(page()),
@@ -58,8 +58,9 @@ it("操作记录查询使用企业 ID 与服务端操作码，空查询有明确
   });
   fireEvent.click(screen.getByRole("button", { name: "查询" }));
   await screen.findByText("未找到符合筛选条件的记录。");
-  const call = request.mock.calls.find(([url]) =>
-    String(url).includes("companyId=123456"),
+  const call = request.mock.calls.find(
+    ([, init]) => JSON.parse(String(init.body ?? "{}")).companyId === "123456",
   );
-  expect(String(call?.[0])).toContain("/api/admin/operation_logs?");
+  expect(call?.[1].method).toBe("POST");
+  expect(String(call?.[0])).toContain("/api/admin/operation_logs/query");
 });

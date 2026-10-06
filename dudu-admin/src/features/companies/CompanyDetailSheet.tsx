@@ -81,7 +81,7 @@ export function CompanyDetailSheet({
                   <dd className="whitespace-pre-wrap">
                     {detail.company.remark ?? "未填写"}
                   </dd>
-                  {detail.company.status === "disabled" && (
+                  {detail.company.status === 0 && (
                     <>
                       <dt>停用原因</dt>
                       <dd>{detail.company.disableReason ?? "未填写"}</dd>
@@ -95,9 +95,7 @@ export function CompanyDetailSheet({
                   </Button>
                   <Button variant="outline" onClick={() => setAction("status")}>
                     <Power data-icon="inline-start" />
-                    {detail.company.status === "enabled"
-                      ? "停用企业"
-                      : "恢复企业"}
+                    {detail.company.status === 1 ? "停用企业" : "恢复企业"}
                   </Button>
                 </div>
                 <Separator />

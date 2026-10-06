@@ -21,13 +21,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtManagerTest {
 
+    @Test
+    void defaultLifetimeIsSevenDays() {
+        assertThat(new JwtProperties("test-secret", null).ttlSeconds()).isEqualTo(604800L);
+    }
+
     private JwtManager manager() {
         return new JwtManager(new JwtProperties("test-secret", null));
     }
 
     @Test
     void roundTripCarriesAllUserFields() {
-        JwtUser expected = new JwtUser(null, 5L, "agent", DateUtil.currentSeconds() + 3600);
+        JwtUser expected = new JwtUser(null, 5L, com.dudu.duduserver.constant.UserRoleEnum.USER, DateUtil.currentSeconds() + 3600);
         String token = manager().createToken(expected);
 
         JwtUser user = manager().parseToken(token);
@@ -41,21 +46,21 @@ class JwtManagerTest {
         JwtManager manager = manager();
         long exp = DateUtil.currentSeconds() + 3600;
         var tasks = IntStream.range(1, 101).mapToObj(id -> (Callable<JwtUser>) () -> {
-            JwtUser user = new JwtUser(null, (long) id, "agent", exp);
+            JwtUser user = new JwtUser(null, (long) id, com.dudu.duduserver.constant.UserRoleEnum.USER, exp);
             return manager.parseToken(manager.createToken(user));
         }).toList();
 
         try (var executor = Executors.newFixedThreadPool(4)) {
             var results = executor.invokeAll(tasks);
             for (int i = 0; i < results.size(); i++) {
-                assertThat(results.get(i).get()).isEqualTo(new JwtUser(null, (long) i + 1, "agent", exp));
+                assertThat(results.get(i).get()).isEqualTo(new JwtUser(null, (long) i + 1, com.dudu.duduserver.constant.UserRoleEnum.USER, exp));
             }
         }
     }
 
     @Test
     void expiredTokenThrowsTokenExpire() {
-        String token = manager().createToken(new JwtUser(null, 5L, "agent", DateUtil.currentSeconds() - 60));
+        String token = manager().createToken(new JwtUser(null, 5L, com.dudu.duduserver.constant.UserRoleEnum.USER, DateUtil.currentSeconds() - 60));
 
         assertThatThrownBy(() -> manager().parseToken(token))
             .isInstanceOf(BizException.class)
@@ -65,7 +70,7 @@ class JwtManagerTest {
 
     @Test
     void wrongSecretThrowsTokenVerify() {
-        String token = manager().createToken(new JwtUser(null, 5L, "agent", DateUtil.currentSeconds() + 3600));
+        String token = manager().createToken(new JwtUser(null, 5L, com.dudu.duduserver.constant.UserRoleEnum.USER, DateUtil.currentSeconds() + 3600));
         JwtManager other = new JwtManager(new JwtProperties("another-secret", null));
 
         assertThatThrownBy(() -> other.parseToken(token))
@@ -88,7 +93,7 @@ class JwtManagerTest {
 
     @Test
     void unknownClaimsAreIgnoredForFutureExtension() {
-        JwtUser expected = new JwtUser(null, 5L, "agent", DateUtil.currentSeconds() + 3600);
+        JwtUser expected = new JwtUser(null, 5L, com.dudu.duduserver.constant.UserRoleEnum.USER, DateUtil.currentSeconds() + 3600);
         String token = JWTUtil.createToken(JSONUtil.parseObj(expected).set("tenantId", 42L),
             "test-secret".getBytes(StandardCharsets.UTF_8));
 
@@ -109,7 +114,7 @@ class JwtManagerTest {
     @Test
     void otherSigningAlgorithmIsRejected() {
         String token = JWT.create()
-            .addPayloads(JSONUtil.parseObj(new JwtUser(null, 5L, "agent", DateUtil.currentSeconds() + 3600)))
+            .addPayloads(JSONUtil.parseObj(new JwtUser(null, 5L, com.dudu.duduserver.constant.UserRoleEnum.USER, DateUtil.currentSeconds() + 3600)))
             .setSigner(JWTSignerUtil.hs512("test-secret".getBytes(StandardCharsets.UTF_8)))
             .sign();
 
@@ -121,7 +126,7 @@ class JwtManagerTest {
 
     @Test
     void missingIdentityIsRejected() {
-        String token = manager().createToken(new JwtUser(null, null, "agent", DateUtil.currentSeconds() + 3600));
+        String token = manager().createToken(new JwtUser(null, null, com.dudu.duduserver.constant.UserRoleEnum.USER, DateUtil.currentSeconds() + 3600));
 
         assertThatThrownBy(() -> manager().parseToken(token))
             .isInstanceOf(BizException.class)
@@ -131,7 +136,7 @@ class JwtManagerTest {
 
     @Test
     void missingExpiryIsRejected() {
-        String token = manager().createToken(new JwtUser(null, 5L, "agent", null));
+        String token = manager().createToken(new JwtUser(null, 5L, com.dudu.duduserver.constant.UserRoleEnum.USER, null));
 
         assertThatThrownBy(() -> manager().parseToken(token))
             .isInstanceOf(BizException.class)

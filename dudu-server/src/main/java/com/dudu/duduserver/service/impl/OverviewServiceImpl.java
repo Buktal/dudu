@@ -5,15 +5,15 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.EnableStatusEnum;
-import com.dudu.duduserver.entity.ChannelAccountDO;
+import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.CompanyDO;
-import com.dudu.duduserver.entity.ReceptionGroupDO;
 import com.dudu.duduserver.entity.UserDO;
+import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.service.*;
 import com.dudu.duduserver.util.CompanyIdPolicy;
+import com.dudu.duduserver.vo.AdminOverviewVO;
+import com.dudu.duduserver.vo.CompanyResourceSummaryVO;
 import com.dudu.duduserver.vo.CompanyVO;
-import com.dudu.duduserver.vo.OverviewVO;
-import com.dudu.duduserver.vo.ResourceSummaryVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -33,14 +33,14 @@ public class OverviewServiceImpl implements OverviewService {
 
     private final CompanyService companyService;
     private final UserService userService;
-    private final ReceptionGroupService receptionGroupService;
-    private final ChannelAccountService channelAccountService;
+    private final UserGroupService userGroupService;
+    private final CompanyChannelService companyChannelService;
 
     @Override
-    public OverviewVO overview() {
+    public AdminOverviewVO getOverview() {
         long total = companyService.count();
         long enabled = companyService.count(new LambdaQueryWrapper<CompanyDO>()
-            .eq(CompanyDO::getStatus, EnableStatusEnum.ENABLED.code));
+            .eq(CompanyDO::getStatus, EnableStatusEnum.ENABLED));
         long recentCount = companyService.count(new LambdaQueryWrapper<CompanyDO>()
             .ge(CompanyDO::getCreateTime, LocalDateTime.now().minusDays(RECENT_DAYS)));
 
@@ -50,25 +50,25 @@ public class OverviewServiceImpl implements OverviewService {
             .page(new Page<>(1, RECENT_COMPANY_LIMIT, false));
         List<CompanyVO> recent = recentPage.getRecords().stream().map(CompanyVO::of).toList();
 
-        return new OverviewVO(total, enabled, total - enabled, recentCount, recent);
+        return new AdminOverviewVO(total, enabled, total - enabled, recentCount, recent);
     }
 
     @Override
-    public ResourceSummaryVO resourceSummary(String companyId) {
-        Long id = CompanyIdPolicy.parseValid(companyId);
+    public CompanyResourceSummaryVO getCompanyResourceSummary(String companyId) {
+        Long id = CompanyIdPolicy.parseCompanyId(companyId);
         if (companyService.getById(id) == null) {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "企业不存在");
         }
-        long employeeCount = userService.count(new LambdaQueryWrapper<UserDO>()
+        long userCount = userService.count(new LambdaQueryWrapper<UserDO>()
             .eq(UserDO::getCompanyId, id));
-        long enabledEmployeeCount = userService.count(new LambdaQueryWrapper<UserDO>()
+        long userEnabledCount = userService.count(new LambdaQueryWrapper<UserDO>()
             .eq(UserDO::getCompanyId, id)
-            .eq(UserDO::getStatus, EnableStatusEnum.ENABLED.code));
-        long groupCount = receptionGroupService.count(new LambdaQueryWrapper<ReceptionGroupDO>()
-            .eq(ReceptionGroupDO::getCompanyId, id));
-        long channelAccountCount = channelAccountService.count(new LambdaQueryWrapper<ChannelAccountDO>()
-            .eq(ChannelAccountDO::getCompanyId, id));
-        return new ResourceSummaryVO(String.valueOf(id), employeeCount, enabledEmployeeCount,
-            groupCount, channelAccountCount);
+            .eq(UserDO::getStatus, EnableStatusEnum.ENABLED));
+        long userGroupCount = userGroupService.count(new LambdaQueryWrapper<UserGroupDO>()
+            .eq(UserGroupDO::getCompanyId, id));
+        long companyChannelCount = companyChannelService.count(new LambdaQueryWrapper<CompanyChannelDO>()
+            .eq(CompanyChannelDO::getCompanyId, id));
+        return new CompanyResourceSummaryVO(String.valueOf(id), userCount, userEnabledCount,
+            userGroupCount, companyChannelCount);
     }
 }

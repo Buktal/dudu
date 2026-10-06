@@ -27,7 +27,7 @@ public final class CompanyIdPolicy {
     }
 
     // 解析合法企业 ID 为 Long；非法输入抛参数错误
-    public static Long parseValid(String companyId) {
+    public static Long parseCompanyId(String companyId) {
         if (!isValid(companyId)) {
             throw new BizException(ApiEnum.PARAM_ERROR, "企业 ID 必须为 100000–999999 的六位数字");
         }

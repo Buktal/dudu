@@ -4,10 +4,9 @@ import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.EnableStatusEnum;
 import com.dudu.duduserver.constant.OperationActionEnum;
-import com.dudu.duduserver.constant.TargetTypeEnum;
-import com.dudu.duduserver.dto.CompanyCreateDTO;
-import com.dudu.duduserver.dto.CompanyAdminInitDTO;
 import com.dudu.duduserver.dto.AdminPasswordResetDTO;
+import com.dudu.duduserver.dto.CompanyAdminInitDTO;
+import com.dudu.duduserver.dto.CompanyCreateDTO;
 import com.dudu.duduserver.entity.CompanyDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.mapper.CompanyMapper;
@@ -48,7 +47,7 @@ class CompanyServiceImplTest {
         CompanyDO company = new CompanyDO();
         company.setCompanyId(100001L);
         company.setCompanyName("测试企业");
-        company.setStatus(EnableStatusEnum.ENABLED.code);
+        company.setStatus(EnableStatusEnum.ENABLED);
         return company;
     }
 
@@ -64,21 +63,21 @@ class CompanyServiceImplTest {
         admin.setUserId(9L);
         when(userService.createInitialAdmin(eq(100001L), any(CompanyAdminInitDTO.class))).thenReturn(admin);
 
-        CompanyVO view = companyService.save(createRequest(), 1L);
+        CompanyVO view = companyService.createCompany(createRequest(), 1L);
 
-        assertThat(view.companyId()).isEqualTo("100001");
-        assertThat(view.companyName()).isEqualTo("测试企业");
+        assertThat(view.getCompanyId()).isEqualTo("100001");
+        assertThat(view.getCompanyName()).isEqualTo("测试企业");
         // 初始管理员就位后回写企业定位列
         verify(companyMapper).updateById(any(CompanyDO.class));
         verify(operationLogService).appendSuccess(1L, 100001L, OperationActionEnum.COMPANY_CREATE,
-            TargetTypeEnum.COMPANY, 100001L, "创建企业「测试企业」，初始管理员 boss");
+            100001L, "创建企业「测试企业」，初始管理员 boss");
     }
 
     @Test
     void createRejectsWhenPrecheckFindsOccupiedId() {
         when(companyMapper.selectById(100001L)).thenReturn(persistedCompany());
 
-        assertThatThrownBy(() -> companyService.save(createRequest(), 1L))
+        assertThatThrownBy(() -> companyService.createCompany(createRequest(), 1L))
             .isInstanceOf(BizException.class)
             .extracting(e -> ((BizException) e).apiEnum().code)
             .isEqualTo(ApiEnum.DATA_EXIST.code);
@@ -91,7 +90,7 @@ class CompanyServiceImplTest {
         when(companyMapper.selectById(100001L)).thenReturn(null);
         when(companyMapper.insert(any(CompanyDO.class))).thenThrow(new DuplicateKeyException("PRIMARY"));
 
-        assertThatThrownBy(() -> companyService.save(createRequest(), 1L))
+        assertThatThrownBy(() -> companyService.createCompany(createRequest(), 1L))
             .isInstanceOf(BizException.class)
             .hasMessage("企业 ID 已被占用，请重新选择");
         // 企业与初始管理员共同成功或共同失败
@@ -101,7 +100,7 @@ class CompanyServiceImplTest {
     @Test
     void disableRejectsAlreadyDisabledCompany() {
         CompanyDO company = persistedCompany();
-        company.setStatus(EnableStatusEnum.DISABLED.code);
+        company.setStatus(EnableStatusEnum.DISABLED);
         when(companyMapper.selectById(100001L)).thenReturn(company);
 
         assertThatThrownBy(() -> companyService.disable("100001", "长期不再使用", 1L))
@@ -167,7 +166,7 @@ class CompanyServiceImplTest {
 
         verify(userService).updatePassword(9L, "new-secret");
         verify(operationLogService).appendSuccess(1L, 100001L, OperationActionEnum.ADMIN_PASSWORD_RESET,
-            TargetTypeEnum.USER, 9L, "重置企业「测试企业」初始管理员 boss 的密码");
+            9L, "重置企业「测试企业」初始管理员 boss 的密码");
     }
 
     @Test
@@ -181,15 +180,15 @@ class CompanyServiceImplTest {
         admin.setUsername("boss");
         admin.setName("老板");
         admin.setPasswordHash("$2a$10$secret");
-        admin.setStatus(EnableStatusEnum.ENABLED.code);
+        admin.setStatus(EnableStatusEnum.ENABLED);
         when(userService.getById(9L)).thenReturn(admin);
 
         var detail = companyService.getDetail("100001");
 
-        assertThat(detail.company().companyId()).isEqualTo("100001");
-        assertThat(detail.adminInit().userId()).isEqualTo("9");
-        assertThat(detail.adminInit().username()).isEqualTo("boss");
-        assertThat(detail.adminInit().name()).isEqualTo("老板");
+        assertThat(detail.company().getCompanyId()).isEqualTo("100001");
+        assertThat(detail.adminInit().getUserId()).isEqualTo("9");
+        assertThat(detail.adminInit().getUsername()).isEqualTo("boss");
+        assertThat(detail.adminInit().getName()).isEqualTo("老板");
     }
 
     @Test

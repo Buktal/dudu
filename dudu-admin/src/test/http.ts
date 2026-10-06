@@ -5,7 +5,7 @@ export const account: Account = {
   userId: "42",
   username: "operator",
   name: "平台运营",
-  role: "platform_admin",
+  role: "admin",
 };
 export const company: Company = {
   companyId: "123456",
@@ -13,7 +13,7 @@ export const company: Company = {
   contactName: "林先生",
   contactInfo: "support@example.com",
   remark: "优先联系负责人",
-  status: "enabled",
+  status: 1,
   disableReason: null,
   createTime: "2026-09-28 16:00:00",
   updateTime: "2026-09-29 17:00:00",
@@ -24,7 +24,7 @@ export const detail: CompanyDetail = {
     userId: "9007199254740993",
     username: "admin",
     name: "企业管理员",
-    status: "enabled",
+    status: 1,
     createTime: company.createTime,
   },
 };
@@ -35,7 +35,11 @@ export const page = (list: Company[] = [company]): Page<Company> => ({
   pageSize: 20,
 });
 export const success = (data: unknown) =>
-  Response.json({ code: 0, msg: "成功", data });
+  Response.json(
+    data && typeof data === "object" && "list" in data
+      ? { code: 0, msg: "成功", ...data }
+      : { code: 0, msg: "成功", data },
+  );
 export const failure = (code: number, msg: string) =>
   Response.json({ code, msg, data: null });
 

@@ -9,7 +9,7 @@ import com.dudu.duduserver.dto.CompanyAdminInitDTO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.mapper.UserMapper;
 import com.dudu.duduserver.service.UserService;
-import com.dudu.duduserver.util.PasswordCodec;
+import com.dudu.duduserver.util.PasswordHasher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
@@ -32,10 +32,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         UserDO admin = new UserDO();
         admin.setCompanyId(companyId);
         admin.setUsername(request.username());
-        admin.setName(request.name() == null || request.name().isBlank() ? request.username() : request.name());
-        admin.setPasswordHash(PasswordCodec.hash(request.password()));
-        admin.setRole(UserRoleEnum.CONSOLE.code);
-        admin.setStatus(EnableStatusEnum.ENABLED.code);
+        admin.setName(cn.hutool.core.util.StrUtil.blankToDefault(request.name(), request.username()));
+        admin.setPasswordHash(PasswordHasher.hash(request.password()));
+        admin.setRole(UserRoleEnum.CONSOLE);
+        admin.setStatus(EnableStatusEnum.ENABLED);
         try {
             save(admin);
         } catch (DuplicateKeyException e) {
@@ -49,7 +49,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     public void updatePassword(Long userId, String newPassword) {
         UserDO patch = new UserDO();
         patch.setUserId(userId);
-        patch.setPasswordHash(PasswordCodec.hash(newPassword));
+        patch.setPasswordHash(PasswordHasher.hash(newPassword));
         updateById(patch);
     }
 }

@@ -15,21 +15,17 @@ import {
   validCompanyId,
 } from "./validators";
 
-function queryString(query: CompanyQuery | LogQuery) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query))
-    if (value !== undefined && value !== "") params.set(key, String(value));
-  return params.toString();
-}
-
 // 企业启停状态值，与后端 EnableStatusEnum 对齐：0 停用、1 恢复
 const STATUS_DISABLED = 0;
 const STATUS_ENABLED = 1;
 
 export const adminApi = {
   companies: (client: AdminClient, query: CompanyQuery, signal: AbortSignal) =>
-    client.request(`/admin/companies?${queryString(query)}`, {
+    client.request("/admin/companies/query", {
+      method: "POST",
+      body: query,
       signal,
+      paginated: true,
       validate: pageOf(isCompany),
     }),
   company: (client: AdminClient, id: string, signal: AbortSignal) =>
@@ -100,7 +96,7 @@ export const adminApi = {
     signal: AbortSignal,
   ) =>
     client.request(
-      `/admin/companies/${encodeURIComponent(id)}/admin_password`,
+      `/admin/companies/${encodeURIComponent(id)}/initial_admin/password`,
       { method: "PUT", body: { newPassword }, signal, validate: isEmpty },
     ),
   overview: (client: AdminClient, signal: AbortSignal) =>
@@ -115,8 +111,11 @@ export const adminApi = {
       },
     ),
   logs: (client: AdminClient, query: LogQuery, signal: AbortSignal) =>
-    client.request(`/admin/operation_logs?${queryString(query)}`, {
+    client.request("/admin/operation_logs/query", {
+      method: "POST",
+      body: query,
       signal,
+      paginated: true,
       validate: pageOf(isLog),
     }),
   changePassword: (
@@ -125,7 +124,7 @@ export const adminApi = {
     newPassword: string,
     signal: AbortSignal,
   ) =>
-    client.request("/admin/password", {
+    client.request("/admin/profile/password", {
       method: "PUT",
       body: { oldPassword, newPassword },
       signal,

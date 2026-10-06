@@ -53,16 +53,16 @@ function ResourceCells({ companyId }: { companyId: string }) {
     query.data && (
       <>
         <TableCell className="text-right font-mono">
-          {query.data.employeeCount}
+          {query.data.userCount}
         </TableCell>
         <TableCell className="text-right font-mono">
-          {query.data.enabledEmployeeCount}
+          {query.data.userEnabledCount}
         </TableCell>
         <TableCell className="text-right font-mono">
-          {query.data.groupCount}
+          {query.data.userGroupCount}
         </TableCell>
         <TableCell className="text-right font-mono">
-          {query.data.channelAccountCount}
+          {query.data.companyChannelCount}
         </TableCell>
       </>
     )
@@ -92,7 +92,7 @@ export function ResourcesPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="企业资源汇总"
-        description="查看各企业的员工、接待组和渠道接入账号数量。"
+        description="查看各企业的用户、用户组和渠道接入账号数量。"
         actions={
           <RefreshButton loading={query.loading} onClick={query.refresh} />
         }
@@ -113,9 +113,9 @@ export function ResourcesPage({
                       <TableHead>企业名称</TableHead>
                       <TableHead>企业 ID</TableHead>
                       <TableHead>企业状态</TableHead>
-                      <TableHead className="text-right">员工总数</TableHead>
-                      <TableHead className="text-right">启用员工</TableHead>
-                      <TableHead className="text-right">接待组</TableHead>
+                      <TableHead className="text-right">用户总数</TableHead>
+                      <TableHead className="text-right">启用用户</TableHead>
+                      <TableHead className="text-right">用户组</TableHead>
                       <TableHead className="text-right">渠道接入账号</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -149,12 +149,12 @@ export function ResourcesPage({
               ) : (
                 <EmptyState
                   title={
-                    filters.keyword || filters.status
+                    filters.keyword || filters.status !== undefined
                       ? "未找到符合条件的企业"
                       : "暂无企业资源"
                   }
                   description={
-                    filters.keyword || filters.status
+                    filters.keyword || filters.status !== undefined
                       ? "调整筛选条件后重试。"
                       : "企业开通后，可在这里查看资源汇总。"
                   }

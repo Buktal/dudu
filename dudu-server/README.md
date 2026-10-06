@@ -10,16 +10,16 @@ Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、
 - [统一返回决策](../docs/adr/0006-always-200-segmented-error-codes.md)。
 - [认证决策](../docs/adr/0007-jwt-auth-chain.md)。
 
-Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `config.auth`。响应体 `R` 与分页响应 `P`（平铺 code/msg/list/total/page/pageSize）位于 `config.response`，业务异常位于 `config.exception`。Admin 接口位于 `controller/admin/`，统一前缀 `/api/admin`，仅 `admin` 角色可访问（登录端点除外）。数据库操作优先使用 MyBatis-Plus `IService` 与 Lambda 条件构造器，不新增 XML 或注解 SQL。
+Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `config.auth`。响应体 `R` 与分页响应 `P`（平铺 code/msg/list/total/page/pageSize）位于 `common`，业务异常位于 `config.exception`。Admin 接口位于 `controller/admin/`，统一前缀 `/api/admin`，仅 `admin` 角色可访问（登录端点除外）。数据库操作优先使用 MyBatis-Plus `IService` 与 Lambda 条件构造器，不新增 XML 或注解 SQL。
 
 ## 配置与检查
 
 - 使用 Java 21 和 Maven，在本目录运行 `mvn clean test`。
 - 默认环境要求提供 `DUDU_AUTH_JWT_SECRET`。生产 HS256 密钥使用至少 32 字节的随机值；开发可显式启用 `SPRING_PROFILES_ACTIVE=dev` 使用开发密钥。
-- 首个平台管理员在启动时初始化：库中无平台账号时以 `AdminInitializer` 内置凭据 `Admin`/`Admin` 创建（与前端登录表单预填约定一致，不是生产凭据，首登后经改密接口更换）。改密接口要求新密码 8–72 字符；初始化凭据不做该长度校验，如需改回短密码须重建初始化账号。
+- 首个平台管理员在启动时初始化：库中无平台账号时以 `AdminInitializer` 内置凭据 `Admin`/`admin` 创建（与前端登录表单预填约定一致，不是生产凭据，首登后经改密接口更换）。改密接口要求新密码 8–72 字符；初始化凭据不做该长度校验，如需改回短密码须重建初始化账号。
 - 本地 MySQL 与 `dev` 数据源配置见下文。默认环境仍通过 `SPRING_DATASOURCE_URL`、`SPRING_DATASOURCE_USERNAME`、`SPRING_DATASOURCE_PASSWORD` 提供连接，不读取本地 `.env`。
 - `/api/**` 默认需要 `Authorization: Bearer <token>`；唯一放行路径为 `POST /api/admin/login`，`/api/admin/**` 叠加 admin 角色校验。
-- 业务表由 Flyway 版本化迁移维护（当前 V1：company、user、operation_log、reception_group、channel_account）；已提交迁移不可变，变更新增迁移。
+- 业务表由 Flyway 版本化迁移维护（当前 V2：company、user、operation_log、user_group、user_group_member、company_channel）；已提交迁移不可变，变更新增迁移。
 
 ## 本地 MySQL
 

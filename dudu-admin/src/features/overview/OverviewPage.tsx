@@ -66,22 +66,22 @@ export function OverviewPage({
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Metric
                 label="企业总数"
-                value={query.data.totalCompanies}
+                value={query.data.companyCount}
                 icon={<Building2 className="size-5" />}
               />
               <Metric
                 label="正常启用"
-                value={query.data.enabledCompanies}
+                value={query.data.companyEnabledCount}
                 icon={<CheckCircle2 className="size-5" />}
               />
               <Metric
                 label="已停用"
-                value={query.data.disabledCompanies}
+                value={query.data.companyDisabledCount}
                 icon={<CirclePause className="size-5" />}
               />
               <Metric
                 label="近 7 天开通"
-                value={query.data.recentCreatedCount}
+                value={query.data.companyCreatedLast7DaysCount}
                 icon={<TrendingUp className="size-5" />}
               />
             </div>

@@ -1,6 +1,6 @@
 package com.dudu.duduserver.config;
 
-import com.dudu.duduserver.config.auth.AdminGuardInterceptor;
+import com.dudu.duduserver.config.auth.AdminAuthInterceptor;
 import com.dudu.duduserver.config.auth.AuthInterceptor;
 import com.dudu.duduserver.config.auth.MeResolver;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ public class WebConfig implements WebMvcConfigurer {
     private static final String ADMIN_LOGIN_PATH = "/api/admin/login";
 
     private final AuthInterceptor authInterceptor;
-    private final AdminGuardInterceptor adminGuardInterceptor;
+    private final AdminAuthInterceptor adminAuthInterceptor;
     private final MeResolver meResolver;
 
     @Override
@@ -27,7 +27,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(authInterceptor)
             .addPathPatterns("/api/**")
             .excludePathPatterns(ADMIN_LOGIN_PATH);
-        registry.addInterceptor(adminGuardInterceptor)
+        registry.addInterceptor(adminAuthInterceptor)
             .addPathPatterns("/api/admin/**")
             .excludePathPatterns(ADMIN_LOGIN_PATH);
     }

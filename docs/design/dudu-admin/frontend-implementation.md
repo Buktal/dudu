@@ -25,33 +25,33 @@
 
 ## 当前 HTTP 对接契约
 
-源地址由环境模块选定，请求层追加 `/api`；除登录外使用 `Authorization: Bearer <token>`。统一响应 `{ code, msg, data }`，`code=0` 为成功；空成功数据为 `null`。响应数据在单一 HTTP 边界校验，不增加字段改名层。ID 为字符串；时间为北京时间的 `yyyy-MM-dd HH:mm:ss` 字符串（无时区标记），即为最终展示文本，直接展示、不做时区换算（见 [ADR 0012](../../adr/0012-beijing-time-end-to-end.md)）。
+源地址由环境模块选定，请求层追加 `/api`；除登录外使用 `Authorization: Bearer <token>`。非分页响应 `{ code, msg, data }`；分页响应 `{ code, msg, list, total, page, pageSize }`，分页字段不嵌套 data，`code=0` 为成功；空成功数据为 `null`。响应数据在单一 HTTP 边界校验，不增加字段改名层。ID 为字符串；时间为北京时间的 `yyyy-MM-dd HH:mm:ss` 字符串（无时区标记），即为最终展示文本，直接展示、不做时区换算（见 [ADR 0012](../../adr/0012-beijing-time-end-to-end.md)）。
 
 | 方法与路径（含 /api） | 请求或查询 | 成功 data |
 | --- | --- | --- |
 | POST `/api/admin/login` | username、password | token、exp（秒）、user |
 | POST `/api/admin/logout` | 无业务入参 | null |
 | GET `/api/admin/profile` | 无 | userId、username、name、role |
-| PUT `/api/admin/password` | oldPassword、newPassword | null |
-| GET `/api/admin/companies` | keyword、status、page、pageSize | list、total、page、pageSize |
+| PUT `/api/admin/profile/password` | oldPassword、newPassword | null |
+| POST `/api/admin/companies/query` | JSON：keyword、status、page、pageSize | list、total、page、pageSize |
 | GET `/api/admin/companies/{companyId}` | 路径中的企业 ID | company、adminInit（可为 null） |
 | POST `/api/admin/companies/id_candidates` | 无 | companyId |
 | GET `/api/admin/companies/id_availability` | companyId | companyId、available |
 | POST `/api/admin/companies` | companyId、企业资料、adminInit | Company |
 | PUT `/api/admin/companies/{companyId}` | 完整企业资料 | Company |
 | PUT `/api/admin/companies/{companyId}/status` | status（1/0）、disableReason（停用必填） | null |
-| PUT `/api/admin/companies/{companyId}/admin_password` | newPassword | null |
-| GET `/api/admin/companies/{companyId}/resource_summary` | 无 | companyId、employeeCount、enabledEmployeeCount、groupCount、channelAccountCount |
-| GET `/api/admin/overview` | 无 | totalCompanies、enabledCompanies、disabledCompanies、recentCreatedCount、recentCompanies |
-| GET `/api/admin/operation_logs` | companyId、action、result、page、pageSize | list、total、page、pageSize |
+| PUT `/api/admin/companies/{companyId}/initial_admin/password` | newPassword | null |
+| GET `/api/admin/companies/{companyId}/resource_summary` | 无 | companyId、userCount、userEnabledCount、userGroupCount、companyChannelCount |
+| GET `/api/admin/overview` | 无 | companyCount、companyEnabledCount、companyDisabledCount、companyCreatedLast7DaysCount、recentCompanies |
+| POST `/api/admin/operation_logs/query` | JSON：companyId、action、page、pageSize | list、total、page、pageSize |
 
-2026-10-07 更新：路径按《阿里巴巴 Java 开发手册》风格调整（小写下划线、纯名词、动作用 HTTP 方法表达），`login`/`logout` 为既定例外（不对应可独立命名的资源）；`disable`/`enable` 合并为 `status` 端点。
+2026-10-07 更新：路径按《阿里巴巴 Java 开发手册》风格调整（小写下划线、纯名词、动作用 HTTP 方法表达），`login`/`logout` 为既定例外（不对应可独立命名的资源）；`disable`/`enable` 合并为 `status` 端点；复杂列表查询使用 POST `/query` 接收 JSON 请求体。
 
 公司资料字段：companyName（必填，100）、contactName（100）、contactInfo（200）、remark（1000）。括号内为最大长度。选填未填或清空提交 null。初始管理员传 username、password、name（可空，100）。企业 ID 限 100000–999999，创建后只读。
 
-分页采用 page=1、pageSize=20；排序由现有服务端负责。状态为 1/0（启用/停用），结果为 success/failure。操作码采用 company.create、company.update、company.disable、company.enable、admin.password_reset、admin.password_change。
+分页采用 page=1、pageSize=20；排序由现有服务端负责。状态为 1/0（启用/停用）；日志只记录完成的操作，不设 result 字段。操作码采用 company.create、company.update、company.disable、company.enable、admin.password_reset、admin.password_change。
 
-10100–10103 与 10106 会清除已认证会话；登录失败 10104 留在登录页；创建冲突 13300 清除 ID 可用状态并保留表单；原密码错误 13310 保留改密表单。网关、网络、超时、非法响应独立显示，不当作空列表或零统计。
+10100–10103 与 10106 会清除已认证会话；登录失败 10104 留在登录页；创建冲突 12300 清除 ID 可用状态并保留表单；原密码错误 12310 保留改密表单。网关、网络、超时、非法响应独立显示，不当作空列表或零统计。
 
 ## 状态与异步行为
 
@@ -65,7 +65,7 @@
 
 常规检查在 `dudu-admin/` 执行：`yarn check:all`、`yarn build`。测试使用 Vitest/Testing Library，覆盖登录及错误、身份恢复和失效、退出失败、开发环境切换、生产地址固定、企业 ID 边界与竞态、创建冲突、资料同步、启停、管理员重置、自身改密、统计与查询失败。测试中的固定返回不会由应用入口导入。
 
-浏览器布局检查使用独立固定 HTTP 响应服务：
+以下为 2026-09-30 历史布局验收记录；固定响应脚本仍是旧契约，不能用于当前版本联调。2026-10-07 当前版本使用真实 Server 与独立 MySQL 验证，结果见 [Java 审查记录](../dudu-server/java-review.md)。原复现命令：
 
 ```powershell
 # 仓库根，独立终端；仅用于布局验收，不启动真实后端

@@ -111,34 +111,35 @@
 | `operator_user_id` | `operatorUserId` | BIGINT，非空 | 已认证的实际操作者 |
 | `company_id` | `companyId` | BIGINT，可空 | 企业操作的目标；个人账号操作可为空 |
 | `action` | `action` | VARCHAR(64)，非空 | 操作代码，前缀为目标对象域、点后为动词短语，只有 `company` 与 `admin` 两个域：`company.create` / `company.update` / `company.disable` / `company.enable` / `admin.password_reset` / `admin.password_change`；不用 `account.`、`user.` 前缀 |
-| `target_type` | `targetType` | VARCHAR(32)，非空 | 企业或用户等目标类型 |
+| `target_type` | `target` | VARCHAR(32)，非空 | 企业或用户等目标类型 |
 | `target_id` | `targetId` | BIGINT，可空 | 已存在的目标标识；创建失败可能尚无标识 |
-| `result` | `result` | VARCHAR(16)，非空 | 候选代码 `success` / `failure` |
 | `summary` | `summary` | VARCHAR(1000)，可空 | 允许展示的非敏感结果说明 |
 | `create_time` | `createTime` | DATETIME(3)，非空 | 操作时间；记录只追加，不设更新时间 |
 
-候选索引：`company_id, create_time, operation_log_id` 和 `create_time, operation_log_id`。记录范围、失败留痕和查询条件待操作记录票确定；业务回滚与失败记录的提交不能错误地共用一个必然回滚的事务。禁止记录密码、哈希、令牌或原样请求体。
+候选索引：`company_id, create_time, operation_log_id` 和 `create_time, operation_log_id`。仅记录已完成操作，与业务事务共同提交；失败不入操作记录，不设结果字段或结果筛选。禁止记录密码、哈希、令牌或原样请求体。
 
 ## 真实资源汇总所需的表
 
-以上三张表能支撑企业和员工数量，不能支撑接待组、渠道接入账号的真实数量。既有资源汇总范围要求后端有对应数据来源，不能暂时返回硬编码 0。
+以上三张表能支撑企业和员工数量，不能支撑用户组、渠道接入账号的真实数量。既有资源汇总范围要求后端有对应数据来源，不能暂时返回硬编码 0。
 
 | 候选表 | 最小字段方向 | 本轮边界 |
 | --- | --- | --- |
-| `reception_group` | `group_id/groupId`、`company_id/companyId`、`group_name/groupName`、时间字段；状态是否存在待业务确认 | 企业内平级接待组；Admin 只读取汇总 |
-| `channel_account` | `channel_account_id/channelAccountId`、`company_id/companyId`、`group_id/groupId`、`channel/channel`、`account_name/accountName`、渠道外部账号标识、时间字段 | 一个账号只归属一个组；账号启停、授权与连接健康须区分，状态口径待定 |
-| `user_group`，后续 Console | `company_id/companyId`、`user_id/userId`、`group_id/groupId` | 员工与组的成员关系；不属于本轮 Admin 操作界面 |
+| `user_group` | `group_id/groupId`、`company_id/companyId`、`group_name/groupName`、时间字段；状态是否存在待业务确认 | 企业内平级用户组；Admin 只读取汇总 |
+| `company_channel` | `company_channel_id/companyChannelId`、`company_id/companyId`、`group_id/groupId`、`channel/channel`、`account_name/accountName`、`channel_info/channelInfo` JSON、时间字段 | 一个账号只归属一个组；2026-10-07 已确认移除当前未使用的 external_account_id，渠道信息存 JSON，出现查找或唯一性需求后再提取字段；已通过 V2 实施 |
+| `user_group_member` | `company_id/companyId`、`user_id/userId`、`group_id/groupId` | 2026-10-07 已确认本轮补员工与组的多对多关联及企业隔离约束；管理接口与角色等级留待后续，不扩展 Admin 操作界面 |
 
 企业、组、账号及成员关系通过复合企业键约束不得跨企业关联。渠道密钥与协议配置随真实渠道接入另行设计，不为了 Admin 汇总引入通用秘密字段。汇总接口只返回已定义且可真实计算的数据；资源模型未实现时该项处于未完成状态。
+
+组权限按 [ADR 0011](../../adr/0011-enterprise-group-access.md)：仅 initUserId 指向且属于本企业的初始管理员自动拥有本企业全部组（含未来新组）；其他用户含普通管理员按成员关系授权，未加入组则无组权限。2026-10-07 本轮不调整数据库或 HTTP 的 ID 类型，保留当前 BIGINT/Long 与接口字符串契约；HTTP 应用层响应固定 200。
 
 ## 接口与前端字段边界
 
 - 继续使用 `/api` 和 `{ code, msg, data }`；应用结果按既有业务码表达，网络和网关失败单独处理。
 - 首版已实现的完整路径清单（15 个），资源与动作直接挂在 `/api/admin` 下，不设 `/auth/*`、`/account/*` 中间层（模块概念不进路径）。路径遵循《阿里巴巴 Java 开发手册》风格：全小写、下划线分隔、纯名词、不在 URL 中暴露 create/list/disable 等动词，动作用 HTTP 方法表达：
-  - 管理员自身：`POST /api/admin/login`、`POST /api/admin/logout`、`GET /api/admin/profile`、`PUT /api/admin/password`。`login`/`logout` 是「URL 不含动词」的既定例外：登录返回 token+exp+user 的组合结果、退出无服务端状态可清理，二者都不对应可独立命名的资源（tokens/sessions 会虚构资源），保留动词命名
+  - 管理员自身：`POST /api/admin/login`、`POST /api/admin/logout`、`GET /api/admin/profile`、`PUT /api/admin/profile/password`。按用户明确偏好保留 login/logout 动词路径例外；登录签发 JWT，退出仅清理客户端 token，不新增服务端撤销表
   - 概览：`GET /api/admin/overview`
-  - 操作记录：`GET /api/admin/operation_logs`
-  - 企业：`POST /api/admin/companies`（创建）、`GET /api/admin/companies`（分页查询）、`POST /api/admin/companies/id_candidates`（随机候选）、`GET /api/admin/companies/id_availability`（可用性检测）、`GET /api/admin/companies/{companyId}`（详情）、`PUT /api/admin/companies/{companyId}`（编辑资料）、`PUT /api/admin/companies/{companyId}/status`（启停合并，请求体 `{ status, disableReason? }`：`0` 停用且原因必填，`1` 恢复并忽略清空原因）、`PUT /api/admin/companies/{companyId}/admin_password`（重置初始管理员密码）、`GET /api/admin/companies/{companyId}/resource_summary`
+  - 操作记录：`POST /api/admin/operation_logs/query`
+  - 企业：`POST /api/admin/companies`（创建）、`POST /api/admin/companies/query`（JSON 分页查询）、`POST /api/admin/companies/id_candidates`（随机候选）、`GET /api/admin/companies/id_availability`（可用性检测）、`GET /api/admin/companies/{companyId}`（详情）、`PUT /api/admin/companies/{companyId}`（编辑资料）、`PUT /api/admin/companies/{companyId}/status`（启停合并，请求体 `{ status, disableReason? }`：`0` 停用且原因必填，`1` 恢复并忽略清空原因）、`PUT /api/admin/companies/{companyId}/initial_admin/password`（重置初始管理员密码）、`GET /api/admin/companies/{companyId}/resource_summary`
   - 查询参数与请求体字段保持小驼峰（如 `companyId`、`disableReason`），路径段才用下划线
 - 平台登录请求：`{ username, password }`。企业登录请求：`{ companyId, username, password }`，直接按企业 ID 定位，不先查询另一套代码。不能让客户端传入 `role` 决定登录权限。
 - 企业查询与维护使用上表的 `companyId/companyName/contactName/contactInfo/remark/status/createTime/updateTime`，不另起 `tenantId/enterpriseName/createdAt` 等同义字段。
@@ -156,3 +157,9 @@
 5. 将上述候选类型、索引和北京时间 / ID 序列化要求落实到最终 DDL、Flyway 迁移与契约测试，验证空库和已有版本升级。
 
 这份草案用于先对齐字段和发现约束，不代表已完成最终表结构或接口验收。
+
+## 2026-10-07 改造落地
+
+V2 将原 reception_group/channel_account 改为 user_group/company_channel，新增 user_group_member，删除操作记录 result；旧 external_account_id 非空值保留到 channelInfo.externalAccountId 后删除旧列。Java DO/DTO/VO 的有限状态、角色、操作、目标和渠道均用枚举，持久化及 JSON 保持业务代码。
+
+统计字段统一为 companyCount、companyEnabledCount、companyDisabledCount、companyCreatedLast7DaysCount、recentCompanies；企业资源使用 companyId、userCount、userEnabledCount、userGroupCount、companyChannelCount。分页响应平铺 code/msg/list/total/page/pageSize。渠道类型当前为 wechat、alipay、douyin、xiaohongshu、bilibili，表示平台，具体授权协议随渠道接入实现。

@@ -1,8 +1,7 @@
 package com.dudu.duduserver.dto;
 
-import com.dudu.duduserver.config.query.PageQuery;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import com.dudu.duduserver.common.PageQuery;
+import com.dudu.duduserver.constant.EnableStatusEnum;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,7 +21,5 @@ public class CompanyListQuery extends PageQuery {
     private String keyword;
 
     // 状态筛选，1 启用 / 0 停用，见 EnableStatusEnum
-    @Min(value = 0, message = "状态只能为 0 或 1")
-    @Max(value = 1, message = "状态只能为 0 或 1")
-    private Integer status;
+    private EnableStatusEnum status;
 }

@@ -1,6 +1,6 @@
 package com.dudu.duduserver.config.exception;
 
-import com.dudu.duduserver.config.response.R;
+import com.dudu.duduserver.common.R;
 import com.dudu.duduserver.constant.ApiEnum;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;

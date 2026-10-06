@@ -1,26 +1,34 @@
 package com.dudu.duduserver.vo;
 
+import cn.hutool.core.bean.BeanUtil;
+import com.dudu.duduserver.constant.EnableStatusEnum;
 import com.dudu.duduserver.entity.UserDO;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 /**
  * 企业初始管理员的非敏感资料视图；不含密码、哈希或令牌，状态为 0/1。
  */
-public record CompanyAdminInitVO(
-    String userId,
-    String username,
-    String name,
-    Integer status,
-    LocalDateTime createTime) {
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CompanyAdminInitVO {
 
-    // 由用户实体映射，业务 ID 统一十进制字符串
-    public static CompanyAdminInitVO of(UserDO user) {
-        return new CompanyAdminInitVO(
-            String.valueOf(user.getUserId()),
-            user.getUsername(),
-            user.getName(),
-            user.getStatus(),
-            user.getCreateTime());
+    private String userId;
+
+    private String username;
+
+    private String name;
+
+    private EnableStatusEnum status;
+
+    private LocalDateTime createTime;
+
+    // 仅映射此视图声明的公开字段，保留 ID 字符串与 null 语义
+    public static CompanyAdminInitVO of(UserDO source) {
+        return BeanUtil.toBean(source, CompanyAdminInitVO.class);
     }
 }
