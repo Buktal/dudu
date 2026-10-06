@@ -7,10 +7,10 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.validation.BindException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -31,28 +31,28 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BindException.class)
     public R<Void> onBind(BindException e) {
         String msg = e.getAllErrors().stream()
-                .findFirst()
-                .map(MessageSourceResolvable::getDefaultMessage)
-                .orElseGet(() -> ApiEnum.PARAM_ERROR.desc);
+            .findFirst()
+            .map(MessageSourceResolvable::getDefaultMessage)
+            .orElseGet(() -> ApiEnum.PARAM_ERROR.desc);
         return R.err(ApiEnum.PARAM_ERROR, msg);
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
     public R<Void> onMethodValidation(HandlerMethodValidationException e) {
         String msg = e.getParameterValidationResults().stream()
-                .flatMap(result -> result.getResolvableErrors().stream())
-                .findFirst()
-                .map(MessageSourceResolvable::getDefaultMessage)
-                .orElseGet(() -> ApiEnum.PARAM_ERROR.desc);
+            .flatMap(result -> result.getResolvableErrors().stream())
+            .findFirst()
+            .map(MessageSourceResolvable::getDefaultMessage)
+            .orElseGet(() -> ApiEnum.PARAM_ERROR.desc);
         return R.err(ApiEnum.PARAM_ERROR, msg);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public R<Void> onConstraintViolation(ConstraintViolationException e) {
         String msg = e.getConstraintViolations().stream()
-                .findFirst()
-                .map(ConstraintViolation::getMessage)
-                .orElseGet(() -> ApiEnum.PARAM_ERROR.desc);
+            .findFirst()
+            .map(ConstraintViolation::getMessage)
+            .orElseGet(() -> ApiEnum.PARAM_ERROR.desc);
         return R.err(ApiEnum.PARAM_ERROR, msg);
     }
 

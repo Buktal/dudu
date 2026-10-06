@@ -18,8 +18,8 @@ class ValidationGroupsTest {
     void saveIncludesDefaultConstraintsAndItsOwnConstraints() {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             assertThat(factory.getValidator().validate(new Form("", 0, 0), Save.class))
-                    .extracting(violation -> violation.getPropertyPath().toString())
-                    .containsExactlyInAnyOrder("name", "amount");
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .containsExactlyInAnyOrder("name", "amount");
         }
     }
 
@@ -27,8 +27,8 @@ class ValidationGroupsTest {
     void queryIncludesDefaultConstraintsAndItsOwnConstraints() {
         try (var factory = Validation.buildDefaultValidatorFactory()) {
             assertThat(factory.getValidator().validate(new Form("", 0, 0), Query.class))
-                    .extracting(violation -> violation.getPropertyPath().toString())
-                    .containsExactlyInAnyOrder("name", "page");
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .containsExactlyInAnyOrder("name", "page");
         }
     }
 }

@@ -6,8 +6,9 @@ import cn.hutool.jwt.JWT;
 import cn.hutool.jwt.JWTUtil;
 import cn.hutool.jwt.JWTValidator;
 import cn.hutool.jwt.signers.JWTSignerUtil;
-import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.config.exception.BizException;
+import com.dudu.duduserver.constant.ApiEnum;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -17,16 +18,17 @@ import java.nio.charset.StandardCharsets;
  * 过期 exp 为 JwtUser 字段，校验用 epoch 秒。
  */
 @Component
+@RequiredArgsConstructor
 public class JwtManager {
 
-    private final byte[] key;
+    private final JwtProperties properties;
 
-    public JwtManager(JwtProperties properties) {
-        this.key = properties.jwtSecret().getBytes(StandardCharsets.UTF_8);
+    private byte[] key() {
+        return properties.jwtSecret().getBytes(StandardCharsets.UTF_8);
     }
 
     public String createToken(JwtUser user) {
-        return JWTUtil.createToken(JSONUtil.parseObj(user), key);
+        return JWTUtil.createToken(JSONUtil.parseObj(user), key());
     }
 
     public JwtUser parseAuthorization(String authorization) {
@@ -44,10 +46,10 @@ public class JwtManager {
         JwtUser user;
         try {
             JWT jwt = JWT.of(token);
-            JWTValidator.of(jwt).validateAlgorithm(JWTSignerUtil.hs256(key));
+            JWTValidator.of(jwt).validateAlgorithm(JWTSignerUtil.hs256(key()));
             user = jwt.getPayloads().toBean(JwtUser.class);
         } catch (RuntimeException e) {
-            // 畸形 JSON、签名/算法错误和载荷类型错误统一归为无效 token。
+            // 畸形 JSON、签名/算法错误和载荷类型错误统一归为无效 token
             throw new BizException(ApiEnum.TOKEN_VERIFY);
         }
 

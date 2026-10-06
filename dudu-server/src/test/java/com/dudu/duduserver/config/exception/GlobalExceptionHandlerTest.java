@@ -3,19 +3,19 @@ package com.dudu.duduserver.config.exception;
 import com.dudu.duduserver.config.response.R;
 import com.dudu.duduserver.constant.ApiEnum;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validation;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.validation.method.MethodValidationResult;
 import org.springframework.validation.method.ParameterValidationResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -46,17 +46,17 @@ class GlobalExceptionHandlerTest {
     @Test
     void bizExceptionRoutesToItsEnumCode() {
         assertThat(handler.onBiz(new BizException(ApiEnum.TOKEN_EXPIRE)).code())
-                .isEqualTo(ApiEnum.TOKEN_EXPIRE.code);
+            .isEqualTo(ApiEnum.TOKEN_EXPIRE.code);
         assertThat(handler.onBiz(new BizException(ApiEnum.DATA_NOT_EXIST)).code())
-                .isEqualTo(ApiEnum.DATA_NOT_EXIST.code);
+            .isEqualTo(ApiEnum.DATA_NOT_EXIST.code);
         assertThat(handler.onBiz(new BizException(ApiEnum.THIRD_ERROR)).code())
-                .isEqualTo(ApiEnum.THIRD_ERROR.code);
+            .isEqualTo(ApiEnum.THIRD_ERROR.code);
     }
 
     @Test
     void nullMsgFallsBackToEnumDesc() {
         assertThat(new BizException(ApiEnum.PARAM_ERROR, null).getMessage())
-                .isEqualTo(ApiEnum.PARAM_ERROR.desc);
+            .isEqualTo(ApiEnum.PARAM_ERROR.desc);
     }
 
     @Test
@@ -64,7 +64,7 @@ class GlobalExceptionHandlerTest {
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "req");
         bindingResult.addError(new FieldError("req", "name", "不能为空"));
         MethodArgumentNotValidException e = new MethodArgumentNotValidException(
-                new MethodParameter(Sample.class.getDeclaredMethod("handler", String.class), 0), bindingResult);
+            new MethodParameter(Sample.class.getDeclaredMethod("handler", String.class), 0), bindingResult);
 
         R<Void> r = handler.onBind(e);
 
@@ -77,9 +77,9 @@ class GlobalExceptionHandlerTest {
         Method method = Sample.class.getDeclaredMethod("handler", String.class);
         MethodParameter parameter = new MethodParameter(method, 0);
         ParameterValidationResult validationResult = new ParameterValidationResult(
-                parameter, null, List.of(new FieldError("req", "name", "不能为空")), null, null, null, null);
+            parameter, null, List.of(new FieldError("req", "name", "不能为空")), null, null, null, null);
         HandlerMethodValidationException e = new HandlerMethodValidationException(
-                MethodValidationResult.create(new Object(), method, List.of(validationResult)));
+            MethodValidationResult.create(new Object(), method, List.of(validationResult)));
 
         R<Void> r = handler.onMethodValidation(e);
 
@@ -92,7 +92,7 @@ class GlobalExceptionHandlerTest {
         record Form(@NotBlank String name) {
         }
         Set<ConstraintViolation<Form>> violations =
-                Validation.buildDefaultValidatorFactory().getValidator().validate(new Form(""));
+            Validation.buildDefaultValidatorFactory().getValidator().validate(new Form(""));
 
         R<Void> r = handler.onConstraintViolation(new ConstraintViolationException(violations));
 
@@ -103,7 +103,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void unreadableBodyMapsToParamError() {
         R<Void> r = handler.onBodyUnreadable(
-                new HttpMessageNotReadableException("bad json", new MockHttpInputMessage(new byte[0])));
+            new HttpMessageNotReadableException("bad json", new MockHttpInputMessage(new byte[0])));
 
         assertThat(r.code()).isEqualTo(ApiEnum.PARAM_ERROR.code);
         assertThat(r.msg()).isEqualTo("请求体不可读");
@@ -121,7 +121,7 @@ class GlobalExceptionHandlerTest {
     void wrongParamTypeMapsToParamError() throws NoSuchMethodException {
         MethodParameter parameter = new MethodParameter(Sample.class.getDeclaredMethod("handler", String.class), 0);
         R<Void> r = handler.onTypeMismatch(new MethodArgumentTypeMismatchException(
-                "abc", Long.class, "userId", parameter, new NumberFormatException()));
+            "abc", Long.class, "userId", parameter, new NumberFormatException()));
 
         assertThat(r.code()).isEqualTo(ApiEnum.PARAM_ERROR.code);
         assertThat(r.msg()).isEqualTo("参数 userId 类型错误");

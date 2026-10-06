@@ -47,7 +47,7 @@ class MyMetaObjectHandlerTest {
     static void registerTableInfo() {
         // strictFill 依赖 TableInfo 元数据；无 DB 环境下手动注册测试 fixture
         TableInfoHelper.initTableInfo(
-                new MapperBuilderAssistant(new MybatisConfiguration(), ""), FillFixture.class);
+            new MapperBuilderAssistant(new MybatisConfiguration(), ""), FillFixture.class);
     }
 
     @Test

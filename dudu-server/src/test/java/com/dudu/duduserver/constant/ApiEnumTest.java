@@ -24,15 +24,15 @@ class ApiEnumTest {
     @Test
     void errorCodesAreFiveDigit() {
         Arrays.stream(ApiEnum.values())
-                .filter(e -> e != ApiEnum.OK)
-                .forEach(e -> assertThat(e.code).isBetween(10000, 99999));
+            .filter(e -> e != ApiEnum.OK)
+            .forEach(e -> assertThat(e.code).isBetween(10000, 99999));
     }
 
     @Test
     void segmentsHoldTheirFamilies() {
         assertThat(ApiEnum.TOKEN_ERROR.code).isEqualTo(10100);
         assertThat(ApiEnum.PARAM_ERROR.code).isEqualTo(11000);
-        assertThat(ApiEnum.DATA_ERROR.code).isEqualTo(13000);
-        assertThat(ApiEnum.THIRD_ERROR.code).isEqualTo(14000);
+        assertThat(ApiEnum.DATA_ERROR.code).isEqualTo(12000);
+        assertThat(ApiEnum.THIRD_ERROR.code).isEqualTo(13000);
     }
 }

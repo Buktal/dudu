@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 /**
- * 时间字段约定：createTime 插入填充，updateTime 插入及更新填充。
+ * 时间字段约定：createTime 插入填充，updateTime 插入及更新填充，统一取当前时间（ADR 0012）。
  * 实体通过 @TableField(fill = ...) 启用填充；更新时覆盖已有 updateTime。
  */
 @Component

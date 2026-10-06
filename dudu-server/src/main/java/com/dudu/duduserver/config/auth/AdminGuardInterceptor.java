@@ -1,0 +1,39 @@
+package com.dudu.duduserver.config.auth;
+
+import com.dudu.duduserver.config.exception.BizException;
+import com.dudu.duduserver.constant.ApiEnum;
+import com.dudu.duduserver.constant.UserRoleEnum;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Component;
+import org.springframework.web.cors.CorsUtils;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+/**
+ * /api/admin/** 模块守卫：仅平台管理员（admin）角色可访问；登录端点在 WebConfig 放行清单中排除。
+ * 与 MeResolver 相同的直接解析方式，不共享请求状态（ADR 0007）。
+ */
+@Component
+@RequiredArgsConstructor
+public class AdminGuardInterceptor implements HandlerInterceptor {
+
+    private final JwtManager jwtManager;
+
+    @Override
+    public boolean preHandle(@NonNull HttpServletRequest request,
+                             @NonNull HttpServletResponse response,
+                             @NonNull Object handler) {
+        // 预检请求不携带凭据，放行交由 CORS 处理；实际请求仍须通过下方校验
+        if (CorsUtils.isPreFlightRequest(request)) {
+            return true;
+        }
+        JwtUser user = jwtManager.parseAuthorization(request.getHeader(HttpHeaders.AUTHORIZATION));
+        if (!UserRoleEnum.ADMIN.code.equals(user.role())) {
+            throw new BizException(ApiEnum.FORBIDDEN);
+        }
+        return true;
+    }
+}

@@ -8,8 +8,8 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 @SpringBootApplication
 public class DuduServerApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(DuduServerApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(DuduServerApplication.class, args);
+    }
 
 }
