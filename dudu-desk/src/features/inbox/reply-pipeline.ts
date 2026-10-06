@@ -17,7 +17,7 @@ export type ReplyReadiness =
   | { sendable: false; notice: string | null };
 
 /**
- * Reply policy: the reply-allowed decision (Reply policy in CONTEXT.md).
+ * Reply policy: the reply-allowed decision.
  * Owns kinds-derivation and the send+attachment composition, so every caller
  * answers the same question with the same clock value.
  */

@@ -12,7 +12,7 @@
 
 ## 已确认的边界
 
-- 产品分工与术语见 [CONTEXT.md](../../../CONTEXT.md)。Admin 供运营方使用，Console 供企业内部管理，Desk 供坐席接待。
+- 产品分工与术语见 [GLOSSARY.md](../../../GLOSSARY.md)。Admin 供运营方使用，Console 供企业内部管理，Desk 供坐席接待。
 - 企业、员工与管理员权限以 [企业隔离决策](../../adr/0011-enterprise-group-access.md) 为准。
 - 后续接待沿用 [固定会话决策](../../adr/0010-persistent-visitor-conversation.md)，首阶段不实现会话和消息业务。
 - 后续两个代表性渠道协议的模拟联调及出站模拟缺口，统一记录在 [Server 总体设计](../dudu-server/README.md)，不属于本阶段企业开通验收。

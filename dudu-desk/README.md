@@ -131,4 +131,4 @@ Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、�
 - [开发数据与异常场景](docs/development.md)
 - [本阶段检查、构建与审查记录](docs/verification.md)
 - [原型视觉与交互参考](../docs/prototype/dudu-desk/README.md)：仅作参考，不参与正式运行
-- [领域词汇](../CONTEXT.md)、[工程规范](../AGENTS.md)、[架构决策](../docs/adr/)
+- [领域词汇](../GLOSSARY.md)、[工程规范](../AGENTS.md)、[架构决策](../docs/adr/)

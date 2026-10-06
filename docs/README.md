@@ -9,4 +9,4 @@
 | [prototype/](prototype/) | 原型产物：用于验证界面、交互和流程的可运行原型 |
 | [research/](research/) | 检索与调研产物：研究结论、来源引用及核验记录 |
 
-项目规范见根目录 [AGENTS.md](../AGENTS.md)；子项目定位与领域术语见 [CONTEXT.md](../CONTEXT.md)
+项目规范见根目录 [AGENTS.md](../AGENTS.md)；子项目定位与领域术语见 [GLOSSARY.md](../GLOSSARY.md)
