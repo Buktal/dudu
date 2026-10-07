@@ -25,7 +25,7 @@ use std::time::Duration;
 use crate::connections::util::now_secs;
 
 use super::{
-    client_with_timeout, request_error_reason, send_measured_outcome, ConnectionConfig,
+    client_with_timeout, no_reply, request_error_reason, send_measured_outcome, ConnectionConfig,
     DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
@@ -207,7 +207,7 @@ fn dispatch_event(
             timestamp,
             request_body: Some(body),
         },
-        |_, _| None,
+        no_reply,
     )
 }
 

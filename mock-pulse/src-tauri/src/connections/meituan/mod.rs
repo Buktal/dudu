@@ -32,7 +32,10 @@ mod tests;
 
 use crate::connections::util::{append_absent, form_encode_value, form_pairs, md5_hex, now_secs, strip_sig};
 
-use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
+};
 
 /// 官方订单核验样本表单（§5.3 docDetail/177/180 字段值逐字；form 字节，前端
 /// 模板骨架同款）：推送探针复用该样本（官方验证握手正文待核验(09-27)，以带
@@ -128,24 +131,20 @@ fn post_form(
         wire.push('=');
         wire.push_str(&form_encode_value(value));
     }
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(wire.clone()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: message_id_of(&pairs),
-        signature,
-        timestamp: Some(timestamp),
-        request_body: Some(wire),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: message_id_of(&pairs),
+            signature,
+            timestamp: Some(timestamp),
+            request_body: Some(wire),
+        },
+        no_reply,
+    )
 }
 
 /// 连接测试（§3 消息回调接入 → 正文待核验(09-27)）：官方未给 challenge/

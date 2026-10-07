@@ -23,7 +23,8 @@ use std::time::Duration;
 use crate::connections::util::{callback_signature as build_callback_signature, now_millis};
 
 use super::{
-    handshake_echo_outcome, send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
+    handshake_echo_outcome, no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome,
+    DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 握手 nonce：8 位数字（官方算例 nonce=57155157 同形态）——rand Uniform
@@ -102,23 +103,19 @@ fn dispatch_event(
         ("timestamp", timestamp.as_str()),
         ("nonce", nonce.as_str()),
     ]);
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         response
         .header("Content-Type", "application/json")
         .body(plaintext.to_string()),
         "",
-    );
-    DispatchOutcome {
-        msg_id: nonce,
-        signature,
-        timestamp: Some(timestamp),
-        request_body: Some(plaintext.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: nonce,
+            signature,
+            timestamp: Some(timestamp),
+            request_body: Some(plaintext.to_string()),
+        },
+        no_reply,
+    )
 }
 
 /// 从微博连接配置取（url, app_secret）；非微博配置 None。

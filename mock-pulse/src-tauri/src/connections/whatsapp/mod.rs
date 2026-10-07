@@ -27,7 +27,10 @@ mod tests;
 
 use crate::connections::util::hmac_sha256_hex;
 
-use super::{request_error_reason, send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{
+    no_reply, request_error_reason, send_measured_outcome, ConnectionConfig, DispatchOutcome,
+    DispatchSnapshot, HandshakeOutcome,
+};
 
 /// 失败重试口径（§3.3 逐字）：非 200 或不可达即失败，Meta 以递减频率重试
 /// 直到成功、最长 7 天；超时文案附该语义。
@@ -155,25 +158,21 @@ fn post_json(
     body: &str,
 ) -> DispatchOutcome {
     let signature = x_hub_signature(body, app_secret);
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .header("X-Hub-Signature-256", signature.clone())
         .header("Content-Type", "application/json")
         .body(body.to_string()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: message_id_of(body),
-        signature,
-        timestamp: None,
-        request_body: Some(body.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: message_id_of(body),
+            signature,
+            timestamp: None,
+            request_body: Some(body.to_string()),
+        },
+        no_reply,
+    )
 }
 
 /// WhatsApp 直发（§附速查）：明文 JSON 逐字节透传 + X-Hub-Signature-256 头。

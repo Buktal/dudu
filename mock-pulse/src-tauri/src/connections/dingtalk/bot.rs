@@ -10,7 +10,8 @@
 //!   规范验签头，目标响应 HTTP 2xx 即连通（官方未定义回包语义，正文不校验）
 
 use super::super::{
-    send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
 };
 use crate::connections::util;
 
@@ -48,7 +49,7 @@ fn post(
             timestamp: Some(timestamp),
             request_body: Some(body.to_string()),
         },
-        |_, _| None,
+        no_reply,
     )
 }
 

@@ -23,8 +23,8 @@ mod tests;
 use crate::connections::util::now_secs;
 
 use super::{
-    client_with_timeout, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    client_with_timeout, no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome,
+    DispatchSnapshot, HandshakeOutcome,
 };
 
 /// op13 验证回调的官方 UA（事实库 §3.2 请求头逐字：`User-Agent:[QQBot-Callback]`）。
@@ -148,7 +148,7 @@ fn verify_handshake(
             timestamp: None,
             request_body: Some(body.clone()),
         },
-        |_, _| None,
+        no_reply,
     );
     if let Some(error) = outcome.error {
         return HandshakeOutcome {
@@ -209,7 +209,7 @@ fn dispatch_event(
             timestamp: Some(timestamp),
             request_body: Some(plaintext.to_string()),
         },
-        |_, _| None,
+        no_reply,
     )
 }
 

@@ -21,7 +21,10 @@ mod tests;
 
 use crate::connections::util::hmac_sha256_hex;
 
-use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
+};
 
 /// 失败重试口径（§3.2 逐字）：超 500ms 未收到 200 即推送失败，半小时后重试、
 /// 最多 12 次；超时文案附该语义。
@@ -78,25 +81,21 @@ fn post_json(
     body: &str,
 ) -> DispatchOutcome {
     let signature = authorization(body, app_key, app_secret);
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .header("Authorization", signature.clone())
         .header("Content-Type", "application/json")
         .body(body.to_string()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: message_id_of(body),
-        signature,
-        timestamp: None,
-        request_body: Some(body.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: message_id_of(body),
+            signature,
+            timestamp: None,
+            request_body: Some(body.to_string()),
+        },
+        no_reply,
+    )
 }
 
 /// 连接测试（§3.2 配置页 Verify 握手）：官方流程为「填回调地址 → Verify →

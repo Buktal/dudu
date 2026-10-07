@@ -22,7 +22,10 @@ use std::time::Duration;
 
 use crate::connections::util::{md5_hex, now_millis};
 
-use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
+};
 
 /// 失败重试口径（附录2 支付回调 16 次重试表 / accessGuide 通用 webhook 重试）：
 /// 官方未给统一应答时限，超时文案附重试提示。
@@ -56,25 +59,21 @@ fn post_json(
     body: &str,
 ) -> DispatchOutcome {
     let signature = kwaisign(body, app_secret);
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .header("kwaisign", signature.clone())
         .header("Content-Type", "application/json")
         .body(body.to_string()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: message_id_of(body),
-        signature,
-        timestamp: None,
-        request_body: Some(body.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: message_id_of(body),
+            signature,
+            timestamp: None,
+            request_body: Some(body.to_string()),
+        },
+        no_reply,
+    )
 }
 
 /// 官方成功应答（§3.1/§3.2 七页逐字一致）：HTTP 200 + result=1 + 回传收到的

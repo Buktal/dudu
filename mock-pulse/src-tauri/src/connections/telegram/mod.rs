@@ -25,7 +25,10 @@
 #[cfg(test)]
 mod tests;
 
-use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
+};
 
 /// 恒等头名（§4.1 官方拼写逐字）：接收侧按配置的 secret_token 做字符串
 /// 相等比较，缺失/不匹配即伪造请求。
@@ -103,25 +106,21 @@ fn post_json(
             "Secret Token 不合法（官方 secret_token 限 1–256 字符，仅 A-Z a-z 0-9 _ -，越限 token 真实 setWebhook 配不出来）",
         );
     }
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .header(SECRET_TOKEN_HEADER, secret_token)
         .header("Content-Type", "application/json")
         .body(body.to_string()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: update_id_of(body),
-        signature: secret_token.to_string(),
-        timestamp: None,
-        request_body: Some(body.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: update_id_of(body),
+            signature: secret_token.to_string(),
+            timestamp: None,
+            request_body: Some(body.to_string()),
+        },
+        no_reply,
+    )
 }
 
 /// 连接测试（§3.2 无 challenge 握手）：官方未记述任何验证请求，setWebhook

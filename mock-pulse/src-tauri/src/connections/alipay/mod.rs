@@ -54,7 +54,10 @@ use rsa::signature::Verifier;
 #[cfg(test)]
 use rsa::RsaPublicKey;
 
-use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
+};
 
 /// 官方支付异步通知核验样本表单（§5.1 公共参数表 + 业务参数表逐字值；form
 /// 字节：notify_time 的空格/冒号按 RFC 3986 大写 hex 编码，trade_status 取
@@ -187,24 +190,20 @@ fn post_signed(
     let pairs = form_pairs(&body);
     let signature = ali_sign(&signing_concat(&pairs), private_key);
     let wire = format!("{body}&sign={}", form_encode_value(&signature));
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(wire.clone()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: message_id_of(&pairs),
-        signature,
-        timestamp: Some(notify_time_of(&pairs)),
-        request_body: Some(wire),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: message_id_of(&pairs),
+            signature,
+            timestamp: Some(notify_time_of(&pairs)),
+            request_body: Some(wire),
+        },
+        no_reply,
+    )
 }
 
 /// 连接测试（网关验证）：官方「验证应用网关」握手后半程待核验(09-27)（事实库

@@ -10,7 +10,8 @@
 //!   验证 TOKEN 验签；目标必须直接返回字符串 success（不带引号），否则重试 3 次
 
 use super::super::{
-    send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
 };
 use crate::connections::util;
 
@@ -91,7 +92,7 @@ fn post(
             timestamp: Some(timestamp),
             request_body: Some(envelope),
         },
-        |_, _| None,
+        no_reply,
     )
 }
 

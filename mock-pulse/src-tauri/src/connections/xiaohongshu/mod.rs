@@ -31,8 +31,8 @@ use crate::connections::util::{callback_signature as build_callback_signature, n
 use crate::connections::wecom::crypto;
 
 use super::{
-    handshake_echo_outcome, send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
-    XiaohongshuSystem,
+    handshake_echo_outcome, no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome,
+    DispatchSnapshot, HandshakeOutcome, XiaohongshuSystem,
 };
 
 /// 官方应答窗口（§10.5 镜像）：5 秒内未收到响应即断开重发，总共重试 3 次。
@@ -178,24 +178,20 @@ fn miniapp_dispatch(
         Ok(push) => push,
         Err(reason) => return DispatchOutcome::not_sent(format!("事件加密封装失败：{reason}")),
     };
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .header("Content-Type", "application/json")
         .body(push.body.clone()),
         "",
-    );
-    DispatchOutcome {
-        msg_id: push.nonce,
-        signature: push.signature,
-        timestamp: Some(push.timestamp),
-        request_body: Some(push.body),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: push.nonce,
+            signature: push.signature,
+            timestamp: Some(push.timestamp),
+            request_body: Some(push.body),
+        },
+        no_reply,
+    )
 }
 
 /// 小红书渠道适配器：[`super::ChannelAdapter`] 的小红书实现——GET 四参握手与

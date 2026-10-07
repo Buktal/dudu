@@ -36,7 +36,10 @@ use percent_encoding::utf8_percent_encode;
 
 use crate::connections::util::{append_absent, form_pairs, now_secs, sha1_hex, strip_sig, SIG_ENCODE_SET};
 
-use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
+};
 
 /// 官方订单状态核验样本明文（§5.2 order-signal 全文逐字，键序/JSON
 /// number/string 形态照录：push_action=2、extra 为 JSON 字符串 "{}"、
@@ -157,7 +160,7 @@ fn post_signed(
     let borrowed: Vec<(&str, &str)> =
         params.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
     let signature = ele_sign(url, &borrowed, secret);
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .query(&[
@@ -175,18 +178,14 @@ fn post_signed(
         )
         .body(body.clone()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: message_id_of(plaintext),
-        signature,
-        timestamp: Some(timestamp),
-        request_body: Some(body),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: message_id_of(plaintext),
+            signature,
+            timestamp: Some(timestamp),
+            request_body: Some(body),
+        },
+        no_reply,
+    )
 }
 
 /// 连接测试（§3.1 无握手）：官方无 challenge/verify 口径，探针即官方订单

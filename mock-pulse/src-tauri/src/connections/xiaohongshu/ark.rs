@@ -9,7 +9,7 @@
 
 use crate::connections::ConnectionConfig;
 
-use super::{send_measured, DispatchOutcome, HandshakeOutcome};
+use super::{no_reply, send_measured_outcome, DispatchOutcome, DispatchSnapshot, HandshakeOutcome};
 
 /// ark 连接测试探针（事实库 §5.4 官方构造示例逐字，掩码值不携带真实业务）。
 const PROBE_ENVELOPE: &str = r#"{"msgTag":"msg_fulfillment_status_change","sellerId":"5e8e****","data":"{\"orderId\":\"P01****\",\"updateTime\":1693500000,\"orderStatus\":4}"}"#;
@@ -44,25 +44,21 @@ fn post_envelope_array(
     // 官方 body 为 JSON 数组（批量推送）：前端逐字节拼装的单条信封按协议
     // 包裹进数组（包裹属通道报文形态，不重排元素内容，ADR-0001）
     let body = format!("[{}]", plaintext.trim());
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .header("Content-Type", "application/json")
         .body(body.clone()),
         "",
-    );
-    // ark 推送无唯一标识/签名要素（官方无消息 ID、无签名头），快照不落值
-    DispatchOutcome {
-        msg_id: String::new(),
-        signature: String::new(),
-        timestamp: None,
-        request_body: Some(body),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        // ark 推送无唯一标识/签名要素（官方无消息 ID、无签名头），快照不落值
+        DispatchSnapshot {
+            msg_id: String::new(),
+            signature: String::new(),
+            timestamp: None,
+            request_body: Some(body),
+        },
+        no_reply,
+    )
 }
 
 /// ark 连接测试（§3.4 无官方握手机制）：POST 最小推送探针（官方构造示例

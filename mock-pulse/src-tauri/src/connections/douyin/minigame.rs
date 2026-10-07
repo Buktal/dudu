@@ -8,7 +8,8 @@
 //! - 旧「消息推送客服」GET echostr 体系 2025-06-30 已下线，不实现
 
 use super::super::{
-    send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
 };
 use crate::connections::util;
 
@@ -82,7 +83,7 @@ fn post(
             timestamp: Some(timestamp),
             request_body: Some(body.to_string()),
         },
-        |_, _| None,
+        no_reply,
     )
 }
 

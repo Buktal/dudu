@@ -29,7 +29,10 @@ mod tests;
 
 use crate::connections::util::{append_absent, md5_wrapped_sign, now_secs};
 
-use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
+};
 
 /// 官方订单状态样本明文（§2.1 照录状态 1-待发货 + §5.1 order_status 参数
 /// 词汇；JSON number 形态同官方 §5.1 请求 body 逐字）：推送探针复用该样本
@@ -115,7 +118,7 @@ fn post_json(
     let borrowed: Vec<(&str, &str)> =
         params.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
     let signature = pdd_sign(&borrowed, client_secret);
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .query(&[
@@ -126,18 +129,14 @@ fn post_json(
         .header("Content-Type", "application/json")
         .body(body.to_string()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: message_id_of(body),
-        signature,
-        timestamp: Some(timestamp),
-        request_body: Some(body.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: message_id_of(body),
+            signature,
+            timestamp: Some(timestamp),
+            request_body: Some(body.to_string()),
+        },
+        no_reply,
+    )
 }
 
 /// 连接测试（§3.1 验证握手 → 待核验(09-27)）：官方未给 challenge/verify 口径，

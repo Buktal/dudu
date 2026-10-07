@@ -185,11 +185,11 @@ pub(crate) fn request_error_reason(err: &reqwest::Error, timeout_note: &str) -> 
     }
 }
 
-/// 直发测量（Reuse-first 审计退件：此收口块曾在 15+ 渠道逐字复制——计时 →
+/// 直发测量实现（Reuse-first 审计退件：此收口块曾在 15+ 渠道逐字复制——计时 →
 /// 发送 → 状态/回执/错误/耗时四元组）：计时口径、Ok/Err 折叠与错误文案
-/// （request_error_reason）单点在本体。纯 REST 渠道消费四元组；携带协议
-/// 要素快照的渠道走 [`send_measured_outcome`] 成品收口。
-pub(crate) fn send_measured(
+/// （request_error_reason）单点在本体。唯一调用方是 [`send_measured_outcome`]，
+/// 渠道不再直接消费四元组手写装订——直发测量的唯一 seam 是成品收口。
+fn send_measured(
     request: reqwest::blocking::RequestBuilder,
     timeout_note: &str,
 ) -> (u16, String, Option<String>, u64) {
@@ -225,11 +225,12 @@ pub(crate) struct DispatchSnapshot {
     pub request_body: Option<String>,
 }
 
-/// 直发成品收口（send_measured 加深一层）：计时与 Ok/Err 折叠之上，把协议
-/// 要素快照（两分支同值）与 Ok 分支增量装订成成品 [`DispatchOutcome`]。
-/// Err 分支（status 0 / 空正文 / request_error_reason 折叠文案 / reply None）
-/// 单点在本体，携带快照字段的渠道不再各自手写双分支组装；`reply` 只在收到
-/// 响应时调用（入参状态码 + 回执正文，如加密回包解密），未发出请求恒 None。
+/// 直发成品收口（send_measured 加深一层），渠道直发测量的唯一 seam：计时与
+/// Ok/Err 折叠之上，把协议要素快照（两分支同值）与 Ok 分支增量装订成成品
+/// [`DispatchOutcome`]。Err 分支（status 0 / 空正文 / request_error_reason
+/// 折叠文案 / reply None）单点在本体，全部渠道不再各自手写双分支组装；
+/// `reply` 只在收到响应时调用（入参状态码 + 回执正文，如加密回包解密；
+/// 无 Ok 分支增量的渠道传 [`no_reply`]），未发出请求恒 None。
 pub(crate) fn send_measured_outcome(
     request: reqwest::blocking::RequestBuilder,
     timeout_note: &str,
@@ -249,6 +250,12 @@ pub(crate) fn send_measured_outcome(
         body,
         error,
     }
+}
+
+/// 无 Ok 分支增量的渠道共用：收到的响应不推导任何要素（无加密回包、应答
+/// 无口径），reply 恒 None，回执事实全由 status/body 承载。
+pub(crate) fn no_reply(_: u16, _: &str) -> Option<String> {
+    None
 }
 
 /// GET echostr 握手应答判定骨架（Reuse-first 审计退件：此判定段曾在 5 处

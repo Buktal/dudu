@@ -37,7 +37,8 @@ mod tests;
 use crate::connections::util::{hmac_sha256_hex, md5_hex, now_secs, utc8_timestamp};
 
 use super::{
-    send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
 };
 
 /// 失败重试口径（§3.3 镜像口径，照录注明待核验）：5s 建连超时即断、失败
@@ -133,23 +134,19 @@ fn post_json(
     for (name, value) in &headers {
         request = request.header(*name, value);
     }
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         request
         .header("Authorization", signature.clone())
         .body(body.to_string()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: nonce,
-        signature,
-        timestamp: Some(timestamp),
-        request_body: Some(body.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: nonce,
+            signature,
+            timestamp: Some(timestamp),
+            request_body: Some(body.to_string()),
+        },
+        no_reply,
+    )
 }
 
 /// verify_webhooks 请求信封（§3.2 镜像样本键序 event → content → timestamp，

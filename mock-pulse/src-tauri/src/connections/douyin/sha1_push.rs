@@ -5,7 +5,7 @@
 //! - 生活服务：body 先按行拼接去掉换行符再参与 sha1（官方 wholeStr 逐行
 //!   readLine 拼接 / Node demo `split(/\r?\n/).join('')`），key 用 AppSecret
 
-use super::super::{send_measured_outcome, DispatchOutcome, DispatchSnapshot};
+use super::super::{no_reply, send_measured_outcome, DispatchOutcome, DispatchSnapshot};
 use crate::connections::util;
 
 /// dop 官方算法：sha1(client_secret + body) 的小写 hex。
@@ -46,7 +46,7 @@ pub(super) fn dispatch(
             timestamp: None,
             request_body: Some(body.to_string()),
         },
-        |_, _| None,
+        no_reply,
     )
 }
 

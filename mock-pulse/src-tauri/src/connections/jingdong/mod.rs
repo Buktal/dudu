@@ -28,7 +28,10 @@ mod tests;
 
 use crate::connections::util::{md5_wrapped_sign, now_secs, utc8_timestamp};
 
-use super::{send_measured, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::{
+    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
+};
 
 /// 官方状态枚举样本明文（§5.1 锚定的 WAIT_SELLER_STOCK_OUT——§5.1 官方订单
 /// 查询示例的状态取值 + 模板骨架同款实锤词汇）：推送探针复用该样本（官方首次
@@ -99,7 +102,7 @@ fn post_json(
         ],
         app_secret,
     );
-    let (status, receipt, error, elapsed_ms) = send_measured(
+    send_measured_outcome(
         client
         .post(url)
         .query(&[
@@ -111,18 +114,14 @@ fn post_json(
         .header("Content-Type", "application/json")
         .body(body.to_string()),
         RETRY_NOTE,
-    );
-    DispatchOutcome {
-        msg_id: message_id_of(body),
-        signature,
-        timestamp: Some(timestamp),
-        request_body: Some(body.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+        DispatchSnapshot {
+            msg_id: message_id_of(body),
+            signature,
+            timestamp: Some(timestamp),
+            request_body: Some(body.to_string()),
+        },
+        no_reply,
+    )
 }
 
 /// 连接测试（§3.2 首次验证握手 → 待核验(09-27)）：官方未给 challenge/verify
