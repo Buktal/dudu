@@ -4,7 +4,7 @@ import { compareConversations } from "../conversation-query";
 import type { ConversationPage, ConversationQuery } from "../types";
 import { collectPaged } from "./page-cursor";
 import { selectConversation } from "./reading";
-import { failureOf, runOperation } from "./requests";
+import { failureOf, requestKeys, runOperation } from "./requests";
 import { inboxActions } from "./slice";
 import {
   type InboxCommand,
@@ -56,7 +56,7 @@ export function loadConversations(
     // The settled signal must fire after the operation releases its key:
     // refresh coordination skips while a queue request is in flight.
     try {
-      await runOperation(runtime, "queue", getState, async (op) => {
+      await runOperation(runtime, requestKeys.queue, getState, async (op) => {
         dispatch(inboxActions.queueLoading(options.query));
         try {
           const page: ConversationPage = { items: [], nextCursor: null };

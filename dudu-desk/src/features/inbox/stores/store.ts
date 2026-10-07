@@ -15,6 +15,7 @@ export type InboxRuntime = {
   api: InboxApi;
   now: () => string;
   id: () => string;
+  /** Request slots; keyed and cancelled only through stores/requests.ts. */
   requests: Map<string, RequestScope>;
   /**
    * Coordination seam between the Conversation queue and Live events modules:

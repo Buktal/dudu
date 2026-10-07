@@ -5,6 +5,7 @@ import { receiveNext } from "./next-reception";
 import {
   failureOf,
   releaseAttachmentResources,
+  requestKeys,
   runOperation,
 } from "./requests";
 import { inboxActions } from "./slice";
@@ -59,7 +60,7 @@ function deliver(
     const { target } = submission.request;
     await runOperation(
       runtime,
-      `send:${target.conversationId}`,
+      requestKeys.send(target.conversationId),
       getState,
       async (op) => {
         dispatch(inboxActions.submissionStarted({ submission, message }));
@@ -227,7 +228,7 @@ function changeReception(
       return;
     await runOperation(
       runtime,
-      `end:${conversationId}`,
+      requestKeys.end(conversationId),
       getState,
       async (op) => {
         dispatch(inboxActions.endStarted(conversationId));

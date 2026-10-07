@@ -8,7 +8,9 @@ import type {
 import { collectPaged } from "./page-cursor";
 import {
   failureOf,
+  getRequestScope,
   releaseAttachmentResources,
+  requestKeys,
   runOperation,
 } from "./requests";
 import { acceptSubmission } from "./sending";
@@ -61,8 +63,8 @@ export function reconcileInbox(
   sourceCurrent: () => boolean,
 ): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
-    await runOperation(runtime, "recovery", getState, async (op) => {
-      const controller = runtime.requests.get("recovery");
+    await runOperation(runtime, requestKeys.recovery, getState, async (op) => {
+      const controller = getRequestScope(runtime, requestKeys.recovery);
       const current = () => op.current() && sourceCurrent();
       const query = getState().inbox.queue.query;
       dispatch(inboxActions.connectionChanged("reconnecting"));

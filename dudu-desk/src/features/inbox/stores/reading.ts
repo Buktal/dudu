@@ -1,6 +1,13 @@
 import { DeskApiError } from "@/lib/api-response";
 import type { WorkContext } from "../types";
-import { cancelRequests, failureOf, runOperation } from "./requests";
+import {
+  abortRequest,
+  cancelRequests,
+  failureOf,
+  releaseRequest,
+  requestKeys,
+  runOperation,
+} from "./requests";
 import { inboxActions } from "./slice";
 import type { InboxCommand } from "./store";
 
@@ -14,7 +21,7 @@ export function loadHistory(
     if (more && (!history?.nextCursor || history.status === "loading")) return;
     await runOperation(
       runtime,
-      `history:${conversationId}`,
+      requestKeys.history(conversationId),
       getState,
       async (op) => {
         dispatch(inboxActions.historyLoading(conversationId));
@@ -51,7 +58,7 @@ export function loadProfile(
   return async (dispatch, getState, runtime) => {
     await runOperation(
       runtime,
-      `profile:${conversationId}`,
+      requestKeys.profile(conversationId),
       getState,
       async (op) => {
         dispatch(inboxActions.profileLoading(conversationId));
@@ -99,16 +106,9 @@ export function selectConversation(
         state.activeId !== conversationId &&
         state.activeId !== state.pinnedId
       ) {
-        const historyKey = `history:${state.activeId}`;
-        const historyRequest = runtime.requests.get(historyKey);
-        if (historyRequest) {
-          historyRequest.abort();
-          if (runtime.requests.get(historyKey) === historyRequest) {
-            runtime.requests.delete(historyKey);
-            dispatch(inboxActions.historyCancelled(state.activeId));
-          }
-        }
-        runtime.requests.get(`profile:${state.activeId}`)?.abort();
+        if (releaseRequest(runtime, requestKeys.history(state.activeId)))
+          dispatch(inboxActions.historyCancelled(state.activeId));
+        abortRequest(runtime, requestKeys.profile(state.activeId));
       }
       dispatch(inboxActions.conversationSelected(conversationId));
     }
@@ -167,7 +167,7 @@ export function markConversationRead(
       return;
     await runOperation(
       runtime,
-      `read:${conversationId}`,
+      requestKeys.read(conversationId),
       getState,
       async (op) => {
         dispatch(inboxActions.readStarted({ conversationId, throughSequence }));

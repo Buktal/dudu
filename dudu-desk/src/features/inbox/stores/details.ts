@@ -5,7 +5,7 @@ import {
   needsQueueReloadAfterProfileSave,
   needsQueueReloadAfterStarChange,
 } from "./queue-membership";
-import { failureOf, runOperation } from "./requests";
+import { failureOf, requestKeys, runOperation } from "./requests";
 import { inboxActions } from "./slice";
 import type { ProfileChanges } from "./state";
 import type { InboxCommand } from "./store";
@@ -41,7 +41,7 @@ export function saveVisitorProfile(
       return;
     await runOperation(
       runtime,
-      `profile-save:${conversationId}`,
+      requestKeys.profileSave(conversationId),
       getState,
       async (op) => {
         dispatch(inboxActions.profileSaving(conversationId));
@@ -103,7 +103,7 @@ export function setConversationStarred(
       return;
     await runOperation(
       runtime,
-      `star:${conversationId}`,
+      requestKeys.star(conversationId),
       getState,
       async (op) => {
         dispatch(inboxActions.starSaving(conversationId));

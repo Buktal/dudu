@@ -3,6 +3,7 @@ import type { Conversation } from "../types";
 import { readConversationChoices } from "./choices";
 import { collectPaged } from "./page-cursor";
 import { selectConversation } from "./reading";
+import { requestKeys } from "./requests";
 import { inboxActions } from "./slice";
 import { emptyQuery, type ReplySubmission } from "./state";
 import type { InboxCommand } from "./store";
@@ -37,7 +38,7 @@ export function receiveNext(
             readConversationChoices({
               query: { ...emptyQuery, status: "needs-reply", order: "wait" },
               cursor,
-              scope: `next:${submission.messageId}`,
+              scope: requestKeys.next(submission.messageId),
             }),
           ),
         duplicateMessage: "The next-visitor cursor did not advance",

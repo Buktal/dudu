@@ -1,6 +1,7 @@
 import type { ConversationQuery, InboxEvent } from "../types";
 import { loadConversations } from "./queue";
 import { needsQueueRefreshForEvent } from "./queue-membership";
+import { hasInFlightRequest, requestKeys } from "./requests";
 import type { InboxState } from "./state";
 import type { InboxDispatch, InboxRootState, InboxRuntime } from "./store";
 
@@ -66,7 +67,7 @@ export function createRefreshScheduler(input: {
       }
       if (
         state.connection !== "connected" ||
-        runtime.requests.has("queue") ||
+        hasInFlightRequest(runtime, requestKeys.queue) ||
         state.queue.error
       )
         return;

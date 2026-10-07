@@ -6,9 +6,13 @@ import {
   settleConfirmedReplies,
 } from "./reconciler";
 import {
+  abortRequest,
   beginRequest,
+  cancelConversationRequests,
   failureOf,
+  getRequestScope,
   releaseAttachmentResources,
+  requestKeys,
 } from "./requests";
 import { inboxActions } from "./slice";
 import { type InboxCommand, onQueueSettled } from "./store";
@@ -16,9 +20,9 @@ import { type InboxCommand, onQueueSettled } from "./store";
 function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
     runtime.unsubscribe?.();
-    runtime.requests.get("recovery")?.abort();
-    const request = beginRequest(runtime, "events", getState);
-    const controller = runtime.requests.get("events");
+    abortRequest(runtime, requestKeys.recovery);
+    const request = beginRequest(runtime, requestKeys.events, getState);
+    const controller = getRequestScope(runtime, requestKeys.events);
     let needsRecovery =
       reconnecting ||
       ["disconnected", "unavailable"].includes(getState().inbox.connection);
@@ -69,7 +73,7 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
             }
           } else {
             needsRecovery = true;
-            runtime.requests.get("recovery")?.abort();
+            abortRequest(runtime, requestKeys.recovery);
             recovery = undefined;
             dispatch(inboxActions.connectionChanged(connection));
           }
@@ -84,7 +88,7 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
         if (stopped) return;
         stopped = true;
         controller?.abort();
-        runtime.requests.get("recovery")?.abort();
+        abortRequest(runtime, requestKeys.recovery);
         request.finish();
         unsubscribe();
         if (runtime.unsubscribe === stop) runtime.unsubscribe = undefined;
@@ -127,19 +131,7 @@ function receiveInboxEvent(event: InboxEvent): InboxCommand {
       state.events.removed[event.conversationId] === event.version
     ) {
       const id = event.conversationId;
-      for (const prefix of [
-        "history",
-        "profile",
-        "profile-save",
-        "send",
-        "read",
-        "star",
-        "end",
-      ]) {
-        const key = `${prefix}:${id}`;
-        runtime.requests.get(key)?.abort();
-        runtime.requests.delete(key);
-      }
+      cancelConversationRequests(runtime, id);
       releaseAttachmentResources(
         runtime,
         Object.values(previous.attachments)

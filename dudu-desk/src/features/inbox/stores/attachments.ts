@@ -9,6 +9,7 @@ import { sendTarget } from "../sending-rules";
 import {
   failureOf,
   releaseAttachmentResources,
+  requestKeys,
   runOperation,
 } from "./requests";
 import { inboxActions } from "./slice";
@@ -84,47 +85,53 @@ function prepareDraftAttachment(id: string): InboxCommand<Promise<void>> {
       return;
     }
     const target = sendTarget(conversation);
-    await runOperation(runtime, `attachment:${id}`, getState, async (op) => {
-      dispatch(inboxActions.attachmentPreparing(id));
-      try {
-        const response = await runtime.api.prepareAttachment({
-          target,
-          file,
-          context: op.context,
-          signal: op.signal,
-        });
-        if (!op.current() || !getState().inbox.attachments[id]) return;
-        const media = readPreparedAttachment(response, attachment.kind);
-        const current =
-          getState().inbox.conversations[attachment.conversationId];
-        if (!current || !isEqual(sendTarget(current), target)) {
-          releaseAttachmentResources(runtime, [id]);
-          dispatch(inboxActions.attachmentRemoved(id));
-          return;
-        }
-        const latest = getState().inbox;
-        const restriction = attachmentRestriction(
-          current,
-          latest.connection,
-          media,
-          latest.drafts[attachment.conversationId]?.attachmentIds.length ?? 0,
-          runtime.now(),
-        );
-        if (restriction) throw new DeskApiError("business", restriction);
-        dispatch(inboxActions.attachmentReady({ id, media }));
-      } catch (error) {
-        if (getState().inbox.attachments[id]) {
-          op.settle(() =>
-            dispatch(
-              inboxActions.attachmentFailed({
-                id,
-                error: failureOf(error, "暂时无法连接服务，请稍后重试").message,
-              }),
-            ),
+    await runOperation(
+      runtime,
+      requestKeys.attachment(id),
+      getState,
+      async (op) => {
+        dispatch(inboxActions.attachmentPreparing(id));
+        try {
+          const response = await runtime.api.prepareAttachment({
+            target,
+            file,
+            context: op.context,
+            signal: op.signal,
+          });
+          if (!op.current() || !getState().inbox.attachments[id]) return;
+          const media = readPreparedAttachment(response, attachment.kind);
+          const current =
+            getState().inbox.conversations[attachment.conversationId];
+          if (!current || !isEqual(sendTarget(current), target)) {
+            releaseAttachmentResources(runtime, [id]);
+            dispatch(inboxActions.attachmentRemoved(id));
+            return;
+          }
+          const latest = getState().inbox;
+          const restriction = attachmentRestriction(
+            current,
+            latest.connection,
+            media,
+            latest.drafts[attachment.conversationId]?.attachmentIds.length ?? 0,
+            runtime.now(),
           );
+          if (restriction) throw new DeskApiError("business", restriction);
+          dispatch(inboxActions.attachmentReady({ id, media }));
+        } catch (error) {
+          if (getState().inbox.attachments[id]) {
+            op.settle(() =>
+              dispatch(
+                inboxActions.attachmentFailed({
+                  id,
+                  error: failureOf(error, "暂时无法连接服务，请稍后重试")
+                    .message,
+                }),
+              ),
+            );
+          }
         }
-      }
-    });
+      },
+    );
   };
 }
 
