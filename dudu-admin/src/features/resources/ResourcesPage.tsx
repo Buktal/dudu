@@ -1,17 +1,15 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { adminApi } from "@/api/admin-api";
 import { useAdmin } from "@/api/context";
-import type { CompanyQuery } from "@/api/types";
 import { useQuery } from "@/api/use-query";
 import { CompanyFilters } from "@/components/company-filters";
-import { EmptyState, ErrorState, LoadingState } from "@/components/feedback";
 import {
   PAGE_SIZE,
   PageHeader,
-  Pagination,
   RefreshButton,
   StatusBadge,
 } from "@/components/page-parts";
+import { QueryView } from "@/components/query-view";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -22,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useCompanies } from "@/features/companies/company-data";
 
 function ResourceCells({ companyId }: { companyId: string }) {
   const client = useAdmin();
@@ -76,18 +75,12 @@ export function ResourcesPage({
   navigate: (path: string) => void;
   companyId?: string | null;
 }) {
-  const client = useAdmin();
-  const [filters, setFilters] = useState<CompanyQuery>({
+  // 初始筛选来自路由，依赖 App 的 key remount 重挂载才生效（company-data 契约）。
+  const query = useCompanies({
     keyword: companyId ?? undefined,
     page: 1,
     pageSize: PAGE_SIZE,
   });
-  const query = useQuery(
-    useCallback(
-      (signal: AbortSignal) => adminApi.companies(client, filters, signal),
-      [client, filters],
-    ),
-  );
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -97,84 +90,72 @@ export function ResourcesPage({
           <RefreshButton loading={query.loading} onClick={query.refresh} />
         }
       />
-      {/* 本页尚未迁 useCompanies，筛选不变量暂由本地状态手工维持 */}
       <CompanyFilters
-        keyword={filters.keyword}
-        status={filters.status}
-        onKeyword={(keyword) => setFilters({ ...filters, page: 1, keyword })}
-        onStatus={(status) => setFilters({ ...filters, page: 1, status })}
-        onReset={() => setFilters({ page: 1, pageSize: filters.pageSize })}
+        keyword={query.keyword}
+        status={query.status}
+        onKeyword={query.setKeyword}
+        onStatus={query.setStatus}
+        onReset={query.reset}
       />
-      <div className="overflow-hidden rounded-xl border bg-card">
-        {query.loading ? (
-          <LoadingState />
-        ) : query.error ? (
-          <ErrorState message={query.error} retry={query.refresh} />
-        ) : (
-          query.data && (
-            <>
-              {query.data.list.length ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>企业名称</TableHead>
-                      <TableHead>企业 ID</TableHead>
-                      <TableHead>企业状态</TableHead>
-                      <TableHead className="text-right">用户总数</TableHead>
-                      <TableHead className="text-right">启用用户</TableHead>
-                      <TableHead className="text-right">用户组</TableHead>
-                      <TableHead className="text-right">渠道接入账号</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {query.data.list.map((company) => (
-                      <TableRow key={company.companyId}>
-                        <TableCell>
-                          <button
-                            type="button"
-                            className="company-link"
-                            onClick={() =>
-                              navigate(
-                                `companies?companyId=${company.companyId}`,
-                              )
-                            }
-                          >
-                            {company.companyName}
-                          </button>
-                        </TableCell>
-                        <TableCell className="font-mono">
-                          {company.companyId}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={company.status} />
-                        </TableCell>
-                        <ResourceCells companyId={company.companyId} />
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <EmptyState
-                  title={
-                    filters.keyword || filters.status !== undefined
-                      ? "未找到符合条件的企业"
-                      : "暂无企业资源"
-                  }
-                  description={
-                    filters.keyword || filters.status !== undefined
-                      ? "调整筛选条件后重试。"
-                      : "企业开通后，可在这里查看资源汇总。"
-                  }
-                />
-              )}
-              <Pagination
-                {...query.data}
-                onChange={(page) => setFilters({ ...filters, page })}
-              />
-            </>
-          )
-        )}
-      </div>
+      <QueryView
+        count={query.list.length}
+        loading={query.loading}
+        error={query.error}
+        retry={query.refresh}
+        pagination={{
+          page: query.page,
+          pageSize: query.pageSize,
+          total: query.total,
+          onPage: query.setPage,
+        }}
+        empty={{
+          filtered: Boolean(query.keyword) || query.status !== undefined,
+          filteredCopy: {
+            title: "未找到符合条件的企业",
+            description: "调整筛选条件后重试。",
+          },
+          defaultCopy: {
+            title: "暂无企业资源",
+            description: "企业开通后，可在这里查看资源汇总。",
+          },
+        }}
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>企业名称</TableHead>
+              <TableHead>企业 ID</TableHead>
+              <TableHead>企业状态</TableHead>
+              <TableHead className="text-right">用户总数</TableHead>
+              <TableHead className="text-right">启用用户</TableHead>
+              <TableHead className="text-right">用户组</TableHead>
+              <TableHead className="text-right">渠道接入账号</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {query.list.map((company) => (
+              <TableRow key={company.companyId}>
+                <TableCell>
+                  <button
+                    type="button"
+                    className="company-link"
+                    onClick={() =>
+                      navigate(`companies?companyId=${company.companyId}`)
+                    }
+                  >
+                    {company.companyName}
+                  </button>
+                </TableCell>
+                <TableCell className="font-mono">{company.companyId}</TableCell>
+                <TableCell>
+                  <StatusBadge status={company.status} />
+                </TableCell>
+                <ResourceCells companyId={company.companyId} />
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </QueryView>
     </div>
   );
 }

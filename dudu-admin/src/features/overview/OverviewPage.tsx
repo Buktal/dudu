@@ -6,10 +6,6 @@ import {
   Plus,
   TrendingUp,
 } from "lucide-react";
-import { useCallback } from "react";
-import { adminApi } from "@/api/admin-api";
-import { useAdmin } from "@/api/context";
-import { useQuery } from "@/api/use-query";
 import { EmptyState, ErrorState, LoadingState } from "@/components/feedback";
 import {
   formatDate,
@@ -28,19 +24,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useOverview } from "./overview-data";
 
 export function OverviewPage({
   navigate,
 }: {
   navigate: (path: string) => void;
 }) {
-  const client = useAdmin();
-  const query = useQuery(
-    useCallback(
-      (signal: AbortSignal) => adminApi.overview(client, signal),
-      [client],
-    ),
-  );
+  const { stats, recentCompanies, loading, error, refresh } = useOverview();
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -48,7 +39,7 @@ export function OverviewPage({
         description="了解企业规模与近期开通情况。"
         actions={
           <>
-            <RefreshButton loading={query.loading} onClick={query.refresh} />
+            <RefreshButton loading={loading} onClick={refresh} />
             <Button onClick={() => navigate("companies?create=1")}>
               <Plus data-icon="inline-start" />
               创建企业
@@ -56,32 +47,32 @@ export function OverviewPage({
           </>
         }
       />
-      {query.loading ? (
+      {loading ? (
         <LoadingState />
-      ) : query.error ? (
-        <ErrorState message={query.error} retry={query.refresh} />
+      ) : error ? (
+        <ErrorState message={error} retry={refresh} />
       ) : (
-        query.data && (
+        stats && (
           <>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Metric
                 label="企业总数"
-                value={query.data.companyCount}
+                value={stats.companyCount}
                 icon={<Building2 className="size-5" />}
               />
               <Metric
                 label="正常启用"
-                value={query.data.companyEnabledCount}
+                value={stats.companyEnabledCount}
                 icon={<CheckCircle2 className="size-5" />}
               />
               <Metric
                 label="已停用"
-                value={query.data.companyDisabledCount}
+                value={stats.companyDisabledCount}
                 icon={<CirclePause className="size-5" />}
               />
               <Metric
                 label="近 7 天开通"
-                value={query.data.companyCreatedLast7DaysCount}
+                value={stats.companyCreatedLast7DaysCount}
                 icon={<TrendingUp className="size-5" />}
               />
             </div>
@@ -98,7 +89,7 @@ export function OverviewPage({
                 </Button>
               </CardHeader>
               <CardContent className="px-0">
-                {query.data.recentCompanies.length ? (
+                {recentCompanies.length ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -109,7 +100,7 @@ export function OverviewPage({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {query.data.recentCompanies.map((company) => (
+                      {recentCompanies.map((company) => (
                         <TableRow key={company.companyId}>
                           <TableCell>
                             <button

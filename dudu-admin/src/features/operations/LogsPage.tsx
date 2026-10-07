@@ -1,20 +1,16 @@
 import { Search } from "lucide-react";
-import { useCallback, useState } from "react";
-import { adminApi } from "@/api/admin-api";
-import { useAdmin } from "@/api/context";
-import { type LogQuery, operationActions } from "@/api/types";
-import { useQuery } from "@/api/use-query";
+import { useState } from "react";
+import { operationActions } from "@/api/types";
 import { validCompanyId } from "@/api/validators";
-import { EmptyState, ErrorState, LoadingState } from "@/components/feedback";
 import { TextField } from "@/components/form-field";
 import {
   FilterSelect,
   formatDate,
   PAGE_SIZE,
   PageHeader,
-  Pagination,
   RefreshButton,
 } from "@/components/page-parts";
+import { QueryView } from "@/components/query-view";
 import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
 import {
@@ -25,21 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useLogs } from "./log-data";
 
 export function LogsPage() {
-  const client = useAdmin();
-  const [filters, setFilters] = useState<LogQuery>({
-    page: 1,
-    pageSize: PAGE_SIZE,
-  });
+  const query = useLogs({ page: 1, pageSize: PAGE_SIZE });
+  // 企业 ID 是提交式草稿：校验通过前不进查询，hook 只收已应用的值。
   const [companyId, setCompanyId] = useState("");
   const [error, setError] = useState<string | undefined>();
-  const query = useQuery(
-    useCallback(
-      (signal: AbortSignal) => adminApi.logs(client, filters, signal),
-      [client, filters],
-    ),
-  );
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -58,11 +46,7 @@ export function LogsPage() {
             return;
           }
           setError(undefined);
-          setFilters({
-            ...filters,
-            companyId: companyId || undefined,
-            page: 1,
-          });
+          query.setCompanyId(companyId || undefined);
         }}
       >
         <FieldGroup className="min-w-44 flex-1">
@@ -83,7 +67,7 @@ export function LogsPage() {
           </Button>
           <FilterSelect<keyof typeof operationActions | "all">
             label="操作类型"
-            value={filters.action ?? "all"}
+            value={query.action ?? "all"}
             options={[
               { value: "all", label: "全部操作" },
               ...Object.entries(operationActions).map(([value, label]) => ({
@@ -92,20 +76,16 @@ export function LogsPage() {
               })),
             ]}
             onChange={(action) =>
-              setFilters({
-                ...filters,
-                page: 1,
-                action: action === "all" ? undefined : action,
-              })
+              query.setAction(action === "all" ? undefined : action)
             }
           />
-          {(filters.companyId || filters.action) && (
+          {(query.companyId || query.action) && (
             <Button
               variant="ghost"
               onClick={() => {
                 setCompanyId("");
                 setError(undefined);
-                setFilters({ page: 1, pageSize: PAGE_SIZE });
+                query.reset();
               }}
             >
               重置
@@ -113,72 +93,69 @@ export function LogsPage() {
           )}
         </div>
       </form>
-      <div className="overflow-hidden rounded-xl border bg-card">
-        {query.loading ? (
-          <LoadingState />
-        ) : query.error ? (
-          <ErrorState message={query.error} retry={query.refresh} />
-        ) : (
-          query.data && (
-            <>
-              {query.data.list.length ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>操作时间</TableHead>
-                      <TableHead>操作</TableHead>
-                      <TableHead>操作对象</TableHead>
-                      <TableHead>操作人 ID</TableHead>
-                      <TableHead>说明</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {query.data.list.map((log) => (
-                      <TableRow key={log.operationLogId}>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(log.createTime, true)}
-                        </TableCell>
-                        <TableCell>
-                          {operationActions[log.action] ?? "其他操作"}
-                        </TableCell>
-                        <TableCell className="font-mono">
-                          {log.targetId
-                            ? `${log.target === "company" ? "企业" : "用户"} ${log.targetId}`
-                            : "—"}
-                          {log.companyId && log.target === "user" && (
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              企业 {log.companyId}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono">
-                          {log.operatorUserId}
-                        </TableCell>
-                        <TableCell className="min-w-48 max-w-md whitespace-normal break-words">
-                          {log.summary ?? "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <EmptyState
-                  title="暂无操作记录"
-                  description={
-                    filters.companyId || filters.action
-                      ? "未找到符合筛选条件的记录。"
-                      : "企业维护与账号操作完成后，可在这里回查结果。"
-                  }
-                />
-              )}
-              <Pagination
-                {...query.data}
-                onChange={(page) => setFilters({ ...filters, page })}
-              />
-            </>
-          )
-        )}
-      </div>
+      <QueryView
+        count={query.list.length}
+        loading={query.loading}
+        error={query.error}
+        retry={query.refresh}
+        pagination={{
+          page: query.page,
+          pageSize: query.pageSize,
+          total: query.total,
+          onPage: query.setPage,
+        }}
+        empty={{
+          filtered: Boolean(query.companyId) || query.action !== undefined,
+          filteredCopy: {
+            title: "暂无操作记录",
+            description: "未找到符合筛选条件的记录。",
+          },
+          defaultCopy: {
+            title: "暂无操作记录",
+            description: "企业维护与账号操作完成后，可在这里回查结果。",
+          },
+        }}
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>操作时间</TableHead>
+              <TableHead>操作</TableHead>
+              <TableHead>操作对象</TableHead>
+              <TableHead>操作人 ID</TableHead>
+              <TableHead>说明</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {query.list.map((log) => (
+              <TableRow key={log.operationLogId}>
+                <TableCell className="text-muted-foreground">
+                  {formatDate(log.createTime, true)}
+                </TableCell>
+                <TableCell>
+                  {operationActions[log.action] ?? "其他操作"}
+                </TableCell>
+                <TableCell className="font-mono">
+                  {log.targetId
+                    ? `${log.target === "company" ? "企业" : "用户"} ${log.targetId}`
+                    : "—"}
+                  {log.companyId && log.target === "user" && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      企业 {log.companyId}
+                    </p>
+                  )}
+                </TableCell>
+                <TableCell className="font-mono">
+                  {log.operatorUserId}
+                </TableCell>
+                <TableCell className="min-w-48 max-w-md whitespace-normal break-words">
+                  {log.summary ?? "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </QueryView>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CompanyStatus } from "@/api/types";
 import { FilterSelect } from "./page-parts";
 import { Button } from "./ui/button";
@@ -7,7 +7,9 @@ import { Field, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 
 // 筛选栏只上报平台管理员的意图（关键词、状态、重置）；
-// 「筛选变化回第一页」等与分页的耦合规则由数据方（useCompanies 或页面本地状态）决定。
+// 「筛选变化回第一页」等与分页的耦合规则由数据方（useCompanies 等数据模块）决定。
+// 搜索草稿是组件私有语义：草稿跟随已应用 keyword（提交、重置后同步），
+// 页面不再需要用 remount key 换「重置后清空草稿」。
 export function CompanyFilters({
   keyword,
   status,
@@ -22,6 +24,9 @@ export function CompanyFilters({
   onReset: () => void;
 }) {
   const [draft, setDraft] = useState(keyword ?? "");
+  useEffect(() => {
+    setDraft(keyword ?? "");
+  }, [keyword]);
   return (
     <form
       className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4"

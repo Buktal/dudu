@@ -188,3 +188,27 @@ it("列表失败不冒充空数据，重试为空时才显示开通入口", asyn
   fireEvent.click(screen.getByRole("button", { name: "重试" }));
   expect(await screen.findByText("暂无企业")).toBeInTheDocument();
 });
+
+it("重置清空搜索草稿并回到全量查询，无需 remount key", async () => {
+  const request = installHttp(() => success(page()));
+  authenticatedSession();
+  render(<App />);
+  await screen.findByRole("button", { name: company.companyName });
+  const queryBodies = () =>
+    request.mock.calls
+      .filter(([url]) => String(url).includes("/admin/companies/query"))
+      .map(([, init]) => JSON.parse(String(init?.body)));
+
+  fill("搜索企业", "青禾");
+  fireEvent.click(screen.getByRole("button", { name: "搜索" }));
+  await waitFor(() => expect(queryBodies()).toHaveLength(2));
+  expect(screen.getByLabelText("搜索企业")).toHaveValue("青禾");
+
+  fireEvent.click(screen.getByRole("button", { name: "重置" }));
+  expect(screen.getByLabelText("搜索企业")).toHaveValue("");
+  await waitFor(() => expect(queryBodies()).toHaveLength(3));
+  expect(queryBodies()[2]).toEqual({ page: 1, pageSize: 20 });
+  expect(
+    screen.queryByRole("button", { name: "重置" }),
+  ).not.toBeInTheDocument();
+});

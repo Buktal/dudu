@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { adminApi } from "@/api/admin-api";
 import { AdminClient } from "@/api/client";
 import { AdminContext } from "@/api/context";
-import type { CompanyProfile } from "@/api/types";
+import type { CompanyProfile, CompanyQuery } from "@/api/types";
 import { company, detail, page, success } from "@/test/http";
 import { useCompanies, useCompany, useCompanyCommands } from "./company-data";
 
@@ -28,6 +28,17 @@ function mount(client: AdminClient) {
     return { companies, companyDetail, commands };
   }
   return renderHook(() => useHarness(), { wrapper: Wrapper });
+}
+
+// 模拟 ResourcesPage 的消费方式：初始筛选来自路由，依赖 App 的 key remount 重挂载。
+function mountList(initial: CompanyQuery) {
+  const client = new AdminClient();
+  return renderHook((filters: CompanyQuery) => useCompanies(filters), {
+    initialProps: initial,
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <AdminContext value={client}>{children}</AdminContext>
+    ),
+  });
 }
 
 function countRequests(
@@ -221,4 +232,34 @@ it("page 以服务端回显为单一真相，与请求值解耦", async () => {
   expect(result.current.companies.page).toBe(4);
   expect(result.current.companies.pageSize).toBe(50);
   expect(queryBodies(request)).toEqual([{ page: 1, pageSize: 20 }]);
+});
+
+// initialFilters 只在挂载读取：props 更新不得覆盖已应用的筛选，
+// 只有重新挂载（如 App 对 ResourcesPage 的 key remount）才应用新的初始筛选。
+it("initialFilters 只在挂载生效，重挂载才应用新的初始筛选", async () => {
+  const request = vi.fn((input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/api/admin/companies/query")
+      return Promise.resolve(success(page()));
+    return Promise.resolve(success(detail));
+  });
+  vi.stubGlobal("fetch", request);
+
+  const first = mountList({ keyword: "青禾", page: 1, pageSize: 20 });
+  await waitFor(() => expect(first.result.current.loading).toBe(false));
+  first.rerender({ keyword: "新条件", page: 1, pageSize: 20 });
+  await act(async () => {});
+  expect(first.result.current.keyword).toBe("青禾");
+  expect(queryBodies(request)).toEqual([
+    { page: 1, pageSize: 20, keyword: "青禾" },
+  ]);
+  first.unmount();
+
+  const second = mountList({ keyword: "新条件", page: 1, pageSize: 20 });
+  await waitFor(() => expect(second.result.current.loading).toBe(false));
+  expect(second.result.current.keyword).toBe("新条件");
+  expect(queryBodies(request)).toEqual([
+    { page: 1, pageSize: 20, keyword: "青禾" },
+    { page: 1, pageSize: 20, keyword: "新条件" },
+  ]);
 });

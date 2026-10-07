@@ -132,3 +132,11 @@ _Avoid_: 手工刷新回调、onChanged 刷新链（旧实现）
 DuduAdmin 中平台管理员对企业列表的筛选写接口词汇：setKeyword / setStatus / reset / setPage 四个命名操作；「筛选变化与重置都回第一页且保留 pageSize」的分页不变量内聚在 companies 域数据模块（company-data）单点，page 以服务端回显为单一真相（加载或失败时回退请求值）；筛选栏等调用方只上报意图，不手工拼 CompanyQuery。
 _Avoid_: 裸 setFilters、手工拼查询对象（旧宽 interface）
 
+**查询四键**:
+DuduAdmin 中取数 hook（useQuery）对外恒定的 interface：{data, error, loading, refresh}；请求竞态防护（旧请求取消、迟到结果丢弃）与「失败不冒充空数据」都收敛在 use-query 单点实现并有 hook 级直接测试。
+_Avoid_: 六键 spread（load/attempt 版本戳外泄的旧 interface）、调用方手工比较版本
+
+**列表页骨架（QueryView）**:
+DuduAdmin 三个列表页（企业、企业资源汇总、操作记录）共用的加载→失败→空态→表格→分页编排单点：「失败不冒充空数据」由分支顺序（error 先于空态判定）单点保证；表格列与行走 children 槽，空态动作按钮与两套空态文案（筛选中 / 全量）归页面。
+_Avoid_: 三步舞手写编排（loading/error/数据分支逐页复制）、失败态渲染空态文案
+
