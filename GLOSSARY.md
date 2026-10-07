@@ -101,7 +101,7 @@ mock-pulse 三条启动路（模板直发 / 剧本运行 / 编排运行）共用
 _Avoid_: 返回值（口语）
 
 **引用解析**:
-mock-pulse 中步骤/编排引用到注册表条目的查找与缺失分类单点：`{id, version}` → ok / id-missing / version-missing。事件素材版本、事件模板版本、编排 lane 剧本三处共用同一 kernel（events 域 resolve）；缺失含义（运行时钟抛错 / 展示时钟标记）归各调用时钟。
+mock-pulse 中步骤/编排引用到注册表条目的查找与缺失分类单点：`{id, version}` → ok / id-missing / version-missing。事件素材版本、事件模板版本、编排 lane 剧本三处共用同一 kernel（events 域 resolve）；各时钟（运行 / 展示 / 编辑 / 守卫）的缺失含义收敛到同域 interpreter（interpret*）这一唯一出口，域外只经它消费，缺失语义变更只改 consequence 表一行。
 _Avoid_: 查找、引用查找（口语）
 
 **渠道适配器（ChannelAdapter）**:
@@ -123,4 +123,8 @@ _Avoid_: 事件样例（UI 旧文案，已统一为「事件素材」）
 **模板直发**:
 不落事件素材、以事件模板默认载荷（可临时编辑）直接发往该渠道当前连接的调试方式。
 _Avoid_: demo 发送、试发
+
+**企业聚合失效**:
+DuduAdmin 中企业资料、启停状态或初始管理员维护成功后，挂载中的企业列表与企业详情自动重新读取的共享失效语义；宣告与订阅收敛在 companies 域数据模块（company-data）单点，页面与弹层不再手工接线刷新。
+_Avoid_: 手工刷新回调、onChanged 刷新链（旧实现）
 

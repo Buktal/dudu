@@ -48,24 +48,25 @@ export function materializePlanRun(input: {
   const lanes = plan.items.map((item, lane) => {
     const scenario = resolveLaneScenario(item, scenarios);
     // 运行时钟问 interpreter（events 域唯一分岔点；存在性引用：快照优先解析
-    // 命中即放行，双缺即拦截；文案一字不动）。
-    // blocks 为 false 即 ok，ok 即 lane 解析命中，下方断言成立。
-    if (interpretPresence(scenario !== undefined, "runtime").blocks) {
+    // 命中即放行，双缺即拦截；文案一字不动）。后半为类型收窄，语义以解释为准。
+    if (
+      interpretPresence(scenario !== undefined, "runtime").blocks ||
+      !scenario
+    ) {
       throw new Error(
         `编排第 ${lane + 1} 条引用的剧本不存在：${item.scenarioId}。先移除该剧本或调整剧本库。`,
       );
     }
-    const laneScenario = scenario as Scenario;
     try {
       return materializeRunSnapshot({
-        scenario: laneScenario,
+        scenario,
         events,
         startedAt,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `剧本「${laneScenario.name}」（编排第 ${lane + 1} 条）无法运行：${message}`,
+        `剧本「${scenario.name}」（编排第 ${lane + 1} 条）无法运行：${message}`,
       );
     }
   });

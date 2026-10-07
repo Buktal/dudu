@@ -28,19 +28,7 @@ export {
   describeExpected,
   RECEIPT_BODY_MODES,
 } from "./receipt";
-export {
-  describeEventVersion,
-  describeTemplateVersion,
-  type EventRefStatus,
-  REF_CONSEQUENCES,
-  type RefConsequence,
-  type RefStatusName,
-  refEntryOf,
-  refRowOf,
-  refStatusForPresence,
-  resolveRow,
-  type TemplateRefStatus,
-} from "./resolve";
+export { resolveRow } from "./resolve";
 export {
   EVENT_SCHEMAS,
   type EventSchema,

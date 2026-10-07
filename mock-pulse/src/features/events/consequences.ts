@@ -18,6 +18,9 @@
  * - guard（组合根删除守卫）：存在引用即拦删；事件引用按 id 匹配，
  *   故 version-missing 仍拦删（行在），lane 无版本维度，
  *   version-missing 列为不可达、默认不拦。
+ *
+ * 本表与 kernel 均为 events 域内私有（门面只出 interpreter）：唯一读方是
+ * ./interpret，域外消费一律走 interpret* 的时钟入口。
  */
 
 export type RefStatusName = "ok" | "id-missing" | "version-missing";

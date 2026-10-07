@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
 import type { ConnectionConfig } from "@/features/connections";
-import { REF_CONSEQUENCES, refStatusForPresence } from "@/features/events";
+import { interpretPresence } from "@/features/events";
 import type { Scenario } from "@/features/scenarios";
 
 import {
@@ -122,14 +122,16 @@ function pinPlanScenarios(draft: Plan, scenarios: Scenario[]): Plan {
       // 已钉快照保持（快照优先，运行时钟同样优先用它）。
       if (item.snapshot) return item;
       const scenario = resolveLaneScenario(item, scenarios);
-      const laneStatus = refStatusForPresence(scenario !== undefined);
-      // 编辑时钟（钉快照门）问 consequence 表：库内命中即钉，缺失留
-      // undefined（保存由 validatePlan 拦；运行时钟同样拒绝；文案不动）。
-      // blocks 为 false 即 ok，ok 即 lane 解析命中，下方断言成立。
-      if (REF_CONSEQUENCES[laneStatus].edit.laneBlocksSave) {
+      // 编辑时钟（钉快照门）问 interpreter（events 域唯一分岔点）：库内命中
+      // 即钉，缺失留 undefined（保存由 validatePlan 拦；运行时钟同样拒绝；
+      // 文案不动）。后半为类型收窄，语义以解释为准。
+      if (
+        interpretPresence(scenario !== undefined, "edit").blocks ||
+        !scenario
+      ) {
         return { ...item, snapshot: undefined };
       }
-      return { ...item, snapshot: scenario as Scenario };
+      return { ...item, snapshot: scenario };
     }),
   };
 }

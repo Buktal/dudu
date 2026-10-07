@@ -9,24 +9,26 @@ import {
 import { describeEventVersion, describeTemplateVersion } from "./resolve";
 
 /**
- * 引用解析 interpreter（C1 的唯一深 module）。
+ * 引用解析 interpreter（C1 的唯一深 module，也是 events 域引用解析的唯一出口：
+ * kernel 与 consequence 表均已退回域内私有，门面只导出 interpret*）。
  *
  * kernel（./resolve：describeEventVersion / describeTemplateVersion）回答「引用怎么了」
  * （ok / id-missing / version-missing），consequence 表（./consequences）回答「每个分类
  * 在各时钟里意味着什么」。本 module 是两者之上的唯一 interface：调用侧只传引用与时钟，
  * 拿回 {row, entry, blocks, missingKind, missing, outdated}，不再手写 status 分岔、
- * 不再自选 refRowOf / refEntryOf。
+ * 不再自选 refRowOf / refEntryOf、不再直查 REF_CONSEQUENCES。
  *
- * seam 说明：新增引用形态 = 本 module 加一个 interpret* 函数；缺失语义变更 = 只改本
- * module 的查表映射；调用侧（runs 快照物化 / plans 编排物化 / scenarios 展示与校验）
- * 只剩薄 adapter——错误文案模板注入（措辞一字不动）与渠道一致性检查。
+ * seam 说明：新增引用形态 = 本 module 加一个 interpret* 函数；缺失语义变更 = 只改
+ * consequence 表一行，调用侧不动。调用侧（runs 快照物化 / plans 编排物化与统计 /
+ * scenarios 展示与校验 / 组合根删除守卫）只剩薄 adapter——错误文案模板注入
+ * （措辞一字不动）与渠道一致性检查。
  *
  * 约定：events 不反向依赖任何 feature。本 module 只收结构化最小形状，
  * 素材库整行与校验侧的窄行（存在性引用走 interpretPresence）都能进。
  */
 
-/** interpreter 时钟：consequence 表的 runtime / view / edit 三行。 */
-export type InterpretClock = "runtime" | "view" | "edit";
+/** interpreter 时钟：consequence 表的 runtime / view / edit / guard 四行。 */
+export type InterpretClock = "runtime" | "view" | "edit" | "guard";
 
 /** 文案选用：调用时钟该用哪份既有错误文案（runtime.missingKind 语义，跨时钟稳定）。 */
 export type InterpretMissingKind = "id" | "version" | null;
@@ -42,7 +44,10 @@ export type InterpretedStep<Row, Entry> = {
   row: Row | undefined;
   /** 命中即带回：事件版本 / 钉住模板条目（view.hasEntry 语义，经 refEntryOf 查表拿）。 */
   entry: Entry | undefined;
-  /** 本时钟是否拦截：runtime = 拒绝启动，edit = 拒绝保存，view 恒 false（只标记不拦）。 */
+  /**
+   * 本时钟是否拦截：runtime = 拒绝启动，edit = 拒绝保存，
+   * guard = 拒绝删除，view 恒 false（只标记不拦）。
+   */
   blocks: boolean;
   /** 该用哪份既有文案，文案本体归调用时钟。 */
   missingKind: InterpretMissingKind;
@@ -52,15 +57,24 @@ export type InterpretedStep<Row, Entry> = {
   outdated: boolean;
 };
 
-/** 时钟→拦截门：runtime 问拒绝启动，edit 问各形态的保存门，view 不拦截。 */
+/**
+ * 时钟→拦截门：runtime 问拒绝启动，edit 问各形态的保存门，guard 问删除
+ * 守卫，view 不拦截（只标记）。各形态只认领自己有的列：事件步骤按 id
+ * 匹配守卫（version-missing 行在仍拦删），内置模板不可删除恒放行，
+ * 存在性引用的保存 / 守卫列在两态同值，查 lane 列代言。
+ */
 function blocksFor(
   status: RefStatusName,
   clock: InterpretClock,
-  editGate: (edit: RefConsequence["edit"]) => boolean,
+  gates: {
+    edit: (edit: RefConsequence["edit"]) => boolean;
+    guard: (guard: RefConsequence["guard"]) => boolean;
+  },
 ): boolean {
   const consequence = REF_CONSEQUENCES[status];
   if (clock === "runtime") return consequence.runtime.blocks;
-  if (clock === "edit") return editGate(consequence.edit);
+  if (clock === "edit") return gates.edit(consequence.edit);
+  if (clock === "guard") return gates.guard(consequence.guard);
   return false;
 }
 
@@ -88,7 +102,10 @@ export function interpretEventStep<
     status: status.status,
     row,
     entry,
-    blocks: blocksFor(status.status, clock, (edit) => edit.eventBlocksSave),
+    blocks: blocksFor(status.status, clock, {
+      edit: (edit) => edit.eventBlocksSave,
+      guard: (guard) => guard.eventBlocksDelete,
+    }),
     missingKind: consequence.runtime.missingKind,
     // 事件展示缺失 = 无行：version-missing 带回行故不标 missing（行照常展示，
     // 拒绝启动是运行时钟的事）。
@@ -118,7 +135,11 @@ export function interpretTemplateStep<
     status: status.status,
     row: refRowOf(status),
     entry,
-    blocks: blocksFor(status.status, clock, (edit) => edit.templateBlocksSave),
+    blocks: blocksFor(status.status, clock, {
+      edit: (edit) => edit.templateBlocksSave,
+      // 内置模板不可删除，guard 无对应列、恒放行。
+      guard: () => false,
+    }),
     missingKind: consequence.runtime.missingKind,
     missing: entry === undefined,
     outdated: false,
@@ -126,9 +147,11 @@ export function interpretTemplateStep<
 }
 
 /**
- * 存在性引用解释：lane 剧本（快照优先解析命中与否）/ 编辑时钟窄行（只有 id 维度）
- * + 时钟 → 唯一词汇。只有 ok / id-missing 两态，四类 edit 门在此两态下同值
- * （ok 全放行、id-missing 全拦截），故两种存在性引用共用，无需再按形态分岔。
+ * 存在性引用解释：lane 剧本（快照优先解析命中与否）/ 编辑时钟窄行（只有 id
+ * 维度）/ 删除守卫计数（引用名列表非空与否）+ 时钟 → 唯一词汇。只有
+ * ok / id-missing 两态：四类 edit 门同值（ok 全放行、id-missing 全拦截），
+ * 两列 guard 门同值（有引用即拦删、无引用放行），故同步门 / 钉快照门 /
+ * 删事件与删剧本守卫共用本入口，无需再按形态分岔。
  */
 export function interpretPresence(
   present: boolean,
@@ -140,7 +163,10 @@ export function interpretPresence(
     status,
     row: undefined,
     entry: undefined,
-    blocks: blocksFor(status, clock, (edit) => edit.laneBlocksSave),
+    blocks: blocksFor(status, clock, {
+      edit: (edit) => edit.laneBlocksSave,
+      guard: (guard) => guard.laneBlocksDelete,
+    }),
     missingKind: consequence.runtime.missingKind,
     missing: !present,
     outdated: false,
