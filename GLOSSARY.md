@@ -128,3 +128,7 @@ _Avoid_: demo 发送、试发
 DuduAdmin 中企业资料、启停状态或初始管理员维护成功后，挂载中的企业列表与企业详情自动重新读取的共享失效语义；宣告与订阅收敛在 companies 域数据模块（company-data）单点，页面与弹层不再手工接线刷新。
 _Avoid_: 手工刷新回调、onChanged 刷新链（旧实现）
 
+**企业列表筛选操作**:
+DuduAdmin 中平台管理员对企业列表的筛选写接口词汇：setKeyword / setStatus / reset / setPage 四个命名操作；「筛选变化与重置都回第一页且保留 pageSize」的分页不变量内聚在 companies 域数据模块（company-data）单点，page 以服务端回显为单一真相（加载或失败时回退请求值）；筛选栏等调用方只上报意图，不手工拼 CompanyQuery。
+_Avoid_: 裸 setFilters、手工拼查询对象（旧宽 interface）
+

@@ -97,7 +97,14 @@ export function ResourcesPage({
           <RefreshButton loading={query.loading} onClick={query.refresh} />
         }
       />
-      <CompanyFilters query={filters} onChange={setFilters} />
+      {/* 本页尚未迁 useCompanies，筛选不变量暂由本地状态手工维持 */}
+      <CompanyFilters
+        keyword={filters.keyword}
+        status={filters.status}
+        onKeyword={(keyword) => setFilters({ ...filters, page: 1, keyword })}
+        onStatus={(status) => setFilters({ ...filters, page: 1, status })}
+        onReset={() => setFilters({ page: 1, pageSize: filters.pageSize })}
+      />
       <div className="overflow-hidden rounded-xl border bg-card">
         {query.loading ? (
           <LoadingState />

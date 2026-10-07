@@ -69,9 +69,12 @@ export function CompaniesPage({
       />
       {message && <Message>{message}</Message>}
       <CompanyFilters
-        key={`${query.filters.keyword ?? ""}-reset`}
-        query={query.filters}
-        onChange={query.setFilters}
+        key={`${query.keyword ?? ""}-reset`}
+        keyword={query.keyword}
+        status={query.status}
+        onKeyword={query.setKeyword}
+        onStatus={query.setStatus}
+        onReset={query.reset}
       />
       <div className="overflow-hidden rounded-xl border bg-card">
         {query.loading ? (
@@ -83,23 +86,18 @@ export function CompaniesPage({
             {query.list.length === 0 ? (
               <EmptyState
                 title={
-                  query.filters.keyword || query.filters.status !== undefined
+                  query.keyword || query.status !== undefined
                     ? "未找到符合条件的企业"
                     : "暂无企业"
                 }
                 description={
-                  query.filters.keyword || query.filters.status !== undefined
+                  query.keyword || query.status !== undefined
                     ? "调整搜索关键词或状态后重试。"
                     : "创建第一家企业，开始提供服务。"
                 }
               >
-                {query.filters.keyword || query.filters.status !== undefined ? (
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      query.setFilters({ page: 1, pageSize: PAGE_SIZE })
-                    }
-                  >
+                {query.keyword || query.status !== undefined ? (
+                  <Button variant="outline" onClick={query.reset}>
                     清除筛选
                   </Button>
                 ) : (
@@ -209,7 +207,7 @@ export function CompaniesPage({
           close={() => navigate("companies")}
           onCreated={(company) => {
             setMessage(`企业「${company.companyName}」已创建`);
-            query.setFilters({ page: 1, pageSize: PAGE_SIZE });
+            query.reset();
             setAction(null);
             navigate(`companies?companyId=${company.companyId}`);
           }}

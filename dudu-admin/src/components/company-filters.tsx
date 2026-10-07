@@ -1,25 +1,33 @@
 import { Search } from "lucide-react";
 import { useState } from "react";
-import type { CompanyQuery, CompanyStatus } from "@/api/types";
+import type { CompanyStatus } from "@/api/types";
 import { FilterSelect } from "./page-parts";
 import { Button } from "./ui/button";
 import { Field, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 
+// 筛选栏只上报平台管理员的意图（关键词、状态、重置）；
+// 「筛选变化回第一页」等与分页的耦合规则由数据方（useCompanies 或页面本地状态）决定。
 export function CompanyFilters({
-  query,
-  onChange,
+  keyword,
+  status,
+  onKeyword,
+  onStatus,
+  onReset,
 }: {
-  query: CompanyQuery;
-  onChange: (query: CompanyQuery) => void;
+  keyword?: string;
+  status?: CompanyStatus;
+  onKeyword: (keyword: string | undefined) => void;
+  onStatus: (status: CompanyStatus | undefined) => void;
+  onReset: () => void;
 }) {
-  const [keyword, setKeyword] = useState(query.keyword ?? "");
+  const [draft, setDraft] = useState(keyword ?? "");
   return (
     <form
       className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4"
       onSubmit={(event) => {
         event.preventDefault();
-        onChange({ ...query, page: 1, keyword: keyword.trim() || undefined });
+        onKeyword(draft.trim() || undefined);
       }}
     >
       <FieldGroup className="min-w-48 flex-1">
@@ -29,8 +37,8 @@ export function CompanyFilters({
           </FieldLabel>
           <Input
             id="company-keyword"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
             maxLength={100}
             placeholder="搜索企业名称或六位企业 ID"
           />
@@ -42,26 +50,20 @@ export function CompanyFilters({
       </Button>
       <FilterSelect<CompanyStatus | "all">
         label="企业状态"
-        value={query.status ?? "all"}
+        value={status ?? "all"}
         options={[
           { value: "all", label: "全部状态" },
           { value: 1, label: "正常启用" },
           { value: 0, label: "已停用" },
         ]}
-        onChange={(status) =>
-          onChange({
-            ...query,
-            page: 1,
-            status: status === "all" ? undefined : status,
-          })
-        }
+        onChange={(value) => onStatus(value === "all" ? undefined : value)}
       />
-      {(query.keyword || query.status !== undefined) && (
+      {(keyword || status !== undefined) && (
         <Button
           variant="ghost"
           onClick={() => {
-            setKeyword("");
-            onChange({ page: 1, pageSize: query.pageSize });
+            setDraft("");
+            onReset();
           }}
         >
           重置
