@@ -1,11 +1,7 @@
 import type { ApiFailure } from "@/lib/api-response";
-import type {
-  ConnectionState,
-  ConversationPage,
-  InboxMessage,
-  Page,
-} from "../types";
+import type { ConnectionState, InboxMessage, Page } from "../types";
 import { collectPaged } from "./page-cursor";
+import { foldConversationPages } from "./queue-membership";
 import {
   failureOf,
   getRequestScope,
@@ -69,8 +65,8 @@ export function reconcileInbox(
       const query = getState().inbox.queue.query;
       dispatch(inboxActions.connectionChanged("reconnecting"));
       try {
-        const queuePage: ConversationPage = { items: [], nextCursor: null };
-        await collectPaged({
+        // Recovery must see every page: the loop never stops early.
+        const { pages } = await collectPaged({
           fetch: (cursor) =>
             runtime.api.listConversations({
               context: op.context,
@@ -80,19 +76,12 @@ export function reconcileInbox(
             }),
           duplicateMessage: "恢复读取返回了重复游标，请重新连接",
           isCurrent: () => current() && getState().inbox.queue.query === query,
-          shouldStop: (all) => {
-            const latest = all[all.length - 1];
-            queuePage.items.push(...latest.items);
-            queuePage.nextCursor = latest.nextCursor;
-            queuePage.total = latest.total ?? queuePage.total;
-            queuePage.counts = latest.counts ?? queuePage.counts;
-            queuePage.channels = latest.channels ?? queuePage.channels;
-            return false;
-          },
         });
         if (!current()) return;
         if (getState().inbox.queue.query === query)
-          dispatch(inboxActions.conversationsReconciled(queuePage));
+          dispatch(
+            inboxActions.conversationsReconciled(foldConversationPages(pages)),
+          );
 
         const historyIds = Object.keys(getState().inbox.histories).filter(
           (id) => getState().inbox.conversations[id],

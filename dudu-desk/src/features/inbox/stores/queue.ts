@@ -1,8 +1,9 @@
 import { createSelector } from "@reduxjs/toolkit";
 import { DeskApiError } from "@/lib/api-response";
 import { compareConversations } from "../conversation-query";
-import type { ConversationPage, ConversationQuery } from "../types";
+import type { ConversationQuery } from "../types";
 import { collectPaged } from "./page-cursor";
+import { foldConversationPages } from "./queue-membership";
 import { selectConversation } from "./reading";
 import { failureOf, requestKeys, runOperation } from "./requests";
 import { inboxActions } from "./slice";
@@ -59,13 +60,12 @@ export function loadConversations(
       await runOperation(runtime, requestKeys.queue, getState, async (op) => {
         dispatch(inboxActions.queueLoading(options.query));
         try {
-          const page: ConversationPage = { items: [], nextCursor: null };
           // Re-find mounted cards before pruning service-owned search membership.
           const remainingIds = new Set(
             options.more || options.query ? [] : queue.ids,
           );
           const loadedIds = new Set<string>();
-          await collectPaged({
+          const { pages } = await collectPaged({
             fetch: (cursor) =>
               runtime.api.listConversations({
                 context: op.context,
@@ -80,17 +80,12 @@ export function loadConversations(
             isCurrent: op.current,
             shouldStop: (all) => {
               const latest = all[all.length - 1];
-              page.items.push(...latest.items);
               const previousSize = loadedIds.size;
               for (const item of latest.items) {
                 loadedIds.add(item.id);
                 remainingIds.delete(item.id);
               }
-              page.nextCursor = latest.nextCursor;
-              page.total = latest.total ?? page.total;
-              page.counts = latest.counts ?? page.counts;
-              page.channels = latest.channels ?? page.channels;
-              if (!page.nextCursor || !remainingIds.size) return true;
+              if (!latest.nextCursor || !remainingIds.size) return true;
               if (loadedIds.size === previousSize)
                 throw new DeskApiError(
                   "invalid-response",
@@ -100,6 +95,7 @@ export function loadConversations(
             },
           });
           if (!op.current()) return;
+          const page = foldConversationPages(pages);
           const latest = getState().inbox;
           const preserveIds = latest.queue.ids.filter(
             (id) => latest.conversations[id].version > (versions.get(id) ?? -1),

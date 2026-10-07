@@ -15,7 +15,7 @@ import {
   mergeMessage,
   orderMessages,
 } from "./live-merge";
-import { rewriteQueueIds } from "./queue-membership";
+import { applyQueuePageMeta, rewriteQueueIds } from "./queue-membership";
 import {
   emptyLoad,
   type InboxState,
@@ -43,13 +43,7 @@ export const eventReducers = {
       incomingIds: page.items.map((item) => item.id),
       mode: "reconcile",
     });
-    state.queue.hasLoaded = true;
-    state.queue.status = "ready";
-    state.queue.error = null;
-    state.queue.nextCursor = page.nextCursor;
-    state.queue.total = page.total ?? state.queue.total;
-    state.queue.counts = page.counts ?? state.queue.counts;
-    state.queue.channels = page.channels ?? state.queue.channels;
+    applyQueuePageMeta(state.queue, page, { fallbackTotal: true });
   },
   historyReconciled(
     state: InboxState,

@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Conversation, VisitorIdentity } from "../types";
 import {
+  applyQueuePageMeta,
+  foldConversationPages,
   needsQueueRefreshForEvent,
   needsQueueReloadAfterProfileSave,
   needsQueueReloadAfterStarChange,
   rewriteQueueIds,
 } from "./queue-membership";
-import { emptyQuery } from "./state";
+import { emptyLoad, emptyQuery, type InboxState } from "./state";
 import { defineTestConversation } from "./test-support";
 
 function card(
@@ -173,5 +175,137 @@ describe("queue reload predicates", () => {
       needsQueueReloadAfterStarChange({ ...emptyQuery, starred: true }),
     ).toBe(true);
     expect(needsQueueReloadAfterStarChange(emptyQuery)).toBe(false);
+  });
+});
+
+function loadingQueue(): InboxState["queue"] {
+  return {
+    ...emptyLoad(),
+    status: "loading",
+    error: { kind: "network", message: "暂时无法连接服务" },
+    ids: ["a"],
+    query: emptyQuery,
+    total: 5,
+    counts: { active: 1, needsReply: 1, waiting: 0, closed: 0, starred: 0 },
+    channels: [{ id: "wechat-kf", name: "微信客服" }],
+  };
+}
+
+describe("foldConversationPages", () => {
+  it("folds items in page order and takes the last cursor", () => {
+    expect(
+      foldConversationPages([
+        { items: [card("a")], nextCursor: "page-two", total: 6 },
+        { items: [card("b")], nextCursor: null },
+      ]),
+    ).toEqual({
+      items: [card("a"), card("b")],
+      nextCursor: null,
+      total: 6,
+    });
+  });
+
+  it("keeps the newest non-null total, counts and channels across pages", () => {
+    const earlier = {
+      active: 1,
+      needsReply: 1,
+      waiting: 0,
+      closed: 0,
+      starred: 0,
+    };
+    const later = {
+      active: 2,
+      needsReply: 0,
+      waiting: 0,
+      closed: 0,
+      starred: 0,
+    };
+    expect(
+      foldConversationPages([
+        {
+          items: [card("a")],
+          nextCursor: "page-two",
+          total: 6,
+          counts: earlier,
+          channels: [{ id: "wechat-kf", name: "微信客服" }],
+        },
+        { items: [card("b")], nextCursor: "page-three" },
+        {
+          items: [card("c")],
+          nextCursor: null,
+          counts: later,
+          channels: [{ id: "telegram", name: "Telegram" }],
+        },
+      ]),
+    ).toEqual({
+      items: [card("a"), card("b"), card("c")],
+      nextCursor: null,
+      total: 6,
+      counts: later,
+      channels: [{ id: "telegram", name: "Telegram" }],
+    });
+  });
+
+  it("folds an empty collection into an empty page", () => {
+    expect(foldConversationPages([])).toEqual({ items: [], nextCursor: null });
+  });
+});
+
+describe("applyQueuePageMeta", () => {
+  const counts = {
+    active: 1,
+    needsReply: 1,
+    waiting: 0,
+    closed: 0,
+    starred: 0,
+  };
+  const channels = [{ id: "wechat-kf", name: "微信客服" }];
+
+  it("a queue read finalizes ready meta and owns the total outright", () => {
+    const queue = loadingQueue();
+    applyQueuePageMeta(
+      queue,
+      {
+        items: [],
+        nextCursor: "later",
+        counts: { active: 2, needsReply: 0, waiting: 0, closed: 0, starred: 1 },
+      },
+      { fallbackTotal: false },
+    );
+    expect(queue).toMatchObject({
+      status: "ready",
+      hasLoaded: true,
+      error: null,
+      nextCursor: "later",
+      counts: { active: 2, needsReply: 0, waiting: 0, closed: 0, starred: 1 },
+      channels,
+    });
+    expect(queue.total).toBeUndefined();
+  });
+
+  it("a reconcile page only overrides a total the service reported", () => {
+    const reported = loadingQueue();
+    applyQueuePageMeta(
+      reported,
+      { items: [], nextCursor: null, total: 9 },
+      { fallbackTotal: true },
+    );
+    expect(reported).toMatchObject({
+      status: "ready",
+      hasLoaded: true,
+      error: null,
+      nextCursor: null,
+      total: 9,
+      counts,
+      channels,
+    });
+
+    const omitted = loadingQueue();
+    applyQueuePageMeta(
+      omitted,
+      { items: [], nextCursor: null },
+      { fallbackTotal: true },
+    );
+    expect(omitted).toMatchObject({ total: 5, counts, channels });
   });
 });

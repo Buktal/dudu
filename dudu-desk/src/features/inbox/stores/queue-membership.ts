@@ -5,16 +5,19 @@ import type {
   ConversationQuery,
   InboxEvent,
 } from "../types";
+import type { InboxState } from "./state";
 
 /**
- * Conversation queue membership module: the single place that decides which
- * conversation ids survive a queue rewrite and when the queue must be re-read.
+ * Conversation queue module: the single place that turns service pages into
+ * queue state — which conversation ids survive a rewrite, when the queue must
+ * be re-read, how one read's pages fold into one page and which meta a landed
+ * page finalizes.
  *
  * Queue reads (refresh / append), the Live events reconciler, the Live events
  * subscription and the detail thunks all answer through here, so the search
- * carve-out and the keep rules change in one module instead of drifting
- * across six call sites. Entity merging stays in the Live events merge
- * kernel; this module owns only membership.
+ * carve-out, the keep rules, the page fold and the meta settle change in one
+ * module instead of drifting across call sites. Entity merging stays in the
+ * Live events merge kernel; this module owns only the queue projection.
  */
 export type QueueRewriteMode = "refresh" | "append" | "reconcile";
 
@@ -39,6 +42,58 @@ export function rewriteQueueIds(input: {
   return [
     ...new Set([...previousIds.filter(keepPrevious), ...incomingIds]),
   ].filter((id) => isQueueMember(conversations, id, query));
+}
+
+/**
+ * Queue page fold: the single place that turns the pages of one queue read
+ * into one page — items in page order, the last nextCursor and the newest
+ * non-null total / counts / channels.
+ *
+ * Queue reads and the Live events reconciler fold behind this seam, so a new
+ * queue meta field lands in one fold instead of drifting across paging
+ * callbacks. Callers keep only their own stop guards and fold the collected
+ * pages after the loop; folding left over `??` reproduces an incremental
+ * fold exactly.
+ */
+export function foldConversationPages(
+  pages: ConversationPage[],
+): ConversationPage {
+  const page: ConversationPage = { items: [], nextCursor: null };
+  for (const part of pages) {
+    page.items.push(...part.items);
+    page.nextCursor = part.nextCursor;
+    page.total = part.total ?? page.total;
+    page.counts = part.counts ?? page.counts;
+    page.channels = part.channels ?? page.channels;
+  }
+  return page;
+}
+
+/**
+ * Queue page settle: the single place that finalizes a landed page's queue
+ * meta — ready status, loaded flag, cleared error and nextCursor / total /
+ * counts / channels.
+ *
+ * `queueLoaded` and `conversationsReconciled` finalize behind this seam, so a
+ * new queue meta field lands in one settle instead of drifting across two
+ * reducers. `fallbackTotal` keeps their total semantics explicit: a queue
+ * read owns the total outright, while a reconcile page only overrides a total
+ * the service actually reported.
+ */
+export function applyQueuePageMeta(
+  queue: InboxState["queue"],
+  page: ConversationPage,
+  options: { fallbackTotal: boolean },
+): void {
+  queue.status = "ready";
+  queue.hasLoaded = true;
+  queue.error = null;
+  queue.nextCursor = page.nextCursor;
+  queue.total = options.fallbackTotal
+    ? (page.total ?? queue.total)
+    : page.total;
+  queue.counts = page.counts ?? queue.counts;
+  queue.channels = page.channels ?? queue.channels;
 }
 
 /**

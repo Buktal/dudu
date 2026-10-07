@@ -6,13 +6,13 @@ import type {
   ConversationQuery,
 } from "../types";
 import { mergeConversation } from "./live-merge";
-import { rewriteQueueIds } from "./queue-membership";
+import { applyQueuePageMeta, rewriteQueueIds } from "./queue-membership";
 import { emptyLoad, type InboxState } from "./state";
 
 /**
  * Conversation queue reducers: own queue membership, cursors and counts.
  * Entity merging stays in the Live events merge kernel; the keep rules for a
- * rewrite stay in the queue membership module.
+ * rewrite and the fold / settle of a landed page stay in the queue module.
  */
 export const queueReducers = {
   conversationsDiscovered(
@@ -61,13 +61,7 @@ export const queueReducers = {
       mode: append ? "append" : "refresh",
       preserveIds,
     });
-    state.queue.status = "ready";
-    state.queue.hasLoaded = true;
-    state.queue.nextCursor = page.nextCursor;
-    state.queue.total = page.total;
-    state.queue.counts = page.counts ?? state.queue.counts;
-    state.queue.channels = page.channels ?? state.queue.channels;
-    state.queue.error = null;
+    applyQueuePageMeta(state.queue, page, { fallbackTotal: false });
   },
   queueFailed(
     state: InboxState,
