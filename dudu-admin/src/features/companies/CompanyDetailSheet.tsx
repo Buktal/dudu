@@ -1,8 +1,5 @@
 import { Edit3, KeyRound, Power } from "lucide-react";
-import { useCallback, useState } from "react";
-import { adminApi } from "@/api/admin-api";
-import { useAdmin } from "@/api/context";
-import { useQuery } from "@/api/use-query";
+import { useState } from "react";
 import { ErrorState, LoadingState } from "@/components/feedback";
 import { formatDate, StatusBadge } from "@/components/page-parts";
 import { Button } from "@/components/ui/button";
@@ -15,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { navigate } from "@/navigation";
 import { type CompanyAction, CompanyActions } from "./CompanyActions";
+import { useCompany } from "./company-data";
 
 export function CompanyDetailSheet({
   companyId,
@@ -27,14 +25,8 @@ export function CompanyDetailSheet({
   onChanged: (message: string) => void;
   initialAction?: CompanyAction | null;
 }) {
-  const client = useAdmin();
-  const load = useCallback(
-    (signal: AbortSignal) => adminApi.company(client, companyId, signal),
-    [client, companyId],
-  );
-  const query = useQuery(load);
+  const { detail, loading, error, refresh } = useCompany(companyId);
   const [action, setAction] = useState(initialAction);
-  const detail = query.data;
   return (
     <Sheet
       open
@@ -50,10 +42,10 @@ export function CompanyDetailSheet({
           <SheetTitle>企业详情</SheetTitle>
         </SheetHeader>
         <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-8">
-          {query.loading ? (
+          {loading ? (
             <LoadingState />
-          ) : query.error ? (
-            <ErrorState message={query.error} retry={query.refresh} />
+          ) : error ? (
+            <ErrorState message={error} retry={refresh} />
           ) : (
             detail && (
               <>
@@ -150,7 +142,6 @@ export function CompanyDetailSheet({
                     close={() => setAction(null)}
                     onSaved={(message) => {
                       setAction(null);
-                      query.refresh();
                       onChanged(message);
                     }}
                   />

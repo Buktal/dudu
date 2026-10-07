@@ -1,8 +1,8 @@
 import { CheckCircle2, Shuffle } from "lucide-react";
-import { useEffect, useRef } from "react";
 import { adminApi } from "@/api/admin-api";
-import { errorMessage, isCancelled } from "@/api/client";
+import { errorMessage } from "@/api/client";
 import { useAdmin } from "@/api/context";
+import { useMutation } from "@/api/use-mutation";
 import { validCompanyId } from "@/api/validators";
 import { TextField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
@@ -29,10 +29,10 @@ export function CompanyIdField({
   disabled: boolean;
 }) {
   const client = useAdmin();
-  const request = useRef<AbortController | null>(null);
-  useEffect(() => () => request.current?.abort(), []);
-  const select = async (generate: boolean) => {
-    request.current?.abort();
+  const mutation = useMutation();
+  // 新检测或改写企业 ID 都撤销在途检测；迟到结果由提交守卫拦下，不再自备 controller 判陈。
+  const select = (generate: boolean) => {
+    mutation.abort();
     if (!generate && !validCompanyId(selection.value)) {
       onChange({
         ...selection,
@@ -41,31 +41,29 @@ export function CompanyIdField({
       });
       return;
     }
-    const controller = new AbortController();
-    request.current = controller;
     onChange({ ...selection, status: generate ? "generating" : "checking" });
-    try {
-      const result = generate
-        ? await adminApi.candidate(client, controller.signal)
-        : await adminApi.availability(
-            client,
-            selection.value,
-            controller.signal,
-          );
-      if (controller.signal.aborted || request.current !== controller) return;
-      onChange({
-        value: result.companyId,
-        status:
-          "available" in result && !result.available ? "occupied" : "available",
-      });
-    } catch (error) {
-      if (
-        !controller.signal.aborted &&
-        request.current === controller &&
-        !isCancelled(error)
-      )
-        onChange({ ...selection, status: "error", error: errorMessage(error) });
-    }
+    void mutation.run(
+      (signal) =>
+        generate
+          ? adminApi.candidate(client, signal)
+          : adminApi.availability(client, selection.value, signal),
+      {
+        commit: (result) =>
+          onChange({
+            value: result.companyId,
+            status:
+              "available" in result && !result.available
+                ? "occupied"
+                : "available",
+          }),
+        onError: (error) =>
+          onChange({
+            ...selection,
+            status: "error",
+            error: errorMessage(error),
+          }),
+      },
+    );
   };
   return (
     <div className="flex flex-col gap-3">
@@ -85,7 +83,7 @@ export function CompanyIdField({
         }
         placeholder="六位数字"
         onChange={(event) => {
-          request.current?.abort();
+          mutation.abort();
           onChange({ value: event.target.value, status: "idle" });
         }}
       />

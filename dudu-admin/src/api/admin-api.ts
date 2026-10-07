@@ -1,4 +1,10 @@
-import { type AdminClient, isEmpty, isRecord } from "./client";
+import {
+  type AdminClient,
+  isAccount,
+  isEmpty,
+  isRecord,
+  PROFILE_PATH,
+} from "./client";
 import type {
   CompanyProfile,
   CompanyQuery,
@@ -117,6 +123,11 @@ export const adminApi = {
       signal,
       paginated: true,
       validate: pageOf(isLog),
+    }),
+  profile: (client: AdminClient, signal: AbortSignal) =>
+    client.request(PROFILE_PATH, {
+      signal,
+      validate: isAccount,
     }),
   changePassword: (
     client: AdminClient,

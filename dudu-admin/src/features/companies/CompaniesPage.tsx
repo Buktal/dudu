@@ -1,9 +1,5 @@
 import { MoreHorizontal, Plus } from "lucide-react";
-import { useCallback, useState } from "react";
-import { adminApi } from "@/api/admin-api";
-import { useAdmin } from "@/api/context";
-import type { CompanyQuery } from "@/api/types";
-import { useQuery } from "@/api/use-query";
+import { useState } from "react";
 import { CompanyFilters } from "@/components/company-filters";
 import {
   EmptyState,
@@ -38,6 +34,7 @@ import {
 import type { CompanyAction } from "./CompanyActions";
 import { CompanyDetailSheet } from "./CompanyDetailSheet";
 import { CreateCompanySheet } from "./CreateCompanySheet";
+import { useCompanies } from "./company-data";
 
 export function CompaniesPage({
   selectedId,
@@ -48,16 +45,7 @@ export function CompaniesPage({
   creating: boolean;
   navigate: (path: string) => void;
 }) {
-  const client = useAdmin();
-  const [filters, setFilters] = useState<CompanyQuery>({
-    page: 1,
-    pageSize: PAGE_SIZE,
-  });
-  const load = useCallback(
-    (signal: AbortSignal) => adminApi.companies(client, filters, signal),
-    [client, filters],
-  );
-  const query = useQuery(load);
+  const query = useCompanies({ page: 1, pageSize: PAGE_SIZE });
   const [message, setMessage] = useState<string | null>(null);
   const [action, setAction] = useState<CompanyAction | null>(null);
   const open = (id: string, nextAction: CompanyAction | null = null) => {
@@ -81,9 +69,9 @@ export function CompaniesPage({
       />
       {message && <Message>{message}</Message>}
       <CompanyFilters
-        key={`${filters.keyword ?? ""}-reset`}
-        query={filters}
-        onChange={setFilters}
+        key={`${query.filters.keyword ?? ""}-reset`}
+        query={query.filters}
+        onChange={query.setFilters}
       />
       <div className="overflow-hidden rounded-xl border bg-card">
         {query.loading ? (
@@ -91,133 +79,129 @@ export function CompaniesPage({
         ) : query.error ? (
           <ErrorState message={query.error} retry={query.refresh} />
         ) : (
-          query.data && (
-            <>
-              {query.data.list.length === 0 ? (
-                <EmptyState
-                  title={
-                    filters.keyword || filters.status !== undefined
-                      ? "未找到符合条件的企业"
-                      : "暂无企业"
-                  }
-                  description={
-                    filters.keyword || filters.status !== undefined
-                      ? "调整搜索关键词或状态后重试。"
-                      : "创建第一家企业，开始提供服务。"
-                  }
-                >
-                  {filters.keyword || filters.status !== undefined ? (
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        setFilters({ page: 1, pageSize: PAGE_SIZE })
-                      }
-                    >
-                      清除筛选
-                    </Button>
-                  ) : (
-                    <Button onClick={() => navigate("companies?create=1")}>
-                      创建企业
-                    </Button>
-                  )}
-                </EmptyState>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>企业名称</TableHead>
-                      <TableHead>企业 ID</TableHead>
-                      <TableHead>联系信息</TableHead>
-                      <TableHead>状态</TableHead>
-                      <TableHead>开通时间</TableHead>
-                      <TableHead className="text-right">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {query.data.list.map((company) => (
-                      <TableRow key={company.companyId}>
-                        <TableCell>
-                          <button
-                            type="button"
-                            className="company-link"
-                            onClick={() => open(company.companyId)}
+          <>
+            {query.list.length === 0 ? (
+              <EmptyState
+                title={
+                  query.filters.keyword || query.filters.status !== undefined
+                    ? "未找到符合条件的企业"
+                    : "暂无企业"
+                }
+                description={
+                  query.filters.keyword || query.filters.status !== undefined
+                    ? "调整搜索关键词或状态后重试。"
+                    : "创建第一家企业，开始提供服务。"
+                }
+              >
+                {query.filters.keyword || query.filters.status !== undefined ? (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      query.setFilters({ page: 1, pageSize: PAGE_SIZE })
+                    }
+                  >
+                    清除筛选
+                  </Button>
+                ) : (
+                  <Button onClick={() => navigate("companies?create=1")}>
+                    创建企业
+                  </Button>
+                )}
+              </EmptyState>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>企业名称</TableHead>
+                    <TableHead>企业 ID</TableHead>
+                    <TableHead>联系信息</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead>开通时间</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {query.list.map((company) => (
+                    <TableRow key={company.companyId}>
+                      <TableCell>
+                        <button
+                          type="button"
+                          className="company-link"
+                          onClick={() => open(company.companyId)}
+                        >
+                          {company.companyName}
+                        </button>
+                        {company.remark && (
+                          <p className="mt-1 max-w-64 truncate text-xs text-muted-foreground">
+                            {company.remark}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-mono tabular-nums">
+                        {company.companyId}
+                      </TableCell>
+                      <TableCell>
+                        <p>{company.contactName ?? "未填写"}</p>
+                        {company.contactInfo && (
+                          <p className="mt-1 max-w-56 truncate text-xs text-muted-foreground">
+                            {company.contactInfo}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={company.status} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(company.createTime)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={<Button variant="ghost" size="icon-sm" />}
+                            aria-label={`${company.companyName}的操作`}
                           >
-                            {company.companyName}
-                          </button>
-                          {company.remark && (
-                            <p className="mt-1 max-w-64 truncate text-xs text-muted-foreground">
-                              {company.remark}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-mono tabular-nums">
-                          {company.companyId}
-                        </TableCell>
-                        <TableCell>
-                          <p>{company.contactName ?? "未填写"}</p>
-                          {company.contactInfo && (
-                            <p className="mt-1 max-w-56 truncate text-xs text-muted-foreground">
-                              {company.contactInfo}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={company.status} />
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(company.createTime)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              render={<Button variant="ghost" size="icon-sm" />}
-                              aria-label={`${company.companyName}的操作`}
-                            >
-                              <MoreHorizontal />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuGroup>
-                                <DropdownMenuItem
-                                  onClick={() => open(company.companyId)}
-                                >
-                                  查看详情
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    open(company.companyId, "edit")
-                                  }
-                                >
-                                  编辑资料
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    open(company.companyId, "status")
-                                  }
-                                >
-                                  {company.status === 1
-                                    ? "停用企业"
-                                    : "恢复企业"}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => open(company.companyId)}
-                                >
-                                  管理员账号
-                                </DropdownMenuItem>
-                              </DropdownMenuGroup>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-              <Pagination
-                {...query.data}
-                onChange={(page) => setFilters({ ...filters, page })}
-              />
-            </>
-          )
+                            <MoreHorizontal />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuGroup>
+                              <DropdownMenuItem
+                                onClick={() => open(company.companyId)}
+                              >
+                                查看详情
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => open(company.companyId, "edit")}
+                              >
+                                编辑资料
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  open(company.companyId, "status")
+                                }
+                              >
+                                {company.status === 1 ? "停用企业" : "恢复企业"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => open(company.companyId)}
+                              >
+                                管理员账号
+                              </DropdownMenuItem>
+                            </DropdownMenuGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            <Pagination
+              page={query.page}
+              pageSize={query.pageSize}
+              total={query.total}
+              onChange={query.setPage}
+            />
+          </>
         )}
       </div>
       {creating && (
@@ -225,7 +209,7 @@ export function CompaniesPage({
           close={() => navigate("companies")}
           onCreated={(company) => {
             setMessage(`企业「${company.companyName}」已创建`);
-            setFilters({ page: 1, pageSize: PAGE_SIZE });
+            query.setFilters({ page: 1, pageSize: PAGE_SIZE });
             setAction(null);
             navigate(`companies?companyId=${company.companyId}`);
           }}
@@ -240,10 +224,7 @@ export function CompaniesPage({
             setAction(null);
             navigate("companies");
           }}
-          onChanged={(message) => {
-            setMessage(message);
-            query.refresh();
-          }}
+          onChanged={setMessage}
         />
       )}
     </div>

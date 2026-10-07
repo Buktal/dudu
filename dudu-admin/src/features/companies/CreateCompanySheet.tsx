@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { adminApi } from "@/api/admin-api";
 import { ApiError, COMPANY_ID_CONFLICT } from "@/api/client";
-import { useAdmin } from "@/api/context";
 import type { Company } from "@/api/types";
 import { useMutation } from "@/api/use-mutation";
 import { Message, PendingLabel } from "@/components/feedback";
@@ -21,6 +19,7 @@ import {
   PASSWORD_MIN_LENGTH,
 } from "@/features/account/password-fields";
 import { CompanyIdField, type IdSelection } from "./CompanyIdField";
+import { useCompanyCommands } from "./company-data";
 import { cleanProfile, emptyProfile, ProfileFields } from "./profile-fields";
 
 export function CreateCompanySheet({
@@ -30,7 +29,7 @@ export function CreateCompanySheet({
   close: () => void;
   onCreated: (company: Company) => void;
 }) {
-  const client = useAdmin();
+  const commands = useCompanyCommands();
   const mutation = useMutation();
   const [profile, setProfile] = useState(emptyProfile);
   const [selection, setSelection] = useState<IdSelection>({
@@ -73,9 +72,8 @@ export function CreateCompanySheet({
               return;
             }
             void mutation.run(
-              async (signal) => {
-                const company = await adminApi.create(
-                  client,
+              (signal) =>
+                commands.create(
                   {
                     ...cleaned,
                     companyId: selection.value,
@@ -86,18 +84,23 @@ export function CreateCompanySheet({
                     },
                   },
                   signal,
-                );
-                if (!signal.aborted) {
+                ),
+              {
+                // 写回只在未中止的成功后执行；列表重读由失效语义接管
+                commit: (company) => {
                   setPassword("");
                   onCreated(company);
-                }
-              },
-              (error) => {
-                if (
-                  error instanceof ApiError &&
-                  error.code === COMPANY_ID_CONFLICT
-                )
-                  setSelection({ value: selection.value, status: "occupied" });
+                },
+                onError: (error) => {
+                  if (
+                    error instanceof ApiError &&
+                    error.code === COMPANY_ID_CONFLICT
+                  )
+                    setSelection({
+                      value: selection.value,
+                      status: "occupied",
+                    });
+                },
               },
             );
           }}

@@ -8,6 +8,8 @@ import type { Account, LoginResult } from "./types";
 
 const SESSION_KEY = "dudu-admin.session";
 const REQUEST_TIMEOUT_MS = 20_000;
+// 平台管理员身份接口路径：会话恢复与 admin-api 共用同一份定义
+export const PROFILE_PATH = "/admin/profile";
 export const COMPANY_ID_CONFLICT = 12300;
 const EXPIRED_CODES = new Set([10100, 10101, 10102, 10103, 10106]);
 
@@ -248,7 +250,7 @@ export class AdminClient {
   async restore(signal: AbortSignal) {
     if (!this.token) return;
     try {
-      const user = await this.request("/admin/profile", {
+      const user = await this.request(PROFILE_PATH, {
         signal,
         validate: isAccount,
       });

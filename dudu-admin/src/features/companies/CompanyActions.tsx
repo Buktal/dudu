@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { adminApi } from "@/api/admin-api";
-import { useAdmin } from "@/api/context";
 import type { CompanyDetail } from "@/api/types";
 import { useMutation } from "@/api/use-mutation";
 import { Message, PendingLabel } from "@/components/feedback";
@@ -18,6 +16,7 @@ import {
   PasswordFields,
   passwordError,
 } from "@/features/account/password-fields";
+import { useCompanyCommands } from "./company-data";
 import { cleanProfile, ProfileFields } from "./profile-fields";
 
 export type CompanyAction = "edit" | "status" | "password";
@@ -33,7 +32,7 @@ export function CompanyActions({
   close: () => void;
   onSaved: (message: string) => void;
 }) {
-  const client = useAdmin();
+  const commands = useCompanyCommands();
   const mutation = useMutation();
   const { company, adminInit } = detail;
   const [profile, setProfile] = useState(cleanProfile(company));
@@ -89,43 +88,45 @@ export function CompanyActions({
                 return;
               }
             }
-            void mutation.run(async (signal) => {
-              if (action === "edit")
-                await adminApi.update(
-                  client,
-                  company.companyId,
-                  cleanProfile(profile),
-                  signal,
-                );
-              else if (action === "password")
-                await adminApi.resetPassword(
-                  client,
-                  company.companyId,
-                  password,
-                  signal,
-                );
-              else if (disabling)
-                await adminApi.disable(
-                  client,
-                  company.companyId,
-                  reason.trim(),
-                  signal,
-                );
-              else await adminApi.enable(client, company.companyId, signal);
-              if (!signal.aborted) {
-                setPassword("");
-                setConfirmation("");
-                onSaved(
-                  action === "edit"
-                    ? "企业资料已更新"
-                    : action === "password"
-                      ? "管理员密码已重置"
-                      : disabling
-                        ? "企业已停用"
-                        : "企业已恢复",
-                );
-              }
-            });
+            void mutation.run(
+              async (signal) => {
+                if (action === "edit")
+                  await commands.update(
+                    company.companyId,
+                    cleanProfile(profile),
+                    signal,
+                  );
+                else if (action === "password")
+                  await commands.resetPassword(
+                    company.companyId,
+                    password,
+                    signal,
+                  );
+                else if (disabling)
+                  await commands.disable(
+                    company.companyId,
+                    reason.trim(),
+                    signal,
+                  );
+                else await commands.enable(company.companyId, signal);
+              },
+              {
+                // 写回只在未中止的成功后执行；列表与详情的重读由失效语义接管
+                commit: () => {
+                  setPassword("");
+                  setConfirmation("");
+                  onSaved(
+                    action === "edit"
+                      ? "企业资料已更新"
+                      : action === "password"
+                        ? "管理员密码已重置"
+                        : disabling
+                          ? "企业已停用"
+                          : "企业已恢复",
+                  );
+                },
+              },
+            );
           }}
         >
           {mutation.error && <Message error>{mutation.error}</Message>}

@@ -1,7 +1,6 @@
 import { UserRound } from "lucide-react";
 import { useCallback, useState } from "react";
 import { adminApi } from "@/api/admin-api";
-import { isAccount } from "@/api/client";
 import { useAdmin } from "@/api/context";
 import { useMutation } from "@/api/use-mutation";
 import { useQuery } from "@/api/use-query";
@@ -32,8 +31,7 @@ export function AccountPage() {
   const client = useAdmin();
   const query = useQuery(
     useCallback(
-      (signal: AbortSignal) =>
-        client.request("/admin/profile", { signal, validate: isAccount }),
+      (signal: AbortSignal) => adminApi.profile(client, signal),
       [client],
     ),
   );
@@ -85,16 +83,20 @@ export function AccountPage() {
                       mutation.setError(error ?? "请输入当前密码");
                       return;
                     }
-                    void mutation.run(async (signal) => {
-                      await adminApi.changePassword(
-                        client,
-                        current,
-                        password,
-                        signal,
-                      );
-                      if (!signal.aborted)
-                        client.clearSession("密码已修改，请使用新密码登录");
-                    });
+                    void mutation.run(
+                      (signal) =>
+                        adminApi.changePassword(
+                          client,
+                          current,
+                          password,
+                          signal,
+                        ),
+                      {
+                        // 写回只在未中止的成功后执行
+                        commit: () =>
+                          client.clearSession("密码已修改，请使用新密码登录"),
+                      },
+                    );
                   }}
                 >
                   {mutation.error && <Message error>{mutation.error}</Message>}
