@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { WorkContext } from "../types";
 import { attachmentReducers } from "./attachment-reducers";
+import { choiceReducers } from "./choices-reducers";
 import { detailReducers } from "./detail-reducers";
 import { eventReducers } from "./event-reducers";
 import { parallelReducers } from "./parallel-reducers";
@@ -11,9 +12,10 @@ import { initialInboxState } from "./state";
 
 /**
  * Single assembly seam for the inbox store: reducer transition shells stay in
- * their owning modules (queue, send, read, event, parallel, attachment,
- * detail) and spread here so dispatch and the root reducer see one interface.
- * The spread adds no behavior by design — depth lives in the owning modules.
+ * their owning modules (queue, choice, send, read, event, parallel,
+ * attachment, detail) and spread here so dispatch and the root reducer see
+ * one interface. The spread adds no behavior by design — depth lives in the
+ * owning modules.
  */
 const inboxSlice = createSlice({
   name: "inbox",
@@ -24,6 +26,7 @@ const inboxSlice = createSlice({
   reducers: {
     ...readReducers,
     ...queueReducers,
+    ...choiceReducers,
     ...detailReducers,
     ...sendReducers,
     ...eventReducers,

@@ -195,6 +195,14 @@ export type InboxState = {
     channels?: ConversationPage["channels"];
   };
   histories: Record<string, LoadState & { ids: string[] }>;
+  choices: Record<
+    string,
+    LoadState & {
+      ids: string[];
+      query: ConversationQuery;
+      failedRead?: "refresh" | "more";
+    }
+  >;
   profiles: Record<
     string,
     {
@@ -235,6 +243,7 @@ export function initialInboxState(
     messages: {},
     queue: { ...emptyLoad(), ids: [], query: { ...emptyQuery } },
     histories: {},
+    choices: {},
     profiles: {},
     profileEdits: {},
     starUpdates: {},

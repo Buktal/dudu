@@ -52,6 +52,9 @@ describe("send and receive the next visitor", () => {
       selectMessages(store.getState(), "conversation-a").slice(-1)[0]?.delivery
         ?.state,
     ).toBe("accepted");
+    // The per-message candidate scope is spent once the next visitor is
+    // picked; no choices state outlives the search.
+    expect(Object.keys(store.getState().inbox.choices)).toEqual([]);
   });
 
   it("stays with a visitor who sends a follow-up while the reply is being accepted", async () => {
@@ -277,5 +280,7 @@ describe("send and receive the next visitor", () => {
     expect(store.getState().inbox.notice?.message).toContain(
       "暂时无法获取下一位",
     );
+    // The read-failed exit spends the scope the same way.
+    expect(Object.keys(store.getState().inbox.choices)).toEqual([]);
   });
 });

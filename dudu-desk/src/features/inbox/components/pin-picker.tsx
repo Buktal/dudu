@@ -1,5 +1,5 @@
 import { Pin, Search, X } from "lucide-react";
-import { type RefObject, useEffect, useId, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useRef } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,31 +17,17 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import type { ApiFailure } from "@/lib/api-response";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import {
   cancelConversationChoices,
+  pinPickerChoicesScope,
   readConversationChoices,
+  retryConversationChoices,
+  selectPinnableChoices,
 } from "../stores/choices";
 import { pinConversation } from "../stores/parallel";
-import { failureOf } from "../stores/requests";
-import { emptyQuery } from "../stores/state";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
 import { InboxEmpty, InboxError, InboxLoading } from "./inbox-state";
-
-type ChoiceResult = {
-  ids: string[];
-  nextCursor: string | null;
-  loading: boolean;
-  error: ApiFailure | null;
-};
-
-const emptyResult: ChoiceResult = {
-  ids: [],
-  nextCursor: null,
-  loading: true,
-  error: null,
-};
 
 function PinChoices({
   inputRef,
@@ -51,73 +37,30 @@ function PinChoices({
   onSelected: () => void;
 }) {
   const dispatch = useInboxDispatch();
-  const primaryId = useInboxSelector((state) => state.inbox.activeId);
   const pinnedId = useInboxSelector((state) => state.inbox.pinnedId);
-  const conversations = useInboxSelector((state) => state.inbox.conversations);
-  const [query, setQuery] = useState<{ search: string; cursor?: string }>({
-    search: "",
-  });
-  const [result, setResult] = useState<ChoiceResult>(emptyResult);
+  const { search, loading, error, nextCursor, candidates } = useInboxSelector(
+    selectPinnableChoices,
+  );
   const id = useId();
-  const candidates = result.ids.flatMap((conversationId) => {
-    const conversation = conversations[conversationId];
-    return conversation &&
-      conversation.id !== primaryId &&
-      conversation.status !== "closed"
-      ? [conversation]
-      : [];
-  });
 
   useEffect(() => {
-    let active = true;
-    setResult((previous) => ({ ...previous, loading: true, error: null }));
     void dispatch(
       readConversationChoices({
-        query: {
-          ...emptyQuery,
-          status: "active",
-          search: query.search,
-          order: "wait",
-        },
-        cursor: query.cursor,
-        scope: "pin-picker",
+        view: "pinnable",
+        scope: pinPickerChoicesScope,
       }),
-    )
-      .then((page) => {
-        if (!active) return;
-        if (!page) {
-          setResult((previous) => ({ ...previous, loading: false }));
-          return;
-        }
-        setResult((previous) => ({
-          ids: [
-            ...new Set([
-              ...(query.cursor ? previous.ids : []),
-              ...page.items.map((conversation) => conversation.id),
-            ]),
-          ],
-          nextCursor: page.nextCursor,
-          loading: false,
-          error: null,
-        }));
-      })
-      .catch((error: unknown) => {
-        if (active)
-          setResult((previous) => ({
-            ...previous,
-            loading: false,
-            error: failureOf(error, "暂时无法连接服务，请稍后重试"),
-          }));
-      });
-    return () => {
-      active = false;
-      dispatch(cancelConversationChoices("pin-picker"));
-    };
-  }, [dispatch, query]);
+    );
+    return () => dispatch(cancelConversationChoices(pinPickerChoicesScope));
+  }, [dispatch]);
 
-  function search(value: string) {
-    setResult(emptyResult);
-    setQuery({ search: value });
+  function change(value: string) {
+    void dispatch(
+      readConversationChoices({
+        view: "pinnable",
+        scope: pinPickerChoicesScope,
+        search: value,
+      }),
+    );
   }
 
   return (
@@ -132,19 +75,19 @@ function PinChoices({
               id={id}
               ref={inputRef}
               type="search"
-              value={query.search}
+              value={search}
               placeholder="搜索未结束的会话…"
-              onChange={(event) => search(event.target.value)}
+              onChange={(event) => change(event.target.value)}
             />
             <InputGroupAddon>
               <Search aria-hidden="true" />
             </InputGroupAddon>
-            {query.search && (
+            {search && (
               <InputGroupAddon align="inline-end">
                 <InputGroupButton
                   size="icon-xs"
                   aria-label="清除固定会话搜索"
-                  onClick={() => search("")}
+                  onClick={() => change("")}
                 >
                   <X data-icon="inline-start" />
                 </InputGroupButton>
@@ -153,12 +96,14 @@ function PinChoices({
           </InputGroup>
         </Field>
       </FieldGroup>
-      {!candidates.length && result.loading ? (
+      {!candidates.length && loading ? (
         <InboxLoading label="正在查找可固定的会话…" />
-      ) : !candidates.length && result.error ? (
+      ) : !candidates.length && error ? (
         <InboxError
-          error={result.error}
-          onRetry={() => setQuery({ ...query })}
+          error={error}
+          onRetry={() =>
+            void dispatch(retryConversationChoices(pinPickerChoicesScope))
+          }
         />
       ) : !candidates.length ? (
         <InboxEmpty
@@ -197,25 +142,33 @@ function PinChoices({
           )}
         />
       )}
-      {result.error && candidates.length > 0 && (
+      {error && candidates.length > 0 && (
         <InboxError
-          error={result.error}
+          error={error}
           compact
-          onRetry={() => setQuery({ ...query })}
+          onRetry={() =>
+            void dispatch(retryConversationChoices(pinPickerChoicesScope))
+          }
         />
       )}
-      {result.nextCursor && (
+      {nextCursor && (
         <Button
           variant="outline"
           size="sm"
           className="shrink-0"
-          disabled={result.loading}
+          disabled={loading}
           onClick={() => {
-            if (result.nextCursor)
-              setQuery({ ...query, cursor: result.nextCursor });
+            if (nextCursor)
+              void dispatch(
+                readConversationChoices({
+                  view: "pinnable",
+                  scope: pinPickerChoicesScope,
+                  cursor: nextCursor,
+                }),
+              );
           }}
         >
-          {result.loading ? "正在加载…" : "加载更多会话"}
+          {loading ? "正在加载…" : "加载更多会话"}
         </Button>
       )}
     </>
