@@ -23,7 +23,8 @@ mod tests;
 use crate::connections::util::now_secs;
 
 use super::{
-    client_with_timeout, request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
+    client_with_timeout, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
 };
 
 /// op13 验证回调的官方 UA（事实库 §3.2 请求头逐字：`User-Agent:[QQBot-Callback]`）。
@@ -93,14 +94,17 @@ fn verify_validation_reply(
     Ok(echoed.to_string())
 }
 
-/// POST 回调公共体：body 逐字节透传 + 渠道头集合，回执快照与耗时统一落点。
-/// 成功返回（状态码, 回执正文, 耗时 ms）；失败返回（耗时 ms, 人类可读原因）。
+/// POST 回调公共体：body 逐字节透传 + 渠道头集合，测量收口统一走
+/// [`send_measured_outcome`]（计时/错误文案/快照装订单点），协议快照与
+/// Ok 分支增量（reply 推导）由调用侧按请求形态给出。
 fn post(
     client: &reqwest::blocking::Client,
     url: &str,
     body: &str,
     headers: &[(&str, String)],
-) -> Result<(u16, String, u64), (u64, String)> {
+    snapshot: DispatchSnapshot,
+    reply: impl FnOnce(u16, &str) -> Option<String>,
+) -> DispatchOutcome {
     let mut request = client
         .post(url)
         .header("Content-Type", "application/json")
@@ -108,20 +112,7 @@ fn post(
     for (name, value) in headers {
         request = request.header(*name, value);
     }
-    let started = std::time::Instant::now();
-    let response = request.send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            Ok((status, receipt, elapsed_ms))
-        }
-        Err(err) => Err((
-            elapsed_ms,
-            format!("{}：{err}", request_error_reason(&err, "")),
-        )),
-    }
+    send_measured_outcome(request, "", snapshot, reply)
 }
 
 /// op13 握手（事实库 §3.2）：随机 plain_token + 当前 event_ts 组验证回调体，
@@ -145,29 +136,40 @@ fn verify_handshake(
         ("User-Agent", CALLBACK_USER_AGENT.to_string()),
         ("X-Bot-Appid", app_id.to_string()),
     ];
-    let (status, receipt) = match post(client, url, &body, &headers) {
-        Ok((status, receipt, _)) => (status, receipt),
-        Err((_, error)) => {
-            return HandshakeOutcome {
-                ok: false,
-                message: error,
-            }
-        }
-    };
-    if !(200..300).contains(&status) {
+    let outcome = post(
+        client,
+        url,
+        &body,
+        &headers,
+        DispatchSnapshot {
+            // plain_token 即本次验证回调的唯一标识快照
+            msg_id: plain_token.clone(),
+            signature: String::new(),
+            timestamp: None,
+            request_body: Some(body.clone()),
+        },
+        |_, _| None,
+    );
+    if let Some(error) = outcome.error {
         return HandshakeOutcome {
             ok: false,
-            message: format!("目标返回 HTTP {status}，op13 验证回调握手未通过"),
+            message: error,
         };
     }
-    match verify_validation_reply(app_secret, &plain_token, &event_ts, &receipt) {
+    if !(200..300).contains(&outcome.status) {
+        return HandshakeOutcome {
+            ok: false,
+            message: format!("目标返回 HTTP {}，op13 验证回调握手未通过", outcome.status),
+        };
+    }
+    match verify_validation_reply(app_secret, &plain_token, &event_ts, &outcome.body) {
         Ok(_) => HandshakeOutcome {
             ok: true,
             message: "op13 验证回调握手成功：plain_token 原样回显且 Ed25519 签名验签通过".into(),
         },
         Err(reason) => HandshakeOutcome {
             ok: false,
-            message: format!("HTTP {status} 但 {reason}"),
+            message: format!("HTTP {} 但 {reason}", outcome.status),
         },
     }
 }
@@ -195,22 +197,20 @@ fn dispatch_event(
         ("X-Signature-Timestamp", timestamp.clone()),
         ("X-Bot-Appid", app_id.to_string()),
     ];
-    let (status, receipt, error, elapsed_ms) = match post(client, url, plaintext, &headers) {
-        Ok((status, receipt, elapsed_ms)) => (status, receipt, None, elapsed_ms),
-        Err((elapsed_ms, error)) => (0, String::new(), Some(error), elapsed_ms),
-    };
-    DispatchOutcome {
-        // 官方直发请求无唯一标识头（幂等键在信封 id，接收侧解析）
-        msg_id: String::new(),
-        signature,
-        timestamp: Some(timestamp),
-        request_body: Some(plaintext.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+    post(
+        client,
+        url,
+        plaintext,
+        &headers,
+        DispatchSnapshot {
+            // 官方直发请求无唯一标识头（幂等键在信封 id，接收侧解析）
+            msg_id: String::new(),
+            signature,
+            timestamp: Some(timestamp),
+            request_body: Some(plaintext.to_string()),
+        },
+        |_, _| None,
+    )
 }
 
 /// op13 验证回调模板直发：同握手形态（`User-Agent: QQBot-Callback` +
@@ -228,27 +228,33 @@ fn dispatch_validation(
         ("User-Agent", CALLBACK_USER_AGENT.to_string()),
         ("X-Bot-Appid", app_id.to_string()),
     ];
-    let (status, receipt, error, elapsed_ms) = match post(client, url, plaintext, &headers) {
-        Ok((status, receipt, elapsed_ms)) => (status, receipt, None, elapsed_ms),
-        Err((elapsed_ms, error)) => (0, String::new(), Some(error), elapsed_ms),
-    };
-    let reply = if error.is_none() && (200..300).contains(&status) {
-        verify_validation_reply(app_secret, &payload.plain_token, &payload.event_ts, &receipt).ok()
-    } else {
-        None
-    };
-    DispatchOutcome {
-        // plain_token 即本次验证回调的唯一标识快照
-        msg_id: payload.plain_token.clone(),
-        signature: String::new(),
-        timestamp: None,
-        request_body: Some(plaintext.to_string()),
-        reply,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    }
+    // helper 只在收到响应时调用 reply（错误路径无正文可验）；2xx 门槛在闭包内
+    post(
+        client,
+        url,
+        plaintext,
+        &headers,
+        DispatchSnapshot {
+            // plain_token 即本次验证回调的唯一标识快照
+            msg_id: payload.plain_token.clone(),
+            signature: String::new(),
+            timestamp: None,
+            request_body: Some(plaintext.to_string()),
+        },
+        |status, receipt| {
+            if (200..300).contains(&status) {
+                verify_validation_reply(
+                    app_secret,
+                    &payload.plain_token,
+                    &payload.event_ts,
+                    receipt,
+                )
+                .ok()
+            } else {
+                None
+            }
+        },
+    )
 }
 
 /// 从 QQ 连接配置取（url, app_id, app_secret）；非 QQ 配置 None。

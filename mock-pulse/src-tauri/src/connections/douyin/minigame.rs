@@ -7,7 +7,9 @@
 //!   douyin_microgame_im（抖音客服消息推送）
 //! - 旧「消息推送客服」GET echostr 体系 2025-06-30 已下线，不实现
 
-use super::super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::super::{
+    send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
+};
 use crate::connections::util;
 
 /// 官方黄金例（§4.2 逐字）：四头字典序 `&` 拼接 + body + token
@@ -61,9 +63,7 @@ fn post(
     let nonce = uuid::Uuid::new_v4().simple().to_string();
     let timestamp = util::now_millis().to_string();
     let signature = signature(app_id, msg_type, &nonce, &timestamp, body, token);
-    let started = std::time::Instant::now();
-
-    let response = client
+    let request = client
         .post(url)
         .header("Content-Type", "application/json")
         .header("x-appid", app_id)
@@ -71,35 +71,19 @@ fn post(
         .header("x-nonce-str", &nonce)
         .header("x-timestamp", &timestamp)
         .header("x-signature", signature.clone())
-        .body(body.to_string())
-        .send();
-
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    match response {
-        Ok(response) => DispatchOutcome {
+        .body(body.to_string());
+    send_measured_outcome(
+        request,
+        "",
+        DispatchSnapshot {
             // 发送唯一标识快照 = x-nonce-str
             msg_id: nonce,
             signature,
             timestamp: Some(timestamp),
             request_body: Some(body.to_string()),
-            reply: None,
-            status: response.status().as_u16(),
-            elapsed_ms,
-            body: response.text().unwrap_or_default(),
-            error: None,
         },
-        Err(err) => DispatchOutcome {
-            msg_id: nonce,
-            signature,
-            timestamp: Some(timestamp),
-            request_body: Some(body.to_string()),
-            reply: None,
-            status: 0,
-            elapsed_ms,
-            body: String::new(),
-            error: Some(format!("{}：{err}", request_error_reason(&err, ""))),
-        },
-    }
+        |_, _| None,
+    )
 }
 
 /// 按官方形态向目标发起 verify_request 握手：POST 带 x-signature 五头，

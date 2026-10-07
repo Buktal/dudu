@@ -28,7 +28,7 @@ use crate::connections::util::{now_secs, sha1_sorted_hex};
 use crate::connections::wecom::crypto::{decrypt_msg, encrypt_msg};
 use crate::connections::wecom::random_16;
 
-use super::{request_error_reason, DispatchOutcome};
+use super::{send_measured_outcome, DispatchOutcome, DispatchSnapshot};
 
 /// 微信族直发凭证：两渠道连接配置（WechatMp/WechatMini）同名字段的借用投影。
 /// 凭证字段解构（配置变体匹配）留在各渠道 push 模块，本模块只见同形四元组。
@@ -140,45 +140,25 @@ fn dispatch(
     timestamp: String,
     nonce: String,
 ) -> DispatchOutcome {
-    let started = std::time::Instant::now();
-    let response = client
+    let request = client
         .post(creds.url)
         .query(&query)
         .header("Content-Type", "text/xml")
-        .body(body.clone())
-        .send();
-
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            let reply = extract_reply_encrypt(&receipt)
-                .and_then(|encrypt| decrypt_reply(creds.encoding_aes_key, encrypt, creds.app_id));
-            DispatchOutcome {
-                msg_id: nonce,
-                signature,
-                timestamp: Some(timestamp),
-                request_body: Some(body),
-                reply,
-                status,
-                elapsed_ms,
-                body: receipt,
-                error: None,
-            }
-        }
-        Err(err) => DispatchOutcome {
+        .body(body.clone());
+    send_measured_outcome(
+        request,
+        "",
+        DispatchSnapshot {
             msg_id: nonce,
             signature,
             timestamp: Some(timestamp),
             request_body: Some(body),
-            reply: None,
-            status: 0,
-            elapsed_ms,
-            body: String::new(),
-            error: Some(format!("{}：{err}", request_error_reason(&err, ""))),
         },
-    }
+        |_, receipt| {
+            extract_reply_encrypt(receipt)
+                .and_then(|encrypt| decrypt_reply(creds.encoding_aes_key, encrypt, creds.app_id))
+        },
+    )
 }
 
 /// 明文模式直发：明文 XML 逐字节为 body，URL 无加密参数（仅三参 signature）。

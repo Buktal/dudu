@@ -4,7 +4,7 @@
 //! 被动回复包 `{"encrypt": "...", "msgsignature": "...", "timestamp": ..., "nonce": ...}`
 //! （官方注明 nonce 需复用回调 url 中的 nonce）。明文 JSON 逐字节透传，不重排。
 
-use super::super::{request_error_reason, ConnectionConfig, DispatchOutcome};
+use super::super::{send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot};
 use super::{build_signature, decrypt_msg, encrypt_msg, random_16};
 use crate::connections::util::now_secs;
 
@@ -49,9 +49,7 @@ pub(super) fn dispatch_event(
     let nonce = uuid::Uuid::new_v4().simple().to_string();
     let signature = build_signature(token, &timestamp, &nonce, &msg_encrypt);
     let envelope = build_envelope_json(&msg_encrypt);
-    let started = std::time::Instant::now();
-
-    let response = client
+    let request = client
         .post(url)
         .query(&[
             ("msg_signature", signature.as_str()),
@@ -59,44 +57,25 @@ pub(super) fn dispatch_event(
             ("nonce", nonce.as_str()),
         ])
         .header("Content-Type", "application/json")
-        .body(envelope.clone())
-        .send();
-
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let body = response.text().unwrap_or_default();
-            let reply = extract_reply_encrypt(&body).and_then(|encrypt| {
-                decrypt_msg(encoding_aes_key, &encrypt)
-                    .ok()
-                    .map(|decrypted| String::from_utf8_lossy(&decrypted.msg).to_string())
-            });
-            DispatchOutcome {
-                // 企微的发送唯一标识即 nonce（RunStep.msg_id 快照）
-                msg_id: nonce,
-                signature,
-                timestamp: Some(timestamp),
-                request_body: Some(envelope),
-                reply,
-                status,
-                elapsed_ms,
-                body,
-                error: None,
-            }
-        }
-        Err(err) => DispatchOutcome {
+        .body(envelope.clone());
+    send_measured_outcome(
+        request,
+        "",
+        DispatchSnapshot {
+            // 企微的发送唯一标识即 nonce（RunStep.msg_id 快照）
             msg_id: nonce,
             signature,
             timestamp: Some(timestamp),
             request_body: Some(envelope),
-            reply: None,
-            status: 0,
-            elapsed_ms,
-            body: String::new(),
-            error: Some(format!("{}：{err}", request_error_reason(&err, ""))),
         },
-    }
+        |_, body| {
+            extract_reply_encrypt(body).and_then(|encrypt| {
+                decrypt_msg(encoding_aes_key, &encrypt)
+                    .ok()
+                    .map(|decrypted| String::from_utf8_lossy(&decrypted.msg).to_string())
+            })
+        },
+    )
 }
 
 #[cfg(test)]

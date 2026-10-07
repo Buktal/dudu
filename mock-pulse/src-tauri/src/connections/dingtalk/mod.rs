@@ -28,8 +28,8 @@ use crate::connections::util::now_millis;
 use crate::connections::wecom;
 
 use super::{
-    client_with_timeout, request_error_reason, ConnectionConfig, DingtalkSystem, DispatchOutcome,
-    HandshakeOutcome,
+    client_with_timeout, send_measured_outcome, ConnectionConfig, DingtalkSystem, DispatchOutcome,
+    DispatchSnapshot, HandshakeOutcome,
 };
 
 /// check_url 握手明文（§5.6 解密后逐字）：密文信封由本模块按连接配置封装。
@@ -96,42 +96,21 @@ fn post_crypto(
     token: &str,
     encoding_aes_key: &str,
 ) -> DispatchOutcome {
-    let started = std::time::Instant::now();
-    let response = client
+    let request = client
         .post(&push.url)
         .header("Content-Type", "application/json")
-        .body(push.body.clone())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            let reply = crypto::verify_and_decrypt_reply(token, encoding_aes_key, &receipt).ok();
-            DispatchOutcome {
-                msg_id: push.nonce.clone(),
-                signature: push.signature.clone(),
-                timestamp: Some(push.timestamp.clone()),
-                request_body: Some(push.body.clone()),
-                reply,
-                status,
-                elapsed_ms,
-                body: receipt,
-                error: None,
-            }
-        }
-        Err(err) => DispatchOutcome {
+        .body(push.body.clone());
+    send_measured_outcome(
+        request,
+        "",
+        DispatchSnapshot {
             msg_id: push.nonce.clone(),
             signature: push.signature.clone(),
             timestamp: Some(push.timestamp.clone()),
             request_body: Some(push.body.clone()),
-            reply: None,
-            status: 0,
-            elapsed_ms,
-            body: String::new(),
-            error: Some(format!("{}：{err}", request_error_reason(&err, ""))),
         },
-    }
+        |_, receipt| crypto::verify_and_decrypt_reply(token, encoding_aes_key, receipt).ok(),
+    )
 }
 
 /// 密文通道 check_url 握手（事实库 §5.6/§5.10）：推送加密 check_url 事件

@@ -185,10 +185,10 @@ pub(crate) fn request_error_reason(err: &reqwest::Error, timeout_note: &str) -> 
     }
 }
 
-/// 直发骨架（Reuse-first 审计退件：此收口块曾在 15+ 渠道逐字复制——计时 →
-/// 发送 → 状态/回执/错误/耗时四元组）：各渠道差异（headers/query/body/快照
-/// 字段/超时补充文案）留在调用侧。分支内直接构造 DispatchOutcome 的渠道
-/// （Ok 分支另有解密等专属逻辑）保留自有收口。
+/// 直发测量（Reuse-first 审计退件：此收口块曾在 15+ 渠道逐字复制——计时 →
+/// 发送 → 状态/回执/错误/耗时四元组）：计时口径、Ok/Err 折叠与错误文案
+/// （request_error_reason）单点在本体。纯 REST 渠道消费四元组；携带协议
+/// 要素快照的渠道走 [`send_measured_outcome`] 成品收口。
 pub(crate) fn send_measured(
     request: reqwest::blocking::RequestBuilder,
     timeout_note: &str,
@@ -209,6 +209,46 @@ pub(crate) fn send_measured(
         ),
     };
     (status, receipt, error, elapsed_ms)
+}
+
+/// 直发的协议要素快照：发出请求前即已确定、Ok/Err 两分支同值的四字段
+/// （[`DispatchOutcome`] 的快照半边；测量回执半边由 [`send_measured_outcome`]
+/// 装订）。字段语义见 [`DispatchOutcome`] 各字段文档。
+pub(crate) struct DispatchSnapshot {
+    /// 发送唯一标识快照（无唯一标识头的渠道为空串）
+    pub msg_id: String,
+    /// 主签名快照（无签名头的明文渠道为空串）
+    pub signature: String,
+    /// 签名时间戳快照（无时间戳要素的渠道为 None）
+    pub timestamp: Option<String>,
+    /// 实际发出的请求体快照（超时/连接失败路径同样保留）
+    pub request_body: Option<String>,
+}
+
+/// 直发成品收口（send_measured 加深一层）：计时与 Ok/Err 折叠之上，把协议
+/// 要素快照（两分支同值）与 Ok 分支增量装订成成品 [`DispatchOutcome`]。
+/// Err 分支（status 0 / 空正文 / request_error_reason 折叠文案 / reply None）
+/// 单点在本体，携带快照字段的渠道不再各自手写双分支组装；`reply` 只在收到
+/// 响应时调用（入参状态码 + 回执正文，如加密回包解密），未发出请求恒 None。
+pub(crate) fn send_measured_outcome(
+    request: reqwest::blocking::RequestBuilder,
+    timeout_note: &str,
+    snapshot: DispatchSnapshot,
+    reply: impl FnOnce(u16, &str) -> Option<String>,
+) -> DispatchOutcome {
+    let (status, body, error, elapsed_ms) = send_measured(request, timeout_note);
+    let reply = if error.is_none() { reply(status, &body) } else { None };
+    DispatchOutcome {
+        msg_id: snapshot.msg_id,
+        signature: snapshot.signature,
+        timestamp: snapshot.timestamp,
+        request_body: snapshot.request_body,
+        reply,
+        status,
+        elapsed_ms,
+        body,
+        error,
+    }
 }
 
 /// GET echostr 握手应答判定骨架（Reuse-first 审计退件：此判定段曾在 5 处

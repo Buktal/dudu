@@ -35,6 +35,83 @@ fn not_sent_outcome_carries_zero_receipt_and_reason() {
     assert_eq!(outcome.reply, None);
 }
 
+/// send_measured_outcome 的 Ok 折叠契约：快照四字段逐字装订，reply 按收到的
+/// 状态码 + 正文推导，计时口径与 send_measured 同源。
+#[test]
+fn send_measured_outcome_folds_snapshot_and_reply_on_receipt() {
+    use crate::test_support::{quick_client, start_single_server, RecordedPost};
+    let responder: fn(&RecordedPost) -> (String, String) =
+        |_| ("HTTP/1.1 200 OK".into(), "ok".into());
+    let (addr, _rx) = start_single_server(responder, std::time::Duration::ZERO);
+    let outcome = send_measured_outcome(
+        quick_client(std::time::Duration::from_secs(2))
+            .post(format!("http://{addr}/hook"))
+            .header("Content-Type", "application/json")
+            .body(r#"{"event":"probe"}"#.to_string()),
+        "",
+        DispatchSnapshot {
+            msg_id: "msg-1".into(),
+            signature: "sig".into(),
+            timestamp: Some("1700000000".into()),
+            request_body: Some(r#"{"event":"probe"}"#.into()),
+        },
+        |status, body| (status == 200).then(|| format!("reply:{body}")),
+    );
+
+    assert_eq!(outcome.status, 200);
+    assert_eq!(outcome.body, "ok");
+    assert_eq!(outcome.error, None);
+    assert!(outcome.elapsed_ms < 2_000, "{outcome:?}");
+    // 快照字段逐字落入结果（Ok/Err 同值）
+    assert_eq!(outcome.msg_id, "msg-1");
+    assert_eq!(outcome.signature, "sig");
+    assert_eq!(outcome.timestamp.as_deref(), Some("1700000000"));
+    assert_eq!(
+        outcome.request_body.as_deref(),
+        Some(r#"{"event":"probe"}"#)
+    );
+    // Ok 分支增量：reply 由回执推导
+    assert_eq!(outcome.reply.as_deref(), Some("reply:ok"));
+}
+
+/// send_measured_outcome 的 Err 折叠契约：未收到响应时 status 0 + 空正文 +
+/// request_error_reason 折叠文案（此处锚定超时分支 + 补充文案透传——本机对
+/// 关闭端口表现为过滤而非拒绝，延迟应答 + 短超时客户端才可控确定）；快照
+/// 字段照常保留（超时/连接失败路径同样保留请求快照），reply 恒 None。
+#[test]
+fn send_measured_outcome_err_branch_keeps_snapshot_without_reply() {
+    use crate::test_support::{quick_client, start_single_server, RecordedPost};
+    let responder: fn(&RecordedPost) -> (String, String) =
+        |_| ("HTTP/1.1 200 OK".into(), "ok".into());
+    let (addr, _rx) = start_single_server(responder, std::time::Duration::from_secs(1));
+    let outcome = send_measured_outcome(
+        quick_client(std::time::Duration::from_millis(200))
+            .post(format!("http://{addr}/hook"))
+            .body("{}".to_string()),
+        "（官方要求 1.5 秒内应答）",
+        DispatchSnapshot {
+            msg_id: "msg-2".into(),
+            signature: "sig".into(),
+            timestamp: Some("1700000001".into()),
+            request_body: Some("{}".into()),
+        },
+        |_, body| Some(format!("不应被调用：{body}")),
+    );
+
+    assert_eq!(outcome.status, 0);
+    assert_eq!(outcome.body, "");
+    let error = outcome.error.expect("应有错误原因");
+    assert!(
+        error.starts_with("等待响应超时（官方要求 1.5 秒内应答）："),
+        "{error}"
+    );
+    assert_eq!(outcome.msg_id, "msg-2");
+    assert_eq!(outcome.signature, "sig");
+    assert_eq!(outcome.timestamp.as_deref(), Some("1700000001"));
+    assert_eq!(outcome.request_body.as_deref(), Some("{}"));
+    assert_eq!(outcome.reply, None);
+}
+
 #[test]
 fn adapter_registry_covers_every_config_variant() {
     let douyin_config = ConnectionConfig::Douyin {

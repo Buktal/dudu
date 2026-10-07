@@ -9,7 +9,9 @@
 //! - 握手：官方无独立 challenge（授权事件 URL 直接推送），按授权推送形态
 //!   验证 TOKEN 验签；目标必须直接返回字符串 success（不带引号），否则重试 3 次
 
-use super::super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::super::{
+    send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
+};
 use crate::connections::util;
 
 /// 官方黄金信封（§4.3 逐字）中的 Encrypt 字面量（官方示例密文占位）。
@@ -75,40 +77,22 @@ fn post(
     let timestamp = util::now_secs().to_string();
     let signature = msg_signature(token, &nonce, &timestamp, encrypt);
     let envelope = build_envelope(&nonce, &timestamp, encrypt, &signature);
-    let started = std::time::Instant::now();
-
-    let response = client
+    let request = client
         .post(url)
         .header("Content-Type", "application/json")
-        .body(envelope.clone())
-        .send();
-
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    match response {
-        Ok(response) => DispatchOutcome {
+        .body(envelope.clone());
+    send_measured_outcome(
+        request,
+        "",
+        DispatchSnapshot {
             // 发送唯一标识快照 = 本次推送的 Nonce
             msg_id: nonce,
             signature,
             timestamp: Some(timestamp),
             request_body: Some(envelope),
-            reply: None,
-            status: response.status().as_u16(),
-            elapsed_ms,
-            body: response.text().unwrap_or_default(),
-            error: None,
         },
-        Err(err) => DispatchOutcome {
-            msg_id: nonce,
-            signature,
-            timestamp: Some(timestamp),
-            request_body: Some(envelope),
-            reply: None,
-            status: 0,
-            elapsed_ms,
-            body: String::new(),
-            error: Some(format!("{}：{err}", request_error_reason(&err, ""))),
-        },
-    }
+        |_, _| None,
+    )
 }
 
 /// 按官方形态验证服务商推送：无独立 challenge（授权事件 URL 直接推送），

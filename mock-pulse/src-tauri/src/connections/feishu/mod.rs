@@ -25,7 +25,8 @@ use std::time::Duration;
 use crate::connections::util::now_secs;
 
 use super::{
-    client_with_timeout, request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome,
+    client_with_timeout, request_error_reason, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// url_verification 的随机 challenge：32 位小写 hex（官方样本 `ajls384kdjxxxx`
@@ -197,38 +198,17 @@ fn dispatch_event(
             .header("X-Lark-Signature", &signature);
     }
 
-    let started = std::time::Instant::now();
-    let response = request.send();
-
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let receipt = response.text().unwrap_or_default();
-            DispatchOutcome {
-                msg_id,
-                signature,
-                timestamp,
-                request_body: Some(body),
-                reply: None,
-                status,
-                elapsed_ms,
-                body: receipt,
-                error: None,
-            }
-        }
-        Err(err) => DispatchOutcome {
+    send_measured_outcome(
+        request,
+        "",
+        DispatchSnapshot {
             msg_id,
             signature,
             timestamp,
             request_body: Some(body),
-            reply: None,
-            status: 0,
-            elapsed_ms,
-            body: String::new(),
-            error: Some(format!("{}：{err}", request_error_reason(&err, ""))),
         },
-    }
+        |_, _| None,
+    )
 }
 
 fn url_of(config: &ConnectionConfig) -> &str {

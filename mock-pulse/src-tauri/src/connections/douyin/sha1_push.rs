@@ -5,7 +5,7 @@
 //! - 生活服务：body 先按行拼接去掉换行符再参与 sha1（官方 wholeStr 逐行
 //!   readLine 拼接 / Node demo `split(/\r?\n/).join('')`），key 用 AppSecret
 
-use super::super::{request_error_reason, DispatchOutcome};
+use super::super::{send_measured_outcome, DispatchOutcome, DispatchSnapshot};
 use crate::connections::util;
 
 /// dop 官方算法：sha1(client_secret + body) 的小写 hex。
@@ -31,44 +31,23 @@ pub(super) fn dispatch(
     timeout_note: &str,
 ) -> DispatchOutcome {
     let msg_id = uuid::Uuid::new_v4().to_string();
-    let started = std::time::Instant::now();
-
-    let response = client
+    let request = client
         .post(url)
         .header("Content-Type", "application/json")
         .header("X-Douyin-Signature", signature.clone())
         .header("Msg-Id", msg_id.clone())
-        .body(body.to_string())
-        .send();
-
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    match response {
-        Ok(response) => DispatchOutcome {
+        .body(body.to_string());
+    send_measured_outcome(
+        request,
+        timeout_note,
+        DispatchSnapshot {
             msg_id,
             signature,
             timestamp: None,
             request_body: Some(body.to_string()),
-            reply: None,
-            status: response.status().as_u16(),
-            elapsed_ms,
-            body: response.text().unwrap_or_default(),
-            error: None,
         },
-        Err(err) => DispatchOutcome {
-            msg_id,
-            signature,
-            timestamp: None,
-            request_body: Some(body.to_string()),
-            reply: None,
-            status: 0,
-            elapsed_ms,
-            body: String::new(),
-            error: Some(format!(
-                "{}：{err}",
-                request_error_reason(&err, timeout_note)
-            )),
-        },
-    }
+        |_, _| None,
+    )
 }
 
 #[cfg(test)]

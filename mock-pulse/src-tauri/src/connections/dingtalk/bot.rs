@@ -9,7 +9,9 @@
 //!   （`{"msgtype":"text","text":{"content":"你好"}}` 官方片段逐字）+
 //!   规范验签头，目标响应 HTTP 2xx 即连通（官方未定义回包语义，正文不校验）
 
-use super::super::{request_error_reason, ConnectionConfig, DispatchOutcome, HandshakeOutcome};
+use super::super::{
+    send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
+};
 use crate::connections::util;
 
 /// 官方 text 片段（§5.1 同页逐字）作连通探测体（最小官方形态，不编造）。
@@ -30,39 +32,24 @@ fn post(
 ) -> DispatchOutcome {
     let timestamp = util::now_millis().to_string();
     let sign = build_sign(app_secret, &timestamp);
-    let started = std::time::Instant::now();
-    let response = client
+    let request = client
         .post(url)
         .header("Content-Type", "application/json; charset=utf-8")
         .header("timestamp", &timestamp)
         .header("sign", &sign)
-        .body(body.to_string())
-        .send();
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let base = |status: u16, receipt: String, error: Option<String>| DispatchOutcome {
-        // 发送唯一标识在明文载荷的 msgId（幂等键由接收侧解析，头部无 nonce 可快照）
-        msg_id: String::new(),
-        signature: sign.clone(),
-        timestamp: Some(timestamp.clone()),
-        request_body: Some(body.to_string()),
-        reply: None,
-        status,
-        elapsed_ms,
-        body: receipt,
-        error,
-    };
-    match response {
-        Ok(response) => base(
-            response.status().as_u16(),
-            response.text().unwrap_or_default(),
-            None,
-        ),
-        Err(err) => base(
-            0,
-            String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, ""))),
-        ),
-    }
+        .body(body.to_string());
+    send_measured_outcome(
+        request,
+        "",
+        DispatchSnapshot {
+            // 发送唯一标识在明文载荷的 msgId（幂等键由接收侧解析，头部无 nonce 可快照）
+            msg_id: String::new(),
+            signature: sign,
+            timestamp: Some(timestamp),
+            request_body: Some(body.to_string()),
+        },
+        |_, _| None,
+    )
 }
 
 /// 机器人通道握手（官方无握手事件）：按收消息形态发官方 text 片段探测 +
