@@ -1,8 +1,14 @@
 spring:
   application:
     name: dudu-server
+  # 生产在 jar 同目录放 .env 覆盖同名键（见 README「线上部署边界」）；开发无 .env 直接跑
+  config:
+    import: optional:file:./.env[.properties]
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/dudu?sslMode=REQUIRED&connectionTimeZone=Asia/Shanghai&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
+    username: dudu
+    password: 123456
 
 dudu:
   auth:
-    # 默认环境必须提供密钥；开发环境显式启用 dev profile。
-    jwt-secret: ${DUDU_AUTH_JWT_SECRET:}
+    jwt-secret: dudu-dev-only-signing-key-change-me

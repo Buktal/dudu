@@ -15,6 +15,12 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      // 本地开发同源转发到 Server（8080），浏览器无跨域；生产由部署层处理
+      "/api": "http://127.0.0.1:8080",
+    },
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],

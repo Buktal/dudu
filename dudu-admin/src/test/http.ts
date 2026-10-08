@@ -48,7 +48,8 @@ export function installHttp(
 ) {
   const fetchRequest = vi.fn(
     (input: string | URL | Request, init: RequestInit) => {
-      const url = new URL(String(input));
+      // 开发模式请求为同源相对路径，按当前页面地址解析
+      const url = new URL(String(input), window.location.href);
       if (url.pathname === "/api/admin/login")
         return Promise.resolve(
           success({ token: "test-token", exp: 2000000000, user: account }),
@@ -68,7 +69,7 @@ export function installHttp(
 export function authenticatedSession(hash = "") {
   sessionStorage.setItem(
     "dudu-admin.session",
-    JSON.stringify({ origin: "http://127.0.0.1:8080", token: "test-token" }),
+    JSON.stringify({ origin: "", token: "test-token" }),
   );
   window.history.replaceState(null, "", `/${hash}`);
 }

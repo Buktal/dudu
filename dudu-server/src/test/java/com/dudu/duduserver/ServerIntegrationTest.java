@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 独立 MySQL 验收；通过环境变量显式启用，不使用开发库。
  */
-@SpringBootTest(properties = {"dudu.auth.jwt-secret=integration-test-secret", "spring.profiles.active=dev"})
+@SpringBootTest(properties = {"dudu.auth.jwt-secret=integration-test-secret"})
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "DUDU_INTEGRATION_TEST", matches = "true")
 class ServerIntegrationTest {
@@ -63,16 +63,6 @@ class ServerIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0));
         mvc.perform(get("/api/admin/profile").header("Authorization", "Bearer " + token))
             .andExpect(jsonPath("$.code").value(0));
-    }
-
-    @Test
-    void preflightIsHandledBeforeAuthenticationButActualRequestIsProtected() throws Exception {
-        mvc.perform(options("/api/admin/profile").header("Origin", "http://localhost:5173")
-                .header("Access-Control-Request-Method", "GET")
-                .header("Access-Control-Request-Headers", "Authorization"))
-            .andExpect(status().isOk()).andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
-        mvc.perform(get("/api/admin/profile").header("Origin", "http://localhost:5173"))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(10101));
     }
 
     @Test

@@ -88,7 +88,7 @@ it("重置密码明确展示初始管理员，不匹配时不提交，成功后�
   await screen.findByRole("button", { name: "重置密码" });
   const mutation = request.mock.calls.find(([, init]) => init.method === "PUT");
   expect(String(mutation?.[0])).toBe(
-    "http://127.0.0.1:8080/api/admin/companies/123456/initial_admin/password",
+    "/api/admin/companies/123456/initial_admin/password",
   );
   expect(JSON.parse(String(mutation?.[1].body))).toEqual({
     newPassword: "Changed-123",

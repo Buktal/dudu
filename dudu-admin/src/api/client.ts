@@ -1,9 +1,3 @@
-import {
-  type Environment,
-  parseOrigin,
-  readEnvironment,
-  saveEnvironment,
-} from "./environment";
 import type { Account, LoginResult } from "./types";
 
 const SESSION_KEY = "dudu-admin.session";
@@ -28,9 +22,23 @@ export const isCancelled = (error: unknown) =>
 export const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "请求失败，请重试";
 
+// 校验构建注入的线上 API 源地址：仅协议、主机与端口，不带路径或凭据
+function parseOrigin(value: string): string {
+  const url = new URL(value.trim());
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== "/"
+  ) {
+    throw new Error("API 源地址仅支持 HTTP 或 HTTPS 的主机与端口");
+  }
+  return url.origin;
+}
+
 interface ClientState {
-  environment: Environment;
-  localOrigin: string;
   origin: string;
   user: Account | null;
   restoring: boolean;
@@ -53,11 +61,8 @@ export class AdminClient {
         import.meta.env.VITE_API_ORIGIN ??
         "https://api.dudu.example",
     );
-    const settings = readEnvironment(this.development);
-    const origin =
-      settings.environment === "local"
-        ? settings.localOrigin
-        : this.onlineOrigin;
+    // 开发走 Vite 同源代理（origin 为空串，请求 /api 同源转发）；生产用构建注入的线上地址
+    const origin = this.development ? "" : this.onlineOrigin;
     try {
       const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "null");
       if (
@@ -70,7 +75,6 @@ export class AdminClient {
       /* 无可恢复的凭据时展示登录页。 */
     }
     this.state = {
-      ...settings,
       origin,
       user: null,
       restoring: !!this.token,
@@ -110,20 +114,6 @@ export class AdminClient {
       generation: this.state.generation + 1,
       notice,
     });
-  }
-
-  switchEnvironment(
-    environment: Environment,
-    localOrigin = this.state.localOrigin,
-  ) {
-    if (!this.development) return;
-    const normalized = parseOrigin(localOrigin);
-    const origin = environment === "local" ? normalized : this.onlineOrigin;
-    if (origin === this.state.origin && environment === this.state.environment)
-      return;
-    this.clearSession();
-    saveEnvironment(environment, normalized);
-    this.publish({ environment, localOrigin: normalized, origin });
   }
 
   async request<T>(

@@ -8,7 +8,6 @@ import { TextField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
-import { EnvironmentMenu } from "./EnvironmentMenu";
 
 export function LoginPage() {
   const client = useAdmin();
@@ -20,7 +19,6 @@ export function LoginPage() {
     <div className="login-page flex min-h-svh flex-col">
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-6 sm:px-8">
         <Brand />
-        {import.meta.env.DEV && <EnvironmentMenu />}
       </header>
       <main className="flex flex-1 items-center justify-center px-5 py-12">
         <Card className="w-full max-w-[420px]">

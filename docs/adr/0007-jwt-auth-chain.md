@@ -2,9 +2,13 @@
 
 认证复用 Hutool JWT，固定 HS256，不新增认证依赖。JwtManager 保留 createToken、parseToken、parseAuthorization，载荷直接 JSONUtil.parseObj(user) 签发、toBean 解析。JwtUser.role 使用 UserRoleEnum，其 toString 与 JSON code 都是 admin/console/user，签发入口无需逐字段补 JSON。
 
-签名密钥保留 dudu.auth.jwt-secret（环境变量 DUDU_AUTH_JWT_SECRET），Java 属性名简化为 secret；缺失或空白启动失败。ttl-seconds 默认 604800 秒（7 天），显式非正数启动失败。
+签名密钥保留 dudu.auth.jwt-secret，Java 属性名简化为 secret；空白启动失败。ttl-seconds 默认 604800 秒（7 天），显式非正数启动失败。
 
-POST /api/admin/login 是唯一公开登录端点；/api/** 默认认证，/api/admin/** 另校验平台管理员角色。Controller 通过 @Me JwtUser 读取身份。保留用户决定：不使用 request attribute、ThreadLocal 或共享身份上下文，因此守卫与参数解析器各自验证。DevCorsConfig 仅在 dev 注册 CorsFilter，在 MVC 前统一处理预检；不让每个 HandlerInterceptor 重复写预检判断。非 dev 使用同源部署。
+## 2026-10-08 密钥与配置明文化
+
+用户确认删除 `.env`/`.env.example` 与占位符体系（含此前的 `DUDU_AUTH_JWT_SECRET` 环境变量桥接）：开发默认密钥与本地库口令明文写入 `application.yaml`，dev profile 的 yaml 段随之取消。生产以 jar 同目录 `.env` 的同名属性键覆盖（`dudu.auth.jwt-secret` 等）。取消「缺失密钥启动失败」的 fail-fast（空白仍失败）：漏覆盖时应用以开发密钥静默启动，上线清单须人工核对。缘由：部署形态极简（jar + 单文件），仓库私有的前提下用户明确接受该风险，取代 2026-10-07 前的「默认环境必须外部提供密钥」约定。同日用户确认跨域交由代理/网关层：DevCorsConfig 与运行时环境切换（dudu-admin EnvironmentMenu）一并移除，开发请求经 Vite 同源代理，项目不再使用 Spring profile。
+
+POST /api/admin/login 是唯一公开登录端点；/api/** 默认认证，/api/admin/** 另校验平台管理员角色。Controller 通过 @Me JwtUser 读取身份。保留用户决定：不使用 request attribute、ThreadLocal 或共享身份上下文，因此守卫与参数解析器各自验证。跨域不在服务端处理（2026-10-08 移除 DevCorsConfig 与 dev profile）：开发由 dudu-admin 的 Vite 代理将 /api 同源转发，生产同源部署或由网关加 CORS 头。
 
 ## 2026-10-07 退出方案的最终取舍
 

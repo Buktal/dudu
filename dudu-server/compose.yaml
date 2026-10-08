@@ -10,8 +10,8 @@ services:
     environment:
       MYSQL_DATABASE: dudu
       MYSQL_USER: dudu
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: 123456
       MYSQL_ROOT_HOST: "%"
     command:
       - --character-set-server=utf8mb4

@@ -18,7 +18,10 @@ import {
   success,
 } from "./test/http";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 it("通过真实 HTTP 登录，业务认证失败时保留登录表单", async () => {
   const fetchRequest = vi
@@ -36,14 +39,31 @@ it("通过真实 HTTP 登录，业务认证失败时保留登录表单", async (
   });
   fireEvent.click(screen.getByRole("button", { name: "登录" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("账号或密码错误");
-  expect(fetchRequest.mock.calls[0][0]).toBe(
-    "http://127.0.0.1:8080/api/admin/login",
-  );
+  expect(fetchRequest.mock.calls[0][0]).toBe("/api/admin/login");
   expect(JSON.parse(fetchRequest.mock.calls[0][1].body)).toEqual({
     username: "operator",
     password: "wrong-password",
   });
   expect(screen.getByRole("button", { name: "登录" })).toBeEnabled();
+});
+
+it("生产构建只向发布配置的线上地址登录", async () => {
+  vi.stubEnv("DEV", false);
+  vi.stubEnv("VITE_API_ORIGIN", "https://admin-api.example.org");
+  const request = vi.fn().mockResolvedValue(failure(10104, "账号或密码错误"));
+  vi.stubGlobal("fetch", request);
+  render(<App />);
+  fireEvent.change(screen.getByLabelText("登录名"), {
+    target: { value: "operator" },
+  });
+  fireEvent.change(screen.getByLabelText("密码"), {
+    target: { value: "password" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "登录" }));
+  await screen.findByRole("alert");
+  expect(request.mock.calls[0][0]).toBe(
+    "https://admin-api.example.org/api/admin/login",
+  );
 });
 
 it.each([
@@ -108,45 +128,6 @@ it("HTTP 200 中的过期业务码清除身份与企业数据", async () => {
   expect(screen.getByRole("status")).toHaveTextContent("登录已失效");
   expect(screen.queryByText(company.companyName)).not.toBeInTheDocument();
   expect(sessionStorage.getItem("dudu-admin.session")).toBeNull();
-});
-
-it("切换环境取消在途请求，旧令牌与迟到响应均不能进入新环境", async () => {
-  const pending = deferred<Response>();
-  const fetchRequest = installHttp(() => pending.promise);
-  authenticatedSession();
-  render(<App />);
-  await screen.findByRole("heading", { name: "企业管理" });
-  await waitFor(() =>
-    expect(
-      fetchRequest.mock.calls.some(([url]) =>
-        String(url).includes("/companies/query"),
-      ),
-    ).toBe(true),
-  );
-  const previousSignal = fetchRequest.mock.calls.find(([url]) =>
-    String(url).includes("/companies/query"),
-  )?.[1].signal;
-  fireEvent.click(screen.getByRole("button", { name: "选择环境" }));
-  fireEvent.click(await screen.findByRole("menuitem", { name: /线上环境/ }));
-  expect(
-    await screen.findByRole("heading", { name: "登录管理后台" }),
-  ).toBeInTheDocument();
-  expect(previousSignal?.aborted).toBe(true);
-  await act(async () => pending.resolve(success(page())));
-  expect(screen.queryByText(company.companyName)).not.toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("登录名"), {
-    target: { value: "operator" },
-  });
-  fireEvent.change(screen.getByLabelText("密码"), {
-    target: { value: "new-password" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "登录" }));
-  await screen.findByRole("heading", { name: "企业管理" });
-  const login = fetchRequest.mock.calls.find(([url]) =>
-    String(url).endsWith("/login"),
-  );
-  expect(String(login?.[0])).toBe("https://api.dudu.example/api/admin/login");
-  expect(new Headers(login?.[1].headers).has("Authorization")).toBe(false);
 });
 
 it("退出失败也清除本机身份，并显示真实结果", async () => {
