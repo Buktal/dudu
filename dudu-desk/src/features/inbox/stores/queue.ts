@@ -5,7 +5,12 @@ import type { ConversationQuery } from "../types";
 import { collectPaged } from "./page-cursor";
 import { foldConversationPages } from "./queue-membership";
 import { selectConversation } from "./reading";
-import { failureOf, requestKeys, runOperation } from "./requests";
+import {
+  failedReadCursor,
+  operationFailure,
+  requestKeys,
+  runOperation,
+} from "./requests";
 import { inboxActions } from "./slice";
 import {
   type InboxCommand,
@@ -121,7 +126,7 @@ export function loadConversations(
           op.settle(() =>
             dispatch(
               inboxActions.queueFailed({
-                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
+                error: operationFailure(error),
                 more: !!options.more,
               }),
             ),
@@ -138,10 +143,6 @@ export function retryConversations(): InboxCommand<Promise<void>> {
   return async (dispatch, getState) => {
     const queue = getState().inbox.queue;
     if (!queue.error || queue.status === "loading") return;
-    await dispatch(
-      loadConversations({
-        more: queue.failedRead === "more" && !!queue.nextCursor,
-      }),
-    );
+    await dispatch(loadConversations({ more: !!failedReadCursor(queue) }));
   };
 }

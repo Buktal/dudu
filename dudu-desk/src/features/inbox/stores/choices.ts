@@ -2,7 +2,8 @@ import { createSelector } from "@reduxjs/toolkit";
 import { matchesConversationFilters } from "../conversation-query";
 import type { ConversationQuery } from "../types";
 import {
-  failureOf,
+  failedReadCursor,
+  operationFailure,
   releaseRequest,
   requestKeys,
   runOperation,
@@ -134,7 +135,7 @@ export function readConversationChoices({
             dispatch(
               inboxActions.choicesFailed({
                 scope,
-                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
+                error: operationFailure(error),
                 append,
               }),
             ),
@@ -155,12 +156,8 @@ export function retryConversationChoices(
       readConversationChoices({
         view: choices.query.status === "needs-reply" ? "replyable" : "pinnable",
         search: choices.query.search,
-        // A failed continuation resumes at the cursor it failed on; the
-        // loading transition keeps it until the read settles.
-        cursor:
-          choices.failedRead === "more"
-            ? (choices.nextCursor ?? undefined)
-            : undefined,
+        // The loading transition keeps the cursor until the read settles.
+        cursor: failedReadCursor(choices),
         scope,
       }),
     );

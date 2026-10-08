@@ -1,12 +1,9 @@
-import { DeskApiError } from "@/lib/api-response";
 import { buildReplySubmission, replyReadiness } from "../reply-pipeline";
 import type { InboxMessage } from "../types";
 import { receiveNext } from "./next-reception";
 import {
-  failureOf,
   releaseAttachmentResources,
-  requestKeys,
-  runOperation,
+  runConversationOperation,
 } from "./requests";
 import { inboxActions } from "./slice";
 import {
@@ -58,40 +55,32 @@ function deliver(
 ): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
     const { target } = submission.request;
-    await runOperation(
+    await runConversationOperation(
       runtime,
-      requestKeys.send(target.conversationId),
       getState,
-      async (op) => {
-        dispatch(inboxActions.submissionStarted({ submission, message }));
-        try {
-          const response = await runtime.api.send({
-            ...submission.request,
-            context: op.context,
-            signal: op.signal,
-          });
-          if (!op.current()) return;
-          if (
-            response.conversationId !== target.conversationId ||
-            response.direction !== "outgoing" ||
-            !response.delivery ||
-            !["accepted", "sent", "delivered", "read"].includes(
-              response.delivery.state,
-            ) ||
-            (response.clientRequestId &&
-              response.clientRequestId !== submission.request.clientRequestId)
-          ) {
-            throw new DeskApiError(
-              "invalid-response",
-              "服务未返回可确认的发送结果",
-            );
-          }
+      target.conversationId,
+      "send",
+      {
+        loading: () =>
+          dispatch(inboxActions.submissionStarted({ submission, message })),
+        call: (io) => runtime.api.send({ ...submission.request, ...io }),
+        validate: (response) =>
+          response.conversationId !== target.conversationId ||
+          response.direction !== "outgoing" ||
+          !response.delivery ||
+          !["accepted", "sent", "delivered", "read"].includes(
+            response.delivery.state,
+          ) ||
+          (response.clientRequestId &&
+            response.clientRequestId !== submission.request.clientRequestId)
+            ? "服务未返回可确认的发送结果"
+            : undefined,
+        loaded: async (response, op) => {
           acceptSubmission(dispatch, runtime, submission, response);
           if (submission.next)
             await dispatch(receiveNext(submission, op.current));
-        } catch (error) {
-          if (!op.current()) return;
-          const failure = failureOf(error, "暂时无法连接服务，请稍后重试");
+        },
+        failed: (failure) =>
           dispatch(
             inboxActions.submissionFailed({
               messageId: message.id,
@@ -100,8 +89,7 @@ function deliver(
                 failure.kind,
               ),
             }),
-          );
-        }
+          ),
       },
     );
   };
@@ -226,53 +214,38 @@ function changeReception(
       (action === "resume" && current.status !== "closed")
     )
       return;
-    await runOperation(
-      runtime,
-      requestKeys.end(conversationId),
-      getState,
-      async (op) => {
-        dispatch(inboxActions.endStarted(conversationId));
-        try {
-          const operation =
-            action === "end" ? "endConversation" : "resumeConversation";
-          const conversation = await runtime.api[operation]({
-            context: op.context,
-            signal: op.signal,
-            conversationId,
-          });
-          if (!op.current()) return;
-          const latest = getState().inbox.conversations[conversationId];
-          const confirmedStatuses =
-            action === "end" ? ["closed"] : ["needs-reply", "waiting"];
-          if (
-            conversation.id !== conversationId ||
-            !confirmedStatuses.includes(conversation.status) ||
-            (latest &&
-              latest.version >= conversation.version &&
-              !confirmedStatuses.includes(latest.status))
-          )
-            throw new DeskApiError(
-              "invalid-response",
-              action === "end"
-                ? "服务未确认本次接待已结束"
-                : "服务未确认本次接待已恢复",
-            );
-          dispatch(
-            action === "end"
-              ? inboxActions.endSucceeded(conversation)
-              : inboxActions.resumeSucceeded(conversation),
-          );
-        } catch (error) {
-          op.settle(() =>
-            dispatch(
-              inboxActions.endFailed({
-                conversationId,
-                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
-              }),
-            ),
-          );
-        }
+    await runConversationOperation(runtime, getState, conversationId, "end", {
+      loading: () => dispatch(inboxActions.endStarted(conversationId)),
+      call: (io) => {
+        const operation =
+          action === "end" ? "endConversation" : "resumeConversation";
+        return runtime.api[operation]({ ...io, conversationId });
       },
-    );
+      validate: (conversation) => {
+        const confirmedStatuses =
+          action === "end" ? ["closed"] : ["needs-reply", "waiting"];
+        const latest = getState().inbox.conversations[conversationId];
+        if (
+          conversation.id !== conversationId ||
+          !confirmedStatuses.includes(conversation.status) ||
+          (latest &&
+            latest.version >= conversation.version &&
+            !confirmedStatuses.includes(latest.status))
+        )
+          return action === "end"
+            ? "服务未确认本次接待已结束"
+            : "服务未确认本次接待已恢复";
+        return undefined;
+      },
+      loaded: (conversation) => {
+        dispatch(
+          action === "end"
+            ? inboxActions.endSucceeded(conversation)
+            : inboxActions.resumeSucceeded(conversation),
+        );
+      },
+      failed: (failure) =>
+        dispatch(inboxActions.endFailed({ conversationId, error: failure })),
+    });
   };
 }

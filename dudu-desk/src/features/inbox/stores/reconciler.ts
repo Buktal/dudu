@@ -3,8 +3,8 @@ import type { ConnectionState, InboxMessage, Page } from "../types";
 import { collectPaged } from "./page-cursor";
 import { foldConversationPages } from "./queue-membership";
 import {
-  failureOf,
   getRequestScope,
+  operationFailure,
   releaseAttachmentResources,
   requestKeys,
   runOperation,
@@ -158,7 +158,7 @@ export function reconcileInbox(
         if (current()) dispatch(inboxActions.connectionChanged("connected"));
       } catch (error) {
         if (current()) {
-          const failure = failureOf(error, "暂时无法连接服务，请稍后重试");
+          const failure = operationFailure(error);
           dispatch(
             inboxActions.connectionChanged(connectionFromFailure(failure)),
           );

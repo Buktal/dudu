@@ -144,3 +144,7 @@ _Avoid_: 逐页复制的 useState + useQuery 手工编排、useCallback 稳定�
 DuduAdmin 三个列表页（企业、企业资源汇总、操作记录）共用的加载→失败→空态→表格→分页编排单点：「失败不冒充空数据」由分支顺序（error 先于空态判定）单点保证；表格列与行走 children 槽，空态动作按钮与两套空态文案（筛选中 / 全量）归页面。
 _Avoid_: 三步舞手写编排（loading/error/数据分支逐页复制）、失败态渲染空态文案
 
+**会话域操作（ConversationOperation）**:
+DuduDesk 中对单个会话的一次请求级读写（读历史 / 读资料、存资料 / 星标 / 已读、发送、结束 / 恢复接待）的统一执行 seam：loading → api 调用 → 结算守卫 → 成功 / 失败效果。「迟到结果不得复活已移除会话」（仅当本次尝试仍是当前尝试且会话仍在册才结算）、响应校验惯用形（不匹配即 invalid-response）与失败映射兜底文案收敛在 inbox stores/requests 单点，各 thunk 只声明哪个键、调哪个 api、成功装什么。
+_Avoid_: 手写 runOperation 仪式、逐处兜底串（旧实现）
+

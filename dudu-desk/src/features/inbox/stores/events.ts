@@ -9,8 +9,8 @@ import {
   abortRequest,
   beginRequest,
   cancelConversationRequests,
-  failureOf,
   getRequestScope,
+  operationFailure,
   releaseAttachmentResources,
   requestKeys,
 } from "./requests";
@@ -102,9 +102,7 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
       if (current)
         dispatch(
           inboxActions.connectionChanged(
-            connectionFromFailure(
-              failureOf(error, "暂时无法连接服务，请稍后重试"),
-            ),
+            connectionFromFailure(operationFailure(error)),
           ),
         );
     }

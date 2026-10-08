@@ -1,11 +1,10 @@
 import { uniq } from "lodash-es";
-import { DeskApiError } from "@/lib/api-response";
 import { loadConversations } from "./queue";
 import {
   needsQueueReloadAfterProfileSave,
   needsQueueReloadAfterStarChange,
 } from "./queue-membership";
-import { failureOf, requestKeys, runOperation } from "./requests";
+import { runConversationOperation } from "./requests";
 import { inboxActions } from "./slice";
 import type { ProfileChanges } from "./state";
 import type { InboxCommand } from "./store";
@@ -39,16 +38,16 @@ export function saveVisitorProfile(
       edit.revision === edit.savedRevision
     )
       return;
-    await runOperation(
+    await runConversationOperation(
       runtime,
-      requestKeys.profileSave(conversationId),
       getState,
-      async (op) => {
-        dispatch(inboxActions.profileSaving(conversationId));
-        try {
-          const result = await runtime.api.saveProfile({
-            context: op.context,
-            signal: op.signal,
+      conversationId,
+      "profile-save",
+      {
+        loading: () => dispatch(inboxActions.profileSaving(conversationId)),
+        call: (io) =>
+          runtime.api.saveProfile({
+            ...io,
             conversationId,
             tags: uniq(
               edit.tagsText
@@ -58,17 +57,13 @@ export function saveVisitorProfile(
             ),
             note: edit.note,
             version: edit.baseVersion,
-          });
-          if (!op.current()) return;
-          if (
-            result.conversationId !== conversationId ||
-            result.version < edit.baseVersion
-          ) {
-            throw new DeskApiError(
-              "invalid-response",
-              "资料保存结果不匹配，请刷新后重试",
-            );
-          }
+          }),
+        validate: (result) =>
+          result.conversationId !== conversationId ||
+          result.version < edit.baseVersion
+            ? "资料保存结果不匹配，请刷新后重试"
+            : undefined,
+        loaded: async (result) => {
           dispatch(
             inboxActions.profileSaved({
               profile: result,
@@ -77,16 +72,14 @@ export function saveVisitorProfile(
           );
           if (needsQueueReloadAfterProfileSave(getState().inbox.queue.query))
             await dispatch(loadConversations());
-        } catch (error) {
-          op.settle(() =>
-            dispatch(
-              inboxActions.profileSaveFailed({
-                conversationId,
-                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
-              }),
-            ),
-          );
-        }
+        },
+        failed: (failure) =>
+          dispatch(
+            inboxActions.profileSaveFailed({
+              conversationId,
+              error: failure,
+            }),
+          ),
       },
     );
   };
@@ -101,46 +94,24 @@ export function setConversationStarred(
     const conversation = state.conversations[conversationId];
     if (!conversation || state.starUpdates[conversationId]?.status === "saving")
       return;
-    await runOperation(
-      runtime,
-      requestKeys.star(conversationId),
-      getState,
-      async (op) => {
-        dispatch(inboxActions.starSaving(conversationId));
-        try {
-          const result = await runtime.api.setStarred({
-            context: op.context,
-            signal: op.signal,
-            conversationId,
-            starred,
-          });
-          if (!op.current()) return;
-          if (
-            result.id !== conversationId ||
-            result.identity.id !== conversation.identity.id ||
-            result.identity.accountId !== conversation.identity.accountId ||
-            result.identity.channelId !== conversation.identity.channelId ||
-            result.starred !== starred
-          ) {
-            throw new DeskApiError(
-              "invalid-response",
-              "星标保存结果不匹配，请刷新后重试",
-            );
-          }
-          dispatch(inboxActions.starSaved(result));
-          if (needsQueueReloadAfterStarChange(getState().inbox.queue.query))
-            await dispatch(loadConversations());
-        } catch (error) {
-          op.settle(() =>
-            dispatch(
-              inboxActions.starFailed({
-                conversationId,
-                error: failureOf(error, "暂时无法连接服务，请稍后重试"),
-              }),
-            ),
-          );
-        }
+    await runConversationOperation(runtime, getState, conversationId, "star", {
+      loading: () => dispatch(inboxActions.starSaving(conversationId)),
+      call: (io) => runtime.api.setStarred({ ...io, conversationId, starred }),
+      validate: (result) =>
+        result.id !== conversationId ||
+        result.identity.id !== conversation.identity.id ||
+        result.identity.accountId !== conversation.identity.accountId ||
+        result.identity.channelId !== conversation.identity.channelId ||
+        result.starred !== starred
+          ? "星标保存结果不匹配，请刷新后重试"
+          : undefined,
+      loaded: async (result) => {
+        dispatch(inboxActions.starSaved(result));
+        if (needsQueueReloadAfterStarChange(getState().inbox.queue.query))
+          await dispatch(loadConversations());
       },
-    );
+      failed: (failure) =>
+        dispatch(inboxActions.starFailed({ conversationId, error: failure })),
+    });
   };
 }

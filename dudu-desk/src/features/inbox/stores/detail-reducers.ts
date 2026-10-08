@@ -55,6 +55,10 @@ export const detailReducers = {
     action: PayloadAction<{ profile: VisitorProfile; revision: number }>,
   ) {
     const { profile, revision } = action.payload;
+    // A save for a removed conversation owns nothing: without the entity
+    // there is no profile or edit to write back (second line of defense
+    // behind the operation settle guard).
+    if (!state.conversations[profile.conversationId]) return;
     const previous = state.profiles[profile.conversationId];
     if (!previous?.data || profile.version >= previous.data.version) {
       state.profiles[profile.conversationId] = {
@@ -88,6 +92,10 @@ export const detailReducers = {
     state.starUpdates[action.payload] = { status: "saving", error: null };
   },
   starSaved(state: InboxState, action: PayloadAction<Conversation>) {
+    // A star change must not re-merge a removed conversation's entity: the
+    // merge kernel's removed-version guard serves live events, not user saves
+    // (second line of defense behind the operation settle guard).
+    if (!state.conversations[action.payload.id]) return;
     mergeConversation(state, action.payload);
     state.starUpdates[action.payload.id] = { status: "saved", error: null };
   },

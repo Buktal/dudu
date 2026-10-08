@@ -7,7 +7,7 @@ import {
 } from "../attachment-rules";
 import { sendTarget } from "../sending-rules";
 import {
-  failureOf,
+  operationFailure,
   releaseAttachmentResources,
   requestKeys,
   runOperation,
@@ -123,8 +123,7 @@ function prepareDraftAttachment(id: string): InboxCommand<Promise<void>> {
               dispatch(
                 inboxActions.attachmentFailed({
                   id,
-                  error: failureOf(error, "暂时无法连接服务，请稍后重试")
-                    .message,
+                  error: operationFailure(error).message,
                 }),
               ),
             );

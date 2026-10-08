@@ -10,6 +10,7 @@ import {
 import { loadConversations } from "./queue";
 import { loadProfile, resetContext, selectConversation } from "./reading";
 import { selectQueueConversations } from "./selectors";
+import { inboxActions } from "./slice";
 import { emptyQuery } from "./state";
 import {
   deferred,
@@ -130,6 +131,51 @@ describe("visitor details", () => {
       starUpdates: {},
       conversations: {},
     });
+  });
+
+  it("drops a late profile save and star change for a removed conversation", async () => {
+    const pendingProfile = deferred<VisitorProfile>();
+    const pendingStar = deferred<Conversation>();
+    const store = testStore({
+      saveProfile: () => pendingProfile.promise,
+      setStarred: () => pendingStar.promise,
+    });
+    await store.dispatch(loadConversations());
+    store.dispatch(
+      editVisitorProfile(firstConversation.id, { note: "移除后才返回的备注" }),
+    );
+    const saving = store.dispatch(saveVisitorProfile(firstConversation.id));
+    const starring = store.dispatch(
+      setConversationStarred(firstConversation.id, true),
+    );
+    // Detach through the reducer-level removal only: the live subscription
+    // path would also cancel the request, and this pins the settle guard
+    // itself — a current operation whose conversation is gone writes nothing.
+    store.dispatch(
+      inboxActions.eventReceived({
+        context: { agentId: "agent-a", workspaceId: "workspace-a" },
+        id: "removed-a",
+        cursor: "removed-a",
+        type: "removed",
+        conversationId: firstConversation.id,
+        version: 3,
+      }),
+    );
+    pendingProfile.resolve({
+      conversationId: firstConversation.id,
+      version: 2,
+      fields: [],
+      tags: [],
+      note: "移除后才返回的备注",
+    });
+    pendingStar.resolve({ ...firstConversation, starred: true, version: 2 });
+    await Promise.all([saving, starring]);
+
+    const state = store.getState().inbox;
+    expect(state.profiles).toEqual({});
+    expect(state.profileEdits).toEqual({});
+    expect(state.starUpdates).toEqual({});
+    expect(state.conversations[firstConversation.id]).toBeUndefined();
   });
 
   it("keeps the confirmed star value and explains a rejected save", async () => {

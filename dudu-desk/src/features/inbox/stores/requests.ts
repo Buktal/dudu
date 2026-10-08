@@ -1,25 +1,31 @@
 /**
- * Owner of inbox request keys and cancellation in one module. The key
- * namespace (`InboxRequestKey` + `requestKeys`) is the single spelling of
- * every request slot — global singletons, per-conversation, per-attachment
- * and per-choice-scope — and the helpers below are the only way other modules
- * abort, release, fan out or query in-flight work, so `runtime.requests`
- * stays an implementation detail of this file. A new per-conversation request
- * registers once in CONVERSATION_REQUEST_KINDS: its key constructor and the
- * removed-conversation cancellation both derive from that table.
+ * Owner of inbox request keys, cancellation and the conversation-domain
+ * operation ritual in one module. The key namespace (`InboxRequestKey` +
+ * `requestKeys`) is the single spelling of every request slot — global
+ * singletons, per-conversation, per-attachment and per-choice-scope — and the
+ * helpers below are the only way other modules abort, release, fan out, query
+ * or run in-flight work, so `runtime.requests` stays an implementation detail
+ * of this file. A new per-conversation request registers once in
+ * CONVERSATION_REQUEST_KINDS: its key, the removed-conversation cancellation
+ * and its runConversationOperation slot all derive from that table.
  */
+import { type ApiFailure, DeskApiError, failureOf } from "@/lib/api-response";
 import { createRequestScope, type RequestScope } from "@/lib/request-scope";
-import type { WorkContext } from "../types";
+import type { RequestOptions, WorkContext } from "../types";
 import type { InboxRootState, InboxRuntime } from "./store";
 
-/** Canonical failure mapping lives in `@/lib/api-response` (shared with the
- *  account session); re-exported here so inbox modules keep one import. */
-export { failureOf } from "@/lib/api-response";
+/** Single spelling of the transient-failure copy for inbox operations: any
+ *  error that is neither a DeskApiError nor an abort reads as a network
+ *  failure with this copy, in every loader and saver. */
+export function operationFailure(error: unknown): ApiFailure {
+  return failureOf(error, "暂时无法连接服务，请稍后重试");
+}
 
 /** Per-conversation request kinds. The per-conversation key constructors in
- *  `requestKeys` and `cancelConversationRequests` both derive from this
- *  table, so a new per-conversation request registers here once and is
- *  cancelled with the rest when its conversation is removed. */
+ *  `requestKeys`, `cancelConversationRequests` and the runConversationOperation
+ *  slot domain all derive from this table, so a new per-conversation request
+ *  registers here once, runs through the conversation operation interface and
+ *  is cancelled with the rest when its conversation is removed. */
 const CONVERSATION_REQUEST_KINDS = [
   "history",
   "profile",
@@ -30,10 +36,16 @@ const CONVERSATION_REQUEST_KINDS = [
   "end",
 ] as const;
 
+/** The runConversationOperation slot domain: one entry per row of
+ *  CONVERSATION_REQUEST_KINDS. */
+export type ConversationRequestKind =
+  (typeof CONVERSATION_REQUEST_KINDS)[number];
+
 /** Slot-key protocol for inbox requests: global singletons plus namespaced
  *  per-owner keys. A key must match one of these shapes to typecheck at
  *  `beginRequest`/`runOperation`; `requestKeys` builds the sanctioned
- *  spellings. */
+ *  spellings for the slots other modules still address directly — running a
+ *  per-conversation slot goes through runConversationOperation instead. */
 export type InboxRequestKey =
   | "queue"
   | "events"
@@ -59,16 +71,6 @@ export const requestKeys = {
     conversationRequestKey("history", conversationId),
   profile: (conversationId: string) =>
     conversationRequestKey("profile", conversationId),
-  profileSave: (conversationId: string) =>
-    conversationRequestKey("profile-save", conversationId),
-  send: (conversationId: string) =>
-    conversationRequestKey("send", conversationId),
-  read: (conversationId: string) =>
-    conversationRequestKey("read", conversationId),
-  star: (conversationId: string) =>
-    conversationRequestKey("star", conversationId),
-  end: (conversationId: string) =>
-    conversationRequestKey("end", conversationId),
   attachment: (attachmentId: string): InboxRequestKey =>
     `attachment:${attachmentId}`,
   choices: (scope: string): InboxRequestKey => `choices:${scope}`,
@@ -77,7 +79,8 @@ export const requestKeys = {
 } as const;
 
 /** Escape hatch for long-lived operations (e.g. the inbox subscription) whose
- *  request outlives a single task. Scoped loads should use runOperation. */
+ *  request outlives a single task. Scoped loads should use runOperation, and
+ *  per-conversation ones runConversationOperation. */
 export function beginRequest(
   runtime: InboxRuntime,
   key: InboxRequestKey,
@@ -222,4 +225,80 @@ export async function runOperation<T>(
   } finally {
     request.finish();
   }
+}
+
+/** One conversation-domain operation: which api call settles it, what a valid
+ *  response matches, and the dispatch effects on each side. */
+export type ConversationOperation<T> = {
+  /** Opens the transition (the xLoading dispatch); runs once before the call. */
+  loading: () => void;
+  call: (io: RequestOptions) => Promise<T>;
+  /** Return a mismatch message to reject the response as invalid-response. */
+  validate?: (result: T) => string | undefined;
+  /** Success effects; may await follow-up work whose errors fall through to
+   *  the failure mapping. */
+  loaded: (result: T, op: { current: () => boolean }) => void | Promise<void>;
+  /** Failure effect; receives the mapped failure with the shared fallback copy. */
+  failed: (failure: ApiFailure) => void;
+};
+
+/**
+ * Deep module for conversation-domain operations. Owns the whole execution
+ * ritual on top of runOperation for every slot in CONVERSATION_REQUEST_KINDS:
+ * the loading dispatch, the api call, and one settle guard — an operation
+ * settles only while it is still the latest attempt for its key AND its
+ * conversation still stands, so a late response can never resurrect a removed
+ * conversation's state. It also owns the response-validation idiom (a returned
+ * mismatch message becomes one invalid-response failure) and the failure
+ * mapping with the shared fallback copy, applied identically to validation
+ * misses and failed calls. Loaders and savers spell only which kind runs,
+ * which api call settles it, what a valid response matches and what each side
+ * dispatches.
+ */
+export async function runConversationOperation<T>(
+  runtime: InboxRuntime,
+  getState: () => InboxRootState,
+  conversationId: string,
+  kind: ConversationRequestKind,
+  operation: ConversationOperation<T>,
+): Promise<void> {
+  await runOperation(
+    runtime,
+    conversationRequestKey(kind, conversationId),
+    getState,
+    async (op) => {
+      operation.loading();
+      // A late result must never resurrect a removed conversation: settle
+      // only while this attempt is current and the conversation stands.
+      const stands = () =>
+        op.current() && !!getState().inbox.conversations[conversationId];
+      try {
+        const result = await operation.call({
+          context: op.context,
+          signal: op.signal,
+        });
+        if (!stands()) return;
+        const mismatch = operation.validate?.(result);
+        if (mismatch) throw new DeskApiError("invalid-response", mismatch);
+        await operation.loaded(result, { current: op.current });
+      } catch (error) {
+        if (!stands()) return;
+        operation.failed(operationFailure(error));
+      }
+    },
+  );
+}
+
+/**
+ * Retry-resume decision for paged reads, shared by the queue and the candidate
+ * scopes: a failure on "more" resumes at the cursor it failed on; a failed
+ * refresh restarts the read from the first page.
+ */
+export function failedReadCursor(read: {
+  failedRead?: "refresh" | "more";
+  nextCursor: string | null;
+}): string | undefined {
+  return read.failedRead === "more"
+    ? (read.nextCursor ?? undefined)
+    : undefined;
 }
