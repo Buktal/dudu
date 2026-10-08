@@ -111,8 +111,6 @@ export type InboxListPhaseProps = {
   error: ApiFailure | null;
   count: number;
   onRetry: () => void;
-  /** Retry of the compact bar; defaults to onRetry when both retry one read. */
-  onRetryMore?: () => void;
   loadingLabel?: string;
   empty: ListPhaseCopy;
   /** Wrapper for the compact bar when the content layout needs one. */
@@ -134,7 +132,6 @@ export function InboxListPhase({
   error,
   count,
   onRetry,
-  onRetryMore,
   loadingLabel,
   empty,
   compactClassName,
@@ -150,7 +147,7 @@ export function InboxListPhase({
   if (!count)
     return <InboxEmpty title={empty.title} description={empty.description} />;
   const bar = error ? (
-    <InboxError compact error={error} onRetry={onRetryMore ?? onRetry} />
+    <InboxError compact error={error} onRetry={onRetry} />
   ) : null;
   return (
     <>

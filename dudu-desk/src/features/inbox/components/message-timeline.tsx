@@ -10,7 +10,7 @@ import { Marker, MarkerContent } from "@/components/ui/marker";
 import { messageDate } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import { loadHistory } from "../stores/reading";
+import { loadHistory, retryHistory } from "../stores/reading";
 import { selectConversationById, selectMessages } from "../stores/selectors";
 import type { InboxMessage } from "../types";
 import { InboxListPhase } from "./inbox-state";
@@ -169,8 +169,7 @@ export function MessageTimeline({
       read={history}
       count={messages.length}
       error={history?.error ?? null}
-      onRetry={() => void dispatch(loadHistory(conversationId))}
-      onRetryMore={() => void dispatch(loadHistory(conversationId, true))}
+      onRetry={() => void dispatch(retryHistory(conversationId))}
       loadingLabel="正在读取消息…"
       empty={{
         title: "这段会话还没有消息",

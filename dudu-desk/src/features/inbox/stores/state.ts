@@ -107,7 +107,10 @@ export type InboxState = {
     counts?: ConversationPage["counts"];
     channels?: ConversationPage["channels"];
   };
-  histories: Record<string, LoadState & { ids: string[] }>;
+  histories: Record<
+    string,
+    LoadState & { ids: string[]; failedRead?: "refresh" | "more" }
+  >;
   choices: Record<
     string,
     LoadState & {

@@ -11,7 +11,7 @@ import { messageTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { messageSummary } from "../message-text";
-import { loadHistory } from "../stores/reading";
+import { loadHistory, retryHistory } from "../stores/reading";
 import { selectMessages } from "../stores/selectors";
 import { retryReply } from "../stores/sending";
 import type { Conversation } from "../types";
@@ -108,7 +108,7 @@ export const QuickCard = memo(function QuickCard({
               variant="ghost"
               size="xs"
               className="mt-1"
-              onClick={() => void dispatch(loadHistory(conversation.id))}
+              onClick={() => void dispatch(retryHistory(conversation.id))}
             >
               消息读取失败，重试
             </Button>

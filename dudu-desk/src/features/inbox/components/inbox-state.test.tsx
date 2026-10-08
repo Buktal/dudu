@@ -90,7 +90,7 @@ describe("list phase branches", () => {
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
-  it("keeps the compact error bar beside content and retries the same read by default", () => {
+  it("keeps the compact error bar beside content and retries the read through onRetry", () => {
     const { onRetry } = renderListPhase({
       read: { hasLoaded: true, status: "error" },
       count: 3,
@@ -102,19 +102,17 @@ describe("list phase branches", () => {
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
-  it("wraps the compact bar when the content layout needs it and retries the continuation", () => {
-    const onRetryMore = vi.fn();
-    const { container } = renderListPhase({
+  it("wraps the compact bar when the content layout needs it", () => {
+    const { onRetry, container } = renderListPhase({
       read: { hasLoaded: true, status: "error" },
       count: 3,
       error: failure,
-      onRetryMore,
       compactClassName: "p-2",
     });
     const bar = screen.getByRole("button", { name: /重试/ });
     expect(bar.closest(".p-2")).not.toBeNull();
     fireEvent.click(bar);
-    expect(onRetryMore).toHaveBeenCalledOnce();
+    expect(onRetry).toHaveBeenCalledOnce();
     expect(container.querySelector(".bg-muted")).toBeInTheDocument();
   });
 

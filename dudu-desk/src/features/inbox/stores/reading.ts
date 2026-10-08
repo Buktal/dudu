@@ -2,6 +2,7 @@ import type { WorkContext } from "../types";
 import {
   abortRequest,
   cancelRequests,
+  failedReadCursor,
   releaseRequest,
   requestKeys,
   runConversationOperation,
@@ -35,10 +36,24 @@ export function loadHistory(
         },
         failed: (failure) =>
           dispatch(
-            inboxActions.historyFailed({ conversationId, error: failure }),
+            inboxActions.historyFailed({
+              conversationId,
+              error: failure,
+              more,
+            }),
           ),
       },
     );
+  };
+}
+
+export function retryHistory(
+  conversationId: string,
+): InboxCommand<Promise<void>> {
+  return async (dispatch, getState) => {
+    const history = getState().inbox.histories[conversationId];
+    if (!history?.error || history.status === "loading") return;
+    await dispatch(loadHistory(conversationId, !!failedReadCursor(history)));
   };
 }
 

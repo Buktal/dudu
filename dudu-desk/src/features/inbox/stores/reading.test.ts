@@ -9,6 +9,7 @@ import {
   loadHistory,
   markConversationRead,
   resetContext,
+  retryHistory,
   selectConversation,
 } from "./reading";
 import {
@@ -319,5 +320,76 @@ describe("reading conversations through the inbox workflow", () => {
     expect(store.getState().inbox.conversations).toEqual({});
     expect(selectActiveConversation(store.getState())).toBeUndefined();
     expect(selectMessages(store.getState(), "conversation-a")).toEqual([]);
+  });
+});
+
+describe("history read retries", () => {
+  it("retries a failed continuation at the cursor it failed on and clears the marker", async () => {
+    let fail = true;
+    const latest = { ...incomingMessage("conversation-a"), sequence: 2 };
+    const older = { ...latest, id: "older-message", sequence: 1 };
+    const olderReads: string[] = [];
+    const store = testStore({
+      listMessages: async ({ conversationId, cursor }) => {
+        if (conversationId !== "conversation-a")
+          return { items: [incomingMessage(conversationId)], nextCursor: null };
+        if (cursor) olderReads.push(cursor);
+        if (cursor && fail)
+          throw new DeskApiError("business", "暂时无法读取更早消息", 50001);
+        return cursor
+          ? { items: [older], nextCursor: null }
+          : { items: [latest], nextCursor: "older-page" };
+      },
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a", true));
+    expect(store.getState().inbox.histories["conversation-a"]).toMatchObject({
+      status: "error",
+      failedRead: "more",
+      nextCursor: "older-page",
+    });
+
+    fail = false;
+    await store.dispatch(retryHistory("conversation-a"));
+
+    expect(olderReads).toEqual(["older-page", "older-page"]);
+    const retried = store.getState().inbox.histories["conversation-a"];
+    expect(retried.failedRead).toBeUndefined();
+    expect(retried).toMatchObject({ status: "ready", nextCursor: null });
+    expect(selectMessages(store.getState(), "conversation-a")).toEqual([
+      older,
+      latest,
+    ]);
+  });
+
+  it("retries a failed first read from the first page and clears the marker", async () => {
+    let calls = 0;
+    const store = testStore({
+      listMessages: async ({ conversationId }) => {
+        calls += 1;
+        if (calls === 1)
+          throw new DeskApiError("business", "暂时无法读取消息", 50001);
+        return { items: [incomingMessage(conversationId)], nextCursor: null };
+      },
+    });
+    await store.dispatch(loadConversations());
+    expect(store.getState().inbox.histories["conversation-a"]).toMatchObject({
+      status: "error",
+      failedRead: "refresh",
+    });
+
+    await store.dispatch(retryHistory("conversation-a"));
+
+    expect(calls).toBe(2);
+    const retried = store.getState().inbox.histories["conversation-a"];
+    expect(retried.failedRead).toBeUndefined();
+    expect(retried).toMatchObject({
+      status: "ready",
+      hasLoaded: true,
+      nextCursor: null,
+    });
+    expect(selectMessages(store.getState(), "conversation-a")).toEqual([
+      incomingMessage("conversation-a"),
+    ]);
   });
 });

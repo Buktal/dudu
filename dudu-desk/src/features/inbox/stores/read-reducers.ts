@@ -25,6 +25,7 @@ export const readReducers = {
     state.histories[id] ??= { ...emptyLoad(), ids: [] };
     state.histories[id].status = "loading";
     state.histories[id].error = null;
+    delete state.histories[id].failedRead;
   },
   historyCancelled(state: InboxState, action: PayloadAction<string>) {
     const history = state.histories[action.payload];
@@ -49,11 +50,17 @@ export const readReducers = {
   },
   historyFailed(
     state: InboxState,
-    action: PayloadAction<{ conversationId: string; error: ApiFailure }>,
+    action: PayloadAction<{
+      conversationId: string;
+      error: ApiFailure;
+      more: boolean;
+    }>,
   ) {
-    const history = state.histories[action.payload.conversationId];
+    const { conversationId, error, more } = action.payload;
+    const history = state.histories[conversationId];
     history.status = "error";
-    history.error = action.payload.error;
+    history.error = error;
+    history.failedRead = more ? "more" : "refresh";
   },
   profileLoading(state: InboxState, action: PayloadAction<string>) {
     const previous = state.profiles[action.payload];
