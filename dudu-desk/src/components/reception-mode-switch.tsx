@@ -50,7 +50,7 @@ export function ReceptionModeSwitch({
                 value={key}
                 aria-label={`${receptionModes[key].name}模式`}
                 title={receptionModes[key].description}
-                className="relative min-w-[91px] rounded-lg max-[760px]:min-w-0"
+                className="relative h-7 min-w-[91px] rounded-lg max-[760px]:min-w-0"
               >
                 {value === key && (
                   <motion.span

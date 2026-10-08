@@ -1,6 +1,5 @@
 import { Pin } from "lucide-react";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { conversationStatusLabels } from "../presentation";
 import type { Conversation } from "../types";
@@ -14,7 +13,6 @@ export function ConversationHeader({
   paneRole,
   paneActions,
   focused = true,
-  onFocus,
   onInfo,
   infoOpen = false,
 }: {
@@ -23,22 +21,21 @@ export function ConversationHeader({
   paneRole?: "primary" | "pinned";
   paneActions?: ReactNode;
   focused?: boolean;
-  onFocus?: () => void;
   onInfo?: () => void;
   infoOpen?: boolean;
 }) {
   return (
     <header
       className={cn(
-        "flex min-h-[84px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 transition-colors max-[760px]:px-3",
+        "flex min-h-[60px] shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 transition-colors max-[760px]:px-3",
         compact && "px-4",
         paneRole && "gap-x-2 px-3",
-        (compact || paneRole) &&
+        compact &&
           focused &&
           "bg-sidebar-accent text-sidebar-accent-foreground",
       )}
     >
-      <VisitorAvatar identity={conversation.identity} />
+      <VisitorAvatar identity={conversation.identity} className="size-8" />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
           <h2 className="max-w-full truncate text-[15px] font-semibold tracking-tight">
@@ -52,7 +49,7 @@ export function ConversationHeader({
             )}
           </span>
         </div>
-        <div className="mt-1 flex min-w-0 items-center gap-2">
+        <div className="mt-0.5 flex min-w-0 items-center gap-2">
           <SourceBadge identity={conversation.identity} />
           <span
             className="truncate text-[11px] text-muted-foreground"
@@ -75,15 +72,6 @@ export function ConversationHeader({
           </span>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
             {paneActions}
-            <Button
-              size="xs"
-              className="h-7 rounded-md"
-              variant={focused ? "secondary" : "ghost"}
-              aria-pressed={focused}
-              onClick={onFocus}
-            >
-              {focused ? "当前回复" : "切换回复"}
-            </Button>
           </div>
         </div>
       )}

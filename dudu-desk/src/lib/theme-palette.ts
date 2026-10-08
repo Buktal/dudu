@@ -1,5 +1,7 @@
-// Brand orange leads; its existing id preserves saved theme preferences.
+// Daylight leads as the default with midnight beside it; existing ids preserve saved theme preferences.
 export const palettes = {
+  daylight: { name: "极昼白", description: "纯白与墨色", scheme: "light" },
+  midnight: { name: "极夜黑", description: "碳黑与银白", scheme: "dark" },
   apricot: { name: "珊瑚橙", description: "嘟嘟品牌色", scheme: "light" },
   crimson: { name: "朱砂红", description: "鲜明朱红", scheme: "light" },
   amber: { name: "琥珀黄", description: "明亮金黄", scheme: "light" },
@@ -10,8 +12,6 @@ export const palettes = {
   iris: { name: "鸢尾紫", description: "浓郁紫色", scheme: "light" },
   berry: { name: "莓果粉", description: "明快玫粉", scheme: "light" },
   oat: { name: "可可棕", description: "醇厚深棕", scheme: "light" },
-  daylight: { name: "极昼白", description: "纯白与墨色", scheme: "light" },
-  midnight: { name: "极夜黑", description: "碳黑与银白", scheme: "dark" },
 } as const;
 
 export type Palette = keyof typeof palettes;

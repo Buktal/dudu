@@ -102,7 +102,7 @@ export function VisitorInfo({
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-l-3xl bg-sidebar text-sidebar-foreground"
       aria-label={`${name} 的来访资料`}
     >
-      <header className="flex shrink-0 items-center justify-between gap-2 px-4 py-4">
+      <header className="flex h-11 shrink-0 items-center justify-between gap-2 px-4">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="shrink-0 text-sm font-semibold">来访资料</h2>
           {(dirty || saving) && (

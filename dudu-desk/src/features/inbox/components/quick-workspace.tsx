@@ -121,9 +121,7 @@ export function QuickWorkspace() {
         <div className="mb-2 flex shrink-0 flex-col gap-2">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1">
             <QueueHeading className="h-8 px-0" />
-            <div className="w-[516px] min-w-0 max-w-full max-[760px]:order-last max-[760px]:w-full">
-              <QueueTools compact />
-            </div>
+            <QueueTools />
             <VisitorInfoToggle
               className="ml-auto"
               disabled={!replyId}

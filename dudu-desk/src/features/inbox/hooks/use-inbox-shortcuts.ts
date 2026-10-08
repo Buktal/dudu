@@ -25,6 +25,18 @@ export function useInboxSearch(openQueue?: () => void) {
         );
         input?.focus();
         input?.select();
+        if (!input) {
+          const trigger = Array.from(
+            document.querySelectorAll<HTMLButtonElement>(
+              "[data-inbox-filter-trigger]",
+            ),
+          ).find(
+            (element) =>
+              !element.closest("[inert]") &&
+              element.getClientRects().length > 0,
+          );
+          trigger?.click();
+        }
       });
     }
     function handleKey(event: KeyboardEvent) {

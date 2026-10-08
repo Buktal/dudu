@@ -1,11 +1,11 @@
-import { type ReactNode, useCallback, useRef } from "react";
+import { type ReactNode, useCallback } from "react";
 import { Separator } from "@/components/ui/separator";
 import { WorkspaceView } from "@/components/workspace-motion";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { markConversationRead } from "../stores/reading";
 import { selectConversationById } from "../stores/selectors";
-import { focusReply, retryReply } from "../stores/sending";
+import { retryReply } from "../stores/sending";
 import { Composer } from "./composer";
 import { ConversationHeader } from "./conversation-header";
 import { visitorName } from "./identity";
@@ -32,7 +32,6 @@ export function ConversationPane({
   infoOpen?: boolean;
 }) {
   const dispatch = useInboxDispatch();
-  const replyInput = useRef<HTMLTextAreaElement>(null);
   const conversation = useInboxSelector((state) =>
     selectConversationById(state, conversationId),
   );
@@ -66,11 +65,6 @@ export function ConversationPane({
         conversation={conversation}
         paneRole={paneRole}
         paneActions={paneActions}
-        focused={focused}
-        onFocus={() => {
-          dispatch(focusReply(conversationId));
-          replyInput.current?.focus();
-        }}
         infoOpen={infoOpen}
         onInfo={onInfo}
       />
@@ -82,7 +76,7 @@ export function ConversationPane({
           onAtBottom={markVisible}
         />
       </WorkspaceView>
-      <Composer conversationId={conversationId} inputRef={replyInput} />
+      <Composer conversationId={conversationId} />
     </section>
   );
 }

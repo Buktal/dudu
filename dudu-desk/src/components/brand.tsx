@@ -8,7 +8,13 @@ const logo = `${baseUrl}dudu-logo.svg`;
 const darkLogo = `${baseUrl}dudu-logo-dark.svg`;
 const mark = `${baseUrl}logo.svg`;
 
-export function Brand({ compact = false }: { compact?: boolean }) {
+export function Brand({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
 
@@ -16,7 +22,7 @@ export function Brand({ compact = false }: { compact?: boolean }) {
     <motion.div
       role="img"
       aria-label="嘟嘟 DuduDesk"
-      className="flex shrink-0 items-center"
+      className={cn("flex shrink-0 items-center", className)}
       whileHover={reduceMotion ? undefined : { rotate: -3, scale: 1.04 }}
       transition={{ type: "spring", stiffness: 360, damping: 30 }}
     >

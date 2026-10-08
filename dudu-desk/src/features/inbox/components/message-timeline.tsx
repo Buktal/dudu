@@ -113,7 +113,7 @@ function HistoryList({
         followOutput={(bottom) => (bottom ? "auto" : false)}
         atBottomStateChange={setAtBottom}
         atBottomThreshold={4}
-        increaseViewportBy={320}
+        increaseViewportBy={600}
         skipAnimationFrameInResizeObserver
         startReached={() => void dispatch(loadHistory(conversationId, true))}
         components={historyComponents}

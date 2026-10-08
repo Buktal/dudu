@@ -42,13 +42,13 @@ describe("workspace preferences", () => {
     expect(preferences.getSnapshot()).toEqual({ theme: "sea", mode: "quick" });
   });
 
-  it("starts a new workspace in apricot and calm without browser storage", () => {
+  it("starts a new workspace in daylight and calm without browser storage", () => {
     const preferences = createWorkspacePreferences({
       storage: () => undefined,
     });
 
     expect(preferences.getSnapshot()).toEqual({
-      theme: "apricot",
+      theme: "daylight",
       mode: "calm",
     });
   });
@@ -83,16 +83,16 @@ describe("workspace preferences", () => {
     ],
     [
       '{"version":1,"theme":"constructor","mode":"parallel"}',
-      { theme: "apricot", mode: "parallel" },
+      { theme: "daylight", mode: "parallel" },
     ],
     [
       '{"version":2,"theme":"sea","mode":"parallel"}',
-      { theme: "apricot", mode: "calm" },
+      { theme: "daylight", mode: "calm" },
     ],
-    ['{"theme":"sea","mode":"parallel"}', { theme: "apricot", mode: "calm" }],
-    ["null", { theme: "apricot", mode: "calm" }],
-    ["[]", { theme: "apricot", mode: "calm" }],
-    ["damaged-json", { theme: "apricot", mode: "calm" }],
+    ['{"theme":"sea","mode":"parallel"}', { theme: "daylight", mode: "calm" }],
+    ["null", { theme: "daylight", mode: "calm" }],
+    ["[]", { theme: "daylight", mode: "calm" }],
+    ["damaged-json", { theme: "daylight", mode: "calm" }],
   ])(
     "restores only recognized preferences from a supported record: %s",
     (raw, expected) => {
@@ -124,9 +124,9 @@ describe("workspace preferences", () => {
 
   it.each([
     ["dark", false, "midnight"],
-    ["light", true, "apricot"],
+    ["light", true, "daylight"],
     ["system", true, "midnight"],
-    ["system", false, "apricot"],
+    ["system", false, "daylight"],
   ] as const)(
     "migrates %s once using the initial system appearance",
     (legacy, prefersDark, theme) => {

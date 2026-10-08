@@ -33,7 +33,7 @@ function ConversationRow({
   return (
     <div
       className={cn(
-        "group mx-2 my-1 grid grid-cols-[41px_minmax(0,1fr)] gap-x-3 rounded-xl px-3 py-4 transition-colors",
+        "group mx-2 my-0.5 grid grid-cols-[32px_minmax(0,1fr)] gap-x-2 rounded-lg px-2 py-2 transition-colors",
         selected
           ? "bg-selection text-selection-foreground"
           : "hover:bg-muted/60",
@@ -45,13 +45,13 @@ function ConversationRow({
         aria-pressed={selected}
         aria-label={`接待 ${name}，${conversation.identity.channelName}，${conversation.identity.accountName}`}
         className={cn(
-          "col-span-2 col-start-1 row-start-1 flex min-w-0 gap-3 rounded-lg text-left outline-none focus-visible:[&_strong]:underline focus-visible:[&_strong]:underline-offset-4",
-          canPin && "min-h-[76px]",
+          "col-span-2 col-start-1 row-start-1 flex min-w-0 gap-2 rounded-lg text-left outline-none focus-visible:[&_strong]:underline focus-visible:[&_strong]:underline-offset-4",
+          canPin && "min-h-[62px]",
         )}
         data-conversation-id={conversation.id}
       >
-        <VisitorAvatar identity={conversation.identity} />
-        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <VisitorAvatar identity={conversation.identity} className="size-8" />
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex items-center gap-1.5">
             <strong className="truncate text-sm font-semibold" title={name}>
               {name}

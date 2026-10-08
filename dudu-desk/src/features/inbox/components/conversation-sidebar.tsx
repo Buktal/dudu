@@ -41,8 +41,10 @@ export function ConversationSidebar({
       )}
       aria-label="会话队列"
     >
-      <QueueHeading />
-      <QueueTools />
+      <div className="flex h-11 shrink-0 items-center pr-3">
+        <QueueHeading className="h-11 flex-1" />
+        <QueueTools />
+      </div>
       <Separator className="mx-3 mb-1 w-auto" />
       <ConversationQueue onSelected={onSelected} onPin={onPin} />
     </aside>

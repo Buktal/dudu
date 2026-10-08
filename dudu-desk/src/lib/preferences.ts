@@ -14,7 +14,7 @@ type PreferenceOptions = {
 };
 
 export const PREFERENCES_STORAGE_KEY = "dudu-desk.preferences";
-const defaults: WorkspacePreferences = { theme: "apricot", mode: "calm" };
+const defaults: WorkspacePreferences = { theme: "daylight", mode: "calm" };
 
 function safely<T>(read: () => T): T | undefined {
   try {
@@ -64,7 +64,7 @@ export function createWorkspacePreferences({
   const migratedTheme =
     legacy === "dark" || (legacy === "system" && safely(prefersDark))
       ? "midnight"
-      : "apricot";
+      : "daylight";
   let snapshot: WorkspacePreferences =
     raw == null
       ? { theme: migratedTheme, mode: "calm" }
