@@ -29,7 +29,7 @@ import {
 import { ConversationPane } from "./conversation-pane";
 import { QueueHeading } from "./conversation-sidebar";
 import { visitorName } from "./identity";
-import { InboxEmpty, InboxError, InboxLoading } from "./inbox-state";
+import { InboxListPhase } from "./inbox-state";
 import { QueueTools } from "./queue-tools";
 import { QuickCard } from "./quick-card";
 import { VisitorInfoPanel } from "./visitor-info-panel";
@@ -133,20 +133,17 @@ export function QuickWorkspace() {
           </div>
           <Separator className="mx-1 w-auto" />
         </div>
-        {!queue.hasLoaded && queue.status === "loading" ? (
-          <InboxLoading />
-        ) : !conversations.length && queue.error ? (
-          <InboxError
-            error={queue.error}
-            onRetry={() => void dispatch(retryConversations())}
-          />
-        ) : !conversations.length ? (
-          <InboxEmpty
-            title="当前没有匹配的消息"
-            description="试试更换会话状态或消息来源。"
-          />
-        ) : (
-          // WebView2 scroll anchoring otherwise fights Virtuoso's virtual padding.
+        <InboxListPhase
+          read={queue}
+          count={conversations.length}
+          error={queue.error}
+          onRetry={() => void dispatch(retryConversations())}
+          empty={{
+            title: "当前没有匹配的消息",
+            description: "试试更换会话状态或消息来源。",
+          }}
+        >
+          {/* WebView2 scroll anchoring otherwise fights Virtuoso's virtual padding. */}
           <VirtuosoGrid
             ref={grid}
             className="min-h-0 flex-1 overscroll-y-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
@@ -165,14 +162,7 @@ export function QuickWorkspace() {
               />
             )}
           />
-        )}
-        {conversations.length > 0 && queue.error && (
-          <InboxError
-            compact
-            error={queue.error}
-            onRetry={() => void dispatch(retryConversations())}
-          />
-        )}
+        </InboxListPhase>
       </main>
       <VisitorInfoPanel
         conversationId={replyId}

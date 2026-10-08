@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
+import { hasConversationFilters } from "../conversation-query";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import {
   queueOrders as orders,
@@ -64,11 +65,7 @@ export function QueueTools({ compact = false }: { compact?: boolean }) {
         .sort((a, b) => a.label.localeCompare(b.label, "zh-Hans-CN-u-kn-true")),
     ];
   }, [catalog, conversations]);
-  const hasFilters =
-    !!query.search ||
-    query.channelId !== "all" ||
-    query.status !== "active" ||
-    query.starred;
+  const hasFilters = hasConversationFilters(query);
 
   function change(changes: Partial<ConversationQuery>) {
     void dispatch(loadConversations({ query: { ...query, ...changes } }));

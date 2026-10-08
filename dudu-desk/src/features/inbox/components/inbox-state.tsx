@@ -1,4 +1,5 @@
 import { Inbox, LoaderCircle, RefreshCw, Unplug } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -8,6 +9,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import type { ApiFailure } from "@/lib/api-response";
+import type { LoadState } from "../types";
 
 export function InboxEmpty({
   title = "选择一段会话，开始接待",
@@ -82,5 +84,84 @@ export function InboxError({
         重新连接
       </Button>
     </Empty>
+  );
+}
+
+/** The load-state shape a list phase reads: queue and history reads. */
+export type ListPhaseRead = Pick<LoadState, "hasLoaded" | "status">;
+
+export type ListPhaseCopy = { title: string; description: string };
+
+/**
+ * The first-read rule behind every inbox list: only a read with nothing
+ * settled yet claims the full-surface loading phase, so re-reads and
+ * continuations keep content mounted. The single interpretation of the
+ * hasLoaded × status pair.
+ */
+export function isInitialRead(read: ListPhaseRead | undefined): boolean {
+  return !read?.hasLoaded && read?.status === "loading";
+}
+
+export type InboxListPhaseProps = {
+  /** Load-state shape (queue, history); undefined reads as idle with no error. */
+  read?: ListPhaseRead;
+  /** Readers without a LoadState pass their in-flight flag instead of `read`;
+   *  their loading phase also requires an empty list. */
+  loading?: boolean;
+  error: ApiFailure | null;
+  count: number;
+  onRetry: () => void;
+  /** Retry of the compact bar; defaults to onRetry when both retry one read. */
+  onRetryMore?: () => void;
+  loadingLabel?: string;
+  empty: ListPhaseCopy;
+  /** Wrapper for the compact bar when the content layout needs one. */
+  compactClassName?: string;
+  /** Content-phase accessory, e.g. a continuation indicator. */
+  footer?: ReactNode;
+  children: ReactNode;
+};
+
+/**
+ * List phase presentation: maps a list read (load state + entry count) onto
+ * the loading / error+retry / empty / content branches, and keeps the compact
+ * error bar beside the content when a settled list later fails. Callers keep
+ * only the content branch, their own copy and their retry command.
+ */
+export function InboxListPhase({
+  read,
+  loading = false,
+  error,
+  count,
+  onRetry,
+  onRetryMore,
+  loadingLabel,
+  empty,
+  compactClassName,
+  footer,
+  children,
+}: InboxListPhaseProps) {
+  const initial = read ? isInitialRead(read) : false;
+  // A first read claims the full surface even when Live events already
+  // filled the list; flag readers (no LoadState) add the empty-list guard.
+  if (initial || (loading && !count))
+    return <InboxLoading label={loadingLabel} />;
+  if (!count && error) return <InboxError error={error} onRetry={onRetry} />;
+  if (!count)
+    return <InboxEmpty title={empty.title} description={empty.description} />;
+  const bar = error ? (
+    <InboxError compact error={error} onRetry={onRetryMore ?? onRetry} />
+  ) : null;
+  return (
+    <>
+      {children}
+      {bar &&
+        (compactClassName ? (
+          <div className={compactClassName}>{bar}</div>
+        ) : (
+          bar
+        ))}
+      {footer}
+    </>
   );
 }

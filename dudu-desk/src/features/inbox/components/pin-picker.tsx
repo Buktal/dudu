@@ -27,7 +27,7 @@ import {
 } from "../stores/choices";
 import { pinConversation } from "../stores/parallel";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
-import { InboxEmpty, InboxError, InboxLoading } from "./inbox-state";
+import { InboxListPhase } from "./inbox-state";
 
 function PinChoices({
   inputRef,
@@ -96,21 +96,19 @@ function PinChoices({
           </InputGroup>
         </Field>
       </FieldGroup>
-      {!candidates.length && loading ? (
-        <InboxLoading label="正在查找可固定的会话…" />
-      ) : !candidates.length && error ? (
-        <InboxError
-          error={error}
-          onRetry={() =>
-            void dispatch(retryConversationChoices(pinPickerChoicesScope))
-          }
-        />
-      ) : !candidates.length ? (
-        <InboxEmpty
-          title="没有可固定的会话"
-          description="试试其他关键词，或继续加载尚未结束的会话。"
-        />
-      ) : (
+      <InboxListPhase
+        loading={loading}
+        count={candidates.length}
+        error={error}
+        onRetry={() =>
+          void dispatch(retryConversationChoices(pinPickerChoicesScope))
+        }
+        loadingLabel="正在查找可固定的会话…"
+        empty={{
+          title: "没有可固定的会话",
+          description: "试试其他关键词，或继续加载尚未结束的会话。",
+        }}
+      >
         <Virtuoso
           className="min-h-0 flex-1"
           data={candidates}
@@ -141,16 +139,7 @@ function PinChoices({
             </Button>
           )}
         />
-      )}
-      {error && candidates.length > 0 && (
-        <InboxError
-          error={error}
-          compact
-          onRetry={() =>
-            void dispatch(retryConversationChoices(pinPickerChoicesScope))
-          }
-        />
-      )}
+      </InboxListPhase>
       {nextCursor && (
         <Button
           variant="outline"

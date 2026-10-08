@@ -24,6 +24,20 @@ export function matchesConversationFilters(
 }
 
 /**
+ * Whether a query narrows beyond the standing defaults: the queue's filtered
+ * empty state and the tools' clear-filters affordance answer through this one
+ * predicate. Order is a presentation choice, not a filter.
+ */
+export function hasConversationFilters(query: ConversationQuery): boolean {
+  return (
+    !!query.search ||
+    query.channelId !== "all" ||
+    query.status !== "active" ||
+    query.starred
+  );
+}
+
+/**
  * One predicate for queue membership, shared by the queue reducers, the Live
  * events reconciler and the merge kernel. Missing conversations never belong.
  * Search is deliberately excluded (see above): server-owned membership.

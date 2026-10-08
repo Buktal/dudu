@@ -13,7 +13,7 @@ import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { loadHistory } from "../stores/reading";
 import { selectConversationById, selectMessages } from "../stores/selectors";
 import type { InboxMessage } from "../types";
-import { InboxEmpty, InboxError, InboxLoading } from "./inbox-state";
+import { InboxListPhase } from "./inbox-state";
 import { MessageView } from "./message-view";
 
 type HistoryContext = { conversationId: string; firstCreatedAt: string };
@@ -164,21 +164,20 @@ export function MessageTimeline({
   const history = useInboxSelector(
     (state) => state.inbox.histories[conversationId],
   );
-  if (!history?.hasLoaded && history?.status === "loading")
-    return <InboxLoading label="正在读取消息…" />;
-  if (!messages.length && history?.error)
-    return (
-      <InboxError
-        error={history.error}
-        onRetry={() => void dispatch(loadHistory(conversationId))}
-      />
-    );
-  if (!messages.length)
-    return (
-      <InboxEmpty title="这段会话还没有消息" description="来信会显示在这里。" />
-    );
   return (
-    <>
+    <InboxListPhase
+      read={history}
+      count={messages.length}
+      error={history?.error ?? null}
+      onRetry={() => void dispatch(loadHistory(conversationId))}
+      onRetryMore={() => void dispatch(loadHistory(conversationId, true))}
+      loadingLabel="正在读取消息…"
+      empty={{
+        title: "这段会话还没有消息",
+        description: "来信会显示在这里。",
+      }}
+      compactClassName="px-4 pb-2"
+    >
       <HistoryList
         key={conversationId}
         conversationId={conversationId}
@@ -186,15 +185,6 @@ export function MessageTimeline({
         onRetry={onRetry}
         onAtBottom={onAtBottom}
       />
-      {history?.error && (
-        <div className="px-4 pb-2">
-          <InboxError
-            compact
-            error={history.error}
-            onRetry={() => void dispatch(loadHistory(conversationId, true))}
-          />
-        </div>
-      )}
-    </>
+    </InboxListPhase>
   );
 }

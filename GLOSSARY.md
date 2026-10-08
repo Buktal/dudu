@@ -152,3 +152,6 @@ _Avoid_: 手写路由字符串（模板串拼 `companies?companyId=`、字面量
 DuduDesk 中对单个会话的一次请求级读写（读历史 / 读资料、存资料 / 星标 / 已读、发送、结束 / 恢复接待）的统一执行 seam：loading → api 调用 → 结算守卫 → 成功 / 失败效果。「迟到结果不得复活已移除会话」（仅当本次尝试仍是当前尝试且会话仍在册才结算）、响应校验惯用形（不匹配即 invalid-response）与失败映射兜底文案收敛在 inbox stores/requests 单点，各 thunk 只声明哪个键、调哪个 api、成功装什么。
 _Avoid_: 手写 runOperation 仪式、逐处兜底串（旧实现）
 
+**列表相位（ListPhase）**:
+DuduDesk 中会话列表类界面（来访会话队列、卡片工作台、消息时间线、固定会话选择）共用的呈现映射单点：load-state + 条目数 → 首读 loading / 失败重试 / 空态 / 内容四相位。`!hasLoaded && status === "loading"`（首读恒占满屏，Live 事件或乐观发送抢先入列也不改；重读与续读保留已加载内容）这一 hasLoaded × status 不变量收敛在 inbox-state 的 isInitialRead，无 load-state 形状的读取（固定会话选择）以「在飞 + 无条目」表达同一相位；四相位分支与「有内容仍出错」的 compact 错误条归 InboxListPhase，调用点只保留内容分支、各自文案（含筛选双文案）与重试命令。
+_Avoid_: 逐组件手写四态判定、hasLoaded×status 组合散落（旧实现）
