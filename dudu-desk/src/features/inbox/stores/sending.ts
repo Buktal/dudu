@@ -1,4 +1,4 @@
-import { buildReplySubmission, replyReadiness } from "../reply-pipeline";
+import { buildReplySubmission, replyReadiness } from "../reply/pipeline";
 import type { InboxMessage } from "../types";
 import { receiveNext } from "./next-reception";
 import {

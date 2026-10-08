@@ -1,4 +1,4 @@
-import { sendRestriction } from "../sending-rules";
+import { sendRestriction } from "../reply/send-rules";
 import type { Conversation } from "../types";
 import { readConversationChoices } from "./choices";
 import { collectPaged } from "./page-cursor";

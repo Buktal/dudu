@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { defineConversation } from "./development/fixtures";
+import { defineConversation } from "../development/fixtures";
+import { firstConversation } from "../stores/test-support";
+import type { Conversation } from "../types";
 import {
   buildReplySubmission,
   replyReadiness,
   replyRestriction,
-} from "./reply-pipeline";
-import { firstConversation } from "./stores/test-support";
-import type { Conversation } from "./types";
+} from "./pipeline";
 
 const NOW = "2026-09-16T00:01:00Z";
 

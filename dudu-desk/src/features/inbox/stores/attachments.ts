@@ -3,9 +3,9 @@ import { DeskApiError } from "@/lib/api-response";
 import {
   attachmentKind,
   attachmentRestriction,
-  readPreparedAttachment,
-} from "../attachment-rules";
-import { sendTarget } from "../sending-rules";
+} from "../reply/attachment-rules";
+import { parsePreparedAttachment } from "../reply/parse-prepared-attachment";
+import { sendTarget } from "../reply/pipeline";
 import {
   operationFailure,
   releaseAttachmentResources,
@@ -99,7 +99,7 @@ function prepareDraftAttachment(id: string): InboxCommand<Promise<void>> {
             signal: op.signal,
           });
           if (!op.current() || !getState().inbox.attachments[id]) return;
-          const media = readPreparedAttachment(response, attachment.kind);
+          const media = parsePreparedAttachment(response, attachment.kind);
           const current =
             getState().inbox.conversations[attachment.conversationId];
           if (!current || !isEqual(sendTarget(current), target)) {

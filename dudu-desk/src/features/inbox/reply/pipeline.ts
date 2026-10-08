@@ -1,16 +1,43 @@
-import { attachmentBatchRestriction, attachmentKind } from "./attachment-rules";
-import { sendRestriction, sendTarget } from "./sending-rules";
-import type { DraftAttachment, StartSubmission } from "./stores/state";
 import type {
   ConnectionState,
   Conversation,
   InboxMessage,
   MediaReference,
   SendKind,
-} from "./types";
+  SendSubmission,
+  SendTarget,
+} from "../types";
+import { attachmentBatchRestriction, attachmentKind } from "./attachment-rules";
+import { sendRestriction } from "./send-rules";
 
-export type ReplyFile = Pick<DraftAttachment, "name" | "size" | "mimeType"> &
-  Partial<Pick<DraftAttachment, "status">> & { media?: unknown };
+/**
+ * Reply-side literal shapes, structurally compatible with the store's
+ * `DraftAttachment` / `StartSubmission`: the pipeline owns its own interface
+ * and stays independent of the store module, while callers pass store state
+ * straight through.
+ */
+export type ReplyFile = {
+  name: string;
+  size: number;
+  mimeType: string;
+  status?: "preparing" | "ready" | "failed";
+  media?: unknown;
+};
+
+export type ReplySubmissionStart = {
+  submission: {
+    request: SendSubmission;
+    messageId: string;
+    draftRevision: number;
+    textRevision: number;
+    draftAttachmentIds: string[];
+    selectionRevision: number;
+    incomingSequence: number;
+    next: boolean;
+    status: "sending";
+  };
+  message: InboxMessage;
+};
 
 export type ReplyReadiness =
   | { sendable: true; notice: null }
@@ -113,7 +140,7 @@ export type ReplySubmissionInput = {
  */
 export function buildReplySubmission(
   input: ReplySubmissionInput,
-): StartSubmission {
+): ReplySubmissionStart {
   const message: InboxMessage = {
     id: `client:${input.clientRequestId}`,
     clientRequestId: input.clientRequestId,
@@ -145,5 +172,19 @@ export function buildReplySubmission(
       next: input.next,
       status: "sending",
     },
+  };
+}
+
+/**
+ * Conversation → SendTarget submission projection: the reply request's
+ * addressing, owned next to its only construction site.
+ */
+export function sendTarget(conversation: Conversation): SendTarget {
+  return {
+    conversationId: conversation.id,
+    visitorId: conversation.identity.id,
+    channelId: conversation.identity.channelId,
+    accountId: conversation.identity.accountId,
+    externalUserId: conversation.identity.externalUserId,
   };
 }

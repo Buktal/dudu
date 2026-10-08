@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatFileSize } from "@/lib/attachment-utils";
 import { nowIso } from "@/lib/time";
+import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import {
   attachmentAccept,
   attachmentEntryRestriction,
-} from "../attachment-rules";
-import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
+} from "../reply/attachment-rules";
 import { addAttachments } from "../stores/attachments";
 import { selectConversationById } from "../stores/selectors";
 import { focusReply } from "../stores/sending";

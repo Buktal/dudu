@@ -1,8 +1,7 @@
 import { useId, useRef } from "react";
 import { nowIso } from "@/lib/time";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import { replyReadiness } from "../reply-pipeline";
-import { composerIntent } from "../sending-rules";
+import { replyReadiness } from "../reply/pipeline";
 import { selectConversationById } from "../stores/selectors";
 import {
   editDraft,
@@ -11,6 +10,7 @@ import {
   sendReply,
 } from "../stores/sending";
 import { blankDraft } from "../stores/state";
+import { composerIntent } from "./composer-keyboard";
 import { ComposerView } from "./composer-view";
 import { visitorName } from "./identity";
 

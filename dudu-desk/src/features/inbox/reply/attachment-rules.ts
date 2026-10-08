@@ -1,13 +1,11 @@
-import { DeskApiError } from "@/lib/api-response";
-import { mediaKindOfMime } from "./message-content";
-import { sendRestriction } from "./sending-rules";
+import { mediaKindOfMime } from "../message-content";
 import type {
   ConnectionState,
   Conversation,
-  MediaReference,
   ReplyCapability,
   SendKind,
-} from "./types";
+} from "../types";
+import { sendRestriction } from "./send-rules";
 
 /**
  * Attachment gates: three entry points, one composition order.
@@ -18,7 +16,7 @@ import type {
  */
 
 /**
- * Mime → 媒体 kind 映射由 `./message-content` 深 module 拥有，
+ * Mime → 媒体 kind 映射由 `../message-content` 深 module 拥有，
  * 这里只保留 Reply pipeline 侧的调用签名并委托，避免同形分派漂移。
  */
 export function attachmentKind(mimeType: string): Exclude<SendKind, "text"> {
@@ -129,36 +127,4 @@ export function attachmentBatchRestriction(
     if (restriction) return restriction;
   }
   return null;
-}
-
-export function readPreparedAttachment(
-  value: unknown,
-  kind: MediaReference["kind"],
-): MediaReference {
-  if (!value || typeof value !== "object")
-    throw new DeskApiError("invalid-response", "服务未返回有效的附件资源");
-  const media = value as Record<string, unknown>;
-  if (
-    typeof media.id !== "string" ||
-    !media.id.trim() ||
-    media.kind !== kind ||
-    typeof media.name !== "string" ||
-    !media.name.trim() ||
-    typeof media.mimeType !== "string" ||
-    !media.mimeType.includes("/") ||
-    typeof media.size !== "number" ||
-    !Number.isFinite(media.size) ||
-    media.size < 0 ||
-    (media.url !== undefined && typeof media.url !== "string")
-  ) {
-    throw new DeskApiError("invalid-response", "服务未返回有效的附件资源");
-  }
-  return {
-    id: media.id,
-    kind,
-    name: media.name,
-    mimeType: media.mimeType,
-    size: media.size,
-    ...(typeof media.url === "string" ? { url: media.url } : {}),
-  };
 }

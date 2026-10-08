@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { composerIntent } from "./sending-rules";
+import { composerIntent } from "./composer-keyboard";
 
 const enter = {
   key: "Enter",

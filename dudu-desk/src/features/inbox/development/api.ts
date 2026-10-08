@@ -3,16 +3,16 @@ import { DeskApiError } from "@/lib/api-response";
 import { nowIso } from "@/lib/time";
 import type { InboxApi } from "../api";
 import {
-  attachmentBatchRestriction,
-  attachmentKind,
-  attachmentRestriction,
-} from "../attachment-rules";
-import {
   compareConversations,
   matchesConversationFilters,
   matchesConversationText,
 } from "../conversation-query";
 import { messageSummary } from "../message-text";
+import {
+  attachmentBatchRestriction,
+  attachmentKind,
+  attachmentRestriction,
+} from "../reply/attachment-rules";
 import type { InboxMessage, MediaReference, SendTarget } from "../types";
 import {
   createDevelopmentDriver,

@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/attachment";
 import { formatFileSize, safeAssetUrl } from "@/lib/attachment-utils";
 import { nowIso } from "@/lib/time";
-import { attachmentRestriction } from "../attachment-rules";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
+import { attachmentRestriction } from "../reply/attachment-rules";
 import { removeAttachment, retryAttachment } from "../stores/attachments";
 import { selectConversationById } from "../stores/selectors";
 import type { DraftAttachment } from "../stores/state";

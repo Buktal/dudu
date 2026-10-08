@@ -1,10 +1,5 @@
 import { isTimeAfter } from "@/lib/time";
-import type {
-  ConnectionState,
-  Conversation,
-  SendKind,
-  SendTarget,
-} from "./types";
+import type { ConnectionState, Conversation, SendKind } from "../types";
 
 export function sendRestriction(
   conversation: Conversation | undefined,
@@ -33,32 +28,4 @@ export function sendRestriction(
   if (kinds.some((kind) => !capability.kinds.includes(kind)))
     return "当前会话不支持此类回复";
   return null;
-}
-
-export function sendTarget(conversation: Conversation): SendTarget {
-  return {
-    conversationId: conversation.id,
-    visitorId: conversation.identity.id,
-    channelId: conversation.identity.channelId,
-    accountId: conversation.identity.accountId,
-    externalUserId: conversation.identity.externalUserId,
-  };
-}
-
-export function composerIntent(event: {
-  key: string;
-  shiftKey: boolean;
-  ctrlKey: boolean;
-  metaKey: boolean;
-  isComposing: boolean;
-  keyCode?: number;
-}): "send" | "next" | null {
-  if (
-    event.isComposing ||
-    event.keyCode === 229 ||
-    event.key !== "Enter" ||
-    event.shiftKey
-  )
-    return null;
-  return event.ctrlKey || event.metaKey ? "next" : "send";
 }
