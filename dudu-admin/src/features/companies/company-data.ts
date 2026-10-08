@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { adminApi } from "@/api/admin-api";
+import { useAdminQuery } from "@/api/admin-query";
 import { useAdmin } from "@/api/context";
 import { usePagedQuery } from "@/api/paged-query";
 import type {
@@ -8,7 +9,6 @@ import type {
   CompanyStatus,
   CreateCompany,
 } from "@/api/types";
-import { useQuery } from "@/api/use-query";
 
 // —— company 聚合失效 ——
 // 「维护成功后重新读取列表和详情」的单点接线：企业维护命令成功即宣告聚合已变更，
@@ -52,13 +52,7 @@ export function useCompanies(initialFilters: CompanyQuery) {
 
 // 企业详情：与列表共享同一份失效语义。
 export function useCompany(companyId: string) {
-  const client = useAdmin();
-  const query = useQuery(
-    useCallback(
-      (signal: AbortSignal) => adminApi.company(client, companyId, signal),
-      [client, companyId],
-    ),
-  );
+  const query = useAdminQuery(adminApi.company, [companyId]);
   useEffect(() => subscribeCompaniesChanged(query.refresh), [query.refresh]);
   return {
     detail: query.data,

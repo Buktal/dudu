@@ -144,6 +144,10 @@ _Avoid_: 六键 spread（load/attempt 版本戳外泄的旧 interface）、调�
 DuduAdmin 分页列表共用的取数机制：client 绑定、查询条件状态与翻页写接口（setFilter 合并补丁 / reset 重置 / setPage 翻页）收敛在 api 层 paged-query 单点；「筛选变化与重置都回第一页且保留 pageSize」「page 只暴露服务端回显这一份真相（加载或失败时回退请求值）」两条翻页不变量在此唯一实现与测试，domain 数据模块（useCompanies/useLogs）收缩为命名筛选操作薄壳。
 _Avoid_: 逐页复制的 useState + useQuery 手工编排、useCallback 稳定身份仪式（调用方自写）
 
+**单记录查询（useAdminQuery）**:
+DuduAdmin 单记录取数共用的绑定层：client 绑定（useAdmin）与 load 身份稳定在 api 层 admin-query 的 seam 处单点完成，与分页查询（usePagedQuery）严格对称；调用方只声明 adminApi 取数函数与业务参数 deps，对外仍是查询四键，请求竞态与「失败不冒充空数据」归 use-query 单点。
+_Avoid_: 手写 useAdmin + useCallback 绑定仪式（旧实现）
+
 **列表页骨架（QueryView）**:
 DuduAdmin 三个列表页（企业、企业资源汇总、操作记录）共用的加载→失败→空态→表格→分页编排单点：「失败不冒充空数据」由分支顺序（error 先于空态判定）单点保证；表格列与行走 children 槽，空态动作按钮与两套空态文案（筛选中 / 全量）归页面。
 _Avoid_: 三步舞手写编排（loading/error/数据分支逐页复制）、失败态渲染空态文案

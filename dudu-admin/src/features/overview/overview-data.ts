@@ -1,20 +1,13 @@
-import { useCallback } from "react";
 import { adminApi } from "@/api/admin-api";
-import { useAdmin } from "@/api/context";
+import { useAdminQuery } from "@/api/admin-query";
 import type { Overview } from "@/api/types";
-import { useQuery } from "@/api/use-query";
 
-// 运营概览：client 绑定与请求竞态收敛在这里，页面只消费统计读数与最近开通名单。
+// 运营概览：client 绑定归单记录查询（useAdminQuery）单点，这里只装订 overview
+// 读数投影；页面只消费统计读数与最近开通名单。
 // 决策：不订阅企业聚合失效——维护命令的写入口都在企业页，本页挂载期间没有
 // 并发写入口，也就没有可见的陈旧；接线最小化为零，出现并发写入口时再补订阅。
 export function useOverview() {
-  const client = useAdmin();
-  const query = useQuery(
-    useCallback(
-      (signal: AbortSignal) => adminApi.overview(client, signal),
-      [client],
-    ),
-  );
+  const query = useAdminQuery(adminApi.overview, []);
   const stats: OverviewStats | null = query.data && {
     companyCount: query.data.companyCount,
     companyEnabledCount: query.data.companyEnabledCount,

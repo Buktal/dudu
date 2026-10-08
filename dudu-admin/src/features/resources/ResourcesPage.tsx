@@ -1,7 +1,5 @@
-import { useCallback } from "react";
 import { adminApi } from "@/api/admin-api";
-import { useAdmin } from "@/api/context";
-import { useQuery } from "@/api/use-query";
+import { useAdminQuery } from "@/api/admin-query";
 import { CompanyFilters } from "@/components/company-filters";
 import {
   PAGE_SIZE,
@@ -24,13 +22,7 @@ import { useCompanies } from "@/features/companies/company-data";
 import { routes } from "@/navigation";
 
 function ResourceCells({ companyId }: { companyId: string }) {
-  const client = useAdmin();
-  const query = useQuery(
-    useCallback(
-      (signal: AbortSignal) => adminApi.resources(client, companyId, signal),
-      [client, companyId],
-    ),
-  );
+  const query = useAdminQuery(adminApi.resources, [companyId]);
   if (query.loading)
     return (
       <TableCell colSpan={4}>

@@ -1,9 +1,9 @@
 import { UserRound } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { adminApi } from "@/api/admin-api";
+import { useAdminQuery } from "@/api/admin-query";
 import { useAdmin } from "@/api/context";
 import { useMutation } from "@/api/use-mutation";
-import { useQuery } from "@/api/use-query";
 import {
   ErrorState,
   LoadingState,
@@ -29,12 +29,7 @@ import {
 
 export function AccountPage() {
   const client = useAdmin();
-  const query = useQuery(
-    useCallback(
-      (signal: AbortSignal) => adminApi.profile(client, signal),
-      [client],
-    ),
-  );
+  const query = useAdminQuery(adminApi.profile, []);
   const mutation = useMutation();
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
