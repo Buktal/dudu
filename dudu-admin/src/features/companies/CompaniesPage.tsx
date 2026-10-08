@@ -69,18 +69,8 @@ export function CompaniesPage({
             onReset={query.reset}
           />
         }
-        count={query.list.length}
-        loading={query.loading}
-        error={query.error}
-        retry={query.refresh}
-        pagination={{
-          page: query.page,
-          pageSize: query.pageSize,
-          total: query.total,
-          onPage: query.setPage,
-        }}
+        query={query}
         empty={{
-          filtered: Boolean(query.keyword) || query.status !== undefined,
           filteredCopy: {
             title: "未找到符合条件的企业",
             description: "调整搜索关键词或状态后重试。",

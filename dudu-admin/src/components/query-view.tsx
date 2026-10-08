@@ -5,32 +5,32 @@ import { Pagination } from "./page-parts";
 import { Separator } from "./ui/separator";
 
 // 列表页骨架单点：加载、失败、空态、表格与分页的编排只在这里写一次。
+// 页面把 usePagedQuery 的返回值整只直传 query 投影，骨架只消费这几个键：
+// { list, total, page, pageSize, loading, error, refresh, setPage, filtered }；
+// 结构化类型就地声明，不 import api/ 下任何模块（components/ 到 api/ 的 seam 单向）。
 // 「失败不冒充空数据」由分支顺序保证：error 先于空态判定，失败时绝不渲染空态文案。
-// 差异归页面：表格列与行渲染走 children 槽，空态动作按钮走 empty.action。
-export function QueryView({
-  count,
-  loading,
-  error,
-  retry,
-  pagination,
+// 差异归页面：表格列与行渲染走 children 槽，空态动作按钮走 empty.action，
+// 「有数据 / 已筛选」两份真相由 query.list.length 与 query.filtered 单点供给。
+export function QueryView<T>({
+  query,
   empty,
   filters,
   actions,
   children,
 }: {
-  count: number;
-  loading: boolean;
-  error: string | null;
-  retry: () => void;
-  pagination: {
+  query: {
+    list: T[];
+    total: number;
     page: number;
     pageSize: number;
-    total: number;
-    onPage: (page: number) => void;
+    loading: boolean;
+    error: string | null;
+    refresh: () => void;
+    setPage: (page: number) => void;
+    filtered: boolean;
   };
   empty: {
     icon?: LucideIcon;
-    filtered: boolean;
     filteredCopy: { title: string; description: string };
     defaultCopy: { title: string; description: string };
     action?: (filtered: boolean) => ReactNode;
@@ -39,7 +39,7 @@ export function QueryView({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const copy = empty.filtered ? empty.filteredCopy : empty.defaultCopy;
+  const copy = query.filtered ? empty.filteredCopy : empty.defaultCopy;
   return (
     <div className="data-panel min-w-0 overflow-hidden rounded-4xl border bg-card">
       {(filters || actions) && (
@@ -55,13 +55,13 @@ export function QueryView({
           <Separator />
         </>
       )}
-      {loading ? (
+      {query.loading ? (
         <LoadingState />
-      ) : error ? (
-        <ErrorState message={error} retry={retry} />
+      ) : query.error ? (
+        <ErrorState message={query.error} retry={query.refresh} />
       ) : (
         <>
-          {count ? (
+          {query.list.length ? (
             children
           ) : (
             <EmptyState
@@ -69,14 +69,14 @@ export function QueryView({
               description={copy.description}
               icon={empty.icon}
             >
-              {empty.action?.(empty.filtered)}
+              {empty.action?.(query.filtered)}
             </EmptyState>
           )}
           <Pagination
-            page={pagination.page}
-            pageSize={pagination.pageSize}
-            total={pagination.total}
-            onChange={pagination.onPage}
+            page={query.page}
+            pageSize={query.pageSize}
+            total={query.total}
+            onChange={query.setPage}
           />
         </>
       )}

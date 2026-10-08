@@ -55,7 +55,7 @@ function requested(load: { mock: { calls: unknown[][] } }): FixtureQuery[] {
   return load.mock.calls.map(([, filters]) => filters as FixtureQuery);
 }
 
-it("usePagedQuery 只暴露翻页机制键：查询条件、三个写接口与回显分页", async () => {
+it("usePagedQuery 只暴露翻页机制键：查询条件、三个写接口、回显分页与 filtered 派生", async () => {
   const load = vi.fn((_client: AdminClient, filters: FixtureQuery) =>
     Promise.resolve(samePage(filters)),
   );
@@ -63,6 +63,7 @@ it("usePagedQuery 只暴露翻页机制键：查询条件、三个写接口与�
   await waitFor(() => expect(result.current.loading).toBe(false));
   expect(Object.keys(result.current).sort()).toEqual([
     "error",
+    "filtered",
     "filters",
     "list",
     "loading",
@@ -126,6 +127,42 @@ it("reset 清空全部筛选回第一页，且保留当前 pageSize", async () =
     { page: 1, pageSize: 20 },
   ]);
   expect(result.current.filters).toEqual({ page: 1, pageSize: 20 });
+});
+
+// 「任一命名筛选已应用」的派生语义：undefined 与空串视为未应用，
+// 0 是合法筛选值（如「已停用」）必须判 true；分页字段不参与判定。
+it("filtered 派生：初始未筛选 false，应用命名筛选 true，reset 后 false", async () => {
+  const load = vi.fn((_client: AdminClient, filters: FixtureQuery) =>
+    Promise.resolve(samePage(filters)),
+  );
+  const { result } = mount(load);
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  // 初始未筛选：false。
+  expect(result.current.filtered).toBe(false);
+
+  // 空串关键词不视为已应用。
+  await act(async () => {
+    result.current.setFilter({ keyword: "" });
+  });
+  expect(result.current.filtered).toBe(false);
+
+  // 非空关键词已应用：true。
+  await act(async () => {
+    result.current.setFilter({ keyword: "青禾" });
+  });
+  expect(result.current.filtered).toBe(true);
+
+  // 0 是合法筛选值：保持 true。
+  await act(async () => {
+    result.current.setFilter({ keyword: "", state: 0 });
+  });
+  expect(result.current.filtered).toBe(true);
+
+  // reset 清空全部筛选：false。
+  await act(async () => {
+    result.current.reset();
+  });
+  expect(result.current.filtered).toBe(false);
 });
 
 it("page/pageSize 只暴露服务端回显这一份真相，加载中回退请求值", async () => {

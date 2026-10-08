@@ -47,6 +47,8 @@ export function useCompanies(initialFilters: CompanyQuery) {
     loading: paging.loading,
     error: paging.error,
     refresh: paging.refresh,
+    // 机制侧派生键原样透出：任一命名筛选已应用，供空态筛选取向单点消费。
+    filtered: paging.filtered,
   };
 }
 

@@ -65,19 +65,9 @@ export function LogsPage() {
             />
           </FilterBar>
         }
-        count={query.list.length}
-        loading={query.loading}
-        error={query.error}
-        retry={query.refresh}
-        pagination={{
-          page: query.page,
-          pageSize: query.pageSize,
-          total: query.total,
-          onPage: query.setPage,
-        }}
+        query={query}
         empty={{
           icon: FileClock,
-          filtered: Boolean(query.companyId) || query.action !== undefined,
           filteredCopy: {
             title: "暂无操作记录",
             description: "未找到符合筛选条件的记录。",
