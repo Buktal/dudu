@@ -28,7 +28,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -66,7 +65,7 @@ class ServerIntegrationTest {
     }
 
     @Test
-    void groupPermissionsAndCompositeForeignKeysStayWithinCompany() {
+    void groupPermissionsStayWithinCompanyWithoutForeignKeys() {
         companies.createCompany(company("781001"), 1L);
         companies.createCompany(company("781002"), 1L);
         Long initialUserId = companies.getById(781001L).getInitUserId();
@@ -85,11 +84,11 @@ class ServerIntegrationTest {
         members.save(member);
         assertThat(members.canAccessGroup(ordinaryAdmin.getUserId(), first.getGroupId())).isTrue();
         assertThat(members.canAccessGroup(ordinaryAdmin.getUserId(), second.getGroupId())).isFalse();
-        member.setMemberId(null);
-        member.setGroupId(foreign.getGroupId());
-        assertThatThrownBy(() -> members.save(member)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
-        member.setCompanyId(781002L);
-        assertThatThrownBy(() -> members.save(member)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(members.canAccessGroup(ordinaryAdmin.getUserId(), foreign.getGroupId())).isFalse();
+        // 外键已全部移除，跨企业隔离由应用层判定；此处锚定库内不再存在任何外键的约定
+        assertThat(jdbc.queryForObject(
+            "SELECT COUNT(*) FROM information_schema.referential_constraints WHERE constraint_schema = DATABASE()", Long.class))
+            .isZero();
 
         CompanyChannelDO channel = new CompanyChannelDO();
         channel.setCompanyId(781001L);
