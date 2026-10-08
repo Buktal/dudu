@@ -9,7 +9,10 @@
 
 use crate::connections::ConnectionConfig;
 
-use super::{no_reply, send_measured_outcome, DispatchOutcome, DispatchSnapshot, HandshakeOutcome};
+use super::{
+    no_reply, probe_handshake_outcome, send_measured_outcome, DispatchOutcome, DispatchSnapshot,
+    HandshakeOutcome,
+};
 
 /// ark 连接测试探针（事实库 §5.4 官方构造示例逐字，掩码值不携带真实业务）。
 const PROBE_ENVELOPE: &str = r#"{"msgTag":"msg_fulfillment_status_change","sellerId":"5e8e****","data":"{\"orderId\":\"P01****\",\"updateTime\":1693500000,\"orderStatus\":4}"}"#;
@@ -74,35 +77,24 @@ pub(crate) fn probe_handshake(
         };
     };
     let outcome = post_envelope_array(client, url, PROBE_ENVELOPE);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("{error}（电商 ark 推送无官方握手口径，探针即最小推送）"),
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，ark 推送探针未通过（期望应答 {{\"success\":true,\"error_code\":0}}）",
-                outcome.status
-            ),
-        };
-    }
-    if ark_reply_ok(&outcome.body) {
-        HandshakeOutcome {
-            ok: true,
-            message: "ark 推送探针成功：官方数组形态被接受，应答 success/error_code 合规".into(),
-        }
-    } else {
-        HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "HTTP 200 但应答不满足官方语义（期望 success=true 且 error_code=0）：{}",
-                outcome.body
-            ),
-        }
-    }
+    probe_handshake_outcome(
+        outcome,
+        // ark 无 RETRY 口径（官方无握手口径，注记即本通道事实）
+        "（电商 ark 推送无官方握手口径，探针即最小推送）",
+        "ark 推送探针",
+        r#"期望应答 {"success":true,"error_code":0}"#,
+        "ark 推送探针成功：官方数组形态被接受，应答 success/error_code 合规",
+        // ark 成功判 2xx + 应答体满足官方语义（§2.1/§5.4），不止状态码
+        |body| {
+            if ark_reply_ok(body) {
+                None
+            } else {
+                Some(format!(
+                    "HTTP 200 但应答不满足官方语义（期望 success=true 且 error_code=0）：{body}"
+                ))
+            }
+        },
+    )
 }
 
 /// ark 直发：明文（单条信封元素 JSON）包裹进官方批量数组逐字节透传。

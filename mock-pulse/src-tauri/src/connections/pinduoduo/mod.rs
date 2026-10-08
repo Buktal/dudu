@@ -30,8 +30,8 @@ mod tests;
 use crate::connections::util::{append_absent, md5_wrapped_sign, now_secs};
 
 use super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 官方订单状态样本明文（§2.1 照录状态 1-待发货 + §5.1 order_status 参数
@@ -159,25 +159,14 @@ fn verify_handshake(
         };
     };
     let outcome = post_json(client, url, client_id, client_secret, GOLDEN_PROBE_PLAINTEXT);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("{error}{RETRY_NOTE}"),
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，推送探针未通过（官方验证握手口径待核验(09-27)，探针语义同普通推送，期望 HTTP 200）",
-                outcome.status
-            ),
-        };
-    }
-    HandshakeOutcome {
-        ok: true,
-        message: "推送探针被接受：PMC 网关签名 POST（sign = UPPER(MD5(client_secret+ASCII 排序 k+v+client_secret))）到达目标，返回 HTTP 200".into(),
-    }
+    probe_handshake_outcome(
+        outcome,
+        RETRY_NOTE,
+        "推送探针",
+        "官方验证握手口径待核验(09-27)，探针语义同普通推送，期望 HTTP 200",
+        "推送探针被接受：PMC 网关签名 POST（sign = UPPER(MD5(client_secret+ASCII 排序 k+v+client_secret))）到达目标，返回 HTTP 200",
+        no_body_check,
+    )
 }
 
 /// 拼多多直发（PMC 订阅推送模拟）：明文 JSON 逐字节透传 + query 公共参数

@@ -55,8 +55,8 @@ use rsa::signature::Verifier;
 use rsa::RsaPublicKey;
 
 use super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 官方支付异步通知核验样本表单（§5.1 公共参数表 + 业务参数表逐字值；form
@@ -235,25 +235,14 @@ fn verify_handshake(
         }
     };
     let outcome = post_signed(client, url, &private_key, GOLDEN_PROBE_BODY);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("{error}{RETRY_NOTE}"),
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，推送探针未通过（官方网关验证握手细节待核验(09-27)，探针语义同普通推送，期望 HTTP 200）",
-                outcome.status
-            ),
-        };
-    }
-    HandshakeOutcome {
-        ok: true,
-        message: "推送探针被接受：异步通知表单 POST（sign = Base64(RSA-SHA256(字母序待签串))）到达目标，返回 HTTP 200".into(),
-    }
+    probe_handshake_outcome(
+        outcome,
+        RETRY_NOTE,
+        "推送探针",
+        "官方网关验证握手细节待核验(09-27)，探针语义同普通推送，期望 HTTP 200",
+        "推送探针被接受：异步通知表单 POST（sign = Base64(RSA-SHA256(字母序待签串))）到达目标，返回 HTTP 200",
+        no_body_check,
+    )
 }
 
 /// 支付宝直发（异步通知模拟）：表单明文业务字节逐段保留 + 旧 sign 剔除现算。

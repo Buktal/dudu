@@ -29,8 +29,8 @@ mod tests;
 use crate::connections::util::{md5_wrapped_sign, now_secs, utc8_timestamp};
 
 use super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 官方状态枚举样本明文（§5.1 锚定的 WAIT_SELLER_STOCK_OUT——§5.1 官方订单
@@ -144,25 +144,14 @@ fn verify_handshake(
         };
     };
     let outcome = post_json(client, url, app_key, app_secret, GOLDEN_PROBE_PLAINTEXT);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("{error}{RETRY_NOTE}"),
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，推送探针未通过（官方首次验证握手口径待核验(09-27)，探针语义同普通推送，期望 HTTP 200）",
-                outcome.status
-            ),
-        };
-    }
-    HandshakeOutcome {
-        ok: true,
-        message: "推送探针被接受：JOS 签名 POST（sign = UPPER(MD5(appSecret+字母序 k+v+appSecret))）到达目标，返回 HTTP 200".into(),
-    }
+    probe_handshake_outcome(
+        outcome,
+        RETRY_NOTE,
+        "推送探针",
+        "官方首次验证握手口径待核验(09-27)，探针语义同普通推送，期望 HTTP 200",
+        "推送探针被接受：JOS 签名 POST（sign = UPPER(MD5(appSecret+字母序 k+v+appSecret))）到达目标，返回 HTTP 200",
+        no_body_check,
+    )
 }
 
 /// 京东直发（JOS 消息推送模拟）：明文 JSON 逐字节透传 + 系统参数 query（签名

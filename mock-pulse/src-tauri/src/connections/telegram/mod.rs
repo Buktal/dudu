@@ -26,8 +26,8 @@
 mod tests;
 
 use super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 恒等头名（§4.1 官方拼写逐字）：接收侧按配置的 secret_token 做字符串
@@ -138,25 +138,15 @@ fn verify_handshake(
         };
     };
     let outcome = post_json(client, url, secret_token, GOLDEN_PROBE_PLAINTEXT);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: error,
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，Update 推送探针未通过（官方无 challenge 握手：setWebhook 同步返回 True 即成功，探针语义同普通推送，成功判 2XY）",
-                outcome.status
-            ),
-        };
-    }
-    HandshakeOutcome {
-        ok: true,
-        message: "Update 推送探针被接受：恒等头 X-Telegram-Bot-Api-Secret-Token 原样携带（官方无 HMAC 无 challenge，验证即字符串相等比较），返回 HTTP 2XY".into(),
-    }
+    // 官方重试口径已在发送测量内附注（RETRY_NOTE），发送失败原因不再追加
+    probe_handshake_outcome(
+        outcome,
+        "",
+        "Update 推送探针",
+        "官方无 challenge 握手：setWebhook 同步返回 True 即成功，探针语义同普通推送，成功判 2XY",
+        "Update 推送探针被接受：恒等头 X-Telegram-Bot-Api-Secret-Token 原样携带（官方无 HMAC 无 challenge，验证即字符串相等比较），返回 HTTP 2XY",
+        no_body_check,
+    )
 }
 
 /// Telegram 直发（§附速查）：明文 Update 逐字节透传 + 恒等头原样回显。

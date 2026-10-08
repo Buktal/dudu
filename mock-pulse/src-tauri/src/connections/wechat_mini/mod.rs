@@ -22,13 +22,15 @@ mod tests;
 
 use std::time::Duration;
 
-// 微信族共享原语单点在 wechat_common（本模块 GET 握手与 tests 经 re-export
-// 取用；POST 直发骨架由 [`push`] 消费族共享 dispatcher）。
+// 微信族共享原语单点在 wechat_common（GET 握手的三参签名已在握手构造骨架
+// handshake_echo_get 内装订，本 re-export 供 tests 黄金对拍取用；POST 直发
+// 骨架由 [`push`] 消费族共享 dispatcher）。
 pub(crate) use crate::connections::util::now_secs;
+#[cfg(test)]
 pub(crate) use crate::connections::wechat_common::build_callback_signature;
 
 use super::{
-    handshake_echo_outcome, ConnectionConfig, DispatchOutcome, HandshakeOutcome, WechatMiniMode,
+    handshake_echo_get, ConnectionConfig, DispatchOutcome, HandshakeOutcome, WechatMiniMode,
 };
 
 /// echostr 握手的随机明文：32 位 hex（官方仅要求原样回显，无内容约束）。
@@ -53,18 +55,14 @@ fn verify_handshake(
     let echostr = random_echostr();
     let timestamp = now_secs().to_string();
     let nonce = uuid::Uuid::new_v4().simple().to_string();
-    let signature = build_callback_signature(token, &timestamp, &nonce);
 
-    let response = client.get(url).query(&[
-        ("signature", signature.as_str()),
-        ("timestamp", timestamp.as_str()),
-        ("nonce", nonce.as_str()),
-        ("echostr", echostr.as_str()),
-    ]);
-
-    handshake_echo_outcome(
-        response.send(),
-        echostr.as_bytes(),
+    handshake_echo_get(
+        client,
+        url,
+        echostr,
+        timestamp,
+        nonce,
+        token,
         "（官方要求 5 秒内应答）",
         "echostr 握手成功：三参 sha1 验签 GET，echostr 原样回显（HTTP 200）",
         "回显与 echostr 不一致",

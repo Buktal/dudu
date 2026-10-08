@@ -23,7 +23,7 @@ use std::time::Duration;
 use crate::connections::util::{callback_signature as build_callback_signature, now_millis};
 
 use super::{
-    handshake_echo_outcome, no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome,
+    handshake_echo_get, no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome,
     DispatchSnapshot, HandshakeOutcome,
 };
 
@@ -63,18 +63,14 @@ fn verify_handshake(
     let echostr = random_echostr();
     let timestamp = now_millis().to_string();
     let nonce = random_nonce();
-    let signature = build_callback_signature(app_secret, &timestamp, &nonce);
 
-    let response = client.get(url).query(&[
-        ("signature", signature.as_str()),
-        ("timestamp", timestamp.as_str()),
-        ("nonce", nonce.as_str()),
-        ("echostr", echostr.as_str()),
-    ]);
-
-    handshake_echo_outcome(
-        response.send(),
-        echostr.as_bytes(),
+    handshake_echo_get(
+        client,
+        url,
+        echostr,
+        timestamp,
+        nonce,
+        app_secret,
         "（官方 5 秒内无响应即断开重试）",
         "echostr 握手成功：三参 sha1 验签 GET，echostr 原样回显（HTTP 200）",
         "回显与 echostr 不一致",

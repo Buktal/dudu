@@ -27,12 +27,15 @@ mod tests;
 
 use std::time::Duration;
 
-use crate::connections::util::{callback_signature as build_callback_signature, now_secs};
+use crate::connections::util::now_secs;
+// 三参签名已进握手构造骨架（handshake_echo_get），本别名仅 tests 黄金对拍取用
+#[cfg(test)]
+use crate::connections::util::callback_signature as build_callback_signature;
 use crate::connections::wecom::crypto;
 
 use super::{
-    handshake_echo_outcome, no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome,
-    DispatchSnapshot, HandshakeOutcome, XiaohongshuSystem,
+    handshake_echo_get, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome, XiaohongshuSystem,
 };
 
 /// 官方应答窗口（§10.5 镜像）：5 秒内未收到响应即断开重发，总共重试 3 次。
@@ -93,18 +96,14 @@ fn verify_handshake(
     let echostr = random_echostr();
     let timestamp = now_secs().to_string();
     let nonce = random_nonce();
-    let signature = build_callback_signature(token, &timestamp, &nonce);
 
-    let response = client.get(url).query(&[
-        ("signature", signature.as_str()),
-        ("timestamp", timestamp.as_str()),
-        ("nonce", nonce.as_str()),
-        ("echostr", echostr.as_str()),
-    ]);
-
-    handshake_echo_outcome(
-        response.send(),
-        echostr.as_bytes(),
+    handshake_echo_get(
+        client,
+        url,
+        echostr,
+        timestamp,
+        nonce,
+        token,
         RESPONSE_WINDOW_NOTE,
         "echostr 握手成功：三参 sha1 验签 GET，echostr 原样回显（HTTP 200）",
         "回显与 echostr 不一致",

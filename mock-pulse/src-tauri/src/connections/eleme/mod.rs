@@ -37,8 +37,8 @@ use percent_encoding::utf8_percent_encode;
 use crate::connections::util::{append_absent, form_pairs, now_secs, sha1_hex, strip_sig, SIG_ENCODE_SET};
 
 use super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 官方订单状态核验样本明文（§5.2 order-signal 全文逐字，键序/JSON
@@ -208,25 +208,14 @@ fn verify_handshake(
         };
     };
     let outcome = post_signed(client, url, consumer_key, consumer_secret, GOLDEN_PROBE_PLAINTEXT);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("{error}{RETRY_NOTE}"),
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，推送探针未通过（官方无握手，探针语义同普通推送，期望 HTTP 200）",
-                outcome.status
-            ),
-        };
-    }
-    HandshakeOutcome {
-        ok: true,
-        message: "推送探针被接受：用户线签名 POST（sig = SHA1(HEX(url?字母序 k=v 串 + Consumer Secret))）到达目标，返回 HTTP 200".into(),
-    }
+    probe_handshake_outcome(
+        outcome,
+        RETRY_NOTE,
+        "推送探针",
+        "官方无握手，探针语义同普通推送，期望 HTTP 200",
+        "推送探针被接受：用户线签名 POST（sig = SHA1(HEX(url?字母序 k=v 串 + Consumer Secret))）到达目标，返回 HTTP 200",
+        no_body_check,
+    )
 }
 
 /// 饿了么直发（用户线推送模拟）：明文判型双形态——JSON 推送逐字节透传，H5

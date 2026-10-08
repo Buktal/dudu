@@ -33,8 +33,8 @@ mod tests;
 use crate::connections::util::{append_absent, form_encode_value, form_pairs, md5_hex, now_secs, strip_sig};
 
 use super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 官方订单核验样本表单（§5.3 docDetail/177/180 字段值逐字；form 字节，前端
@@ -167,25 +167,14 @@ fn verify_handshake(
         };
     };
     let outcome = post_form(client, url, app_id, app_secret, GOLDEN_PROBE_BODY);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("{error}{RETRY_NOTE}"),
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，推送探针未通过（官方验证握手正文待核验(09-27)，探针语义同普通推送，期望 HTTP 200）",
-                outcome.status
-            ),
-        };
-    }
-    HandshakeOutcome {
-        ok: true,
-        message: "推送探针被接受：合作中心表单 POST（sig = MD5(url?字母序 k=v 串 + App Secret)）到达目标，返回 HTTP 200".into(),
-    }
+    probe_handshake_outcome(
+        outcome,
+        RETRY_NOTE,
+        "推送探针",
+        "官方验证握手正文待核验(09-27)，探针语义同普通推送，期望 HTTP 200",
+        "推送探针被接受：合作中心表单 POST（sig = MD5(url?字母序 k=v 串 + App Secret)）到达目标，返回 HTTP 200",
+        no_body_check,
+    )
 }
 
 /// 美团直发（合作中心回调模拟）：表单明文逐字节透传 + 尾部追加系统级参数与

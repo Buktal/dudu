@@ -33,6 +33,7 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 use crate::app_data_dir;
+use crate::connections::util::callback_signature;
 
 // 体系/通道/模式枚举按 connections:: 路径对外复用（部分仅子模块测试消费）
 #[allow(unused_imports)]
@@ -262,7 +263,8 @@ pub(crate) fn no_reply(_: u16, _: &str) -> Option<String> {
 /// 逐字复制——发送失败 → 超时文案；非 2xx → 握手未通过；2xx → 响应体与
 /// 期望值逐字节比对）。差异（期望值、超时补充、成功文案、逐字节不符说明）
 /// 留在调用侧；whatsapp 变体（非 2xx 文案含 verify_token 说明、不符文案含
-/// JSON 信封警示）保留自有判定。
+/// JSON 信封警示）保留自有判定。构造半边已收敛为 [`handshake_echo_get`]，
+/// 收敛后渠道侧直调仅余企微 wecom 自有 GET 握手。
 pub(crate) fn handshake_echo_outcome(
     response: Result<reqwest::blocking::Response, reqwest::Error>,
     expected: &[u8],
@@ -301,6 +303,85 @@ pub(crate) fn handshake_echo_outcome(
             message: format!("HTTP 200 但{mismatch_note}：{echoed:?}"),
         }
     }
+}
+
+/// GET echostr 握手构造骨架（构造半边收敛；应答判定半边见
+/// [`handshake_echo_outcome`]，Reuse-first 审计退件：随机要素生成之外的装配段
+/// 曾在 4 处逐字复制——三参签名 → 四参 GET → 发送 → 应答判定）。随机 echostr/
+/// 时间戳/nonce 由渠道按官方形态自备后传入——形态与时间源（secs/millis）是
+/// 逐渠道协议差异（微信族 32 位 hex + 秒、微博 10 位字母数字 + 8 位数字 nonce
+/// + 毫秒），留在各渠道（ADR-0001）；三参签名（callback_signature 单点）的
+/// 密钥来源经 `signing_key` 承载（微信/小红书 = Token，微博 = App Secret）。
+pub(crate) fn handshake_echo_get(
+    client: &reqwest::blocking::Client,
+    url: &str,
+    echostr: String,
+    timestamp: String,
+    nonce: String,
+    signing_key: &str,
+    timeout_note: &str,
+    success_message: &str,
+    mismatch_note: &str,
+) -> HandshakeOutcome {
+    let signature = callback_signature(signing_key, &timestamp, &nonce);
+    let response = client.get(url).query(&[
+        ("signature", signature.as_str()),
+        ("timestamp", timestamp.as_str()),
+        ("nonce", nonce.as_str()),
+        ("echostr", echostr.as_str()),
+    ]);
+    handshake_echo_outcome(
+        response.send(),
+        echostr.as_bytes(),
+        timeout_note,
+        success_message,
+        mismatch_note,
+    )
+}
+
+/// 推送探针握手判定骨架（Reuse-first 审计退件：此判定段曾在 7 处逐字复制——
+/// 发送失败 → 失败原因 + 渠道注记；非 2xx → 「目标返回 HTTP {}，{探针名}未
+/// 通过（核验注记）」；2xx → 可选正文语义校验后成功文案）。探针发送仍由各
+/// 渠道私有 post 原语完成（ADR-0001），本骨架只收判定与装配结构；各渠道注记
+/// （重试口径待核验/官方无握手/成功判 2XY 等）是逐渠道事实，逐字经参数透传。
+/// ark 变体（2xx 后还须应答体满足官方语义 success/error_code）经 `body_check`
+/// 承载，无正文口径的渠道传 [`no_body_check`]。
+pub(crate) fn probe_handshake_outcome(
+    outcome: DispatchOutcome,
+    failure_note: &str,
+    probe_label: &str,
+    unaccepted_note: &str,
+    success_message: &str,
+    body_check: impl FnOnce(&str) -> Option<String>,
+) -> HandshakeOutcome {
+    if let Some(error) = outcome.error {
+        return HandshakeOutcome {
+            ok: false,
+            message: format!("{error}{failure_note}"),
+        };
+    }
+    if !(200..300).contains(&outcome.status) {
+        return HandshakeOutcome {
+            ok: false,
+            message: format!(
+                "目标返回 HTTP {}，{probe_label}未通过（{unaccepted_note}）",
+                outcome.status
+            ),
+        };
+    }
+    if let Some(message) = body_check(&outcome.body) {
+        return HandshakeOutcome { ok: false, message };
+    }
+    HandshakeOutcome {
+        ok: true,
+        message: success_message.to_string(),
+    }
+}
+
+/// 无 2xx 正文语义口径的渠道共用（对仗 [`no_reply`]）：探针成功判定只看状态
+/// 码（应答正文无官方口径），`body_check` 恒通过。
+pub(crate) fn no_body_check(_: &str) -> Option<String> {
+    None
 }
 
 /// 读取全部持久化连接（无文件时返回空列表）。
