@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { InboxApi } from "../api";
+import { emptyQuery } from "../conversation-query";
 import { loadConversations } from "./queue";
 import {
   selectQueueConversations,
   selectQuickQueueConversations,
 } from "./selectors";
-import { emptyQuery } from "./state";
 import {
   firstConversation,
   secondConversation,

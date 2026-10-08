@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
+import { emptyQuery } from "../conversation-query";
 import type { Conversation, InboxEvent } from "../types";
 import { loadConversations } from "./queue";
 import { resetContext } from "./reading";
 import { editDraft, endReception, resumeReception } from "./sending";
-import { emptyQuery } from "./state";
 import { deferred, firstConversation, testStore } from "./test-support";
 
 describe("reception commands", () => {

@@ -1,6 +1,7 @@
 import { matchesConversationFilters } from "../conversation-query";
 import type { Conversation, InboxMessage } from "../types";
-import { type InboxState, receiptKeys, rememberReceipt } from "./state";
+import { receiptKeys, rememberReceipt } from "./receipts";
+import type { InboxState } from "./state";
 
 /**
  * Live events merge kernel: the single place that knows how an incoming

@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
-import { hasConversationFilters } from "../conversation-query";
+import { emptyQuery, hasConversationFilters } from "../conversation-query";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import {
   queueOrders as orders,
@@ -35,7 +35,6 @@ import {
   queueStatuses as statuses,
 } from "../presentation";
 import { loadConversations } from "../stores/queue";
-import { emptyQuery } from "../stores/state";
 import type { ConversationQuery } from "../types";
 
 export function QueueTools({ compact = false }: { compact?: boolean }) {

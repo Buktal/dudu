@@ -2,6 +2,19 @@ import { timestamp } from "@/lib/time";
 import type { Conversation, ConversationQuery } from "./types";
 
 /**
+ * The standing queue query defaults: what a fresh workspace watches, and the
+ * base every queue / choice read spreads from. The filters predicate reads
+ * exactly this shape as "no filters applied".
+ */
+export const emptyQuery: ConversationQuery = {
+  search: "",
+  channelId: "all",
+  status: "active",
+  starred: false,
+  order: "wait",
+};
+
+/**
  * Client-side queue filters only: channel / status / starred. Full-text
  * search stays server-side — a conversation the service returns is a search
  * match by definition, so callers must not re-apply search here. The search

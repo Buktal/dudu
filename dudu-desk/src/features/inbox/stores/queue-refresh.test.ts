@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { emptyQuery } from "../conversation-query";
 import { loadConversations } from "./queue";
 import {
   selectQueue,
@@ -6,7 +7,6 @@ import {
   selectQuickQueueConversations,
 } from "./selectors";
 import { editDraft, focusReply } from "./sending";
-import { emptyQuery } from "./state";
 import { firstConversation, testStore } from "./test-support";
 
 describe("loaded conversation window refresh", () => {

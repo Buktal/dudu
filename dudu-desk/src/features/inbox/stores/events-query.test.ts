@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { InboxApi } from "../api";
+import { emptyQuery } from "../conversation-query";
 import type { ConversationPage } from "../types";
 import { reconnectInbox } from "./events";
 import { loadConversations } from "./queue";
 import { selectQueue, selectQueueConversations } from "./selectors";
 import { editDraft } from "./sending";
-import { emptyQuery } from "./state";
 import {
   deferred,
   firstConversation,

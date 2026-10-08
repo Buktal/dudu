@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
 import type { InboxApi } from "../api";
+import { emptyQuery } from "../conversation-query";
 import type { ConversationPage } from "../types";
 import { loadConversations, retryConversations } from "./queue";
 import { resetContext } from "./reading";
 import { selectQueue, selectQuickQueueConversations } from "./selectors";
-import { emptyQuery } from "./state";
 import {
   deferred,
   firstConversation,

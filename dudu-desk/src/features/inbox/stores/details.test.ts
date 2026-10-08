@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
+import { emptyQuery } from "../conversation-query";
 import type { Conversation, Page, VisitorProfile } from "../types";
 import {
   discardProfileEdits,
@@ -11,7 +12,6 @@ import { loadConversations } from "./queue";
 import { loadProfile, resetContext, selectConversation } from "./reading";
 import { selectQueueConversations } from "./selectors";
 import { inboxActions } from "./slice";
-import { emptyQuery } from "./state";
 import {
   deferred,
   firstConversation,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { emptyQuery } from "./conversation-query";
 import { createDevelopmentInboxApi } from "./development-api";
 import { loadConversations } from "./stores/queue";
-import { emptyQuery } from "./stores/state";
 import { createInboxStore } from "./stores/store";
 
 const context = { workspaceId: "preview", agentId: "agent" };

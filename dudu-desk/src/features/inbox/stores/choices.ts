@@ -1,5 +1,5 @@
 import { createSelector } from "@reduxjs/toolkit";
-import { matchesConversationFilters } from "../conversation-query";
+import { emptyQuery, matchesConversationFilters } from "../conversation-query";
 import type { ConversationQuery } from "../types";
 import {
   failedReadCursor,
@@ -9,7 +9,6 @@ import {
   runOperation,
 } from "./requests";
 import { inboxActions } from "./slice";
-import { emptyQuery } from "./state";
 import type { InboxCommand, InboxRootState } from "./store";
 
 /** The pinned-picker's candidate scope: one dialog, one read slot. */

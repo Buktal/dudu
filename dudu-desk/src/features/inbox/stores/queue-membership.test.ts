@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { emptyQuery } from "../conversation-query";
 import type { Conversation, VisitorIdentity } from "../types";
 import {
   applyQueuePageMeta,
@@ -8,7 +9,7 @@ import {
   needsQueueReloadAfterStarChange,
   rewriteQueueIds,
 } from "./queue-membership";
-import { emptyLoad, emptyQuery, type InboxState } from "./state";
+import { emptyLoad, type InboxState } from "./state";
 import { defineTestConversation } from "./test-support";
 
 function card(

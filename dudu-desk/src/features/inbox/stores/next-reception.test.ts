@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { emptyQuery } from "../conversation-query";
 import type { InboxEvent, InboxMessage, Page, SendSubmission } from "../types";
 import { loadConversations } from "./queue";
 import { loadHistory } from "./reading";
 import { selectMessages } from "./selectors";
 import { editDraft, sendReply } from "./sending";
-import { emptyQuery } from "./state";
 import {
   acceptedMessage,
   deferred,

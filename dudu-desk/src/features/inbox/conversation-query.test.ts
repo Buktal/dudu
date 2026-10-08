@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasConversationFilters } from "./conversation-query";
-import { emptyQuery } from "./stores/state";
+import { emptyQuery, hasConversationFilters } from "./conversation-query";
 
 describe("conversation query filters", () => {
   it("reads false on the standing defaults, whatever the order", () => {

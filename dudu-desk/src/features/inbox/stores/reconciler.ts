@@ -2,6 +2,7 @@ import type { ApiFailure } from "@/lib/api-response";
 import type { ConnectionState, InboxMessage, Page } from "../types";
 import { collectPaged } from "./page-cursor";
 import { foldConversationPages } from "./queue-membership";
+import { receiptKeys } from "./receipts";
 import {
   getRequestScope,
   operationFailure,
@@ -11,7 +12,6 @@ import {
 } from "./requests";
 import { acceptSubmission } from "./sending";
 import { inboxActions } from "./slice";
-import { receiptKeys } from "./state";
 import type { InboxCommand } from "./store";
 
 /** Failure kinds map to connection states in exactly one place. */

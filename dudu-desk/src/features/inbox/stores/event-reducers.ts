@@ -16,12 +16,8 @@ import {
   orderMessages,
 } from "./live-merge";
 import { applyQueuePageMeta, rewriteQueueIds } from "./queue-membership";
-import {
-  emptyLoad,
-  type InboxState,
-  receiptKeys,
-  rememberReceipt,
-} from "./state";
+import { receiptKeys, rememberReceipt } from "./receipts";
+import { emptyLoad, type InboxState } from "./state";
 
 export const eventReducers = {
   connectionChanged(state: InboxState, action: PayloadAction<ConnectionState>) {
