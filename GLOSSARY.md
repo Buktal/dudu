@@ -145,7 +145,7 @@ DuduAdmin 中取数 hook（useQuery）对外恒定的 interface：{data, error, 
 _Avoid_: 六键 spread（load/attempt 版本戳外泄的旧 interface）、调用方手工比较版本
 
 **分页查询（usePagedQuery）**:
-DuduAdmin 分页列表共用的取数机制：client 绑定、查询条件状态与翻页写接口（setFilter 合并补丁 / reset 重置 / setPage 翻页）收敛在 api 层 paged-query 单点；「筛选变化与重置都回第一页且保留 pageSize」「page 只暴露服务端回显这一份真相（加载或失败时回退请求值）」两条翻页不变量在此唯一实现与测试，domain 数据模块（useCompanies/useLogs）收缩为命名筛选操作薄壳。
+DuduAdmin 分页列表共用的取数机制：client 绑定、查询条件状态与翻页写接口（setFilter 合并补丁 / reset 重置 / setPage 翻页）收敛在 api 层 paged-query 单点；「筛选变化与重置都回第一页且保留 pageSize」「page 只暴露服务端回显这一份真相（加载或失败时回退请求值）」「任一命名筛选已应用」的 filtered 派生（非分页字段非 undefined 且非空串即 true，0 等合法筛选值除外）三条机制不变量在此唯一实现与测试，domain 数据模块（useCompanies/useLogs）收缩为命名筛选操作薄壳并原样透传 filtered。
 _Avoid_: 逐页复制的 useState + useQuery 手工编排、useCallback 稳定身份仪式（调用方自写）
 
 **单记录查询（useAdminQuery）**:
@@ -153,8 +153,8 @@ DuduAdmin 单记录取数共用的绑定层：client 绑定（useAdmin）与 loa
 _Avoid_: 手写 useAdmin + useCallback 绑定仪式（旧实现）
 
 **列表页骨架（QueryView）**:
-DuduAdmin 三个列表页（企业、企业资源汇总、操作记录）共用的加载→失败→空态→表格→分页编排单点：「失败不冒充空数据」由分支顺序（error 先于空态判定）单点保证；表格列与行走 children 槽，空态动作按钮与两套空态文案（筛选中 / 全量）归页面。
-_Avoid_: 三步舞手写编排（loading/error/数据分支逐页复制）、失败态渲染空态文案
+DuduAdmin 三个列表页（企业、企业资源汇总、操作记录）共用的加载→失败→空态→表格→分页编排单点：「失败不冒充空数据」由分支顺序（error 先于空态判定）单点保证；页面把分页查询返回整只直传单个 query 投影 prop（结构化类型在骨架就地声明，不 import api/）；表格列与行走 children 槽，空态动作按钮与两套空态文案（筛选中 / 全量）归页面，空态文案取向由投影的 filtered 键机制供给。
+_Avoid_: 三步舞手写编排（loading/error/数据分支逐页复制）、失败态渲染空态文案、逐页把查询返回值逐键转写成骨架 props 并手写 filtered 布尔（旧八 prop interface）
 
 **筛选栏（FilterBar）**:
 DuduAdmin 列表页共用的「草稿-提交-重置」编排单点（components 层 filter-bar）：输入只改草稿、点搜索才上报（去空格，空串归 undefined）、草稿跟随已应用值、重置立即清草稿（含校验错误）并上报 onReset、重置按钮仅在草稿或已应用条件存在时可见，这些不变量在 filter-bar 唯一实现与测试；搜索字段差异（标签、占位、校验）走 props，立即生效的下拉走 children 槽，企业筛选（CompanyFilters）与操作记录筛选收缩为它的薄组合。
