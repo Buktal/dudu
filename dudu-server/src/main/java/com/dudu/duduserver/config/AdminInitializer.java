@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 public class AdminInitializer implements ApplicationRunner {
 
     // 内置初始化凭据（与前端登录表单预填约定一致，非生产凭据），首登后经改密接口更换
-    private static final String INIT_USERNAME = "Admin";
+    private static final String INIT_USERNAME = "admin";
     private static final String INIT_PASSWORD = "admin";
 
     private final UserService userService;
