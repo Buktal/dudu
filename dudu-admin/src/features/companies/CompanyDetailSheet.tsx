@@ -10,7 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { navigate } from "@/navigation";
+import { navigate, routes } from "@/navigation";
 import { type CompanyAction, CompanyActions } from "./CompanyActions";
 import { useCompany } from "./company-data";
 
@@ -94,7 +94,7 @@ export function CompanyDetailSheet({
                 <Button
                   variant="outline"
                   className="self-start"
-                  onClick={() => navigate(`resources?companyId=${companyId}`)}
+                  onClick={() => navigate(routes.resources(companyId))}
                 >
                   查看企业资源
                 </Button>

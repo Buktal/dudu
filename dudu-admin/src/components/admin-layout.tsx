@@ -12,7 +12,7 @@ import { type ReactNode, useState } from "react";
 import { useAdmin, useSession } from "@/api/context";
 import { EnvironmentMenu } from "@/features/auth/EnvironmentMenu";
 import { cn } from "@/lib/utils";
-import { navigate, type View } from "@/navigation";
+import { navigate, routes, type View } from "@/navigation";
 import { Brand } from "./brand";
 import { Button } from "./ui/button";
 import {
@@ -111,7 +111,7 @@ export function AdminLayout({
             <div className="flex min-w-0 items-center gap-2 text-sm">
               <button
                 type="button"
-                onClick={() => navigate("overview")}
+                onClick={() => navigate(routes.overview())}
                 className="hidden text-muted-foreground sm:inline"
               >
                 运营中心

@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { routes } from "@/navigation";
 import type { CompanyAction } from "./CompanyActions";
 import { CompanyDetailSheet } from "./CompanyDetailSheet";
 import { CreateCompanySheet } from "./CreateCompanySheet";
@@ -45,7 +46,7 @@ export function CompaniesPage({
   const [action, setAction] = useState<CompanyAction | null>(null);
   const open = (id: string, nextAction: CompanyAction | null = null) => {
     setAction(nextAction);
-    navigate(`companies?companyId=${id}`);
+    navigate(routes.companyDetail(id));
   };
   return (
     <div className="flex flex-col gap-6">
@@ -55,7 +56,7 @@ export function CompaniesPage({
         actions={
           <>
             <RefreshButton loading={query.loading} onClick={query.refresh} />
-            <Button onClick={() => navigate("companies?create=1")}>
+            <Button onClick={() => navigate(routes.companyCreate())}>
               <Plus data-icon="inline-start" />
               创建企业
             </Button>
@@ -97,7 +98,7 @@ export function CompaniesPage({
                 清除筛选
               </Button>
             ) : (
-              <Button onClick={() => navigate("companies?create=1")}>
+              <Button onClick={() => navigate(routes.companyCreate())}>
                 创建企业
               </Button>
             ),
@@ -189,12 +190,12 @@ export function CompaniesPage({
       </QueryView>
       {creating && (
         <CreateCompanySheet
-          close={() => navigate("companies")}
+          close={() => navigate(routes.companies())}
           onCreated={(company) => {
             setMessage(`企业「${company.companyName}」已创建`);
             query.reset();
             setAction(null);
-            navigate(`companies?companyId=${company.companyId}`);
+            navigate(routes.companyDetail(company.companyId));
           }}
         />
       )}
@@ -205,7 +206,7 @@ export function CompaniesPage({
           initialAction={action}
           close={() => {
             setAction(null);
-            navigate("companies");
+            navigate(routes.companies());
           }}
           onChanged={setMessage}
         />

@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { routes } from "@/navigation";
 import { useOverview } from "./overview-data";
 
 export function OverviewPage({
@@ -40,7 +41,7 @@ export function OverviewPage({
         actions={
           <>
             <RefreshButton loading={loading} onClick={refresh} />
-            <Button onClick={() => navigate("companies?create=1")}>
+            <Button onClick={() => navigate(routes.companyCreate())}>
               <Plus data-icon="inline-start" />
               创建企业
             </Button>
@@ -82,7 +83,7 @@ export function OverviewPage({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigate("companies")}
+                  onClick={() => navigate(routes.companies())}
                 >
                   全部企业
                   <ArrowRight data-icon="inline-end" />
@@ -108,7 +109,7 @@ export function OverviewPage({
                               className="company-link"
                               onClick={() =>
                                 navigate(
-                                  `companies?companyId=${company.companyId}`,
+                                  routes.companyDetail(company.companyId),
                                 )
                               }
                             >

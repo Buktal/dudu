@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCompanies } from "@/features/companies/company-data";
+import { routes } from "@/navigation";
 
 function ResourceCells({ companyId }: { companyId: string }) {
   const client = useAdmin();
@@ -140,7 +141,7 @@ export function ResourcesPage({
                     type="button"
                     className="company-link"
                     onClick={() =>
-                      navigate(`companies?companyId=${company.companyId}`)
+                      navigate(routes.companyDetail(company.companyId))
                     }
                   >
                     {company.companyName}
