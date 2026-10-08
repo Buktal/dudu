@@ -1,8 +1,11 @@
 import { useState } from "react";
 import type { CompanyDetail } from "@/api/types";
-import { useMutation } from "@/api/use-mutation";
-import { Message, PendingLabel } from "@/components/feedback";
 import { TextField } from "@/components/form-field";
+import {
+  SubmitButton,
+  SubmitMessage,
+  useSubmit,
+} from "@/components/submit-shell";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,7 +36,7 @@ export function CompanyActions({
   onSaved: (message: string) => void;
 }) {
   const commands = useCompanyCommands();
-  const mutation = useMutation();
+  const shell = useSubmit();
   const { company, adminInit } = detail;
   const [profile, setProfile] = useState(cleanProfile(company));
   const [reason, setReason] = useState("");
@@ -48,16 +51,13 @@ export function CompanyActions({
         : disabling
           ? "停用企业"
           : "恢复企业";
+  // 弹层 pending 关闭守卫成对取用：Root 拦关闭，Content 隐藏关闭按钮
+  const hold = shell.hold(close);
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open && !mutation.pending) close();
-      }}
-    >
+    <Dialog open onOpenChange={hold.onOpenChange}>
       <DialogContent
         className="max-h-[90svh] overflow-y-auto sm:max-w-lg"
-        showCloseButton={!mutation.pending}
+        showCloseButton={hold.showCloseButton}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -67,28 +67,21 @@ export function CompanyActions({
         </DialogHeader>
         <form
           className="flex flex-col gap-6"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (action === "edit" && !profile.companyName.trim()) {
-              mutation.setError("请输入企业名称");
-              return;
-            }
-            if (action === "status" && disabling && !reason.trim()) {
-              mutation.setError("请填写停用原因");
-              return;
-            }
-            if (action === "password") {
-              const error = passwordError(password, confirmation);
-              if (error) {
-                mutation.setError(error);
-                return;
-              }
-              if (!adminInit) {
-                mutation.setError("该企业尚无可重置的管理员");
-                return;
-              }
-            }
-            void mutation.run(
+          onSubmit={(event) =>
+            shell.submit(
+              event,
+              () => {
+                if (action === "edit" && !profile.companyName.trim())
+                  return "请输入企业名称";
+                if (action === "status" && disabling && !reason.trim())
+                  return "请填写停用原因";
+                if (action === "password") {
+                  const error = passwordError(password, confirmation);
+                  if (error) return error;
+                  if (!adminInit) return "该企业尚无可重置的管理员";
+                }
+                return null;
+              },
               async (signal) => {
                 if (action === "edit")
                   await commands.update(
@@ -126,15 +119,15 @@ export function CompanyActions({
                   );
                 },
               },
-            );
-          }}
+            )
+          }
         >
-          {mutation.error && <Message error>{mutation.error}</Message>}
+          <SubmitMessage error={shell.error} />
           {action === "edit" && (
             <ProfileFields
               profile={profile}
               setProfile={setProfile}
-              disabled={mutation.pending}
+              disabled={shell.pending}
             />
           )}
           {action === "status" && (
@@ -152,7 +145,7 @@ export function CompanyActions({
                   onChange={(event) => setReason(event.target.value)}
                   required
                   maxLength={500}
-                  disabled={mutation.pending}
+                  disabled={shell.pending}
                 />
               )}
             </>
@@ -172,33 +165,22 @@ export function CompanyActions({
                 confirmation={confirmation}
                 setPassword={setPassword}
                 setConfirmation={setConfirmation}
-                disabled={mutation.pending}
+                disabled={shell.pending}
               />
             </>
           )}
           <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={mutation.pending}
-              onClick={close}
-            >
+            <Button variant="outline" disabled={shell.pending} onClick={close}>
               取消
             </Button>
-            <Button
-              type="submit"
+            <SubmitButton
+              shell={shell}
+              label={action === "edit" ? "保存修改" : title}
+              pendingLabel="正在保存"
               variant={
                 action === "status" && disabling ? "destructive" : "default"
               }
-              disabled={mutation.pending}
-            >
-              <PendingLabel pending={mutation.pending}>
-                {mutation.pending
-                  ? "正在保存"
-                  : action === "edit"
-                    ? "保存修改"
-                    : title}
-              </PendingLabel>
-            </Button>
+            />
           </DialogFooter>
         </form>
       </DialogContent>

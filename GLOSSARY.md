@@ -156,6 +156,10 @@ _Avoid_: 三步舞手写编排（loading/error/数据分支逐页复制）、失
 DuduAdmin 中 hash 路由地址的构造单点：页面间跳转只表达意图（overview / companies / companyCreate / companyDetail / resources 五个命名构造），参数名（companyId / create）、取值约定（create=1）、企业 ID 编码与「回纯列表即清参关闭弹层」的关闭语义收敛在 navigation.ts 一处，与解析侧（parseRoute / useRoute）共用同一组语法常量并有 builder→parser 往返测试；概览页、资源汇总页打开企业弹层等跨页跳转不再手写查询串。
 _Avoid_: 手写路由字符串（模板串拼 `companies?companyId=`、字面量 `"companies?create=1"`）
 
+**表单提交外壳（SubmitShell）**:
+DuduAdmin 表单写操作共用的提交编排单点（components 层 submit-shell）：「校验文案即写错并中断」的守卫习惯、错误 Message 显示位、提交按钮 pending 禁用与「正在X」文案、弹层「pending 期不可关闭 + 隐藏关闭按钮」成对守卫都收敛在一处并有外壳级直接测试；竞态、取消与写回守卫仍归 useMutation 机制单点，调用方只留字段、校验函数与命令，非表单的按钮触发写操作（如企业 ID 检测、退出登录）不经此外壳。
+_Avoid_: 逐表单手写守卫-写错-中断、错误 Message 位逐字复制、手写 loggingOut 重入门卫（旧形态）
+
 **会话域操作（ConversationOperation）**:
 DuduDesk 中对单个会话的一次请求级读写（读历史 / 读资料、存资料 / 星标 / 已读、发送、结束 / 恢复接待）的统一执行 seam：loading → api 调用 → 结算守卫 → 成功 / 失败效果。「迟到结果不得复活已移除会话」（仅当本次尝试仍是当前尝试且会话仍在册才结算）、响应校验惯用形（不匹配即 invalid-response）与失败映射兜底文案收敛在 inbox stores/requests 单点，各 thunk 只声明哪个键、调哪个 api、成功装什么。
 _Avoid_: 手写 runOperation 仪式、逐处兜底串（旧实现）

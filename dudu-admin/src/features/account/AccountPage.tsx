@@ -3,15 +3,14 @@ import { useState } from "react";
 import { adminApi } from "@/api/admin-api";
 import { useAdminQuery } from "@/api/admin-query";
 import { useAdmin } from "@/api/context";
-import { useMutation } from "@/api/use-mutation";
-import {
-  ErrorState,
-  LoadingState,
-  Message,
-  PendingLabel,
-} from "@/components/feedback";
+import { ErrorState, LoadingState } from "@/components/feedback";
 import { TextField } from "@/components/form-field";
 import { PageHeader } from "@/components/page-parts";
+import {
+  SubmitButton,
+  SubmitMessage,
+  useSubmit,
+} from "@/components/submit-shell";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,7 +29,7 @@ import {
 export function AccountPage() {
   const client = useAdmin();
   const query = useAdminQuery(adminApi.profile, []);
-  const mutation = useMutation();
+  const shell = useSubmit();
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -71,14 +70,12 @@ export function AccountPage() {
               <CardContent>
                 <form
                   className="flex flex-col gap-6"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const error = passwordError(password, confirmation);
-                    if (!current.trim() || error) {
-                      mutation.setError(error ?? "请输入当前密码");
-                      return;
-                    }
-                    void mutation.run(
+                  onSubmit={(event) =>
+                    shell.submit(
+                      event,
+                      () =>
+                        passwordError(password, confirmation) ??
+                        (current.trim() ? null : "请输入当前密码"),
                       (signal) =>
                         adminApi.changePassword(
                           client,
@@ -91,10 +88,10 @@ export function AccountPage() {
                         commit: () =>
                           client.clearSession("密码已修改，请使用新密码登录"),
                       },
-                    );
-                  }}
+                    )
+                  }
                 >
-                  {mutation.error && <Message error>{mutation.error}</Message>}
+                  <SubmitMessage error={shell.error} />
                   <FieldGroup>
                     <TextField
                       label="当前密码"
@@ -104,7 +101,7 @@ export function AccountPage() {
                       required
                       maxLength={PASSWORD_MAX_LENGTH}
                       autoComplete="current-password"
-                      disabled={mutation.pending}
+                      disabled={shell.pending}
                     />
                   </FieldGroup>
                   <PasswordFields
@@ -112,30 +109,27 @@ export function AccountPage() {
                     confirmation={confirmation}
                     setPassword={setPassword}
                     setConfirmation={setConfirmation}
-                    disabled={mutation.pending}
+                    disabled={shell.pending}
                   />
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      disabled={mutation.pending}
+                      disabled={shell.pending}
                       onClick={() => {
                         setCurrent("");
                         setPassword("");
                         setConfirmation("");
-                        mutation.setError(null);
+                        shell.setError(null);
                       }}
                     >
                       取消
                     </Button>
-                    <Button
-                      type="submit"
+                    <SubmitButton
+                      shell={shell}
+                      label="修改密码"
+                      pendingLabel="正在修改"
                       className="self-start"
-                      disabled={mutation.pending}
-                    >
-                      <PendingLabel pending={mutation.pending}>
-                        {mutation.pending ? "正在修改" : "修改密码"}
-                      </PendingLabel>
-                    </Button>
+                    />
                   </div>
                 </form>
               </CardContent>

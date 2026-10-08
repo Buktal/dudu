@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { ApiError, COMPANY_ID_CONFLICT } from "@/api/client";
 import type { Company } from "@/api/types";
-import { useMutation } from "@/api/use-mutation";
-import { Message, PendingLabel } from "@/components/feedback";
 import { TextField } from "@/components/form-field";
+import {
+  SubmitButton,
+  SubmitMessage,
+  useSubmit,
+} from "@/components/submit-shell";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
@@ -30,7 +33,7 @@ export function CreateCompanySheet({
   onCreated: (company: Company) => void;
 }) {
   const commands = useCompanyCommands();
-  const mutation = useMutation();
+  const shell = useSubmit();
   const [profile, setProfile] = useState(emptyProfile);
   const [selection, setSelection] = useState<IdSelection>({
     value: "",
@@ -39,39 +42,35 @@ export function CreateCompanySheet({
   const [username, setUsername] = useState("admin");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const cleaned = cleanProfile(profile);
+  // 弹层 pending 关闭守卫成对取用：Root 拦关闭，Content 隐藏关闭按钮
+  const hold = shell.hold(close);
   return (
-    <Sheet
-      open
-      onOpenChange={(open) => {
-        if (!open && !mutation.pending) close();
-      }}
-    >
+    <Sheet open onOpenChange={hold.onOpenChange}>
       <SheetContent
         side="right"
         className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
-        showCloseButton={!mutation.pending}
+        showCloseButton={hold.showCloseButton}
       >
         <SheetHeader>
           <SheetTitle>创建企业</SheetTitle>
         </SheetHeader>
         <form
           className="flex min-h-0 flex-1 flex-col"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const cleaned = cleanProfile(profile);
-            if (
-              !cleaned.companyName ||
-              username.trim().length < 2 ||
-              !password.trim()
-            ) {
-              mutation.setError("请填写企业名称及有效的管理员登录名和密码");
-              return;
-            }
-            if (selection.status !== "available") {
-              mutation.setError("请先检测企业 ID 是否可用");
-              return;
-            }
-            void mutation.run(
+          onSubmit={(event) =>
+            shell.submit(
+              event,
+              () => {
+                if (
+                  !cleaned.companyName ||
+                  username.trim().length < 2 ||
+                  !password.trim()
+                )
+                  return "请填写企业名称及有效的管理员登录名和密码";
+                if (selection.status !== "available")
+                  return "请先检测企业 ID 是否可用";
+                return null;
+              },
               (signal) =>
                 commands.create(
                   {
@@ -102,23 +101,23 @@ export function CreateCompanySheet({
                     });
                 },
               },
-            );
-          }}
+            )
+          }
         >
           <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6">
-            {mutation.error && <Message error>{mutation.error}</Message>}
+            <SubmitMessage error={shell.error} />
             <CompanyIdField
               selection={selection}
               onChange={setSelection}
-              disabled={mutation.pending}
+              disabled={shell.pending}
             />
             <ProfileFields
               profile={profile}
               setProfile={setProfile}
-              disabled={mutation.pending}
+              disabled={shell.pending}
             />
             <Separator />
-            <FieldSet disabled={mutation.pending}>
+            <FieldSet disabled={shell.pending}>
               <FieldLegend>初始企业管理员</FieldLegend>
               <FieldGroup>
                 <TextField
@@ -151,21 +150,15 @@ export function CreateCompanySheet({
             </FieldSet>
           </div>
           <SheetFooter className="flex-row justify-end border-t">
-            <Button
-              variant="outline"
-              disabled={mutation.pending}
-              onClick={close}
-            >
+            <Button variant="outline" disabled={shell.pending} onClick={close}>
               取消
             </Button>
-            <Button
-              type="submit"
-              disabled={mutation.pending || selection.status !== "available"}
-            >
-              <PendingLabel pending={mutation.pending}>
-                {mutation.pending ? "正在创建" : "创建企业"}
-              </PendingLabel>
-            </Button>
+            <SubmitButton
+              shell={shell}
+              label="创建企业"
+              pendingLabel="正在创建"
+              disabled={selection.status !== "available"}
+            />
           </SheetFooter>
         </form>
       </SheetContent>

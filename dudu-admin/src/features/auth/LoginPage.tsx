@@ -1,18 +1,20 @@
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useAdmin, useSession } from "@/api/context";
-import { useMutation } from "@/api/use-mutation";
 import { Brand } from "@/components/brand";
-import { Message, PendingLabel } from "@/components/feedback";
 import { TextField } from "@/components/form-field";
-import { Button } from "@/components/ui/button";
+import {
+  SubmitButton,
+  SubmitMessage,
+  useSubmit,
+} from "@/components/submit-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 
 export function LoginPage() {
   const client = useAdmin();
   const session = useSession();
-  const mutation = useMutation();
+  const shell = useSubmit();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   return (
@@ -40,19 +42,18 @@ export function LoginPage() {
           <CardContent className="px-7 pb-8 sm:px-8">
             <form
               className="flex flex-col gap-6"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!username.trim() || !password.trim()) {
-                  mutation.setError("请输入登录名和密码");
-                  return;
-                }
-                void mutation.run((signal) =>
-                  client.login(username.trim(), password, signal),
-                );
-              }}
+              onSubmit={(event) =>
+                shell.submit(
+                  event,
+                  () =>
+                    !username.trim() || !password.trim()
+                      ? "请输入登录名和密码"
+                      : null,
+                  (signal) => client.login(username.trim(), password, signal),
+                )
+              }
             >
-              {session.notice && <Message>{session.notice}</Message>}
-              {mutation.error && <Message error>{mutation.error}</Message>}
+              <SubmitMessage error={shell.error} notice={session.notice} />
               <FieldGroup>
                 <TextField
                   label="登录名"
@@ -61,7 +62,7 @@ export function LoginPage() {
                   autoComplete="username"
                   required
                   maxLength={64}
-                  disabled={mutation.pending}
+                  disabled={shell.pending}
                   placeholder="请输入登录名"
                 />
                 <TextField
@@ -72,21 +73,19 @@ export function LoginPage() {
                   autoComplete="current-password"
                   required
                   maxLength={72}
-                  disabled={mutation.pending}
+                  disabled={shell.pending}
                   placeholder="请输入密码"
                 />
               </FieldGroup>
-              <Button
-                type="submit"
+              <SubmitButton
+                shell={shell}
+                label="登录"
+                pendingLabel="正在登录"
                 size="lg"
                 className="w-full"
-                disabled={mutation.pending}
               >
-                <PendingLabel pending={mutation.pending}>
-                  {mutation.pending ? "正在登录" : "登录"}
-                </PendingLabel>
-                {!mutation.pending && <ArrowRight data-icon="inline-end" />}
-              </Button>
+                {!shell.pending && <ArrowRight data-icon="inline-end" />}
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
