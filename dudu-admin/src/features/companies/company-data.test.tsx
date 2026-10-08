@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { adminApi } from "@/api/admin-api";
 import { AdminClient } from "@/api/client";
 import { AdminContext } from "@/api/context";
-import type { CompanyProfile, CompanyQuery } from "@/api/types";
+import type { CompanyProfile } from "@/api/types";
 import { company, detail, page, success } from "@/test/http";
 import { useCompanies, useCompany, useCompanyCommands } from "./company-data";
 
@@ -28,17 +28,6 @@ function mount(client: AdminClient) {
     return { companies, companyDetail, commands };
   }
   return renderHook(() => useHarness(), { wrapper: Wrapper });
-}
-
-// 模拟 ResourcesPage 的消费方式：初始筛选来自路由，依赖 App 的 key remount 重挂载。
-function mountList(initial: CompanyQuery) {
-  const client = new AdminClient();
-  return renderHook((filters: CompanyQuery) => useCompanies(filters), {
-    initialProps: initial,
-    wrapper: ({ children }: { children: ReactNode }) => (
-      <AdminContext value={client}>{children}</AdminContext>
-    ),
-  });
 }
 
 function countRequests(
@@ -151,7 +140,9 @@ it("卸载后不再订阅失效，维护成功不触发重读", async () => {
   expect(countRequests(request, "/admin/companies/123456")).toBe(1);
 });
 
-it("翻页与筛选的请求体由命名操作决定：筛选回第一页且保留 pageSize", async () => {
+// 翻页不变量（回第一页且保留 pageSize、page 以服务端回显为单一真相）归
+// paged-query 单点测试；这里只断言 domain 装订：命名操作上报的意图进入查询条件。
+it("setKeyword 与 setStatus 上报的筛选意图进入查询条件", async () => {
   const request = vi.fn((input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname === "/api/admin/companies/query")
@@ -163,10 +154,6 @@ it("翻页与筛选的请求体由命名操作决定：筛选回第一页且保�
   await waitFor(() => expect(result.current.companies.loading).toBe(false));
 
   await act(async () => {
-    result.current.companies.setPage(3);
-  });
-  await waitFor(() => expect(result.current.companies.loading).toBe(false));
-  await act(async () => {
     result.current.companies.setKeyword("青禾");
   });
   await waitFor(() => expect(result.current.companies.loading).toBe(false));
@@ -175,16 +162,14 @@ it("翻页与筛选的请求体由命名操作决定：筛选回第一页且保�
   });
   await waitFor(() => expect(result.current.companies.loading).toBe(false));
 
-  expect(queryBodies(request)).toEqual([
-    { page: 1, pageSize: 20 },
-    { page: 3, pageSize: 20 },
-    { page: 1, pageSize: 20, keyword: "青禾" },
-    { page: 1, pageSize: 20, keyword: "青禾", status: 0 },
-  ]);
-  expect(result.current.companies.page).toBe(1);
+  const bodies = queryBodies(request);
+  expect(bodies[1]).toMatchObject({ keyword: "青禾" });
+  expect(bodies[2]).toMatchObject({ keyword: "青禾", status: 0 });
+  expect(result.current.companies.keyword).toBe("青禾");
+  expect(result.current.companies.status).toBe(0);
 });
 
-it("reset 清空全部筛选回到第一页，且保留当前 pageSize", async () => {
+it("reset 清空全部筛选", async () => {
   const request = vi.fn((input: string | URL | Request) => {
     const url = new URL(String(input));
     if (url.pathname === "/api/admin/companies/query")
@@ -216,50 +201,4 @@ it("reset 清空全部筛选回到第一页，且保留当前 pageSize", async (
   ]);
   expect(result.current.companies.keyword).toBeUndefined();
   expect(result.current.companies.status).toBeUndefined();
-});
-
-it("page 以服务端回显为单一真相，与请求值解耦", async () => {
-  const request = vi.fn((input: string | URL | Request) => {
-    const url = new URL(String(input));
-    if (url.pathname === "/api/admin/companies/query")
-      return Promise.resolve(success({ ...page(), page: 4, pageSize: 50 }));
-    return Promise.resolve(success(detail));
-  });
-  vi.stubGlobal("fetch", request);
-  const { result } = mount(new AdminClient());
-
-  await waitFor(() => expect(result.current.companies.loading).toBe(false));
-  expect(result.current.companies.page).toBe(4);
-  expect(result.current.companies.pageSize).toBe(50);
-  expect(queryBodies(request)).toEqual([{ page: 1, pageSize: 20 }]);
-});
-
-// initialFilters 只在挂载读取：props 更新不得覆盖已应用的筛选，
-// 只有重新挂载（如 App 对 ResourcesPage 的 key remount）才应用新的初始筛选。
-it("initialFilters 只在挂载生效，重挂载才应用新的初始筛选", async () => {
-  const request = vi.fn((input: string | URL | Request) => {
-    const url = new URL(String(input));
-    if (url.pathname === "/api/admin/companies/query")
-      return Promise.resolve(success(page()));
-    return Promise.resolve(success(detail));
-  });
-  vi.stubGlobal("fetch", request);
-
-  const first = mountList({ keyword: "青禾", page: 1, pageSize: 20 });
-  await waitFor(() => expect(first.result.current.loading).toBe(false));
-  first.rerender({ keyword: "新条件", page: 1, pageSize: 20 });
-  await act(async () => {});
-  expect(first.result.current.keyword).toBe("青禾");
-  expect(queryBodies(request)).toEqual([
-    { page: 1, pageSize: 20, keyword: "青禾" },
-  ]);
-  first.unmount();
-
-  const second = mountList({ keyword: "新条件", page: 1, pageSize: 20 });
-  await waitFor(() => expect(second.result.current.loading).toBe(false));
-  expect(second.result.current.keyword).toBe("新条件");
-  expect(queryBodies(request)).toEqual([
-    { page: 1, pageSize: 20, keyword: "青禾" },
-    { page: 1, pageSize: 20, keyword: "新条件" },
-  ]);
 });

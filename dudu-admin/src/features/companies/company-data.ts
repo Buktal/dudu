@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { adminApi } from "@/api/admin-api";
 import { useAdmin } from "@/api/context";
+import { usePagedQuery } from "@/api/paged-query";
 import type {
   CompanyProfile,
   CompanyQuery,
@@ -25,37 +26,27 @@ function subscribeCompaniesChanged(notify: () => void) {
   };
 }
 
-// 企业列表：client 绑定、请求竞态防护、查询条件与失效重读都收敛在这里。
-// 写接口是命名操作（setKeyword/setStatus/reset/setPage）：「筛选变化回第一页且保留
-// pageSize」的不变量在 module 内固定，调用方不手工拼 CompanyQuery；
-// page 只暴露服务端回显这一份真相（加载或失败时回退请求值）。
+// 企业列表：翻页机制收敛在 usePagedQuery，这里只装订 domain 词汇——
+// 命名操作 setKeyword/setStatus 把筛选意图映射进 CompanyQuery，请求走
+// adminApi.companies；对外键名与语义不变，调用方不感知机制侧。
 export function useCompanies(initialFilters: CompanyQuery) {
-  const client = useAdmin();
-  const [filters, setFilters] = useState(initialFilters);
-  const query = useQuery(
-    useCallback(
-      (signal: AbortSignal) => adminApi.companies(client, filters, signal),
-      [client, filters],
-    ),
-  );
-  useEffect(() => subscribeCompaniesChanged(query.refresh), [query.refresh]);
+  const paging = usePagedQuery(adminApi.companies, initialFilters);
+  // 企业聚合失效接线：维护成功即重读挂载中的列表。
+  useEffect(() => subscribeCompaniesChanged(paging.refresh), [paging.refresh]);
   return {
-    keyword: filters.keyword,
-    status: filters.status,
-    setKeyword: (keyword?: string) =>
-      setFilters((current) => ({ ...current, page: 1, keyword })),
-    setStatus: (status?: CompanyStatus) =>
-      setFilters((current) => ({ ...current, page: 1, status })),
-    reset: () =>
-      setFilters((current) => ({ page: 1, pageSize: current.pageSize })),
-    setPage: (page: number) => setFilters((current) => ({ ...current, page })),
-    list: query.data?.list ?? [],
-    total: query.data?.total ?? 0,
-    page: query.data?.page ?? filters.page,
-    pageSize: query.data?.pageSize ?? filters.pageSize,
-    loading: query.loading,
-    error: query.error,
-    refresh: query.refresh,
+    keyword: paging.filters.keyword,
+    status: paging.filters.status,
+    setKeyword: (keyword?: string) => paging.setFilter({ keyword }),
+    setStatus: (status?: CompanyStatus) => paging.setFilter({ status }),
+    reset: paging.reset,
+    setPage: paging.setPage,
+    list: paging.list,
+    total: paging.total,
+    page: paging.page,
+    pageSize: paging.pageSize,
+    loading: paging.loading,
+    error: paging.error,
+    refresh: paging.refresh,
   };
 }
 
