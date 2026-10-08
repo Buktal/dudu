@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useAdmin, useSession } from "@/api/context";
-import { useMutation } from "@/api/use-mutation";
 import { cn } from "@/lib/utils";
 import { navigate, routes, type View } from "@/navigation";
 import { Brand } from "./brand";
@@ -40,10 +39,13 @@ export function AdminLayout({
 }) {
   const client = useAdmin();
   const session = useSession();
-  const mutation = useMutation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  // 重入门卫归 useMutation 单点：退出在途时重复触发直接被拦。
-  const logout = () => mutation.run(() => client.logout());
+  const [loggingOut, setLoggingOut] = useState(false);
+  const logout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    await client.logout();
+  };
   const navigation = (
     <nav aria-label="主导航" className="flex flex-col gap-1.5 p-4">
       {items.map(({ view: target, label, icon: Icon }) => (
@@ -123,11 +125,11 @@ export function AdminLayout({
             <Button
               variant="ghost"
               size="sm"
-              disabled={mutation.pending}
+              disabled={loggingOut}
               onClick={() => void logout()}
             >
               <LogOut data-icon="inline-start" />
-              {mutation.pending ? "正在退出" : "退出"}
+              {loggingOut ? "正在退出" : "退出"}
             </Button>
           </div>
         </header>
