@@ -1,8 +1,7 @@
-import { FileClock, RotateCcw, Search } from "lucide-react";
-import { useState } from "react";
+import { FileClock } from "lucide-react";
 import { operationActions } from "@/api/types";
 import { validCompanyId } from "@/api/validators";
-import { TextField } from "@/components/form-field";
+import { FilterBar } from "@/components/filter-bar";
 import {
   FilterSelect,
   formatDate,
@@ -12,7 +11,6 @@ import {
 import { QueryView } from "@/components/query-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FieldGroup } from "@/components/ui/field";
 import {
   Table,
   TableBody,
@@ -25,14 +23,9 @@ import { useLogs } from "./log-data";
 
 export function LogsPage() {
   const query = useLogs({ page: 1, pageSize: PAGE_SIZE });
-  // 企业 ID 是提交式草稿：校验通过前不进查询，hook 只收已应用的值。
-  const [companyId, setCompanyId] = useState("");
-  const [error, setError] = useState<string | undefined>();
-  const reset = () => {
-    setCompanyId("");
-    setError(undefined);
-    query.reset();
-  };
+  // 企业 ID 是提交式草稿：校验通过前不进查询，hook 只收已应用的值；
+  // 草稿、校验错误与重置编排收敛在 FilterBar 单点。
+  // 空态「清除筛选」走 query.reset，草稿经「跟随已应用值」一并清空。
   return (
     <div className="flex flex-col gap-6">
       <QueryView
@@ -40,40 +33,22 @@ export function LogsPage() {
           <RefreshButton loading={query.loading} onClick={query.refresh} />
         }
         filters={
-          <form
-            aria-label="操作记录筛选"
-            className="filter-bar"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (companyId && !validCompanyId(companyId)) {
-                setError("请输入六位企业 ID");
-                return;
-              }
-              setError(undefined);
-              query.setCompanyId(companyId || undefined);
-            }}
+          <FilterBar
+            label="操作记录筛选"
+            searchLabel="企业 ID"
+            placeholder="搜索六位企业 ID"
+            maxLength={6}
+            inputMode="numeric"
+            value={query.companyId}
+            validate={(companyId) =>
+              companyId !== "" && !validCompanyId(companyId)
+                ? "请输入六位企业 ID"
+                : undefined
+            }
+            hasConditions={query.action !== undefined}
+            onSearch={query.setCompanyId}
+            onReset={query.reset}
           >
-            <div className="filter-search">
-              <FieldGroup className="min-w-0 flex-1">
-                <TextField
-                  label="企业 ID"
-                  hideLabel
-                  value={companyId}
-                  onChange={(event) => {
-                    setCompanyId(event.target.value);
-                    setError(undefined);
-                  }}
-                  maxLength={6}
-                  inputMode="numeric"
-                  error={error}
-                  placeholder="搜索六位企业 ID"
-                />
-              </FieldGroup>
-              <Button type="submit" variant="secondary">
-                <Search data-icon="inline-start" />
-                搜索
-              </Button>
-            </div>
             <FilterSelect<keyof typeof operationActions | "all">
               label="操作类型"
               value={query.action ?? "all"}
@@ -88,13 +63,7 @@ export function LogsPage() {
                 query.setAction(action === "all" ? undefined : action)
               }
             />
-            {(companyId || query.companyId || query.action) && (
-              <Button type="button" variant="ghost" onClick={reset}>
-                <RotateCcw data-icon="inline-start" />
-                重置
-              </Button>
-            )}
-          </form>
+          </FilterBar>
         }
         count={query.list.length}
         loading={query.loading}
@@ -119,7 +88,7 @@ export function LogsPage() {
           },
           action: (filtered) =>
             filtered && (
-              <Button variant="outline" onClick={reset}>
+              <Button variant="outline" onClick={query.reset}>
                 清除筛选
               </Button>
             ),

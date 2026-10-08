@@ -152,6 +152,10 @@ _Avoid_: 手写 useAdmin + useCallback 绑定仪式（旧实现）
 DuduAdmin 三个列表页（企业、企业资源汇总、操作记录）共用的加载→失败→空态→表格→分页编排单点：「失败不冒充空数据」由分支顺序（error 先于空态判定）单点保证；表格列与行走 children 槽，空态动作按钮与两套空态文案（筛选中 / 全量）归页面。
 _Avoid_: 三步舞手写编排（loading/error/数据分支逐页复制）、失败态渲染空态文案
 
+**筛选栏（FilterBar）**:
+DuduAdmin 列表页共用的「草稿-提交-重置」编排单点（components 层 filter-bar）：输入只改草稿、点搜索才上报（去空格，空串归 undefined）、草稿跟随已应用值、重置立即清草稿（含校验错误）并上报 onReset、重置按钮仅在草稿或已应用条件存在时可见，这些不变量在 filter-bar 唯一实现与测试；搜索字段差异（标签、占位、校验）走 props，立即生效的下拉走 children 槽，企业筛选（CompanyFilters）与操作记录筛选收缩为它的薄组合。
+_Avoid_: 逐页手写 form 草稿编排、remount key 换重置清空（旧形态）
+
 **路由构造（routes）**:
 DuduAdmin 中 hash 路由地址的构造单点：页面间跳转只表达意图（overview / companies / companyCreate / companyDetail / resources 五个命名构造），参数名（companyId / create）、取值约定（create=1）、企业 ID 编码与「回纯列表即清参关闭弹层」的关闭语义收敛在 navigation.ts 一处，与解析侧（parseRoute / useRoute）共用同一组语法常量并有 builder→parser 往返测试；概览页、资源汇总页打开企业弹层等跨页跳转不再手写查询串。
 _Avoid_: 手写路由字符串（模板串拼 `companies?companyId=`、字面量 `"companies?create=1"`）
