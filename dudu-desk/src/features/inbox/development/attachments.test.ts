@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createDevelopmentInboxApi } from "./development-api";
-import type { ReplyCapability, RequestOptions, SendTarget } from "./types";
+import type { ReplyCapability, RequestOptions, SendTarget } from "../types";
+import { createDevelopmentInboxApi } from "./api";
 
 async function setup() {
   const driver = createDevelopmentInboxApi();

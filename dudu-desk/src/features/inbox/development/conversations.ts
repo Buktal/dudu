@@ -1,4 +1,4 @@
-import type { ConversationStatus, InboxMessage, MessageBody } from "./types";
+import type { ConversationStatus, InboxMessage, MessageBody } from "../types";
 
 export type DevelopmentTurn = {
   direction: InboxMessage["direction"];

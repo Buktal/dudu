@@ -1,25 +1,25 @@
 import { isEqual } from "lodash-es";
 import { DeskApiError } from "@/lib/api-response";
 import { nowIso } from "@/lib/time";
-import type { InboxApi } from "./api";
+import type { InboxApi } from "../api";
 import {
   attachmentBatchRestriction,
   attachmentKind,
   attachmentRestriction,
-} from "./attachment-rules";
+} from "../attachment-rules";
 import {
   compareConversations,
   matchesConversationFilters,
   matchesConversationText,
-} from "./conversation-query";
+} from "../conversation-query";
+import { messageSummary } from "../message-text";
+import type { InboxMessage, MediaReference, SendTarget } from "../types";
 import {
   createDevelopmentDriver,
   findDevelopmentConversation as findConversation,
   isDevelopmentScenario,
   resolveDevelopmentScenario,
-} from "./development-scenarios";
-import { messageSummary } from "./message-text";
-import type { InboxMessage, MediaReference, SendTarget } from "./types";
+} from "./scenarios";
 
 export { isDevelopmentScenario };
 

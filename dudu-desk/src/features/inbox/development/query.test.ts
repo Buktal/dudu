@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { emptyQuery } from "./conversation-query";
-import { createDevelopmentInboxApi } from "./development-api";
-import { loadConversations } from "./stores/queue";
-import { createInboxStore } from "./stores/store";
+import { emptyQuery } from "../conversation-query";
+import { loadConversations } from "../stores/queue";
+import { createInboxStore } from "../stores/store";
+import { createDevelopmentInboxApi } from "./api";
 
 const context = { workspaceId: "preview", agentId: "agent" };
 const request = () => ({ context, signal: new AbortController().signal });

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { InboxApi } from "./api";
-import { createDevelopmentInboxApi } from "./development-api";
+import type { InboxApi } from "../api";
 import type {
   Conversation,
   ConversationQuery,
   InboxEvent,
   RequestOptions,
   SendTarget,
-} from "./types";
+} from "../types";
+import { createDevelopmentInboxApi } from "./api";
 
 const options = (): RequestOptions => ({
   context: {

@@ -172,6 +172,10 @@ _Avoid_: 手写 runOperation 仪式、逐处兜底串（旧实现）
 DuduDesk 中会话列表类界面（来访会话队列、卡片工作台、消息时间线、固定会话选择）共用的呈现映射单点：load-state + 条目数 → 首读 loading / 失败重试 / 空态 / 内容四相位。`!hasLoaded && status === "loading"`（首读恒占满屏，Live 事件或乐观发送抢先入列也不改；重读与续读保留已加载内容）这一 hasLoaded × status 不变量收敛在 inbox-state 的 isInitialRead，无 load-state 形状的读取（固定会话选择）以「在飞 + 无条目」表达同一相位；四相位分支与「有内容仍出错」的 compact 错误条归 InboxListPhase，调用点只保留内容分支、各自文案（含筛选双文案）与重试命令。
 _Avoid_: 逐组件手写四态判定、hasLoaded×status 组合散落（旧实现）
 
+**开发联调世界（Development World）**:
+DuduDesk 中 dev-only 联调模块的收敛 seam：开发适配器（api）、场景驱动（scenarios）、种子数据（mocks、conversations、portraits）与 fixture 内核（fixtures）整体落在 `dudu-desk/src/features/inbox/development/`，仅当 `import.meta.env.DEV` 与 `VITE_DESK_MOCK === "true"` 同时成立时由 inbox runtime.ts 动态 import，正式构建不导入该目录；生产代码对开发世界的唯一触达点是这一个动态导入。
+_Avoid_: 生产模块静态 import development/ 内部文件、在 inbox 根平铺 dev-only 模块（旧形态）
+
 **回执证据（ReceiptEvidence）**:
 DuduDesk 中一条消息投递状态的服务端证据（版本 + delivery）：按 clientRequestId / serverId / id 三键关联（receiptKeys），版本新者优先、同版本按状态明确度取胜（evidenceRank + rememberReceipt），本地不确定的证据永不覆盖已存的服务端证据。形状与策略同址收敛在 inbox stores/receipts 单点，Live 合并内核、receipt 事件分支与重连对账共用同一合并算法。
 _Avoid_: 消息 delivery 字段直读直写（绕过证据合并）、按事件到达顺序判新旧

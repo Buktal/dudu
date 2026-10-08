@@ -1,24 +1,24 @@
 import { en, Faker, zh_CN } from "@faker-js/faker";
 import { relativeIso } from "@/lib/time";
-import {
-  allowedCapability,
-  defineConversation,
-  restrictedCapability,
-  unknownCapability,
-} from "./fixtures";
-import {
-  type DevelopmentTurn,
-  developmentEarlierTurns,
-  developmentScene,
-} from "./mock-conversations";
-import { developmentPortrait } from "./mock-portraits";
 import type {
   Conversation,
   InboxMessage,
   MessageBody,
   ReplyCapability,
   VisitorProfile,
-} from "./types";
+} from "../types";
+import {
+  type DevelopmentTurn,
+  developmentEarlierTurns,
+  developmentScene,
+} from "./conversations";
+import {
+  allowedCapability,
+  defineConversation,
+  restrictedCapability,
+  unknownCapability,
+} from "./fixtures";
+import { developmentPortrait } from "./portraits";
 
 const sources = [
   ["wechat-kf", "微信客服", "wechat-main", "品牌旗舰店"],
@@ -42,7 +42,7 @@ const screenshot = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
  * and text-only reply policies visible in the dev world no matter how the
  * channel order above changes. Editing a card's policy means moving its slot
  * constant — never guessing an array position. Positions are pinned by
- * development-api.test.ts (e.g. dev-conversation-05 is restricted).
+ * development/api.test.ts (e.g. dev-conversation-05 is restricted).
  */
 const RESTRICTED_SLOT = 4;
 const UNKNOWN_SLOT = 5;

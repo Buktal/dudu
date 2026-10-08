@@ -10,9 +10,9 @@
 
 开发模式首次自动进入“林舟 · 嘟嘟服务中心”的工作台，方便直接查看会话。可以从右上角头像打开账户信息或设置，也可完整体验退出与重新登录。开发账号为 `linzhou`，密码为 `desk123`；这两项只存在于开发适配器，不进入正式产物，不在产品页面展示提示。退出后，同一标签页刷新仍停留在登录页，重新登录恢复开发身份。此行为通过 `sessionStorage` 中的 `dudu-desk.development-signed-out` 标记实现，不保存密码或令牌；新标签页重新进入初始开发会话。
 
-退出成功会卸载 inbox，取消请求和订阅、清空草稿、附件与固定对象。主题、接待方式和减少动态效果保留在独立偏好中。账号资料由 `features/account/mocks.ts` 提供，来访会话由 `features/inbox/mocks.ts` 提供，均通过正式组件展示。
+退出成功会卸载 inbox，取消请求和订阅、清空草稿、附件与固定对象。主题、接待方式和减少动态效果保留在独立偏好中。账号资料由 `features/account/mocks.ts` 提供，来访会话由 `features/inbox/development/mocks.ts` 提供，均通过正式组件展示。
 
-`mocks.ts` 使用已安装的 Faker，固定 seed 为 `20260916`。默认 36 个会话，每页 12 个；消息历史每页 20 条，页内按 `sequence` 升序，`nextCursor` 指向更早的历史。前三个来访用户都叫“林小满”，但渠道或账号不同；第 5 个回复受限，第 6 个权限未知，第 7 个仅支持文字，第 8 个没有昵称。
+`development/mocks.ts` 使用已安装的 Faker，固定 seed 为 `20260916`。默认 36 个会话，每页 12 个；消息历史每页 20 条，页内按 `sequence` 升序，`nextCursor` 指向更早的历史。前三个来访用户都叫“林小满”，但渠道或账号不同；第 5 个回复受限，第 6 个权限未知，第 7 个仅支持文字，第 8 个没有昵称。
 
 前三位初始等待分别为 18、4、11 分钟，完整历史分别为 34、52、26 条，方便观察“等待最久”和“消息最多”的不同顺序。名单排序后不保证这三位都在首屏；可以搜索姓名或按来源定位。头像为本地稳定 SVG，接待内容来自 12 组连贯场景。
 
@@ -85,10 +85,10 @@
 
 ## 验证
 
-针对 API seam 的回归用例位于 `src/lib/desk-http.test.ts` 与 `src/features/inbox/development-api.test.ts`：
+针对 API seam 的回归用例位于 `src/lib/desk-http.test.ts` 与 `src/features/inbox/development/api.test.ts`：
 
 ```powershell
-yarn test src/lib/desk-http.test.ts src/features/inbox/development-api.test.ts
+yarn test src/lib/desk-http.test.ts src/features/inbox/development/api.test.ts
 yarn check:type
 yarn lint
 ```

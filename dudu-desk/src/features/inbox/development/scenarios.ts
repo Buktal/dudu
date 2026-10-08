@@ -1,6 +1,5 @@
 import { DeskApiError } from "@/lib/api-response";
-import type { InboxApi } from "./api";
-import { createDevelopmentFixtures, type DevelopmentFixtures } from "./mocks";
+import type { InboxApi } from "../api";
 import type {
   ConnectionState,
   DeliveryState,
@@ -12,7 +11,8 @@ import type {
   SendSubmission,
   SendTarget,
   WorkContext,
-} from "./types";
+} from "../types";
+import { createDevelopmentFixtures, type DevelopmentFixtures } from "./mocks";
 
 type EventData<T = InboxEvent> = T extends InboxEvent
   ? Omit<T, "id" | "cursor" | "context">

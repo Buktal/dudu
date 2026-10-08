@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineConversation } from "./fixtures";
+import { defineConversation } from "./development/fixtures";
 import {
   buildReplySubmission,
   replyReadiness,

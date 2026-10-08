@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createDevelopmentInboxApi } from "./development-api";
-import type { InboxEvent, ReplyCapability, RequestOptions } from "./types";
+import type { InboxEvent, ReplyCapability, RequestOptions } from "../types";
+import { createDevelopmentInboxApi } from "./api";
 
 const options = (): RequestOptions & { conversationId: string } => ({
   context: {

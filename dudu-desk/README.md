@@ -107,7 +107,7 @@ src/
 │   ├── components/             三种布局及共享接待组件
 │   ├── hooks/                  接待逻辑 hooks
 │   ├── stores/                 状态、操作命令与 selectors
-│   └── development-*.ts / mocks.ts  开发联调与固定数据工厂
+│   └── development/            开发联调适配器与固定数据工厂（dev-only）
 ├── components/                 工作台外壳、设置、控件、动效与共享 UI
 └── lib/                        偏好、时间、HTTP、附件等共享逻辑
 src-tauri/                      Tauri 桌面宿主与本地平台桥接

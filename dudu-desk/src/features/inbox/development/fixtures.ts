@@ -4,7 +4,7 @@ import type {
   ReplyCapability,
   SendKind,
   VisitorProfile,
-} from "./types";
+} from "../types";
 
 /**
  * FixtureBuilder module: one place that knows what a valid Conversation

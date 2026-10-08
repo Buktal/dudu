@@ -8,7 +8,7 @@ import {
 import { Provider } from "react-redux";
 import { afterEach, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { createDevelopmentInboxApi } from "../development-api";
+import { createDevelopmentInboxApi } from "../development/api";
 import { loadConversations } from "../stores/queue";
 import { loadHistory } from "../stores/reading";
 import { createInboxStore } from "../stores/store";
