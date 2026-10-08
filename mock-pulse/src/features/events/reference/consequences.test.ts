@@ -18,7 +18,8 @@ import {
   validateScenario,
 } from "@/features/scenarios/model";
 import { resolveSteps } from "@/features/scenarios/selectors";
-
+import type { EventItem } from "../model";
+import { schemaById } from "../schemas";
 import {
   REF_CONSEQUENCES,
   refEntryOf,
@@ -30,9 +31,7 @@ import {
   interpretPresence,
   interpretTemplateStep,
 } from "./interpret";
-import type { EventItem } from "./model";
 import { describeEventVersion, describeTemplateVersion } from "./resolve";
-import { schemaById } from "./schemas";
 
 /**
  * consequence 表行为钉住（C5）：每 status × 时钟一行，断言的都是

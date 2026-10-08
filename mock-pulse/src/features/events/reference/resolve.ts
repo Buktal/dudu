@@ -1,8 +1,10 @@
-import type { EventItem, EventVersion } from "./model";
-import type { EventSchema } from "./schemas";
+import type { EventItem, EventVersion } from "../model";
+import type { EventSchema } from "../schemas";
 
 /**
  * 引用解析 kernel（C2：查找与缺失含义同一模块，挂在引用数据的 events 域）。
+ * 归位：与 consequence 表、interpreter 一并住 ./reference（评审 C1），
+ * 域外仍只经 events 门面消费。
  *
  * 下钻查找（resolve*）是内部接缝：{eventId, revision} → {事件, 版本}，
  * {templateId, templateVersion} → 模板。lane 剧本的行查找（快照优先）

@@ -1,9 +1,11 @@
 import { has } from "lodash-es";
-import { safePath, WIRE_FIELD_PATTERN } from "./paths";
-import type { WirePayload, XmlLayout } from "./schemas";
+import { safePath, WIRE_FIELD_PATTERN } from "../paths";
+import type { WirePayload, XmlLayout } from "../schemas";
 
 /**
- * 企微 XML 载荷的确定性拼装与解析（纯函数）。
+ * 企微 XML 载荷的确定性拼装与解析（纯函数；评审 C1 归位 codec/，字节
+ * 编解码单点，不依赖 EventSchema——layout 与 knownTags 经参数传入，
+ * 与 ./form、./json 同层）。
  * 载荷模型：扁平对象，键 = XML 元素名（文档序，serde_json preserve_order
  * 保证跨 Rust 持久化往返键序不变），值 = 元素文本。
  * - 已知元素（描述符声明过）：按 layout 规则输出——裸文本或 CDATA，

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { EventItem } from "./model";
+import type { EventItem } from "../model";
 import { describeEventVersion, describeTemplateVersion } from "./resolve";
 
 const event = (id: string, revisions: number[]): EventItem => ({

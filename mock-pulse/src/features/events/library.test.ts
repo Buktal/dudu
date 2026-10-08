@@ -2,16 +2,15 @@ import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 
 import type { ChannelId } from "@/lib/channels";
-
-import type { EventItem } from "./model";
-import { EVENT_SCHEMAS, schemasByChannel } from "./schemas";
 import {
   type EventFilters,
   filterEvents,
   libraryRows,
   paginateEvents,
   templatesForChannel,
-} from "./selectors";
+} from "./library";
+import type { EventItem } from "./model";
+import { EVENT_SCHEMAS, schemasByChannel } from "./schemas";
 
 /** 固定 seed 的数百条样本工厂（验收：筛选分页在数百条样本下可用） */
 function seededEvents(count: number): EventItem[] {

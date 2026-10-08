@@ -21,7 +21,8 @@ import { describeEventVersion, describeTemplateVersion } from "./resolve";
  * seam 说明：新增引用形态 = 本 module 加一个 interpret* 函数；缺失语义变更 = 只改
  * consequence 表一行，调用侧不动。调用侧（runs 快照物化 / plans 编排物化与统计 /
  * scenarios 展示与校验 / 组合根删除守卫）只剩薄 adapter——错误文案模板注入
- * （措辞一字不动）与渠道一致性检查。
+ * （措辞一字不动）与渠道一致性检查。归位：kernel、consequence 表与本 module
+ * 一并住 ./reference（评审 C1），reference/index.ts 是子系统的域内出口。
  *
  * 约定：events 不反向依赖任何 feature。本 module 只收结构化最小形状，
  * 素材库整行与校验侧的窄行（存在性引用走 interpretPresence）都能进。

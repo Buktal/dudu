@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-
+import type { EventItem } from "../model";
+import { schemaById } from "../schemas";
 import {
   interpretEventStep,
   interpretPresence,
   interpretTemplateStep,
 } from "./interpret";
-import type { EventItem } from "./model";
-import { schemaById } from "./schemas";
 
 /**
  * interpreter guard / view 时钟契约（C1 唯一出口补齐的时钟行）：

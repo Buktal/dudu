@@ -1,13 +1,6 @@
 export { EventEditor, type EventEditorSlots } from "./components/event-editor";
 export { EventsView } from "./components/events-view";
-export {
-  type InterpretClock,
-  type InterpretedStep,
-  type InterpretMissingKind,
-  interpretEventStep,
-  interpretPresence,
-  interpretTemplateStep,
-} from "./interpret";
+export { templatesForChannel } from "./library";
 export {
   DEFAULT_EXPECTED,
   type EventDraft,
@@ -15,8 +8,6 @@ export {
   type EventVersion,
   type ExpectedReceipt,
   type ReceiptBodyMode,
-  resolveEventVersion,
-  resolveTemplateVersion,
 } from "./model";
 export {
   parseWireDraft,
@@ -28,7 +19,17 @@ export {
   describeExpected,
   RECEIPT_BODY_MODES,
 } from "./receipt";
-export { resolveRow } from "./resolve";
+export {
+  type InterpretClock,
+  type InterpretedStep,
+  type InterpretMissingKind,
+  interpretEventStep,
+  interpretPresence,
+  interpretTemplateStep,
+  resolveEventVersion,
+  resolveRow,
+  resolveTemplateVersion,
+} from "./reference";
 export {
   EVENT_SCHEMAS,
   type EventSchema,
@@ -40,7 +41,6 @@ export {
 export {
   selectDraftChannelId,
   selectDraftId,
-  templatesForChannel,
 } from "./selectors";
 export {
   deleteEvent,

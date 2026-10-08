@@ -1,11 +1,15 @@
-import { cloneJson, flattenPayload, safePath } from "../paths";
+import { buildJsonBody } from "../codec/json";
+import { cloneJson } from "../payload-value";
 import type { EventSchema, WirePayload } from "../schemas";
 
 /**
- * JSON 线上形态分支（抖音等 wire === "json" 模板的拼装/解析单点）：
- * contentString 转换（editorPayload / wirePayload）与 JSON 校验收敛于此，
+ * JSON 线上形态分支（抖音等 wire === "json" 模板的 schema 感知 adapter）：
+ * contentString 转换（editorPayload / wirePayload）与分支文本出口收敛于此，
  * payload.ts 的 wireBodyText / wireDraftText / parseWireDraft 只做分发。
- * 键序规则见 payload.ts wireBodyText（载荷文档序 + Rust preserve_order）。
+ * 线上字节的编解码单点在 ../codec/json（buildJsonBody / parseWirePayload，
+ * 评审 C1 归位）；完整报文页编辑文本（2 空格缩进）是展示文本非线上字节，
+ * 留在本分支。键序规则见 payload.ts wireBodyText（载荷文档序 +
+ * Rust preserve_order）。
  */
 
 /**
@@ -63,12 +67,12 @@ export function wirePayload(
   return draft;
 }
 
-/** JSON 分支的线上明文：紧凑序列化（UTF-8 原文，不转义非 ASCII）。 */
+/** JSON 分支的线上明文：紧凑序列化（字节语义单点在 ../codec/json）。 */
 export function jsonWireText(
   schema: EventSchema,
   payload: WirePayload,
 ): string {
-  return JSON.stringify(wirePayload(schema, payload));
+  return buildJsonBody(wirePayload(schema, payload));
 }
 
 /** JSON 分支的完整报文页编辑文本：2 空格缩进。 */
@@ -77,21 +81,4 @@ export function jsonDraftText(
   payload: WirePayload,
 ): string {
   return JSON.stringify(wirePayload(schema, payload), null, 2);
-}
-
-/** 完整报文文本 → 载荷（JSON 校验：最外层必须是对象，路径安全）。 */
-export function parseWirePayload(text: string): WirePayload {
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error("报文不是合法的 JSON。");
-  }
-  if (data == null || Array.isArray(data) || typeof data !== "object") {
-    throw new Error("报文最外层必须是对象。");
-  }
-  if (flattenPayload(data).some((leaf) => !safePath(leaf.path))) {
-    throw new Error("报文包含保留字段名。");
-  }
-  return cloneJson(data) as WirePayload;
 }

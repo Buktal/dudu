@@ -19,8 +19,10 @@
  *   故 version-missing 仍拦删（行在），lane 无版本维度，
  *   version-missing 列为不可达、默认不拦。
  *
- * 本表与 kernel 均为 events 域内私有（门面只出 interpreter）：唯一读方是
- * ./interpret，域外消费一律走 interpret* 的时钟入口。
+ * 本表为 events 域内私有：唯一读方是 ./interpret，域外消费一律走
+ * interpret* 的时钟入口。归位：随 kernel 与 interpreter 一并住
+ * ./reference（评审 C1）；kernel 与 interpret* 经 reference/index.ts
+ * 出门，供 events 门面与 model 再导出，本表不经此出口。
  */
 
 export type RefStatusName = "ok" | "id-missing" | "version-missing";

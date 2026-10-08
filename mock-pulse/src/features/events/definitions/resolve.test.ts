@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flattenPayload } from "../paths";
+import { flattenPayload } from "../payload-value";
 import { schemaById } from "../schemas";
 import {
   finalizeField,

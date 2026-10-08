@@ -5,16 +5,16 @@ import {
   createDraft,
   draftFromItem,
   isDraftDirty,
-} from "./model";
+} from "../model";
 import {
   parseWireDraft,
   setPayloadField,
   wireBodyText,
   wireDraftText,
   withCustomField,
-} from "./payload";
-import type { XmlLayout } from "./schemas";
-import { schemaById } from "./schemas";
+} from "../payload";
+import type { XmlLayout } from "../schemas";
+import { schemaById } from "../schemas";
 import { buildXmlBody, parseXmlBody } from "./xml";
 
 /**

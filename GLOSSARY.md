@@ -105,8 +105,12 @@ mock-pulse 剧本/编排运行启动即落盘的中断态记录：步骤先以�
 _Avoid_: 断点续跑（检查点不自动续发）、进度缓存（口语）
 
 **引用解析**:
-mock-pulse 中步骤/编排引用到注册表条目的查找与缺失分类单点：`{id, version}` → ok / id-missing / version-missing。事件素材版本、事件模板版本、编排 lane 剧本三处共用同一 kernel（events 域 resolve）；各时钟（运行 / 展示 / 编辑 / 守卫）的缺失含义收敛到同域 interpreter（interpret*）这一唯一出口，域外只经它消费，缺失语义变更只改 consequence 表一行。
+mock-pulse 中步骤/编排引用到注册表条目的查找与缺失分类单点：`{id, version}` → ok / id-missing / version-missing。事件素材版本、事件模板版本、编排 lane 剧本三处共用同一 kernel（events 域 reference/resolve）；各时钟（运行 / 展示 / 编辑 / 守卫）的缺失含义收敛到同域 interpreter（reference/interpret，interpret*）这一唯一出口，域外只经它消费，缺失语义变更只改 consequence 表一行。
 _Avoid_: 查找、引用查找（口语）
+
+**线上编解码（codec）**:
+mock-pulse 中事件报文三种线上形态（json / form / xml）的确定性字节编解码单点（events 域 codec/）：同输入同输出逐字节一致的拼装与解析（build*Body / parseWirePayload），不依赖 EventSchema，Rust 侧按同一语义对拍；schema 感知分支（contentString 往返、XML 排版装载）住 payload/ 各 adapter，payload.ts 只按模板的 wire 形态分发。
+_Avoid_: 编码器、序列化工具（口语）
 
 **渠道适配器（ChannelAdapter）**:
 各渠道出站协议原语（握手、直发、回执投影）的统一 seam：高保真差异全部住在各渠道实现模块内部，分派经 connections 域静态注册表单点；新渠道接入 = 一个实现文件 + 注册表一行。

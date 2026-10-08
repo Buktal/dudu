@@ -1,26 +1,25 @@
 import { get, toPath } from "lodash-es";
 
-import { cloneJson, safePath, WIRE_FIELD_PATTERN } from "./paths";
+import { parseWirePayload } from "./codec/json";
+import { isXmlNonScalar } from "./codec/xml";
+import { safePath, WIRE_FIELD_PATTERN } from "./paths";
 import { formWireText, parseFormDraft } from "./payload/form";
-import {
-  editorPayload,
-  jsonDraftText,
-  jsonWireText,
-  parseWirePayload,
-} from "./payload/json";
+import { editorPayload, jsonDraftText, jsonWireText } from "./payload/json";
 import { parseXmlDraft, xmlWireText } from "./payload/xml";
+import { cloneJson } from "./payload-value";
 import type { EventSchema, WireForm, WirePayload } from "./schemas";
-import { isXmlNonScalar } from "./xml";
 
 /**
  * 报文载荷编排：路径读写、叶子展开之外的编辑入口、表单/线上分发、
  * 发送者 ID 同步。全部为纯函数。
- * 线上形态按 schema.wire 分发到 wire 自有分支（./payload/json|form|xml）：
- * 抖音 JSON（紧凑序列化）、企微 XML（确定性拼装）、美团 form（确定性拼装）；
- * 深层字节语义单点仍在 ./form 与 ./xml（Rust 对拍注释随逻辑，不随分发走）。
- * 路径安全守卫（safePath）、扁平字段名单点（WIRE_FIELD_PATTERN）、深拷贝与
- * 叶子展开（cloneJson/flattenPayload）见 ./paths，各模块直接导入；
- * 表单字段解析（描述符 ∪ 载荷叶子 + 用户定义合并）见 ./definitions/resolve。
+ * 线上形态按 schema.wire 分发到 wire 自有分支（./payload/json|form|xml，
+ * schema 感知 adapter）：抖音 JSON（紧凑序列化）、企微 XML（确定性拼装）、
+ * 美团 form（确定性拼装）；深层字节语义单点在 ./codec/json|form|xml
+ * （Rust 对拍注释随逻辑，不随分发走）。
+ * 路径安全守卫（safePath）、扁平字段名单点（WIRE_FIELD_PATTERN）见
+ * ./paths，深拷贝与叶子展开（cloneJson/flattenPayload）见 ./payload-value，
+ * 各模块直接导入；表单字段解析（描述符 ∪ 载荷叶子 + 用户定义合并）见
+ * ./definitions/resolve。
  */
 
 /**

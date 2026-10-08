@@ -1,8 +1,8 @@
 import type { ChannelId } from "@/lib/channels";
 
 import { applyGeneratedIds } from "./ids";
-import { cloneJson } from "./paths";
 import { editorPayload, wirePayload } from "./payload/json";
+import { cloneJson } from "./payload-value";
 import type { EventSchema, ExpectedReceipt, WirePayload } from "./schemas";
 import { schemaById } from "./schemas";
 
@@ -90,9 +90,9 @@ export function latestVersion(event: EventItem): EventVersion | undefined {
   return event.versions[event.versions.length - 1];
 }
 
-// 步骤引用解析核心住在 ./resolve（C4：查找与缺失含义同一模块）；
-// 经此处再导出，既有调用（barrel / model.test.ts）不受影响。
-export { resolveEventVersion, resolveTemplateVersion } from "./resolve";
+// 步骤引用解析核心住在 ./reference/resolve（C4：查找与缺失含义同一模块）；
+// 经此处再导出供 model.test.ts，域外门面改从 ./reference 直取。
+export { resolveEventVersion, resolveTemplateVersion } from "./reference";
 
 /** 装载已保存事件为草稿：基于最新版本。 */
 export function draftFromItem(event: EventItem): EventDraft {

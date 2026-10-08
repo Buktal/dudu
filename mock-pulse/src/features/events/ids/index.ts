@@ -1,6 +1,6 @@
-import { cloneJson } from "../paths";
 import { getAt, setAt } from "../payload";
 import { parseContentString, stringifyContentString } from "../payload/json";
+import { cloneJson } from "../payload-value";
 import type { EventSchema, IdKind } from "../schemas";
 import {
   generateAibotMsgId,

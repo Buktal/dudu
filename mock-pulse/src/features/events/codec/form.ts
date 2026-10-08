@@ -1,9 +1,10 @@
-import { safePath, WIRE_FIELD_PATTERN } from "./paths";
-import type { WirePayload } from "./schemas";
+import { safePath, WIRE_FIELD_PATTERN } from "../paths";
+import type { WirePayload } from "../schemas";
 
 /**
  * form 载荷的确定性拼装与解析（纯函数）——form 线上形态
- * （application/x-www-form-urlencoded）的拼装单点，与 xml.ts 同层。
+ * （application/x-www-form-urlencoded）的字节编解码单点（评审 C1 归位
+ * codec/，不依赖 EventSchema），与 ./xml、./json 同层。
  * 载荷模型：扁平对象，键 = 表单字段名（文档序，serde_json preserve_order
  * 保证跨 Rust 持久化往返键序不变），值 = 文本/数字/布尔标量或 JSON 结构。
  * - 标量按文本输出；对象/数组先 JSON.stringify 再作字段值（表单渠道官方
@@ -18,7 +19,7 @@ import type { WirePayload } from "./schemas";
  *   backup_recipient_phone 等数组字段即以 JSON 结构进出编辑器。
  */
 
-/** 表单字段名即扁平字段名单点约束（与 XML 元素名同族，见 ./paths） */
+/** 表单字段名即扁平字段名单点约束（与 XML 元素名同族，见 ../paths） */
 function assertFieldName(key: string): void {
   if (!WIRE_FIELD_PATTERN.test(key) || !safePath(key)) {
     throw new Error(`无效的表单字段名：${key}`);

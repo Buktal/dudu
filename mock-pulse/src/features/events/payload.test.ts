@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-
+import { parseWirePayload } from "./codec/json";
 import {
   appendVersion,
   createDraft,
   draftFromItem,
   type EventItem,
 } from "./model";
-import { flattenPayload, safePath } from "./paths";
+import { safePath } from "./paths";
 import {
   getAt,
   parseFieldText,
@@ -15,7 +15,8 @@ import {
   syncSenderIdentity,
   wireBodyText,
 } from "./payload";
-import { editorPayload, parseWirePayload, wirePayload } from "./payload/json";
+import { editorPayload, wirePayload } from "./payload/json";
+import { flattenPayload } from "./payload-value";
 import { schemaById } from "./schemas";
 
 const dyText = schemaById("dy-text");
