@@ -25,17 +25,16 @@ mod ark;
 #[cfg(test)]
 mod tests;
 
-use std::time::Duration;
-
 use crate::connections::util::now_secs;
 // 三参签名已进握手构造骨架（handshake_echo_get），本别名仅 tests 黄金对拍取用
 #[cfg(test)]
 use crate::connections::util::callback_signature as build_callback_signature;
 use crate::connections::wecom::crypto;
 
+use super::adapter::narrow;
 use super::{
-    handshake_echo_get, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
-    DispatchOutcome, DispatchSnapshot, HandshakeOutcome, XiaohongshuSystem,
+    handshake_echo_get, no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome,
+    DispatchSnapshot, HandshakeOutcome, XiaohongshuSystem,
 };
 
 /// 官方应答窗口（§10.5 镜像）：5 秒内未收到响应即断开重发，总共重试 3 次。
@@ -58,40 +57,17 @@ pub(crate) fn build_msg_signature(token: &str, timestamp: &str, nonce: &str, enc
     crypto::build_signature(token, timestamp, nonce, encrypt)
 }
 
-/// 从小红书连接配置取小程序通道字段；非小红书配置或 ark 通道返回 None。
-fn miniapp_fields(config: &ConnectionConfig) -> Option<(&str, &str, &str, &str)> {
-    let ConnectionConfig::Xiaohongshu {
-        url,
-        system,
-        token,
-        encoding_aes_key,
-        app_id,
-    } = config
-    else {
-        return None;
-    };
-    if *system != XiaohongshuSystem::Miniapp {
-        return None;
-    }
-    Some((url, token, encoding_aes_key, app_id))
-}
-
-/// GET 首次校验握手（§10.4）：生成随机 echostr/nonce → 三参字典序签名 →
-/// GET 目标 URL（四 query 参数）→ 期望 HTTP 200 且响应体与 echostr 逐字节
-/// 一致（官方要求原样返回 echostr，接入生效）。
+/// 小红书体系握手路由：小程序通道 GET 四参握手（§10.4）；ark 通道无官方
+/// 握手机制（§3.4），以最小推送探针验证连通（[`ark`]）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    system: &XiaohongshuSystem,
+    token: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Xiaohongshu { url, token, system, .. } = config else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是小红书渠道，无法执行 GET 握手".into(),
-        };
-    };
     if *system == XiaohongshuSystem::Ark {
-        return ark::probe_handshake(client, config);
+        return ark::probe_handshake(client, url);
     }
     let echostr = random_echostr();
     let timestamp = now_secs().to_string();
@@ -150,16 +126,17 @@ fn random16() -> [u8; 16] {
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    system: &XiaohongshuSystem,
+    token: &str,
+    encoding_aes_key: &str,
+    app_id: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    if matches!(
-        config,
-        ConnectionConfig::Xiaohongshu { system: XiaohongshuSystem::Ark, .. }
-    ) {
-        return ark::dispatch_event(client, config, plaintext);
+    if *system == XiaohongshuSystem::Ark {
+        return ark::dispatch_event(client, url, plaintext);
     }
-    miniapp_dispatch(client, config, plaintext)
+    miniapp_dispatch(client, url, token, encoding_aes_key, app_id, plaintext)
 }
 
 /// 小程序通道直发（§10.3/§11.2）：明文 JSON 逐字节加密进信封 body，POST 目标
@@ -167,12 +144,12 @@ fn dispatch_event(
 /// `success`（§10.5），无需解密，回执正文原样记录。
 fn miniapp_dispatch(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    token: &str,
+    encoding_aes_key: &str,
+    app_id: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let Some((url, token, encoding_aes_key, app_id)) = miniapp_fields(config) else {
-        return DispatchOutcome::not_sent("配置不是小红书小程序通道，无法直发");
-    };
     let push = match build_crypto_push(plaintext, token, encoding_aes_key, app_id) {
         Ok(push) => push,
         Err(reason) => return DispatchOutcome::not_sent(format!("事件加密封装失败：{reason}")),
@@ -196,6 +173,7 @@ fn miniapp_dispatch(
 /// 小红书渠道适配器：[`super::ChannelAdapter`] 的小红书实现——GET 四参握手与
 /// 加密信封/ark 数组双通道直发按连接配置路由；AES 原语复用企微同族
 /// （`wecom::crypto`，官方 MsgDecrypt 与微信同族），差异不外溢。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -212,15 +190,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Xiaohongshu { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：小程序通道官方 5 秒应答窗口（超时断开×3 重试）
-        super::client_with_timeout(Duration::from_secs(5))
+        narrow!(config, Xiaohongshu { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -228,7 +198,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Xiaohongshu { url, system, token } =>
+            verify_handshake(client, url, system, token))
     }
 
     fn dispatch_event(
@@ -237,6 +208,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Xiaohongshu { url, system, token, encoding_aes_key, app_id } =>
+            dispatch_event(client, url, system, token, encoding_aes_key, app_id, plaintext))
     }
 }

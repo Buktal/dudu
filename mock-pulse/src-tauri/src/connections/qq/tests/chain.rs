@@ -1,9 +1,11 @@
 //! 握手与直发全链路（本地 TcpListener）：op13 握手（官方头集合 + 回包验签
 //! 成功/回显不符/验签不过/非 2xx/超时）、事件直发（签名三头可复算 + 快照）、
-//! op13 模板直发（回包验签落 reply）、配置判别。
+//! op13 模板直发（回包验签落 reply）。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::time::Duration;
 
+use crate::connections::ChannelAdapter;
 use crate::test_support::{quick_client, start_single_server, RecordedPost};
 
 use super::*;
@@ -15,7 +17,7 @@ fn handshake_posts_official_headers_and_accepts_signed_reply() {
     let (addr, rx) = start_single_server(reply_validation, Duration::ZERO);
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("握手成功"), "{outcome:?}");
@@ -68,7 +70,7 @@ fn handshake_fails_when_reply_signature_is_invalid() {
     let (addr, _rx) = start_single_server(forged, Duration::ZERO);
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("签名"), "{outcome:?}");
@@ -87,7 +89,7 @@ fn handshake_fails_when_plain_token_is_not_echoed() {
     let (addr, _rx) = start_single_server(wrong_echo, Duration::ZERO);
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("不一致"), "{outcome:?}");
@@ -100,7 +102,7 @@ fn handshake_fails_on_non_json_or_missing_signature() {
     let (addr, _rx) = start_single_server(plain, Duration::ZERO);
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("不是合法 JSON"), "{outcome:?}");
@@ -113,7 +115,7 @@ fn handshake_fails_on_non_200() {
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("500"), "{outcome:?}");
@@ -125,7 +127,7 @@ fn handshake_fails_on_timeout() {
     let (addr, _rx) = start_single_server(reply_validation, Duration::from_secs(1));
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
-    let outcome = verify_handshake(&quick_client(Duration::from_millis(200)), &config);
+    let outcome = Adapter.verify_handshake(&quick_client(Duration::from_millis(200)), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("超时"), "{outcome:?}");
@@ -144,7 +146,7 @@ fn dispatch_signs_event_and_snapshots_protocol_elements() {
     let (addr, rx) = start_single_server(ok, Duration::ZERO);
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -182,7 +184,7 @@ fn dispatch_reports_non_200_status() {
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
-    let outcome = dispatch_event(&client(), &config, "{}");
+    let outcome = Adapter.dispatch_event(&client(), &config, "{}");
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -195,7 +197,7 @@ fn dispatch_reports_timeout_without_response() {
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
-    let outcome = dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");
@@ -210,7 +212,7 @@ fn dispatch_op13_template_verifies_reply_into_receipt() {
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
     let plaintext = build_validation_body(GOLDEN_PLAIN_TOKEN, GOLDEN_EVENT_TS);
 
-    let outcome = dispatch_event(&client(), &config, &plaintext);
+    let outcome = Adapter.dispatch_event(&client(), &config, &plaintext);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -247,28 +249,8 @@ fn dispatch_op13_template_records_unverifiable_reply_as_none() {
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
     let plaintext = build_validation_body(GOLDEN_PLAIN_TOKEN, GOLDEN_EVENT_TS);
 
-    let outcome = dispatch_event(&client(), &config, &plaintext);
+    let outcome = Adapter.dispatch_event(&client(), &config, &plaintext);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.reply, None, "验签不过时不落回显值");
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_qq_config() {
-    let config = ConnectionConfig::Feishu {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_id: "cli_x".into(),
-        verification_token: "token".into(),
-        encrypt_key: String::new(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是 QQ 渠道"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是 QQ 渠道"));
 }

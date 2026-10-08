@@ -54,6 +54,7 @@ use rsa::signature::Verifier;
 #[cfg(test)]
 use rsa::RsaPublicKey;
 
+use super::adapter::narrow;
 use super::{
     no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
     DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
@@ -209,22 +210,14 @@ fn post_signed(
 /// 连接测试（网关验证）：官方「验证应用网关」握手后半程待核验(09-27)（事实库
 /// §3.2/§7-2，勿硬编码），探针即官方支付异步通知核验样本（§5.1 逐字）+ 合规
 /// RSA2 签名（语义同普通推送），期望 HTTP 200（success 由接收方兑现）。
+/// 超时窗口：官方应答窗口未给出（重试节拍 4m 起远超本地窗口），本地沿用 5 秒
+/// 上限（trait 默认握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_private_key: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Alipay {
-        url,
-        app_private_key,
-        ..
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是支付宝渠道，无法执行推送探针握手".into(),
-        };
-    };
     let private_key = match parse_private_key(app_private_key) {
         Ok(private_key) => private_key,
         Err(reason) => {
@@ -250,17 +243,10 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_private_key: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Alipay {
-        url,
-        app_private_key,
-        ..
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是支付宝渠道，无法直发");
-    };
     let private_key = match parse_private_key(app_private_key) {
         Ok(private_key) => private_key,
         Err(reason) => return DispatchOutcome::not_sent(format!("签名私钥不可用：{reason}")),
@@ -270,7 +256,8 @@ fn dispatch_event(
 
 /// 支付宝渠道适配器：[`super::ChannelAdapter`] 的支付宝实现——推送探针握手
 /// 与 RSA2 表单直发；原语复用 util（form_pairs/strip_form_pair），签名取
-/// rsa crate，差异不外溢。
+/// rsa crate，差异不外溢。宽配置 → 渠道字段收窄经 `narrow!` 单点
+/// （super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -287,16 +274,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Alipay { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方应答窗口未给出（重试节拍 4m 起远超本地窗口），
-        // 本地沿用 5 秒上限
-        super::client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Alipay { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -304,7 +282,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Alipay { url, app_private_key } =>
+            verify_handshake(client, url, app_private_key))
     }
 
     fn dispatch_event(
@@ -313,6 +292,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Alipay { url, app_private_key } =>
+            dispatch_event(client, url, app_private_key, plaintext))
     }
 }

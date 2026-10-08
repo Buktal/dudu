@@ -4,7 +4,7 @@
 //! 被动回复包 `{"encrypt": "...", "msgsignature": "...", "timestamp": ..., "nonce": ...}`
 //! （官方注明 nonce 需复用回调 url 中的 nonce）。明文 JSON 逐字节透传，不重排。
 
-use super::super::{send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot};
+use super::super::{send_measured_outcome, DispatchOutcome, DispatchSnapshot};
 use super::{build_signature, decrypt_msg, encrypt_msg, random_16};
 use crate::connections::util::now_secs;
 
@@ -28,19 +28,11 @@ fn extract_reply_encrypt(body: &str) -> Option<String> {
 /// 私有协议原语：对外只经 [`super::Adapter`]（super::super::ChannelAdapter）路由。
 pub(super) fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    token: &str,
+    encoding_aes_key: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Wecom {
-        url,
-        token,
-        encoding_aes_key,
-        ..
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是企业微信渠道，无法直发");
-    };
-
     let msg_encrypt = match encrypt_msg(encoding_aes_key, &random_16(), plaintext.as_bytes(), "") {
         Ok(value) => value,
         Err(reason) => return DispatchOutcome::not_sent(reason),
@@ -86,7 +78,7 @@ mod tests {
     use super::super::crypto::{
         GOLDEN_ENCODING_AES_KEY, GOLDEN_TOKEN, GOLDEN_CORP_ID,
     };
-    use crate::connections::{ConnectionConfig, WecomSystem};
+    use crate::connections::{ChannelAdapter, ConnectionConfig, WecomSystem};
     use crate::test_support::{
         quick_client, query_params, run_dispatch_case, run_handshake_case, start_serial_server,
         status_responder, Responder,
@@ -123,7 +115,7 @@ mod tests {
             Duration::ZERO,
             Duration::from_secs(2),
             |addr| aibot_config(format!("http://{addr}/aibot")),
-            super::super::verify_handshake,
+            |client, config| super::super::Adapter.verify_handshake(client, config),
             true,
             &[],
         );
@@ -176,7 +168,7 @@ mod tests {
             Duration::ZERO,
             Duration::from_secs(2),
             |addr| aibot_config(format!("http://{addr}/aibot")),
-            dispatch_event,
+            |client, config, body| super::super::Adapter.dispatch_event(client, config, body),
         );
 
         assert_eq!(outcome.status, 200);
@@ -230,7 +222,7 @@ mod tests {
         let (addr, _rx) = start_serial_server(1, responder, Duration::ZERO);
         let config = aibot_config(format!("http://{addr}/aibot"));
 
-        let outcome = dispatch_event(
+        let outcome = super::super::Adapter.dispatch_event(
             &quick_client(Duration::from_secs(2)),
             &config,
             GOLDEN_AIBOT_JSON,
@@ -260,21 +252,5 @@ mod tests {
         let aibot_decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, &aibot_encrypt).unwrap();
         assert_eq!(aibot_decrypted.msg, golden.msg);
         assert_eq!(aibot_decrypted.receiveid, "", "机器人 receiveid = 空串");
-    }
-
-    #[test]
-    fn dispatch_rejects_non_wecom_config() {
-        let config = ConnectionConfig::Douyin {
-            url: "http://127.0.0.1:1/hook".into(),
-            system: crate::connections::DouyinSystem::Dop,
-            client_key: "tt_key".into(),
-            client_secret: "tt_secret".into(),
-            mini_game_token: String::new(),
-            isv_token: String::new(),
-            isv_key: String::new(),
-        };
-        let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, "{}");
-        assert_eq!(outcome.status, 0);
-        assert!(outcome.error.unwrap().contains("不是企业微信渠道"));
     }
 }

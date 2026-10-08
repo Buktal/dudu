@@ -36,6 +36,7 @@ use percent_encoding::utf8_percent_encode;
 
 use crate::connections::util::{append_absent, form_pairs, now_secs, sha1_hex, strip_sig, SIG_ENCODE_SET};
 
+use super::adapter::narrow;
 use super::{
     no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
     DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
@@ -191,22 +192,15 @@ fn post_signed(
 /// 连接测试（§3.1 无握手）：官方无 challenge/verify 口径，探针即官方订单
 /// 状态核验样本（§5.2 载荷逐字）+ 合规签名（语义同普通推送），期望 HTTP 200
 /// （官方成功应答口径 HTTP 200 + {"message":"ok"} 由接收方兑现）。
+/// 超时窗口：官方应答窗口未给出（§7.6），本地沿用 5 秒上限（trait 默认
+/// 握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    consumer_key: &str,
+    consumer_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Eleme {
-        url,
-        consumer_key,
-        consumer_secret,
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是饿了么渠道，无法执行推送探针握手".into(),
-        };
-    };
     let outcome = post_signed(client, url, consumer_key, consumer_secret, GOLDEN_PROBE_PLAINTEXT);
     probe_handshake_outcome(
         outcome,
@@ -225,22 +219,17 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    consumer_key: &str,
+    consumer_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Eleme {
-        url,
-        consumer_key,
-        consumer_secret,
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是饿了么渠道，无法直发");
-    };
     post_signed(client, url, consumer_key, consumer_secret, plaintext)
 }
 
 /// 饿了么渠道适配器：[`super::ChannelAdapter`] 的饿了么实现——推送探针握手与
 /// SHA1 五步签名直发；原语复用 util（sha1_hex），差异不外溢。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -257,15 +246,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Eleme { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方应答窗口未给出（§7.6），本地沿用 5 秒上限
-        super::client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Eleme { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -273,7 +254,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Eleme { url, consumer_key, consumer_secret } =>
+            verify_handshake(client, url, consumer_key, consumer_secret))
     }
 
     fn dispatch_event(
@@ -282,6 +264,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Eleme { url, consumer_key, consumer_secret } =>
+            dispatch_event(client, url, consumer_key, consumer_secret, plaintext))
     }
 }

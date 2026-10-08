@@ -1,8 +1,8 @@
 //! 握手与双通道直发全链路（本地 TcpListener）：
 //! 小程序 GET 四参握手（三参签名可复算 + 原样回显成功/回显不符/非 2xx/超时）、
 //! 加密信封直发（信封可独立验签解密 + 回执 success + 快照）、ark 数组直发
-//! （数组包裹逐字节核对 + 官方应答）、ark 推送探针（成功/应答不合规）、
-//! 配置判别。
+//! （数组包裹逐字节核对 + 官方应答）、ark 推送探针（成功/应答不合规）。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -10,7 +10,7 @@ use std::net::{Shutdown, SocketAddr, TcpListener};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use crate::connections::ConnectionConfig;
+use crate::connections::{ChannelAdapter, ConnectionConfig};
 use crate::test_support::{quick_client, read_head_and_body};
 
 use super::*;
@@ -102,7 +102,7 @@ fn echo_ok(request: &Recorded) -> (String, String) {
 fn handshake_succeeds_when_echostr_echoed_verbatim() {
     let (addr, rx) = start_request_server(echo_ok, Duration::ZERO);
     let config = miniapp_config(format!("http://{addr}/callback"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("原样回显"), "{outcome:?}");
@@ -134,7 +134,7 @@ fn handshake_fails_when_echostr_is_modified() {
     };
     let (addr, _rx) = start_request_server(wrong_echo, Duration::ZERO);
     let config = miniapp_config(format!("http://{addr}/callback"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("不一致"), "{outcome:?}");
@@ -147,7 +147,7 @@ fn handshake_fails_on_non_200() {
     };
     let (addr, _rx) = start_request_server(responder, Duration::ZERO);
     let config = miniapp_config(format!("http://{addr}/callback"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("500"), "{outcome:?}");
@@ -158,7 +158,7 @@ fn handshake_fails_on_timeout() {
     // 官方 5 秒应答窗口（超时断开×3 重试）；客户端 200ms 超时 vs 服务器 1s 延迟
     let (addr, _rx) = start_request_server(echo_ok, Duration::from_secs(1));
     let config = miniapp_config(format!("http://{addr}/callback"));
-    let outcome = verify_handshake(&quick_client(Duration::from_millis(200)), &config);
+    let outcome = Adapter.verify_handshake(&quick_client(Duration::from_millis(200)), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("超时"), "{outcome:?}");
@@ -175,7 +175,7 @@ fn dispatch_posts_encrypted_envelope_and_snapshots_elements() {
     let (addr, rx) = start_request_server(success_receipt, Duration::ZERO);
     let config = miniapp_config(format!("http://{addr}/callback"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_MESSAGE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_MESSAGE_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.body, "success");
@@ -213,7 +213,7 @@ fn dispatch_reports_non_200_status_and_body() {
     let (addr, _rx) = start_request_server(boom, Duration::ZERO);
     let config = miniapp_config(format!("http://{addr}/callback"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_MESSAGE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_MESSAGE_PLAINTEXT);
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -226,7 +226,7 @@ fn dispatch_reports_timeout_without_response() {
     let (addr, _rx) = start_request_server(slow, Duration::from_secs(1));
     let config = miniapp_config(format!("http://{addr}/callback"));
 
-    let outcome = dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");
@@ -244,7 +244,7 @@ fn dispatch_fails_fast_on_bad_aes_key_without_sending() {
         encoding_aes_key: "short-key".into(),
         app_id: GOLDEN_APP_ID.into(),
     };
-    let outcome = dispatch_event(&client(), &config, GOLDEN_MESSAGE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_MESSAGE_PLAINTEXT);
 
     assert_eq!(outcome.status, 0);
     let error = outcome.error.clone().expect("应有封装失败原因");
@@ -272,7 +272,7 @@ fn ark_dispatch_wraps_envelope_into_official_array_and_reads_receipt() {
     let (addr, _rx) = start_request_server(official_receipt, Duration::ZERO);
     let config = ark_config(format!("http://{addr}/callback"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_ARK_ENVELOPE);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_ARK_ENVELOPE);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(
@@ -305,7 +305,7 @@ fn ark_probe_handshake_succeeds_on_official_reply() {
     };
     let (addr, _rx) = start_request_server(official_receipt, Duration::ZERO);
     let config = ark_config(format!("http://{addr}/callback"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("探针成功"), "{outcome:?}");
@@ -321,27 +321,8 @@ fn ark_probe_handshake_fails_on_non_official_reply() {
     };
     let (addr, _rx) = start_request_server(wrong_reply, Duration::ZERO);
     let config = ark_config(format!("http://{addr}/callback"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("success=true"), "{outcome:?}");
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_xiaohongshu_config() {
-    let config = ConnectionConfig::Qq {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_id: "11111111".into(),
-        app_secret: "DG5g3B4j9X2KOErG".into(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是小红书"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是小红书"));
 }

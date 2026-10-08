@@ -36,6 +36,7 @@ mod tests;
 
 use crate::connections::util::{hmac_sha256_hex, md5_hex, now_secs, utc8_timestamp};
 
+use super::adapter::narrow;
 use super::{
     no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig, DispatchOutcome,
     DispatchSnapshot, HandshakeOutcome,
@@ -191,22 +192,15 @@ fn data_echo_check(response_body: &str, sent: i64) -> Result<(), String> {
 /// verify_webhooks 校验——按官方信封键序构造（content.data 为随机 10 位
 /// 整数、timestamp 为当前 UTC+8 字符串），带签名头表；期望 HTTP 200 且
 /// 应答原样回 {"data":<数值>}。
+/// 超时窗口：官方 5s 建连超时即断（§3.3 镜像口径），本地沿用 5 秒上限（trait
+/// 默认握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    client_id: &str,
+    app_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Bilibili {
-        url,
-        client_id,
-        app_secret,
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是 B站渠道，无法执行 verify_webhooks 握手".into(),
-        };
-    };
     let data = random_probe_data();
     let body = probe_envelope(data, &timestamp_utc8(now_secs()));
     // 非 2xx 核验注记携带本次随机 data（期望回显值随请求变化）
@@ -231,23 +225,18 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    client_id: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Bilibili {
-        url,
-        client_id,
-        app_secret,
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是 B站渠道，无法直发");
-    };
     post_json(client, url, client_id, app_secret, plaintext)
 }
 
 /// B站渠道适配器：[`super::ChannelAdapter`] 的 B站实现——verify_webhooks
 /// 握手与 x-bili-* 头表 HMAC-SHA256 签名直发；原语复用 util（md5_hex/
-/// hmac_sha256_hex），差异不外溢。
+/// hmac_sha256_hex），差异不外溢。宽配置 → 渠道字段收窄经 `narrow!` 单点
+/// （super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -264,15 +253,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Bilibili { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方 5s 建连超时即断（§3.3 镜像口径），本地沿用 5 秒上限
-        super::client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Bilibili { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -280,7 +261,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Bilibili { url, client_id, app_secret } =>
+            verify_handshake(client, url, client_id, app_secret))
     }
 
     fn dispatch_event(
@@ -289,6 +271,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Bilibili { url, client_id, app_secret } =>
+            dispatch_event(client, url, client_id, app_secret, plaintext))
     }
 }

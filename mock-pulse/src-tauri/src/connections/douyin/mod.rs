@@ -15,58 +15,55 @@ mod sha1_push;
 #[cfg(test)]
 pub(crate) use sha1_push::sign_dop as sign;
 
-use std::time::Duration;
-
+use super::adapter::narrow;
 use super::{ConnectionConfig, DispatchOutcome, DouyinSystem, HandshakeOutcome};
 
 /// 抖音体系握手路由：dop/生活服务共用 verify_webhook challenge（官方同款，
 /// 差异只在签名算法与应答窗口提示）；小游戏与服务商各有独立握手形态。
+/// 超时窗口：抖音连接超过 5s 自动断开（dop 官方窗口），本地留 5s 上限（trait
+/// 默认握手客户端）；生活服务 2.5s 更严但由提示与期望回执表达。
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    system: &DouyinSystem,
+    client_key: &str,
+    client_secret: &str,
+    mini_game_token: &str,
+    isv_token: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Douyin { system, .. } = config else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是抖音渠道，无法执行握手".into(),
-        };
-    };
     match system {
         DouyinSystem::Dop => {
-            challenge::verify_handshake(client, config, sha1_push::sign_dop, "")
+            challenge::verify_handshake(client, url, client_key, client_secret, sha1_push::sign_dop, "")
         }
         DouyinSystem::LifeService => challenge::verify_handshake(
             client,
-            config,
+            url,
+            client_key,
+            client_secret,
             sha1_push::sign_life,
             "（官方要求 2.5 秒内应答）",
         ),
-        DouyinSystem::MiniGame => minigame::verify_handshake(client, config),
-        DouyinSystem::Isv => isv::verify_handshake(client, config),
+        DouyinSystem::MiniGame => minigame::verify_handshake(client, url, client_key, mini_game_token),
+        DouyinSystem::Isv => isv::verify_handshake(client, url, isv_token),
     }
 }
 
 /// 抖音体系直发路由：body 是前端逐字节拼装的明文，各体系只算签名/构信封
 /// 与头集合不同，字节透传原则一致（服务商信封为唯一例外，见 isv 模块说明）。
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
+// 协议路由显式收全渠道字段（URL/通道/凭证/明文各就各位），不为压参数量引入包装对象
+#[allow(clippy::too_many_arguments)]
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    system: &DouyinSystem,
+    client_key: &str,
+    client_secret: &str,
+    mini_game_token: &str,
+    isv_token: &str,
     body: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Douyin {
-        url,
-        system,
-        client_key,
-        client_secret,
-        mini_game_token,
-        isv_token,
-        ..
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是抖音渠道，无法直发");
-    };
     match system {
         DouyinSystem::Dop => sha1_push::dispatch(
             client,
@@ -91,6 +88,7 @@ fn dispatch_event(
 
 /// 抖音渠道适配器：[`super::ChannelAdapter`] 的抖音实现——
 /// 四套体系的签名/信封/头构造全部复用各体系模块的协议原语，不对外暴露。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -107,16 +105,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Douyin { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：抖音连接超过 5s 自动断开（dop 官方窗口），
-        // 本地留 5s 上限；生活服务 2.5s 更严但由提示与期望回执表达
-        super::client_with_timeout(Duration::from_secs(5))
+        narrow!(config, Douyin { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -124,7 +113,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Douyin { url, system, client_key, client_secret, mini_game_token, isv_token } =>
+            verify_handshake(client, url, system, client_key, client_secret, mini_game_token, isv_token))
     }
 
     fn dispatch_event(
@@ -133,6 +123,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         body: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, body)
+        narrow!(config, Douyin { url, system, client_key, client_secret, mini_game_token, isv_token } =>
+            dispatch_event(client, url, system, client_key, client_secret, mini_game_token, isv_token, body))
     }
 }

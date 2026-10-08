@@ -20,10 +20,9 @@ mod crypto;
 #[cfg(test)]
 mod tests;
 
-use std::time::Duration;
-
 use crate::connections::util::now_secs;
 
+use super::adapter::narrow;
 use super::{
     client_with_timeout, no_reply, request_error_reason, send_measured_outcome, ConnectionConfig,
     DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
@@ -66,20 +65,10 @@ fn check_echo(expected: &str, response_body: &str) -> Result<(), String> {
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    verification_token: &str,
+    encrypt_key: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Feishu {
-        url,
-        verification_token,
-        encrypt_key,
-        ..
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是飞书渠道，无法执行 url_verification 握手".into(),
-        };
-    };
     let challenge = random_challenge();
     let plaintext = build_verification_body(&challenge, verification_token);
 
@@ -164,13 +153,10 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    encrypt_key: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Feishu { encrypt_key, .. } = config else {
-        return DispatchOutcome::not_sent("配置不是飞书渠道，无法直发");
-    };
-
     // 明文模式（官方 §4.1 默认）：仅 Content-Type，无签名头可快照；
     // 加密模式（官方 §4.2/§4.3）：单字段信封 + 三签名头。
     let (body, signature, timestamp, msg_id) = if encrypt_key.is_empty() {
@@ -188,7 +174,7 @@ fn dispatch_event(
     };
 
     let mut request = client
-        .post(url_of(config))
+        .post(url)
         .header("Content-Type", "application/json")
         .body(body.clone());
     if let (Some(timestamp), true) = (&timestamp, !signature.is_empty()) {
@@ -211,16 +197,10 @@ fn dispatch_event(
     )
 }
 
-fn url_of(config: &ConnectionConfig) -> &str {
-    let ConnectionConfig::Feishu { url, .. } = config else {
-        return "";
-    };
-    url
-}
-
 /// 飞书渠道适配器：[`super::ChannelAdapter`] 的飞书实现——POST challenge
 /// 握手（1s 应答窗口，现行口径）与明文/加密双格式直发按连接配置路由；
 /// sha256 验签与 AES-256-CBC 信封原语在 [`crypto`]，差异不外溢。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -237,16 +217,13 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Feishu { url, .. } = config else {
-            return None;
-        };
-        Some(url)
+        narrow!(config, Feishu { url } => Some(url.as_str()))
     }
 
     fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：challenge 应答现行口径 1 秒内（事实库 §3.2），
-        // 本地留 1s 上限（历史卡片页 3s 旧口径兼容，不放宽超时）
-        client_with_timeout(Duration::from_secs(1))
+        // challenge 应答现行口径 1 秒内（事实库 §3.2），本地留 1s 上限
+        // （历史卡片页 3s 旧口径兼容，不放宽超时）
+        client_with_timeout(std::time::Duration::from_secs(1))
     }
 
     fn verify_handshake(
@@ -254,7 +231,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Feishu { url, verification_token, encrypt_key } =>
+            verify_handshake(client, url, verification_token, encrypt_key))
     }
 
     fn dispatch_event(
@@ -263,6 +241,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Feishu { url, encrypt_key } =>
+            dispatch_event(client, url, encrypt_key, plaintext))
     }
 }

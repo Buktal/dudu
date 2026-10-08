@@ -1,5 +1,5 @@
 //! 平台连接域测试：DispatchOutcome 序列化契约 + 适配器注册表覆盖
-//! （每个配置变体必有适配器，url 快照与判别互为映照）。
+//! （每个配置变体必有适配器，注册表按 matches() 路由、url 快照恒有值）。
 
 use super::*;
 
@@ -321,83 +321,32 @@ fn adapter_registry_covers_every_config_variant() {
     );
     assert!(adapter_by_channel("zhihu").is_none());
     assert_eq!(adapter_of(&whatsapp_config).id(), "whatsapp");
-    // 渠道串与配置判别互为映照：url 快照只对匹配的配置成立
-    for adapter in ADAPTERS {
-        assert_eq!(
-            adapter.url(&douyin_config).is_some(),
-            adapter.matches(&douyin_config)
-        );
-        assert_eq!(
-            adapter.url(&wecom_config).is_some(),
-            adapter.matches(&wecom_config)
-        );
-        assert_eq!(
-            adapter.url(&wechat_mp_config).is_some(),
-            adapter.matches(&wechat_mp_config)
-        );
-        assert_eq!(
-            adapter.url(&wechat_mini_config).is_some(),
-            adapter.matches(&wechat_mini_config)
-        );
-        assert_eq!(
-            adapter.url(&feishu_config).is_some(),
-            adapter.matches(&feishu_config)
-        );
-        assert_eq!(
-            adapter.url(&dingtalk_config).is_some(),
-            adapter.matches(&dingtalk_config)
-        );
-        assert_eq!(
-            adapter.url(&qq_config).is_some(),
-            adapter.matches(&qq_config)
-        );
-        assert_eq!(
-            adapter.url(&weibo_config).is_some(),
-            adapter.matches(&weibo_config)
-        );
-        assert_eq!(
-            adapter.url(&xiaohongshu_config).is_some(),
-            adapter.matches(&xiaohongshu_config)
-        );
-        assert_eq!(
-            adapter.url(&kuaishou_config).is_some(),
-            adapter.matches(&kuaishou_config)
-        );
-        assert_eq!(
-            adapter.url(&taobao_config).is_some(),
-            adapter.matches(&taobao_config)
-        );
-        assert_eq!(
-            adapter.url(&jingdong_config).is_some(),
-            adapter.matches(&jingdong_config)
-        );
-        assert_eq!(
-            adapter.url(&pinduoduo_config).is_some(),
-            adapter.matches(&pinduoduo_config)
-        );
-        assert_eq!(
-            adapter.url(&meituan_config).is_some(),
-            adapter.matches(&meituan_config)
-        );
-        assert_eq!(
-            adapter.url(&eleme_config).is_some(),
-            adapter.matches(&eleme_config)
-        );
-        assert_eq!(
-            adapter.url(&alipay_config).is_some(),
-            adapter.matches(&alipay_config)
-        );
-        assert_eq!(
-            adapter.url(&bilibili_config).is_some(),
-            adapter.matches(&bilibili_config)
-        );
-        assert_eq!(
-            adapter.url(&whatsapp_config).is_some(),
-            adapter.matches(&whatsapp_config)
-        );
-        assert_eq!(
-            adapter.url(&telegram_config).is_some(),
-            adapter.matches(&telegram_config)
-        );
+    // 注册表按 matches() 路由（生产唯一不变量）：每个配置取到的适配器对本
+    // 配置判别恒真、url 快照恒有值——宽→窄 downcast 收敛于适配器侧 narrow!
+    // 单点，错配即编程错误（unreachable 终止），不测错配分支
+    for (channel, config) in [
+        ("douyin", &douyin_config),
+        ("wecom", &wecom_config),
+        ("wechat-mp", &wechat_mp_config),
+        ("wechat-mini", &wechat_mini_config),
+        ("feishu", &feishu_config),
+        ("dingtalk", &dingtalk_config),
+        ("qq", &qq_config),
+        ("weibo", &weibo_config),
+        ("xiaohongshu", &xiaohongshu_config),
+        ("kuaishou", &kuaishou_config),
+        ("taobao", &taobao_config),
+        ("jingdong", &jingdong_config),
+        ("pinduoduo", &pinduoduo_config),
+        ("meituan", &meituan_config),
+        ("eleme", &eleme_config),
+        ("alipay", &alipay_config),
+        ("bilibili", &bilibili_config),
+        ("whatsapp", &whatsapp_config),
+        ("telegram", &telegram_config),
+    ] {
+        let adapter = adapter_of(config);
+        assert!(adapter.matches(config), "{channel} 适配器应判别本渠道配置");
+        assert!(adapter.url(config).is_some(), "{channel} 应取到 url 快照");
     }
 }

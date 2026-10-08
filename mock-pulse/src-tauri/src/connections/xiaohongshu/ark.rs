@@ -7,9 +7,7 @@
 //! 首次配置无 echo/challenge 握手（§3.4 未发现），连接测试以最小推送探针
 //! （官方构造示例第一条）验证连通性与应答格式。
 
-use crate::connections::ConnectionConfig;
-
-use super::{
+use super::super::{
     no_reply, probe_handshake_outcome, send_measured_outcome, DispatchOutcome, DispatchSnapshot,
     HandshakeOutcome,
 };
@@ -25,17 +23,6 @@ fn ark_reply_ok(body: &str) -> bool {
     };
     parsed.get("success").and_then(|value| value.as_bool()) == Some(true)
         && parsed.get("error_code").and_then(|value| value.as_i64()) == Some(0)
-}
-
-/// 从小红书连接配置取 ark 通道 url；非 ark 配置 None。
-fn ark_url(config: &ConnectionConfig) -> Option<&str> {
-    let ConnectionConfig::Xiaohongshu { url, system, .. } = config else {
-        return None;
-    };
-    if *system != super::XiaohongshuSystem::Ark {
-        return None;
-    }
-    Some(url)
 }
 
 /// POST 单条信封数组并取回执（批量推送的最小形态：数组内一个元素）。
@@ -68,14 +55,8 @@ fn post_envelope_array(
 /// 逐字），期望 HTTP 2xx 且应答体满足官方语义 success=true/error_code=0。
 pub(crate) fn probe_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
 ) -> HandshakeOutcome {
-    let Some(url) = ark_url(config) else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是小红书 ark 通道，无法执行推送探针".into(),
-        };
-    };
     let outcome = post_envelope_array(client, url, PROBE_ENVELOPE);
     probe_handshake_outcome(
         outcome,
@@ -101,12 +82,9 @@ pub(crate) fn probe_handshake(
 /// ark 直发：明文（单条信封元素 JSON）包裹进官方批量数组逐字节透传。
 pub(crate) fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let Some(url) = ark_url(config) else {
-        return DispatchOutcome::not_sent("配置不是小红书 ark 通道，无法直发");
-    };
     post_envelope_array(client, url, plaintext)
 }
 

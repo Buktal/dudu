@@ -32,6 +32,7 @@ mod tests;
 
 use crate::connections::util::{append_absent, form_encode_value, form_pairs, md5_hex, now_secs, strip_sig};
 
+use super::adapter::narrow;
 use super::{
     no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
     DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
@@ -150,22 +151,15 @@ fn post_form(
 /// 连接测试（§3 消息回调接入 → 正文待核验(09-27)）：官方未给 challenge/
 /// verify 口径，探针即官方订单核验样本表单（§5.3 字段值逐字）+ 合规签名
 /// （语义同普通推送），期望 HTTP 200（应答正文无口径）。
+/// 超时窗口：官方应答窗口订单 2s / IM 4s，本地沿用 5 秒上限（trait 默认
+/// 握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_id: &str,
+    app_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Meituan {
-        url,
-        app_id,
-        app_secret,
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是美团渠道，无法执行推送探针握手".into(),
-        };
-    };
     let outcome = post_form(client, url, app_id, app_secret, GOLDEN_PROBE_BODY);
     probe_handshake_outcome(
         outcome,
@@ -183,22 +177,17 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_id: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Meituan {
-        url,
-        app_id,
-        app_secret,
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是美团渠道，无法直发");
-    };
     post_form(client, url, app_id, app_secret, plaintext)
 }
 
 /// 美团渠道适配器：[`super::ChannelAdapter`] 的美团实现——推送探针握手与
 /// MD5(url?字母序+secret) 签名表单直发；原语复用 util（md5_hex），差异不外溢。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -215,15 +204,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Meituan { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方应答窗口订单 2s / IM 4s，本地沿用 5 秒上限
-        super::client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Meituan { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -231,7 +212,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Meituan { url, app_id, app_secret } =>
+            verify_handshake(client, url, app_id, app_secret))
     }
 
     fn dispatch_event(
@@ -240,6 +222,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Meituan { url, app_id, app_secret } =>
+            dispatch_event(client, url, app_id, app_secret, plaintext))
     }
 }

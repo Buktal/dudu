@@ -4,7 +4,7 @@
 //! 三态处理（空串 / success / §3.5 加密被动回复包解密入记录）。
 //! 握手与直发共用 super::crypto 原语与 super::echo_handshake。
 
-use super::super::{send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot};
+use super::super::{send_measured_outcome, DispatchOutcome, DispatchSnapshot};
 use super::{build_signature, decrypt_msg, encrypt_msg, random_16};
 use crate::connections::util::now_secs;
 
@@ -36,21 +36,13 @@ fn extract_reply_encrypt(body: &str) -> Option<&str> {
 /// 私有协议原语：对外只经 [`super::Adapter`]（super::super::ChannelAdapter）路由。
 pub(super) fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    corp_id: &str,
+    token: &str,
+    encoding_aes_key: &str,
+    agent_id: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Wecom {
-        url,
-        corp_id,
-        token,
-        encoding_aes_key,
-        agent_id,
-        ..
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是企业微信渠道，无法直发");
-    };
-
     let msg_encrypt = match encrypt_msg(
         encoding_aes_key,
         &random_16(),

@@ -1,8 +1,10 @@
 //! 握手与三模式直发全链路（本地 TcpListener）：GET 三参握手（成功/回显
 //! 不符/非 200/超时）；明文逐字节直发、兼容并存、安全信封独立可解；XML 与
 //! JSON 双回包信封解密（JSON 形态为事实库 §5.6 逐字官方样本）；尾部 AppId
-//! 校验、非 200、超时与配置判别。
+//! 校验、非 200 与超时。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
+use crate::connections::ChannelAdapter;
 use crate::connections::wechat_common::build_msg_signature;
 
 use super::*;
@@ -21,7 +23,7 @@ fn echo_ok(query: &HashMap<String, String>) -> (String, String) {
 fn handshake_succeeds_when_echostr_echoed_verbatim() {
     let (addr, rx) = start_get_server(echo_ok, Duration::ZERO);
     let config = mini_config(format!("http://{addr}/webhooks/wechat-mini"));
-    let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
+    let outcome = Adapter.verify_handshake(&quick_client(Duration::from_secs(2)), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("原样回显"), "{outcome:?}");
@@ -49,7 +51,7 @@ fn handshake_fails_when_echostr_altered() {
     };
     let (addr, _rx) = start_get_server(altered, Duration::ZERO);
     let config = mini_config(format!("http://{addr}/hook"));
-    let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
+    let outcome = Adapter.verify_handshake(&quick_client(Duration::from_secs(2)), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("不一致"), "{outcome:?}");
@@ -61,7 +63,7 @@ fn handshake_fails_on_non_200() {
         |_| ("HTTP/1.1 500 Internal Server Error".into(), "boom".into());
     let (addr, _rx) = start_get_server(responder, Duration::ZERO);
     let config = mini_config(format!("http://{addr}/hook"));
-    let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
+    let outcome = Adapter.verify_handshake(&quick_client(Duration::from_secs(2)), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("500"), "{outcome:?}");
@@ -72,7 +74,7 @@ fn handshake_fails_on_timeout() {
     // 官方 5 秒应答窗口；客户端 200ms 超时 vs 服务器 1s 延迟
     let (addr, _rx) = start_get_server(echo_ok, Duration::from_secs(1));
     let config = mini_config(format!("http://{addr}/hook"));
-    let outcome = verify_handshake(&quick_client(Duration::from_millis(200)), &config);
+    let outcome = Adapter.verify_handshake(&quick_client(Duration::from_millis(200)), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("超时"), "{outcome:?}");
@@ -108,7 +110,7 @@ fn plain_mode_posts_plaintext_verbatim_with_three_param_signature() {
     let (addr, rx) = start_single_server(success, Duration::ZERO);
     let config = mini_config(format!("http://{addr}/hook"));
 
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.body, "success");
@@ -146,7 +148,7 @@ fn secure_mode_posts_envelope_independently_decryptable_verbatim() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.body, "");
@@ -190,7 +192,7 @@ fn compatible_mode_keeps_plaintext_and_appends_encrypt() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -229,7 +231,7 @@ fn secure_mode_decrypts_json_reply_envelope_official_sample() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
 
     // 原始回执原样保留；解密明文一并返回（入运行记录）
     assert_eq!(outcome.status, 200);
@@ -255,7 +257,7 @@ fn secure_mode_decrypts_xml_reply_envelope_with_appid_check() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.body, reply_envelope);
@@ -279,7 +281,7 @@ fn secure_mode_ignores_reply_whose_tail_appid_mismatches() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.reply, None, "尾部 AppId 不符的回复不进记录");
@@ -298,7 +300,7 @@ fn plain_mode_still_posts_verbatim_when_data_format_records_json() {
         WechatMiniDataFormat::Json,
     );
 
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
@@ -312,7 +314,7 @@ fn dispatch_reports_non_200_status_and_body() {
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = mini_config(format!("http://{addr}/hook"));
 
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, "<xml></xml>");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, "<xml></xml>");
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -327,29 +329,11 @@ fn dispatch_reports_timeout_without_response() {
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = mini_config(format!("http://{addr}/hook"));
 
-    let outcome = dispatch_event(&quick_client(Duration::from_millis(200)), &config, "<xml></xml>");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "<xml></xml>");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");
     assert!(error.contains("超时"), "{outcome:?}");
     assert_eq!(outcome.body, "");
     assert_eq!(outcome.reply, None);
-}
-
-#[test]
-fn dispatch_rejects_non_wechat_mini_config() {
-    let config = ConnectionConfig::WechatMp {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_id: "wx_mp".into(),
-        token: GOLDEN_TOKEN.into(),
-        encoding_aes_key: GOLDEN_ENCODING_AES_KEY.into(),
-        mode: crate::connections::WechatMpMode::Plain,
-    };
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, "<xml/>");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是微信小程序渠道"));
-
-    let handshake = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是微信小程序渠道"));
 }

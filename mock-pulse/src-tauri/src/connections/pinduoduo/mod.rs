@@ -29,6 +29,7 @@ mod tests;
 
 use crate::connections::util::{append_absent, md5_wrapped_sign, now_secs};
 
+use super::adapter::narrow;
 use super::{
     no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
     DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
@@ -142,22 +143,15 @@ fn post_json(
 /// 连接测试（§3.1 验证握手 → 待核验(09-27)）：官方未给 challenge/verify 口径，
 /// 探针即官方订单状态样本明文（§2.1 照录状态 1-待发货）+ 合规签名（语义同
 /// 普通推送），期望 HTTP 200（应答正文无口径）。
+/// 超时窗口：官方应答窗口未取得（待核验），本地沿用 5 秒上限（trait 默认
+/// 握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    client_id: &str,
+    client_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Pinduoduo {
-        url,
-        client_id,
-        client_secret,
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是拼多多渠道，无法执行推送探针握手".into(),
-        };
-    };
     let outcome = post_json(client, url, client_id, client_secret, GOLDEN_PROBE_PLAINTEXT);
     probe_handshake_outcome(
         outcome,
@@ -176,22 +170,17 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    client_id: &str,
+    client_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Pinduoduo {
-        url,
-        client_id,
-        client_secret,
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是拼多多渠道，无法直发");
-    };
     post_json(client, url, client_id, client_secret, plaintext)
 }
 
 /// 拼多多渠道适配器：[`super::ChannelAdapter`] 的拼多多实现——推送探针握手与
 /// UPPER(MD5) 网关签名直发；原语复用 util（md5_hex），差异不外溢。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -208,15 +197,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Pinduoduo { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方应答窗口未取得（待核验），本地沿用 5 秒上限
-        super::client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Pinduoduo { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -224,7 +205,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Pinduoduo { url, client_id, client_secret } =>
+            verify_handshake(client, url, client_id, client_secret))
     }
 
     fn dispatch_event(
@@ -233,6 +215,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Pinduoduo { url, client_id, client_secret } =>
+            dispatch_event(client, url, client_id, client_secret, plaintext))
     }
 }

@@ -25,6 +25,7 @@
 #[cfg(test)]
 mod tests;
 
+use super::adapter::narrow;
 use super::{
     no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
     DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
@@ -126,17 +127,14 @@ fn post_json(
 /// 连接测试（§3.2 无 challenge 握手）：官方未记述任何验证请求，setWebhook
 /// 同步返回 True 即成功——探针即 §5.2 官方文本消息核验样本 + 合规恒等头
 /// （语义同普通推送），成功判 2XY（应答正文无口径）。
+/// 超时窗口：官方无秒级应答 SLA（非 2XY 才重推），本地沿用 5 秒上限（trait
+/// 默认握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    secret_token: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Telegram { url, secret_token } = config else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是 Telegram 渠道，无法执行推送探针".into(),
-        };
-    };
     let outcome = post_json(client, url, secret_token, GOLDEN_PROBE_PLAINTEXT);
     // 官方重试口径已在发送测量内附注（RETRY_NOTE），发送失败原因不再追加
     probe_handshake_outcome(
@@ -155,18 +153,17 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    secret_token: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Telegram { url, secret_token } = config else {
-        return DispatchOutcome::not_sent("配置不是 Telegram 渠道，无法直发");
-    };
     post_json(client, url, secret_token, plaintext)
 }
 
 /// Telegram 渠道适配器：[`super::ChannelAdapter`] 的 Telegram 实现——合规
 /// Update 探针握手与恒等头 JSON 直发；无 HMAC/加密原语（原样比对不引入
-/// util 密码学），差异不外溢。
+/// util 密码学），差异不外溢。宽配置 → 渠道字段收窄经 `narrow!` 单点
+/// （super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -183,15 +180,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Telegram { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方无秒级应答 SLA（非 2XY 才重推），本地沿用 5 秒上限
-        super::client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Telegram { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -199,7 +188,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Telegram { url, secret_token } =>
+            verify_handshake(client, url, secret_token))
     }
 
     fn dispatch_event(
@@ -208,6 +198,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Telegram { url, secret_token } =>
+            dispatch_event(client, url, secret_token, plaintext))
     }
 }

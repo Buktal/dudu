@@ -8,8 +8,7 @@
 //! - 旧「消息推送客服」GET echostr 体系 2025-06-30 已下线，不实现
 
 use super::super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_reply, send_measured_outcome, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 use crate::connections::util;
 
@@ -92,20 +91,10 @@ fn post(
 /// 私有协议原语：对外只经 [`super::Adapter`]（super::super::ChannelAdapter）路由。
 pub(super) fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    client_key: &str,
+    mini_game_token: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Douyin {
-        url,
-        client_key,
-        mini_game_token,
-        ..
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是抖音渠道，无法执行 verify_request 握手".into(),
-        };
-    };
     // 官方未公开 verify_request 报文体（待核验），握手校验以头集合与验签为准
     let body = "{}";
     let outcome = post(
@@ -153,7 +142,6 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
-    use crate::connections::DouyinSystem;
     use crate::test_support::{quick_client, start_single_server, RecordedPost};
 
     #[test]
@@ -202,25 +190,18 @@ mod tests {
         );
     }
 
-    fn config_with_url(url: String) -> ConnectionConfig {
-        ConnectionConfig::Douyin {
-            url,
-            system: DouyinSystem::MiniGame,
-            client_key: "tt12321".into(),
-            client_secret: String::new(),
-            mini_game_token: "mg_token".into(),
-            isv_token: String::new(),
-            isv_key: String::new(),
-        }
-    }
-
     #[test]
     fn handshake_posts_verify_request_with_signature_headers() {
         let responder: fn(&RecordedPost) -> (String, String) =
             |_| ("HTTP/1.1 200 OK".into(), String::new());
         let (addr, rx) = start_single_server(responder, Duration::ZERO);
-        let config = config_with_url(format!("http://{addr}/push"));
-        let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
+        let url = format!("http://{addr}/push");
+        let outcome = verify_handshake(
+            &quick_client(Duration::from_secs(2)),
+            &url,
+            "tt12321",
+            "mg_token",
+        );
 
         assert!(outcome.ok, "应成功：{outcome:?}");
         let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
@@ -254,8 +235,13 @@ mod tests {
         let responder: fn(&RecordedPost) -> (String, String) =
             |_| ("HTTP/1.1 403 Forbidden".into(), String::new());
         let (addr, _rx) = start_single_server(responder, Duration::ZERO);
-        let config = config_with_url(format!("http://{addr}/push"));
-        let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
+        let url = format!("http://{addr}/push");
+        let outcome = verify_handshake(
+            &quick_client(Duration::from_secs(2)),
+            &url,
+            "tt12321",
+            "mg_token",
+        );
 
         assert!(!outcome.ok);
         assert!(outcome.message.contains("403"), "{outcome:?}");

@@ -1,11 +1,12 @@
 //! 探针握手与直发全链路（本地 TcpListener）：推送探针握手（sig 可由 Query
 //! 系统参数复算 + 200/非 2xx）、JSON 推送直发（明文逐字节透传 + Query 系统
 //! 参数）、H5 表单直发（表单全字段参签 + 旧 sig 剔除 + 订单号快照）、超时
-//! 回执、配置判别。
+//! 回执。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::time::Duration;
 
-use crate::connections::ConnectionConfig;
+use crate::connections::ChannelAdapter;
 use crate::test_support::{quick_client, start_single_server};
 
 use super::*;
@@ -62,7 +63,7 @@ fn handshake_posts_probe_json_and_accepts_200() {
     );
     let url = format!("http://{addr}/webhooks/eleme");
     let config = eleme_config(url.clone());
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("推送探针"), "{outcome:?}");
@@ -95,7 +96,7 @@ fn handshake_fails_on_non_200() {
     };
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = eleme_config(format!("http://{addr}/webhooks/eleme"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("500"), "{outcome:?}");
@@ -119,7 +120,7 @@ fn dispatch_posts_json_verbatim_with_query_params_and_snapshots() {
     );
     let config = eleme_config(format!("http://{addr}/webhooks/eleme"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -172,7 +173,7 @@ fn dispatch_posts_h5_form_signed_over_all_fields() {
     );
     let config = eleme_config(format!("http://{addr}/webhooks/eleme"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_H5_FORM);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_H5_FORM);
 
     assert_eq!(outcome.status, 200, "{outcome:?}");
     assert_eq!(outcome.msg_id, "12637645858619059");
@@ -212,7 +213,7 @@ fn dispatch_strips_stale_sig_from_form_body_and_signs_fresh() {
     let url = format!("http://{addr}/webhooks/eleme");
     let config = eleme_config(url);
 
-    let outcome = dispatch_event(&client(), &config, body);
+    let outcome = Adapter.dispatch_event(&client(), &config, body);
 
     assert_eq!(outcome.status, 200, "{outcome:?}");
     let request_body = outcome.request_body.expect("应带请求快照");
@@ -231,7 +232,7 @@ fn dispatch_reports_non_200_status_and_body() {
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = eleme_config(format!("http://{addr}/webhooks/eleme"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -247,30 +248,11 @@ fn dispatch_reports_timeout_with_official_retry_note() {
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = eleme_config(format!("http://{addr}/webhooks/eleme"));
 
-    let outcome = dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");
     assert!(error.contains("超时"), "{outcome:?}");
     assert!(error.contains("重试间隔/次数"), "{outcome:?}");
     assert_eq!(outcome.body, "");
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_eleme_config() {
-    let config = ConnectionConfig::Jingdong {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_key: "yourappkey".into(),
-        app_secret: "yourappSecret".into(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是饿了么渠道"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是饿了么渠道"));
 }

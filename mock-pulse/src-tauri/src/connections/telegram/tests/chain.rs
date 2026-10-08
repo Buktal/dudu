@@ -1,11 +1,12 @@
 //! 探针与直发全链路（本地 TcpListener）：恒等头原样携带可核（原样比对
 //! 验证链路）+ 官方 §5.2 探针样本逐字节透传 + secret_token 缺失/不合法
 //! 直发前拒绝（缺失/超 256 字符/非法字符边界）+ 2XY 应答语义 + 非 200/
-//! 超时回执 + 配置判别。
+//! 超时回执。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::time::Duration;
 
-use crate::connections::ConnectionConfig;
+use crate::connections::{ChannelAdapter, ConnectionConfig};
 use crate::test_support::{
     ExpectedSnapshots, assert_dispatch_error, assert_dispatch_receipt, assert_snapshots,
     run_dispatch_case, run_handshake_case, status_responder,
@@ -35,7 +36,7 @@ fn probe_posts_official_update_with_identity_header() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| telegram_config(format!("http://{addr}/webhooks/telegram")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         true,
         &["2XY", "无 HMAC"],
     );
@@ -70,7 +71,7 @@ fn probe_fails_on_non_2xy() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| telegram_config(format!("http://{addr}/webhooks/telegram")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["404", "探针"],
     );
@@ -84,7 +85,7 @@ fn probe_reports_timeout_with_retry_note() {
         Duration::from_secs(1),
         Duration::from_millis(200),
         |addr| telegram_config(format!("http://{addr}/webhooks/telegram")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["超时", "合理次数"],
     );
@@ -109,7 +110,7 @@ fn dispatch_posts_update_verbatim_and_snapshots_update_id() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| telegram_config(format!("http://{addr}/webhooks/telegram")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_eq!(outcome.status, 204, "2XY 语义：204 亦属成功");
@@ -140,7 +141,7 @@ fn dispatch_snapshots_update_id_across_update_types() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| telegram_config(format!("http://{addr}/webhooks/telegram")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     // callback_query 代表（§5.2 样本压单行）：update_id 快照同语义
@@ -160,7 +161,7 @@ fn dispatch_reports_non_2xy_status_and_body() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| telegram_config(format!("http://{addr}/webhooks/telegram")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_dispatch_receipt(&outcome, 500, "boom");
@@ -176,7 +177,7 @@ fn dispatch_rejects_missing_secret_token_before_sending() {
         secret_token: String::new(),
     };
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
 
     assert_dispatch_error(&outcome, &["未配置"]);
     assert_eq!(outcome.request_body, None);
@@ -191,7 +192,7 @@ fn dispatch_rejects_secret_token_over_256_chars() {
         secret_token: "a".repeat(257),
     };
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
 
     assert_dispatch_error(&outcome, &["1–256"]);
     assert_eq!(outcome.signature, "", "未发出请求即无头值快照");
@@ -227,7 +228,7 @@ fn dispatch_carries_256_char_boundary_token_verbatim() {
                 secret_token: token.clone(),
             }
         },
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_eq!(outcome.status, 200);
@@ -249,26 +250,7 @@ fn dispatch_rejects_secret_token_with_foreign_characters() {
         secret_token: "bad token+value=".into(),
     };
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_PROBE_PLAINTEXT);
 
     assert_dispatch_error(&outcome, &["A-Z"]);
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_probe_reject_non_telegram_config() {
-    let config = ConnectionConfig::Qq {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_id: "11111111".into(),
-        app_secret: "DG5g3B4j9X2KOErG".into(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是 Telegram 渠道"));
-
-    let probe = verify_handshake(&client(), &config);
-    assert!(!probe.ok);
-    assert!(probe.message.contains("不是 Telegram 渠道"));
 }

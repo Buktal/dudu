@@ -27,6 +27,7 @@ use std::time::Duration;
 use crate::connections::util::now_millis;
 use crate::connections::wecom;
 
+use super::adapter::narrow;
 use super::{
     client_with_timeout, send_measured_outcome, ConnectionConfig, DingtalkSystem, DispatchOutcome,
     DispatchSnapshot, HandshakeOutcome,
@@ -113,29 +114,21 @@ fn post_crypto(
     )
 }
 
-/// 密文通道 check_url 握手（事实库 §5.6/§5.10）：推送加密 check_url 事件
-/// （sha1 四参 URL 签名），目标 1500ms 内须回可验签解密的加密 success 包。
+/// 钉钉体系握手路由：密文通道 check_url（事实库 §5.6/§5.10：推送加密 check_url
+/// 事件，目标 1500ms 内须回可验签解密的加密 success 包）；机器人通道无官方握手
+/// 事件，按收消息形态探测（[`bot`]）。
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    system: &DingtalkSystem,
+    token: &str,
+    encoding_aes_key: &str,
+    owner_key: &str,
+    app_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Dingtalk {
-        url,
-        token,
-        encoding_aes_key,
-        owner_key,
-        system,
-        ..
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是钉钉渠道，无法执行 check_url 握手".into(),
-        };
-    };
     if *system == DingtalkSystem::Bot {
-        return bot::verify_handshake(client, config);
+        return bot::verify_handshake(client, url, app_secret);
     }
     let push = match build_crypto_push(url, HANDSHAKE_PLAINTEXT, token, encoding_aes_key, owner_key)
     {
@@ -183,27 +176,23 @@ fn verify_handshake(
     }
 }
 
-/// 钉钉直发：密文信封（事件）/ 明文 + HmacSHA256 头（机器人）按通道路由，
-/// 明文由前端逐字节拼装，本模块只做协议封装不重排（ADR-0001）。
+/// 钉钉体系直发路由：密文信封（事件）/ 明文 + HmacSHA256 头（机器人）按通道
+/// 路由，明文由前端逐字节拼装，本模块只做协议封装不重排（ADR-0001）。
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
+// 协议路由显式收全渠道字段（URL/通道/凭证/明文各就各位），不为压参数量引入包装对象
+#[allow(clippy::too_many_arguments)]
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    system: &DingtalkSystem,
+    token: &str,
+    encoding_aes_key: &str,
+    owner_key: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Dingtalk {
-        url,
-        token,
-        encoding_aes_key,
-        owner_key,
-        system,
-        ..
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是钉钉渠道，无法直发");
-    };
     if *system == DingtalkSystem::Bot {
-        return bot::dispatch_event(client, config, plaintext);
+        return bot::dispatch_event(client, url, app_secret, plaintext);
     }
     let push = match build_crypto_push(url, plaintext, token, encoding_aes_key, owner_key) {
         Ok(push) => push,
@@ -215,6 +204,7 @@ fn dispatch_event(
 /// 钉钉渠道适配器：[`super::ChannelAdapter`] 的钉钉实现——check_url 握手
 /// （1500ms 加密 success 回包）与密文/机器人双通道直发按连接配置路由；
 /// sha1 四参验签与 AES 信封原语在 [`crypto`]，机器人 HmacSHA256 在 [`bot`]。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -231,14 +221,11 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Dingtalk { url, .. } = config else {
-            return None;
-        };
-        Some(url)
+        narrow!(config, Dingtalk { url } => Some(url.as_str()))
     }
 
     fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：事件应答官方窗口 1500ms（事实库 §5.10）
+        // 事件应答官方窗口 1500ms（事实库 §5.10）
         client_with_timeout(Duration::from_millis(1500))
     }
 
@@ -247,7 +234,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Dingtalk { url, system, token, encoding_aes_key, owner_key, app_secret } =>
+            verify_handshake(client, url, system, token, encoding_aes_key, owner_key, app_secret))
     }
 
     fn dispatch_event(
@@ -256,6 +244,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Dingtalk { url, system, token, encoding_aes_key, owner_key, app_secret } =>
+            dispatch_event(client, url, system, token, encoding_aes_key, owner_key, app_secret, plaintext))
     }
 }

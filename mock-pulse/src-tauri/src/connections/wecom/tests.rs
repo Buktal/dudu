@@ -1,15 +1,16 @@
 //! 企微协议全链路测试：echostr 握手（成功/带引号/非 200/超时）与直发
-//! （加密信封逐字节/三种回执形态/非 200/超时/配置判别）。
+//! （加密信封逐字节/三种回执形态/非 200/超时）。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）；
 //! 网络基建在 crate::test_support（共享）；黄金例常量在 crypto（单点）。
 
 use std::collections::HashMap;
 use std::time::Duration;
 
 use super::crypto::{GOLDEN_CORP_ID, GOLDEN_ENCODING_AES_KEY, GOLDEN_TOKEN};
-use crate::connections::{ConnectionConfig, WecomSystem};
+use crate::connections::{ChannelAdapter, ConnectionConfig, WecomSystem};
 use crate::test_support::{
     ExpectedSnapshots, assert_dispatch_error, assert_dispatch_receipt, assert_snapshots,
-    query_params, quick_client, run_dispatch_case, run_handshake_case, status_responder,
+    query_params, run_dispatch_case, run_handshake_case, status_responder,
 };
 
 use super::*;
@@ -53,7 +54,7 @@ fn handshake_succeeds_when_plaintext_echoed() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| wecom_config(format!("http://{addr}/webhooks/wecom")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         true,
         &["回显"],
     );
@@ -99,7 +100,7 @@ fn handshake_fails_when_echo_wrapped_in_quotes() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| wecom_config(format!("http://{addr}/hook")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["不一致"],
     );
@@ -112,7 +113,7 @@ fn handshake_fails_on_non_200() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| wecom_config(format!("http://{addr}/hook")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["500"],
     );
@@ -129,7 +130,7 @@ fn handshake_fails_on_timeout() {
         Duration::from_secs(1),
         Duration::from_millis(200),
         |addr| wecom_config(format!("http://{addr}/hook")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["超时"],
     );
@@ -184,7 +185,7 @@ fn dispatch_delivers_envelope_independently_decryptable_verbatim() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| wecom_config(format!("http://{addr}/hook")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_eq!(outcome.status, 200);
@@ -242,7 +243,7 @@ fn dispatch_returns_success_receipt_verbatim() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| wecom_config(format!("http://{addr}/hook")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_dispatch_receipt(&outcome, 200, "success");
@@ -257,7 +258,7 @@ fn dispatch_decrypts_encrypted_passive_reply_into_record() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| wecom_config(format!("http://{addr}/hook")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     // 原始回执原样保留；解密明文一并返回（入运行记录）
@@ -275,7 +276,7 @@ fn dispatch_reports_non_200_status_and_body() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| wecom_config(format!("http://{addr}/hook")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_dispatch_receipt(&outcome, 500, "boom");
@@ -290,25 +291,9 @@ fn dispatch_reports_timeout_without_response() {
         Duration::from_secs(1),
         Duration::from_millis(200),
         |addr| wecom_config(format!("http://{addr}/hook")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_dispatch_error(&outcome, &["超时"]);
     assert_eq!(outcome.reply, None);
-}
-
-#[test]
-fn dispatch_rejects_non_wecom_config() {
-    let config = ConnectionConfig::Douyin {
-        url: "http://127.0.0.1:1/hook".into(),
-        system: crate::connections::DouyinSystem::Dop,
-        client_key: "tt_key".into(),
-        client_secret: "tt_secret".into(),
-        mini_game_token: String::new(),
-        isv_token: String::new(),
-        isv_key: String::new(),
-    };
-    let outcome = dispatch_event(&quick_client(Duration::from_secs(2)), &config, "<xml/>");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是企业微信渠道"));
 }

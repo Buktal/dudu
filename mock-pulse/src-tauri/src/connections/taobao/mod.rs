@@ -21,6 +21,7 @@ mod tests;
 
 use crate::connections::util::hmac_sha256_hex;
 
+use super::adapter::narrow;
 use super::{
     no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
     DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
@@ -99,24 +100,17 @@ fn post_json(
 }
 
 /// 连接测试（§3.2 配置页 Verify 握手）：官方流程为「填回调地址 → Verify →
-/// 返回 HTTP 200 即验证成功」。验证请求体官方未披露，探针即官方正向样本明文
-/// + 合规 Authorization 签名头（语义同普通推送），期望 HTTP 200（正文无口径）。
+/// 返回 HTTP 200 即验证成功」。验证请求体官方未披露，探针即官方正向样本明文，
+/// 附合规 Authorization 签名头（语义同普通推送），期望 HTTP 200（正文无口径）。
+/// 超时窗口：官方签收窗口 500ms 由目标侧保证，本地沿用 5 秒上限（trait 默认
+/// 握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_key: &str,
+    app_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Taobao {
-        url,
-        app_key,
-        app_secret,
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是淘宝渠道，无法执行 Verify 验证握手".into(),
-        };
-    };
     let outcome = post_json(client, url, app_key, app_secret, GOLDEN_FORWARD_PLAINTEXT);
     probe_handshake_outcome(
         outcome,
@@ -135,23 +129,17 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_key: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Taobao {
-        url,
-        app_key,
-        app_secret,
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是淘宝渠道，无法直发");
-    };
     post_json(client, url, app_key, app_secret, plaintext)
 }
 
 /// 淘宝渠道适配器：[`super::ChannelAdapter`] 的淘宝实现——Verify 验证握手与
 /// Authorization（HMAC-SHA256）签名直发；原语复用 util（hmac_sha256_hex），
-/// 差异不外溢。
+/// 差异不外溢。宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -168,15 +156,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Taobao { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方签收窗口 500ms 由目标侧保证，本地沿用 5 秒上限
-        super::client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Taobao { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -184,7 +164,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Taobao { url, app_key, app_secret } =>
+            verify_handshake(client, url, app_key, app_secret))
     }
 
     fn dispatch_event(
@@ -193,6 +174,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Taobao { url, app_key, app_secret } =>
+            dispatch_event(client, url, app_key, app_secret, plaintext))
     }
 }

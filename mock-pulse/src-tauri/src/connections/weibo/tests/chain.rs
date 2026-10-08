@@ -1,6 +1,7 @@
 //! 握手与直发全链路（本地 TcpListener）：GET 四参握手（三参签名可复算 +
 //! 原样回显成功/回显不符/非 2xx/超时）、JSON 直发（URL 三参签名 + 快照 + body
-//! 逐字节透传）、非 200/超时回执、配置判别。
+//! 逐字节透传）、非 200/超时回执。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -8,7 +9,7 @@ use std::net::{Shutdown, SocketAddr, TcpListener};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use crate::connections::ConnectionConfig;
+use crate::connections::ChannelAdapter;
 use crate::test_support::{quick_client, read_head_and_body};
 
 use super::*;
@@ -105,7 +106,7 @@ fn handshake_succeeds_when_echostr_echoed_verbatim() {
     let (addr, rx) =
         start_request_server(|query, _body| echo_ok(query), Duration::ZERO);
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("原样回显"), "{outcome:?}");
@@ -138,7 +139,7 @@ fn handshake_fails_when_echostr_is_modified() {
     let (addr, _rx) =
         start_request_server(move |query, _body| wrong_echo(query), Duration::ZERO);
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("不一致"), "{outcome:?}");
@@ -151,7 +152,7 @@ fn handshake_fails_on_non_200() {
     };
     let (addr, _rx) = start_request_server(responder, Duration::ZERO);
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("500"), "{outcome:?}");
@@ -165,7 +166,7 @@ fn handshake_fails_on_timeout() {
         Duration::from_secs(1),
     );
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
-    let outcome = verify_handshake(&quick_client(Duration::from_millis(200)), &config);
+    let outcome = Adapter.verify_handshake(&quick_client(Duration::from_millis(200)), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("超时"), "{outcome:?}");
@@ -182,7 +183,7 @@ fn dispatch_posts_json_with_signature_query_and_snapshots_elements() {
     let (addr, rx) = start_request_server(empty_receipt, Duration::ZERO);
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.body, "");
@@ -222,7 +223,7 @@ fn dispatch_reports_non_200_status_and_body() {
     let (addr, _rx) = start_request_server(boom, Duration::ZERO);
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -238,29 +239,10 @@ fn dispatch_reports_timeout_without_response() {
     let (addr, _rx) = start_request_server(slow, Duration::from_secs(1));
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
 
-    let outcome = dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");
     assert!(error.contains("超时"), "{outcome:?}");
     assert_eq!(outcome.body, "");
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_weibo_config() {
-    let config = ConnectionConfig::Qq {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_id: "11111111".into(),
-        app_secret: "DG5g3B4j9X2KOErG".into(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是微博渠道"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是微博渠道"));
 }

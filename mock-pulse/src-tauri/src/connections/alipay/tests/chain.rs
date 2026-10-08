@@ -1,13 +1,14 @@
 //! 探针握手与直发全链路（本地 TcpListener）：推送探针握手（sign 可由表单
 //! 解码值按 rsaCheckV1 复算验签 + 200/非 2xx）、表单直发（业务字节逐段保留 +
 //! 旧 sign 剔除现算 + sign_type 补齐 + 幂等键/notify_time 快照 + 签名 base64
-//! 的线上编码）、超时回执、私钥坏文本拒绝、配置判别。
+//! 的线上编码）、超时回执、私钥坏文本拒绝。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::time::Duration;
 
 use rsa::RsaPublicKey;
 
-use crate::connections::ConnectionConfig;
+use crate::connections::ChannelAdapter;
 use crate::test_support::{quick_client, start_single_server};
 
 use super::*;
@@ -58,7 +59,7 @@ fn handshake_posts_probe_form_and_accepts_200() {
     );
     let url = format!("http://{addr}/webhooks/alipay");
     let config = alipay_config(url, &key_pem);
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("推送探针"), "{outcome:?}");
@@ -87,7 +88,7 @@ fn handshake_fails_on_non_200() {
     };
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = alipay_config(format!("http://{addr}/webhooks/alipay"), &key_pem);
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("500"), "{outcome:?}");
@@ -102,7 +103,7 @@ fn handshake_rejects_unparseable_private_key() {
         "http://127.0.0.1:1/webhooks/alipay".into(),
         "not-a-key-at-all",
     );
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
     assert!(!outcome.ok);
     assert!(outcome.message.contains("私钥"), "{outcome:?}");
 }
@@ -130,7 +131,7 @@ fn dispatch_posts_form_with_fresh_sign_and_snapshots() {
     );
     let config = alipay_config(format!("http://{addr}/webhooks/alipay"), &key_pem);
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_NOTIFY_BODY);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_NOTIFY_BODY);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -170,7 +171,7 @@ fn dispatch_appends_sign_type_when_plaintext_missing() {
     );
     let config = alipay_config(format!("http://{addr}/webhooks/alipay"), &key_pem);
 
-    let outcome = dispatch_event(&client(), &config, body);
+    let outcome = Adapter.dispatch_event(&client(), &config, body);
 
     assert_eq!(outcome.status, 200, "{outcome:?}");
     // 幂等键回退：无 notify_id 时取 trade_no/out_trade_no
@@ -193,7 +194,7 @@ fn dispatch_reports_non_200_status_and_body() {
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = alipay_config(format!("http://{addr}/webhooks/alipay"), &key_pem);
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_NOTIFY_BODY);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_NOTIFY_BODY);
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -210,7 +211,7 @@ fn dispatch_reports_timeout_with_official_retry_note() {
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = alipay_config(format!("http://{addr}/webhooks/alipay"), &key_pem);
 
-    let outcome = dispatch_event(&quick_client(Duration::from_millis(200)), &config, "charset=utf-8");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "charset=utf-8");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");
@@ -222,26 +223,7 @@ fn dispatch_reports_timeout_with_official_retry_note() {
 #[test]
 fn dispatch_rejects_unparseable_private_key_without_request() {
     let config = alipay_config("http://127.0.0.1:1/webhooks/alipay".into(), "不是密钥");
-    let outcome = dispatch_event(&client(), &config, GOLDEN_NOTIFY_BODY);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_NOTIFY_BODY);
     assert_eq!(outcome.status, 0);
     assert!(outcome.error.unwrap().contains("私钥"));
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_alipay_config() {
-    let config = ConnectionConfig::Jingdong {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_key: "yourappkey".into(),
-        app_secret: "yourappSecret".into(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "a=1");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是支付宝渠道"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是支付宝渠道"));
 }

@@ -17,7 +17,11 @@ use std::time::Duration;
 
 use crate::connections::util::now_secs;
 
-use super::{handshake_echo_outcome, ConnectionConfig, DispatchOutcome, HandshakeOutcome, WecomSystem};
+use super::adapter::narrow;
+use super::{
+    client_with_timeout, handshake_echo_outcome, ConnectionConfig, DispatchOutcome,
+    HandshakeOutcome, WecomSystem,
+};
 
 /// 16 字节随机数：复用 uuid v4（已在依赖内），一个 v4 即 16 随机字节。
 pub(super) fn random_16() -> [u8; 16] {
@@ -79,22 +83,12 @@ fn echo_handshake(
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    system: &WecomSystem,
+    corp_id: &str,
+    token: &str,
+    encoding_aes_key: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Wecom {
-        url,
-        corp_id,
-        token,
-        encoding_aes_key,
-        system,
-        ..
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是企业微信渠道，无法执行 echostr 握手".into(),
-        };
-    };
     match system {
         WecomSystem::Agent => echo_handshake(client, url, token, encoding_aes_key, corp_id),
         // 官方 §4.4/101033：企业自建智能机器人 receiveid 直接传空字符串
@@ -105,23 +99,30 @@ fn verify_handshake(
 /// 企微通道直发路由：明文逐字节加密进信封，通道差异留在各通道模块内部
 /// （自建应用 XML 信封 text/xml / 机器人 JSON 信封 application/json）。
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
+// 协议路由显式收全渠道字段（URL/通道/凭证/明文各就各位），不为压参数量引入包装对象
+#[allow(clippy::too_many_arguments)]
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    system: &WecomSystem,
+    corp_id: &str,
+    token: &str,
+    encoding_aes_key: &str,
+    agent_id: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Wecom { system, .. } = config else {
-        return DispatchOutcome::not_sent("配置不是企业微信渠道，无法直发");
-    };
     match system {
-        WecomSystem::Agent => agent::dispatch_event(client, config, plaintext),
-        WecomSystem::Aibot => aibot::dispatch_event(client, config, plaintext),
+        WecomSystem::Agent => {
+            agent::dispatch_event(client, url, corp_id, token, encoding_aes_key, agent_id, plaintext)
+        }
+        WecomSystem::Aibot => aibot::dispatch_event(client, url, token, encoding_aes_key, plaintext),
     }
 }
 
 /// 企微渠道适配器：[`super::ChannelAdapter`] 的企微实现——
 /// AES 信封/四值签名/被动回复解密全部复用 crypto 的协议原语，
 /// XML 与机器人两通道的报文差异按配置路由到各自模块，不对外暴露。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -138,15 +139,12 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Wecom { url, .. } = config else {
-            return None;
-        };
-        Some(url)
+        narrow!(config, Wecom { url } => Some(url.as_str()))
     }
 
     fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方要求 echostr 1 秒内响应，本地留 1s 上限
-        super::client_with_timeout(Duration::from_secs(1))
+        // 官方要求 echostr 1 秒内响应，本地留 1s 上限
+        client_with_timeout(Duration::from_secs(1))
     }
 
     fn verify_handshake(
@@ -154,7 +152,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Wecom { url, system, corp_id, token, encoding_aes_key } =>
+            verify_handshake(client, url, system, corp_id, token, encoding_aes_key))
     }
 
     fn dispatch_event(
@@ -163,7 +162,8 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Wecom { url, system, corp_id, token, encoding_aes_key, agent_id } =>
+            dispatch_event(client, url, system, corp_id, token, encoding_aes_key, agent_id, plaintext))
     }
 }
 

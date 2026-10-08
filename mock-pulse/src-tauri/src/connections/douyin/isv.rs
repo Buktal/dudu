@@ -10,8 +10,7 @@
 //!   验证 TOKEN 验签；目标必须直接返回字符串 success（不带引号），否则重试 3 次
 
 use super::super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_reply, send_measured_outcome, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 use crate::connections::util;
 
@@ -101,17 +100,9 @@ fn post(
 /// 私有协议原语：对外只经 [`super::Adapter`]（super::super::ChannelAdapter）路由。
 pub(super) fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    isv_token: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Douyin {
-        url, isv_token, ..
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是抖音渠道，无法执行服务商授权推送验证".into(),
-        };
-    };
     let outcome = post(client, url, GOLDEN_ENCRYPT, isv_token);
     match outcome.error {
         Some(error) => HandshakeOutcome {
@@ -159,7 +150,6 @@ mod tests {
 
     use super::*;
     use crate::test_support::{quick_client, start_single_server, RecordedPost};
-    use crate::connections::{ConnectionConfig, DouyinSystem};
 
     /// 微信系四值签名同族黄金例（企微官方 90968，独立来源；常量唯一出处
     /// 为 wecom::crypto，按测试引用引作同族验签参考向量）
@@ -212,18 +202,6 @@ mod tests {
         assert!(check_success("").is_err());
     }
 
-    fn config_with_url(url: String) -> ConnectionConfig {
-        ConnectionConfig::Douyin {
-            url,
-            system: DouyinSystem::Isv,
-            client_key: String::new(),
-            client_secret: String::new(),
-            mini_game_token: String::new(),
-            isv_token: "isv_token".into(),
-            isv_key: "isv_key".into(),
-        }
-    }
-
     /// 官方期望的成功实现：直接返回字符串 success（不带引号）
     fn reply_success(_request: &RecordedPost) -> (String, String) {
         ("HTTP/1.1 200 OK".into(), "success".into())
@@ -232,8 +210,8 @@ mod tests {
     #[test]
     fn handshake_posts_resigned_envelope_and_expects_success() {
         let (addr, rx) = start_single_server(reply_success, Duration::ZERO);
-        let config = config_with_url(format!("http://{addr}/auth"));
-        let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
+        let url = format!("http://{addr}/auth");
+        let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &url, "isv_token");
 
         assert!(outcome.ok, "应成功：{outcome:?}");
         let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
@@ -256,8 +234,8 @@ mod tests {
         let responder: fn(&RecordedPost) -> (String, String) =
             |_| ("HTTP/1.1 200 OK".into(), r#""success""#.into());
         let (addr, _rx) = start_single_server(responder, Duration::ZERO);
-        let config = config_with_url(format!("http://{addr}/auth"));
-        let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &config);
+        let url = format!("http://{addr}/auth");
+        let outcome = verify_handshake(&quick_client(Duration::from_secs(2)), &url, "isv_token");
 
         assert!(!outcome.ok);
         assert!(outcome.message.contains("success"), "{outcome:?}");

@@ -18,10 +18,9 @@
 #[cfg(test)]
 mod tests;
 
-use std::time::Duration;
-
 use crate::connections::util::{md5_hex, now_millis};
 
+use super::adapter::narrow;
 use super::{
     no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig, DispatchOutcome,
     DispatchSnapshot, HandshakeOutcome,
@@ -103,22 +102,14 @@ fn result_reply_check(body: &str, sent_message_id: &str) -> Result<(), String> {
 /// TEST 事件验证合法性——按官方信封五字段构造 TEST 事件（data 只含测试时间戳，
 /// 与信封同值），header 带 kwaisign；期望 HTTP 200 且应答 result=1 并原样回传
 /// 收到的 message_id。
+/// 超时窗口：官方未给统一应答时限，本地沿用 5 秒上限（trait 默认握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_id: &str,
+    app_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Kuaishou {
-        url,
-        app_id,
-        app_secret,
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是快手渠道，无法执行 TEST 事件握手".into(),
-        };
-    };
     let timestamp = now_millis() as u64;
     let message_id = uuid::Uuid::new_v4().to_string();
     // TEST 事件信封（§2.1 事件页信封五字段键序 + §3.1 测试样本 data 只含时间戳）
@@ -150,20 +141,16 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Kuaishou {
-        url, app_secret, ..
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是快手渠道，无法直发");
-    };
     post_json(client, url, app_secret, plaintext)
 }
 
 /// 快手渠道适配器：[`super::ChannelAdapter`] 的快手实现——TEST 事件握手与
 /// kwaisign 签名直发；MD5 原语复用 util（md5_hex），差异不外溢。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -180,15 +167,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Kuaishou { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方未给统一应答时限，本地沿用 5 秒上限
-        super::client_with_timeout(Duration::from_secs(5))
+        narrow!(config, Kuaishou { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -196,7 +175,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Kuaishou { url, app_id, app_secret } =>
+            verify_handshake(client, url, app_id, app_secret))
     }
 
     fn dispatch_event(
@@ -205,6 +185,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Kuaishou { url, app_secret } =>
+            dispatch_event(client, url, app_secret, plaintext))
     }
 }

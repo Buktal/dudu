@@ -22,9 +22,10 @@ mod tests;
 
 use crate::connections::util::now_secs;
 
+use super::adapter::narrow;
 use super::{
-    client_with_timeout, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
-    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
+    no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig, DispatchOutcome,
+    DispatchSnapshot, HandshakeOutcome,
 };
 
 /// op13 验证回调的官方 UA（事实库 §3.2 请求头逐字：`User-Agent:[QQBot-Callback]`）。
@@ -117,18 +118,14 @@ fn post(
 
 /// op13 握手（事实库 §3.2）：随机 plain_token + 当前 event_ts 组验证回调体，
 /// 期望 HTTP 2xx 且回包 plain_token 回显 + Ed25519 验签通过（官方未给应答
-/// 时限口径，超时上限与直发同取 5s）。
+/// 时限口径，超时上限与直发同取 5s——trait 默认握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_id: &str,
+    app_secret: &str,
 ) -> HandshakeOutcome {
-    let Some((url, app_id, app_secret)) = qq_fields(config) else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是 QQ 渠道，无法执行 op13 验证回调握手".into(),
-        };
-    };
     let plain_token = random_plain_token();
     let event_ts = now_secs().to_string();
     let body = build_validation_body(&plain_token, &event_ts);
@@ -170,12 +167,11 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_id: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let Some((url, app_id, app_secret)) = qq_fields(config) else {
-        return DispatchOutcome::not_sent("配置不是 QQ 渠道，无法直发");
-    };
     if let Some(payload) = parse_validation_payload(plaintext) {
         return dispatch_validation(client, url, app_id, app_secret, plaintext, &payload);
     }
@@ -247,21 +243,9 @@ fn dispatch_validation(
     )
 }
 
-/// 从 QQ 连接配置取（url, app_id, app_secret）；非 QQ 配置 None。
-fn qq_fields(config: &ConnectionConfig) -> Option<(&str, &str, &str)> {
-    let ConnectionConfig::Qq {
-        url,
-        app_id,
-        app_secret,
-    } = config
-    else {
-        return None;
-    };
-    Some((url, app_id, app_secret))
-}
-
 /// QQ 渠道适配器：[`super::ChannelAdapter`] 的 QQ 实现——op13 验证回调握手
 /// 与事件/op13 双形态直发按载荷路由；Ed25519 原语在 [`sign`]，差异不外溢。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -278,13 +262,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        qq_fields(config).map(|(url, _, _)| url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方未给 op13 应答时限口径（事实库 §7.2 待核验），
-        // 与直发同取 5s 上限
-        client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Qq { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -292,7 +270,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Qq { url, app_id, app_secret } =>
+            verify_handshake(client, url, app_id, app_secret))
     }
 
     fn dispatch_event(
@@ -301,6 +280,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Qq { url, app_id, app_secret } =>
+            dispatch_event(client, url, app_id, app_secret, plaintext))
     }
 }

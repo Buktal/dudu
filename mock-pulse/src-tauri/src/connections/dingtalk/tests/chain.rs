@@ -1,10 +1,11 @@
 //! 握手与直发全链路（本地 TcpListener）：check_url 加密握手（成功/回包明文非
 //! success/验签不过/非加密回包/非 200/超时）、密文直发（URL 三参可复算 + 信封
-//! 可独立解密 + 回执快照）、机器人明文通道探测与直发（timestamp/sign 头）、
-//! 配置判别。
+//! 可独立解密 + 回执快照）、机器人明文通道探测与直发（timestamp/sign 头）。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::time::Duration;
 
+use crate::connections::ChannelAdapter;
 use crate::connections::util::sha1_sorted_hex;
 use crate::connections::wecom::random_16;
 use crate::test_support::{
@@ -23,7 +24,7 @@ fn handshake_posts_signed_envelope_and_accepts_encrypted_success_reply() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         true,
         &["握手成功"],
     );
@@ -87,7 +88,7 @@ fn handshake_fails_when_reply_plaintext_is_not_success() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["不为 success"],
     );
@@ -106,7 +107,7 @@ fn handshake_fails_when_reply_signature_is_invalid() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["加密 success 回包"],
     );
@@ -120,7 +121,7 @@ fn handshake_fails_on_plain_text_reply() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["未回可验签解密的加密"],
     );
@@ -133,7 +134,7 @@ fn handshake_fails_on_non_200() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["500"],
     );
@@ -147,7 +148,7 @@ fn handshake_fails_on_timeout() {
         Duration::from_secs(1),
         Duration::from_millis(200),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["超时"],
     );
@@ -163,7 +164,7 @@ fn dispatch_posts_signed_envelope_and_snapshots_protocol_elements() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_eq!(outcome.status, 200);
@@ -201,7 +202,7 @@ fn dispatch_records_plain_receipt_without_encrypted_reply() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_eq!(outcome.status, 200);
@@ -217,7 +218,7 @@ fn dispatch_reports_non_200_status() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_dispatch_receipt(&outcome, 500, "boom");
@@ -231,7 +232,7 @@ fn dispatch_reports_timeout_without_response() {
         Duration::from_secs(1),
         Duration::from_millis(200),
         |addr| dingtalk_config(format!("http://{addr}/callback")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_dispatch_error(&outcome, &["超时"]);
@@ -246,7 +247,7 @@ fn bot_handshake_posts_signed_plaintext_probe_and_accepts_2xx() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| bot_config(format!("http://{addr}/bot")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         true,
         &[],
     );
@@ -273,7 +274,7 @@ fn bot_handshake_fails_on_non_2xx() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| bot_config(format!("http://{addr}/bot")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["403"],
     );
@@ -288,7 +289,7 @@ fn bot_dispatch_posts_plaintext_verbatim_with_fresh_sign_headers() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| bot_config(format!("http://{addr}/bot")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_eq!(outcome.status, 200);
@@ -309,24 +310,4 @@ fn bot_dispatch_posts_plaintext_verbatim_with_fresh_sign_headers() {
     );
     assert_eq!(sign, bot::build_sign(GOLDEN_APP_SECRET, &timestamp));
     assert_eq!(outcome.reply, None);
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_dingtalk_config() {
-    let config = ConnectionConfig::Feishu {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_id: "cli_x".into(),
-        verification_token: "token".into(),
-        encrypt_key: String::new(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是钉钉渠道"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是钉钉渠道"));
 }

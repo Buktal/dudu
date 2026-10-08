@@ -8,7 +8,6 @@ mod golden;
 
 use crate::connections::wecom::random_16;
 use crate::connections::ConnectionConfig;
-use crate::test_support::quick_client;
 
 use super::*;
 
@@ -86,9 +85,4 @@ pub(super) fn reply_success_envelope(
     })
     .to_string();
     ("HTTP/1.1 200 OK".into(), body)
-}
-
-/// quick 客户端别名（网络基建在 crate::test_support 共享）。
-pub(super) fn client() -> reqwest::blocking::Client {
-    quick_client(std::time::Duration::from_secs(2))
 }

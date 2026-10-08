@@ -20,8 +20,6 @@ mod push;
 #[cfg(test)]
 mod tests;
 
-use std::time::Duration;
-
 // 微信族共享原语单点在 wechat_common（GET 握手的三参签名已在握手构造骨架
 // handshake_echo_get 内装订，本 re-export 供 tests 黄金对拍取用；POST 直发
 // 骨架由 [`push`] 消费族共享 dispatcher）。
@@ -29,6 +27,7 @@ pub(crate) use crate::connections::util::now_secs;
 #[cfg(test)]
 pub(crate) use crate::connections::wechat_common::build_callback_signature;
 
+use super::adapter::narrow;
 use super::{
     handshake_echo_get, ConnectionConfig, DispatchOutcome, HandshakeOutcome, WechatMiniMode,
 };
@@ -41,17 +40,14 @@ fn random_echostr() -> String {
 /// GET 首次校验握手（事实库 §3.2）：生成随机 echostr → 三参字典序签名 →
 /// GET 目标 URL（signature/timestamp/nonce/echostr）→ 期望 HTTP 200 且响应体
 /// 与 echostr 逐字节一致（官方要求原样返回、不加引号）。
+/// 超时窗口：官方 5 秒应答窗口（重试规则小程序侧待核验，mock 按同体系实现），
+/// 本地留 5s 上限（trait 默认握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    token: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::WechatMini { url, token, .. } = config else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是微信小程序渠道，无法执行 GET 握手".into(),
-        };
-    };
     let echostr = random_echostr();
     let timestamp = now_secs().to_string();
     let nonce = uuid::Uuid::new_v4().simple().to_string();
@@ -74,16 +70,23 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`]（super::ChannelAdapter）路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    mode: &WechatMiniMode,
+    token: &str,
+    app_id: &str,
+    encoding_aes_key: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::WechatMini { mode, .. } = config else {
-        return DispatchOutcome::not_sent("配置不是微信小程序渠道，无法直发");
-    };
     match mode {
-        WechatMiniMode::Plain => push::dispatch_plain(client, config, plaintext),
-        WechatMiniMode::Compatible => push::dispatch_compatible(client, config, plaintext),
-        WechatMiniMode::Secure => push::dispatch_secure(client, config, plaintext),
+        WechatMiniMode::Plain => {
+            push::dispatch_plain(client, url, token, app_id, encoding_aes_key, plaintext)
+        }
+        WechatMiniMode::Compatible => {
+            push::dispatch_compatible(client, url, token, app_id, encoding_aes_key, plaintext)
+        }
+        WechatMiniMode::Secure => {
+            push::dispatch_secure(client, url, token, app_id, encoding_aes_key, plaintext)
+        }
     }
 }
 
@@ -91,6 +94,7 @@ fn dispatch_event(
 /// GET 三参握手（同公众号）与三模式 XML 直发按连接配置路由；数据格式取
 /// XML 为主（事实库结论），AES 信封复用企微 crypto 同族原语，尾部 AppId
 /// 校验在族共享直发骨架（wechat_common）内。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -107,16 +111,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::WechatMini { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方 5 秒应答窗口（重试规则小程序侧待核验，
-        // mock 按同体系实现），本地留 5s 上限
-        super::client_with_timeout(Duration::from_secs(5))
+        narrow!(config, WechatMini { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -124,7 +119,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, WechatMini { url, token } =>
+            verify_handshake(client, url, token))
     }
 
     fn dispatch_event(
@@ -133,6 +129,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, WechatMini { url, mode, token, app_id, encoding_aes_key } =>
+            dispatch_event(client, url, mode, token, app_id, encoding_aes_key, plaintext))
     }
 }

@@ -27,6 +27,7 @@ mod tests;
 
 use crate::connections::util::hmac_sha256_hex;
 
+use super::adapter::narrow;
 use super::{
     no_reply, request_error_reason, send_measured_outcome, ConnectionConfig, DispatchOutcome,
     DispatchSnapshot, HandshakeOutcome,
@@ -83,22 +84,14 @@ fn message_id_of(body: &str) -> String {
 /// 随机 int/字符串，本侧生成同形态的 16 位数字串）→ GET 目标 URL（hub.mode
 /// =subscribe + hub.challenge + hub.verify_token）→ 期望 HTTP 200 且响应体
 /// 与 hub.challenge 逐字节一致（裸值纯文本非 JSON）。
+/// 超时窗口：官方无秒级应答 SLA（待核验(09-27)），本地沿用 5 秒上限（trait
+/// 默认握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    verify_token: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Whatsapp {
-        url,
-        app_secret: _,
-        verify_token,
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是 WhatsApp 渠道，无法执行 GET 三参握手".into(),
-        };
-    };
     // App Secret 不参与 GET 握手（§4.1：Verify token 与 app secret 是两个
     // 无关值），仅 verify_token 进 query 供目标侧比对。
     let challenge = random_challenge();
@@ -106,7 +99,7 @@ fn verify_handshake(
     let response = client.get(url).query(&[
         ("hub.mode", "subscribe"),
         ("hub.challenge", challenge.as_str()),
-        ("hub.verify_token", verify_token.as_str()),
+        ("hub.verify_token", verify_token),
     ]);
 
     let response = match response.send() {
@@ -181,17 +174,10 @@ fn post_json(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Whatsapp {
-        url,
-        app_secret,
-        verify_token: _,
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是 WhatsApp 渠道，无法直发");
-    };
     post_json(client, url, app_secret, plaintext)
 }
 
@@ -209,7 +195,8 @@ fn random_challenge() -> String {
 
 /// WhatsApp 渠道适配器：[`super::ChannelAdapter`] 的 WhatsApp 实现——GET 三参
 /// 握手与 X-Hub-Signature-256（HMAC-SHA256）签名直发；原语复用 util
-/// （hmac_sha256_hex），差异不外溢。
+/// （hmac_sha256_hex），差异不外溢。宽配置 → 渠道字段收窄经 `narrow!` 单点
+/// （super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -226,15 +213,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Whatsapp { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方无秒级应答 SLA（待核验(09-27)），本地沿用 5 秒上限
-        super::client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Whatsapp { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -242,7 +221,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Whatsapp { url, verify_token } =>
+            verify_handshake(client, url, verify_token))
     }
 
     fn dispatch_event(
@@ -251,6 +231,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Whatsapp { url, app_secret } =>
+            dispatch_event(client, url, app_secret, plaintext))
     }
 }

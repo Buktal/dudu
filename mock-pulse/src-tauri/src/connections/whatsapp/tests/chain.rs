@@ -1,7 +1,8 @@
 //! 握手与直发全链路（本地 TcpListener）：GET 三参握手（hub 三参可核 +
 //! 200 裸回 challenge 成功/JSON 信封回包/非 200/超时）、JSON 直发
 //! （X-Hub-Signature-256 头可由原始 body 复算 + body 逐字节透传 + wamid
-//! 快照）、非 200/超时回执、配置判别。
+//! 快照）、非 200/超时回执。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -9,7 +10,7 @@ use std::net::{Shutdown, SocketAddr, TcpListener};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use crate::connections::ConnectionConfig;
+use crate::connections::ChannelAdapter;
 use crate::test_support::{quick_client, read_head_and_body};
 
 use super::*;
@@ -120,7 +121,7 @@ fn handshake_gets_three_params_and_accepts_bare_challenge() {
     let (addr, rx) =
         start_request_server(|request| challenge_echo_ok(request), Duration::ZERO);
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("裸回"), "{outcome:?}");
@@ -157,7 +158,7 @@ fn handshake_fails_when_challenge_wrapped_in_json() {
     };
     let (addr, _rx) = start_request_server(json_envelope, Duration::ZERO);
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("裸值"), "{outcome:?}");
@@ -174,7 +175,7 @@ fn handshake_fails_when_challenge_modified() {
     };
     let (addr, _rx) = start_request_server(modified, Duration::ZERO);
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("裸值"), "{outcome:?}");
@@ -188,7 +189,7 @@ fn handshake_fails_on_non_200() {
     };
     let (addr, _rx) = start_request_server(forbidden, Duration::ZERO);
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("403"), "{outcome:?}");
@@ -202,7 +203,7 @@ fn handshake_fails_on_timeout() {
         Duration::from_secs(1),
     );
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
-    let outcome = verify_handshake(&quick_client(Duration::from_millis(200)), &config);
+    let outcome = Adapter.verify_handshake(&quick_client(Duration::from_millis(200)), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("超时"), "{outcome:?}");
@@ -234,7 +235,7 @@ fn dispatch_posts_json_with_signature_header_and_snapshots_wamid() {
     );
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_INBOUND_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_INBOUND_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -278,7 +279,7 @@ fn dispatch_outbound_status_snapshots_statuses_wamid() {
     let (addr, _rx) = start_request_server(empty_receipt, Duration::ZERO);
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_DELIVERED_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_DELIVERED_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.msg_id, GOLDEN_DELIVERED_WAMID);
@@ -295,7 +296,7 @@ fn dispatch_reports_non_200_status_and_body() {
     let (addr, _rx) = start_request_server(boom, Duration::ZERO);
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_INBOUND_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_INBOUND_PLAINTEXT);
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -310,30 +311,11 @@ fn dispatch_reports_timeout_with_retry_note() {
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
 
     let outcome =
-        dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
+        Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");
     assert!(error.contains("超时"), "{outcome:?}");
     assert!(error.contains("7 天"), "{outcome:?}");
     assert_eq!(outcome.body, "");
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_whatsapp_config() {
-    let config = ConnectionConfig::Qq {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_id: "11111111".into(),
-        app_secret: "DG5g3B4j9X2KOErG".into(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是 WhatsApp 渠道"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是 WhatsApp 渠道"));
 }

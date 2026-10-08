@@ -28,6 +28,7 @@ mod tests;
 
 use crate::connections::util::{md5_wrapped_sign, now_secs, utc8_timestamp};
 
+use super::adapter::narrow;
 use super::{
     no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
     DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
@@ -127,22 +128,15 @@ fn post_json(
 /// 连接测试（§3.2 首次验证握手 → 待核验(09-27)）：官方未给 challenge/verify
 /// 口径，探针即官方状态枚举样本明文（§5.1 锚定的 WAIT_SELLER_STOCK_OUT）+
 /// 合规签名（语义同普通推送），期望 HTTP 200（应答正文无口径）。
+/// 超时窗口：官方应答窗口未取得（待核验），本地沿用 5 秒上限（trait 默认
+/// 握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_key: &str,
+    app_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Jingdong {
-        url,
-        app_key,
-        app_secret,
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是京东渠道，无法执行推送探针握手".into(),
-        };
-    };
     let outcome = post_json(client, url, app_key, app_secret, GOLDEN_PROBE_PLAINTEXT);
     probe_handshake_outcome(
         outcome,
@@ -160,22 +154,17 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_key: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Jingdong {
-        url,
-        app_key,
-        app_secret,
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是京东渠道，无法直发");
-    };
     post_json(client, url, app_key, app_secret, plaintext)
 }
 
 /// 京东渠道适配器：[`super::ChannelAdapter`] 的京东实现——推送探针握手与
 /// JOS MD5 签名直发；原语复用 util（md5_hex），差异不外溢。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -192,15 +181,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        let ConnectionConfig::Jingdong { url, .. } = config else {
-            return None;
-        };
-        Some(url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方应答窗口未取得（待核验），本地沿用 5 秒上限
-        super::client_with_timeout(std::time::Duration::from_secs(5))
+        narrow!(config, Jingdong { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -208,7 +189,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Jingdong { url, app_key, app_secret } =>
+            verify_handshake(client, url, app_key, app_secret))
     }
 
     fn dispatch_event(
@@ -217,6 +199,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Jingdong { url, app_key, app_secret } =>
+            dispatch_event(client, url, app_key, app_secret, plaintext))
     }
 }

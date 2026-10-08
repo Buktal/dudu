@@ -1,10 +1,11 @@
 //! 握手与直发全链路（本地 TcpListener）：TEST 事件握手（kwaisign 可由原始
 //! body 复算 + result=1 回显成功/result≠1/message_id 不回传/非 2xx）、明文直发
-//! （header kwaisign + body 逐字节透传 + 快照）、超时回执、配置判别。
+//! （header kwaisign + body 逐字节透传 + 快照）、超时回执。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::time::Duration;
 
-use crate::connections::ConnectionConfig;
+use crate::connections::ChannelAdapter;
 use crate::test_support::{
     ExpectedSnapshots, assert_dispatch_error, assert_dispatch_receipt, assert_snapshots,
     run_dispatch_case, run_handshake_case, status_responder,
@@ -45,7 +46,7 @@ fn handshake_posts_test_event_and_accepts_official_result_reply() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         true,
         &["TEST", "result=1"],
     );
@@ -84,7 +85,7 @@ fn handshake_fails_when_result_is_not_one() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["result"],
     );
@@ -103,7 +104,7 @@ fn handshake_fails_when_message_id_not_echoed() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["message_id"],
     );
@@ -116,7 +117,7 @@ fn handshake_fails_on_non_200() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
-        verify_handshake,
+        |client, config| Adapter.verify_handshake(client, config),
         false,
         &["500"],
     );
@@ -138,7 +139,7 @@ fn dispatch_posts_plaintext_with_kwaisign_header_and_snapshots_elements() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_eq!(outcome.status, 200);
@@ -171,7 +172,7 @@ fn dispatch_reports_non_200_status_and_body() {
         Duration::ZERO,
         Duration::from_secs(2),
         |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_dispatch_receipt(&outcome, 500, "boom");
@@ -186,27 +187,8 @@ fn dispatch_reports_timeout_without_response() {
         Duration::from_secs(1),
         Duration::from_millis(200),
         |addr| kuaishou_config(format!("http://{addr}/webhooks/kuaishou")),
-        dispatch_event,
+        |client, config, body| Adapter.dispatch_event(client, config, body),
     );
 
     assert_dispatch_error(&outcome, &["超时", "重试"]);
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_kuaishou_config() {
-    let config = ConnectionConfig::Qq {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_id: "11111111".into(),
-        app_secret: "DG5g3B4j9X2KOErG".into(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是快手渠道"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是快手渠道"));
 }

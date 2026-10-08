@@ -18,10 +18,9 @@
 #[cfg(test)]
 mod tests;
 
-use std::time::Duration;
-
 use crate::connections::util::{callback_signature as build_callback_signature, now_millis};
 
+use super::adapter::narrow;
 use super::{
     handshake_echo_get, no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome,
     DispatchSnapshot, HandshakeOutcome,
@@ -49,17 +48,14 @@ fn random_echostr() -> String {
 /// GET 首次校验握手（事实库 §3.1 四参）：生成随机 nonce/echostr → 三参字典序
 /// 签名 → GET 目标 URL（signature/timestamp/nonce/echostr）→ 期望 HTTP 200 且
 /// 响应体与 echostr 逐字节一致（官方要求原样返回）。
+/// 超时窗口：官方 5 秒应答窗口（超时断开×3 重试），本地留 5s 上限（trait 默认
+/// 握手客户端）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Weibo { url, app_secret } = config else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是微博渠道，无法执行 GET 握手".into(),
-        };
-    };
     let echostr = random_echostr();
     let timestamp = now_millis().to_string();
     let nonce = random_nonce();
@@ -84,12 +80,10 @@ fn verify_handshake(
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Weibo { url, app_secret } = config else {
-        return DispatchOutcome::not_sent("配置不是微博渠道，无法直发");
-    };
     let timestamp = now_millis().to_string();
     let nonce = random_nonce();
     let signature = build_callback_signature(app_secret, &timestamp, &nonce);
@@ -114,16 +108,9 @@ fn dispatch_event(
     )
 }
 
-/// 从微博连接配置取（url, app_secret）；非微博配置 None。
-fn weibo_fields(config: &ConnectionConfig) -> Option<(&str, &str)> {
-    let ConnectionConfig::Weibo { url, app_secret } = config else {
-        return None;
-    };
-    Some((url, app_secret))
-}
-
 /// 微博渠道适配器：[`super::ChannelAdapter`] 的微博实现——GET 四参握手与
 /// JSON 签名直发；三参 sha1 排序验签复用 util 同族原语，差异不外溢。
+/// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
 impl super::ChannelAdapter for Adapter {
@@ -140,12 +127,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        weibo_fields(config).map(|(url, _)| url)
-    }
-
-    fn handshake_client(&self) -> reqwest::blocking::Client {
-        // 生产用默认客户端：官方 5 秒应答窗口（超时断开×3 重试），本地留 5s 上限
-        super::client_with_timeout(Duration::from_secs(5))
+        narrow!(config, Weibo { url } => Some(url.as_str()))
     }
 
     fn verify_handshake(
@@ -153,7 +135,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        verify_handshake(client, config)
+        narrow!(config, Weibo { url, app_secret } =>
+            verify_handshake(client, url, app_secret))
     }
 
     fn dispatch_event(
@@ -162,6 +145,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        dispatch_event(client, config, plaintext)
+        narrow!(config, Weibo { url, app_secret } =>
+            dispatch_event(client, url, app_secret, plaintext))
     }
 }

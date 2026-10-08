@@ -1,11 +1,11 @@
 //! verify_webhooks 握手与直发全链路（本地 TcpListener）：签名头表可由原始
 //! 请求复算（接收侧「签名→验签」自反）+ data 原样回显成功/不一致/缺字段/
-//! 非 JSON/非 200 + 明文直发透传与快照 + 凭据缺失直发前拒绝 + 超时回执 +
-//! 配置判别。
+//! 非 JSON/非 200 + 明文直发透传与快照 + 凭据缺失直发前拒绝 + 超时回执。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::time::Duration;
 
-use crate::connections::ConnectionConfig;
+use crate::connections::{ChannelAdapter, ConnectionConfig};
 use crate::test_support::{RecordedPost, quick_client, start_single_server};
 
 use super::*;
@@ -74,7 +74,7 @@ fn handshake_posts_verify_webhooks_and_accepts_data_echo() {
         Duration::ZERO,
     );
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("verify_webhooks"), "{outcome:?}");
@@ -116,7 +116,7 @@ fn handshake_fails_when_data_not_echoed() {
     };
     let (addr, _rx) = start_single_server(wrong_echo, Duration::ZERO);
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("data"), "{outcome:?}");
@@ -129,7 +129,7 @@ fn handshake_fails_on_json_without_data_field() {
         |_request: &RecordedPost| ("HTTP/1.1 200 OK".into(), r#"{"code":0}"#.to_string());
     let (addr, _rx) = start_single_server(no_data, Duration::ZERO);
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("data"), "{outcome:?}");
@@ -140,7 +140,7 @@ fn handshake_fails_on_non_json_body() {
     let plain = |_request: &RecordedPost| ("HTTP/1.1 200 OK".into(), "pong".to_string());
     let (addr, _rx) = start_single_server(plain, Duration::ZERO);
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("合法 JSON"), "{outcome:?}");
@@ -156,7 +156,7 @@ fn handshake_fails_on_non_200() {
     };
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("500"), "{outcome:?}");
@@ -176,7 +176,7 @@ fn dispatch_posts_plaintext_with_signature_headers_and_snapshots() {
     );
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -226,7 +226,7 @@ fn dispatch_reports_non_200_status_and_body() {
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -241,7 +241,7 @@ fn dispatch_reports_timeout_with_retry_note() {
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
 
-    let outcome = dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");
@@ -264,7 +264,7 @@ fn dispatch_rejects_missing_client_id_before_sending() {
         app_secret: GOLDEN_APP_SECRET.into(),
     };
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
 
     assert_eq!(outcome.status, 0, "未发出请求");
     assert_eq!(outcome.request_body, None);
@@ -284,29 +284,10 @@ fn dispatch_rejects_missing_app_secret_before_sending() {
         app_secret: String::new(),
     };
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_EVENT_PLAINTEXT);
 
     assert_eq!(outcome.status, 0, "未发出请求");
     assert_eq!(outcome.signature, "", "未发出请求即无签名快照");
     let error = outcome.error.expect("应有拒绝原因");
     assert!(error.contains("HMAC-SHA256"), "{error:?}");
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_bilibili_config() {
-    let config = ConnectionConfig::Qq {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_id: "11111111".into(),
-        app_secret: "DG5g3B4j9X2KOErG".into(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是 B站渠道"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是 B站渠道"));
 }

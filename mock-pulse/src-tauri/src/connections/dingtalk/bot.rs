@@ -10,8 +10,7 @@
 //!   规范验签头，目标响应 HTTP 2xx 即连通（官方未定义回包语义，正文不校验）
 
 use super::super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_reply, send_measured_outcome, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 use crate::connections::util;
 
@@ -58,17 +57,9 @@ fn post(
 /// 私有协议原语：对外只经 [`super::Adapter`]（super::super::ChannelAdapter）路由。
 pub(super) fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_secret: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Dingtalk {
-        url, app_secret, ..
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是钉钉渠道，无法执行机器人通道探测".into(),
-        };
-    };
     let outcome = post(client, url, PROBE_PLAINTEXT, app_secret);
     match outcome.error {
         Some(error) => HandshakeOutcome {
@@ -96,15 +87,10 @@ pub(super) fn verify_handshake(
 /// 私有协议原语：对外只经 [`super::Adapter`]（super::super::ChannelAdapter）路由。
 pub(super) fn dispatch_event(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    app_secret: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    let ConnectionConfig::Dingtalk {
-        url, app_secret, ..
-    } = config
-    else {
-        return DispatchOutcome::not_sent("配置不是钉钉渠道，无法直发");
-    };
     post(client, url, plaintext, app_secret)
 }
 

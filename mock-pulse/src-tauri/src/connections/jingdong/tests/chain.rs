@@ -1,10 +1,11 @@
 //! 探针握手与直发全链路（本地 TcpListener）：推送探针握手（JOS 签名可由原始
 //! body + query 参数复算 + 200/非 2xx）、明文直发（系统参数 query + body 逐字节
-//! 透传 + 业务单号快照 + timestamp 快照）、超时回执、配置判别。
+//! 透传 + 业务单号快照 + timestamp 快照）、超时回执。
+//! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::time::Duration;
 
-use crate::connections::ConnectionConfig;
+use crate::connections::ChannelAdapter;
 use crate::test_support::{quick_client, start_single_server};
 
 use super::*;
@@ -41,7 +42,7 @@ fn handshake_posts_probe_sample_and_accepts_200() {
         Duration::ZERO,
     );
     let config = jingdong_config(format!("http://{addr}/webhooks/jingdong"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(outcome.ok, "应成功：{outcome:?}");
     assert!(outcome.message.contains("推送探针"), "{outcome:?}");
@@ -67,7 +68,7 @@ fn handshake_fails_on_non_200() {
     };
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = jingdong_config(format!("http://{addr}/webhooks/jingdong"));
-    let outcome = verify_handshake(&client(), &config);
+    let outcome = Adapter.verify_handshake(&client(), &config);
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("500"), "{outcome:?}");
@@ -101,7 +102,7 @@ fn dispatch_posts_plaintext_with_jos_query_and_snapshots_elements() {
     );
     let config = jingdong_config(format!("http://{addr}/webhooks/jingdong"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_ORDER_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_ORDER_PLAINTEXT);
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -143,7 +144,7 @@ fn dispatch_snapshots_business_id_per_template() {
             Duration::ZERO,
         );
         let config = jingdong_config(format!("http://{addr}/webhooks/jingdong"));
-        let outcome = dispatch_event(&client(), &config, plaintext);
+        let outcome = Adapter.dispatch_event(&client(), &config, plaintext);
         assert_eq!(outcome.status, 200);
         assert_eq!(outcome.msg_id, expected, "{plaintext}");
     }
@@ -160,7 +161,7 @@ fn dispatch_reports_non_200_status_and_body() {
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = jingdong_config(format!("http://{addr}/webhooks/jingdong"));
 
-    let outcome = dispatch_event(&client(), &config, GOLDEN_ORDER_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_ORDER_PLAINTEXT);
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -176,32 +177,13 @@ fn dispatch_reports_timeout_with_pending_retry_note() {
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = jingdong_config(format!("http://{addr}/webhooks/jingdong"));
 
-    let outcome = dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");
     assert!(error.contains("超时"), "{outcome:?}");
     assert!(error.contains("待核验"), "{outcome:?}");
     assert_eq!(outcome.body, "");
-}
-
-// ---- 配置判别 ----
-
-#[test]
-fn dispatch_and_handshake_reject_non_jingdong_config() {
-    let config = ConnectionConfig::Taobao {
-        url: "http://127.0.0.1:1/hook".into(),
-        app_key: "123456".into(),
-        app_secret: "taobao_app_secret".into(),
-    };
-
-    let outcome = dispatch_event(&client(), &config, "{}");
-    assert_eq!(outcome.status, 0);
-    assert!(outcome.error.unwrap().contains("不是京东渠道"));
-
-    let handshake = verify_handshake(&client(), &config);
-    assert!(!handshake.ok);
-    assert!(handshake.message.contains("不是京东渠道"));
 }
 
 // ---- 请求行/query 解析（本文件断言专用，不进协议原语） ----

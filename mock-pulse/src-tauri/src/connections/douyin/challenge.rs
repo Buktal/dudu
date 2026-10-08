@@ -4,7 +4,7 @@
 //! 放入 ResponseBody、text 格式的 JSON。签名头按体系算法由调用方注入
 //! （dop=sha1(client_secret+body)、生活服务=sha1(AppSecret+去换行 body)）。
 
-use super::super::{request_error_reason, ConnectionConfig, HandshakeOutcome};
+use super::super::{request_error_reason, HandshakeOutcome};
 
 /// 构造 verify_webhook 验证请求体（challenge 为数字）。
 pub(super) fn build_verify_body(client_key: &str, challenge: u64) -> String {
@@ -42,22 +42,12 @@ pub(super) fn check_echo(expected: u64, response_body: &str) -> Result<(), Strin
 /// 私有协议原语：对外只经 [`super::Adapter`]（super::super::ChannelAdapter）路由。
 pub(super) fn verify_handshake(
     client: &reqwest::blocking::Client,
-    config: &ConnectionConfig,
+    url: &str,
+    client_key: &str,
+    client_secret: &str,
     sign: fn(&str, &str) -> String,
     timeout_note: &str,
 ) -> HandshakeOutcome {
-    let ConnectionConfig::Douyin {
-        url,
-        client_key,
-        client_secret,
-        ..
-    } = config
-    else {
-        return HandshakeOutcome {
-            ok: false,
-            message: "配置不是抖音渠道，无法执行 verify_webhook 握手".into(),
-        };
-    };
     let challenge = random_challenge();
     let body = build_verify_body(client_key, challenge);
     let signature = sign(client_secret, &body);
@@ -160,25 +150,15 @@ mod tests {
         )
     }
 
-    fn config_with_url(url: String) -> ConnectionConfig {
-        ConnectionConfig::Douyin {
-            url,
-            system: crate::connections::DouyinSystem::Dop,
-            client_key: "tt_key".into(),
-            client_secret: "tt_secret".into(),
-            mini_game_token: String::new(),
-            isv_token: String::new(),
-            isv_key: String::new(),
-        }
-    }
-
     #[test]
     fn handshake_succeeds_when_challenge_echoed() {
         let (addr, rx) = start_single_server(echo_ok, Duration::ZERO);
-        let config = config_with_url(format!("http://{addr}/webhooks/douyin"));
+        let url = format!("http://{addr}/webhooks/douyin");
         let outcome = verify_handshake(
             &quick_client(Duration::from_secs(2)),
-            &config,
+            &url,
+            "tt_key",
+            "tt_secret",
             sha1_push::sign_dop,
             "",
         );
@@ -220,10 +200,12 @@ mod tests {
         // 生活服务与 dop 同款握手，差异只在签名算法（sha1(AppSecret + 去换行 body)）：
         // 请求体为单行 JSON，签名头应等于对该 body 的 life 版签名
         let (addr, rx) = start_single_server(echo_ok, Duration::ZERO);
-        let config = config_with_url(format!("http://{addr}/hook"));
+        let url = format!("http://{addr}/hook");
         let outcome = verify_handshake(
             &quick_client(Duration::from_secs(2)),
-            &config,
+            &url,
+            "tt_key",
+            "tt_secret",
             sha1_push::sign_life,
             "（官方要求 2.5 秒内应答）",
         );
@@ -246,10 +228,12 @@ mod tests {
         };
         let responder: fn(&RecordedPost) -> (String, String) = wrong;
         let (addr, _rx) = start_single_server(responder, Duration::ZERO);
-        let config = config_with_url(format!("http://{addr}/hook"));
+        let url = format!("http://{addr}/hook");
         let outcome = verify_handshake(
             &quick_client(Duration::from_secs(2)),
-            &config,
+            &url,
+            "tt_key",
+            "tt_secret",
             sha1_push::sign_dop,
             "",
         );
@@ -263,10 +247,12 @@ mod tests {
         let responder: fn(&RecordedPost) -> (String, String) =
             |_| ("HTTP/1.1 500 Internal Server Error".into(), "boom".into());
         let (addr, _rx) = start_single_server(responder, Duration::ZERO);
-        let config = config_with_url(format!("http://{addr}/hook"));
+        let url = format!("http://{addr}/hook");
         let outcome = verify_handshake(
             &quick_client(Duration::from_secs(2)),
-            &config,
+            &url,
+            "tt_key",
+            "tt_secret",
             sha1_push::sign_dop,
             "",
         );
@@ -279,10 +265,12 @@ mod tests {
     fn handshake_fails_on_timeout() {
         // 客户端 200ms 超时 vs 服务器 1s 延迟
         let (addr, _rx) = start_single_server(echo_ok, Duration::from_secs(1));
-        let config = config_with_url(format!("http://{addr}/hook"));
+        let url = format!("http://{addr}/hook");
         let outcome = verify_handshake(
             &quick_client(Duration::from_millis(200)),
-            &config,
+            &url,
+            "tt_key",
+            "tt_secret",
             sha1_push::sign_dop,
             "",
         );

@@ -7,7 +7,6 @@ mod chain;
 mod golden;
 
 use crate::connections::ConnectionConfig;
-use crate::test_support::quick_client;
 
 use super::*;
 
@@ -38,9 +37,4 @@ pub(super) fn kuaishou_config(url: String) -> ConnectionConfig {
         app_id: GOLDEN_APP_ID.into(),
         app_secret: GOLDEN_APP_SECRET.into(),
     }
-}
-
-/// quick 客户端别名（网络基建在 crate::test_support 共享）。
-pub(super) fn client() -> reqwest::blocking::Client {
-    quick_client(std::time::Duration::from_secs(2))
 }
