@@ -100,6 +100,10 @@ _Avoid_: 旗标组合、失败标志（口语）
 mock-pulse 三条启动路（模板直发 / 剧本运行 / 编排运行）共用的结果词汇：noop / needConnection（恒带缺失渠道）/ started / done。收敛单点在 runs 域 launch 模块，各 thunk 只取自己的子集。
 _Avoid_: 返回值（口语）
 
+**运行检查点（RunCheckpoint）**:
+mock-pulse 剧本/编排运行启动即落盘的中断态记录：步骤先以未完成占位，运行中每步回执经检查点回写单点（runs 域 executor 的 write_checkpoint_step：patch_checkpoint_step 按 lane 顺序落位覆盖后注入落盘）持久化，正常结束由最终运行记录整体替换；进程中断后重启可追溯已完成步骤，且不会自动续发。
+_Avoid_: 断点续跑（检查点不自动续发）、进度缓存（口语）
+
 **引用解析**:
 mock-pulse 中步骤/编排引用到注册表条目的查找与缺失分类单点：`{id, version}` → ok / id-missing / version-missing。事件素材版本、事件模板版本、编排 lane 剧本三处共用同一 kernel（events 域 resolve）；各时钟（运行 / 展示 / 编辑 / 守卫）的缺失含义收敛到同域 interpreter（interpret*）这一唯一出口，域外只经它消费，缺失语义变更只改 consequence 表一行。
 _Avoid_: 查找、引用查找（口语）

@@ -10,7 +10,10 @@
 //! （在途步骤自然完成）。
 //! 失败策略显式化（批 3a）：「跳不跳、为何跳」收敛为 `policy::LanePolicy`
 //! 决策表单点裁决，serial/parallel 编织函数只负责喂策略，不再各自解读旗标。
-//! 本文件只剩编排编织内核，只认 `PlanRunSnapshot`——剧本运行 = 单 lane 编排，
+//! 本文件是编排编织内核（只认 `PlanRunSnapshot`）+ 检查点步骤回写单点
+//! （[`write_checkpoint_step`] = [`patch_checkpoint_step`] 定位覆盖 +
+//! 注入落盘）：「记录内步骤下标 = 按 lane 顺序拼接」这条契约的拼装与
+//! 增量回写两半同住此处。剧本运行 = 单 lane 编排，
 //! 包装与形态退化在命令边界（`commands::solo_plan` / `scenario_shape`）；
 //! 快照类型/校验在 `super::snapshot`，run-progress 事件与 emit 侧在
 //! `super::progress`，命令接线与后台执行在子模块 `commands`。
@@ -94,6 +97,50 @@ fn tag_lane(mut step: RunStep, lane: usize, scenario_name: &str) -> RunStep {
     step.lane_index = Some(lane);
     step.lane_name = Some(scenario_name.into());
     step
+}
+
+/// 运行检查点的步骤回执补丁（runs 域单点）：把「lane 内步骤下标」定位为
+/// 运行记录内的平铺下标并回执覆盖。记录内步骤下标 = 前 lane 步数前缀和，
+/// 与串行/并行编织（下方两编织函数的 lane 顺序 extend）及中断检查点构造
+/// （`commands::interrupted_plan_record` 的同序 flat_map）同一条拼接契约；
+/// 偏移从记录自身的 lane 归属推导（归属 lane 序号小于本 lane 的步骤数），
+/// 不再依赖快照重算。槽位归属（lane 序号 + 剧本名；剧本形态为 None）原样
+/// 保留——归属在检查点构造时已由 [`tag_lane`] 定死，单 lane 剧本形态自然
+/// 退化，本函数不解读运行形态。纯函数：只改内存记录，落盘由调用方注入
+/// （见 `commands.rs` 的回执覆盖路径）。
+fn patch_checkpoint_step(
+    record: &mut RunRecord,
+    lane: usize,
+    index: usize,
+    mut step: RunStep,
+) {
+    let offset = record
+        .steps
+        .iter()
+        .filter(|placed| placed.lane_index.is_some_and(|placed_lane| placed_lane < lane))
+        .count();
+    let slot = &mut record.steps[offset + index];
+    step.lane_index = slot.lane_index;
+    step.lane_name = slot.lane_name.take();
+    *slot = step;
+}
+
+/// 检查点回执回写（组合操作，runs 域单点）：[`patch_checkpoint_step`] 定位
+/// 覆盖后，经注入的 persist 携带已补丁记录全量落盘。persist 在命令边界注入
+/// （生产侧 = `store::upsert_run` + 错误映射，内核不感知存储），落盘失败
+/// 以 `Err` 原样上抛——调用方装进 run-progress 事件的 error，回执不静默丢失。
+fn write_checkpoint_step<P>(
+    record: &mut RunRecord,
+    lane: usize,
+    index: usize,
+    step: RunStep,
+    persist: P,
+) -> Result<(), String>
+where
+    P: FnOnce(RunRecord) -> Result<(), String>,
+{
+    patch_checkpoint_step(record, lane, index, step);
+    persist(record.clone())
 }
 
 /// 编排执行（#21）：serial 按序逐剧本完整执行；parallel 每剧本一线程

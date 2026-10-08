@@ -19,7 +19,7 @@ use super::super::progress::{
 use super::super::snapshot::{validate_snapshot, PlanRunSnapshot, ScenarioRunSnapshot};
 use super::super::store;
 use super::super::{skipped_step, RunRecord};
-use super::{execute_plan_cancellable, step_facts, tag_lane};
+use super::{execute_plan_cancellable, step_facts, tag_lane, write_checkpoint_step};
 
 /// 运行形态（命令边界定死，内核不感知）：剧本运行 = 单 lane 编排的退化——
 /// 进度事件不携带 lane、记录与步骤不落归属、来源字段为 scenario；
@@ -137,20 +137,19 @@ fn run_in_background(
                 &lane_progress.progress,
             );
             if let StepProgress::Finished { index, step, .. } = &lane_progress.progress {
-                // 回执覆盖检查点：lane 内步骤下标平铺为记录内下标（单 lane 偏移恒 0）
-                let offset: usize = snapshot.scenarios[..lane]
-                    .iter()
-                    .map(|scenario| scenario.steps.len())
-                    .sum();
-                let step = step.clone();
-                checkpoint.steps[offset + index] = if solo {
-                    step
-                } else {
-                    tag_lane(step, lane, &snapshot.scenarios[lane].scenario_name)
-                };
-                event.error = store::upsert_run(&dir, checkpoint.clone())
-                    .err()
-                    .map(|error| error.to_string());
+                // 回执回写检查点（补丁 + 注入落盘）：失败进事件，回执不静默丢失
+                event.error = write_checkpoint_step(
+                    &mut checkpoint,
+                    lane,
+                    *index,
+                    step.clone(),
+                    |record| {
+                        store::upsert_run(&dir, record)
+                            .map(|_| ())
+                            .map_err(|error| error.to_string())
+                    },
+                )
+                .err();
             }
             let _ = app.emit(RUN_PROGRESS, event);
         },

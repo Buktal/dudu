@@ -1,5 +1,6 @@
 //! 生命周期语义：用户取消打断等待、剧本 continue 记录后继续、编排 stop 覆盖
-//! 剧本 continue、用户停止贯穿串/并行编排、中断检查点落盘往返。
+//! 剧本 continue、用户停止贯穿串/并行编排、中断检查点落盘往返、检查点回执
+//! 回写（checkpoint patch / write）的落位与落盘。
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -171,4 +172,126 @@ fn interrupted_scenario_checkpoint_degenerates_to_scenario_shape() {
     assert_eq!(step.lane_index, None);
     assert_eq!(step.lane_name, None);
     assert_eq!(step.payload, snap.steps[0].body);
+}
+
+#[test]
+fn parallel_checkpoint_patches_land_by_lane_prefix_despite_out_of_order_finish() {
+    // 并行乱序完成（lane 1 无等待先完成，lane 0 带等待后完成）：检查点补丁
+    // 仍按「记录内步骤下标 = 前 lane 步数前缀和」落位——lane 1 的回执先到
+    // 却落平铺下标 2，归属保持槽位原值，与完成先后无关。
+    let slow = {
+        let mut step = dy_step("a1", "a1");
+        step.wait = Some(0.2);
+        step
+    };
+    let mut lane_a = lane_snapshot("a", "A", vec![slow, dy_step("a2", "a2")]);
+    lane_a.failure = Some("continue".into());
+    let snap = plan_snapshot(
+        "patch-order",
+        PlanMode::Parallel,
+        PlanFailure::Continue,
+        vec![lane_a, lane_snapshot("b", "B", vec![dy_step("b1", "b1")])],
+    );
+    let mut checkpoint = super::super::commands::interrupted_plan_record(
+        &snap,
+        &[],
+        super::super::commands::RunShape::Plan,
+    );
+    let mut finished_lanes = Vec::new();
+    super::super::execute_plan_cancellable(
+        &snap,
+        &[],
+        Duration::from_secs(1),
+        &AtomicBool::new(false),
+        &mut |lane_progress| {
+            if let StepProgress::Finished { index, step, .. } = &lane_progress.progress {
+                finished_lanes.push(lane_progress.lane);
+                super::super::patch_checkpoint_step(
+                    &mut checkpoint,
+                    lane_progress.lane,
+                    *index,
+                    step.clone(),
+                );
+            }
+        },
+    );
+    // 完成顺序确实乱序：lane 1 的回执先于 lane 0 全部回执到达
+    assert_eq!(finished_lanes, vec![1, 0, 0]);
+    // lane 1 落 lane 0 两步之后（平铺下标 2），内容与归属均为 lane 1
+    assert_eq!(checkpoint.steps[2].event_name, "b1");
+    assert_eq!(
+        checkpoint.steps[2].payload,
+        r#"{"event":"im_receive_msg","content":{"text":"b1"}}"#
+    );
+    assert_eq!(checkpoint.steps[2].lane_index, Some(1));
+    assert_eq!(checkpoint.steps[2].lane_name.as_deref(), Some("B"));
+    assert!(!checkpoint.steps[2].skipped);
+    // lane 0 两步各落前缀位 0/1，归属保持 A；检查点三格全部被回执覆盖
+    assert_eq!(checkpoint.steps[0].event_name, "a1");
+    assert_eq!(checkpoint.steps[1].event_name, "a2");
+    assert!(checkpoint.steps[..2].iter().all(|step| {
+        !step.skipped && step.lane_index == Some(0) && step.lane_name.as_deref() == Some("A")
+    }));
+}
+
+#[test]
+fn checkpoint_patch_keeps_scenario_shape_unattributed() {
+    // 剧本形态（单 lane 退化）的检查点补丁：偏移恒 0、槽位归属保持 None，
+    // 补丁不为单 lane 记录引入 lane 归属。
+    let snap = snapshot("patch-solo", vec![dy_step("one", "one"), dy_step("two", "two")]);
+    let mut checkpoint = super::super::commands::interrupted_plan_record(
+        &super::super::commands::solo_plan(snap.clone()),
+        &[],
+        super::super::commands::RunShape::Scenario,
+    );
+    super::super::patch_checkpoint_step(
+        &mut checkpoint,
+        0,
+        1,
+        super::super::failed_without_send(&snap.steps[1], "no connection".into()),
+    );
+    assert_eq!(checkpoint.steps[1].event_name, "two");
+    assert!(!checkpoint.steps[1].skipped);
+    assert_eq!(
+        checkpoint.steps[1].receipt.error.as_deref(),
+        Some("no connection")
+    );
+    assert_eq!(checkpoint.steps[1].lane_index, None);
+    assert_eq!(checkpoint.steps[1].lane_name, None);
+    // 未补丁的槽位保持中断占位
+    assert!(checkpoint.steps[0].skipped);
+}
+
+#[test]
+fn checkpoint_write_patches_before_persist_and_propagates_persist_error() {
+    // 回写组合操作：先补丁再落盘（注入的 persist 收到已补丁记录），
+    // 落盘失败原样上抛——「落盘失败进 run-progress 事件 error」
+    // 脱离 AppHandle 可直测。
+    let snap = snapshot("write-solo", vec![dy_step("one", "one")]);
+    let mut checkpoint = super::super::commands::interrupted_plan_record(
+        &super::super::commands::solo_plan(snap.clone()),
+        &[],
+        super::super::commands::RunShape::Scenario,
+    );
+    let mut persisted: Option<crate::runs::RunRecord> = None;
+    let result = super::super::write_checkpoint_step(
+        &mut checkpoint,
+        0,
+        0,
+        super::super::failed_without_send(&snap.steps[0], "no connection".into()),
+        |record| {
+            persisted = Some(record);
+            Err("磁盘已满，无法保存运行快照".into())
+        },
+    );
+    assert_eq!(result, Err("磁盘已满，无法保存运行快照".into()));
+    // persist 收到的是已补丁记录：回执已替换中断占位
+    let persisted = persisted.as_ref().unwrap();
+    assert!(!persisted.steps[0].skipped);
+    assert_eq!(
+        persisted.steps[0].receipt.error.as_deref(),
+        Some("no connection")
+    );
+    // 内存检查点同步补丁，落盘与内存同源
+    assert!(!checkpoint.steps[0].skipped);
 }
