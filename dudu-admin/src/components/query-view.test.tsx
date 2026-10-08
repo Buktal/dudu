@@ -105,7 +105,7 @@ it("空态动作按钮由页面差异提供，并得知当前筛选取向", () =
     <button type="button">{filtered ? "清除筛选" : "创建企业"}</button>
   ));
   const base = viewProps();
-  render(
+  const view = render(
     <QueryView
       {...viewProps({
         query: { ...base.query, list: [], filtered: true },
@@ -115,4 +115,19 @@ it("空态动作按钮由页面差异提供，并得知当前筛选取向", () =
   );
   expect(screen.getByRole("button", { name: "清除筛选" })).toBeInTheDocument();
   expect(action).toHaveBeenCalledWith(true);
+
+  // 未筛选空态：false 也必须原样转发，页面据此切换为「创建企业」主引导。
+  view.rerender(
+    <QueryView
+      {...viewProps({
+        query: { ...base.query, list: [], filtered: false },
+        empty: { ...base.empty, action },
+      })}
+    />,
+  );
+  expect(screen.getByRole("button", { name: "创建企业" })).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "清除筛选" }),
+  ).not.toBeInTheDocument();
+  expect(action).toHaveBeenCalledWith(false);
 });
