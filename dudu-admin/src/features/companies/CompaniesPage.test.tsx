@@ -78,8 +78,8 @@ it("创建冲突保留资料并要求重新检测，成功后打开相同企业�
   expect(within(opened).queryByText("Password-123")).not.toBeInTheDocument();
   const creation = request.mock.calls.find(
     ([url, init]) =>
-      new URL(String(url)).pathname === "/api/admin/companies" &&
-      init.method === "POST",
+      new URL(String(url), window.location.href).pathname ===
+        "/api/admin/companies" && init.method === "POST",
   );
   expect(JSON.parse(String(creation?.[1].body))).toEqual({
     companyId: "123456",

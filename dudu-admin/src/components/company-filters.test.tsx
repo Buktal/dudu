@@ -61,3 +61,14 @@ it("点重置立即清空草稿并上报 onReset", () => {
   expect(onReset).toHaveBeenCalledTimes(1);
   expect(screen.getByLabelText("搜索企业")).toHaveValue("");
 });
+
+it("未提交的搜索草稿也可以直接重置", () => {
+  const { onKeyword, onReset } = renderFilters();
+  fireEvent.change(screen.getByLabelText("搜索企业"), {
+    target: { value: "尚未搜索" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "重置" }));
+  expect(screen.getByLabelText("搜索企业")).toHaveValue("");
+  expect(onReset).toHaveBeenCalledTimes(1);
+  expect(onKeyword).not.toHaveBeenCalled();
+});

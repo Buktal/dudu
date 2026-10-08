@@ -1,10 +1,10 @@
-import { Search } from "lucide-react";
+import { RotateCcw, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CompanyStatus } from "@/api/types";
+import { TextField } from "./form-field";
 import { FilterSelect } from "./page-parts";
 import { Button } from "./ui/button";
-import { Field, FieldGroup, FieldLabel } from "./ui/field";
-import { Input } from "./ui/input";
+import { FieldGroup } from "./ui/field";
 
 // 筛选栏只上报平台管理员的意图（关键词、状态、重置）；
 // 「筛选变化回第一页」等与分页的耦合规则由数据方（useCompanies 等数据模块）决定。
@@ -29,30 +29,29 @@ export function CompanyFilters({
   }, [keyword]);
   return (
     <form
-      className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4"
+      aria-label="企业筛选"
+      className="filter-bar"
       onSubmit={(event) => {
         event.preventDefault();
         onKeyword(draft.trim() || undefined);
       }}
     >
-      <FieldGroup className="min-w-48 flex-1">
-        <Field>
-          <FieldLabel htmlFor="company-keyword" className="sr-only">
-            搜索企业
-          </FieldLabel>
-          <Input
-            id="company-keyword"
+      <div className="filter-search">
+        <FieldGroup className="min-w-0 flex-1">
+          <TextField
+            label="搜索企业"
+            hideLabel
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             maxLength={100}
             placeholder="搜索企业名称或六位企业 ID"
           />
-        </Field>
-      </FieldGroup>
-      <Button type="submit" variant="outline">
-        <Search data-icon="inline-start" />
-        搜索
-      </Button>
+        </FieldGroup>
+        <Button type="submit" variant="secondary">
+          <Search data-icon="inline-start" />
+          搜索
+        </Button>
+      </div>
       <FilterSelect<CompanyStatus | "all">
         label="企业状态"
         value={status ?? "all"}
@@ -63,14 +62,16 @@ export function CompanyFilters({
         ]}
         onChange={(value) => onStatus(value === "all" ? undefined : value)}
       />
-      {(keyword || status !== undefined) && (
+      {(draft || keyword || status !== undefined) && (
         <Button
+          type="button"
           variant="ghost"
           onClick={() => {
             setDraft("");
             onReset();
           }}
         >
+          <RotateCcw data-icon="inline-start" />
           重置
         </Button>
       )}

@@ -56,13 +56,49 @@ it("操作记录查询使用企业 ID 与服务端操作码，空查询有明确
   fireEvent.change(screen.getByLabelText("企业 ID"), {
     target: { value: "123456" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "查询" }));
+  fireEvent.click(screen.getByRole("button", { name: "搜索" }));
   await screen.findByText("未找到符合筛选条件的记录。");
   const call = request.mock.calls.find(
     ([, init]) => JSON.parse(String(init.body ?? "{}")).companyId === "123456",
   );
   expect(call?.[1].method).toBe("POST");
   expect(String(call?.[0])).toContain("/api/admin/operation_logs/query");
+});
+
+it("操作记录的无效 ID 不进入查询，重置同时清除草稿、错误和已应用条件", async () => {
+  const request = installHttp(() =>
+    success({ list: [], total: 0, page: 1, pageSize: 20 }),
+  );
+  authenticatedSession("#/logs");
+  render(<App />);
+  await screen.findByText("暂无操作记录");
+  const input = screen.getByRole("textbox", { name: "企业 ID" });
+  const queryBodies = () =>
+    request.mock.calls
+      .filter(([url]) => String(url).includes("/operation_logs/query"))
+      .map(([, init]) => JSON.parse(String(init.body)));
+
+  fireEvent.change(input, { target: { value: "123" } });
+  fireEvent.click(screen.getByRole("button", { name: "搜索" }));
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  expect(input).toHaveAccessibleDescription("请输入六位企业 ID");
+  expect(queryBodies()).toEqual([{ page: 1, pageSize: 20 }]);
+  fireEvent.click(screen.getByRole("button", { name: "重置" }));
+  expect(input).toHaveValue("");
+  expect(input).toHaveAttribute("aria-invalid", "false");
+
+  fireEvent.change(input, { target: { value: "123456" } });
+  fireEvent.click(screen.getByRole("button", { name: "搜索" }));
+  await screen.findByText("未找到符合筛选条件的记录。");
+  expect(queryBodies().slice(-1)[0]).toEqual({
+    page: 1,
+    pageSize: 20,
+    companyId: "123456",
+  });
+  fireEvent.click(screen.getByRole("button", { name: "清除筛选" }));
+  await screen.findByText("企业维护与账号操作完成后，可在这里回查结果。");
+  expect(input).toHaveValue("");
+  expect(queryBodies().slice(-1)[0]).toEqual({ page: 1, pageSize: 20 });
 });
 
 it("资源页搜索后重置，草稿与查询条件一并清空", async () => {

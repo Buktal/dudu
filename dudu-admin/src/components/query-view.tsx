@@ -1,6 +1,8 @@
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { EmptyState, ErrorState, LoadingState } from "./feedback";
 import { Pagination } from "./page-parts";
+import { Separator } from "./ui/separator";
 
 // 列表页骨架单点：加载、失败、空态、表格与分页的编排只在这里写一次。
 // 「失败不冒充空数据」由分支顺序保证：error 先于空态判定，失败时绝不渲染空态文案。
@@ -12,6 +14,8 @@ export function QueryView({
   retry,
   pagination,
   empty,
+  filters,
+  actions,
   children,
 }: {
   count: number;
@@ -25,16 +29,32 @@ export function QueryView({
     onPage: (page: number) => void;
   };
   empty: {
+    icon?: LucideIcon;
     filtered: boolean;
     filteredCopy: { title: string; description: string };
     defaultCopy: { title: string; description: string };
     action?: (filtered: boolean) => ReactNode;
   };
+  filters?: ReactNode;
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   const copy = empty.filtered ? empty.filteredCopy : empty.defaultCopy;
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
+    <div className="data-panel min-w-0 overflow-hidden rounded-4xl border bg-card">
+      {(filters || actions) && (
+        <>
+          <div className="flex flex-wrap items-start justify-between gap-3 p-4 sm:px-5">
+            {filters}
+            {actions && (
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                {actions}
+              </div>
+            )}
+          </div>
+          <Separator />
+        </>
+      )}
       {loading ? (
         <LoadingState />
       ) : error ? (
@@ -44,7 +64,11 @@ export function QueryView({
           {count ? (
             children
           ) : (
-            <EmptyState title={copy.title} description={copy.description}>
+            <EmptyState
+              title={copy.title}
+              description={copy.description}
+              icon={empty.icon}
+            >
               {empty.action?.(empty.filtered)}
             </EmptyState>
           )}

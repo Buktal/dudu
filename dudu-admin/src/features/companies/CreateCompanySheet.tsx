@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -52,9 +53,11 @@ export function CreateCompanySheet({
         className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
         showCloseButton={hold.showCloseButton}
       >
-        <SheetHeader>
+        <SheetHeader className="pr-14">
           <SheetTitle>创建企业</SheetTitle>
+          <SheetDescription>开通企业并设置初始管理员账号。</SheetDescription>
         </SheetHeader>
+        <Separator />
         <form
           className="flex min-h-0 flex-1 flex-col"
           onSubmit={(event) =>
@@ -104,7 +107,7 @@ export function CreateCompanySheet({
             )
           }
         >
-          <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6">
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-6">
             <SubmitMessage error={shell.error} />
             <CompanyIdField
               selection={selection}
@@ -119,7 +122,7 @@ export function CreateCompanySheet({
             <Separator />
             <FieldSet disabled={shell.pending}>
               <FieldLegend>初始企业管理员</FieldLegend>
-              <FieldGroup>
+              <FieldGroup className="gap-5">
                 <TextField
                   label="管理员登录名"
                   value={username}
@@ -134,6 +137,7 @@ export function CreateCompanySheet({
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   maxLength={100}
+                  placeholder="选填"
                 />
                 <TextField
                   label="初始密码"
@@ -145,6 +149,7 @@ export function CreateCompanySheet({
                   maxLength={PASSWORD_MAX_LENGTH}
                   autoComplete="new-password"
                   description="8–72 字符"
+                  placeholder="设置管理员初始密码"
                 />
               </FieldGroup>
             </FieldSet>

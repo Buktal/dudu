@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { cn } from "@/lib/utils";
 import { Field, FieldDescription, FieldError, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
@@ -11,6 +12,7 @@ type TextFieldProps = Omit<
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
   label: string;
+  hideLabel?: boolean;
   error?: string;
   description?: string;
   multiline?: boolean;
@@ -18,6 +20,7 @@ type TextFieldProps = Omit<
 
 export function TextField({
   label,
+  hideLabel = false,
   error,
   description,
   multiline,
@@ -30,8 +33,14 @@ export function TextField({
     "aria-describedby": error || description ? `${id}-help` : undefined,
   };
   return (
-    <Field data-invalid={!!error} data-disabled={props.disabled}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+    <Field
+      className="gap-2"
+      data-invalid={!!error}
+      data-disabled={props.disabled}
+    >
+      <FieldLabel htmlFor={id} className={cn(hideLabel && "sr-only")}>
+        {label}
+      </FieldLabel>
       {multiline ? (
         <Textarea
           {...shared}
@@ -40,6 +49,7 @@ export function TextField({
           maxLength={props.maxLength}
           disabled={props.disabled}
           required={props.required}
+          placeholder={props.placeholder}
           rows={3}
         />
       ) : (

@@ -1,12 +1,7 @@
 import { adminApi } from "@/api/admin-api";
 import { useAdminQuery } from "@/api/admin-query";
 import { CompanyFilters } from "@/components/company-filters";
-import {
-  PAGE_SIZE,
-  PageHeader,
-  RefreshButton,
-  StatusBadge,
-} from "@/components/page-parts";
+import { PAGE_SIZE, RefreshButton, StatusBadge } from "@/components/page-parts";
 import { QueryView } from "@/components/query-view";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,21 +71,19 @@ export function ResourcesPage({
   });
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="企业资源汇总"
-        description="查看各企业的用户、用户组和渠道接入账号数量。"
+      <QueryView
         actions={
           <RefreshButton loading={query.loading} onClick={query.refresh} />
         }
-      />
-      <CompanyFilters
-        keyword={query.keyword}
-        status={query.status}
-        onKeyword={query.setKeyword}
-        onStatus={query.setStatus}
-        onReset={query.reset}
-      />
-      <QueryView
+        filters={
+          <CompanyFilters
+            keyword={query.keyword}
+            status={query.status}
+            onKeyword={query.setKeyword}
+            onStatus={query.setStatus}
+            onReset={query.reset}
+          />
+        }
         count={query.list.length}
         loading={query.loading}
         error={query.error}
@@ -102,6 +95,7 @@ export function ResourcesPage({
           onPage: query.setPage,
         }}
         empty={{
+          icon: Layers3,
           filtered: Boolean(query.keyword) || query.status !== undefined,
           filteredCopy: {
             title: "未找到符合条件的企业",
@@ -111,9 +105,15 @@ export function ResourcesPage({
             title: "暂无企业资源",
             description: "企业开通后，可在这里查看资源汇总。",
           },
+          action: (filtered) =>
+            filtered && (
+              <Button variant="outline" onClick={query.reset}>
+                清除筛选
+              </Button>
+            ),
         }}
       >
-        <Table>
+        <Table aria-label="企业资源汇总">
           <TableHeader>
             <TableRow>
               <TableHead>企业名称</TableHead>
@@ -152,3 +152,5 @@ export function ResourcesPage({
     </div>
   );
 }
+
+import { Layers3 } from "lucide-react";

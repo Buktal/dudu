@@ -29,7 +29,7 @@ export function PasswordFields({
   disabled?: boolean;
 }) {
   return (
-    <FieldGroup>
+    <FieldGroup className="gap-5">
       <TextField
         label="新密码"
         type="password"
@@ -41,6 +41,7 @@ export function PasswordFields({
         maxLength={PASSWORD_MAX_LENGTH}
         disabled={disabled}
         description="8–72 字符"
+        placeholder="设置新密码"
       />
       <TextField
         label="确认新密码"
@@ -51,6 +52,7 @@ export function PasswordFields({
         required
         maxLength={PASSWORD_MAX_LENGTH}
         disabled={disabled}
+        placeholder="再次输入新密码"
       />
     </FieldGroup>
   );

@@ -1,4 +1,10 @@
-import { AlertCircle, Building2, LoaderCircle } from "lucide-react";
+import {
+  AlertCircle,
+  Building2,
+  CheckCircle2,
+  LoaderCircle,
+  type LucideIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
@@ -24,7 +30,7 @@ export function Message({
       variant={error ? "destructive" : "default"}
       role={error ? "alert" : "status"}
     >
-      {error && <AlertCircle />}
+      {error ? <AlertCircle /> : <CheckCircle2 />}
       <AlertDescription>{children}</AlertDescription>
     </Alert>
   );
@@ -75,16 +81,18 @@ export function EmptyState({
   title,
   description,
   children,
+  icon: Icon = Building2,
 }: {
   title: string;
   description: string;
   children?: ReactNode;
+  icon?: LucideIcon;
 }) {
   return (
     <Empty className="py-16">
       <EmptyHeader>
         <EmptyMedia variant="icon">
-          <Building2 />
+          <Icon />
         </EmptyMedia>
         <EmptyTitle>{title}</EmptyTitle>
         <EmptyDescription>{description}</EmptyDescription>

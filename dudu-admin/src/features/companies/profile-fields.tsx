@@ -27,7 +27,7 @@ export function ProfileFields({
   disabled: boolean;
 }) {
   return (
-    <FieldGroup>
+    <FieldGroup className="gap-5">
       <TextField
         label="企业名称"
         value={profile.companyName}
@@ -39,7 +39,7 @@ export function ProfileFields({
         disabled={disabled}
         placeholder="填写企业名称"
       />
-      <div className="grid gap-5 sm:grid-cols-2">
+      <FieldGroup className="grid gap-5 sm:grid-cols-2">
         <TextField
           label="联系人"
           value={profile.contactName ?? ""}
@@ -48,6 +48,7 @@ export function ProfileFields({
           }
           maxLength={100}
           disabled={disabled}
+          placeholder="选填"
         />
         <TextField
           label="联系方式"
@@ -57,8 +58,9 @@ export function ProfileFields({
           }
           maxLength={200}
           disabled={disabled}
+          placeholder="电话或邮箱（选填）"
         />
-      </div>
+      </FieldGroup>
       <TextField
         label="备注"
         multiline
@@ -68,6 +70,7 @@ export function ProfileFields({
         }
         maxLength={1000}
         disabled={disabled}
+        placeholder="补充企业信息（选填）"
       />
     </FieldGroup>
   );

@@ -6,6 +6,7 @@ import { useMutation } from "@/api/use-mutation";
 import { validCompanyId } from "@/api/validators";
 import { TextField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
+import { FieldGroup } from "@/components/ui/field";
 
 export interface IdSelection {
   value: string;
@@ -66,7 +67,7 @@ export function CompanyIdField({
     );
   };
   return (
-    <div className="flex flex-col gap-3">
+    <FieldGroup className="gap-2.5">
       <TextField
         label="企业 ID"
         value={selection.value}
@@ -115,6 +116,6 @@ export function CompanyIdField({
           </span>
         )}
       </div>
-    </div>
+    </FieldGroup>
   );
 }

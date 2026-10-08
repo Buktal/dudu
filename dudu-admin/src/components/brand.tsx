@@ -8,8 +8,11 @@ export function Brand() {
       <span className="brand-mark" aria-hidden="true">
         D
       </span>
-      <span className="text-xl font-bold tracking-tight">
-        DuDu <span className="text-xs font-semibold text-primary">ADMIN</span>
+      <span className="flex items-baseline gap-1.5 font-heading text-xl font-bold tracking-tight">
+        DuDu{" "}
+        <span className="text-[10px] font-semibold tracking-wider text-primary">
+          ADMIN
+        </span>
       </span>
     </div>
   );

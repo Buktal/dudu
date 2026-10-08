@@ -53,7 +53,7 @@ function queryBodies(request: { mock: { calls: unknown[][] } }) {
 it("企业维护成功后，挂载中的列表与详情各自重读新资料", async () => {
   let current = company;
   const request = vi.fn((input: string | URL | Request, init: RequestInit) => {
-    const url = new URL(String(input));
+    const url = new URL(String(input), window.location.href);
     if (url.pathname === "/api/admin/companies/query")
       return Promise.resolve(success(page([current])));
     if ((init.method ?? "GET") === "PUT") {
@@ -91,7 +91,7 @@ it("企业维护成功后，挂载中的列表与详情各自重读新资料", a
 
 it("已中止的企业维护不发送写请求，也不触发重读", async () => {
   const request = vi.fn((input: string | URL | Request) => {
-    const url = new URL(String(input));
+    const url = new URL(String(input), window.location.href);
     if (url.pathname === "/api/admin/companies/query")
       return Promise.resolve(success(page()));
     return Promise.resolve(success(detail));
@@ -114,7 +114,7 @@ it("已中止的企业维护不发送写请求，也不触发重读", async () =
 
 it("卸载后不再订阅失效，维护成功不触发重读", async () => {
   const request = vi.fn((input: string | URL | Request, init: RequestInit) => {
-    const url = new URL(String(input));
+    const url = new URL(String(input), window.location.href);
     if (url.pathname === "/api/admin/companies/query")
       return Promise.resolve(success(page()));
     if ((init.method ?? "GET") === "PUT")
@@ -144,7 +144,7 @@ it("卸载后不再订阅失效，维护成功不触发重读", async () => {
 // paged-query 单点测试；这里只断言 domain 装订：命名操作上报的意图进入查询条件。
 it("setKeyword 与 setStatus 上报的筛选意图进入查询条件", async () => {
   const request = vi.fn((input: string | URL | Request) => {
-    const url = new URL(String(input));
+    const url = new URL(String(input), window.location.href);
     if (url.pathname === "/api/admin/companies/query")
       return Promise.resolve(success(page()));
     return Promise.resolve(success(detail));
@@ -171,7 +171,7 @@ it("setKeyword 与 setStatus 上报的筛选意图进入查询条件", async () 
 
 it("reset 清空全部筛选", async () => {
   const request = vi.fn((input: string | URL | Request) => {
-    const url = new URL(String(input));
+    const url = new URL(String(input), window.location.href);
     if (url.pathname === "/api/admin/companies/query")
       return Promise.resolve(success(page()));
     return Promise.resolve(success(detail));

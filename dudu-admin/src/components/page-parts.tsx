@@ -1,9 +1,8 @@
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
-import type { ReactNode } from "react";
 import type { CompanyStatus } from "@/api/types";
+import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import {
   Select,
   SelectContent,
@@ -17,28 +16,6 @@ export const PAGE_SIZE = 20;
 // 时间串已是北京时间展示文本（yyyy-MM-dd HH:mm:ss），直接截取日期或到分钟
 export const formatDate = (value: string, includeTime = false) =>
   includeTime ? value.slice(0, 16) : value.slice(0, 10);
-
-export function PageHeader({
-  title,
-  description,
-  actions,
-}: {
-  title: string;
-  description?: string;
-  actions?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description && (
-          <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-        )}
-      </div>
-      <div className="flex items-center gap-2">{actions}</div>
-    </div>
-  );
-}
 
 export function RefreshButton({
   loading,
@@ -56,7 +33,7 @@ export function RefreshButton({
       disabled={loading}
       onClick={onClick}
     >
-      <RefreshCw />
+      <RefreshCw className={cn(loading && "animate-spin")} />
     </Button>
   );
 }
@@ -65,11 +42,10 @@ export function StatusBadge({ status }: { status: CompanyStatus }) {
   return (
     <Badge variant="outline">
       <span
-        className={
-          status === 1
-            ? "status-dot status-enabled"
-            : "status-dot status-disabled"
-        }
+        className={cn(
+          "status-dot",
+          status === 1 ? "status-enabled" : "status-disabled",
+        )}
         aria-hidden="true"
       />
       {status === 1 ? "正常启用" : "已停用"}
@@ -96,10 +72,10 @@ export function FilterSelect<T extends string | number>({
         if (next !== null) onChange(next);
       }}
     >
-      <SelectTrigger aria-label={label} className="min-w-32">
+      <SelectTrigger aria-label={label} className="w-40 shrink-0">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent align="start" alignItemWithTrigger={false}>
         <SelectGroup>
           {options.map((option) => (
             <SelectItem key={option.value} value={option.value}>
@@ -127,9 +103,9 @@ export function Pagination({
   return (
     <nav
       aria-label="分页"
-      className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4"
+      className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3.5 sm:px-5"
     >
-      <span className="text-xs text-muted-foreground">
+      <span className="text-xs tabular-nums text-muted-foreground">
         共 {total} 条 · 第 {page} / {pages} 页
       </span>
       <div className="flex gap-2">
@@ -153,29 +129,5 @@ export function Pagination({
         </Button>
       </div>
     </nav>
-  );
-}
-
-export function Metric({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number;
-  icon: ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>{label}</CardTitle>
-        <span className="text-muted-foreground">{icon}</span>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-semibold tabular-nums tracking-tight">
-          {value.toLocaleString("zh-CN")}
-        </p>
-      </CardContent>
-    </Card>
   );
 }

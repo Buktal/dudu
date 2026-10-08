@@ -1,11 +1,10 @@
-import { UserRound } from "lucide-react";
+import { KeyRound, UserRound } from "lucide-react";
 import { useState } from "react";
 import { adminApi } from "@/api/admin-api";
 import { useAdminQuery } from "@/api/admin-query";
 import { useAdmin } from "@/api/context";
 import { ErrorState, LoadingState } from "@/components/feedback";
 import { TextField } from "@/components/form-field";
-import { PageHeader } from "@/components/page-parts";
 import {
   SubmitButton,
   SubmitMessage,
@@ -14,12 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
+import { Separator } from "@/components/ui/separator";
 import {
   PASSWORD_MAX_LENGTH,
   PasswordFields,
@@ -35,37 +36,53 @@ export function AccountPage() {
   const [confirmation, setConfirmation] = useState("");
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="个人账号" description="查看当前身份，管理登录密码。" />
       {query.loading ? (
         <LoadingState />
       ) : query.error ? (
         <ErrorState message={query.error} retry={query.refresh} />
       ) : (
         query.data && (
-          <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.4fr]">
+          <div className="grid max-w-5xl items-start gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.3fr)]">
             <Card>
               <CardHeader>
-                <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <UserRound />
-                </div>
-                <CardTitle>{query.data.name}</CardTitle>
+                <CardTitle>
+                  <h2 className="break-words">{query.data.name}</h2>
+                </CardTitle>
                 <CardDescription>平台管理员</CardDescription>
+                <CardAction>
+                  <span
+                    className="flex size-10 items-center justify-center rounded-xl bg-accent text-accent-foreground"
+                    aria-hidden="true"
+                  >
+                    <UserRound className="size-5" />
+                  </span>
+                </CardAction>
               </CardHeader>
+              <Separator />
               <CardContent>
                 <dl className="detail-grid">
                   <dt>登录名</dt>
-                  <dd>{query.data.username}</dd>
+                  <dd className="break-all">{query.data.username}</dd>
                   <dt>用户 ID</dt>
-                  <dd className="font-mono">{query.data.userId}</dd>
+                  <dd className="break-all font-mono text-xs">
+                    {query.data.userId}
+                  </dd>
                 </dl>
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>修改密码</CardTitle>
+                <CardTitle>
+                  <h2>修改密码</h2>
+                </CardTitle>
                 <CardDescription>
                   修改成功后，请使用新密码重新登录。
                 </CardDescription>
+                <CardAction>
+                  <span className="metric-icon" aria-hidden="true">
+                    <KeyRound className="size-5" />
+                  </span>
+                </CardAction>
               </CardHeader>
               <CardContent>
                 <form
@@ -102,6 +119,7 @@ export function AccountPage() {
                       maxLength={PASSWORD_MAX_LENGTH}
                       autoComplete="current-password"
                       disabled={shell.pending}
+                      placeholder="输入当前登录密码"
                     />
                   </FieldGroup>
                   <PasswordFields
@@ -111,7 +129,8 @@ export function AccountPage() {
                     setConfirmation={setConfirmation}
                     disabled={shell.pending}
                   />
-                  <div className="flex gap-2">
+                  <Separator />
+                  <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
                       disabled={shell.pending}

@@ -1,4 +1,4 @@
-import { Edit3, KeyRound, Power } from "lucide-react";
+import { ArrowUpRight, Edit3, KeyRound, Power } from "lucide-react";
 import { useState } from "react";
 import { ErrorState, LoadingState } from "@/components/feedback";
 import { formatDate, StatusBadge } from "@/components/page-parts";
@@ -38,10 +38,11 @@ export function CompanyDetailSheet({
         className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
         showCloseButton={!action || !detail}
       >
-        <SheetHeader>
+        <SheetHeader className="pr-14">
           <SheetTitle>企业详情</SheetTitle>
         </SheetHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 pb-8">
+        <Separator />
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
           {loading ? (
             <LoadingState />
           ) : error ? (
@@ -51,13 +52,16 @@ export function CompanyDetailSheet({
               <>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-4">
-                    <h2 className="min-w-0 break-words text-xl font-semibold">
+                    <h2 className="min-w-0 break-words text-xl font-semibold leading-snug">
                       {detail.company.companyName}
                     </h2>
                     <StatusBadge status={detail.company.status} />
                   </div>
-                  <span className="font-mono text-sm text-muted-foreground">
-                    {detail.company.companyId}
+                  <span className="text-xs text-muted-foreground">
+                    企业 ID{" "}
+                    <span className="ml-2 font-mono">
+                      {detail.company.companyId}
+                    </span>
                   </span>
                 </div>
                 <dl className="detail-grid">
@@ -85,19 +89,24 @@ export function CompanyDetailSheet({
                     <Edit3 data-icon="inline-start" />
                     编辑资料
                   </Button>
-                  <Button variant="outline" onClick={() => setAction("status")}>
+                  <Button
+                    variant={
+                      detail.company.status === 1 ? "destructive" : "outline"
+                    }
+                    onClick={() => setAction("status")}
+                  >
                     <Power data-icon="inline-start" />
                     {detail.company.status === 1 ? "停用企业" : "恢复企业"}
                   </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate(routes.resources(companyId))}
+                  >
+                    查看企业资源
+                    <ArrowUpRight data-icon="inline-end" />
+                  </Button>
                 </div>
                 <Separator />
-                <Button
-                  variant="outline"
-                  className="self-start"
-                  onClick={() => navigate(routes.resources(companyId))}
-                >
-                  查看企业资源
-                </Button>
                 <section
                   className="flex flex-col gap-4"
                   aria-labelledby="initial-admin-title"

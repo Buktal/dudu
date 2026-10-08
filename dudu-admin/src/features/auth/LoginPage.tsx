@@ -8,7 +8,13 @@ import {
   SubmitMessage,
   useSubmit,
 } from "@/components/submit-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { FieldGroup } from "@/components/ui/field";
 
 export function LoginPage() {
@@ -22,9 +28,9 @@ export function LoginPage() {
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-6 sm:px-8">
         <Brand />
       </header>
-      <main className="flex flex-1 items-center justify-center px-5 py-12">
+      <main className="flex flex-1 items-center justify-center px-5 py-8">
         <Card className="w-full max-w-[420px]">
-          <CardHeader className="pb-3 pt-8 text-center">
+          <CardHeader className="pb-2 pt-5 text-center">
             <div className="mb-4 flex justify-center">
               <span className="brand-mark brand-mark-large" aria-hidden="true">
                 D
@@ -35,11 +41,9 @@ export function LoginPage() {
                 登录管理后台
               </h1>
             </CardTitle>
-            <p className="mt-2 text-sm text-muted-foreground">
-              DuDu 平台运营中心
-            </p>
+            <CardDescription>DuDu 平台运营中心</CardDescription>
           </CardHeader>
-          <CardContent className="px-7 pb-8 sm:px-8">
+          <CardContent className="px-6 pb-5 sm:px-8">
             <form
               className="flex flex-col gap-6"
               onSubmit={(event) =>
@@ -54,7 +58,7 @@ export function LoginPage() {
               }
             >
               <SubmitMessage error={shell.error} notice={session.notice} />
-              <FieldGroup>
+              <FieldGroup className="gap-5">
                 <TextField
                   label="登录名"
                   value={username}

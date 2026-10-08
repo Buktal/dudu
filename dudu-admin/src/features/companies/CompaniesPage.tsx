@@ -5,7 +5,6 @@ import { Message } from "@/components/feedback";
 import {
   formatDate,
   PAGE_SIZE,
-  PageHeader,
   RefreshButton,
   StatusBadge,
 } from "@/components/page-parts";
@@ -50,9 +49,8 @@ export function CompaniesPage({
   };
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="企业管理"
-        description="开通企业，维护企业资料与管理员账号。"
+      {message && <Message>{message}</Message>}
+      <QueryView
         actions={
           <>
             <RefreshButton loading={query.loading} onClick={query.refresh} />
@@ -62,16 +60,15 @@ export function CompaniesPage({
             </Button>
           </>
         }
-      />
-      {message && <Message>{message}</Message>}
-      <CompanyFilters
-        keyword={query.keyword}
-        status={query.status}
-        onKeyword={query.setKeyword}
-        onStatus={query.setStatus}
-        onReset={query.reset}
-      />
-      <QueryView
+        filters={
+          <CompanyFilters
+            keyword={query.keyword}
+            status={query.status}
+            onKeyword={query.setKeyword}
+            onStatus={query.setStatus}
+            onReset={query.reset}
+          />
+        }
         count={query.list.length}
         loading={query.loading}
         error={query.error}
@@ -104,7 +101,7 @@ export function CompaniesPage({
             ),
         }}
       >
-        <Table>
+        <Table aria-label="企业列表">
           <TableHeader>
             <TableRow>
               <TableHead>企业名称</TableHead>
@@ -127,7 +124,10 @@ export function CompaniesPage({
                     {company.companyName}
                   </button>
                   {company.remark && (
-                    <p className="mt-1 max-w-64 truncate text-xs text-muted-foreground">
+                    <p
+                      className="mt-1 max-w-64 truncate text-xs text-muted-foreground"
+                      title={company.remark}
+                    >
                       {company.remark}
                     </p>
                   )}
@@ -138,7 +138,10 @@ export function CompaniesPage({
                 <TableCell>
                   <p>{company.contactName ?? "未填写"}</p>
                   {company.contactInfo && (
-                    <p className="mt-1 max-w-56 truncate text-xs text-muted-foreground">
+                    <p
+                      className="mt-1 max-w-56 truncate text-xs text-muted-foreground"
+                      title={company.contactInfo}
+                    >
                       {company.contactInfo}
                     </p>
                   )}
