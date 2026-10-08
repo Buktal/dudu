@@ -22,8 +22,8 @@ mod tests;
 use crate::connections::util::hmac_sha256_hex;
 
 use super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_body_check, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 失败重试口径（§3.2 逐字）：超 500ms 未收到 200 即推送失败，半小时后重试、
@@ -118,25 +118,15 @@ fn verify_handshake(
         };
     };
     let outcome = post_json(client, url, app_key, app_secret, GOLDEN_FORWARD_PLAINTEXT);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("{error}{RETRY_NOTE}"),
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，Verify 验证未通过（官方：返回 HTTP 200 即验证成功）",
-                outcome.status
-            ),
-        };
-    }
-    HandshakeOutcome {
-        ok: true,
-        message: "Verify 验证成功：Authorization 签名 POST 被接受，目标返回 HTTP 200 确认签收".into(),
-    }
+    probe_handshake_outcome(
+        outcome,
+        RETRY_NOTE,
+        "Verify 验证",
+        "官方：返回 HTTP 200 即验证成功",
+        "Verify 验证成功：Authorization 签名 POST 被接受，目标返回 HTTP 200 确认签收",
+        // 正文无官方口径，成功只判 HTTP 200
+        no_body_check,
+    )
 }
 
 /// 淘宝直发（§3.2/§5.6）：明文 JSON 逐字节透传 + Authorization 头。明文由前端

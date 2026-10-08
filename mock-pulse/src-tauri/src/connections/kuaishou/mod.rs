@@ -23,8 +23,8 @@ use std::time::Duration;
 use crate::connections::util::{md5_hex, now_millis};
 
 use super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig, DispatchOutcome,
+    DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 失败重试口径（附录2 支付回调 16 次重试表 / accessGuide 通用 webhook 重试）：
@@ -131,31 +131,17 @@ fn verify_handshake(
     })
     .to_string();
     let outcome = post_json(client, url, app_secret, &body);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("{error}{RETRY_NOTE}"),
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，TEST 事件握手未通过（期望应答 {{\"result\":1,\"message_id\":\"…\"}}）",
-                outcome.status
-            ),
-        };
-    }
-    match result_reply_check(&outcome.body, &message_id) {
-        Ok(()) => HandshakeOutcome {
-            ok: true,
-            message: "TEST 事件握手成功：kwaisign 验签 POST 被接受，应答 result=1 且 message_id 原样回传（HTTP 200）".into(),
+    probe_handshake_outcome(
+        outcome,
+        RETRY_NOTE,
+        "TEST 事件握手",
+        "期望应答 {\"result\":1,\"message_id\":\"…\"}",
+        "TEST 事件握手成功：kwaisign 验签 POST 被接受，应答 result=1 且 message_id 原样回传（HTTP 200）",
+        |status, body| match result_reply_check(body, &message_id) {
+            Ok(()) => None,
+            Err(reason) => Some(format!("HTTP {status}，但{reason}")),
         },
-        Err(reason) => HandshakeOutcome {
-            ok: false,
-            message: format!("HTTP {}，但{reason}", outcome.status),
-        },
-    }
+    )
 }
 
 /// 快手直发（§3.1）：明文 JSON 逐字节透传 + header kwaisign（两域共用同一

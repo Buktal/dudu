@@ -345,14 +345,19 @@ pub(crate) fn handshake_echo_get(
 /// 渠道私有 post 原语完成（ADR-0001），本骨架只收判定与装配结构；各渠道注记
 /// （重试口径待核验/官方无握手/成功判 2XY 等）是逐渠道事实，逐字经参数透传。
 /// ark 变体（2xx 后还须应答体满足官方语义 success/error_code）经 `body_check`
-/// 承载，无正文口径的渠道传 [`no_body_check`]。
+/// 承载——入参（status + body）供闭包自组「HTTP {status}，但{原因}」式文案，
+/// 无正文口径的渠道传 [`no_body_check`]。归位来历：上轮收敛余留 5 处带回包
+/// 语义校验的手写同构判定，taobao/bilibili/kuaishou/qq 四渠道已迁回本骨架
+/// （qq error 分支与非 2xx 均无注记口径——`unaccepted_note` 为空串时非 2xx
+/// 文案省略括号）；dingtalk check_url 判定对象是解密 reply 的 Some/None
+/// 三分支而非回执正文，保留自有判定。
 pub(crate) fn probe_handshake_outcome(
     outcome: DispatchOutcome,
     failure_note: &str,
     probe_label: &str,
     unaccepted_note: &str,
     success_message: &str,
-    body_check: impl FnOnce(&str) -> Option<String>,
+    body_check: impl FnOnce(u16, &str) -> Option<String>,
 ) -> HandshakeOutcome {
     if let Some(error) = outcome.error {
         return HandshakeOutcome {
@@ -361,15 +366,18 @@ pub(crate) fn probe_handshake_outcome(
         };
     }
     if !(200..300).contains(&outcome.status) {
+        // 核验注记空串（渠道无非 2xx 注记口径）时省略括号，不留悬空「（）」
+        let note = if unaccepted_note.is_empty() {
+            String::new()
+        } else {
+            format!("（{unaccepted_note}）")
+        };
         return HandshakeOutcome {
             ok: false,
-            message: format!(
-                "目标返回 HTTP {}，{probe_label}未通过（{unaccepted_note}）",
-                outcome.status
-            ),
+            message: format!("目标返回 HTTP {}，{probe_label}未通过{note}", outcome.status),
         };
     }
-    if let Some(message) = body_check(&outcome.body) {
+    if let Some(message) = body_check(outcome.status, &outcome.body) {
         return HandshakeOutcome { ok: false, message };
     }
     HandshakeOutcome {
@@ -380,7 +388,7 @@ pub(crate) fn probe_handshake_outcome(
 
 /// 无 2xx 正文语义口径的渠道共用（对仗 [`no_reply`]）：探针成功判定只看状态
 /// 码（应答正文无官方口径），`body_check` 恒通过。
-pub(crate) fn no_body_check(_: &str) -> Option<String> {
+pub(crate) fn no_body_check(_: u16, _: &str) -> Option<String> {
     None
 }
 

@@ -84,8 +84,9 @@ pub(crate) fn probe_handshake(
         "ark 推送探针",
         r#"期望应答 {"success":true,"error_code":0}"#,
         "ark 推送探针成功：官方数组形态被接受，应答 success/error_code 合规",
-        // ark 成功判 2xx + 应答体满足官方语义（§2.1/§5.4），不止状态码
-        |body| {
+        // ark 成功判 2xx + 应答体满足官方语义（§2.1/§5.4），不止状态码；
+        // 文案锚定官方「应答 HTTP 200」口径，status 不入文案
+        |_, body| {
             if ark_reply_ok(body) {
                 None
             } else {

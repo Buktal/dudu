@@ -37,8 +37,8 @@ mod tests;
 use crate::connections::util::{hmac_sha256_hex, md5_hex, now_secs, utc8_timestamp};
 
 use super::{
-    no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot,
-    HandshakeOutcome,
+    no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig, DispatchOutcome,
+    DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 失败重试口径（§3.3 镜像口径，照录注明待核验）：5s 建连超时即断、失败
@@ -209,32 +209,20 @@ fn verify_handshake(
     };
     let data = random_probe_data();
     let body = probe_envelope(data, &timestamp_utc8(now_secs()));
+    // 非 2xx 核验注记携带本次随机 data（期望回显值随请求变化）
+    let unaccepted_note = format!("期望 HTTP 200 原样回 {{\"data\":{data}}}");
     let outcome = post_json(client, url, client_id, app_secret, &body);
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("{error}{RETRY_NOTE}"),
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!(
-                "目标返回 HTTP {}，verify_webhooks 握手未通过（期望 HTTP 200 原样回 {{\"data\":{data}}}）",
-                outcome.status
-            ),
-        };
-    }
-    match data_echo_check(&outcome.body, data) {
-        Ok(()) => HandshakeOutcome {
-            ok: true,
-            message: "verify_webhooks 握手成功：x-bili-* 签名头表 + HMAC-SHA256 POST 被接受，应答原样回 data（HTTP 200）".into(),
+    probe_handshake_outcome(
+        outcome,
+        RETRY_NOTE,
+        "verify_webhooks 握手",
+        &unaccepted_note,
+        "verify_webhooks 握手成功：x-bili-* 签名头表 + HMAC-SHA256 POST 被接受，应答原样回 data（HTTP 200）",
+        |status, body| match data_echo_check(body, data) {
+            Ok(()) => None,
+            Err(reason) => Some(format!("HTTP {status}，但{reason}")),
         },
-        Err(reason) => HandshakeOutcome {
-            ok: false,
-            message: format!("HTTP {}，但{reason}", outcome.status),
-        },
-    }
+    )
 }
 
 /// B站直发（§附速查）：事件明文 JSON 逐字节透传 + 签名头表现算。明文由

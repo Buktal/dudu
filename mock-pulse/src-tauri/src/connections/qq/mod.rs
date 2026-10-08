@@ -23,8 +23,8 @@ mod tests;
 use crate::connections::util::now_secs;
 
 use super::{
-    client_with_timeout, no_reply, send_measured_outcome, ConnectionConfig, DispatchOutcome,
-    DispatchSnapshot, HandshakeOutcome,
+    client_with_timeout, no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// op13 验证回调的官方 UA（事实库 §3.2 请求头逐字：`User-Agent:[QQBot-Callback]`）。
@@ -150,28 +150,18 @@ fn verify_handshake(
         },
         no_reply,
     );
-    if let Some(error) = outcome.error {
-        return HandshakeOutcome {
-            ok: false,
-            message: error,
-        };
-    }
-    if !(200..300).contains(&outcome.status) {
-        return HandshakeOutcome {
-            ok: false,
-            message: format!("目标返回 HTTP {}，op13 验证回调握手未通过", outcome.status),
-        };
-    }
-    match verify_validation_reply(app_secret, &plain_token, &event_ts, &outcome.body) {
-        Ok(_) => HandshakeOutcome {
-            ok: true,
-            message: "op13 验证回调握手成功：plain_token 原样回显且 Ed25519 签名验签通过".into(),
+    probe_handshake_outcome(
+        outcome,
+        // qq 官方无应答时限口径：error 后缀与非 2xx 括号注记均无
+        "",
+        "op13 验证回调握手",
+        "",
+        "op13 验证回调握手成功：plain_token 原样回显且 Ed25519 签名验签通过",
+        |status, body| match verify_validation_reply(app_secret, &plain_token, &event_ts, body) {
+            Ok(_) => None,
+            Err(reason) => Some(format!("HTTP {status} 但 {reason}")),
         },
-        Err(reason) => HandshakeOutcome {
-            ok: false,
-            message: format!("HTTP {} 但 {reason}", outcome.status),
-        },
-    }
+    )
 }
 
 /// QQ 直发：op13 验证回调模板（官方验证形态，无签名头，回包验签）与普通
