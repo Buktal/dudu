@@ -1,5 +1,6 @@
 import { Pin, Star } from "lucide-react";
-import { Virtuoso } from "react-virtuoso";
+import { useEffect, useState } from "react";
+import { type FollowOutput, Virtuoso } from "react-virtuoso";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -131,6 +132,14 @@ export function ConversationQueue({
   const conversations = useInboxSelector(selectQueueConversations);
   const selectedId = useInboxSelector((state) => state.inbox.replyId);
   const hasFilters = hasConversationFilters(queue.query);
+  const [followOutput, setFollowOutput] = useState<FollowOutput>("auto");
+  const [atTop, setAtTop] = useState<boolean>(false);
+  const [atBottom, setAtBottom] = useState<boolean>(false);
+  useEffect(() => {
+    // atBottom 不一定真的在底部（atTop、atBottom 可同时为 true）
+    const realAtBottom = atTop ? false : atBottom;
+    setFollowOutput(realAtBottom ? "smooth" : "auto");
+  }, [atBottom, atTop]);
   return (
     <section
       className="flex min-h-0 flex-1 flex-col"
@@ -163,9 +172,25 @@ export function ConversationQueue({
       >
         <Virtuoso
           className="min-h-0 flex-1 [scrollbar-gutter:stable]"
+          // 虚拟滚动视口扩展距离，提前加载视口外项目。
+          increaseViewportBy={{ bottom: 200, top: 300 }}
+          // 滚动时多渲染一些项目，避免滚动时频繁触发 re-render。
+          overscan={{ main: 200, reverse: 300 }}
+          // 默认情况下，followOutput 只会在列表已经到底部时向下滚动
+          followOutput={followOutput}
+          // 当列表滚动到顶部或向下滚动时，会调用此回调并传入 true / false
+          atTopStateChange={setAtTop}
+          // 当列表滚动到底部或向上滚动时，会调用此回调并传入 true / false
+          atBottomStateChange={setAtBottom}
+          // 快速滚动时显示占位符内容，避免性能下降
+          scrollSeekConfiguration={false}
+          // 禁用 requestAnimationFrame 包装，优化性能但可能出现警告
+          skipAnimationFrameInResizeObserver={true}
+          // 要渲染的数据数组。设置这个后，会根据数组长度推断总数量
           data={conversations}
+          // 自定义列表每项的 key（React key），提升性能，避免重复渲染
           computeItemKey={(_, conversation) => conversation.id}
-          endReached={() => void dispatch(loadConversations({ more: true }))}
+          // 渲染每个项目的回调函数。返回要显示的 React 元素
           itemContent={(_, conversation) => (
             <ConversationRow
               conversation={conversation}
@@ -177,6 +202,9 @@ export function ConversationQueue({
               onPin={onPin ? () => onPin(conversation.id) : undefined}
             />
           )}
+          // 设置默认项目高度，避免首次渲染探测。访客行高一致，按实际行高取 80。
+          defaultItemHeight={80}
+          endReached={() => void dispatch(loadConversations({ more: true }))}
         />
       </InboxListPhase>
     </section>

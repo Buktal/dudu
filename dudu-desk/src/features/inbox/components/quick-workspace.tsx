@@ -50,19 +50,11 @@ const CardGrid = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ),
 );
 const gridComponents = { List: CardGrid };
-const retainedCardLimit = 36;
 
 export function QuickWorkspace() {
   const dispatch = useInboxDispatch();
   const conversations = useInboxSelector(selectQuickQueueConversations);
   const queue = useInboxSelector(selectQueue);
-  // Keep short queues mounted to avoid reinitializing editors on the scroll path.
-  // A 400 px buffer per card also covers the single-column layout's 380 px cards.
-  const viewportBuffer =
-    queue.total !== undefined &&
-    Math.max(queue.total, conversations.length) <= retainedCardLimit
-      ? Math.max(queue.total, conversations.length) * 400
-      : 800;
   const historyId = useInboxSelector((state) => state.inbox.quickHistoryId);
   const replyId = useInboxSelector((state) => state.inbox.replyId);
   const historyConversation = useInboxSelector((state) =>
@@ -145,12 +137,17 @@ export function QuickWorkspace() {
           <VirtuosoGrid
             ref={grid}
             className="min-h-0 flex-1 overscroll-y-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
+            // 虚拟滚动视口扩展距离，提前加载视口外项目。
+            increaseViewportBy={{ bottom: 200, top: 300 }}
+            // 滚动时多渲染一些项目，避免滚动时频繁触发 re-render。
+            overscan={{ main: 200, reverse: 300 }}
+            // 快速滚动时显示占位符内容，避免性能下降
+            scrollSeekConfiguration={false}
+            // 要渲染的数据数组。设置这个后，会根据数组长度推断总数量
             data={conversations}
-            components={gridComponents}
-            increaseViewportBy={viewportBuffer}
-            overscan={400}
+            // 自定义列表每项的 key（React key），提升性能，避免重复渲染
             computeItemKey={(_, conversation) => conversation.id}
-            endReached={() => void dispatch(loadConversations({ more: true }))}
+            // 渲染每个项目的回调函数。返回要显示的 React 元素
             itemContent={(_, conversation) => (
               <QuickCard
                 conversation={conversation}
@@ -159,6 +156,8 @@ export function QuickWorkspace() {
                 onInfo={setCardInfoOpen}
               />
             )}
+            endReached={() => void dispatch(loadConversations({ more: true }))}
+            components={gridComponents}
           />
         </InboxListPhase>
       </main>

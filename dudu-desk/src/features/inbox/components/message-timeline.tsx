@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   type ContextProp,
+  type FollowOutput,
   Virtuoso,
   type VirtuosoHandle,
 } from "react-virtuoso";
@@ -76,7 +77,11 @@ function HistoryList({
   );
   const virtuoso = useRef<VirtuosoHandle>(null);
   const [initialFirstId] = useState(messages[0].id);
+  // atBottom 初始为 true：initialTopMostItemIndex 定位最新消息，且内容不满一屏时
+  // Virtuoso 不会触发 atBottomStateChange。
   const [atBottom, setAtBottom] = useState(true);
+  const [atTop, setAtTop] = useState<boolean>(false);
+  const [followOutput, setFollowOutput] = useState<FollowOutput>("auto");
   const firstCreatedAt = messages[0].createdAt;
   const context = useMemo(
     () => ({ conversationId, firstCreatedAt }),
@@ -89,6 +94,11 @@ function HistoryList({
       messages.findIndex((message) => message.id === initialFirstId),
     );
   const lastSequence = messages[messages.length - 1]?.sequence ?? 0;
+  useEffect(() => {
+    // atBottom 不一定真的在底部（atTop、atBottom 可同时为 true）
+    const realAtBottom = atTop ? false : atBottom;
+    setFollowOutput(realAtBottom ? "smooth" : "auto");
+  }, [atBottom, atTop]);
   useEffect(() => {
     const markVisible = () => {
       if (atBottom) onAtBottom?.(lastSequence);
@@ -106,18 +116,29 @@ function HistoryList({
       <Virtuoso
         ref={virtuoso}
         className="h-full [scrollbar-gutter:stable]"
-        data={messages}
-        computeItemKey={(_, message) => message.id}
+        // 虚拟滚动视口扩展距离，提前加载视口外项目。
+        increaseViewportBy={{ bottom: 400, top: 600 }}
+        // 滚动时多渲染一些项目，避免滚动时频繁触发 re-render。
+        overscan={{ main: 400, reverse: 600 }}
+        // 实现反向无限滚动时使用，结合 totalCount 减少此属性值，以向列表顶部追加项（警告：firstItemIndex 应该是一个正数，基于要显示的总项数）
         firstItemIndex={firstItemIndex}
+        // 列表初始位置
         initialTopMostItemIndex={latestLocation}
-        followOutput={(bottom) => (bottom ? "auto" : false)}
+        // 默认情况下，followOutput 只会在列表已经到底部时向下滚动
+        followOutput={followOutput}
+        // 当列表滚动到顶部或向下滚动时，会调用此回调并传入 true / false
+        atTopStateChange={setAtTop}
+        // 当列表滚动到底部或向上滚动时，会调用此回调并传入 true / false
         atBottomStateChange={setAtBottom}
-        atBottomThreshold={4}
-        increaseViewportBy={600}
-        skipAnimationFrameInResizeObserver
-        startReached={() => void dispatch(loadHistory(conversationId, true))}
-        components={historyComponents}
-        context={context}
+        // 快速滚动时显示占位符内容，避免性能下降
+        scrollSeekConfiguration={false}
+        // 禁用 requestAnimationFrame 包装，优化性能但可能出现警告
+        skipAnimationFrameInResizeObserver={true}
+        // 要渲染的数据数组。设置这个后，会根据数组长度推断总数量
+        data={messages}
+        // 自定义列表每项的 key（React key），提升性能，避免重复渲染
+        computeItemKey={(_, message) => message.id}
+        // 渲染每个项目的回调函数。返回要显示的 React 元素
         itemContent={(_, message) => (
           <div
             className={cn(
@@ -132,6 +153,11 @@ function HistoryList({
             />
           </div>
         )}
+        // 设置默认项目高度，避免首次渲染探测。消息高度不一，按生产验证取 200。
+        defaultItemHeight={200}
+        startReached={() => void dispatch(loadHistory(conversationId, true))}
+        components={historyComponents}
+        context={context}
       />
       {!atBottom && (
         <Button
