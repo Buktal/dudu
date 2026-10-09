@@ -31,7 +31,6 @@ export type Conversation = {
   identity: VisitorIdentity;
   status: ConversationStatus;
   unread: number;
-  starred: boolean;
   preview: string;
   updatedAt: string;
   waitingSince?: string;
@@ -108,7 +107,6 @@ export type ConversationQuery = {
   search: string;
   channelId: string;
   status: ConversationStatus | "all" | "active";
-  starred: boolean;
   order: "wait" | "messages";
 };
 
@@ -119,7 +117,6 @@ export type ConversationPage = Page<Conversation> & {
     needsReply: number;
     waiting: number;
     closed: number;
-    starred: number;
   };
   channels?: { id: string; name: string }[];
 };

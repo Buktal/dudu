@@ -1,4 +1,4 @@
-import { Pin, Star } from "lucide-react";
+import { Pin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type FollowOutput, Virtuoso } from "react-virtuoso";
 import { Badge } from "@/components/ui/badge";
@@ -57,9 +57,6 @@ function ConversationRow({
             <strong className="truncate text-sm font-semibold" title={name}>
               {name}
             </strong>
-            {conversation.starred && (
-              <Star className="size-3 shrink-0 fill-primary text-primary" />
-            )}
             <span className="ml-auto shrink-0">
               <WaitingTime conversation={conversation} />
             </span>

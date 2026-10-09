@@ -73,7 +73,6 @@ export function createDevelopmentInboxApi({
               .length,
             waiting: all.filter((item) => item.status === "waiting").length,
             closed: all.filter((item) => item.status === "closed").length,
-            starred: all.filter((item) => item.starred).length,
           },
           channels: Array.from(
             new Map(
@@ -126,14 +125,6 @@ export function createDevelopmentInboxApi({
         conversation.unread = incoming.filter(
           (message) => message.sequence > through,
         ).length;
-        conversation.version += 1;
-        driver.emit(input.context, { type: "conversation", conversation });
-        return structuredClone(conversation);
-      },
-      setStarred: async (input) => {
-        const fixtures = await session(input, "setStarred");
-        const conversation = findConversation(fixtures, input.conversationId);
-        conversation.starred = input.starred;
         conversation.version += 1;
         driver.emit(input.context, { type: "conversation", conversation });
         return structuredClone(conversation);

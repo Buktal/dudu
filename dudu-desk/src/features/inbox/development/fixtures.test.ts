@@ -22,11 +22,10 @@ const identity = {
 };
 
 describe("fixture builder", () => {
-  it("fills version, starred and a text-only capability by default", () => {
+  it("fills version and a text-only capability by default", () => {
     expect(defineConversation({ id: "a", identity })).toMatchObject({
       status: "needs-reply",
       unread: 0,
-      starred: false,
       version: 1,
       capability: { state: "allowed", kinds: ["text"] },
     });
@@ -37,7 +36,6 @@ describe("fixture builder", () => {
       id: "conversation-a",
       status: "needs-reply",
       unread: 1,
-      starred: false,
       preview: "你好，想问一下",
       version: 1,
       capability: { state: "allowed", kinds: ["text"] },

@@ -44,7 +44,6 @@ describe("independent conversation choices", () => {
           search: "主列表关键词",
           channelId: "wechat-kf",
           status: "active",
-          starred: false,
           order: "messages",
         },
       }),

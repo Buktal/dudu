@@ -246,7 +246,6 @@ export function createDevelopmentFixtures(
       },
       status,
       unread: status === "needs-reply" ? (index % 2) + 1 : 0,
-      starred: index % 7 === 0,
       preview: scene.preview,
       updatedAt,
       waitingSince,

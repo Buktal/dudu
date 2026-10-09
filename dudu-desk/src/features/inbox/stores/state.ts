@@ -128,7 +128,6 @@ export type InboxState = {
     }
   >;
   profileEdits: Record<string, ProfileEdit>;
-  starUpdates: Record<string, DetailSaveState>;
   drafts: Record<string, ReplyDraft>;
   attachments: Record<string, DraftAttachment>;
   submissions: Record<string, ReplySubmission>;
@@ -162,7 +161,6 @@ export function initialInboxState(
     choices: {},
     profiles: {},
     profileEdits: {},
-    starUpdates: {},
     drafts: {},
     attachments: {},
     submissions: {},

@@ -36,9 +36,6 @@ export type InboxApi = {
   markRead: (
     input: RequestOptions & { conversationId: string; throughSequence: number },
   ) => Promise<Conversation>;
-  setStarred: (
-    input: RequestOptions & { conversationId: string; starred: boolean },
-  ) => Promise<Conversation>;
   saveProfile: (
     input: RequestOptions & {
       conversationId: string;
@@ -75,7 +72,6 @@ export const unavailableInboxApi: InboxApi = {
   send: unavailable,
   prepareAttachment: unavailable,
   markRead: unavailable,
-  setStarred: unavailable,
   saveProfile: unavailable,
   endConversation: unavailable,
   resumeConversation: unavailable,

@@ -10,12 +10,11 @@ export const emptyQuery: ConversationQuery = {
   search: "",
   channelId: "all",
   status: "active",
-  starred: false,
   order: "wait",
 };
 
 /**
- * Client-side queue filters only: channel / status / starred. Full-text
+ * Client-side queue filters only: channel / status. Full-text
  * search stays server-side — a conversation the service returns is a search
  * match by definition, so callers must not re-apply search here. The search
  * carve-out for queue rewrites lives in the queue membership module.
@@ -31,8 +30,7 @@ export function matchesConversationFilters(
     (query.status === "all" ||
       (query.status === "active"
         ? conversation.status !== "closed"
-        : query.status === conversation.status)) &&
-    (!query.starred || conversation.starred)
+        : query.status === conversation.status))
   );
 }
 
@@ -43,10 +41,7 @@ export function matchesConversationFilters(
  */
 export function hasConversationFilters(query: ConversationQuery): boolean {
   return (
-    !!query.search ||
-    query.channelId !== "all" ||
-    query.status !== "active" ||
-    query.starred
+    !!query.search || query.channelId !== "all" || query.status !== "active"
   );
 }
 

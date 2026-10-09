@@ -3,7 +3,6 @@ import {
   FilterX,
   Search,
   SlidersHorizontal,
-  Star,
 } from "lucide-react";
 import { useId, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -37,8 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Toggle } from "@/components/ui/toggle";
-import { cn } from "@/lib/utils";
 import { emptyQuery, hasConversationFilters } from "../conversation-query";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import {
@@ -127,23 +124,8 @@ export function QueueTools() {
               <InputGroupAddon>
                 <Search aria-hidden="true" />
               </InputGroupAddon>
-              <InputGroupAddon align="inline-end">
-                <Toggle
-                  size="sm"
-                  pressed={query.starred}
-                  onPressedChange={(starred) =>
-                    change({ starred, status: starred ? "all" : "active" })
-                  }
-                  aria-label="仅查看星标会话"
-                  title="星标会话（包含已结束）"
-                  className="size-6 min-w-6 shrink-0 rounded-md p-0"
-                >
-                  <Star
-                    data-icon="inline-start"
-                    className={cn(query.starred && "fill-current")}
-                  />
-                </Toggle>
-                {hasFilters && (
+              {hasFilters && (
+                <InputGroupAddon align="inline-end">
                   <InputGroupButton
                     size="icon-xs"
                     aria-label="清除筛选"
@@ -158,8 +140,8 @@ export function QueueTools() {
                   >
                     <FilterX />
                   </InputGroupButton>
-                )}
-              </InputGroupAddon>
+                </InputGroupAddon>
+              )}
             </InputGroup>
           </Field>
           <div className="grid min-w-0 grid-cols-[70px_minmax(0,1fr)_auto] items-center gap-1.5">
@@ -169,10 +151,10 @@ export function QueueTools() {
               </FieldLabel>
               <Select
                 items={statuses}
-                value={query.starred ? null : query.status}
+                value={query.status}
                 onValueChange={(value) => {
                   const status = statuses.find((item) => item.value === value);
-                  if (status) change({ status: status.value, starred: false });
+                  if (status) change({ status: status.value });
                 }}
               >
                 <SelectTrigger

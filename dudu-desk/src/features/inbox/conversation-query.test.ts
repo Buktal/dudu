@@ -9,7 +9,7 @@ describe("conversation query filters", () => {
     );
   });
 
-  it("reads true once search, channel, status or starred narrows the query", () => {
+  it("reads true once search, channel or status narrows the query", () => {
     expect(hasConversationFilters({ ...emptyQuery, search: "小雨" })).toBe(
       true,
     );
@@ -20,6 +20,5 @@ describe("conversation query filters", () => {
       true,
     );
     expect(hasConversationFilters({ ...emptyQuery, status: "all" })).toBe(true);
-    expect(hasConversationFilters({ ...emptyQuery, starred: true })).toBe(true);
   });
 });

@@ -6,7 +6,6 @@ import {
   foldConversationPages,
   needsQueueRefreshForEvent,
   needsQueueReloadAfterProfileSave,
-  needsQueueReloadAfterStarChange,
   rewriteQueueIds,
 } from "./queue-membership";
 import { emptyLoad, type InboxState } from "./state";
@@ -132,7 +131,6 @@ describe("needsQueueRefreshForEvent", () => {
     needsReply: 1,
     waiting: 0,
     closed: 0,
-    starred: 0,
   };
   it("fires for queue-moving types when searching or counts exist", () => {
     for (const type of ["conversation", "message", "removed"] as const) {
@@ -170,13 +168,6 @@ describe("queue reload predicates", () => {
     ).toBe(true);
     expect(needsQueueReloadAfterProfileSave(emptyQuery)).toBe(false);
   });
-
-  it("star change reloads only the starred view", () => {
-    expect(
-      needsQueueReloadAfterStarChange({ ...emptyQuery, starred: true }),
-    ).toBe(true);
-    expect(needsQueueReloadAfterStarChange(emptyQuery)).toBe(false);
-  });
 });
 
 function loadingQueue(): InboxState["queue"] {
@@ -187,7 +178,7 @@ function loadingQueue(): InboxState["queue"] {
     ids: ["a"],
     query: emptyQuery,
     total: 5,
-    counts: { active: 1, needsReply: 1, waiting: 0, closed: 0, starred: 0 },
+    counts: { active: 1, needsReply: 1, waiting: 0, closed: 0 },
     channels: [{ id: "wechat-kf", name: "微信客服" }],
   };
 }
@@ -212,14 +203,12 @@ describe("foldConversationPages", () => {
       needsReply: 1,
       waiting: 0,
       closed: 0,
-      starred: 0,
     };
     const later = {
       active: 2,
       needsReply: 0,
       waiting: 0,
       closed: 0,
-      starred: 0,
     };
     expect(
       foldConversationPages([
@@ -258,7 +247,6 @@ describe("applyQueuePageMeta", () => {
     needsReply: 1,
     waiting: 0,
     closed: 0,
-    starred: 0,
   };
   const channels = [{ id: "wechat-kf", name: "微信客服" }];
 
@@ -269,7 +257,7 @@ describe("applyQueuePageMeta", () => {
       {
         items: [],
         nextCursor: "later",
-        counts: { active: 2, needsReply: 0, waiting: 0, closed: 0, starred: 1 },
+        counts: { active: 2, needsReply: 0, waiting: 0, closed: 0 },
       },
       { fallbackTotal: false },
     );
@@ -278,7 +266,7 @@ describe("applyQueuePageMeta", () => {
       hasLoaded: true,
       error: null,
       nextCursor: "later",
-      counts: { active: 2, needsReply: 0, waiting: 0, closed: 0, starred: 1 },
+      counts: { active: 2, needsReply: 0, waiting: 0, closed: 0 },
       channels,
     });
     expect(queue.total).toBeUndefined();

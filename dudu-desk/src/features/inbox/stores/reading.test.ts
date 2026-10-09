@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
 import { type InboxApi, unavailableInboxApi } from "../api";
 import type { Conversation, InboxMessage, Page } from "../types";
-import { setConversationStarred } from "./details";
 import { pinConversation } from "./parallel";
 import { loadConversations } from "./queue";
 import {
@@ -254,9 +253,9 @@ describe("reading conversations through the inbox workflow", () => {
     },
   );
 
-  it("aligns filtered queue membership after API-only end, read and star responses without changing targets", async () => {
-    const first = { ...firstConversation, starred: true };
-    const second = { ...secondConversation, starred: true };
+  it("aligns filtered queue membership after API-only end and read responses without changing targets", async () => {
+    const first = firstConversation;
+    const second = secondConversation;
     const store = testStore({
       listConversations: async () => ({
         items: [first, second],
@@ -264,11 +263,6 @@ describe("reading conversations through the inbox workflow", () => {
       }),
       endConversation: async () => ({ ...first, version: 2, status: "closed" }),
       markRead: async () => ({ ...second, version: 2, unread: 0 }),
-      setStarred: async ({ starred }) => ({
-        ...second,
-        version: starred ? 4 : 3,
-        starred,
-      }),
     });
     await store.dispatch(
       loadConversations({
@@ -276,7 +270,6 @@ describe("reading conversations through the inbox workflow", () => {
           search: "",
           channelId: "all",
           status: "needs-reply",
-          starred: true,
           order: "wait",
         },
       }),
@@ -291,12 +284,6 @@ describe("reading conversations through the inbox workflow", () => {
     expect(
       store.getState().inbox.conversations["conversation-b"],
     ).toMatchObject({ status: "needs-reply", unread: 0 });
-    await store.dispatch(setConversationStarred("conversation-b", false));
-    expect(selectQueueConversations(store.getState())).toEqual([]);
-    await store.dispatch(setConversationStarred("conversation-b", true));
-    expect(
-      selectQueueConversations(store.getState()).map((item) => item.id),
-    ).toEqual(["conversation-b"]);
     expect(store.getState().inbox).toMatchObject({
       activeId,
       replyId,

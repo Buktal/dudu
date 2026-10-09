@@ -168,7 +168,6 @@ export function detachConversation(state: InboxState, id: string): boolean {
   delete state.histories[id];
   delete state.profiles[id];
   delete state.profileEdits[id];
-  delete state.starUpdates[id];
   delete state.ending[id];
   delete state.sendingByConversation[id];
   delete state.events.readingThrough[id];

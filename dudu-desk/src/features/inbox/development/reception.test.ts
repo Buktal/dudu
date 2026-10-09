@@ -121,7 +121,6 @@ describe("development reception API", () => {
         search: "",
         channelId: "all",
         status: "waiting",
-        starred: false,
         order: "wait",
       },
     });
@@ -158,7 +157,6 @@ describe("development reception API", () => {
         search: "",
         channelId: "all",
         status: "closed",
-        starred: false,
         order: "wait",
       },
     });

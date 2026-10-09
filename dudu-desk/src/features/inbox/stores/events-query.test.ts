@@ -30,7 +30,6 @@ describe("recovered conversation queries", () => {
               needsReply: 1,
               waiting: 0,
               closed: 0,
-              starred: 0,
             },
             channels: [{ id: "wechat-kf", name: "微信客服" }],
           };
@@ -46,7 +45,6 @@ describe("recovered conversation queries", () => {
             needsReply: 2,
             waiting: 0,
             closed: 1,
-            starred: 1,
           },
           channels: [
             { id: "wechat-kf", name: "微信客服" },
@@ -69,7 +67,6 @@ describe("recovered conversation queries", () => {
         needsReply: 2,
         waiting: 0,
         closed: 1,
-        starred: 1,
       },
       channels: [
         { id: "wechat-kf", name: "微信客服" },

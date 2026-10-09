@@ -32,7 +32,6 @@ const CONVERSATION_REQUEST_KINDS = [
   "profile-save",
   "send",
   "read",
-  "star",
   "end",
 ] as const;
 

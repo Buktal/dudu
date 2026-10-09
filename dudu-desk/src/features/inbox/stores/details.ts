@@ -1,9 +1,6 @@
 import { uniq } from "lodash-es";
 import { loadConversations } from "./queue";
-import {
-  needsQueueReloadAfterProfileSave,
-  needsQueueReloadAfterStarChange,
-} from "./queue-membership";
+import { needsQueueReloadAfterProfileSave } from "./queue-membership";
 import { runConversationOperation } from "./requests";
 import { inboxActions } from "./slice";
 import type { ProfileChanges } from "./state";
@@ -82,36 +79,5 @@ export function saveVisitorProfile(
           ),
       },
     );
-  };
-}
-
-export function setConversationStarred(
-  conversationId: string,
-  starred: boolean,
-): InboxCommand<Promise<void>> {
-  return async (dispatch, getState, runtime) => {
-    const state = getState().inbox;
-    const conversation = state.conversations[conversationId];
-    if (!conversation || state.starUpdates[conversationId]?.status === "saving")
-      return;
-    await runConversationOperation(runtime, getState, conversationId, "star", {
-      loading: () => dispatch(inboxActions.starSaving(conversationId)),
-      call: (io) => runtime.api.setStarred({ ...io, conversationId, starred }),
-      validate: (result) =>
-        result.id !== conversationId ||
-        result.identity.id !== conversation.identity.id ||
-        result.identity.accountId !== conversation.identity.accountId ||
-        result.identity.channelId !== conversation.identity.channelId ||
-        result.starred !== starred
-          ? "星标保存结果不匹配，请刷新后重试"
-          : undefined,
-      loaded: async (result) => {
-        dispatch(inboxActions.starSaved(result));
-        if (needsQueueReloadAfterStarChange(getState().inbox.queue.query))
-          await dispatch(loadConversations());
-      },
-      failed: (failure) =>
-        dispatch(inboxActions.starFailed({ conversationId, error: failure })),
-    });
   };
 }

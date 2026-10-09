@@ -20,7 +20,6 @@ const query: ConversationQuery = {
   search: "",
   channelId: "all",
   status: "all",
-  starred: false,
   order: "wait",
 };
 const targetFor = (conversation: Conversation): SendTarget => ({
@@ -218,19 +217,11 @@ describe("development InboxApi", () => {
     ).toMatchObject({ state: "restricted" });
   });
 
-  it("updates unread, star and closed state independently", async () => {
+  it("updates unread and closed state independently", async () => {
     const { api } = createDevelopmentInboxApi();
     const input = { ...options(), conversationId: "dev-conversation-01" };
     const read = await api.markRead({ ...input, throughSequence: 39 });
     expect(read).toMatchObject({ unread: 0, status: "needs-reply" });
-    await api.setStarred({ ...input, starred: false });
-    const starred = await api.listConversations({
-      ...input,
-      query: { ...query, starred: true },
-    });
-    expect(starred.items.some((item) => item.id === input.conversationId)).toBe(
-      false,
-    );
     expect(await api.endConversation(input)).toMatchObject({
       status: "closed",
       capability: { state: "restricted" },

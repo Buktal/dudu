@@ -14,7 +14,6 @@ async function setup() {
       search: "",
       channelId: "all",
       status: "all",
-      starred: false,
       order: "wait",
     },
   });

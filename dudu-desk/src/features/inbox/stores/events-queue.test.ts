@@ -24,7 +24,6 @@ describe("live queue refresh coordination", () => {
       needsReply: 2,
       waiting: 0,
       closed: 0,
-      starred: 0,
     };
     const pendingPage = deferred<ConversationPage>();
     const store = testStore({
@@ -47,7 +46,7 @@ describe("live queue refresh coordination", () => {
     await store.dispatch(loadConversations());
     const loadingMore = store.dispatch(loadConversations({ more: true }));
     first = { ...firstConversation, status: "waiting", version: 2 };
-    counts = { active: 2, needsReply: 1, waiting: 1, closed: 0, starred: 0 };
+    counts = { active: 2, needsReply: 1, waiting: 1, closed: 0 };
 
     subscription.onEvent({
       type: "conversation",
@@ -103,7 +102,6 @@ describe("live queue refresh coordination", () => {
               needsReply: 2,
               waiting: 0,
               closed: 0,
-              starred: 0,
             },
           };
         },
@@ -154,7 +152,6 @@ describe("live queue refresh coordination", () => {
         needsReply: 2,
         waiting: 0,
         closed: 0,
-        starred: 0,
       };
       const pendingPage = deferred<ConversationPage>();
       const store = testStore({
@@ -176,7 +173,7 @@ describe("live queue refresh coordination", () => {
       await store.dispatch(loadConversations());
       const loadingMore = store.dispatch(loadConversations({ more: true }));
       first = { ...firstConversation, status: "waiting", version: 2 };
-      counts = { active: 2, needsReply: 1, waiting: 1, closed: 0, starred: 0 };
+      counts = { active: 2, needsReply: 1, waiting: 1, closed: 0 };
       subscription.onEvent({
         type: "conversation",
         id: "update-before-failed-page",

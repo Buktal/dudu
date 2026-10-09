@@ -121,13 +121,3 @@ export function needsQueueReloadAfterProfileSave(
 ): boolean {
   return query.search.trim() !== "";
 }
-
-/**
- * Whether a star change can move its conversation under the active query.
- * Only the starred view filters on it.
- */
-export function needsQueueReloadAfterStarChange(
-  query: ConversationQuery,
-): boolean {
-  return query.starred;
-}

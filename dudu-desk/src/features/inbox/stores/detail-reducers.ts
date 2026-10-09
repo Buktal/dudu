@@ -1,7 +1,6 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
-import type { Conversation, VisitorProfile } from "../types";
-import { mergeConversation } from "./live-merge";
+import type { VisitorProfile } from "../types";
 import type { InboxState, ProfileChanges } from "./state";
 
 export const detailReducers = {
@@ -87,25 +86,5 @@ export const detailReducers = {
       edit.status = "error";
       edit.error = action.payload.error;
     }
-  },
-  starSaving(state: InboxState, action: PayloadAction<string>) {
-    state.starUpdates[action.payload] = { status: "saving", error: null };
-  },
-  starSaved(state: InboxState, action: PayloadAction<Conversation>) {
-    // A star change must not re-merge a removed conversation's entity: the
-    // merge kernel's removed-version guard serves live events, not user saves
-    // (second line of defense behind the operation settle guard).
-    if (!state.conversations[action.payload.id]) return;
-    mergeConversation(state, action.payload);
-    state.starUpdates[action.payload.id] = { status: "saved", error: null };
-  },
-  starFailed(
-    state: InboxState,
-    action: PayloadAction<{ conversationId: string; error: ApiFailure }>,
-  ) {
-    state.starUpdates[action.payload.conversationId] = {
-      status: "error",
-      error: action.payload.error,
-    };
   },
 };

@@ -24,7 +24,6 @@ export function defineConversation(
   return {
     status: "needs-reply",
     unread: 0,
-    starred: false,
     preview: "",
     updatedAt: FIXTURE_NOW,
     version: 1,

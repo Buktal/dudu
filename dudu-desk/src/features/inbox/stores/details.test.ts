@@ -6,7 +6,6 @@ import {
   discardProfileEdits,
   editVisitorProfile,
   saveVisitorProfile,
-  setConversationStarred,
 } from "./details";
 import { loadConversations } from "./queue";
 import { loadProfile, resetContext, selectConversation } from "./reading";
@@ -96,21 +95,16 @@ describe("visitor details", () => {
     ).toMatchObject({ status: "error", note: "正在编辑的备注" });
   });
 
-  it("discards late profile and star writes after the agent context changes", async () => {
+  it("discards late profile writes after the agent context changes", async () => {
     const pendingProfile = deferred<VisitorProfile>();
-    const pendingStar = deferred<Conversation>();
     const store = testStore({
       saveProfile: () => pendingProfile.promise,
-      setStarred: () => pendingStar.promise,
     });
     await store.dispatch(loadConversations());
     store.dispatch(
       editVisitorProfile(firstConversation.id, { note: "旧坐席的未保存备注" }),
     );
     const saving = store.dispatch(saveVisitorProfile(firstConversation.id));
-    const starring = store.dispatch(
-      setConversationStarred(firstConversation.id, true),
-    );
     store.dispatch(
       resetContext({ agentId: "new-agent", workspaceId: "new-workspace" }),
     );
@@ -121,33 +115,26 @@ describe("visitor details", () => {
       tags: [],
       note: "旧坐席的未保存备注",
     });
-    pendingStar.resolve({ ...firstConversation, starred: true, version: 2 });
-    await Promise.all([saving, starring]);
+    await saving;
 
     expect(store.getState().inbox).toMatchObject({
       context: { agentId: "new-agent", workspaceId: "new-workspace" },
       profiles: {},
       profileEdits: {},
-      starUpdates: {},
       conversations: {},
     });
   });
 
-  it("drops a late profile save and star change for a removed conversation", async () => {
+  it("drops a late profile save for a removed conversation", async () => {
     const pendingProfile = deferred<VisitorProfile>();
-    const pendingStar = deferred<Conversation>();
     const store = testStore({
       saveProfile: () => pendingProfile.promise,
-      setStarred: () => pendingStar.promise,
     });
     await store.dispatch(loadConversations());
     store.dispatch(
       editVisitorProfile(firstConversation.id, { note: "移除后才返回的备注" }),
     );
     const saving = store.dispatch(saveVisitorProfile(firstConversation.id));
-    const starring = store.dispatch(
-      setConversationStarred(firstConversation.id, true),
-    );
     // Detach through the reducer-level removal only: the live subscription
     // path would also cancel the request, and this pins the settle guard
     // itself — a current operation whose conversation is gone writes nothing.
@@ -168,34 +155,12 @@ describe("visitor details", () => {
       tags: [],
       note: "移除后才返回的备注",
     });
-    pendingStar.resolve({ ...firstConversation, starred: true, version: 2 });
-    await Promise.all([saving, starring]);
+    await saving;
 
     const state = store.getState().inbox;
     expect(state.profiles).toEqual({});
     expect(state.profileEdits).toEqual({});
-    expect(state.starUpdates).toEqual({});
     expect(state.conversations[firstConversation.id]).toBeUndefined();
-  });
-
-  it("keeps the confirmed star value and explains a rejected save", async () => {
-    const store = testStore({
-      setStarred: async () => {
-        throw new DeskApiError("business", "当前账号不能修改星标");
-      },
-    });
-    await store.dispatch(loadConversations());
-    await store.dispatch(setConversationStarred(firstConversation.id, true));
-
-    expect(
-      store.getState().inbox.conversations[firstConversation.id].starred,
-    ).toBe(false);
-    expect(
-      store.getState().inbox.starUpdates[firstConversation.id],
-    ).toMatchObject({
-      status: "error",
-      error: { kind: "business", message: "当前账号不能修改星标" },
-    });
   });
 
   it("keeps newer edits when an earlier profile save completes", async () => {

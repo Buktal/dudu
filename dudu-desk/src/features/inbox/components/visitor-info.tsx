@@ -24,13 +24,11 @@ import {
   discardProfileEdits,
   editVisitorProfile,
   saveVisitorProfile,
-  setConversationStarred,
 } from "../stores/details";
 import { loadProfile } from "../stores/reading";
 import { selectConversationById } from "../stores/selectors";
 import type { ProfileField } from "../types";
 import { ChannelProfileCopy } from "./channel-profile-copy";
-import { ConversationStarAction } from "./conversation-actions";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
 import { InboxEmpty, InboxError } from "./inbox-state";
 import { VisitorTags } from "./visitor-tags";
@@ -58,9 +56,6 @@ export function VisitorInfo({
   );
   const edit = useInboxSelector(
     (state) => state.inbox.profileEdits[conversationId],
-  );
-  const star = useInboxSelector(
-    (state) => state.inbox.starUpdates[conversationId],
   );
   const id = useId();
   const [tagInputReset, setTagInputReset] = useState(0);
@@ -122,7 +117,7 @@ export function VisitorInfo({
         </div>
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-y-contain px-4 pb-4">
-        <div className="relative flex flex-col items-center gap-2 rounded-xl bg-sidebar-accent p-4 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-sidebar-accent p-4 text-center">
           <VisitorAvatar identity={conversation.identity} large />
           <h3 className="mt-1 max-w-full break-words text-lg font-semibold tracking-tight">
             {name}
@@ -131,21 +126,6 @@ export function VisitorInfo({
           <p className="max-w-full break-words text-[11px] text-muted-foreground">
             {conversation.identity.accountName}
           </p>
-          <ConversationStarAction
-            conversationId={conversationId}
-            className="absolute top-2 right-2"
-          />
-          {star?.error && (
-            <InboxError
-              error={star.error}
-              compact
-              onRetry={() =>
-                void dispatch(
-                  setConversationStarred(conversationId, !conversation.starred),
-                )
-              }
-            />
-          )}
         </div>
 
         <section
