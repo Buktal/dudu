@@ -1,0 +1,82 @@
+[
+  {
+    "id": "daylight",
+    "name": "极昼白",
+    "incomingText": 11.75,
+    "outgoingText": 10.142,
+    "selectedTitle": 9.406,
+    "secondaryOnPaper": 6.174,
+    "secondaryOnSelected": 4.943,
+    "buttonLabel": 6.509
+  },
+  {
+    "id": "midnight",
+    "name": "极夜黑",
+    "incomingText": 9.822,
+    "outgoingText": 7.806,
+    "selectedTitle": 6.705,
+    "secondaryOnPaper": 6.74,
+    "secondaryOnSelected": 4.601,
+    "buttonLabel": 7.494
+  },
+  {
+    "id": "brick",
+    "name": "枣木红",
+    "incomingText": 11.75,
+    "outgoingText": 10.019,
+    "selectedTitle": 8.968,
+    "secondaryOnPaper": 6.174,
+    "secondaryOnSelected": 4.712,
+    "buttonLabel": 6.463
+  },
+  {
+    "id": "honey",
+    "name": "麦穗金",
+    "incomingText": 11.75,
+    "outgoingText": 10.088,
+    "selectedTitle": 8.977,
+    "secondaryOnPaper": 6.174,
+    "secondaryOnSelected": 4.717,
+    "buttonLabel": 6.292
+  },
+  {
+    "id": "olive",
+    "name": "橄榄绿",
+    "incomingText": 11.75,
+    "outgoingText": 10.118,
+    "selectedTitle": 9.067,
+    "secondaryOnPaper": 6.174,
+    "secondaryOnSelected": 4.764,
+    "buttonLabel": 6.176
+  },
+  {
+    "id": "denim",
+    "name": "牛仔蓝",
+    "incomingText": 11.75,
+    "outgoingText": 10.083,
+    "selectedTitle": 9.014,
+    "secondaryOnPaper": 6.174,
+    "secondaryOnSelected": 4.737,
+    "buttonLabel": 6.311
+  },
+  {
+    "id": "iris",
+    "name": "烟岚紫",
+    "incomingText": 11.75,
+    "outgoingText": 10.013,
+    "selectedTitle": 8.937,
+    "secondaryOnPaper": 6.174,
+    "secondaryOnSelected": 4.696,
+    "buttonLabel": 6.425
+  },
+  {
+    "id": "linen",
+    "name": "亚麻褐",
+    "incomingText": 11.75,
+    "outgoingText": 10.069,
+    "selectedTitle": 8.97,
+    "secondaryOnPaper": 6.174,
+    "secondaryOnSelected": 4.713,
+    "buttonLabel": 6.251
+  }
+]

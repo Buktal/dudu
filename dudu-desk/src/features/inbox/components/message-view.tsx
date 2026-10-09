@@ -54,13 +54,12 @@ export function MessageView({
           )}
         >
           <Bubble
-            variant="outline"
+            variant="secondary"
             align={outgoing ? "end" : "start"}
             className={cn(
               "max-w-[calc(100%-40px)]",
-              outgoing
-                ? "[--background:var(--accent)]"
-                : "[--background:var(--card)]",
+              outgoing &&
+                "[--secondary:var(--accent)] [--secondary-foreground:var(--accent-foreground)]",
             )}
           >
             <BubbleContent

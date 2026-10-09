@@ -1,0 +1,84 @@
+{
+  "keyboard": {
+    "arrowMovedFocus": true,
+    "spaceAppliedTheme": true,
+    "escapeReturnedFocus": true
+  },
+  "modes": [
+    {
+      "mode": "parallel",
+      "overflow": false,
+      "palette": "citrus",
+      "draftObservedInScreenshot": "请稍等，我帮您核对一下实物颜色。",
+      "screenshot": "citrus-parallel.jpg"
+    },
+    {
+      "editors": [
+        {
+          "draft": "请稍等，我帮您核对一下实物颜色。",
+          "name": "回复 林小满，微信客服，品牌旗舰店"
+        }
+      ],
+      "mode": "quick",
+      "overflow": false,
+      "palette": "midnight"
+    },
+    {
+      "editors": [
+        {
+          "draft": "请稍等，我帮您核对一下实物颜色。",
+          "name": "回复 林小满，微信客服，品牌旗舰店"
+        }
+      ],
+      "mode": "calm",
+      "overflow": false,
+      "palette": "daylight"
+    }
+  ],
+  "narrowMenus": [
+    {
+      "height": 800,
+      "menu": {
+        "height": 338,
+        "left": 5,
+        "right": 341,
+        "width": 336
+      },
+      "overflow": false,
+      "themes": [
+        "极昼白主题",
+        "极夜黑主题",
+        "栗木红主题",
+        "麦穗金主题",
+        "草木绿主题",
+        "牛仔蓝主题",
+        "烟岚紫主题",
+        "亚麻褐主题"
+      ],
+      "width": 360
+    },
+    {
+      "height": 800,
+      "menu": {
+        "height": 586,
+        "left": 5,
+        "right": 301,
+        "width": 296
+      },
+      "overflow": false,
+      "width": 320
+    }
+  ],
+  "narrowChat": {
+    "height": 800,
+    "overflow": false,
+    "palette": "citrus",
+    "width": 320
+  },
+  "restoredAfterReload": {
+    "height": 720,
+    "mode": "true",
+    "palette": "citrus",
+    "width": 1280
+  }
+}

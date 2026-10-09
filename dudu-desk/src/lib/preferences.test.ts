@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorkspacePreferences } from "./preferences";
 import type { ReceptionMode } from "./reception-mode";
-import type { Palette } from "./theme-palette";
+import { type Palette, paletteKeys } from "./theme-palette";
 
 function memoryStorage(entries: Record<string, string> = {}) {
   const values = new Map(Object.entries(entries));
@@ -35,11 +35,14 @@ describe("workspace preferences", () => {
   it("ignores invalid motion values without discarding valid theme and mode preferences", () => {
     const storage = memoryStorage({
       "dudu-desk.preferences":
-        '{"version":1,"theme":"sea","mode":"quick","reduceMotion":"true"}',
+        '{"version":1,"theme":"ocean","mode":"quick","reduceMotion":"true"}',
     });
     const preferences = createWorkspacePreferences({ storage: () => storage });
     preferences.setReduceMotion("true" as unknown as boolean);
-    expect(preferences.getSnapshot()).toEqual({ theme: "sea", mode: "quick" });
+    expect(preferences.getSnapshot()).toEqual({
+      theme: "ocean",
+      mode: "quick",
+    });
   });
 
   it("starts a new workspace in daylight and calm without browser storage", () => {
@@ -57,11 +60,14 @@ describe("workspace preferences", () => {
     const storage = memoryStorage();
     const first = createWorkspacePreferences({ storage: () => storage });
 
-    first.setTheme("sea");
+    first.setTheme("ocean");
     first.setMode("parallel");
     const reopened = createWorkspacePreferences({ storage: () => storage });
 
-    expect(reopened.getSnapshot()).toEqual({ theme: "sea", mode: "parallel" });
+    expect(reopened.getSnapshot()).toEqual({
+      theme: "ocean",
+      mode: "parallel",
+    });
   });
 
   it.each([
@@ -71,7 +77,7 @@ describe("workspace preferences", () => {
     ],
     [
       '{"version":1,"theme":"sea","mode":"fold"}',
-      { theme: "sea", mode: "calm" },
+      { theme: "ocean", mode: "calm" },
     ],
     [
       '{"version":1,"theme":"graphite","mode":"parallel","reduceMotion":true}',
@@ -105,8 +111,8 @@ describe("workspace preferences", () => {
     },
   );
 
-  it.each(["crimson", "citrus"] as const)(
-    "restores the new %s theme without changing other preferences",
+  it.each(paletteKeys)(
+    "restores the %s theme without changing other preferences",
     (theme) => {
       const storage = memoryStorage();
       const preferences = createWorkspacePreferences({
@@ -119,6 +125,46 @@ describe("workspace preferences", () => {
       expect(
         createWorkspacePreferences({ storage: () => storage }).getSnapshot(),
       ).toEqual({ theme, mode: "parallel", reduceMotion: true });
+    },
+  );
+
+  it.each([
+    ["apricot", "crimson"],
+    ["berry", "crimson"],
+    ["pine", "citrus"],
+    ["sea", "ocean"],
+  ] as const)(
+    "restores retired %s as %s and saves the retained id on the next change",
+    (retired, theme) => {
+      const storage = memoryStorage({
+        "dudu-desk.preferences": JSON.stringify({
+          version: 1,
+          theme: retired,
+          mode: "parallel",
+          reduceMotion: true,
+        }),
+      });
+      const preferences = createWorkspacePreferences({
+        storage: () => storage,
+      });
+
+      expect(preferences.getSnapshot()).toEqual({
+        theme,
+        mode: "parallel",
+        reduceMotion: true,
+      });
+      preferences.setMode("quick");
+      expect(
+        JSON.parse(storage.getItem("dudu-desk.preferences") ?? "null"),
+      ).toEqual({
+        version: 1,
+        theme,
+        mode: "quick",
+        reduceMotion: true,
+      });
+      expect(
+        createWorkspacePreferences({ storage: () => storage }).getSnapshot(),
+      ).toEqual({ theme, mode: "quick", reduceMotion: true });
     },
   );
 
@@ -177,11 +223,11 @@ describe("workspace preferences", () => {
     (_, storage) => {
       const preferences = createWorkspacePreferences({ storage });
 
-      preferences.setTheme("pine");
+      preferences.setTheme("citrus");
       preferences.setMode("quick");
 
       expect(preferences.getSnapshot()).toEqual({
-        theme: "pine",
+        theme: "citrus",
         mode: "quick",
       });
     },
@@ -196,15 +242,15 @@ describe("workspace preferences", () => {
       observed.push(preferences.getSnapshot()),
     );
 
-    preferences.setTheme("berry");
-    preferences.setTheme("berry");
+    preferences.setTheme("crimson");
+    preferences.setTheme("crimson");
     preferences.setMode("quick");
     unsubscribe();
     preferences.setTheme("daylight");
 
     expect(observed).toEqual([
-      { theme: "berry", mode: "calm" },
-      { theme: "berry", mode: "quick" },
+      { theme: "crimson", mode: "calm" },
+      { theme: "crimson", mode: "quick" },
     ]);
   });
 
@@ -215,6 +261,7 @@ describe("workspace preferences", () => {
     preferences.setMode("parallel");
 
     preferences.setTheme("old-theme" as Palette);
+    preferences.setTheme("sea" as Palette);
     preferences.setMode("fold" as ReceptionMode);
 
     expect([

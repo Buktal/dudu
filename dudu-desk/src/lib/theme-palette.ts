@@ -1,17 +1,29 @@
-// Daylight leads as the default with midnight beside it; existing ids preserve saved theme preferences.
+// The eight selected palettes keep existing ids for saved theme preferences.
 export const palettes = {
-  daylight: { name: "极昼白", description: "纯白与墨色", scheme: "light" },
-  midnight: { name: "极夜黑", description: "碳黑与银白", scheme: "dark" },
-  apricot: { name: "珊瑚橙", description: "嘟嘟品牌色", scheme: "light" },
-  crimson: { name: "朱砂红", description: "鲜明朱红", scheme: "light" },
-  amber: { name: "琥珀黄", description: "明亮金黄", scheme: "light" },
-  citrus: { name: "青柠绿", description: "清爽黄绿", scheme: "light" },
-  pine: { name: "松柏绿", description: "沉静森林绿", scheme: "light" },
-  sea: { name: "冰川青", description: "清透蓝青", scheme: "light" },
-  ocean: { name: "钴蓝", description: "鲜明宝蓝", scheme: "light" },
-  iris: { name: "鸢尾紫", description: "浓郁紫色", scheme: "light" },
-  berry: { name: "莓果粉", description: "明快玫粉", scheme: "light" },
-  oat: { name: "可可棕", description: "醇厚深棕", scheme: "light" },
+  daylight: {
+    name: "极昼白",
+    description: "清白底色 · 分层灰阶",
+    scheme: "light",
+  },
+  midnight: {
+    name: "极夜黑",
+    description: "中性炭灰 · 灰色气泡",
+    scheme: "dark",
+  },
+  crimson: {
+    name: "栗木红",
+    description: "暖红棕 · 柔和浅底",
+    scheme: "light",
+  },
+  amber: { name: "麦穗金", description: "米金 · 柔和暖意", scheme: "light" },
+  citrus: {
+    name: "草木绿",
+    description: "柔和草绿 · 清楚自然",
+    scheme: "light",
+  },
+  ocean: { name: "牛仔蓝", description: "灰调蓝 · 清楚沉静", scheme: "light" },
+  iris: { name: "烟岚紫", description: "灰调紫 · 柔和安静", scheme: "light" },
+  oat: { name: "亚麻褐", description: "米褐 · 接近中性", scheme: "light" },
 } as const;
 
 export type Palette = keyof typeof palettes;
@@ -22,7 +34,19 @@ export function isPalette(value: unknown): value is Palette {
 }
 
 export function restorePalette(value: unknown): Palette | undefined {
-  // Retired gray themes keep a neutral appearance for existing workspaces.
-  if (value === "graphite" || value === "fog") return "daylight";
-  return isPalette(value) ? value : undefined;
+  // Retired themes restore to the closest retained color family.
+  switch (value) {
+    case "apricot":
+    case "berry":
+      return "crimson";
+    case "pine":
+      return "citrus";
+    case "sea":
+      return "ocean";
+    case "graphite":
+    case "fog":
+      return "daylight";
+    default:
+      return isPalette(value) ? value : undefined;
+  }
 }

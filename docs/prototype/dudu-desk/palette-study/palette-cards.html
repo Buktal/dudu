@@ -1,0 +1,225 @@
+<!-- PROTOTYPE · 2026-10-09. Eight user-selected themes with shared neutrals; no production changes. -->
+<style>
+  #dudu-palette-study { display: flex; flex-direction: column; gap: 24px; }
+  #dudu-palette-study .study-section { display: flex; flex-direction: column; gap: 14px; }
+  #dudu-palette-study .study-heading { margin: 0; }
+  #dudu-palette-study .neutral-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; }
+  #dudu-palette-study .neutral-roles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+  #dudu-palette-study .neutral-role { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  #dudu-palette-study .neutral-color { display: block; height: 26px; }
+  #dudu-palette-study .palette-option { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  #dudu-palette-study .option-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+  #dudu-palette-study .option-heading h3 { margin: 0; }
+  #dudu-palette-study .preview-stage { padding: 8px; }
+  #dudu-palette-study .accent-roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  #dudu-palette-study .accent-role { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  #dudu-palette-study .accent-color { display: block; height: 32px; }
+  /* The mockup has its own fixed product colors. Surrounding labels follow the host. */
+  #dudu-palette-study .du-preview {
+    color-scheme: light;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--du-line);
+    border-radius: 10px;
+    background: var(--du-canvas);
+    color: var(--du-ink);
+    font-family: "Inter Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+    font-size: 12px;
+    line-height: 1.55;
+    font-weight: 400;
+  }
+  #dudu-palette-study .du-preview * { box-sizing: border-box; }
+  #dudu-palette-study .du-preview[data-scheme="dark"] { color-scheme: dark; }
+  #dudu-palette-study .du-chrome {
+    display: flex;
+    height: 32px;
+    gap: 8px;
+    align-items: center;
+    padding: 0 10px;
+    border-bottom: 1px solid var(--du-line);
+  }
+  #dudu-palette-study .du-logo { font-size: 13px; font-weight: 600; letter-spacing: -.35px; }
+  #dudu-palette-study .du-mode { margin-left: auto; color: var(--du-secondary); font-size: 11px; }
+  #dudu-palette-study .du-active-mode { color: var(--du-ink); background: var(--du-selected); padding: 1px 9px; border-radius: 5px; }
+  #dudu-palette-study .du-main { display: grid; grid-template-columns: 30% minmax(0, 1fr); min-height: 209px; }
+  #dudu-palette-study .du-queue { min-width: 0; background: var(--du-paper); border-right: 1px solid var(--du-line); padding: 8px 5px; }
+  #dudu-palette-study .du-queue-title { padding: 0 4px 6px; font-size: 11px; font-weight: 500; }
+  #dudu-palette-study .du-person { display: flex; flex-direction: column; padding: 6px; margin-bottom: 4px; border-radius: 5px; min-width: 0; }
+  #dudu-palette-study .du-person-current { background: var(--du-selected); }
+  #dudu-palette-study .du-person-name { font-weight: 500; white-space: nowrap; }
+  #dudu-palette-study .du-person-note { color: var(--du-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+  #dudu-palette-study .du-chat { display: flex; flex-direction: column; gap: 8px; padding: 8px; min-width: 0; }
+  #dudu-palette-study .du-chat-heading { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+  #dudu-palette-study .du-channel { color: var(--du-secondary); font-size: 11px; font-weight: 400; }
+  #dudu-palette-study .du-message { max-width: 94%; padding: 6px 8px; border-radius: 9px; overflow-wrap: anywhere; }
+  #dudu-palette-study .du-incoming { align-self: flex-start; background: var(--du-paper); border: 1px solid var(--du-line); border-top-left-radius: 3px; }
+  #dudu-palette-study .du-outgoing { align-self: flex-end; background: var(--du-soft); border-top-right-radius: 3px; }
+  #dudu-palette-study .du-composer { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: auto; padding: 6px; background: var(--du-paper); border: 1px solid var(--du-line); border-radius: 7px; }
+  #dudu-palette-study .du-placeholder { color: var(--du-secondary); font-size: 11px; }
+  #dudu-palette-study .du-send { margin-left: auto; background: var(--du-strong); color: var(--du-on-strong); border-radius: 5px; padding: 3px 8px; font-weight: 500; font-size: 11px; }
+  @media (max-width: 440px) {
+    #dudu-palette-study .neutral-row { grid-template-columns: 1fr; gap: 6px; }
+    #dudu-palette-study .neutral-roles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+</style>
+
+<div id="dudu-palette-study" aria-label="DuDu 已选定的八套主题色">
+  <section class="study-section" aria-labelledby="shared-neutral-title">
+    <h2 id="shared-neutral-title" class="study-heading">共用底色与文字</h2>
+    <div id="shared-neutrals"></div>
+  </section>
+  <section class="study-section" aria-labelledby="neutral-palette-title">
+    <div class="viz-row">
+      <h2 id="neutral-palette-title" class="study-heading">白与黑</h2>
+      <span class="text-small text-muted">已选定 · 两套基础主题</span>
+    </div>
+    <div class="viz-grid" id="neutral-palettes"></div>
+  </section>
+  <section class="study-section" aria-labelledby="accent-palette-title">
+    <div class="viz-row">
+      <h2 id="accent-palette-title" class="study-heading">六套彩色主题</h2>
+      <span class="text-small text-muted">已选定 · 共用浅色底色与文字</span>
+    </div>
+    <div id="accent-palettes" class="study-section"></div>
+  </section>
+
+  <template id="palette-option-template">
+    <section class="palette-option">
+      <div class="option-heading">
+        <h3 data-name></h3>
+        <span class="text-small text-muted" data-mood></span>
+      </div>
+      <div class="preview-stage viz-dotted-background">
+        <div class="du-preview" role="img">
+          <div class="du-chrome">
+            <span class="du-logo">DuDu</span>
+            <span class="du-mode du-active-mode">专注</span>
+            <span class="du-mode">并排</span>
+            <span class="du-mode">卡片</span>
+          </div>
+          <div class="du-main">
+            <div class="du-queue">
+              <div class="du-queue-title">我的会话</div>
+              <div class="du-person du-person-current">
+                <span class="du-person-name">林小满</span>
+                <span class="du-person-note">米白色还有吗？</span>
+              </div>
+              <div class="du-person">
+                <span class="du-person-name">齐开慧</span>
+                <span class="du-person-note">订单已收到</span>
+              </div>
+              <div class="du-person">
+                <span class="du-person-name">田志明</span>
+                <span class="du-person-note">想问一下尺码</span>
+              </div>
+            </div>
+            <div class="du-chat">
+              <div class="du-chat-heading">林小满 <span class="du-channel">微信客服</span></div>
+              <div class="du-message du-incoming">你好，米白色还有吗？</div>
+              <div class="du-message du-outgoing">有的，我发你自然光实拍。</div>
+              <div class="du-message du-incoming">好，想看一下颜色。</div>
+              <div class="du-composer">
+                <span class="du-placeholder">回复 林小满…</span>
+                <span class="du-send">发送</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="accent-roles" data-roles></div>
+    </section>
+  </template>
+
+  <script type="application/json" id="palette-study-data">
+    {
+      "neutrals": {
+        "light": { "canvas": "#F5F7F8", "paper": "#FFFFFF", "muted": "#EEF1F3", "line": "#DCE2E6", "ink": "#303941", "secondary": "#56636D", "on-strong": "#FFFFFF" },
+        "dark": { "canvas": "#181C20", "paper": "#22282E", "muted": "#2B3239", "line": "#3A444D", "ink": "#CBD3D9", "secondary": "#A5B0B9", "on-strong": "#181C20" }
+      },
+      "fixed": [
+        { "id": "daylight", "name": "极昼白", "mood": "清白底色 · 分层灰阶", "scheme": "light", "soft": "#EAEFF2", "selected": "#E0E7EC", "strong": "#4F606D" },
+        { "id": "midnight", "name": "极夜黑", "mood": "柔和炭黑 · 灰白文字", "scheme": "dark", "soft": "#2D3942", "selected": "#36434D", "strong": "#9CAEBB" }
+      ],
+      "ruledOut": [
+        { "id": "pine", "name": "松针绿", "reason": "偏青、显亮" },
+        { "id": "teal", "name": "青瓷色", "reason": "偏青、显亮" },
+        { "id": "clay", "name": "赤陶红", "reason": "本轮用户排除" },
+        { "id": "sage", "name": "鼠尾草", "reason": "本轮用户排除" },
+        { "id": "mist", "name": "雾海蓝", "reason": "本轮用户排除" },
+        { "id": "cocoa", "name": "可可棕", "reason": "本轮用户排除" }
+      ],
+      "accents": [
+        { "id": "brick", "name": "枣木红", "mood": "沉红 · 暖灰辅色", "scheme": "light", "soft": "#F4EBE9", "selected": "#ECDEDA", "strong": "#85504C" },
+        { "id": "honey", "name": "麦穗金", "mood": "米金 · 柔和暖意", "scheme": "light", "soft": "#F5EDDC", "selected": "#ECE0C6", "strong": "#745D27" },
+        { "id": "olive", "name": "橄榄绿", "mood": "灰绿 · 略带暖意", "scheme": "light", "soft": "#EBF0E1", "selected": "#DEE5CE", "strong": "#5C6544" },
+        { "id": "denim", "name": "牛仔蓝", "mood": "靛蓝 · 稍沉一些", "scheme": "light", "soft": "#E7EEFB", "selected": "#D7E2F7", "strong": "#4D6085" },
+        { "id": "iris", "name": "烟岚紫", "mood": "灰紫 · 柔和冷调", "scheme": "light", "soft": "#EFEBF7", "selected": "#E3DEF0", "strong": "#65597B" },
+        { "id": "linen", "name": "亚麻褐", "mood": "米褐 · 接近中性", "scheme": "light", "soft": "#F1EDE6", "selected": "#E7E0D6", "strong": "#6A5F4E" }
+      ]
+    }
+  </script>
+</div>
+
+<script>
+  (() => {
+    const root = document.getElementById("dudu-palette-study");
+    const data = JSON.parse(root.querySelector("#palette-study-data").textContent);
+    const template = root.querySelector("#palette-option-template");
+    const neutralRoles = [["canvas", "底色"], ["paper", "面板"], ["muted", "辅助灰"], ["line", "分隔线"], ["ink", "正文"], ["secondary", "次要文字"]];
+    const accentRoles = [["soft", "消息背景"], ["selected", "选中背景"], ["strong", "按钮 / 标记"]];
+
+    function colorRole(color, name, neutral = false) {
+      const role = document.createElement("div");
+      role.className = neutral ? "neutral-role" : "accent-role";
+      const swatch = document.createElement("span");
+      swatch.className = neutral ? "neutral-color" : "accent-color";
+      swatch.style.background = color;
+      swatch.setAttribute("aria-hidden", "true");
+      const caption = document.createElement("span");
+      caption.className = "text-small text-muted";
+      caption.textContent = name;
+      role.append(swatch, caption);
+      return role;
+    }
+
+    for (const [scheme, label] of [["light", "浅色共用"], ["dark", "深色共用"]]) {
+      const row = document.createElement("div");
+      row.className = "neutral-row";
+      const title = document.createElement("span");
+      title.className = "text-small";
+      title.textContent = label;
+      const roles = document.createElement("div");
+      roles.className = "neutral-roles";
+      for (const [key, name] of neutralRoles) roles.append(colorRole(data.neutrals[scheme][key], name, true));
+      row.append(title, roles);
+      root.querySelector("#shared-neutrals").append(row);
+    }
+    root.querySelector("#shared-neutrals").className = "study-section";
+
+    function renderPalette(palette) {
+      const fragment = template.content.cloneNode(true);
+      const section = fragment.querySelector("section");
+      section.dataset.paletteId = palette.id;
+      section.setAttribute("aria-label", palette.name);
+      fragment.querySelector("[data-name]").textContent = palette.name;
+      fragment.querySelector("[data-mood]").textContent = palette.mood;
+      const preview = fragment.querySelector(".du-preview");
+      preview.dataset.scheme = palette.scheme;
+      preview.setAttribute("aria-label", `${palette.name}会话示例：选中林小满、客服回复气泡和发送按钮`);
+      for (const [name, color] of Object.entries(data.neutrals[palette.scheme])) preview.style.setProperty(`--du-${name}`, color);
+      for (const [key, name] of accentRoles) {
+        preview.style.setProperty(`--du-${key}`, palette[key]);
+        fragment.querySelector("[data-roles]").append(colorRole(palette[key], name));
+      }
+      return fragment;
+    }
+
+    for (const palette of data.fixed) root.querySelector("#neutral-palettes").append(renderPalette(palette));
+    for (let index = 0; index < data.accents.length; index += 2) {
+      const pair = document.createElement("div");
+      pair.className = "viz-grid";
+      for (const palette of data.accents.slice(index, index + 2)) pair.append(renderPalette(palette));
+      root.querySelector("#accent-palettes").append(pair);
+    }
+  })();
+</script>

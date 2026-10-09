@@ -1,0 +1,346 @@
+[
+  {
+    "name": "极昼白",
+    "colorScheme": "light",
+    "dark": false,
+    "draft": "请稍等，我帮您核对一下实物颜色。",
+    "incoming": {
+      "background": "rgb(238, 238, 238)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "neutrals": {
+      "--background": "#f7f7f7",
+      "--card": "#ffffff",
+      "--foreground": "#333333",
+      "--muted": "#eeeeee",
+      "--muted-foreground": "#606060"
+    },
+    "outgoing": {
+      "background": "rgb(233, 233, 233)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "overflow": false,
+    "palette": "daylight",
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "selectedControl": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(225, 225, 225)",
+      "borderLeft": "0px",
+      "borderRight": "0px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "none"
+    }
+  },
+  {
+    "name": "极夜黑",
+    "colorScheme": "dark",
+    "dark": true,
+    "draft": "请稍等，我帮您核对一下实物颜色。",
+    "incoming": {
+      "background": "rgb(47, 47, 47)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(200, 200, 200)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.121569 0.121569 0.121569 / 0.02) 0px 2px 6px 0px"
+    },
+    "neutrals": {
+      "--background": "#1f1f1f",
+      "--card": "#2b2b2b",
+      "--foreground": "#c8c8c8",
+      "--muted": "#2f2f2f",
+      "--muted-foreground": "#a0a0a0"
+    },
+    "outgoing": {
+      "background": "rgb(52, 52, 52)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(200, 200, 200)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.121569 0.121569 0.121569 / 0.02) 0px 2px 6px 0px"
+    },
+    "overflow": false,
+    "palette": "midnight",
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "selectedControl": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(53, 53, 53)",
+      "borderLeft": "0px",
+      "borderRight": "0px",
+      "color": "rgb(200, 200, 200)",
+      "shadow": "none"
+    }
+  },
+  {
+    "name": "栗木红",
+    "colorScheme": "light",
+    "dark": false,
+    "draft": "请稍等，我帮您核对一下实物颜色。",
+    "incoming": {
+      "background": "rgb(238, 238, 238)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "neutrals": {
+      "--background": "#f7f7f7",
+      "--card": "#ffffff",
+      "--foreground": "#333333",
+      "--muted": "#eeeeee",
+      "--muted-foreground": "#606060"
+    },
+    "outgoing": {
+      "background": "rgb(241, 231, 226)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "overflow": false,
+    "palette": "crimson",
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "selectedControl": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(225, 225, 225)",
+      "borderLeft": "0px",
+      "borderRight": "0px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "none"
+    }
+  },
+  {
+    "name": "麦穗金",
+    "colorScheme": "light",
+    "dark": false,
+    "draft": "请稍等，我帮您核对一下实物颜色。",
+    "incoming": {
+      "background": "rgb(238, 238, 238)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "neutrals": {
+      "--background": "#f7f7f7",
+      "--card": "#ffffff",
+      "--foreground": "#333333",
+      "--muted": "#eeeeee",
+      "--muted-foreground": "#606060"
+    },
+    "outgoing": {
+      "background": "rgb(244, 237, 217)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "overflow": false,
+    "palette": "amber",
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "selectedControl": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(225, 225, 225)",
+      "borderLeft": "0px",
+      "borderRight": "0px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "none"
+    }
+  },
+  {
+    "name": "草木绿",
+    "colorScheme": "light",
+    "dark": false,
+    "draft": "请稍等，我帮您核对一下实物颜色。",
+    "incoming": {
+      "background": "rgb(238, 238, 238)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "neutrals": {
+      "--background": "#f7f7f7",
+      "--card": "#ffffff",
+      "--foreground": "#333333",
+      "--muted": "#eeeeee",
+      "--muted-foreground": "#606060"
+    },
+    "outgoing": {
+      "background": "rgb(223, 241, 216)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "overflow": false,
+    "palette": "citrus",
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "selectedControl": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(225, 225, 225)",
+      "borderLeft": "0px",
+      "borderRight": "0px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "none"
+    }
+  },
+  {
+    "name": "牛仔蓝",
+    "colorScheme": "light",
+    "dark": false,
+    "draft": "请稍等，我帮您核对一下实物颜色。",
+    "incoming": {
+      "background": "rgb(238, 238, 238)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "neutrals": {
+      "--background": "#f7f7f7",
+      "--card": "#ffffff",
+      "--foreground": "#333333",
+      "--muted": "#eeeeee",
+      "--muted-foreground": "#606060"
+    },
+    "outgoing": {
+      "background": "rgb(231, 237, 245)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "overflow": false,
+    "palette": "ocean",
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "selectedControl": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(225, 225, 225)",
+      "borderLeft": "0px",
+      "borderRight": "0px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "none"
+    }
+  },
+  {
+    "name": "烟岚紫",
+    "colorScheme": "light",
+    "dark": false,
+    "draft": "请稍等，我帮您核对一下实物颜色。",
+    "incoming": {
+      "background": "rgb(238, 238, 238)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "neutrals": {
+      "--background": "#f7f7f7",
+      "--card": "#ffffff",
+      "--foreground": "#333333",
+      "--muted": "#eeeeee",
+      "--muted-foreground": "#606060"
+    },
+    "outgoing": {
+      "background": "rgb(236, 232, 241)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "overflow": false,
+    "palette": "iris",
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "selectedControl": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(225, 225, 225)",
+      "borderLeft": "0px",
+      "borderRight": "0px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "none"
+    }
+  },
+  {
+    "name": "亚麻褐",
+    "colorScheme": "light",
+    "dark": false,
+    "draft": "请稍等，我帮您核对一下实物颜色。",
+    "incoming": {
+      "background": "rgb(238, 238, 238)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "neutrals": {
+      "--background": "#f7f7f7",
+      "--card": "#ffffff",
+      "--foreground": "#333333",
+      "--muted": "#eeeeee",
+      "--muted-foreground": "#606060"
+    },
+    "outgoing": {
+      "background": "rgb(239, 232, 223)",
+      "borderColor": "rgba(0, 0, 0, 0)",
+      "borderLeft": "1px",
+      "borderRight": "1px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, color(srgb 0.2 0.2 0.2 / 0.02) 0px 2px 6px 0px"
+    },
+    "overflow": false,
+    "palette": "oat",
+    "viewport": {
+      "height": 720,
+      "width": 1280
+    },
+    "selectedControl": {
+      "background": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(225, 225, 225)",
+      "borderLeft": "0px",
+      "borderRight": "0px",
+      "color": "rgb(51, 51, 51)",
+      "shadow": "none"
+    }
+  }
+]

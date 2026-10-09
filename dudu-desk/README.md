@@ -1,6 +1,6 @@
 # 嘟嘟 Desk
 
-嘟嘟（DuDu）的客服坐席桌面端，使用 React 19、Vite、Tailwind CSS、shadcn、Redux Toolkit 和 Tauri 2。本阶段将已确认的接待原型迁入正式前端，统一三种接待模式、十二主题、会话状态与 API 契约；范围以 [规格 #50](https://github.com/Buktal/dudu/issues/50) 为准。
+嘟嘟（DuDu）的客服坐席桌面端，使用 React 19、Vite、Tailwind CSS、shadcn、Redux Toolkit 和 Tauri 2。本阶段将已确认的接待原型迁入正式前端，统一三种接待模式、八套主题、会话状态与 API 契约；初始范围见 [规格 #50](https://github.com/Buktal/dudu/issues/50)，当前功能见 [功能图谱](../docs/features/dudu-desk.md)。
 
 真实 Server 认证、会话、历史、收发、附件与推送接口留到下一阶段。正式入口先恢复坐席身份，未登录时显示登录页；当前 `unavailableAccountApi` 不会创建虚假登录，`unavailableInboxApi` 不会假装收发成功。开发数据需显式开启，详见 [开发联调说明](docs/development.md)。
 
@@ -52,20 +52,18 @@ yarn tauri:build
 
 模式与会话切换使用短距离淡入，来访资料面板展开／收起同步过渡宽度与间距。复用已有 `motion/react`，不引入额外动效库；遵循系统减少动画设置，也可在工作台设置中主动关闭动态效果。退出中的布局停止响应快捷键，隐藏面板不可聚焦。
 
-右上角主题菜单首先展示极昼白与极夜黑，品牌色珊瑚橙排第三，朱砂红第四，其余色系依次排列；窄窗下按每行左、右的顺序展示。
+右上角主题菜单提供已选定的八套柔和配色，首先展示极昼白与极夜黑；窄窗下按每行左、右的顺序展示。主题名称与颜色更新，保留对应色系已有的稳定标识。
 
 | 左列 | 右列 |
 | --- | --- |
 | 极昼白 `daylight` | 极夜黑 `midnight` |
-| 珊瑚橙 `apricot` | 朱砂红 `crimson` |
-| 琥珀黄 `amber` | 青柠绿 `citrus` |
-| 松柏绿 `pine` | 冰川青 `sea` |
-| 钴蓝 `ocean` | 鸢尾紫 `iris` |
-| 莓果粉 `berry` | 可可棕 `oat` |
+| 栗木红 `crimson` | 麦穗金 `amber` |
+| 草木绿 `citrus` | 牛仔蓝 `ocean` |
+| 烟岚紫 `iris` | 亚麻褐 `oat` |
 
-首次使用默认为极昼白与专注模式。珊瑚橙取 Logo 渐变的中间色作为基色，沿用原杏桃橙的稳定标识 `apricot`，已有偏好自动使用新配色。极夜黑采用深色外观，其余十一款采用浅色外观；主题选择由一个入口管理。
+首次使用默认为极昼白与专注模式。七套浅色主题共用中性底色、面板、正文、辅助文字与灰阶，只改变客服消息背景、选中背景和按钮／标记的强调色。访客消息共用浅灰气泡；极夜黑使用中性炭灰底色、分层灰字与两档灰色气泡。气泡通过填色区分，不显示描边；选中会话以整块柔和背景区分，不加深色侧边条。主题选择由一个入口管理。
 
-主题先按基色区分，再在各自色系内分配明暗层级。旧岩墨灰 `graphite`、雾白灰 `fog` 的偏好恢复为极昼白，保留中性外观；其余既有主题标识继续有效。
+退出菜单的旧主题按相近色系恢复：珊瑚橙 `apricot`、莓果粉 `berry` → 栗木红；松柏绿 `pine` → 草木绿；冰川青 `sea` → 牛仔蓝。旧岩墨灰 `graphite`、雾白灰 `fog` 仍恢复为极昼白。迁移保留接待模式与减少动态效果偏好，下次偏好修改时保存当前主题标识。
 
 | 状态 | 本次运行内切换会话、模式或主题 | 完整刷新、关闭重开或替换工作上下文 |
 | --- | --- | --- |
@@ -78,9 +76,9 @@ yarn tauri:build
 
 ## 样式的唯一入口
 
-[src/index.css](src/index.css) 是正式 Desk 唯一的全局样式入口，统一 Tailwind、shadcn、字体、基础样式与主题语义变量。十二主题的颜色数值只在这里维护；业务组件使用语义 token 及其配对前景色。
+[src/index.css](src/index.css) 是正式 Desk 唯一的全局样式入口，统一 Tailwind、shadcn、字体、基础样式与主题语义变量。八套主题的颜色数值只在这里维护；业务组件使用语义 token 及其配对前景色。
 
-`palette-base` 表示主题基色，用于主题预览；`background`、`card`、`input` 承载安静的基础界面；`muted`、`secondary`、`accent` 用于辅助信息与轻强调；`selection` / `selection-foreground` 用于选中会话与接待模式；`sidebar-accent` 用于来访用户资料卡和当前回复窗口的标题区；`primary` 用于主要按钮与重点标识。
+`background`、`card`、`input`、`muted`、`secondary` 与 `sidebar-accent` 使用共用灰阶，正文和配对前景色保持一致；`accent` 是客服消息背景，`selection` 是同色系稍深的选中背景，`palette-base` 是主题强调色。`primary` 用于主要按钮、标记和焦点环：浅色下在基色中混入 18% 黑色，使组件已有的 80% 悬停填色仍保有文字对比度；极夜黑使用浅强调色搭配深色按钮文字。消息组合复用 Bubble 的 `secondary` 变体，仅将客服气泡的配对变量绑定到 `accent`，访客气泡沿用公共灰阶。状态色与渠道标识按各自语义维护，不随彩色主题改变。
 
 [theme-palette.ts](src/lib/theme-palette.ts) 登记主题标识、名称、描述、顺序和深浅属性，并恢复旧主题标识。[ThemeProvider](src/components/theme-provider.tsx) 通过同一个偏好入口设置文档根的 `data-palette`、`.dark` 和 `color-scheme`，浮层与品牌也继承这一主题。布局优先组合现有组件 variant 和 Tailwind 工具类。
 
@@ -92,7 +90,7 @@ yarn tauri:build
 src/
 ├── main.tsx                     唯一 CSS 导入与 ThemeProvider
 ├── App.tsx                      账户门禁与工作上下文组装
-├── index.css                    全局样式与十二主题 token
+├── index.css                    全局样式与八套主题 token
 ├── features/account/
 │   ├── index.ts / api.ts        账户公开入口与认证适配器契约
 │   ├── account-provider.tsx    恢复身份、登录门禁与生命周期
@@ -127,6 +125,7 @@ Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、�
 ## 相关资料
 
 - [功能图谱](../docs/features/dudu-desk.md)
+- [八套主题配色与实际界面验收](../docs/design/dudu-desk/palette-refresh/README.md)
 - [工作台交互调整与验收截图](../docs/design/dudu-desk/workspace-polish/README.md)
 - [正式规格 #50](https://github.com/Buktal/dudu/issues/50)
 - [API 契约与后续接入](docs/api-contract.md)

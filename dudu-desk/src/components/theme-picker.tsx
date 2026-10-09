@@ -48,10 +48,12 @@ export function ThemePicker({
         <PopoverHeader className="shrink-0 px-2 pt-1">
           <div className="flex items-center justify-between gap-2">
             <PopoverTitle id={titleId}>主题色</PopoverTitle>
-            <span className="text-xs text-muted-foreground">12 款配色</span>
+            <span className="text-xs text-muted-foreground">
+              {paletteKeys.length} 款配色
+            </span>
           </div>
           <PopoverDescription>
-            选择喜欢的色系，预览整个工作台。
+            选择柔和的色系，即时应用到工作台。
           </PopoverDescription>
         </PopoverHeader>
         <ToggleGroup
@@ -74,13 +76,11 @@ export function ThemePicker({
               <span
                 data-palette={key}
                 aria-hidden="true"
-                className="flex size-9 shrink-0 overflow-hidden rounded-md border border-border bg-background"
+                className="flex size-9 shrink-0 flex-col justify-center gap-1 overflow-hidden rounded-md border border-border bg-card p-1.5"
               >
-                <span className="w-2.5 bg-palette-base" />
-                <span className="flex flex-1 flex-col justify-center gap-1 p-1">
-                  <span className="h-1.5 rounded-sm bg-primary" />
-                  <span className="h-1.5 w-2/3 rounded-sm bg-selection" />
-                </span>
+                <span className="h-1.5 rounded-sm bg-selection" />
+                <span className="h-1.5 w-3/4 self-end rounded-sm bg-accent" />
+                <span className="h-1 w-1/3 self-end rounded-sm bg-palette-base" />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-xs">{palettes[key].name}</span>
