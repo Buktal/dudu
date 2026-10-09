@@ -9,6 +9,7 @@ DUDU 下子项目对照表（口语 → 规范名，用于精准定位）：
 | 规范名 | 口语别名 | 目录 | 一句话 |
 | --- | --- | --- | --- |
 | DUDU | 大项目 / 根仓库 | `/` | 容纳多个子项目的 monorepo 根 |
+| Worktrees | 工作树 | `worktrees/` | 临时 git worktree 检出目录（约定见 AGENTS.md「Worktree 零安装」条），已 gitignore，非子项目 |
 | MockPulse | Mock / 测试项目 | `mock-pulse/` | Tauri 2 + React 19 + Vite 的 mock 工具桌面端 |
 | DUDU Server | 后端 / dudu 服务 | `dudu-server/` | Spring Boot 3.5（Java 21）消息聚合后端：渠道消息进 → 客服工作台 |
 | DuduDesk | Desk / 客服端 / 工作台 | `dudu-desk/` | 嘟嘟客服坐席工作台（Tauri 2 + React 19，桌面端起步） |
