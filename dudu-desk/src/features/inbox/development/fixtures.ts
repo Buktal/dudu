@@ -14,7 +14,7 @@ import type {
  *
  * Defaults are frozen instants (`FIXTURE_NOW`); live clocks stay injected by
  * the caller (testStore `now`, development driver `now`). Only dev/test
- * modules import this kernel — production never does.
+ * modules import this kernel; packaged mock builds use the same fixtures.
  */
 export const FIXTURE_NOW = "2026-09-16T00:00:00Z";
 

@@ -2,7 +2,7 @@
 
 嘟嘟（DuDu）的客服坐席桌面端，使用 React 19、Vite、Tailwind CSS、shadcn、Redux Toolkit 和 Tauri 2。本阶段将已确认的接待原型迁入正式前端，统一三种接待模式、八套主题、会话状态与 API 契约；初始范围见 [规格 #50](https://github.com/Buktal/dudu/issues/50)，当前功能见 [功能图谱](../docs/features/dudu-desk.md)。
 
-真实 Server 认证、会话、历史、收发、附件与推送接口留到下一阶段。正式入口先恢复坐席身份，未登录时显示登录页；当前 `unavailableAccountApi` 不会创建虚假登录，`unavailableInboxApi` 不会假装收发成功。开发数据需显式开启，详见 [开发联调说明](docs/development.md)。
+真实 Server 认证、会话、历史、收发、附件与推送接口留到下一阶段。未启用 Mock 时，入口先恢复坐席身份，未登录时显示登录页；当前 `unavailableAccountApi` 不会创建虚假登录，`unavailableInboxApi` 不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
 
 ## 运行与检查
 
@@ -26,7 +26,21 @@ yarn check:rust    # 涉及 Rust 改动时执行
 yarn tauri:build
 ```
 
-桌面命令需要本机 Tauri/Rust 构建环境。开发场景、开关和受控事件示例统一维护在 [docs/development.md](docs/development.md)；正式构建排除开发数据入口。
+桌面命令需要本机 Tauri/Rust 构建环境。
+
+### Mock 打包测试
+
+`VITE_DESK_MOCK=true` 在开发运行和生产构建中都生效：恢复模拟坐席身份，并加载相同的会话、消息和异常场景。无需另改登录页或滚动实现。
+
+在 `dudu-desk/.env.local` 中开启可同时用于开发和打包；仅测试打包时，可写入 `dudu-desk/.env.production.local`：
+
+```dotenv
+VITE_DESK_MOCK=true
+```
+
+然后运行原有的 `yarn tauri:build`，启动 `dudu-desk/src-tauri/target/release/dudu-desk.exe`。这些 `.local` 文件不提交到 Git；开关在构建时确定，修改后需要重新打包。开关未设置或为 `false` 时不加载 Mock 适配器，生产构建会排除对应数据模块。此前在 Mock 中退出登录的同一运行会话仍保持退出状态，可用开发账号 `linzhou` / `desk123` 登录。
+
+`VITE_DESK_SCENARIO` 继续选择已有的 Mock 异常场景，缺省使用 `default`；拼错场景名会报错。
 
 ## 接待与偏好
 
@@ -105,7 +119,7 @@ src/
 │   ├── components/             三种布局及共享接待组件
 │   ├── hooks/                  接待逻辑 hooks
 │   ├── stores/                 状态、操作命令与 selectors
-│   └── development/            开发联调适配器与固定数据工厂（dev-only）
+│   └── development/            Mock 适配器与固定数据工厂（按开关加载）
 ├── components/                 工作台外壳、设置、控件、动效与共享 UI
 └── lib/                        偏好、时间、HTTP、附件等共享逻辑
 src-tauri/                      Tauri 桌面宿主与本地平台桥接

@@ -177,7 +177,7 @@ DuduDesk 中会话列表类界面（来访会话队列、卡片工作台、消�
 _Avoid_: 逐组件手写四态判定、hasLoaded×status 组合散落（旧实现）
 
 **开发联调世界（Development World）**:
-DuduDesk 中 dev-only 联调模块的收敛 seam：开发适配器（api）、场景驱动（scenarios）、种子数据（mocks、conversations、portraits）与 fixture 内核（fixtures）整体落在 `dudu-desk/src/features/inbox/development/`，仅当 `import.meta.env.DEV` 与 `VITE_DESK_MOCK === "true"` 同时成立时由 inbox runtime.ts 动态 import，正式构建不导入该目录；生产代码对开发世界的唯一触达点是这一个动态导入。
+DuduDesk 中可显式启用的模拟接待环境，为开发运行和打包测试提供相同的坐席身份、会话、消息与受控异常场景；其中的数据不属于真实服务端数据。
 _Avoid_: 生产模块静态 import development/ 内部文件、在 inbox 根平铺 dev-only 模块（旧形态）
 
 **回执证据（ReceiptEvidence）**:
