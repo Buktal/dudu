@@ -1,8 +1,10 @@
 # DuduDesk 功能图谱
 
-记录当前前端工作台的功能、入口与限制。子项目概览见 [DuduDesk README](../../dudu-desk/README.md)，当前接口边界见 [InboxApi](../../dudu-desk/src/features/inbox/api.ts)，后端对接讨论见 [设计草案](../design/dudu-desk/data-contract.md)。
+记录当前前端工作台的功能、入口与限制。子项目概览见 [DuduDesk README](../../dudu-desk/README.md)，当前接口边界见 [InboxApi](../../dudu-desk/src/features/inbox/api.ts)，后端对接实施依据见已定稿的[最小契约](../design/dudu-desk/implementation-contract.md)，业务尚待逐项接通。
 
 ## 功能与入口
+
+2026-10-10 后端对接范围更新：本轮只接纯文本发送，附件准备/上传/发送延期，已收到的非文本内容继续展示。以下表格描述现有前端/Mock；附件入口尚未在业务代码中调整，真实对接时由[文本回复实施票](https://github.com/Buktal/dudu/issues/89)停用，不能把范围决定当成已完成改动。
 
 | 模块 | 子功能与操作流程 | 状态与限制 |
 | --- | --- | --- |

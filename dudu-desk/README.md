@@ -2,7 +2,9 @@
 
 嘟嘟（DuDu）的客服坐席桌面端，使用 React 19、Vite、Tailwind CSS、shadcn、Redux Toolkit 和 Tauri 2。本阶段将已确认的接待原型迁入正式前端，统一三种接待模式、八套主题、会话状态与 API 契约；初始范围见 [规格 #50](https://github.com/Buktal/dudu/issues/50)，当前功能见 [功能图谱](../docs/features/dudu-desk.md)。
 
-真实 Server 认证、会话、历史、收发、附件与推送接口留到下一阶段。未启用 Mock 时，入口先恢复坐席身份，未登录时显示登录页；当前 `unavailableAccountApi` 不会创建虚假登录，`unavailableInboxApi` 不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
+真实 Server 认证、会话、历史、收发与推送接口留到下一阶段。2026-10-10 已将本轮发送收窄为纯文本，附件准备/上传/发送延期，收到的非文本消息展示保留；当前 Mock 附件入口尚未修改，真实对接时按[文本回复实施票](https://github.com/Buktal/dudu/issues/89)停用。未启用 Mock 时，入口先恢复坐席身份，未登录时显示登录页；当前 `unavailableAccountApi` 不会创建虚假登录，`unavailableInboxApi` 不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
+
+真实认证实施依据见 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)：企业登录、身份恢复及授权范围已独立定稿，尚未实现；它不依赖其余消息与 Socket 契约。
 
 ## 运行与检查
 
@@ -125,7 +127,7 @@ src/
 src-tauri/                      Tauri 桌面宿主与本地平台桥接
 ```
 
-跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。真实服务适配器可从各 feature 的 `runtime.ts` 接入，或向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端对接的交互、接口、Socket 与表结构持续记录在 [对接设计草案](../docs/design/dudu-desk/data-contract.md)。草案尚未定稿，新的未读与资料编辑规则不代表当前适配器已经实现。
+跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。真实服务适配器可从各 feature 的 `runtime.ts` 接入，或向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端三表、HTTP 与 Socket 已在[最小对接契约](../docs/design/dudu-desk/implementation-contract.md)定稿；按实施票逐项接通，契约确定不代表真实适配器已经实现。
 
 Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、回调和消息转发属于后续 Server 接入职责。
 
@@ -141,7 +143,7 @@ Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、�
 - [八套主题配色与实际界面验收](../docs/design/dudu-desk/palette-refresh/README.md)
 - [工作台交互调整与验收截图](../docs/design/dudu-desk/workspace-polish/README.md)
 - [正式规格 #50](https://github.com/Buktal/dudu/issues/50)
-- [对接设计草案：交互、接口、Socket 与表结构](../docs/design/dudu-desk/data-contract.md)
+- [最小对接契约：三表、HTTP 与 Socket](../docs/design/dudu-desk/implementation-contract.md)
 - [开发数据与异常场景](src/features/inbox/development/)
 - [原型视觉与交互参考](../docs/prototype/dudu-desk/README.md)：仅作参考，不参与正式运行
 - [领域词汇](../GLOSSARY.md)、[工程规范](../AGENTS.md)、[架构决策](../docs/adr/)

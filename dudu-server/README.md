@@ -7,6 +7,7 @@ Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、
 - [总体设计与阶段计划](../docs/design/dudu-server/README.md)：已确认模型、Admin 优先交付和待定问题。
 - [功能图谱](../docs/features/dudu-server.md)：模块入口、行为和验证范围。
 - [Admin 数据契约](../docs/design/dudu-admin/data-contract.md)：接口字段与错误码契约，首版后端按此实现。
+- [Desk 最小对接契约](../docs/design/dudu-desk/implementation-contract.md)：三表、HTTP、Socket 与前端映射已定稿；企业认证字段见[认证子契约](../docs/design/dudu-desk/ticket-01-login.md)，业务尚待按实施票接通。
 - [统一返回决策](../docs/adr/0006-always-200-segmented-error-codes.md)。
 - [认证决策](../docs/adr/0007-jwt-auth-chain.md)。
 
