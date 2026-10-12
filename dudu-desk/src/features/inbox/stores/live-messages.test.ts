@@ -80,6 +80,51 @@ describe("live message events", () => {
     );
   });
 
+  it("adds a colleague's reply to a loaded conversation without a local sending bubble", async () => {
+    const { store, subscription } = connectedStore();
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-b"));
+
+    // 服务端只在结果保存后推送：发送端与接收端都按完整消息新增，没有发送中气泡
+    subscription.onEvent({
+      type: "message",
+      context: subscription.context,
+      message: {
+        id: "conversation-b-outgoing-2",
+        clientRequestId: "colleague-request",
+        conversationId: "conversation-b",
+        direction: "outgoing",
+        body: { type: "text", text: "同事已回复" },
+        createdAt: "2026-09-16T00:02:00Z",
+        sequence: 2,
+        version: 2,
+        senderUserId: "9",
+        senderName: "林舟",
+        delivery: { state: "sent" },
+      },
+      conversation: {
+        ...secondConversation,
+        status: "waiting",
+        version: 3,
+        messageCount: 2,
+        preview: "同事已回复",
+      },
+    });
+
+    expect(selectMessages(store.getState(), "conversation-b")).toMatchObject([
+      { id: "conversation-b-message", sequence: 1 },
+      {
+        id: "conversation-b-outgoing-2",
+        clientRequestId: "colleague-request",
+        senderName: "林舟",
+        delivery: { state: "sent" },
+      },
+    ]);
+    expect(
+      store.getState().inbox.conversations["conversation-b"],
+    ).toMatchObject({ status: "waiting", preview: "同事已回复", version: 3 });
+  });
+
   it("merges messages into loaded history without moving the earlier cursor", async () => {
     const { store, subscription } = connectedStore({
       listMessages: async ({ conversationId }) => ({

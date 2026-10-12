@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
+import type { InboxApi } from "../api";
 import type { InboxMessage, ReplyCapability, SendSubmission } from "../types";
 import { loadConversations } from "./queue";
 import { loadHistory, resetContext, selectConversation } from "./reading";
@@ -73,7 +74,7 @@ describe("replies through the inbox workflow", () => {
     expect(store.getState().inbox.replyId).toBe("conversation-b");
   });
 
-  it("retries a definite failure using the original content, target and correlation id", async () => {
+  it("retries with the original content and a new correlation id while keeping the failed record", async () => {
     const submissions: SendSubmission[] = [];
     const store = testStore({
       send: async (input) => {
@@ -93,12 +94,152 @@ describe("replies through the inbox workflow", () => {
     store.dispatch(editDraft("conversation-a", "新的内容"));
     await store.dispatch(retryReply(failed.id));
     expect(submissions[1].target).toEqual(submissions[0].target);
-    expect(submissions[1].clientRequestId).toBe(submissions[0].clientRequestId);
+    // 手动重发按新消息处理：新的 clientRequestId，原失败记录不被覆盖
+    expect(submissions[1].clientRequestId).not.toBe(
+      submissions[0].clientRequestId,
+    );
     expect(submissions[1].text).toBe("原内容");
     expect(store.getState().inbox.drafts["conversation-a"].text).toBe(
       "新的内容",
     );
-    expect(selectMessages(store.getState(), "conversation-a")).toHaveLength(2);
+    const messages = selectMessages(store.getState(), "conversation-a");
+    expect(messages).toHaveLength(3);
+    expect(messages.find((item) => item.id === failed.id)).toMatchObject({
+      delivery: { state: "failed", reason: "渠道明确拒绝" },
+    });
+    const retried = messages.find(
+      (item) => item.id !== failed.id && item.direction === "outgoing",
+    );
+    expect(retried?.clientRequestId).toBe(submissions[1].clientRequestId);
+    expect(retried?.delivery?.state).toBe("accepted");
+  });
+
+  it("settles a persisted channel failure as the failed bubble with its real reason", async () => {
+    const store = testStore({
+      send: async (input) => ({
+        ...acceptedMessage(input),
+        delivery: {
+          state: "failed",
+          reason: "微信客服消息发送失败：40001 invalid credential",
+        },
+      }),
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
+    store.dispatch(editDraft("conversation-a", "稍等，我查一下"));
+    await store.dispatch(sendReply("conversation-a"));
+
+    const messages = selectMessages(store.getState(), "conversation-a");
+    expect(messages).toHaveLength(2);
+    // 渠道失败同样是已保存的持久消息：显示真实原因，不能判成无效响应或结果未确认
+    expect(messages[1].delivery).toEqual({
+      state: "failed",
+      reason: "微信客服消息发送失败：40001 invalid credential",
+    });
+    expect(store.getState().inbox.submissions[messages[1].id].status).toBe(
+      "failed",
+    );
+    expect(
+      store.getState().inbox.sendingByConversation["conversation-a"],
+    ).toBeUndefined();
+    expect(store.getState().inbox.notice?.kind).not.toBe("unconfirmed-send");
+  });
+
+  it("merges the socket result and the HTTP response into one persisted message", async () => {
+    const pending = deferred<InboxMessage>();
+    let request: SendSubmission | undefined;
+    let subscription!: Parameters<InboxApi["subscribe"]>[0];
+    const store = testStore({
+      subscribe: (input) => {
+        subscription = input;
+        input.onConnection("connected");
+        return () => {};
+      },
+      send: async (input) => {
+        request = input;
+        return pending.promise;
+      },
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
+    store.dispatch(editDraft("conversation-a", "已受理的回复"));
+    const sending = store.dispatch(sendReply("conversation-a"));
+    const clientRequestId = request?.clientRequestId ?? "";
+    const persisted: InboxMessage = {
+      id: "server-9002",
+      clientRequestId,
+      conversationId: "conversation-a",
+      direction: "outgoing",
+      body: { type: "text", text: "已受理的回复" },
+      createdAt: "2026-09-16T00:01:00Z",
+      sequence: 2,
+      version: 2,
+      delivery: { state: "sent" },
+    };
+
+    // Socket 先进：完整消息 + 最新访客摘要；随后 HTTP 返回同一条消息
+    subscription.onEvent({
+      type: "message",
+      context: subscription.context,
+      message: persisted,
+      conversation: {
+        ...firstConversation,
+        status: "waiting",
+        version: 2,
+        messageCount: 2,
+        preview: "已受理的回复",
+      },
+    });
+    pending.resolve(persisted);
+    await sending;
+
+    const messages = selectMessages(store.getState(), "conversation-a");
+    expect(
+      messages.filter((message) => message.direction === "outgoing"),
+    ).toHaveLength(1);
+    expect(messages[1].delivery?.state).toBe("sent");
+    expect(
+      store.getState().inbox.conversations["conversation-a"],
+    ).toMatchObject({
+      status: "waiting",
+      preview: "已受理的回复",
+    });
+    expect(store.getState().inbox.drafts["conversation-a"].text).toBe("");
+  });
+
+  it("shows the sending bubble without overwriting the persisted summary", async () => {
+    const pending = deferred<InboxMessage>();
+    let request: SendSubmission | undefined;
+    const store = testStore({
+      send: async (input) => {
+        request = input;
+        return pending.promise;
+      },
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
+    const before = store.getState().inbox.conversations["conversation-a"];
+    store.dispatch(editDraft("conversation-a", "正在发送的回复"));
+    const sending = store.dispatch(sendReply("conversation-a"));
+
+    // 发送中先显示本地气泡；持久摘要与计数等到结果保存后的通知才更新
+    expect(selectMessages(store.getState(), "conversation-a")[1]).toMatchObject(
+      {
+        direction: "outgoing",
+        body: { type: "text", text: "正在发送的回复" },
+        delivery: { state: "sending" },
+      },
+    );
+    const during = store.getState().inbox.conversations["conversation-a"];
+    expect(during.preview).toBe(before.preview);
+    expect(during.messageCount).toBe(before.messageCount);
+    expect(during.status).toBe(before.status);
+
+    if (request) pending.resolve(acceptedMessage(request));
+    await sending;
+    expect(store.getState().inbox.conversations["conversation-a"].status).toBe(
+      before.status,
+    );
   });
 
   it("keeps interrupted sends unconfirmed without auto retry or moving to the next visitor", async () => {

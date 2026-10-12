@@ -2,7 +2,7 @@
 
 嘟嘟（DuDu）的客服坐席桌面端，使用 React 19、Vite、Tailwind CSS、shadcn、Redux Toolkit 和 Tauri 2。本阶段将已确认的接待原型迁入正式前端，统一三种接待模式、八套主题、会话状态与 API 契约；初始范围见 [规格 #50](https://github.com/Buktal/dudu/issues/50)，当前功能见 [功能图谱](../docs/features/dudu-desk.md)。
 
-真实 Server 的消息发送接口留到后续实施票，来信接收与推送已接通：未启用 Mock 时使用真实账户、访客摘要、按需历史与 `/ws/desk` 实时通道适配器，登录后先建立 Socket、收到 ready 再读取初始数据，来信按 ID/version 合并（未打开访客只更新摘要，首次打开仍取最近页）。2026-10-10 已将本轮发送收窄为纯文本，附件准备/上传/发送延期，收到的非文本消息展示保留；当前 Mock 附件入口尚未修改，真实对接时按[文本回复实施票](https://github.com/Buktal/dudu/issues/89)停用。企业登录、身份恢复与接待范围已按 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)接入真实 Server：未登录时显示企业登录页，`unavailableInboxApi` 仍不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
+2026-10-12 纯文本回复与实时推送已接通：未启用 Mock 时使用真实账户、访客摘要、按需历史、文本回复与 `/ws/desk` 实时通道适配器，登录后先建立 Socket、收到 ready 再读取初始数据，来信按 ID/version 合并（未打开访客只更新摘要，首次打开仍取最近页）；发送中先显示本地气泡，HTTP 返回与 Socket 通知按同一消息 ID 合并为一条，渠道失败按已保存的失败气泡展示真实原因并可手动重试（新 `clientRequestId`，原失败记录保留）；服务端不返回个人已读，待处理提醒在本次运行的内存态维护。本轮发送收窄为纯文本：附件准备/上传/发送延期，收到的非文本消息展示保留，真实适配器下附件入口按能力停用（不伪装可用），Mock 场景按自身能力数据保持可用。企业登录、身份恢复与接待范围已按 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)接入真实 Server：未登录时显示企业登录页，`unavailableInboxApi` 仍不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
 
 ## 运行与检查
 
@@ -129,7 +129,7 @@ src/
 src-tauri/                      Tauri 桌面宿主与本地平台桥接
 ```
 
-跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。账户 feature 已接入真实 Server 认证（[http-account-api.ts](src/features/account/http-account-api.ts)）：token 只由适配器写入会话存储（[desk-session.ts](src/lib/desk-session.ts)），界面与业务 store 只接收身份及授权元数据，身份恢复必须经 `GET /api/desk/profile` 重新确认，不能仅凭本地 token 或解码结果放行。inbox 已接入真实访客摘要与按需历史适配器（[http-inbox-api.ts](src/features/inbox/http-inbox-api.ts)）：列表查询走 `POST /api/desk/visitors/query`，历史分页走 `GET /api/desk/visitors/{visitorId}/messages`（首次展示完整对话读取最近页，向上滚动用 `nextCursor` 读取更早页），登录后只读取授权范围内的摘要与消息；发送、状态、资料与订阅仍沿用「接待服务未连接」的空态语义，待后续实施票接通。也可向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端三表、HTTP 与 Socket 已在[最小对接契约](../docs/design/dudu-desk/implementation-contract.md)定稿；按实施票逐项接通，契约确定不代表全部真实适配器已经实现。
+跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。账户 feature 已接入真实 Server 认证（[http-account-api.ts](src/features/account/http-account-api.ts)）：token 只由适配器写入会话存储（[desk-session.ts](src/lib/desk-session.ts)），界面与业务 store 只接收身份及授权元数据，身份恢复必须经 `GET /api/desk/profile` 重新确认，不能仅凭本地 token 或解码结果放行。inbox 已接入真实访客摘要、按需历史、文本回复与实时通道适配器（[http-inbox-api.ts](src/features/inbox/http-inbox-api.ts)）：列表查询走 `POST /api/desk/visitors/query`，历史分页走 `GET /api/desk/visitors/{visitorId}/messages`（首次展示完整对话读取最近页，向上滚动用 `nextCursor` 读取更早页），纯文本回复走 `POST /api/desk/visitors/{visitorId}/messages`、能力走 `GET …/capability`，订阅走 `/ws/desk` 的 message 报文，登录后只读写授权范围内的访客；服务端不返回个人已读，待处理提醒由本次运行的内存态维护（[reminders.ts](src/features/inbox/stores/reminders.ts)），附件发送尚未接入并在真实适配器下停用入口；结束／继续与资料仍沿用「接待服务未连接」的空态语义，待后续实施票接通。也可向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端三表、HTTP 与 Socket 已在[最小对接契约](../docs/design/dudu-desk/implementation-contract.md)定稿；按实施票逐项接通，契约确定不代表全部真实适配器已经实现。
 
 Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、回调和消息转发属于后续 Server 接入职责。
 

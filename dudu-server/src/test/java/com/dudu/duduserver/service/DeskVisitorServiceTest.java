@@ -11,6 +11,7 @@ import com.dudu.duduserver.constant.UserRoleEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
 import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
+import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.MessageDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.VisitorDO;
@@ -52,8 +53,9 @@ class DeskVisitorServiceTest {
     private final VisitorService visitorService = mock(VisitorService.class);
     private final MessageService messageService = mock(MessageService.class);
     private final UserService userService = mock(UserService.class);
-    private final DeskVisitorService deskVisitorService =
-        new DeskVisitorServiceImpl(deskAuthService, visitorService, messageService, userService);
+    private final CompanyChannelService companyChannelService = mock(CompanyChannelService.class);
+    private final DeskVisitorService deskVisitorService = new DeskVisitorServiceImpl(
+        deskAuthService, visitorService, messageService, userService, companyChannelService);
 
     private final JwtUser me = new JwtUser(COMPANY_ID, 9L, UserRoleEnum.CONSOLE, 0L);
 
@@ -86,6 +88,8 @@ class DeskVisitorServiceTest {
     @Test
     void detailReadsSnapshotWithStringIdsAndWaitingFieldsOnlyWhenNeedsReply() {
         when(visitorService.getById(VISITOR_ID)).thenReturn(visitorWithLastMessage());
+        // 未配置发送凭据的公众号账号如实返回不可发能力，不编造可发
+        when(companyChannelService.getById(Long.valueOf(ACCOUNT_ID))).thenReturn(channelAccount(Map.of("token", "t")));
 
         DeskConversationVO view = deskVisitorService.get(me, String.valueOf(VISITOR_ID));
 
@@ -104,6 +108,7 @@ class DeskVisitorServiceTest {
         assertThat(view.identity().accountName()).isEqualTo("公众号");
         assertThat(view.capability().state()).isEqualTo("restricted");
         assertThat(view.capability().kinds()).isEmpty();
+        assertThat(view.capability().reason()).isEqualTo("渠道发送凭据未配置");
     }
 
     @Test
@@ -299,6 +304,15 @@ class DeskVisitorServiceTest {
 
     private static DeskVisitorQueryDTO query(int page, int pageSize, String search, String channelId) {
         return new DeskVisitorQueryDTO(search, channelId, null, null, page, pageSize);
+    }
+
+    private CompanyChannelDO channelAccount(Map<String, Object> channelInfo) {
+        CompanyChannelDO account = new CompanyChannelDO();
+        account.setCompanyChannelId(Long.valueOf(ACCOUNT_ID));
+        account.setChannel(ChannelEnum.WECHAT);
+        account.setAccountName("公众号");
+        account.setChannelInfo(channelInfo);
+        return account;
     }
 
     private VisitorDO visitorWithLastMessage() {

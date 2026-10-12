@@ -11,9 +11,11 @@ import com.dudu.duduserver.constant.VisitorQueryOrderEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
 import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
+import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.MessageDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.VisitorDO;
+import com.dudu.duduserver.service.CompanyChannelService;
 import com.dudu.duduserver.service.DeskAuthService;
 import com.dudu.duduserver.service.DeskVisitorService;
 import com.dudu.duduserver.service.MessageService;
@@ -61,6 +63,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     private final VisitorService visitorService;
     private final MessageService messageService;
     private final UserService userService;
+    private final CompanyChannelService companyChannelService;
 
     @Override
     public DeskVisitorPageVO query(JwtUser me, DeskVisitorQueryDTO query) {
@@ -74,8 +77,6 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         if (scoped.isEmpty()) {
             return new DeskVisitorPageVO(List.of(), 0L, query.page(), query.pageSize(), counts, channels);
         }
-        Map<Long, DeskAccessVO.Account> accountById = accounts.stream()
-            .collect(Collectors.toMap(account -> Long.valueOf(account.companyChannelId()), Function.identity()));
         long total = visitorService.count(filters(me.companyId(), query, scoped));
         List<DeskConversationVO> items = List.of();
         if (total > 0) {
@@ -84,6 +85,11 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             List<VisitorDO> rows = visitorService
                 .page(page, filters(me.companyId(), query, scoped).last(orderSql(query)))
                 .getRecords();
+            // 账号详情用于会话对象的真实回复能力，只在确有本页访客时读取
+            Map<Long, CompanyChannelDO> accountById = companyChannelService
+                .listByIds(scoped.stream().map(account -> Long.valueOf(account.companyChannelId())).toList())
+                .stream()
+                .collect(Collectors.toMap(CompanyChannelDO::getCompanyChannelId, Function.identity()));
             items = rows.stream()
                 .map(row -> toConversation(row, accountById.get(row.getCompanyChannelId())))
                 .toList();
@@ -94,7 +100,8 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     @Override
     public DeskConversationVO get(JwtUser me, String visitorId) {
         AuthorizedVisitor authorized = requireAuthorizedVisitor(me, parseVisitorId(visitorId));
-        return toConversation(authorized.visitor(), authorized.account());
+        return toConversation(authorized.visitor(),
+            companyChannelService.getById(authorized.visitor().getCompanyChannelId()));
     }
 
     @Override
@@ -321,9 +328,8 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             .toList();
     }
 
-    private DeskConversationVO toConversation(VisitorDO visitor, DeskAccessVO.Account account) {
-        return DeskConversationViews.conversation(visitor, account.channel(),
-            account.companyChannelId(), account.accountName());
+    private DeskConversationVO toConversation(VisitorDO visitor, CompanyChannelDO account) {
+        return DeskConversationViews.conversation(visitor, account);
     }
 
     private Long parseVisitorId(String visitorId) {

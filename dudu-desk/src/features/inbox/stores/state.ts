@@ -131,6 +131,8 @@ export type InboxState = {
   drafts: Record<string, ReplyDraft>;
   attachments: Record<string, DraftAttachment>;
   submissions: Record<string, ReplySubmission>;
+  /** 待处理提醒：真实链路在本次运行维护的未读计数，键存在即提示（见 reminders.ts） */
+  reminders: Record<string, number>;
   sendingByConversation: Record<string, string>;
   ending: Record<string, EndState>;
   activeId: string | null;
@@ -164,6 +166,7 @@ export function initialInboxState(
     drafts: {},
     attachments: {},
     submissions: {},
+    reminders: {},
     sendingByConversation: {},
     ending: {},
     activeId: null,

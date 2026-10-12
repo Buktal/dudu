@@ -396,7 +396,12 @@ describe("attachment drafts", () => {
     );
     await store.dispatch(selectConversation("conversation-b"));
     await store.dispatch(retryReply(messageId));
-    expect(sent[1]).toEqual(sent[0]);
+    // 原访客、原正文与原附件重发，但生成新的 clientRequestId（原失败记录保留）
+    expect(sent[1].clientRequestId).not.toBe(sent[0].clientRequestId);
+    expect({ ...sent[1], clientRequestId: "" }).toEqual({
+      ...sent[0],
+      clientRequestId: "",
+    });
     const state = store.getState().inbox;
     expect(state.activeId).toBe("conversation-b");
     expect(state.drafts["conversation-a"].text).toBe("之后编辑的正文");

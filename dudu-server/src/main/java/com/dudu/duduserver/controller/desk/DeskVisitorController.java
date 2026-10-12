@@ -4,10 +4,14 @@ import com.dudu.duduserver.common.R;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.auth.Me;
 import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
+import com.dudu.duduserver.dto.DeskSendDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
+import com.dudu.duduserver.service.DeskReplyService;
 import com.dudu.duduserver.service.DeskVisitorService;
+import com.dudu.duduserver.vo.DeskCapabilityVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessagePageVO;
+import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskVisitorPageVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,8 +23,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Desk 访客资源入口：授权范围内的摘要列表查询、单访客当前快照与按需历史分页；
- * 组合筛选与分页用 POST + JSON 请求体，历史简单查询用 GET 查询参数，响应元信息容纳在 R.data。
+ * Desk 访客资源入口：授权范围内的摘要列表查询、单访客当前快照、按需历史分页、
+ * 文本回复与回复能力；组合筛选与分页用 POST + JSON 请求体，历史与能力简单查询用
+ * GET，响应元信息容纳在 R.data。
  */
 @RestController
 @RequiredArgsConstructor
@@ -28,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DeskVisitorController {
 
     private final DeskVisitorService deskVisitorService;
+    private final DeskReplyService deskReplyService;
 
     // 查询体可省略：全部字段都有契约缺省值，省略时按授权范围返回默认页
     @PostMapping("/query")
@@ -48,6 +54,19 @@ public class DeskVisitorController {
                                          @RequestParam(required = false) String beforeSequence,
                                          @RequestParam(required = false) String limit) {
         return R.ok(deskVisitorService.history(user, visitorId, new DeskHistoryQueryDTO(beforeSequence, limit)));
+    }
+
+    // 提交纯文本回复：返回与推送共用同一条最终消息，渠道失败也返回已保存的 delivery.failed
+    @PostMapping("/{visitorId}/messages")
+    public R<DeskMessageVO> send(@Me JwtUser user,
+                                 @PathVariable String visitorId,
+                                 @RequestBody DeskSendDTO request) {
+        return R.ok(deskReplyService.send(user, visitorId, request));
+    }
+
+    @GetMapping("/{visitorId}/capability")
+    public R<DeskCapabilityVO> capability(@Me JwtUser user, @PathVariable String visitorId) {
+        return R.ok(deskReplyService.capability(user, visitorId));
     }
 
     private DeskVisitorQueryDTO emptyQuery() {

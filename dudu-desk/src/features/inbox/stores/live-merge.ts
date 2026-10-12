@@ -186,6 +186,7 @@ export function detachConversation(state: InboxState, id: string): boolean {
   state.queue.ids = state.queue.ids.filter((item) => item !== id);
   delete state.conversations[id];
   delete state.histories[id];
+  delete state.reminders[id];
   delete state.profiles[id];
   delete state.profileEdits[id];
   delete state.ending[id];

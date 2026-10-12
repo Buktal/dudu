@@ -169,6 +169,13 @@ export function markConversationRead(
         )
     )
       return;
+    if (runtime.api.localUnread) {
+      // 服务端没有已读接口：只清除本地待处理提醒，不发请求
+      dispatch(
+        inboxActions.readHandledLocally({ conversationId, throughSequence }),
+      );
+      return;
+    }
     await runConversationOperation(runtime, getState, conversationId, "read", {
       loading: () =>
         dispatch(inboxActions.readStarted({ conversationId, throughSequence })),

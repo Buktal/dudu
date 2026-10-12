@@ -24,6 +24,15 @@ export const eventReducers = {
   connectionChanged(state: InboxState, action: PayloadAction<ConnectionState>) {
     state.connection = action.payload;
   },
+  /** 本地待处理提醒：0 表示清除；增减规则见 reminders.ts，由事件链路调用 */
+  reminderChanged(
+    state: InboxState,
+    action: PayloadAction<{ conversationId: string; unread: number }>,
+  ) {
+    const { conversationId, unread } = action.payload;
+    if (unread > 0) state.reminders[conversationId] = unread;
+    else delete state.reminders[conversationId];
+  },
   conversationsReconciled(
     state: InboxState,
     action: PayloadAction<ConversationPage>,
@@ -127,6 +136,21 @@ export const eventReducers = {
       kind: "information",
       message: action.payload.error.message,
     };
+  },
+  /**
+   * 真实链路没有服务端已读接口：读到最新处只清除本地待处理提醒并记录进度，
+   * 不产生请求、不改变会话数据。
+   */
+  readHandledLocally(
+    state: InboxState,
+    action: PayloadAction<{ conversationId: string; throughSequence: number }>,
+  ) {
+    const { conversationId, throughSequence } = action.payload;
+    delete state.reminders[conversationId];
+    state.events.readThrough[conversationId] = Math.max(
+      state.events.readThrough[conversationId] ?? 0,
+      throughSequence,
+    );
   },
   eventReceived(state: InboxState, action: PayloadAction<InboxEvent>) {
     const event = action.payload;

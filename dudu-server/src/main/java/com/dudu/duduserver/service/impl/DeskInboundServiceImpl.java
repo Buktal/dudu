@@ -159,8 +159,7 @@ public class DeskInboundServiceImpl implements DeskInboundService {
 
     // 事务提交后再推送：读到的摘要与查询接口一致；推送失败只记录，不回滚已保存的来信
     private void pushAfterCommit(CompanyChannelDO account, VisitorDO visitor, MessageDO message) {
-        DeskConversationVO conversation = DeskConversationViews.conversation(
-            visitor, account.getChannel(), String.valueOf(account.getCompanyChannelId()), account.getAccountName());
+        DeskConversationVO conversation = DeskConversationViews.conversation(visitor, account);
         DeskMessageVO messageVO = DeskMessageVO.of(message, null);
         Long companyId = account.getCompanyId();
         Long companyChannelId = account.getCompanyChannelId();

@@ -5,6 +5,7 @@ import {
   reconcileInbox,
   settleConfirmedReplies,
 } from "./reconciler";
+import { reminderChange } from "./reminders";
 import {
   abortRequest,
   beginRequest,
@@ -125,6 +126,11 @@ function receiveInboxEvent(event: InboxEvent): InboxCommand {
     const previous = getState().inbox;
     dispatch(inboxActions.eventReceived(event));
     const state = getState().inbox;
+    // 服务端不返回个人已读：真实链路的待处理提醒按本次运行的事件增减
+    if (runtime.api.localUnread) {
+      const reminder = reminderChange(previous, event);
+      if (reminder) dispatch(inboxActions.reminderChanged(reminder));
+    }
     if (state === previous) return;
     if (
       event.type === "removed" &&

@@ -8,6 +8,7 @@ import {
 import { inboxActions } from "./slice";
 import {
   blankDraft,
+  type InboxState,
   latestIncomingSequence,
   type ReplySubmission,
 } from "./state";
@@ -49,6 +50,24 @@ export function acceptSubmission(
   releaseAttachmentResources(runtime, submission.draftAttachmentIds);
 }
 
+/**
+ * Submission watermarks, owned next to their only consumers: the highest
+ * sequence known locally (the optimistic bubble sits next) and the latest
+ * incoming sequence seen through events or history (the reply baseline).
+ */
+function watermarks(state: InboxState, conversationId: string) {
+  const messages = Object.values(state.messages).filter(
+    (item) => item.conversationId === conversationId,
+  );
+  return {
+    maxSequence: Math.max(0, ...messages.map((item) => item.sequence)),
+    incomingSequence: Math.max(
+      state.events.incomingSequence[conversationId] ?? 0,
+      latestIncomingSequence(state.messages, conversationId),
+    ),
+  };
+}
+
 function deliver(
   submission: ReplySubmission,
   message: InboxMessage,
@@ -68,7 +87,8 @@ function deliver(
           response.conversationId !== target.conversationId ||
           response.direction !== "outgoing" ||
           !response.delivery ||
-          !["accepted", "sent", "delivered", "read"].includes(
+          // 渠道失败也是已保存的持久消息：同样是合法结果，按失败气泡显示
+          !["accepted", "sent", "delivered", "read", "failed"].includes(
             response.delivery.state,
           ) ||
           (response.clientRequestId &&
@@ -131,16 +151,7 @@ export function sendReply(
       textRevision: draft.textRevision,
       draftAttachmentIds: [...draft.attachmentIds],
       media,
-      maxSequence: Math.max(
-        0,
-        ...Object.values(state.messages)
-          .filter((item) => item.conversationId === conversationId)
-          .map((item) => item.sequence),
-      ),
-      incomingSequence: Math.max(
-        state.events.incomingSequence[conversationId] ?? 0,
-        latestIncomingSequence(state.messages, conversationId),
-      ),
+      ...watermarks(state, conversationId),
       selectionRevision: state.selectionRevision,
       clientRequestId,
       now: runtime.now(),
@@ -150,18 +161,28 @@ export function sendReply(
   };
 }
 
+/**
+ * Manual retry of a definite failure: the same visitor and text go out again as
+ * a new message with a fresh clientRequestId, while the persisted failure stays
+ * in the timeline as its own record. Reusing the original request id would
+ * overwrite the failed row instead of resending.
+ */
 export function retryReply(messageId: string): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
     const state = getState().inbox;
     const original = state.submissions[messageId];
+    const conversation = original
+      ? state.conversations[original.request.target.conversationId]
+      : undefined;
     if (
       original?.status !== "failed" ||
-      state.sendingByConversation[original.request.target.conversationId]
+      !conversation ||
+      state.sendingByConversation[conversation.id]
     )
       return;
-    const { target, attachments, text } = original.request;
+    const { attachments, text } = original.request;
     const readiness = replyReadiness({
-      conversation: state.conversations[target.conversationId],
+      conversation,
       connection: state.connection,
       text,
       files: attachments.map((media) => ({
@@ -179,12 +200,20 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
         dispatch(inboxActions.noticeChanged(readiness.notice));
       return;
     }
-    await dispatch(
-      deliver(
-        { ...original, status: "sending", next: false },
-        { ...state.messages[messageId], delivery: { state: "sending" } },
-      ),
-    );
+    const { submission, message } = buildReplySubmission({
+      conversation,
+      text,
+      draftRevision: original.draftRevision,
+      textRevision: original.textRevision,
+      draftAttachmentIds: [...original.draftAttachmentIds],
+      media: attachments,
+      ...watermarks(state, conversation.id),
+      selectionRevision: state.selectionRevision,
+      clientRequestId: runtime.id(),
+      now: runtime.now(),
+      next: false,
+    });
+    await dispatch(deliver(submission, message));
   };
 }
 

@@ -110,7 +110,7 @@ function parseConversation(value: unknown): Conversation {
     id: nonEmptyText(value.id),
     identity: parseIdentity(value.identity),
     status: value.status as ConversationStatus,
-    // 服务端不返回个人已读；待处理提醒由实时票在本地维护，重登不制造旧提示
+    // 服务端不返回个人已读；待处理提醒由本地运行态维护（stores/reminders.ts），重登不制造旧提示
     unread: 0,
     preview: text(value.preview),
     updatedAt: nonEmptyText(value.updatedAt),
@@ -263,11 +263,12 @@ function parseLiveEvent(
 }
 
 /**
- * 真实接待适配器（访客摘要、按需历史与实时通道）：列表查询走 POST /api/desk/visitors/query，
- * 历史分页走 GET /api/desk/visitors/{visitorId}/messages（最近页无 beforeSequence，
- * 更早页用上一页 nextCursor）；订阅连接 /ws/desk，ready 后接收 message 报文；
- * 其余能力（发送、状态、资料）暂未接入，沿用 unavailableInboxApi 的语义；
- * token 由账户适配器写入会话，这里按请求读取。
+ * 真实接待适配器（访客摘要、按需历史、文本回复与实时通道）：列表查询走
+ * POST /api/desk/visitors/query，历史分页走 GET /api/desk/visitors/{visitorId}/messages
+ * （最近页无 beforeSequence，更早页用上一页 nextCursor）；回复走
+ * POST /api/desk/visitors/{visitorId}/messages，能力走同一资源的 capability；
+ * 订阅连接 /ws/desk，ready 后接收 message 报文；状态与资料等其余能力沿用
+ * unavailableInboxApi 的语义；token 由账户适配器写入会话，这里按请求读取。
  */
 export function createHttpInboxApi(
   options: {
@@ -280,6 +281,8 @@ export function createHttpInboxApi(
 
   return {
     ...unavailableInboxApi,
+    // 服务端不返回个人已读：待处理提醒、标记已读都留在本地运行态
+    localUnread: true,
     subscribe({ context, signal, onEvent, onConnection }) {
       const token = readDeskToken(origin);
       if (token === null) {
@@ -309,6 +312,32 @@ export function createHttpInboxApi(
         token: readDeskToken(origin) ?? undefined,
         signal,
         parse: parseMessagePage,
+        fetcher: options.fetcher,
+      });
+    },
+    async send({ target, clientRequestId, text, attachments, signal }) {
+      // 本轮只接纯文本：附件发送尚未接入，拒绝而不是静默丢弃
+      if (attachments.length)
+        throw new DeskApiError(
+          "unavailable",
+          "当前仅支持文字回复，附件发送尚未接入",
+        );
+      return requestDesk({
+        url: `${origin}/api/desk/visitors/${encodeURIComponent(target.conversationId)}/messages`,
+        method: "POST",
+        token: readDeskToken(origin) ?? undefined,
+        signal,
+        body: { clientRequestId, text },
+        parse: parseMessage,
+        fetcher: options.fetcher,
+      });
+    },
+    async getCapability({ conversationId, signal }) {
+      return requestDesk({
+        url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/capability`,
+        token: readDeskToken(origin) ?? undefined,
+        signal,
+        parse: parseCapability,
         fetcher: options.fetcher,
       });
     },

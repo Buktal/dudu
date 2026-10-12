@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DESK_SESSION_KEY } from "@/lib/desk-session";
 import { createHttpInboxApi } from "./http-inbox-api";
-import type { Conversation, ConversationQuery, InboxMessage } from "./types";
+import type {
+  Conversation,
+  ConversationQuery,
+  InboxMessage,
+  SendTarget,
+} from "./types";
 
 const ORIGIN = "https://desk.example.test";
 const CONTEXT = { agentId: "agent-a", workspaceId: "workspace-a" };
@@ -277,13 +282,13 @@ describe("http inbox adapter", () => {
     ).rejects.toMatchObject({ kind: "invalid-response" });
   });
 
-  it("keeps unimplemented capabilities unavailable in the existing way", async () => {
+  it("keeps capabilities the server does not provide unavailable", async () => {
     const api = createHttpInboxApi({ origin: ORIGIN, fetcher: vi.fn() });
     const input = { context: CONTEXT, signal: signal(), conversationId: "41" };
 
     for (const call of [
       () => api.readProfile(input),
-      () => api.getCapability(input),
+      // 服务端没有已读接口：待处理提醒只在本地运行态维护，不调用它
       () => api.markRead({ ...input, throughSequence: 1 }),
       () => api.endConversation(input),
       () => api.resumeConversation(input),
@@ -496,5 +501,129 @@ describe("http inbox history adapter", () => {
       type: "unknown",
       originalType: "image",
     });
+  });
+});
+
+// 独立于实现写出的发送目标与失败响应（渠道原始说明来自公众号错误响应）
+const SEND_TARGET: SendTarget = {
+  conversationId: "41",
+  visitorId: "41",
+  channelId: "wechat",
+  accountId: "51",
+  externalUserId: "external-a",
+};
+const CHANNEL_FAILURE =
+  "微信客服消息发送失败：40001 invalid credential, access_token is invalid or not latest";
+
+describe("http inbox reply adapter", () => {
+  it("posts the text reply with the stored token and reads the persisted message back", async () => {
+    seed("stored-token");
+    const fetcher = vi.fn(
+      async (url: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(url)).toBe(`${ORIGIN}/api/desk/visitors/41/messages`);
+        expect(init?.method).toBe("POST");
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          "Bearer stored-token",
+        );
+        expect(JSON.parse(String(init?.body))).toEqual({
+          clientRequestId: "client-1",
+          text: "好的，已登记",
+        });
+        return envelope(SERVER_OUTGOING);
+      },
+    );
+    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
+
+    const message = await api.send({
+      context: CONTEXT,
+      signal: signal(),
+      clientRequestId: "client-1",
+      target: SEND_TARGET,
+      text: "好的，已登记",
+      attachments: [],
+    });
+
+    expect(message).toEqual(EXPECTED_OUTGOING);
+  });
+
+  it("returns a channel failure as the persisted reply instead of an invalid response", async () => {
+    seed("stored-token");
+    const api = createHttpInboxApi({
+      origin: ORIGIN,
+      fetcher: async () =>
+        envelope({
+          ...SERVER_OUTGOING,
+          delivery: { state: "failed", reason: CHANNEL_FAILURE },
+        }),
+    });
+
+    const message = await api.send({
+      context: CONTEXT,
+      signal: signal(),
+      clientRequestId: "client-1",
+      target: SEND_TARGET,
+      text: "好的，已登记",
+      attachments: [],
+    });
+
+    expect(message.id).toBe("9002");
+    expect(message.delivery).toEqual({
+      state: "failed",
+      reason: CHANNEL_FAILURE,
+    });
+  });
+
+  it("refuses to send attachments in the text-only integration", async () => {
+    seed("stored-token");
+    const fetcher = vi.fn();
+    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
+
+    await expect(
+      api.send({
+        context: CONTEXT,
+        signal: signal(),
+        clientRequestId: "client-1",
+        target: SEND_TARGET,
+        text: "带附件的回复",
+        attachments: [
+          {
+            id: "m1",
+            kind: "image",
+            name: "图片.png",
+            mimeType: "image/png",
+            size: 12,
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({ kind: "unavailable" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("reads the reply capability of the visitor", async () => {
+    seed("stored-token");
+    const fetcher = vi.fn(async (url: RequestInfo | URL) => {
+      expect(String(url)).toBe(`${ORIGIN}/api/desk/visitors/41/capability`);
+      return envelope({ state: "allowed", kinds: ["text"] });
+    });
+    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
+
+    const capability = await api.getCapability({
+      context: CONTEXT,
+      signal: signal(),
+      conversationId: "41",
+    });
+
+    expect(capability).toEqual({
+      state: "allowed",
+      kinds: ["text"],
+      reason: undefined,
+      nextStep: undefined,
+    });
+  });
+
+  it("marks reminders as locally owned so the store never reads a server unread", () => {
+    expect(
+      createHttpInboxApi({ origin: ORIGIN, fetcher: vi.fn() }).localUnread,
+    ).toBe(true);
   });
 });

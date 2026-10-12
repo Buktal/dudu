@@ -8,6 +8,7 @@ import { hasConversationFilters } from "../conversation-query";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { loadConversations, retryConversations } from "../stores/queue";
 import { selectConversation } from "../stores/reading";
+import { unreadBadge } from "../stores/reminders";
 import { selectQueue, selectQueueConversations } from "../stores/selectors";
 import type { Conversation } from "../types";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
@@ -30,6 +31,8 @@ function ConversationRow({
     (state) => state.inbox.drafts[conversation.id],
   );
   const order = useInboxSelector((state) => state.inbox.queue.query.order);
+  // 真实链路的待处理提醒在本地运行态，Mock 沿用自身未读数据
+  const unread = useInboxSelector((state) => unreadBadge(state, conversation));
   const canPin = !!onPin && conversation.status !== "closed";
   return (
     <div
@@ -90,12 +93,12 @@ function ConversationRow({
                   {conversation.messageCount} 条
                 </span>
               )}
-            {conversation.unread > 0 && (
+            {unread > 0 && (
               <Badge
                 className="ml-auto min-w-4 px-1 text-[10px]"
-                aria-label={`${conversation.unread} 条未读`}
+                aria-label={`${unread} 条未读`}
               >
-                {conversation.unread > 99 ? "99+" : conversation.unread}
+                {unread > 99 ? "99+" : unread}
               </Badge>
             )}
           </span>
