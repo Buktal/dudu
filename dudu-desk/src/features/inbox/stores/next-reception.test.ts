@@ -205,7 +205,8 @@ describe("send and receive the next visitor", () => {
         return response.promise;
       },
     });
-    const loading = store.dispatch(loadConversations());
+    await store.dispatch(loadConversations());
+    const loading = store.dispatch(loadHistory("conversation-a"));
     await reading.promise;
     store.dispatch(editDraft("conversation-a", "已经为你确认"));
     const sending = store.dispatch(sendReply("conversation-a", true));

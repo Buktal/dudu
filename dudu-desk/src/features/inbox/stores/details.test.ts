@@ -44,6 +44,7 @@ describe("visitor details", () => {
     await store.dispatch(
       loadConversations({ query: { ...emptyQuery, search: "保修" } }),
     );
+    await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(editVisitorProfile(firstConversation.id, { tagsText: "" }));
 
     await store.dispatch(saveVisitorProfile(firstConversation.id));
@@ -80,6 +81,7 @@ describe("visitor details", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
       editVisitorProfile(firstConversation.id, { note: "正在编辑的备注" }),
     );
@@ -167,6 +169,7 @@ describe("visitor details", () => {
     const result = deferred<VisitorProfile>();
     const store = testStore({ saveProfile: () => result.promise });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
       editVisitorProfile(firstConversation.id, {
         note: "第一版备注",
@@ -207,6 +210,7 @@ describe("visitor details", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
       editVisitorProfile(firstConversation.id, {
         note: "品牌店待回访",
@@ -324,6 +328,7 @@ describe("visitor details", () => {
       }),
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
       editVisitorProfile(firstConversation.id, { note: "服务端已确认的备注" }),
     );

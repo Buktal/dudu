@@ -8,14 +8,22 @@ import com.dudu.duduserver.config.auth.Me;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.UserRoleEnum;
+import com.dudu.duduserver.constant.VisitorQueryOrderEnum;
+import com.dudu.duduserver.constant.VisitorQueryStatusEnum;
+import com.dudu.duduserver.constant.VisitorStatusEnum;
 import com.dudu.duduserver.dto.DeskLoginDTO;
+import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
 import com.dudu.duduserver.service.DeskAuthService;
 import com.dudu.duduserver.testutil.NoDatasourceSpringTest;
 import com.dudu.duduserver.vo.DeskAccessVO;
+import com.dudu.duduserver.vo.DeskCapabilityVO;
 import com.dudu.duduserver.vo.DeskCompanyVO;
+import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskLoginVO;
 import com.dudu.duduserver.vo.DeskProfileVO;
 import com.dudu.duduserver.vo.DeskUserVO;
+import com.dudu.duduserver.vo.DeskVisitorIdentityVO;
+import com.dudu.duduserver.vo.DeskVisitorPageVO;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,11 +34,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -163,6 +175,94 @@ class DeskApiTest extends NoDatasourceSpringTest {
     }
 
     @Test
+    void deskVisitorEndpointsAreGuardedAndReturnContractEnvelope() throws Exception {
+        when(deskVisitorService.query(any(JwtUser.class), any(DeskVisitorQueryDTO.class)))
+            .thenReturn(pageResult());
+        when(deskVisitorService.get(any(JwtUser.class), anyString())).thenReturn(conversationResult());
+        String token = bearer(783101L, 9L, UserRoleEnum.CONSOLE);
+
+        // 访客资源落在 /api/desk/** 的企业员工守卫内：缺令牌与平台身份都不得进入服务
+        mockMvc.perform(post("/api/desk/visitors/query"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(ApiEnum.TOKEN_EMPTY.code));
+        mockMvc.perform(get("/api/desk/visitors/41").header("Authorization", bearer(null, 1L, UserRoleEnum.ADMIN)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(ApiEnum.FORBIDDEN.code));
+        verify(deskVisitorService, never()).query(any(JwtUser.class), any(DeskVisitorQueryDTO.class));
+
+        mockMvc.perform(post("/api/desk/visitors/query").header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"search": " 林 ", "channelId": "wechat", "status": "all", "order": "messages", "page": 2, "pageSize": 5}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(ApiEnum.OK.code))
+            .andExpect(jsonPath("$.data.items[0].id").value("41"))
+            .andExpect(jsonPath("$.data.items[0].identity.externalUserId").value("external-a"))
+            .andExpect(jsonPath("$.data.items[0].identity.name").value("林小满"))
+            .andExpect(jsonPath("$.data.items[0].identity.channelId").value("wechat"))
+            .andExpect(jsonPath("$.data.items[0].identity.channelName").value("微信"))
+            .andExpect(jsonPath("$.data.items[0].identity.accountId").value("51"))
+            .andExpect(jsonPath("$.data.items[0].identity.accountName").value("公众号"))
+            .andExpect(jsonPath("$.data.items[0].preview").value("最后一条摘要"))
+            .andExpect(jsonPath("$.data.items[0].waitingSince").doesNotExist())
+            .andExpect(jsonPath("$.data.items[0].messageCount").value(7))
+            .andExpect(jsonPath("$.data.items[0].version").value(3))
+            .andExpect(jsonPath("$.data.items[0].capability.state").value("restricted"))
+            .andExpect(jsonPath("$.data.total").value(1))
+            .andExpect(jsonPath("$.data.page").value(2))
+            .andExpect(jsonPath("$.data.pageSize").value(5))
+            .andExpect(jsonPath("$.data.counts.active").value(4))
+            .andExpect(jsonPath("$.data.counts.needsReply").value(3))
+            .andExpect(jsonPath("$.data.counts.waiting").value(1))
+            .andExpect(jsonPath("$.data.counts.closed").value(2))
+            .andExpect(jsonPath("$.data.channels[0].id").value("wechat"))
+            .andExpect(jsonPath("$.data.channels[0].name").value("微信"));
+
+        ArgumentCaptor<DeskVisitorQueryDTO> captor = ArgumentCaptor.forClass(DeskVisitorQueryDTO.class);
+        verify(deskVisitorService).query(any(JwtUser.class), captor.capture());
+        assertThat(captor.getValue().search()).isEqualTo("林");
+        assertThat(captor.getValue().channelId()).isEqualTo("wechat");
+        assertThat(captor.getValue().status()).isEqualTo(VisitorQueryStatusEnum.ALL);
+        assertThat(captor.getValue().order()).isEqualTo(VisitorQueryOrderEnum.MESSAGES);
+        assertThat(captor.getValue().page()).isEqualTo(2);
+        assertThat(captor.getValue().pageSize()).isEqualTo(5);
+
+        // 查询体可省略：缺省值在服务端归一
+        mockMvc.perform(post("/api/desk/visitors/query").header("Authorization", token))
+            .andExpect(jsonPath("$.code").value(ApiEnum.OK.code));
+        ArgumentCaptor<DeskVisitorQueryDTO> defaulted = ArgumentCaptor.forClass(DeskVisitorQueryDTO.class);
+        verify(deskVisitorService, times(2)).query(any(JwtUser.class), defaulted.capture());
+        assertThat(defaulted.getValue().search()).isEmpty();
+        assertThat(defaulted.getValue().channelId()).isEqualTo("all");
+        assertThat(defaulted.getValue().status()).isEqualTo(VisitorQueryStatusEnum.ACTIVE);
+        assertThat(defaulted.getValue().order()).isEqualTo(VisitorQueryOrderEnum.WAIT);
+        assertThat(defaulted.getValue().page()).isEqualTo(1);
+        assertThat(defaulted.getValue().pageSize()).isEqualTo(30);
+
+        mockMvc.perform(get("/api/desk/visitors/41").header("Authorization", token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(ApiEnum.OK.code))
+            .andExpect(jsonPath("$.data.id").value("41"))
+            .andExpect(jsonPath("$.data.identity.name").value("林小满"))
+            .andExpect(jsonPath("$.data.updatedAt").value("2026-10-12 10:30:15"))
+            .andExpect(jsonPath("$.data.waitingSince").doesNotExist());
+        verify(deskVisitorService).get(any(JwtUser.class), eq("41"));
+    }
+
+    @Test
+    void deskVisitorQueryRejectsUnknownFilterValues() throws Exception {
+        String token = bearer(783101L, 9L, UserRoleEnum.CONSOLE);
+        mockMvc.perform(post("/api/desk/visitors/query").header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"bogus\"}"))
+            .andExpect(jsonPath("$.code").value(ApiEnum.PARAM_ERROR.code));
+        mockMvc.perform(post("/api/desk/visitors/query").header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"order\": \"bogus\"}"))
+            .andExpect(jsonPath("$.code").value(ApiEnum.PARAM_ERROR.code));
+        verify(deskVisitorService, never()).query(any(JwtUser.class), any(DeskVisitorQueryDTO.class));
+    }
+
+    @Test
     void deskLoginValidatesCompanyIdAccountAndPassword() throws Exception {
         mockMvc.perform(post("/api/desk/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -210,5 +310,20 @@ class DeskApiTest extends NoDatasourceSpringTest {
         return new DeskProfileVO(new DeskUserVO("9", "boss", "老板", UserRoleEnum.CONSOLE),
             new DeskCompanyVO("783101", "验收企业"),
             new DeskAccessVO(false, List.of(), List.of()));
+    }
+
+    private DeskVisitorPageVO pageResult() {
+        return new DeskVisitorPageVO(List.of(conversationResult()), 1L, 2, 5,
+            new DeskVisitorPageVO.Counts(4, 3, 1, 2),
+            List.of(new DeskVisitorPageVO.Channel("wechat", "微信")));
+    }
+
+    private DeskConversationVO conversationResult() {
+        return new DeskConversationVO("41",
+            new DeskVisitorIdentityVO("41", "external-a", "林小满", null,
+                "wechat", "微信", "51", "公众号"),
+            VisitorStatusEnum.WAITING, "最后一条摘要",
+            LocalDateTime.of(2026, 10, 12, 10, 30, 15), null, 7, 3,
+            new DeskCapabilityVO("restricted", List.of(), "渠道发送能力尚未接入"));
     }
 }

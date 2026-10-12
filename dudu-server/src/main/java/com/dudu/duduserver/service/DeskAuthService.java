@@ -2,6 +2,7 @@ package com.dudu.duduserver.service;
 
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.dto.DeskLoginDTO;
+import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskLoginVO;
 import com.dudu.duduserver.vo.DeskProfileVO;
 
@@ -16,4 +17,7 @@ public interface DeskAuthService {
 
     // 按 token 载荷定位当前企业员工；身份不存在、归属不符或停用均按无效登录处理
     DeskProfileVO getProfile(JwtUser me);
+
+    // 访客等资源接口共用的身份守卫：先核对实时企业员工身份，再返回该员工当前的接待范围
+    DeskAccessVO requireAccess(JwtUser me);
 }

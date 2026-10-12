@@ -81,6 +81,7 @@ describe("reading conversations through the inbox workflow", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     await store.dispatch(loadHistory("conversation-a", true));
     expect(selectMessages(store.getState(), "conversation-a")).toEqual([
       older,
@@ -109,9 +110,10 @@ describe("reading conversations through the inbox workflow", () => {
         };
       },
     });
-    const initial = store.dispatch(loadConversations());
-    // State-driven wait: the auto-select chain resolves in a tick count that
-    // paging refactors may shift, so wait for the in-flight read itself.
+    await store.dispatch(loadConversations());
+    const initial = store.dispatch(loadHistory("conversation-a"));
+    // State-driven wait: wait for the in-flight read itself instead of a tick count
+    // that paging refactors may shift.
     await vi.waitFor(() => expect(signal).toBeDefined());
     await store.dispatch(selectConversation("conversation-b"));
     expect(signal?.aborted).toBe(true);
@@ -148,6 +150,7 @@ describe("reading conversations through the inbox workflow", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     const cancelled = store.dispatch(loadHistory("conversation-a", true));
     await store.dispatch(selectConversation("conversation-b"));
     expect(olderReads[0].signal.aborted).toBe(true);
@@ -329,6 +332,7 @@ describe("history read retries", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     await store.dispatch(loadHistory("conversation-a", true));
     expect(store.getState().inbox.histories["conversation-a"]).toMatchObject({
       status: "error",
@@ -360,6 +364,7 @@ describe("history read retries", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     expect(store.getState().inbox.histories["conversation-a"]).toMatchObject({
       status: "error",
       failedRead: "refresh",

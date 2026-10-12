@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { unavailableInboxApi } from "./api";
 import { loadInboxApi } from "./runtime";
+import type { ConnectionState } from "./types";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -24,10 +25,26 @@ describe("inbox mock runtime", () => {
   });
 
   it.each([undefined, "false", "TRUE"])(
-    "keeps the real adapter boundary when the mock flag is %s",
+    "uses the real visitor adapter when the mock flag is %s",
     async (flag) => {
       vi.stubEnv("VITE_DESK_MOCK", flag);
-      expect(await loadInboxApi()).toBe(unavailableInboxApi);
+      const api = await loadInboxApi();
+      // 访客摘要查询已接入真实适配器；历史/订阅等未接入能力保持「未连接」语义
+      expect(api).not.toBe(unavailableInboxApi);
+      expect(api.listConversations).not.toBe(
+        unavailableInboxApi.listConversations,
+      );
+      let connection: ConnectionState = "connecting";
+      const unsubscribe = api.subscribe({
+        context: { agentId: "agent-a", workspaceId: "workspace-a" },
+        signal: new AbortController().signal,
+        onEvent: () => {},
+        onConnection: (state) => {
+          connection = state;
+        },
+      });
+      expect(connection).toBe("unavailable");
+      unsubscribe();
     },
   );
 

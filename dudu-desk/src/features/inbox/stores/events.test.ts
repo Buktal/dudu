@@ -117,6 +117,7 @@ describe("incremental inbox updates", () => {
     });
     store.dispatch(startInboxUpdates());
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     store.dispatch(editDraft("conversation-a", "等待真实回执"));
     const sending = store.dispatch(sendReply("conversation-a"));
     const accepted = acceptedMessage(submission);
@@ -179,6 +180,7 @@ describe("incremental inbox updates", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     store.dispatch(editDraft("conversation-a", "已提交的内容"));
     await store.dispatch(sendReply("conversation-a"));
     const pending = selectMessages(store.getState(), "conversation-a")[1];

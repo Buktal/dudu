@@ -4,7 +4,6 @@ import { compareConversations } from "../conversation-query";
 import type { ConversationQuery } from "../types";
 import { collectPaged } from "./page-cursor";
 import { foldConversationPages } from "./queue-membership";
-import { selectConversation } from "./reading";
 import {
   failedReadCursor,
   operationFailure,
@@ -120,7 +119,9 @@ export function loadConversations(
             current.selectionRevision === 0 &&
             current.queue.ids.length
           ) {
-            await dispatch(selectConversation(current.queue.ids[0]));
+            // 启动先把首位访客设为当前接待对象，但不预取历史与资料：
+            // 最近页读取按展示模式由后续实施票接通，卡片与列表共用摘要不受影响
+            dispatch(inboxActions.conversationSelected(current.queue.ids[0]));
           }
         } catch (error) {
           op.settle(() =>

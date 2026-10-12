@@ -28,7 +28,7 @@ yarn tauri:build
 
 桌面命令需要本机 Tauri/Rust 构建环境。
 
-开发运行时 Vite 将 `/api` 同源代理到 `127.0.0.1:8080`（见 [vite.config.ts](vite.config.ts)），浏览器与桌面端都不需要跨域配置，本地 Server 用 `mvn spring-boot:run` 启动即可。打包运行时用 `VITE_API_ORIGIN` 注入线上 API 源地址（只允许协议、主机与端口），由部署层处理跨域。真实账户适配器把 JWT 保存在内存与 `sessionStorage` 的 `dudu-desk.session` 中，且与 API 源地址绑定；关闭窗口不承诺记住登录。
+开发运行时 Vite 将 `/api` 同源代理到 `127.0.0.1:8080`（见 [vite.config.ts](vite.config.ts)），浏览器与桌面端都不需要跨域配置，本地 Server 用 `mvn spring-boot:run` 启动即可。打包运行时用 `VITE_API_ORIGIN` 注入线上 API 源地址（只允许协议、主机与端口），由部署层处理跨域。真实账户适配器与访客摘要适配器共用会话凭据：JWT 保存在内存与 `sessionStorage` 的 `dudu-desk.session` 中，登录后由账户适配器写入、inbox 按请求读取（见 [desk-session.ts](src/lib/desk-session.ts)），且与 API 源地址绑定；关闭窗口不承诺记住登录。
 
 ### Mock 打包测试
 
@@ -129,7 +129,7 @@ src/
 src-tauri/                      Tauri 桌面宿主与本地平台桥接
 ```
 
-跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。账户 feature 已接入真实 Server 认证（[http-account-api.ts](src/features/account/http-account-api.ts)）：token 只由适配器在内存与 `dudu-desk.session` 中维护，界面与业务 store 只接收身份及授权元数据，身份恢复必须经 `GET /api/desk/profile` 重新确认，不能仅凭本地 token 或解码结果放行。inbox 真实适配器仍待按实施票接入，也可向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端三表、HTTP 与 Socket 已在[最小对接契约](../docs/design/dudu-desk/implementation-contract.md)定稿；按实施票逐项接通，契约确定不代表真实适配器已经实现。
+跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。账户 feature 已接入真实 Server 认证（[http-account-api.ts](src/features/account/http-account-api.ts)）：token 只由适配器写入会话存储（[desk-session.ts](src/lib/desk-session.ts)），界面与业务 store 只接收身份及授权元数据，身份恢复必须经 `GET /api/desk/profile` 重新确认，不能仅凭本地 token 或解码结果放行。inbox 已接入真实访客摘要适配器（[http-inbox-api.ts](src/features/inbox/http-inbox-api.ts)）：列表查询走 `POST /api/desk/visitors/query`，登录后只读取授权范围内的摘要；历史、发送、状态、资料与订阅仍沿用「接待服务未连接」的空态语义，待后续实施票接通。也可向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端三表、HTTP 与 Socket 已在[最小对接契约](../docs/design/dudu-desk/implementation-contract.md)定稿；按实施票逐项接通，契约确定不代表全部真实适配器已经实现。
 
 Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、回调和消息转发属于后续 Server 接入职责。
 

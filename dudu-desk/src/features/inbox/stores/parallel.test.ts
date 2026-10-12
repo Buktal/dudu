@@ -9,7 +9,7 @@ import {
   unpinConversation,
 } from "./parallel";
 import { loadConversations } from "./queue";
-import { destroyInbox, selectConversation } from "./reading";
+import { destroyInbox, loadHistory, selectConversation } from "./reading";
 import { selectInbox } from "./selectors";
 import { editDraft, focusReply, sendReply } from "./sending";
 import {
@@ -233,9 +233,10 @@ describe("parallel reception", () => {
         return { items: [incomingMessage(conversationId)], nextCursor: null };
       },
     });
-    const loading = store.dispatch(loadConversations());
-    // State-driven wait: the auto-select chain resolves in a tick count that
-    // paging refactors may shift, so wait for the in-flight read itself.
+    await store.dispatch(loadConversations());
+    const loading = store.dispatch(loadHistory(firstConversation.id));
+    // State-driven wait: wait for the in-flight read itself instead of a tick
+    // count that paging refactors may shift.
     await vi.waitFor(() => expect(primarySignal).toBeDefined());
     await store.dispatch(pinConversation(secondConversation.id));
     await store.dispatch(selectConversation(secondConversation.id));

@@ -4,7 +4,12 @@ import type { InboxEvent, Page, ReplyCapability } from "../types";
 import { reconnectInbox, startInboxUpdates } from "./events";
 import { focusPane, openQuickHistory, pinConversation } from "./parallel";
 import { loadConversations } from "./queue";
-import { destroyInbox, markConversationRead, resetContext } from "./reading";
+import {
+  destroyInbox,
+  loadHistory,
+  markConversationRead,
+  resetContext,
+} from "./reading";
 import { selectMessages, selectQueueConversations } from "./selectors";
 import { editDraft } from "./sending";
 import {
@@ -139,6 +144,7 @@ describe("inbox connection recovery", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     store.dispatch(editDraft("conversation-a", "断线期间的草稿"));
     subscriptions[0].onConnection("disconnected");
     expect(store.getState().inbox.connection).toBe("disconnected");

@@ -1,5 +1,11 @@
 import { DeskApiError } from "@/lib/api-response";
 import { requestDesk } from "@/lib/desk-http";
+import {
+  clearDeskToken,
+  readDeskToken,
+  resolveDeskOrigin,
+  storeDeskToken,
+} from "@/lib/desk-session";
 import type {
   AccountApi,
   AgentAccess,
@@ -7,10 +13,6 @@ import type {
   LoginCredentials,
 } from "./api";
 
-/** 凭据存储键：只保存在当前窗口会话，并绑定签发它的 API 源地址。 */
-export const DESK_SESSION_KEY = "dudu-desk.session";
-
-const ONLINE_ORIGIN_FALLBACK = "https://api.dudu.example";
 const PROFILE_PATH = "/desk/profile";
 const LOGIN_PATH = "/desk/login";
 const LOGOUT_PATH = "/desk/logout";
@@ -20,24 +22,6 @@ const ROLE_NAMES: Record<string, string> = {
   console: "企业管理员",
   user: "客服坐席",
 };
-
-type StoredCredentials = { origin: string; token: string };
-
-// 只接受协议、主机与端口的构建注入地址，禁止携带路径、凭据与查询参数
-function parseOrigin(value: string): string {
-  const url = new URL(value.trim());
-  if (
-    !["http:", "https:"].includes(url.protocol) ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash ||
-    url.pathname !== "/"
-  ) {
-    throw new Error("API 源地址仅支持 HTTP 或 HTTPS 的主机与端口");
-  }
-  return url.origin;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -124,62 +108,29 @@ function invalidCredentials(error: unknown): boolean {
   );
 }
 
-function storedToken(currentOrigin: string): string | null {
-  try {
-    const saved: unknown = JSON.parse(
-      sessionStorage.getItem(DESK_SESSION_KEY) ?? "null",
-    );
-    if (
-      isRecord(saved) &&
-      saved.origin === currentOrigin &&
-      typeof saved.token === "string" &&
-      saved.token
-    )
-      return saved.token;
-  } catch {
-    /* 存储不可用或内容损坏时回到登录态。 */
-  }
-  return null;
-}
-
 /**
- * 真实企业账户适配器：token 只在本模块内存与 sessionStorage 中流转，
+ * 真实企业账户适配器：token 只在本模块内存与 sessionStorage 中流转（存储形状见 lib/desk-session），
  * 身份恢复必须经 profile 重新确认，不能仅凭本地 token 或解码结果放行。
  */
 export function createHttpAccountApi(
   options: { origin?: string; fetcher?: typeof fetch } = {},
 ): AccountApi {
   // 开发走 Vite 同源代理（origin 为空串），生产使用构建注入的线上地址
-  const origin =
-    options.origin ??
-    (import.meta.env.DEV
-      ? ""
-      : parseOrigin(import.meta.env.VITE_API_ORIGIN ?? ONLINE_ORIGIN_FALLBACK));
-  let token = storedToken(origin);
+  const origin = resolveDeskOrigin(options.origin);
+  let token = readDeskToken(origin);
   // 凭据换代的单调计数：迟到的响应只能写回它开始时的这一代
   let generation = 0;
 
   function keepToken(value: string) {
     token = value;
     generation += 1;
-    try {
-      sessionStorage.setItem(
-        DESK_SESSION_KEY,
-        JSON.stringify({ origin, token: value } satisfies StoredCredentials),
-      );
-    } catch {
-      /* 存储不可用时保持当前内存登录可用。 */
-    }
+    storeDeskToken(origin, value);
   }
 
   function dropToken() {
     token = null;
     generation += 1;
-    try {
-      sessionStorage.removeItem(DESK_SESSION_KEY);
-    } catch {
-      /* 内存凭据已清除。 */
-    }
+    clearDeskToken();
   }
 
   return {

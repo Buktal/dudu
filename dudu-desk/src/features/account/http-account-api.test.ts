@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DESK_SESSION_KEY } from "@/lib/desk-session";
 import type { AgentSession } from "./api";
-import { createHttpAccountApi, DESK_SESSION_KEY } from "./http-account-api";
+import { createHttpAccountApi } from "./http-account-api";
 
 const ORIGIN = "https://desk.example.test";
 const CREDENTIALS = {

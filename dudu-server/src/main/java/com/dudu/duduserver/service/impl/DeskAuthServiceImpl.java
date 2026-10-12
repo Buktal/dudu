@@ -67,6 +67,19 @@ public class DeskAuthServiceImpl implements DeskAuthService {
 
     @Override
     public DeskProfileVO getProfile(JwtUser me) {
+        DeskIdentity identity = requireIdentity(me);
+        return new DeskProfileVO(DeskUserVO.of(identity.user()), DeskCompanyVO.of(identity.company()),
+            deskAccessService.resolve(identity.company(), identity.user()));
+    }
+
+    @Override
+    public DeskAccessVO requireAccess(JwtUser me) {
+        DeskIdentity identity = requireIdentity(me);
+        return deskAccessService.resolve(identity.company(), identity.user());
+    }
+
+    // 当前令牌对应的实时企业身份：员工与企业的启用状态、角色与归属每次都按持久数据核对
+    private DeskIdentity requireIdentity(JwtUser me) {
         UserDO user = userService.getById(me.userId());
         if (user == null || user.getCompanyId() == null || !user.getCompanyId().equals(me.companyId())
             || !isAgentRole(user.getRole()) || user.getStatus() != EnableStatusEnum.ENABLED) {
@@ -76,12 +89,15 @@ public class DeskAuthServiceImpl implements DeskAuthService {
         if (company == null || company.getStatus() != EnableStatusEnum.ENABLED) {
             throw new BizException(ApiEnum.TOKEN_VERIFY);
         }
-        DeskAccessVO access = deskAccessService.resolve(company, user);
-        return new DeskProfileVO(DeskUserVO.of(user), DeskCompanyVO.of(company), access);
+        return new DeskIdentity(user, company);
     }
 
     // 企业坐席只包含企业管理员与普通员工；平台 admin 身份不进入企业接待
     private boolean isAgentRole(UserRoleEnum role) {
         return role == UserRoleEnum.CONSOLE || role == UserRoleEnum.USER;
+    }
+
+    // 已核验的企业员工与其所属企业，只在本服务内流转
+    private record DeskIdentity(UserDO user, CompanyDO company) {
     }
 }

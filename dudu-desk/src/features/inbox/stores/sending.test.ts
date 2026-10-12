@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
 import type { InboxMessage, ReplyCapability, SendSubmission } from "../types";
 import { loadConversations } from "./queue";
-import { resetContext, selectConversation } from "./reading";
+import { loadHistory, resetContext, selectConversation } from "./reading";
 import { selectMessages } from "./selectors";
 import { editDraft, endReception, retryReply, sendReply } from "./sending";
 import {
@@ -34,6 +34,7 @@ describe("replies through the inbox workflow", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     store.dispatch(editDraft("conversation-a", "给旗舰店的回复"));
     await store.dispatch(selectConversation("conversation-b"));
     store.dispatch(editDraft("conversation-b", "给海外服务的回复"));
@@ -83,6 +84,7 @@ describe("replies through the inbox workflow", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     store.dispatch(editDraft("conversation-a", "原内容"));
     await store.dispatch(sendReply("conversation-a"));
     const failed = selectMessages(store.getState(), "conversation-a")[1];
@@ -108,6 +110,7 @@ describe("replies through the inbox workflow", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     store.dispatch(editDraft("conversation-a", "等待结果"));
     await store.dispatch(sendReply("conversation-a", true));
     const message = selectMessages(store.getState(), "conversation-a")[1];

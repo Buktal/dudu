@@ -4,6 +4,7 @@ import type { InboxApi } from "../api";
 import type { Conversation, InboxMessage, SendSubmission } from "../types";
 import { addAttachments } from "./attachments";
 import { loadConversations } from "./queue";
+import { loadHistory } from "./reading";
 import { selectMessages } from "./selectors";
 import { editDraft, sendReply } from "./sending";
 import {
@@ -33,6 +34,7 @@ describe("receipt correlation across response ordering", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     store.dispatch(editDraft("conversation-a", "同一条回复"));
     const sending = store.dispatch(sendReply("conversation-a"));
     const accepted = { ...acceptedMessage(submission), sequence: 6 };
@@ -87,6 +89,7 @@ describe("receipt correlation across response ordering", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     store.dispatch(editDraft("conversation-a", "保留失败内容"));
     const sending = store.dispatch(sendReply("conversation-a", true));
     input.onEvent({
@@ -131,6 +134,7 @@ describe("receipt correlation across response ordering", () => {
       },
     });
     await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
     store.dispatch(editDraft("conversation-a", "已发送内容"));
     const sending = store.dispatch(sendReply("conversation-a", true));
     store.dispatch(editDraft("conversation-a", "之后继续输入"));

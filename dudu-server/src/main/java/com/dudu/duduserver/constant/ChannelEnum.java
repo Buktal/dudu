@@ -7,21 +7,25 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 渠道平台类型，按领域术语中的平台划分，不包含 MockPulse 的回调子类型。
+ * 渠道平台类型，按领域术语中的平台划分，不包含 MockPulse 的回调子类型；
+ * displayName 供 Desk 展示渠道名，数据库与接口仍只交换平台代码。
  */
 @Getter
 @RequiredArgsConstructor
 public enum ChannelEnum {
 
-    WECHAT("wechat"),
-    ALIPAY("alipay"),
-    DOUYIN("douyin"),
-    XIAOHONGSHU("xiaohongshu"),
-    BILIBILI("bilibili");
+    WECHAT("wechat", "微信"),
+    ALIPAY("alipay", "支付宝"),
+    DOUYIN("douyin", "抖音"),
+    XIAOHONGSHU("xiaohongshu", "小红书"),
+    BILIBILI("bilibili", "哔哩哔哩");
 
     @EnumValue
     @JsonValue
     private final String code;
+
+    // Desk 渠道筛选与列表展示用的显示名
+    private final String displayName;
 
     // 数据库、JSON 与查询参数共用业务代码，拒绝未知值
     @JsonCreator
