@@ -27,7 +27,7 @@ describe("conversation queue startup", () => {
     await store.dispatch(loadConversations());
 
     expect(listConversations).toHaveBeenCalledTimes(1);
-    // 启动与默认选中都不做历史/资料预取；最近页读取由后续实施票按展示模式接通
+    // 启动与默认选中都不做历史/资料预取；最近页由实际展示完整对话的会话窗按需读取
     expect(listMessages).not.toHaveBeenCalled();
     expect(readProfile).not.toHaveBeenCalled();
     expect(store.getState().inbox.activeId).toBe("conversation-a");

@@ -1,16 +1,24 @@
 package com.dudu.duduserver.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.ChannelEnum;
+import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.constant.MessageSendStatusEnum;
 import com.dudu.duduserver.constant.UserRoleEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
+import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
+import com.dudu.duduserver.entity.MessageDO;
+import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.VisitorDO;
 import com.dudu.duduserver.service.impl.DeskVisitorServiceImpl;
 import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
+import com.dudu.duduserver.vo.DeskMessagePageVO;
+import com.dudu.duduserver.vo.DeskMessageVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -19,12 +27,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -40,8 +50,10 @@ class DeskVisitorServiceTest {
 
     private final DeskAuthService deskAuthService = mock(DeskAuthService.class);
     private final VisitorService visitorService = mock(VisitorService.class);
+    private final MessageService messageService = mock(MessageService.class);
+    private final UserService userService = mock(UserService.class);
     private final DeskVisitorService deskVisitorService =
-        new DeskVisitorServiceImpl(deskAuthService, visitorService);
+        new DeskVisitorServiceImpl(deskAuthService, visitorService, messageService, userService);
 
     private final JwtUser me = new JwtUser(COMPANY_ID, 9L, UserRoleEnum.CONSOLE, 0L);
 
@@ -129,6 +141,153 @@ class DeskVisitorServiceTest {
         unauthorizedChannel.setCompanyChannelId(99L);
         when(visitorService.getById(VISITOR_ID)).thenReturn(unauthorizedChannel);
         assertCodeForbidden(VISITOR_ID);
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidHistoryQueries")
+    void historyRejectsInvalidPagingInputBeforeReadingPersistence(int expectedCode, String beforeSequence, String limit) {
+        assertThatThrownBy(() -> deskVisitorService.history(me, String.valueOf(VISITOR_ID),
+            new DeskHistoryQueryDTO(beforeSequence, limit)))
+            .isInstanceOf(BizException.class)
+            .extracting(error -> ((BizException) error).apiEnum().code)
+            .isEqualTo(expectedCode);
+        verifyNoInteractions(visitorService, messageService);
+    }
+
+    static Stream<Arguments> invalidHistoryQueries() {
+        return Stream.of(
+            Arguments.of(ApiEnum.PARAM_ERROR.code, "abc", null),
+            Arguments.of(ApiEnum.PARAM_ERROR.code, "0", null),
+            Arguments.of(ApiEnum.PARAM_ERROR.code, "-1", null),
+            Arguments.of(ApiEnum.PARAM_ERROR.code, null, "0"),
+            Arguments.of(ApiEnum.PARAM_ERROR.code, null, "abc"),
+            Arguments.of(ApiEnum.PARAM_EXCEED.code, null, "101"));
+    }
+
+    @Test
+    void historyReturnsTheRecentPageAscendingWithAnEarlierCursorAndTheFullMessageProjection() {
+        when(visitorService.getById(VISITOR_ID)).thenReturn(visitorWithLastMessage());
+        // SQL 按 sequence 降序取 limit + 1 条：多出的一条只用于判断还有更早消息
+        when(messageService.page(any(Page.class), any())).thenAnswer(invocation -> {
+            Page<MessageDO> page = invocation.getArgument(0);
+            page.setRecords(List.of(message(3, MessageDirectionEnum.INCOMING),
+                message(2, MessageDirectionEnum.OUTGOING), message(1, MessageDirectionEnum.INCOMING)));
+            return page;
+        });
+        when(userService.listByIds(any())).thenReturn(List.of(agent("9", "林舟")));
+
+        DeskMessagePageVO page =
+            deskVisitorService.history(me, String.valueOf(VISITOR_ID), new DeskHistoryQueryDTO(null, "2"));
+
+        // 最近一页取 limit + 1 中的最新两条并按升序返回；多出的最旧一条（sequence 1）不返回
+        assertThat(page.items()).extracting(DeskMessageVO::sequence).containsExactly(2, 3);
+        assertThat(page.nextCursor()).isEqualTo("2");
+
+        // outgoing 增加发送员工、显示名与发送结果；本票无发送接口，字段为后续票复用
+        DeskMessageVO outgoing = page.items().get(0);
+        assertThat(outgoing.id()).isEqualTo("2");
+        assertThat(outgoing.conversationId()).isEqualTo("41");
+        assertThat(outgoing.direction()).isEqualTo(MessageDirectionEnum.OUTGOING);
+        assertThat(outgoing.body()).isEqualTo(Map.of("type", "text", "text", "消息 2"));
+        assertThat(outgoing.createdAt()).isEqualTo(LocalDateTime.of(2026, 10, 12, 9, 2, 0));
+        assertThat(outgoing.version()).isEqualTo(1);
+        assertThat(outgoing.clientRequestId()).isEqualTo("client-2");
+        assertThat(outgoing.senderUserId()).isEqualTo("9");
+        assertThat(outgoing.senderName()).isEqualTo("林舟");
+        assertThat(outgoing.delivery()).isEqualTo(new DeskMessageVO.Delivery("sent", null));
+
+        // 其他方向不返回发送员工、气泡标识与发送结果
+        DeskMessageVO incoming = page.items().get(1);
+        assertThat(incoming.id()).isEqualTo("3");
+        assertThat(incoming.direction()).isEqualTo(MessageDirectionEnum.INCOMING);
+        assertThat(incoming.body()).isEqualTo(Map.of("type", "text", "text", "消息 3"));
+        assertThat(incoming.createdAt()).isEqualTo(LocalDateTime.of(2026, 10, 12, 9, 3, 0));
+        assertThat(incoming.clientRequestId()).isNull();
+        assertThat(incoming.senderUserId()).isNull();
+        assertThat(incoming.senderName()).isNull();
+        assertThat(incoming.delivery()).isNull();
+    }
+
+    @Test
+    void historyCarriesTheFailedReasonAndOmitsTheCursorWhenTheConversationFits() {
+        when(visitorService.getById(VISITOR_ID)).thenReturn(visitorWithLastMessage());
+        MessageDO failed = message(2, MessageDirectionEnum.OUTGOING);
+        failed.setSendStatus(MessageSendStatusEnum.FAILED);
+        failed.setFailureReason("渠道拒绝");
+        when(messageService.page(any(Page.class), any())).thenAnswer(invocation -> {
+            Page<MessageDO> page = invocation.getArgument(0);
+            page.setRecords(List.of(failed, message(1, MessageDirectionEnum.INCOMING)));
+            return page;
+        });
+        when(userService.listByIds(any())).thenReturn(List.of(agent("9", "林舟")));
+
+        DeskMessagePageVO page =
+            deskVisitorService.history(me, String.valueOf(VISITOR_ID), new DeskHistoryQueryDTO(null, null));
+
+        assertThat(page.items()).hasSize(2);
+        assertThat(page.nextCursor()).isNull();
+        assertThat(page.items().get(1).delivery())
+            .isEqualTo(new DeskMessageVO.Delivery("failed", "渠道拒绝"));
+
+        // 空历史：空 items + 无更早游标，且不为空结果查询员工显示名
+        when(messageService.page(any(Page.class), any())).thenAnswer(invocation -> {
+            Page<MessageDO> empty = invocation.getArgument(0);
+            empty.setRecords(List.of());
+            return empty;
+        });
+        DeskMessagePageVO none =
+            deskVisitorService.history(me, String.valueOf(VISITOR_ID), new DeskHistoryQueryDTO("5", null));
+        assertThat(none.items()).isEmpty();
+        assertThat(none.nextCursor()).isNull();
+        verify(userService).listByIds(any());
+    }
+
+    @Test
+    void historySharesTheVisitorAccessRules() {
+        assertThatThrownBy(() -> deskVisitorService.history(me, "not-a-number", new DeskHistoryQueryDTO(null, null)))
+            .isInstanceOf(BizException.class)
+            .extracting(error -> ((BizException) error).apiEnum().code)
+            .isEqualTo(ApiEnum.PARAM_ERROR.code);
+
+        assertThatThrownBy(() -> deskVisitorService.history(me, "999999", new DeskHistoryQueryDTO(null, null)))
+            .isInstanceOf(BizException.class)
+            .extracting(error -> ((BizException) error).apiEnum().code)
+            .isEqualTo(ApiEnum.DATA_NOT_EXIST.code);
+
+        VisitorDO foreign = visitorWithLastMessage();
+        foreign.setCompanyId(784102L);
+        when(visitorService.getById(VISITOR_ID)).thenReturn(foreign);
+        assertThatThrownBy(() -> deskVisitorService.history(me, String.valueOf(VISITOR_ID),
+            new DeskHistoryQueryDTO(null, null)))
+            .isInstanceOf(BizException.class)
+            .extracting(error -> ((BizException) error).apiEnum().code)
+            .isEqualTo(ApiEnum.FORBIDDEN.code);
+        verifyNoInteractions(messageService);
+    }
+
+    private MessageDO message(int sequence, MessageDirectionEnum direction) {
+        MessageDO message = new MessageDO();
+        message.setMessageId((long) sequence);
+        message.setVisitorId(VISITOR_ID);
+        message.setSequence(sequence);
+        message.setDirection(direction);
+        message.setContent(Map.of("type", "text", "text", "消息 " + sequence));
+        message.setVersion(1);
+        message.setCreateTime(LocalDateTime.of(2026, 10, 12, 9, sequence, 0));
+        message.setUpdateTime(message.getCreateTime());
+        if (direction == MessageDirectionEnum.OUTGOING) {
+            message.setSenderUserId(9L);
+            message.setClientRequestId("client-" + sequence);
+            message.setSendStatus(MessageSendStatusEnum.SENT);
+        }
+        return message;
+    }
+
+    private UserDO agent(String userId, String name) {
+        UserDO user = new UserDO();
+        user.setUserId(Long.valueOf(userId));
+        user.setName(name);
+        return user;
     }
 
     private void assertCodeForbidden(Long visitorId) {

@@ -6,6 +6,10 @@ import type {
   Conversation,
   ConversationPage,
   ConversationStatus,
+  DeliveryState,
+  InboxMessage,
+  MessageBody,
+  Page,
   ReplyCapability,
   SendKind,
   VisitorIdentity,
@@ -13,6 +17,8 @@ import type {
 
 /** 访客摘要页大小：与契约默认 pageSize 一致，翻页由页码游标驱动。 */
 const PAGE_SIZE = 30;
+/** 历史页大小：与契约默认 limit 一致；更早页由 beforeSequence 游标驱动。 */
+const HISTORY_LIMIT = 30;
 const QUERY_PATH = "/desk/visitors/query";
 
 const CONVERSATION_STATUSES: ConversationStatus[] = [
@@ -155,10 +161,87 @@ function pageNumber(cursor: string | undefined): number {
   return page;
 }
 
+const MESSAGE_DIRECTIONS: InboxMessage["direction"][] = [
+  "incoming",
+  "outgoing",
+  "system",
+];
+const DELIVERY_STATES: DeliveryState[] = [
+  "sending",
+  "sent",
+  "failed",
+  "accepted",
+  "delivered",
+  "read",
+  "unconfirmed",
+];
+
+function parseBody(value: unknown): MessageBody {
+  if (!isRecord(value) || typeof value.type !== "string")
+    throw new TypeError("消息内容格式不完整");
+  if (value.type === "text") {
+    if (typeof value.text !== "string") throw new TypeError("文本消息缺少正文");
+    return { type: "text", text: value.text };
+  }
+  // 非文本内容（图片/文件/链接等）的展示由后续实施票接通；先如实归入未知类型，不猜结构
+  return { type: "unknown", originalType: value.type };
+}
+
+function parseDelivery(value: unknown): InboxMessage["delivery"] {
+  if (!isRecord(value)) throw new TypeError("发送结果格式不完整");
+  if (!DELIVERY_STATES.includes(value.state as DeliveryState))
+    throw new TypeError("发送结果格式不完整");
+  return {
+    state: value.state as DeliveryState,
+    reason: optionalText(value.reason),
+  };
+}
+
+function parseMessage(value: unknown): InboxMessage {
+  if (
+    !isRecord(value) ||
+    !MESSAGE_DIRECTIONS.includes(value.direction as InboxMessage["direction"])
+  )
+    throw new TypeError("消息格式不完整");
+  const outgoing = value.direction === "outgoing";
+  return {
+    id: nonEmptyText(value.id),
+    conversationId: nonEmptyText(value.conversationId),
+    clientRequestId: optionalText(value.clientRequestId),
+    direction: value.direction as InboxMessage["direction"],
+    body: parseBody(value.body),
+    createdAt: nonEmptyText(value.createdAt),
+    sequence: integer(value.sequence),
+    version: integer(value.version),
+    senderUserId: outgoing ? optionalText(value.senderUserId) : undefined,
+    senderName: outgoing ? optionalText(value.senderName) : undefined,
+    delivery: outgoing ? parseDelivery(value.delivery) : undefined,
+  };
+}
+
+function parseMessagePage(data: unknown): Page<InboxMessage> {
+  if (!isRecord(data) || !Array.isArray(data.items))
+    throw new TypeError("消息页格式不完整");
+  return {
+    items: data.items.map(parseMessage),
+    nextCursor: data.nextCursor === null ? null : nonEmptyText(data.nextCursor),
+  };
+}
+
+// 更早游标：没有游标取最近一页；非法游标按无效响应处理，不猜测序号
+function beforeSequence(cursor: string | undefined): string | undefined {
+  if (cursor === undefined) return undefined;
+  const sequence = Number(cursor);
+  if (!Number.isSafeInteger(sequence) || sequence < 1)
+    throw new DeskApiError("invalid-response", "历史游标无效，请刷新后重试");
+  return cursor;
+}
+
 /**
- * 真实接待适配器（访客摘要部分）：列表查询走 POST /api/desk/visitors/query，
- * 其余能力（历史、发送、状态、资料、订阅）暂未接入，沿用 unavailableInboxApi 的语义，
- * 界面继续呈现「接待服务未连接」空态；token 由账户适配器写入会话，这里按请求读取。
+ * 真实接待适配器（访客摘要与按需历史）：列表查询走 POST /api/desk/visitors/query，
+ * 历史分页走 GET /api/desk/visitors/{visitorId}/messages（最近页无 beforeSequence，
+ * 更早页用上一页 nextCursor）；其余能力（发送、状态、资料、订阅）暂未接入，
+ * 沿用 unavailableInboxApi 的语义；token 由账户适配器写入会话，这里按请求读取。
  */
 export function createHttpInboxApi(
   options: { origin?: string; fetcher?: typeof fetch } = {},
@@ -167,6 +250,19 @@ export function createHttpInboxApi(
 
   return {
     ...unavailableInboxApi,
+    async listMessages({ conversationId, cursor, signal }) {
+      const before = beforeSequence(cursor);
+      const params = new URLSearchParams();
+      if (before !== undefined) params.set("beforeSequence", before);
+      params.set("limit", String(HISTORY_LIMIT));
+      return requestDesk({
+        url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/messages?${params}`,
+        token: readDeskToken(origin) ?? undefined,
+        signal,
+        parse: parseMessagePage,
+        fetcher: options.fetcher,
+      });
+    },
     async listConversations({ query, cursor, signal }) {
       const page = pageNumber(cursor);
       const data = await requestDesk({

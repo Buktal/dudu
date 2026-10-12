@@ -1,8 +1,10 @@
 package com.dudu.duduserver.service;
 
 import com.dudu.duduserver.config.auth.JwtUser;
+import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
 import com.dudu.duduserver.vo.DeskConversationVO;
+import com.dudu.duduserver.vo.DeskMessagePageVO;
 import com.dudu.duduserver.vo.DeskVisitorPageVO;
 
 /**
@@ -16,4 +18,7 @@ public interface DeskVisitorService {
 
     // 单访客当前快照：在库但不在当前权限内为 10106，不存在为 12100
     DeskConversationVO get(JwtUser me, String visitorId);
+
+    // 按需历史：最近一页或 beforeSequence 之前的更早一页；权限与错误语义同单访客快照
+    DeskMessagePageVO history(JwtUser me, String visitorId, DeskHistoryQueryDTO query);
 }

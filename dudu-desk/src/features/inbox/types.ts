@@ -100,6 +100,9 @@ export type InboxMessage = {
   createdAt: string;
   sequence: number;
   version: number;
+  /** 坐席发出的消息才带发送员工与显示名；服务端不返回员工快照表。 */
+  senderUserId?: string;
+  senderName?: string;
   delivery?: { state: DeliveryState; reason?: string };
 };
 

@@ -1,9 +1,9 @@
-import { type ReactNode, useCallback } from "react";
+import { type ReactNode, useCallback, useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
 import { WorkspaceView } from "@/components/workspace-motion";
 import { cn } from "@/lib/utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import { markConversationRead } from "../stores/reading";
+import { ensureHistoryLoaded, markConversationRead } from "../stores/reading";
 import { selectConversationById } from "../stores/selectors";
 import { retryReply } from "../stores/sending";
 import { Composer } from "./composer";
@@ -38,6 +38,11 @@ export function ConversationPane({
   const focused = useInboxSelector(
     (state) => state.inbox.replyId === conversationId,
   );
+  // 展示完整对话（专注、并排任一侧、卡片展开）才按需读取最近页；
+  // 已经初始化过的访客由 store 直接复用缓存，不重查
+  useEffect(() => {
+    void dispatch(ensureHistoryLoaded(conversationId));
+  }, [conversationId, dispatch]);
   const markVisible = useCallback(
     (sequence: number) => {
       if (focused && document.visibilityState === "visible")

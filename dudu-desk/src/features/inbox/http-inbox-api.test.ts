@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DESK_SESSION_KEY } from "@/lib/desk-session";
 import { createHttpInboxApi } from "./http-inbox-api";
-import type { Conversation, ConversationQuery } from "./types";
+import type { Conversation, ConversationQuery, InboxMessage } from "./types";
 
 const ORIGIN = "https://desk.example.test";
 const CONTEXT = { agentId: "agent-a", workspaceId: "workspace-a" };
@@ -282,7 +282,6 @@ describe("http inbox adapter", () => {
     const input = { context: CONTEXT, signal: signal(), conversationId: "41" };
 
     for (const call of [
-      () => api.listMessages(input),
       () => api.readProfile(input),
       () => api.getCapability(input),
       () => api.markRead({ ...input, throughSequence: 1 }),
@@ -306,5 +305,196 @@ describe("http inbox adapter", () => {
     });
     expect(connection).toBe("unavailable");
     expect(unsubscribe()).toBeUndefined();
+  });
+});
+
+// 独立于实现写出的服务端消息与期望消息
+const SERVER_INCOMING = {
+  id: "9001",
+  conversationId: "41",
+  direction: "incoming",
+  body: { type: "text", text: "还想问问保修" },
+  createdAt: "2026-10-12 09:36:00",
+  sequence: 36,
+  version: 1,
+};
+
+const SERVER_OUTGOING = {
+  id: "9002",
+  conversationId: "41",
+  clientRequestId: "client-1",
+  direction: "outgoing",
+  body: { type: "text", text: "好的，已登记" },
+  createdAt: "2026-10-12 09:40:00",
+  sequence: 37,
+  version: 2,
+  senderUserId: "9",
+  senderName: "林舟",
+  delivery: { state: "sent" },
+};
+
+const EXPECTED_INCOMING: InboxMessage = {
+  id: "9001",
+  conversationId: "41",
+  direction: "incoming",
+  body: { type: "text", text: "还想问问保修" },
+  createdAt: "2026-10-12 09:36:00",
+  sequence: 36,
+  version: 1,
+};
+
+const EXPECTED_OUTGOING: InboxMessage = {
+  id: "9002",
+  conversationId: "41",
+  clientRequestId: "client-1",
+  direction: "outgoing",
+  body: { type: "text", text: "好的，已登记" },
+  createdAt: "2026-10-12 09:40:00",
+  sequence: 37,
+  version: 2,
+  senderUserId: "9",
+  senderName: "林舟",
+  delivery: { state: "sent" },
+};
+
+function messageData(items: unknown[], nextCursor: string | null) {
+  return { items, nextCursor };
+}
+
+describe("http inbox history adapter", () => {
+  it("reads the bounded recent page with the contract defaults", async () => {
+    seed("stored-token");
+    const fetcher = vi.fn(
+      async (url: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(url)).toBe(
+          `${ORIGIN}/api/desk/visitors/41/messages?limit=30`,
+        );
+        expect(init?.method ?? "GET").toBe("GET");
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          "Bearer stored-token",
+        );
+        return envelope(messageData([SERVER_INCOMING, SERVER_OUTGOING], "36"));
+      },
+    );
+    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
+
+    const page = await api.listMessages({
+      context: CONTEXT,
+      signal: signal(),
+      conversationId: "41",
+    });
+
+    expect(page.items).toEqual([EXPECTED_INCOMING, EXPECTED_OUTGOING]);
+    expect(page.nextCursor).toBe("36");
+  });
+
+  it("continues from the earlier cursor and returns no cursor on the oldest page", async () => {
+    seed("stored-token");
+    const fetcher = vi.fn(async (url: RequestInfo | URL) => {
+      expect(String(url)).toBe(
+        `${ORIGIN}/api/desk/visitors/41/messages?beforeSequence=36&limit=30`,
+      );
+      return envelope(messageData([SERVER_INCOMING], null));
+    });
+    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
+
+    const page = await api.listMessages({
+      context: CONTEXT,
+      signal: signal(),
+      conversationId: "41",
+      cursor: "36",
+    });
+
+    expect(page.items).toEqual([EXPECTED_INCOMING]);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it("returns an empty page for a conversation without messages", async () => {
+    seed("stored-token");
+    const api = createHttpInboxApi({
+      origin: ORIGIN,
+      fetcher: async () => envelope(messageData([], null)),
+    });
+
+    const page = await api.listMessages({
+      context: CONTEXT,
+      signal: signal(),
+      conversationId: "77",
+    });
+
+    expect(page.items).toEqual([]);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it("rejects cursors and pages it cannot trust instead of guessing", async () => {
+    seed("stored-token");
+    const fetcher = vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).includes("beforeSequence=36"))
+        return envelope(
+          messageData([{ ...SERVER_INCOMING, sequence: "36" }], null),
+        );
+      return envelope(
+        messageData([{ ...SERVER_INCOMING, body: { type: "text" } }], null),
+      );
+    });
+    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
+
+    await expect(
+      api.listMessages({
+        context: CONTEXT,
+        signal: signal(),
+        conversationId: "41",
+        cursor: "not-a-sequence",
+      }),
+    ).rejects.toMatchObject({ kind: "invalid-response" });
+    expect(fetcher).not.toHaveBeenCalled();
+
+    await expect(
+      api.listMessages({
+        context: CONTEXT,
+        signal: signal(),
+        conversationId: "41",
+        cursor: "36",
+      }),
+    ).rejects.toMatchObject({ kind: "invalid-response" });
+
+    // 文本消息缺少正文：契约被破坏，按无效响应处理，不渲染空气泡
+    await expect(
+      api.listMessages({
+        context: CONTEXT,
+        signal: signal(),
+        conversationId: "41",
+      }),
+    ).rejects.toMatchObject({ kind: "invalid-response" });
+  });
+
+  it("shows content outside the text contract as an unsupported body without guessing", async () => {
+    seed("stored-token");
+    const api = createHttpInboxApi({
+      origin: ORIGIN,
+      fetcher: async () =>
+        envelope(
+          messageData(
+            [
+              {
+                ...SERVER_INCOMING,
+                body: { type: "image", media: { id: "m1" } },
+              },
+            ],
+            null,
+          ),
+        ),
+    });
+
+    const page = await api.listMessages({
+      context: CONTEXT,
+      signal: signal(),
+      conversationId: "41",
+    });
+
+    expect(page.items[0].body).toEqual({
+      type: "unknown",
+      originalType: "image",
+    });
   });
 });

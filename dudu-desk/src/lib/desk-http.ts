@@ -16,9 +16,10 @@ export type DeskRequest<T> = {
  *
  * Seam status: the account feature builds on this helper through
  * features/account/http-account-api.ts (anonymous login, stored-token
- * profile/logout), and the inbox visitor-summary adapter through
- * features/inbox/http-inbox-api.ts (stored-token visitors/query). Remaining
- * inbox capabilities are still unimplemented adapters.
+ * profile/logout), and the inbox adapter through
+ * features/inbox/http-inbox-api.ts (stored-token visitors/query and
+ * visitors/{id}/messages history). Remaining inbox capabilities are still
+ * unimplemented adapters.
  */
 export async function requestDesk<T>(request: DeskRequest<T>): Promise<T> {
   throwIfAborted(request.signal);

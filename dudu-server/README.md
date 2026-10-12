@@ -1,6 +1,6 @@
 # DUDU Server
 
-Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、JWT 认证与参数注入、校验分组、MyBatis-Plus 分页与时间填充）之外，已提供 DuduAdmin 首版全部后端接口：平台登录、企业管理（开通、编辑、停用恢复、ID 候选与检测、重置初始管理员密码、资源汇总）、运营概览与操作记录查询。企业侧已按 [Desk 认证子契约](../docs/design/dudu-desk/ticket-01-login.md)实现 DuduDesk 企业登录、身份恢复与无状态退出（`/api/desk/login`、`/api/desk/profile`、`/api/desk/logout`），返回企业员工身份与当前接待范围；访客侧已实现授权范围内的摘要查询与单访客快照（`POST /api/desk/visitors/query`、`GET /api/desk/visitors/{visitorId}`），并随首张访客票建立 visitor、visitor_profile、message 三表；历史消息、发送、名片与 Socket 接口仍待后续实施票接通。
+Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、JWT 认证与参数注入、校验分组、MyBatis-Plus 分页与时间填充）之外，已提供 DuduAdmin 首版全部后端接口：平台登录、企业管理（开通、编辑、停用恢复、ID 候选与检测、重置初始管理员密码、资源汇总）、运营概览与操作记录查询。企业侧已按 [Desk 认证子契约](../docs/design/dudu-desk/ticket-01-login.md)实现 DuduDesk 企业登录、身份恢复与无状态退出（`/api/desk/login`、`/api/desk/profile`、`/api/desk/logout`），返回企业员工身份与当前接待范围；访客侧已实现授权范围内的摘要查询、单访客快照与按需历史分页（`POST /api/desk/visitors/query`、`GET /api/desk/visitors/{visitorId}`、`GET /api/desk/visitors/{visitorId}/messages`），并随首张访客票建立 visitor、visitor_profile、message 三表；发送、名片与 Socket 接口仍待后续实施票接通。
 
 ## 开发入口
 

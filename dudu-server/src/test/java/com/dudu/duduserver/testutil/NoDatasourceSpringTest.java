@@ -57,6 +57,9 @@ public abstract class NoDatasourceSpringTest {
     @MockitoBean
     protected VisitorService visitorService;
 
+    @MockitoBean
+    protected MessageService messageService;
+
     // 上下文启动即执行的 ApplicationRunner，替身避免初始化流程触库
     @MockitoBean
     protected AdminInitializer platformAdminInitializer;

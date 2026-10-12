@@ -17,7 +17,9 @@ export function loadHistory(
   return async (dispatch, getState, runtime) => {
     const history = getState().inbox.histories[conversationId];
     if (!getState().inbox.conversations[conversationId]) return;
-    if (more && (!history?.nextCursor || history.status === "loading")) return;
+    // 同一会话已有在途读取（最近页或更早页）时合并到该请求，不重复发起
+    if (history?.status === "loading") return;
+    if (more && !history?.nextCursor) return;
     await runConversationOperation(
       runtime,
       getState,
@@ -54,6 +56,17 @@ export function retryHistory(
     const history = getState().inbox.histories[conversationId];
     if (!history?.error || history.status === "loading") return;
     await dispatch(loadHistory(conversationId, !!failedReadCursor(history)));
+  };
+}
+
+export function ensureHistoryLoaded(
+  conversationId: string,
+): InboxCommand<Promise<void>> {
+  return async (dispatch, getState) => {
+    const history = getState().inbox.histories[conversationId];
+    // 初始化过的会话直接复用缓存；在途读取由 loadHistory 合并，不重复发起
+    if (history && (history.hasLoaded || history.status === "loading")) return;
+    await dispatch(loadHistory(conversationId));
   };
 }
 
@@ -116,9 +129,7 @@ export function ensureConversationLoaded(
     const state = getState().inbox;
     if (!state.conversations[conversationId]) return;
     await Promise.all([
-      !state.histories[conversationId]?.hasLoaded
-        ? dispatch(loadHistory(conversationId))
-        : undefined,
+      dispatch(ensureHistoryLoaded(conversationId)),
       state.profiles[conversationId]?.status !== "ready"
         ? dispatch(loadProfile(conversationId))
         : undefined,

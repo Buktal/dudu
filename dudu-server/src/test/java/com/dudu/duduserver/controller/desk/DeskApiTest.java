@@ -7,10 +7,12 @@ import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.auth.Me;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.ChannelEnum;
+import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.UserRoleEnum;
 import com.dudu.duduserver.constant.VisitorQueryOrderEnum;
 import com.dudu.duduserver.constant.VisitorQueryStatusEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
+import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
 import com.dudu.duduserver.dto.DeskLoginDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
 import com.dudu.duduserver.service.DeskAuthService;
@@ -20,6 +22,8 @@ import com.dudu.duduserver.vo.DeskCapabilityVO;
 import com.dudu.duduserver.vo.DeskCompanyVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskLoginVO;
+import com.dudu.duduserver.vo.DeskMessagePageVO;
+import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskProfileVO;
 import com.dudu.duduserver.vo.DeskUserVO;
 import com.dudu.duduserver.vo.DeskVisitorIdentityVO;
@@ -251,6 +255,53 @@ class DeskApiTest extends NoDatasourceSpringTest {
     }
 
     @Test
+    void deskVisitorHistoryAcceptsOptionalPagingParametersAndReturnsTheContractEnvelope() throws Exception {
+        when(deskVisitorService.history(any(JwtUser.class), anyString(), any(DeskHistoryQueryDTO.class)))
+            .thenReturn(historyResult());
+        String token = bearer(783101L, 9L, UserRoleEnum.CONSOLE);
+
+        mockMvc.perform(get("/api/desk/visitors/41/messages").header("Authorization", token)
+                .param("beforeSequence", "51").param("limit", "30"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(ApiEnum.OK.code))
+            .andExpect(jsonPath("$.data.items[0].id").value("41"))
+            .andExpect(jsonPath("$.data.items[0].conversationId").value("41"))
+            .andExpect(jsonPath("$.data.items[0].direction").value("incoming"))
+            .andExpect(jsonPath("$.data.items[0].body.type").value("text"))
+            .andExpect(jsonPath("$.data.items[0].body.text").value("还想问问保修"))
+            .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-10-12 09:10:00"))
+            .andExpect(jsonPath("$.data.items[0].sequence").value(7))
+            .andExpect(jsonPath("$.data.items[0].version").value(1))
+            .andExpect(jsonPath("$.data.items[0].senderUserId").doesNotExist())
+            .andExpect(jsonPath("$.data.items[0].delivery").doesNotExist())
+            .andExpect(jsonPath("$.data.items[1].senderUserId").value("9"))
+            .andExpect(jsonPath("$.data.items[1].senderName").value("老板"))
+            .andExpect(jsonPath("$.data.items[1].clientRequestId").value("client-1"))
+            .andExpect(jsonPath("$.data.items[1].delivery.state").value("sent"))
+            .andExpect(jsonPath("$.data.nextCursor").value("8"));
+        ArgumentCaptor<DeskHistoryQueryDTO> captor = ArgumentCaptor.forClass(DeskHistoryQueryDTO.class);
+        verify(deskVisitorService).history(any(JwtUser.class), eq("41"), captor.capture());
+        assertThat(captor.getValue().beforeSequence()).isEqualTo("51");
+        assertThat(captor.getValue().limit()).isEqualTo("30");
+
+        // 两个参数都可省略：缺省在服务层归一为最近一页
+        mockMvc.perform(get("/api/desk/visitors/41/messages").header("Authorization", token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(ApiEnum.OK.code));
+        verify(deskVisitorService, times(2)).history(any(JwtUser.class), eq("41"), captor.capture());
+        assertThat(captor.getValue().beforeSequence()).isNull();
+        assertThat(captor.getValue().limit()).isNull();
+
+        // 未认证与平台身份都不得进入服务
+        mockMvc.perform(get("/api/desk/visitors/41/messages"))
+            .andExpect(jsonPath("$.code").value(ApiEnum.TOKEN_EMPTY.code));
+        mockMvc.perform(get("/api/desk/visitors/41/messages")
+                .header("Authorization", bearer(null, 1L, UserRoleEnum.ADMIN)))
+            .andExpect(jsonPath("$.code").value(ApiEnum.FORBIDDEN.code));
+        verify(deskVisitorService, times(2)).history(any(JwtUser.class), anyString(), any(DeskHistoryQueryDTO.class));
+    }
+
+    @Test
     void deskVisitorQueryRejectsUnknownFilterValues() throws Exception {
         String token = bearer(783101L, 9L, UserRoleEnum.CONSOLE);
         mockMvc.perform(post("/api/desk/visitors/query").header("Authorization", token)
@@ -316,6 +367,17 @@ class DeskApiTest extends NoDatasourceSpringTest {
         return new DeskVisitorPageVO(List.of(conversationResult()), 1L, 2, 5,
             new DeskVisitorPageVO.Counts(4, 3, 1, 2),
             List.of(new DeskVisitorPageVO.Channel("wechat", "微信")));
+    }
+
+    private DeskMessagePageVO historyResult() {
+        return new DeskMessagePageVO(List.of(
+            new DeskMessageVO("41", "41", null, MessageDirectionEnum.INCOMING,
+                java.util.Map.of("type", "text", "text", "还想问问保修"),
+                LocalDateTime.of(2026, 10, 12, 9, 10, 0), 7, 1, null, null, null),
+            new DeskMessageVO("42", "41", "client-1", MessageDirectionEnum.OUTGOING,
+                java.util.Map.of("type", "text", "text", "好的，已登记"),
+                LocalDateTime.of(2026, 10, 12, 9, 12, 0), 8, 1, "9", "老板",
+                new DeskMessageVO.Delivery("sent", null))), "8");
     }
 
     private DeskConversationVO conversationResult() {

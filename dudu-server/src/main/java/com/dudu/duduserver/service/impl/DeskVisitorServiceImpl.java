@@ -6,16 +6,24 @@ import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.ChannelEnum;
+import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.VisitorQueryOrderEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
+import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
+import com.dudu.duduserver.entity.MessageDO;
+import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.VisitorDO;
 import com.dudu.duduserver.service.DeskAuthService;
 import com.dudu.duduserver.service.DeskVisitorService;
+import com.dudu.duduserver.service.MessageService;
+import com.dudu.duduserver.service.UserService;
 import com.dudu.duduserver.service.VisitorService;
 import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskCapabilityVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
+import com.dudu.duduserver.vo.DeskMessagePageVO;
+import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskVisitorIdentityVO;
 import com.dudu.duduserver.vo.DeskVisitorPageVO;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +42,7 @@ import java.util.stream.Collectors;
  * 访客查询实现：授权范围经 DeskAuthService.requireAccess 实时解析，访客始终由
  * 企业 + 授权账号集合过滤；排序与计数按契约固定规则表达，名片保存不影响消息排序。
  * 排序里的布尔表达式与空值回落无法用 Lambda 构造器表达，作为受支持的固定 SQL 片段追加。
+ * 按需历史复用同一授权读取，按会话内 sequence 分页投影为契约第 4 节的消息对象。
  */
 @Service
 @RequiredArgsConstructor
@@ -55,6 +64,8 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
 
     private final DeskAuthService deskAuthService;
     private final VisitorService visitorService;
+    private final MessageService messageService;
+    private final UserService userService;
 
     @Override
     public DeskVisitorPageVO query(JwtUser me, DeskVisitorQueryDTO query) {
@@ -87,9 +98,41 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
 
     @Override
     public DeskConversationVO get(JwtUser me, String visitorId) {
+        AuthorizedVisitor authorized = requireAuthorizedVisitor(me, parseVisitorId(visitorId));
+        return toConversation(authorized.visitor(), authorized.account());
+    }
+
+    @Override
+    public DeskMessagePageVO history(JwtUser me, String visitorId, DeskHistoryQueryDTO query) {
         Long id = parseVisitorId(visitorId);
+        Long beforeSequence = parseBeforeSequence(query.beforeSequence());
+        int limit = parseLimit(query.limit());
+        requireAuthorizedVisitor(me, id);
+
+        // 按 sequence 降序取 limit + 1 条；多出的一条只用于判断还有更早消息，不改变返回顺序
+        LambdaQueryWrapper<MessageDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(MessageDO::getVisitorId, id)
+            .lt(beforeSequence != null, MessageDO::getSequence, beforeSequence)
+            .orderByDesc(MessageDO::getSequence);
+        List<MessageDO> rows = messageService.page(new Page<>(1, limit + 1, false), wrapper).getRecords();
+        boolean hasEarlier = rows.size() > limit;
+        List<MessageDO> recentFirst = hasEarlier ? rows.subList(0, limit) : rows;
+        String nextCursor = hasEarlier
+            ? String.valueOf(recentFirst.get(recentFirst.size() - 1).getSequence())
+            : null;
+        Map<Long, String> senderNames = senderNames(recentFirst);
+        List<DeskMessageVO> items = recentFirst.stream()
+            .map(row -> DeskMessageVO.of(row,
+                row.getSenderUserId() == null ? null : senderNames.get(row.getSenderUserId())))
+            .toList()
+            .reversed();
+        return new DeskMessagePageVO(items, nextCursor);
+    }
+
+    // 访客资源共用的授权读取：不存在 12100；在库但不属于当前企业或当前授权账号统一 10106，不泄漏他人数据
+    private AuthorizedVisitor requireAuthorizedVisitor(JwtUser me, Long visitorId) {
         DeskAccessVO access = deskAuthService.requireAccess(me);
-        VisitorDO visitor = visitorService.getById(id);
+        VisitorDO visitor = visitorService.getById(visitorId);
         if (visitor == null) {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "访客不存在");
         }
@@ -98,11 +141,65 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
                 .filter(item -> item.companyChannelId().equals(String.valueOf(visitor.getCompanyChannelId())))
                 .findFirst().orElse(null)
             : null;
-        // 在库但不属于当前企业或当前授权账号：与越权统一返回无访问权限，不泄漏他人数据
         if (account == null) {
             throw new BizException(ApiEnum.FORBIDDEN);
         }
-        return toConversation(visitor, account);
+        return new AuthorizedVisitor(visitor, account);
+    }
+
+    // 发送员工显示名按现有用户数据批量查询，不新增员工快照表；缺失时省略该字段
+    private Map<Long, String> senderNames(List<MessageDO> rows) {
+        List<Long> senderIds = rows.stream()
+            .filter(row -> row.getDirection() == MessageDirectionEnum.OUTGOING && row.getSenderUserId() != null)
+            .map(MessageDO::getSenderUserId)
+            .distinct()
+            .toList();
+        if (senderIds.isEmpty()) {
+            return Map.of();
+        }
+        return userService.listByIds(senderIds).stream()
+            .filter(user -> user.getName() != null)
+            .collect(Collectors.toMap(UserDO::getUserId, UserDO::getName));
+    }
+
+    // beforeSequence 只接受正整数的十进制字符串；缺省表示没有更早边界，取最近一页
+    private Long parseBeforeSequence(String beforeSequence) {
+        if (!StringUtils.hasText(beforeSequence)) {
+            return null;
+        }
+        try {
+            long value = Long.parseLong(beforeSequence);
+            if (value <= 0) {
+                throw new NumberFormatException();
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            throw new BizException(ApiEnum.PARAM_ERROR, "起始消息序号必须为正整数");
+        }
+    }
+
+    // limit 缺省 30，范围 1–100；越界语义与访客分页一致
+    private int parseLimit(String limit) {
+        if (!StringUtils.hasText(limit)) {
+            return DeskHistoryQueryDTO.DEFAULT_LIMIT;
+        }
+        int value;
+        try {
+            value = Integer.parseInt(limit);
+        } catch (NumberFormatException e) {
+            throw new BizException(ApiEnum.PARAM_ERROR, "每页数量必须为整数");
+        }
+        if (value < 1) {
+            throw new BizException(ApiEnum.PARAM_ERROR, "每页数量至少为 1");
+        }
+        if (value > DeskHistoryQueryDTO.LIMIT_MAX) {
+            throw new BizException(ApiEnum.PARAM_EXCEED, "每页数量不能超过 100");
+        }
+        return value;
+    }
+
+    // 已授权的访客与其授权账号，只在本服务内流转
+    private record AuthorizedVisitor(VisitorDO visitor, DeskAccessVO.Account account) {
     }
 
     // 输入范围校验：长度与分页上限用 11200 表达超限，非法取值用 11000
