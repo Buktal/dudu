@@ -26,7 +26,10 @@ import { AccountAvatar } from "./account-avatar";
 import { AccountDetails } from "./account-details";
 
 const sections = {
-  profile: { title: "坐席信息", description: "当前登录的坐席与所属工作台。" },
+  profile: {
+    title: "坐席信息",
+    description: "当前登录的坐席、所属企业与接待范围。",
+  },
   settings: {
     title: "工作台设置",
     description: "偏好自动保存，三种接待方式通用。",

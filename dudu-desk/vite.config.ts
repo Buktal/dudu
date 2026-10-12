@@ -31,6 +31,10 @@ export default defineConfig(() => ({
     port: 1423,
     strictPort: true,
     host: host || false,
+    proxy: {
+      // 本地开发同源转发到 Server（8080），浏览器无跨域；生产由部署层处理跨域
+      "/api": "http://127.0.0.1:8080",
+    },
     hmr: host
       ? {
           protocol: "ws",

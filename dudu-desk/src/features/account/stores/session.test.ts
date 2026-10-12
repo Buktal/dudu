@@ -15,6 +15,7 @@ const session: AgentSession = {
     roleName: "客服坐席",
   },
   workspace: { id: "workspace-1", name: "工作台一" },
+  access: { allGroups: false, groups: [], accounts: [] },
 };
 
 function accountApi(overrides: Partial<AccountApi> = {}): AccountApi {
@@ -48,18 +49,23 @@ describe("account session lifecycle", () => {
     expect(signOut).toHaveBeenCalledOnce();
   });
 
-  it("normalizes the account name while forwarding the password exactly and never publishing it", async () => {
+  it("normalizes the company and account names while forwarding the password exactly and never publishing it", async () => {
     const signIn = vi.fn(async () => session);
     const store = createAccountSession(
       accountApi({ getSession: async () => null, signIn }),
     );
     await store.restore();
     await store.signIn({
+      companyId: " 783101 ",
       username: " agent.one ",
       password: "  private password  ",
     });
     expect(signIn).toHaveBeenCalledWith(
-      { username: "agent.one", password: "  private password  " },
+      {
+        companyId: "783101",
+        username: "agent.one",
+        password: "  private password  ",
+      },
       expect.any(AbortSignal),
     );
     expect(store.getSnapshot()).toEqual({ status: "signed-in", session });
@@ -77,7 +83,11 @@ describe("account session lifecycle", () => {
       .mockResolvedValueOnce(session);
     const store = createAccountSession(accountApi({ signIn }));
     expect(
-      await store.signIn({ username: "agent.one", password: "wrong" }),
+      await store.signIn({
+        companyId: "783101",
+        username: "agent.one",
+        password: "wrong",
+      }),
     ).toBe(false);
     expect(store.getSnapshot()).toMatchObject({
       status: "signed-out",
@@ -85,7 +95,11 @@ describe("account session lifecycle", () => {
       error: { kind: "authentication" },
     });
     expect(
-      await store.signIn({ username: "agent.one", password: "correct" }),
+      await store.signIn({
+        companyId: "783101",
+        username: "agent.one",
+        password: "correct",
+      }),
     ).toBe(true);
     expect(store.getSnapshot().error).toBeUndefined();
   });
@@ -124,7 +138,11 @@ describe("account session lifecycle", () => {
       }),
     );
     const restoring = store.restore();
-    await store.signIn({ username: "agent.two", password: "secret" });
+    await store.signIn({
+      companyId: "783101",
+      username: "agent.two",
+      password: "secret",
+    });
     finishRestore(session);
     await restoring;
     expect(restoreSignal?.aborted).toBe(true);
@@ -163,6 +181,7 @@ describe("account session lifecycle", () => {
     const changed = vi.fn();
     store.subscribe(changed);
     const signingIn = store.signIn({
+      companyId: "783101",
       username: "agent.one",
       password: "secret",
     });
@@ -178,12 +197,21 @@ describe("account session lifecycle", () => {
   it("rejects blank credentials locally and the unavailable adapter cannot create a session", async () => {
     const signIn = vi.fn();
     const store = createAccountSession(accountApi({ signIn }));
-    expect(await store.signIn({ username: " ", password: "" })).toBe(false);
+    expect(
+      await store.signIn({ companyId: "783101", username: " ", password: "" }),
+    ).toBe(false);
+    expect(
+      await store.signIn({ companyId: " ", username: "agent", password: "s" }),
+    ).toBe(false);
     expect(signIn).not.toHaveBeenCalled();
     const production = createAccountSession(unavailableAccountApi);
     await production.restore();
     expect(
-      await production.signIn({ username: "agent", password: "secret" }),
+      await production.signIn({
+        companyId: "783101",
+        username: "agent",
+        password: "secret",
+      }),
     ).toBe(false);
     expect(production.getSnapshot()).toMatchObject({
       status: "signed-out",

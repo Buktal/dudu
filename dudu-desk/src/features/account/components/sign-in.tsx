@@ -17,6 +17,12 @@ import {
 import type { LoginCredentials } from "../api";
 import { AccountScreen } from "./account-screen";
 
+// 企业 ID 与后端 CompanyIdPolicy 一致：100000–999999 的六位数字，首位不为 0
+const COMPANY_ID_PATTERN = /^[1-9]\d{5}$/;
+// 登录名与密码沿用后端上限（密码 72 为 BCrypt 实际可校验长度）
+const USERNAME_MAX_LENGTH = 64;
+const PASSWORD_MAX_LENGTH = 72;
+
 export function SignIn({
   pending,
   error,
@@ -27,9 +33,11 @@ export function SignIn({
   onSignIn: (credentials: LoginCredentials) => Promise<boolean>;
 }) {
   const id = useId();
+  const [companyId, setCompanyId] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
+  const companyIdValid = COMPANY_ID_PATTERN.test(companyId.trim());
   return (
     <AccountScreen>
       <section
@@ -44,25 +52,40 @@ export function SignIn({
             登录嘟嘟 Desk
           </h1>
           <p className="text-sm text-muted-foreground">
-            使用工作台账号开始接待。
+            使用企业 ID 和工作台账号开始接待。
           </p>
         </div>
         <form
           className="flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault();
-            void onSignIn({ username, password }).finally(() =>
+            void onSignIn({ companyId, username, password }).finally(() =>
               setPassword(""),
             );
           }}
         >
           <FieldGroup className="gap-4">
             <Field>
+              <FieldLabel htmlFor={`${id}-company`}>企业 ID</FieldLabel>
+              <Input
+                id={`${id}-company`}
+                inputMode="numeric"
+                autoComplete="off"
+                required
+                maxLength={6}
+                value={companyId}
+                disabled={pending}
+                placeholder="请输入六位企业 ID"
+                onChange={(event) => setCompanyId(event.target.value)}
+              />
+            </Field>
+            <Field>
               <FieldLabel htmlFor={`${id}-username`}>账号</FieldLabel>
               <Input
                 id={`${id}-username`}
                 autoComplete="username"
                 required
+                maxLength={USERNAME_MAX_LENGTH}
                 value={username}
                 disabled={pending}
                 placeholder="请输入工作台账号"
@@ -77,6 +100,7 @@ export function SignIn({
                   type={visible ? "text" : "password"}
                   autoComplete="current-password"
                   required
+                  maxLength={PASSWORD_MAX_LENGTH}
                   value={password}
                   disabled={pending}
                   onChange={(event) => setPassword(event.target.value)}
@@ -102,7 +126,9 @@ export function SignIn({
           {error && <FieldError role="alert">{error}</FieldError>}
           <Button
             type="submit"
-            disabled={pending || !username.trim() || !password}
+            disabled={
+              pending || !companyIdValid || !username.trim() || !password
+            }
           >
             {pending ? (
               <LoaderCircle

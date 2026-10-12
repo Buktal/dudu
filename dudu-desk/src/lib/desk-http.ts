@@ -2,7 +2,8 @@ import { DeskApiError, readApiEnvelope } from "./api-response";
 
 export type DeskRequest<T> = {
   url: string | URL;
-  token: string;
+  /** Absent for anonymous calls (login); present for authenticated calls. */
+  token?: string;
   signal: AbortSignal;
   parse: (data: unknown) => T;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -11,20 +12,20 @@ export type DeskRequest<T> = {
 };
 
 /**
- * Routes and response parsers belong to the adapter implementing InboxApi.
+ * Routes and response parsers belong to the adapter that owns them.
  *
- * Seam status: the InboxApi seam itself is real (development + unavailable
- * adapters), but the production HTTP adapter is not built yet, so this
- * transport helper has no production caller. Kept intentionally — the future
- * production adapter is constructed on it — and exercised by desk-http.test.ts
- * until that second caller arrives.
+ * Seam status: the account feature builds on this helper through
+ * features/account/http-account-api.ts (anonymous login, stored-token
+ * profile/logout). The InboxApi seam is real too (development + unavailable
+ * adapters) but its production HTTP adapter is still to come, so the inbox
+ * side has no caller yet.
  */
 export async function requestDesk<T>(request: DeskRequest<T>): Promise<T> {
   throwIfAborted(request.signal);
   const response = await (request.fetcher ?? fetch)(request.url, {
     method: request.method ?? "GET",
     headers: {
-      Authorization: `Bearer ${request.token}`,
+      ...(request.token ? { Authorization: `Bearer ${request.token}` } : {}),
       Accept: "application/json",
       ...(request.body === undefined
         ? {}

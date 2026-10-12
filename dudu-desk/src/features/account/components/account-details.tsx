@@ -2,11 +2,19 @@ import type { AgentSession } from "../api";
 import { AccountAvatar } from "./account-avatar";
 
 export function AccountDetails({ session }: { session: AgentSession }) {
+  const { access } = session;
+  // 初始企业管理员自动拥有本企业全部组；其他员工只显示真实成员范围，空范围不表示全组
+  const scope = access.allGroups
+    ? `全部用户组（${access.groups.length} 个组，${access.accounts.length} 个账号）`
+    : access.groups.length > 0
+      ? `${access.groups.length} 个用户组，${access.accounts.length} 个账号`
+      : "暂无接待权限";
   const rows = [
     ["登录账号", session.agent.username],
     ["坐席编号", session.agent.id],
     ["角色", session.agent.roleName],
-    ["所属工作台", session.workspace.name],
+    ["所属企业", session.workspace.name],
+    ["接待范围", scope],
   ];
   return (
     <div className="flex flex-col gap-6">

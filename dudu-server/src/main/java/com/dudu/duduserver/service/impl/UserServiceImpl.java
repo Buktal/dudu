@@ -28,6 +28,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     }
 
     @Override
+    public UserDO findCompanyUser(Long companyId, String username) {
+        return lambdaQuery()
+            .eq(UserDO::getCompanyId, companyId)
+            .eq(UserDO::getUsername, username)
+            .one();
+    }
+
+    @Override
     public UserDO createInitialAdmin(Long companyId, CompanyAdminInitDTO request) {
         UserDO admin = new UserDO();
         admin.setCompanyId(companyId);

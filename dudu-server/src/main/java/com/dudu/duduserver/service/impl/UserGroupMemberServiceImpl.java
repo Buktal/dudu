@@ -13,6 +13,8 @@ import com.dudu.duduserver.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * 先检查企业隔离，再识别初始管理员或显式成员；普通管理员无隐式全组权限。
  */
@@ -42,5 +44,14 @@ public class UserGroupMemberServiceImpl extends ServiceImpl<UserGroupMemberMappe
         }
         return lambdaQuery().eq(UserGroupMemberDO::getCompanyId, user.getCompanyId())
             .eq(UserGroupMemberDO::getUserId, userId).eq(UserGroupMemberDO::getGroupId, groupId).exists();
+    }
+
+    @Override
+    public List<Long> listGroupIds(Long companyId, Long userId) {
+        return lambdaQuery()
+            .eq(UserGroupMemberDO::getCompanyId, companyId)
+            .eq(UserGroupMemberDO::getUserId, userId)
+            .orderByAsc(UserGroupMemberDO::getGroupId)
+            .list().stream().map(UserGroupMemberDO::getGroupId).distinct().toList();
     }
 }

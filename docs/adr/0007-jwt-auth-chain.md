@@ -21,3 +21,7 @@ POST /api/admin/login 是唯一公开登录端点；/api/** 默认认证，/api/
 - 默认拒绝，公开路径在 WebConfig 写死，不引入部署可配置认证白名单。
 - 不引入 Spring Security、JJWT 或 TokenAspect；现有 Hutool 与 Spring 参数解析器满足范围。
 - Hutool 处理业务 JSON/JWT；Spring MVC 与 MP JSON 字段映射仍使用框架内置 Jackson。
+
+## 2026-10-12 企业登录接入
+
+企业登录沿用既有边界，不新增认证机制：`POST /api/desk/login` 与 `POST /api/admin/login` 同为 WebConfig 写死的公开路径，`/api/**` 默认认证不变，`/api/desk/**` 另校验企业员工身份（角色 console/user 且带企业归属，平台身份返回 10106）。签发沿用 JwtUser（企业员工 companyId 非空，exp 为 epoch 秒），退出同样不引入撤销表；身份恢复每次按持久数据重新查询员工、企业与接待范围，不把组与账号写进 token。字段与错误码见 [Desk 企业认证子契约](../design/dudu-desk/ticket-01-login.md)。

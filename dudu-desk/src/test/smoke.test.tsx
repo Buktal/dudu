@@ -45,6 +45,7 @@ describe("Desk application smoke", () => {
         roleName: "客服坐席",
       },
       workspace: { id: "service-next", name: "另一工作台" },
+      access: { allGroups: false, groups: [], accounts: [] },
     }));
     const accountApi: AccountApi = {
       getSession: async () => ({
@@ -55,6 +56,7 @@ describe("Desk application smoke", () => {
           roleName: "客服坐席",
         },
         workspace: { id: "service-session", name: "当前工作台" },
+        access: { allGroups: false, groups: [], accounts: [] },
       }),
       signIn,
       signOut,
@@ -98,6 +100,9 @@ describe("Desk application smoke", () => {
     expect(
       screen.queryByRole("button", { name: "坐席账户：当前坐席" }),
     ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("企业 ID"), {
+      target: { value: "783101" },
+    });
     fireEvent.change(screen.getByLabelText("账号"), {
       target: { value: "next.agent" },
     });
@@ -110,7 +115,11 @@ describe("Desk application smoke", () => {
       screen.getByRole("button", { name: "坐席账户：下一位坐席" }),
     ).toBeInTheDocument();
     expect(signIn).toHaveBeenCalledWith(
-      { username: "next.agent", password: "private password" },
+      {
+        companyId: "783101",
+        username: "next.agent",
+        password: "private password",
+      },
       expect.any(AbortSignal),
     );
     expect(contexts).toEqual([

@@ -2,9 +2,7 @@
 
 嘟嘟（DuDu）的客服坐席桌面端，使用 React 19、Vite、Tailwind CSS、shadcn、Redux Toolkit 和 Tauri 2。本阶段将已确认的接待原型迁入正式前端，统一三种接待模式、八套主题、会话状态与 API 契约；初始范围见 [规格 #50](https://github.com/Buktal/dudu/issues/50)，当前功能见 [功能图谱](../docs/features/dudu-desk.md)。
 
-真实 Server 认证、会话、历史、收发与推送接口留到下一阶段。2026-10-10 已将本轮发送收窄为纯文本，附件准备/上传/发送延期，收到的非文本消息展示保留；当前 Mock 附件入口尚未修改，真实对接时按[文本回复实施票](https://github.com/Buktal/dudu/issues/89)停用。未启用 Mock 时，入口先恢复坐席身份，未登录时显示登录页；当前 `unavailableAccountApi` 不会创建虚假登录，`unavailableInboxApi` 不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
-
-真实认证实施依据见 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)：企业登录、身份恢复及授权范围已独立定稿，尚未实现；它不依赖其余消息与 Socket 契约。
+真实 Server 的会话、历史、收发与推送接口留到后续实施票。2026-10-10 已将本轮发送收窄为纯文本，附件准备/上传/发送延期，收到的非文本消息展示保留；当前 Mock 附件入口尚未修改，真实对接时按[文本回复实施票](https://github.com/Buktal/dudu/issues/89)停用。企业登录、身份恢复与接待范围已按 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)接入真实 Server：未启用 Mock 时使用真实账户适配器，未登录时显示企业登录页，`unavailableInboxApi` 仍不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
 
 ## 运行与检查
 
@@ -30,6 +28,8 @@ yarn tauri:build
 
 桌面命令需要本机 Tauri/Rust 构建环境。
 
+开发运行时 Vite 将 `/api` 同源代理到 `127.0.0.1:8080`（见 [vite.config.ts](vite.config.ts)），浏览器与桌面端都不需要跨域配置，本地 Server 用 `mvn spring-boot:run` 启动即可。打包运行时用 `VITE_API_ORIGIN` 注入线上 API 源地址（只允许协议、主机与端口），由部署层处理跨域。真实账户适配器把 JWT 保存在内存与 `sessionStorage` 的 `dudu-desk.session` 中，且与 API 源地址绑定；关闭窗口不承诺记住登录。
+
 ### Mock 打包测试
 
 `VITE_DESK_MOCK=true` 在开发运行和生产构建中都生效：恢复模拟坐席身份，并加载相同的会话、消息和异常场景。无需另改登录页或滚动实现。
@@ -40,7 +40,7 @@ yarn tauri:build
 VITE_DESK_MOCK=true
 ```
 
-然后运行原有的 `yarn tauri:build`，启动 `dudu-desk/src-tauri/target/release/dudu-desk.exe`。这些 `.local` 文件不提交到 Git；开关在构建时确定，修改后需要重新打包。开关未设置或为 `false` 时不加载 Mock 适配器，生产构建会排除对应数据模块。此前在 Mock 中退出登录的同一运行会话仍保持退出状态，可用开发账号 `linzhou` / `desk123` 登录。
+然后运行原有的 `yarn tauri:build`，启动 `dudu-desk/src-tauri/target/release/dudu-desk.exe`。这些 `.local` 文件不提交到 Git；开关在构建时确定，修改后需要重新打包。开关未设置或为 `false` 时不加载 Mock 适配器，生产构建会排除对应数据模块。此前在 Mock 中退出登录的同一运行会话仍保持退出状态，可用开发账号 `linzhou` / `desk123` 登录；登录表单中的企业 ID 填任意合法六位数字即可，Mock 不按企业区分。
 
 `VITE_DESK_SCENARIO` 继续选择已有的 Mock 异常场景，缺省使用 `default`；拼错场景名会报错。
 
@@ -48,7 +48,7 @@ VITE_DESK_MOCK=true
 
 三种模式通过顶部的分段按钮切换，共用同一个 inbox store 和同一份会话草稿。
 
-右上角的坐席头像统一提供“坐席信息”“工作台设置”和“退出登录”。坐席信息显示当前身份、角色及工作台；设置复用主题和接待方式控件，并提供“减少动态效果”。退出前确认未发送内容会清空，成功后销毁接待工作区并返回登录页；退出失败保留当前会话并允许重试。下一次登录从确认后的坐席和工作台身份创建新的工作区。
+右上角的坐席头像统一提供“坐席信息”“工作台设置”和“退出登录”。坐席信息显示当前身份、角色、所属企业及接待范围（本企业全部组或真实成员组，以及其中的渠道账号）；设置复用主题和接待方式控件，并提供“减少动态效果”。退出前确认未发送内容会清空，成功后销毁接待工作区并返回登录页；退出失败保留当前会话并允许重试，令牌已无效时本地清理并回到登录页。下一次登录从确认后的坐席和所属企业身份创建新的工作区。
 
 | 模式 | 稳定标识 | 用途 |
 | --- | --- | --- |
@@ -110,9 +110,11 @@ src/
 ├── features/account/
 │   ├── index.ts / api.ts        账户公开入口与认证适配器契约
 │   ├── account-provider.tsx    恢复身份、登录门禁与生命周期
-│   ├── components/             登录页、账户菜单与坐席信息
+│   ├── components/             企业登录页、账户菜单与坐席信息
 │   ├── stores/session.ts       登录、退出、取消与竞态保护
-│   └── runtime.ts / mocks.ts   适配器注入与隔离的开发身份
+│   ├── runtime.ts               适配器注入（显式 Mock 开关选择）
+│   ├── http-account-api.ts      真实 Server 企业登录适配器与 token 管理
+│   └── mocks.ts                 隔离的开发身份
 ├── features/inbox/
 │   ├── index.ts                 feature 公开入口
 │   ├── inbox-workspace.tsx      工作上下文、store 与适配器生命周期
@@ -127,7 +129,7 @@ src/
 src-tauri/                      Tauri 桌面宿主与本地平台桥接
 ```
 
-跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。真实服务适配器可从各 feature 的 `runtime.ts` 接入，或向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端三表、HTTP 与 Socket 已在[最小对接契约](../docs/design/dudu-desk/implementation-contract.md)定稿；按实施票逐项接通，契约确定不代表真实适配器已经实现。
+跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。账户 feature 已接入真实 Server 认证（[http-account-api.ts](src/features/account/http-account-api.ts)）：token 只由适配器在内存与 `dudu-desk.session` 中维护，界面与业务 store 只接收身份及授权元数据，身份恢复必须经 `GET /api/desk/profile` 重新确认，不能仅凭本地 token 或解码结果放行。inbox 真实适配器仍待按实施票接入，也可向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端三表、HTTP 与 Socket 已在[最小对接契约](../docs/design/dudu-desk/implementation-contract.md)定稿；按实施票逐项接通，契约确定不代表真实适配器已经实现。
 
 Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、回调和消息转发属于后续 Server 接入职责。
 

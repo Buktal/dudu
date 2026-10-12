@@ -1,6 +1,6 @@
 # DUDU Server
 
-Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、JWT 认证与参数注入、校验分组、MyBatis-Plus 分页与时间填充）之外，已提供 DuduAdmin 首版全部后端接口：平台登录、企业管理（开通、编辑、停用恢复、ID 候选与检测、重置初始管理员密码、资源汇总）、运营概览与操作记录查询。
+Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、JWT 认证与参数注入、校验分组、MyBatis-Plus 分页与时间填充）之外，已提供 DuduAdmin 首版全部后端接口：平台登录、企业管理（开通、编辑、停用恢复、ID 候选与检测、重置初始管理员密码、资源汇总）、运营概览与操作记录查询。企业侧已按 [Desk 认证子契约](../docs/design/dudu-desk/ticket-01-login.md)实现 DuduDesk 企业登录、身份恢复与无状态退出（`/api/desk/login`、`/api/desk/profile`、`/api/desk/logout`），返回企业员工身份与当前接待范围；访客、消息与 Socket 接口仍待后续实施票接通。
 
 ## 开发入口
 
@@ -11,7 +11,7 @@ Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、
 - [统一返回决策](../docs/adr/0006-always-200-segmented-error-codes.md)。
 - [认证决策](../docs/adr/0007-jwt-auth-chain.md)。
 
-Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `config.auth`。响应体 `R` 与分页响应 `P`（平铺 code/msg/list/total/page/pageSize）位于 `common`，业务异常位于 `config.exception`。Admin 接口位于 `controller/admin/`，统一前缀 `/api/admin`，仅 `admin` 角色可访问（登录端点除外）。数据库操作优先使用 MyBatis-Plus `IService` 与 Lambda 条件构造器，不新增 XML 或注解 SQL。
+Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `config.auth`。响应体 `R` 与分页响应 `P`（平铺 code/msg/list/total/page/pageSize）位于 `common`，业务异常位于 `config.exception`。Admin 接口位于 `controller/admin/`，统一前缀 `/api/admin`，仅 `admin` 角色可访问（登录端点除外）；Desk 接口位于 `controller/desk/`，统一前缀 `/api/desk`，仅企业员工（`console`/`user`）可访问（登录端点除外），平台身份访问 Desk 资源返回 10106。数据库操作优先使用 MyBatis-Plus `IService` 与 Lambda 条件构造器，不新增 XML 或注解 SQL。
 
 ## 配置与检查
 
@@ -19,7 +19,7 @@ Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `c
 - 密钥与数据源明文写在 `application.yaml`（本地开发默认值，开箱即跑）。生产在 jar 同目录 `.env` 用同名键覆盖（`dudu.auth.jwt-secret` 至少 32 字节随机值）；空白密钥仍启动失败，但漏写 `.env` 时应用会以开发密钥静默启动，部署时须人工核对。
 - 首个平台管理员在启动时初始化：库中无平台账号时以 `AdminInitializer` 内置凭据 `Admin`/`admin` 创建（与前端登录表单预填约定一致，不是生产凭据，首登后经改密接口更换）。改密接口要求新密码 8–72 字符；初始化凭据不做该长度校验，如需改回短密码须重建初始化账号。
 - 数据源为 `application.yaml` 明文默认值（`127.0.0.1:3306`、`dudu`/`123456`），无 `.env`、无环境变量直接跑；生产覆盖方式见「线上部署边界」。
-- `/api/**` 默认需要 `Authorization: Bearer <token>`；唯一放行路径为 `POST /api/admin/login`，`/api/admin/**` 叠加 admin 角色校验。
+- `/api/**` 默认需要 `Authorization: Bearer <token>`；放行路径仅 `POST /api/admin/login` 与 `POST /api/desk/login`，`/api/admin/**` 叠加 admin 角色校验，`/api/desk/**` 叠加企业员工身份校验。
 - 业务表由 Flyway 版本化迁移维护（当前 V2：company、user、operation_log、user_group、user_group_member、company_channel）；已提交迁移不可变，变更新增迁移。
 
 ## 本地 MySQL

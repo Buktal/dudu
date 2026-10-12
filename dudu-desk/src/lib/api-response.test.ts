@@ -14,6 +14,18 @@ describe("Desk API response contract", () => {
     );
   });
 
+  it("separates missing access from expired credentials", () => {
+    expect(() =>
+      readApiEnvelope({ code: 10106, msg: "无访问权限", data: null }),
+    ).toThrowError(
+      expect.objectContaining({
+        kind: "forbidden",
+        message: "无访问权限",
+        code: 10106,
+      }),
+    );
+  });
+
   it("rejects malformed success envelopes instead of treating them as data", () => {
     expect(() => readApiEnvelope({ code: 0 })).toThrowError(
       expect.objectContaining({ kind: "invalid-response" }),

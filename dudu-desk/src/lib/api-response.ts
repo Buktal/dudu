@@ -1,5 +1,6 @@
 export type ApiErrorKind =
   | "authentication"
+  | "forbidden"
   | "business"
   | "invalid-response"
   | "unavailable"
@@ -23,6 +24,12 @@ export class DeskApiError extends Error {
   }
 }
 
+/**
+ * 10106 无访问权限：当前身份不能使用该资源，语义区别于登录失效（10100–10103），
+ * 调用方按此区分"重新登录"与"无权访问"。
+ */
+const NO_ACCESS_CODE = 10106;
+
 export function readApiEnvelope(response: unknown): unknown {
   if (
     response === null ||
@@ -40,7 +47,11 @@ export function readApiEnvelope(response: unknown): unknown {
   const message = response.msg;
   if (code !== 0) {
     throw new DeskApiError(
-      code >= 10100 && code < 10200 ? "authentication" : "business",
+      code === NO_ACCESS_CODE
+        ? "forbidden"
+        : code >= 10100 && code < 10200
+          ? "authentication"
+          : "business",
       message,
       code,
     );

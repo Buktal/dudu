@@ -6,10 +6,20 @@ import com.dudu.duduserver.mapper.UserGroupMapper;
 import com.dudu.duduserver.service.UserGroupService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * 接待组领域服务实现，SQL 全部经 MyBatis-Plus 通用能力与 Lambda 构造器表达。
  */
 @Service
 public class UserGroupServiceImpl extends ServiceImpl<UserGroupMapper, UserGroupDO>
     implements UserGroupService {
+
+    @Override
+    public List<UserGroupDO> listByCompany(Long companyId) {
+        return lambdaQuery()
+            .eq(UserGroupDO::getCompanyId, companyId)
+            .orderByAsc(UserGroupDO::getGroupId)
+            .list();
+    }
 }

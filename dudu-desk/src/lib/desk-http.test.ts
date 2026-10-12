@@ -82,6 +82,35 @@ describe("Desk HTTP boundary", () => {
     ).rejects.toMatchObject({ kind: "network" });
   });
 
+  it("only sends a bearer header for authenticated requests", async () => {
+    await requestDesk({
+      url: "/api/desk/login",
+      method: "POST",
+      body: { companyId: "783101", username: "boss", password: "password123" },
+      signal: new AbortController().signal,
+      parse: (value) => value,
+      fetcher: async (_url, init) => {
+        const headers = new Headers(init?.headers);
+        expect(headers.has("Authorization")).toBe(false);
+        expect(headers.get("Content-Type")).toBe("application/json");
+        return Response.json({ code: 0, msg: "ok", data: { token: "issued" } });
+      },
+    });
+
+    await requestDesk({
+      url: "/api/desk/profile",
+      token: "stored-token",
+      signal: new AbortController().signal,
+      parse: (value) => value,
+      fetcher: async (_url, init) => {
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          "Bearer stored-token",
+        );
+        return Response.json({ code: 0, msg: "ok", data: {} });
+      },
+    });
+  });
+
   it("keeps the caller's route, bearer token and parser at the API boundary", async () => {
     const controller = new AbortController();
     const result = await requestDesk({

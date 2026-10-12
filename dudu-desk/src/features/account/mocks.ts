@@ -10,6 +10,18 @@ const fixture: AgentSession = {
     roleName: "客服坐席",
   },
   workspace: { id: "dudu-service", name: "嘟嘟服务中心" },
+  access: {
+    allGroups: false,
+    groups: [{ groupId: "group-service", groupName: "客服组" }],
+    accounts: [
+      {
+        companyChannelId: "channel-wechat",
+        groupId: "group-service",
+        channel: "wechat",
+        accountName: "嘟嘟公众号",
+      },
+    ],
+  },
 };
 
 export function createDevelopmentAccountApi(): AccountApi {

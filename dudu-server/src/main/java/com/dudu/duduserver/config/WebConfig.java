@@ -2,6 +2,7 @@ package com.dudu.duduserver.config;
 
 import com.dudu.duduserver.config.auth.AdminAuthInterceptor;
 import com.dudu.duduserver.config.auth.AuthInterceptor;
+import com.dudu.duduserver.config.auth.DeskAuthInterceptor;
 import com.dudu.duduserver.config.auth.MeResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -15,21 +16,26 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
 
-    // 全模块唯一放行路径：平台登录端点（无需认证，ADR 0007 写死维护）
+    // 公开登录端点：平台与企业的登录入口无需认证（ADR 0007 写死维护）
     private static final String ADMIN_LOGIN_PATH = "/api/admin/login";
+    private static final String DESK_LOGIN_PATH = "/api/desk/login";
 
     private final AuthInterceptor authInterceptor;
     private final AdminAuthInterceptor adminAuthInterceptor;
+    private final DeskAuthInterceptor deskAuthInterceptor;
     private final MeResolver meResolver;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
             .addPathPatterns("/api/**")
-            .excludePathPatterns(ADMIN_LOGIN_PATH);
+            .excludePathPatterns(ADMIN_LOGIN_PATH, DESK_LOGIN_PATH);
         registry.addInterceptor(adminAuthInterceptor)
             .addPathPatterns("/api/admin/**")
             .excludePathPatterns(ADMIN_LOGIN_PATH);
+        registry.addInterceptor(deskAuthInterceptor)
+            .addPathPatterns("/api/desk/**")
+            .excludePathPatterns(DESK_LOGIN_PATH);
     }
 
     @Override

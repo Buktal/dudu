@@ -18,10 +18,13 @@ describe("account mock runtime", () => {
   );
 
   it.each([undefined, "false", "TRUE"])(
-    "keeps the real adapter boundary when the mock flag is %s",
+    "uses the real server adapter when the mock flag is %s",
     async (flag) => {
       vi.stubEnv("VITE_DESK_MOCK", flag);
-      expect(await loadAccountApi()).toBe(unavailableAccountApi);
+      const api = await loadAccountApi();
+      expect(api).not.toBe(unavailableAccountApi);
+      // 未登录时既不发请求也不给出虚假身份
+      expect(await api.getSession(new AbortController().signal)).toBeNull();
     },
   );
 });

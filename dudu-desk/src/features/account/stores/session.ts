@@ -62,20 +62,21 @@ export function createAccountSession(api: AccountApi) {
     signIn: async (credentials: LoginCredentials) => {
       if (disposed || snapshot.session || snapshot.status === "signing-in")
         return false;
+      const companyId = credentials.companyId.trim();
       const username = credentials.username.trim();
-      if (!username || !credentials.password) {
+      if (!companyId || !username || !credentials.password) {
         scope.abort();
         publish({
           status: "signed-out",
           session: null,
-          error: { kind: "business", message: "请输入账号和密码" },
+          error: { kind: "business", message: "请输入企业 ID、账号和密码" },
         });
         return false;
       }
       const pending = begin({ status: "signing-in", session: null });
       try {
         const session = await api.signIn(
-          { username, password: credentials.password },
+          { companyId, username, password: credentials.password },
           pending,
         );
         if (!current(pending)) return false;

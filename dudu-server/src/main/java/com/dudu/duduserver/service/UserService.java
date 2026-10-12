@@ -12,6 +12,9 @@ public interface UserService extends IService<UserDO> {
     // 按账号查找平台用户（企业归属为空的作用域）；不存在返回 null
     UserDO findPlatformUser(String username);
 
+    // 按企业作用域查找员工，登录名沿用企业内不区分大小写；不存在返回 null
+    UserDO findCompanyUser(Long companyId, String username);
+
     // 在创建企业事务内初始化企业管理员；显示名未填时取登录名。返回带自增 ID 的实体
     UserDO createInitialAdmin(Long companyId, CompanyAdminInitDTO request);
 
