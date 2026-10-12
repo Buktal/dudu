@@ -2,7 +2,7 @@ import type {
   ConnectionState,
   Conversation,
   InboxMessage,
-  MediaReference,
+  PreparedAttachment,
   SendKind,
   SendSubmission,
   SendTarget,
@@ -123,7 +123,7 @@ export type ReplySubmissionInput = {
   draftRevision: number;
   textRevision: number;
   draftAttachmentIds: string[];
-  media: MediaReference[];
+  media: PreparedAttachment[];
   maxSequence: number;
   incomingSequence: number;
   selectionRevision: number;

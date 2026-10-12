@@ -1,5 +1,5 @@
 import { DeskApiError } from "@/lib/api-response";
-import type { MediaReference } from "../types";
+import type { MediaReference, PreparedAttachment } from "../types";
 
 /**
  * prepareAttachment response validation: unknown payload → MediaReference.
@@ -9,7 +9,7 @@ import type { MediaReference } from "../types";
 export function parsePreparedAttachment(
   value: unknown,
   kind: MediaReference["kind"],
-): MediaReference {
+): PreparedAttachment {
   if (!value || typeof value !== "object")
     throw new DeskApiError("invalid-response", "服务未返回有效的附件资源");
   const media = value as Record<string, unknown>;

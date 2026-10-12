@@ -4,6 +4,7 @@ import { attachmentReducers } from "./attachment-reducers";
 import { choiceReducers } from "./choices-reducers";
 import { detailReducers } from "./detail-reducers";
 import { eventReducers } from "./event-reducers";
+import { mediaReducers } from "./media-reducers";
 import { parallelReducers } from "./parallel-reducers";
 import { queueReducers } from "./queue-reducers";
 import { readReducers } from "./read-reducers";
@@ -30,6 +31,7 @@ const inboxSlice = createSlice({
     ...detailReducers,
     ...sendReducers,
     ...eventReducers,
+    ...mediaReducers,
     ...parallelReducers,
     ...attachmentReducers,
     contextReset(state, action: PayloadAction<WorkContext>) {

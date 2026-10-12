@@ -366,6 +366,7 @@ access_token 返回示例（两版同形，原文）：`{"access_token":"ACCESS_
 6. **卡券/门店/发票等运营类事件**（`Coupons_Vouchers_and_Cards_Event_Push_Messages`、认证事件 `Accreditation`、一次性订阅消息、自动回复规则）：存在性已由服务号导航树复核确认（2026-09-10 直抓 Receiving_standard_messages 左侧导航：卡券事件推送/微信认证事件推送/一次性订阅消息/微信门店均在列），正文未抓 → 待核验(09-27)（残：正文；与消息总水管无关，如需再补）。
 7. **群发额度细节**：服务号「每月 4 条」按自然月、认证服务号高级群发日调用上限、API 群发保护 30 分钟确认——Batch_Sends 页原文已录，但 MP 后台实际配额数字以线上为准 → 口径性待核验(09-27)。
 8. **客服「48 小时」窗口起算口径**（最后一次互动起算 vs 自然时间）与 mpnewsarticle 草稿灰度状态：官方页未明示 → 待核验(09-27)。
+9. **获取临时素材接口正文**（2026-10-12 新增）：DuduDesk 媒体读取票按 `GET https://api.weixin.qq.com/cgi-bin/media/get?access_token=&media_id=`、成功返回二进制（带 `Content-Type`/`Content-disposition`）、失败返回 `{"errcode":40007,"errmsg":"invalid media_id"}`、视频素材返回 JSON `video_url` 再取一次字节实现（官方文档 `material/temporary/api_getmedia`）；本次未能直抓官方正文，路径与响应形状来自 2026-10-12 检索摘要与既有实现经验 → 待核验(10-12)。
 
 ## 附：对 MockPulse 模拟的直接含义（速查，非官方原文）
 

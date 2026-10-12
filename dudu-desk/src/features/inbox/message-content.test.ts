@@ -41,6 +41,19 @@ describe("messageSummary", () => {
     ).toBe("[附件] a.png、[附件] b.pdf");
   });
 
+  it("keeps the kind label when the channel provided no file name", () => {
+    expect(
+      messageSummary({ type: "image", media: { kind: "image", id: "m1" } }),
+    ).toBe("[图片]");
+    expect(
+      messageSummary({
+        type: "reply",
+        text: "",
+        attachments: [{ kind: "file", id: "a" }],
+      }),
+    ).toBe("[附件] 文件");
+  });
+
   it("prefixes single-media bodies with the kind label", () => {
     const cases: { body: MessageBody; expected: string }[] = [
       { body: { type: "image", media: media() }, expected: "[图片] photo.png" },

@@ -31,15 +31,24 @@ import {
   safeAssetUrl,
   safeExternalUrl,
 } from "@/lib/attachment-utils";
+import { useMessageMedia } from "../hooks/use-message-media";
 import {
   assetPurposeOf,
   describeMessageBody,
   mediaIcon,
   mediaLabel,
+  mediaName,
 } from "../message-content";
 import type { MessageBody as Body, MediaReference } from "../types";
 
-export function MessageBody({ body }: { body: Body }) {
+export function MessageBody({
+  body,
+  messageId,
+}: {
+  body: Body;
+  /** 所属消息 ID：向媒体接口读取需要渠道凭据的素材时用于定位。 */
+  messageId: string;
+}) {
   const descriptor = describeMessageBody(body);
   if (body.type === "text")
     return <p className="whitespace-pre-wrap break-words">{body.text}</p>;
@@ -49,8 +58,14 @@ export function MessageBody({ body }: { body: Body }) {
         {body.text && (
           <p className="whitespace-pre-wrap break-words">{body.text}</p>
         )}
-        {descriptor.media.map((media) => (
-          <MessageMedia key={`${media.id}:${media.url}`} media={media} />
+        {/* 契约第 4 节：reply 的媒体下标就是 attachments 数组下标 */}
+        {descriptor.media.map((media, index) => (
+          <MessageMedia
+            key={`${media.id}:${media.url ?? ""}`}
+            media={media}
+            messageId={messageId}
+            index={index}
+          />
         ))}
       </div>
     );
@@ -59,8 +74,10 @@ export function MessageBody({ body }: { body: Body }) {
   if ("media" in body)
     return (
       <MessageMedia
-        key={`${descriptor.media[0].id}:${descriptor.media[0].url}`}
+        key={`${descriptor.media[0].id}:${descriptor.media[0].url ?? ""}`}
         media={descriptor.media[0]}
+        messageId={messageId}
+        index={0}
       />
     );
   if (body.type === "link")
@@ -133,14 +150,28 @@ export function MessageBody({ body }: { body: Body }) {
   );
 }
 
-function MessageMedia({ media }: { media: MediaReference }) {
+function MessageMedia({
+  media,
+  messageId,
+  index,
+}: {
+  media: MediaReference;
+  messageId: string;
+  index: number;
+}) {
   const [failed, setFailed] = useState(false);
   const purpose = assetPurposeOf(media.kind);
-  const source =
-    !failed && purpose !== "download" ? safeAssetUrl(media.url, purpose) : null;
+  // 公开链接直连渠道；只有渠道标识的素材经认证的媒体接口取字节
+  const direct = safeAssetUrl(media.url, purpose);
+  const fetched = useMessageMedia(messageId, index, direct === null && !failed);
+  const source = failed ? null : (direct ?? fetched.url);
   if (!source)
     return (
-      <MediaFile media={media} unavailable={failed || purpose !== "download"} />
+      <MediaFile
+        media={media}
+        source={null}
+        pending={fetched.status === "loading"}
+      />
     );
   if (purpose === "image")
     return (
@@ -150,6 +181,8 @@ function MessageMedia({ media }: { media: MediaReference }) {
         onError={() => setFailed(true)}
       />
     );
+  if (purpose === "download")
+    return <MediaFile media={media} source={source} pending={false} />;
   return (
     <div className="flex w-72 max-w-full min-w-0 flex-col gap-2">
       {purpose === "audio" ? (
@@ -159,7 +192,7 @@ function MessageMedia({ media }: { media: MediaReference }) {
           preload="metadata"
           src={source}
           className="w-full min-w-0"
-          aria-label={media.name}
+          aria-label={mediaName(media)}
           onError={() => setFailed(true)}
         />
       ) : (
@@ -170,12 +203,12 @@ function MessageMedia({ media }: { media: MediaReference }) {
           preload="metadata"
           src={source}
           className="max-h-64 w-full rounded-xl bg-muted"
-          aria-label={media.name}
+          aria-label={mediaName(media)}
           onError={() => setFailed(true)}
         />
       )}
       <p className="break-words text-xs opacity-70">
-        {media.name} · {formatFileSize(media.size)}
+        {mediaName(media)} · {formatFileSize(media.size)}
       </p>
     </div>
   );
@@ -190,7 +223,7 @@ function MessageImage({
   source: string;
   onError: () => void;
 }) {
-  const download = safeAssetUrl(media.url, "download");
+  const download = safeAssetUrl(media.url, "download") ?? source;
   return (
     <Dialog>
       <DialogTrigger
@@ -200,11 +233,11 @@ function MessageImage({
             className="h-auto max-w-full overflow-hidden rounded-xl p-0"
           />
         }
-        aria-label={`放大图片：${media.name}`}
+        aria-label={`放大图片：${mediaName(media)}`}
       >
         <img
           src={source}
-          alt={media.name}
+          alt={mediaName(media)}
           loading="lazy"
           className="max-h-60 max-w-full rounded-xl object-contain"
           onError={onError}
@@ -215,7 +248,7 @@ function MessageImage({
         showCloseButton={false}
       >
         <DialogHeader className="pr-10">
-          <DialogTitle className="break-words">{media.name}</DialogTitle>
+          <DialogTitle className="break-words">{mediaName(media)}</DialogTitle>
           <DialogDescription>{formatFileSize(media.size)}</DialogDescription>
         </DialogHeader>
         <DialogClose
@@ -232,14 +265,14 @@ function MessageImage({
         </DialogClose>
         <img
           src={source}
-          alt={media.name}
+          alt={mediaName(media)}
           className="mx-auto max-h-[65dvh] max-w-full rounded-xl object-contain"
           onError={onError}
         />
         <ExternalAction
           url={download}
-          label={download?.startsWith("data:") ? "下载原图" : "打开原图"}
-          downloadName={download?.startsWith("data:") ? media.name : undefined}
+          label={isLocalAsset(download) ? "下载原图" : "打开原图"}
+          downloadName={isLocalAsset(download) ? media.name : undefined}
         />
       </DialogContent>
     </Dialog>
@@ -248,33 +281,50 @@ function MessageImage({
 
 function MediaFile({
   media,
-  unavailable,
+  source,
+  pending,
 }: {
   media: MediaReference;
-  unavailable: boolean;
+  /** 已解析的素材地址：公开链接或接口取回的本地对象 URL，未就绪为 null。 */
+  source: string | null;
+  pending: boolean;
 }) {
   const Icon = mediaIcon(media.kind);
-  const source = !unavailable ? safeAssetUrl(media.url, "download") : null;
   return (
     <Attachment className="w-full max-w-72" size="sm">
       <AttachmentMedia>
         <Icon />
       </AttachmentMedia>
       <AttachmentContent>
-        <AttachmentTitle title={media.name}>{media.name}</AttachmentTitle>
+        <AttachmentTitle title={mediaName(media)}>
+          {mediaName(media)}
+        </AttachmentTitle>
         <AttachmentDescription>
           {mediaLabel(media.kind)} · {formatFileSize(media.size)}
         </AttachmentDescription>
-        {!source && (
-          <p className="mt-1 text-xs text-muted-foreground">素材暂不可读取</p>
+        {pending ? (
+          <p className="mt-1 text-xs text-muted-foreground">正在读取素材…</p>
+        ) : (
+          !source && (
+            <p className="mt-1 text-xs text-muted-foreground">素材暂不可读取</p>
+          )
         )}
         <ExternalAction
           url={source}
-          label={source?.startsWith("data:") ? "下载附件" : "打开附件"}
-          downloadName={source?.startsWith("data:") ? media.name : undefined}
+          label={isLocalAsset(source) ? "下载附件" : "打开附件"}
+          downloadName={isLocalAsset(source) ? media.name : undefined}
         />
       </AttachmentContent>
     </Attachment>
+  );
+}
+
+// data:/blob: 是本地素材地址：直接下载而不是交给外部打开
+function isLocalAsset(source: string | null | undefined): boolean {
+  return (
+    source !== null &&
+    source !== undefined &&
+    (source.startsWith("data:") || source.startsWith("blob:"))
   );
 }
 

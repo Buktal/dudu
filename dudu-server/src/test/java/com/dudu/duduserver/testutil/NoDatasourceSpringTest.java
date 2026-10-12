@@ -55,6 +55,9 @@ public abstract class NoDatasourceSpringTest {
     protected DeskVisitorService deskVisitorService;
 
     @MockitoBean
+    protected DeskMediaService deskMediaService;
+
+    @MockitoBean
     protected VisitorService visitorService;
 
     @MockitoBean

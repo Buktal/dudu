@@ -74,7 +74,7 @@ export function MessageView({
                   outgoing ? "text-accent-foreground" : "text-foreground",
                 )}
               >
-                <MessageBody body={message.body} />
+                <MessageBody body={message.body} messageId={message.id} />
               </div>
             </BubbleContent>
           </Bubble>

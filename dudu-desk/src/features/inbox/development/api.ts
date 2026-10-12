@@ -7,13 +7,15 @@ import {
   matchesConversationFilters,
   matchesConversationText,
 } from "../conversation-query";
+import { describeMessageBody } from "../message-content";
 import { messageSummary } from "../message-text";
 import {
   attachmentBatchRestriction,
   attachmentKind,
   attachmentRestriction,
 } from "../reply/attachment-rules";
-import type { InboxMessage, MediaReference, SendTarget } from "../types";
+import type { InboxMessage, PreparedAttachment, SendTarget } from "../types";
+import { developmentMediaBytes } from "./media";
 import {
   createDevelopmentDriver,
   findDevelopmentConversation as findConversation,
@@ -181,6 +183,27 @@ export function createDevelopmentInboxApi({
         profile.version += 1;
         return structuredClone(profile);
       },
+      loadMessageMedia: async (input) => {
+        const fixtures = await session(input, "loadMessageMedia");
+        const message = Object.values(fixtures.messages)
+          .flat()
+          .find((item) => item.id === input.messageId);
+        const media = message
+          ? describeMessageBody(message.body).media[input.index]
+          : undefined;
+        if (!media) {
+          throw new DeskApiError("business", "该消息没有这个媒体", 12100);
+        }
+        // 与真实服务一致：公开链接由界面直连，不经媒体接口代理
+        if (media.url) {
+          throw new DeskApiError(
+            "business",
+            "该素材提供公开链接，请直接打开",
+            12200,
+          );
+        }
+        return developmentMediaBytes(media);
+      },
       prepareAttachment: async (input) => {
         const fixtures = await session(input, "prepareAttachment");
         const conversation = findConversation(
@@ -199,7 +222,7 @@ export function createDevelopmentInboxApi({
         );
         if (restriction) throw new DeskApiError("business", restriction, 14002);
         const url = await readDevelopmentFile(file, input.signal);
-        const media: MediaReference = {
+        const media: PreparedAttachment = {
           id: `dev-upload-${fixtures.uploads.size + 1}`,
           kind,
           name: file.name,

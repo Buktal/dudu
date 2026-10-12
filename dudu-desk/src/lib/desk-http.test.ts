@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { requestDesk } from "./desk-http";
+import { requestDesk, requestDeskBlob } from "./desk-http";
 
 describe("Desk HTTP boundary", () => {
   it("rejects an expired login even when the server returns HTTP 200", async () => {
@@ -153,5 +153,86 @@ describe("Desk HTTP boundary", () => {
           Response.json({ code: 14001, msg: "渠道拒绝了本次回复", data: null }),
       }),
     ).rejects.toMatchObject({ kind: "business", code: 14001 });
+  });
+});
+
+describe("Desk media byte boundary", () => {
+  const bytes = new Uint8Array([1, 2, 3, 4]);
+
+  it("returns the response bytes as a blob and keeps the token in the header", async () => {
+    const blob = await requestDeskBlob({
+      url: "https://desk.example.test/api/desk/messages/9001/media?index=1",
+      token: "stored-token",
+      signal: new AbortController().signal,
+      fetcher: async (url, init) => {
+        expect(String(url)).toBe(
+          "https://desk.example.test/api/desk/messages/9001/media?index=1",
+        );
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          "Bearer stored-token",
+        );
+        return new Response(bytes, {
+          headers: { "Content-Type": "image/jpeg" },
+        });
+      },
+    });
+
+    expect(blob.type).toBe("image/jpeg");
+    expect(new Uint8Array(await blob.arrayBuffer())).toEqual(bytes);
+  });
+
+  it("maps a JSON R error body to the same business semantics as JSON requests", async () => {
+    await expect(
+      requestDeskBlob({
+        url: "/api/desk/messages/9001/media?index=2",
+        token: "stored-token",
+        signal: new AbortController().signal,
+        fetcher: async () =>
+          Response.json(
+            { code: 12100, msg: "该消息没有这个媒体", data: null },
+            { status: 200 },
+          ),
+      }),
+    ).rejects.toMatchObject({
+      kind: "business",
+      code: 12100,
+      message: "该消息没有这个媒体",
+    });
+
+    // 成功信封不是媒体字节：如实报无效响应，不把它当素材展示
+    await expect(
+      requestDeskBlob({
+        url: "/api/desk/messages/9001/media",
+        token: "stored-token",
+        signal: new AbortController().signal,
+        fetcher: async () => Response.json({ code: 0, msg: "ok", data: null }),
+      }),
+    ).rejects.toMatchObject({ kind: "invalid-response" });
+  });
+
+  it("keeps network and cancellation failures apart from channel errors", async () => {
+    await expect(
+      requestDeskBlob({
+        url: "/api/desk/messages/9001/media",
+        token: "stored-token",
+        signal: new AbortController().signal,
+        fetcher: async () => {
+          throw new TypeError("Failed to fetch");
+        },
+      }),
+    ).rejects.toMatchObject({ kind: "network" });
+
+    const controller = new AbortController();
+    await expect(
+      requestDeskBlob({
+        url: "/api/desk/messages/9001/media",
+        token: "stored-token",
+        signal: controller.signal,
+        fetcher: async () => {
+          controller.abort();
+          throw new DOMException("Aborted", "AbortError");
+        },
+      }),
+    ).rejects.toMatchObject({ kind: "aborted" });
   });
 });

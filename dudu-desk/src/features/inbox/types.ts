@@ -54,9 +54,10 @@ export type VisitorProfile = {
 export type MediaReference = {
   id: string;
   kind: Exclude<SendKind, "text">;
-  name: string;
-  mimeType: string;
-  size: number;
+  /** 渠道不提供的可选信息省略，不填假值。 */
+  name?: string;
+  mimeType?: string;
+  size?: number;
   url?: string;
 };
 
@@ -136,10 +137,16 @@ export type SendSubmission = {
   clientRequestId: string;
   target: SendTarget;
   text: string;
-  attachments: MediaReference[];
+  /** 发送中的附件都经过准备阶段：名称、类型与大小完整。 */
+  attachments: PreparedAttachment[];
 };
 
-export type PreparedAttachment = MediaReference;
+/** 已准备好的待发送附件：名称、类型与大小在准备阶段必须完整。 */
+export type PreparedAttachment = MediaReference & {
+  name: string;
+  mimeType: string;
+  size: number;
+};
 export type ConnectionState =
   | "unavailable"
   | "connecting"

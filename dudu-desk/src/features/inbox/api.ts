@@ -38,6 +38,10 @@ export type InboxApi = {
   prepareAttachment: (
     input: RequestOptions & { target: SendTarget; file: File },
   ) => Promise<PreparedAttachment>;
+  /** 需要渠道凭据的媒体素材：按消息与消息内下标经认证请求取字节。 */
+  loadMessageMedia: (
+    input: RequestOptions & { messageId: string; index: number },
+  ) => Promise<Blob>;
   markRead: (
     input: RequestOptions & { conversationId: string; throughSequence: number },
   ) => Promise<Conversation>;
@@ -76,6 +80,7 @@ export const unavailableInboxApi: InboxApi = {
   getCapability: unavailable,
   send: unavailable,
   prepareAttachment: unavailable,
+  loadMessageMedia: unavailable,
   markRead: unavailable,
   saveProfile: unavailable,
   endConversation: unavailable,

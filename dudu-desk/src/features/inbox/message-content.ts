@@ -53,16 +53,16 @@ export function messageSummary(body: MessageBody): string {
     case "reply":
       return (
         body.text ||
-        body.attachments.map((item) => `[附件] ${item.name}`).join("、")
+        body.attachments.map((item) => `[附件] ${mediaName(item)}`).join("、")
       );
     case "image":
-      return `[图片] ${body.media.name}`;
+      return mediaSummary("图片", body.media);
     case "audio":
-      return `[音频] ${body.media.name}`;
+      return mediaSummary("音频", body.media);
     case "video":
-      return `[视频] ${body.media.name}`;
+      return mediaSummary("视频", body.media);
     case "file":
-      return `[文件] ${body.media.name}`;
+      return mediaSummary("文件", body.media);
     case "link":
       return `[链接] ${body.title || body.url}`;
     case "location":
@@ -74,6 +74,16 @@ export function messageSummary(body: MessageBody): string {
     case "unknown":
       return `[暂不支持的消息] ${body.originalType}`;
   }
+}
+
+// 渠道可能不给文件名：摘要与展示都回落到类型名，不填假值
+function mediaSummary(label: string, media: MediaReference): string {
+  return media.name ? `[${label}] ${media.name}` : `[${label}]`;
+}
+
+/** 媒体的展示名：渠道未提供文件名时用类型名。 */
+export function mediaName(media: MediaReference): string {
+  return media.name || MEDIA_LABELS[media.kind];
 }
 
 /**

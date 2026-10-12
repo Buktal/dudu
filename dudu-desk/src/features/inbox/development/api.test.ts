@@ -410,6 +410,64 @@ describe("development InboxApi", () => {
     });
   });
 
+  it("serves mock media bytes for references without a public link and refuses linked or unknown ones", async () => {
+    const { api } = createDevelopmentInboxApi();
+    const input = options();
+    const findMessage = async (
+      predicate: (message: { body: { type: string } }) => boolean,
+    ) => {
+      let cursor: string | undefined;
+      do {
+        const page = await api.listMessages({
+          ...input,
+          conversationId: "dev-conversation-01",
+          cursor,
+        });
+        const found = page.items.find((message) => predicate(message));
+        if (found) return found;
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
+      return undefined;
+    };
+
+    // 只有渠道标识的语音/视频走媒体读取路径，Mock 按引用合成可复现的字节
+    const audio = await findMessage((message) => message.body.type === "audio");
+    expect(audio).toBeDefined();
+    const audioBlob = await api.loadMessageMedia({
+      ...input,
+      messageId: audio?.id ?? "",
+      index: 0,
+    });
+    expect(audioBlob.type).toBe("audio/wav");
+    expect(audioBlob.size).toBeGreaterThan(44);
+
+    const video = await findMessage((message) => message.body.type === "video");
+    expect(video).toBeDefined();
+    const videoBlob = await api.loadMessageMedia({
+      ...input,
+      messageId: video?.id ?? "",
+      index: 0,
+    });
+    expect(videoBlob.type).toBe("video/mp4");
+
+    // 公开链接由界面直连，与真实服务一致地拒绝代理读取
+    const image = await findMessage((message) => message.body.type === "image");
+    await expect(
+      api.loadMessageMedia({ ...input, messageId: image?.id ?? "", index: 0 }),
+    ).rejects.toMatchObject({ kind: "business", code: 12200 });
+
+    await expect(
+      api.loadMessageMedia({ ...input, messageId: image?.id ?? "", index: 3 }),
+    ).rejects.toMatchObject({ kind: "business", code: 12100 });
+    await expect(
+      api.loadMessageMedia({
+        ...input,
+        messageId: "missing-message",
+        index: 0,
+      }),
+    ).rejects.toMatchObject({ kind: "business", code: 12100 });
+  });
+
   it("uses explicit development scenarios for read failure, auth expiry and an empty queue", async () => {
     const input = options();
     const failed = createDevelopmentInboxApi({ scenario: "read-error" }).api;

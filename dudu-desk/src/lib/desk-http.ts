@@ -68,6 +68,62 @@ export async function requestDesk<T>(request: DeskRequest<T>): Promise<T> {
   }
 }
 
+export type DeskBlobRequest = {
+  url: string | URL;
+  token?: string;
+  signal: AbortSignal;
+  fetcher?: typeof fetch;
+};
+
+/**
+ * 认证的媒体字节请求：成功响应就是素材字节，Blob 的类型来自响应内容类型；
+ * 服务端异常按统一 R 语义返回 JSON 报文，这里同样映射为 DeskApiError，
+ * 使媒体失败与其它接口的错误分类一致。
+ */
+export async function requestDeskBlob(request: DeskBlobRequest): Promise<Blob> {
+  throwIfAborted(request.signal);
+  const response = await (request.fetcher ?? fetch)(request.url, {
+    headers: {
+      ...(request.token ? { Authorization: `Bearer ${request.token}` } : {}),
+      Accept: "*/*",
+    },
+    signal: request.signal,
+  }).catch((error: unknown) => {
+    throwIfAborted(request.signal);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new DeskApiError("aborted", "操作已取消");
+    }
+    throw new DeskApiError("network", "网络连接失败，请稍后重试");
+  });
+  throwIfAborted(request.signal);
+  if (!response.ok) {
+    throw new DeskApiError(
+      response.status === 401 || response.status === 403
+        ? "authentication"
+        : "network",
+      response.status === 401 || response.status === 403
+        ? "登录已失效，请重新登录"
+        : `服务请求失败（HTTP ${response.status}）`,
+    );
+  }
+  const contentType = response.headers.get("Content-Type") ?? "";
+  if (contentType.includes("application/json")) {
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throwIfAborted(request.signal);
+      throw new DeskApiError("invalid-response", "服务返回了无法识别的数据");
+    }
+    readApiEnvelope(body);
+    // code=0 的 JSON 信封不是媒体字节：如实报无效响应，不把它当素材展示
+    throw new DeskApiError("invalid-response", "服务未返回媒体内容");
+  }
+  const blob = await response.blob();
+  throwIfAborted(request.signal);
+  return blob;
+}
+
 function throwIfAborted(signal: AbortSignal) {
   if (signal.aborted) throw new DeskApiError("aborted", "操作已取消");
 }

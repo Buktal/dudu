@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
-import type { Conversation, MediaReference, SendSubmission } from "../types";
+import type {
+  Conversation,
+  PreparedAttachment,
+  SendSubmission,
+} from "../types";
 import {
   addAttachments,
   removeAttachment,
@@ -220,7 +224,7 @@ describe("attachment drafts", () => {
         static revokeObjectURL = revokePreview;
       },
     );
-    const pending = deferred<MediaReference>();
+    const pending = deferred<PreparedAttachment>();
     let uploadSignal: AbortSignal | undefined;
     const conversation = {
       ...firstConversation,
@@ -268,7 +272,7 @@ describe("attachment drafts", () => {
   });
 
   it("rechecks permissions when an upload finishes after the reply window closes", async () => {
-    const pending = deferred<MediaReference>();
+    const pending = deferred<PreparedAttachment>();
     let conversation: Conversation = {
       ...firstConversation,
       capability: {
@@ -424,7 +428,7 @@ describe("attachment drafts", () => {
         static revokeObjectURL = revokePreview;
       },
     );
-    const pending = deferred<MediaReference>();
+    const pending = deferred<PreparedAttachment>();
     const conversation: Conversation = {
       ...firstConversation,
       capability: {

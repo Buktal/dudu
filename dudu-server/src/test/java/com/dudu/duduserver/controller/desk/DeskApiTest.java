@@ -5,6 +5,7 @@ import com.dudu.duduserver.common.R;
 import com.dudu.duduserver.config.auth.JwtManager;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.auth.Me;
+import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
@@ -23,6 +24,7 @@ import com.dudu.duduserver.vo.DeskCapabilityVO;
 import com.dudu.duduserver.vo.DeskCompanyVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskLoginVO;
+import com.dudu.duduserver.vo.DeskMediaVO;
 import com.dudu.duduserver.vo.DeskMessagePageVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskProfileVO;
@@ -46,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -343,6 +346,50 @@ class DeskApiTest extends NoDatasourceSpringTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"order\": \"bogus\"}"))
             .andExpect(jsonPath("$.code").value(ApiEnum.PARAM_ERROR.code));
         verify(deskVisitorService, never()).query(any(JwtUser.class), any(DeskVisitorQueryDTO.class));
+    }
+
+    @Test
+    void deskMediaEndpointReturnsChannelBytesAndFallsBackForUnusableContentTypes() throws Exception {
+        byte[] bytes = "channel-bytes".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        when(deskMediaService.media(any(JwtUser.class), eq("9001"), isNull()))
+            .thenReturn(new DeskMediaVO(bytes, "image/jpeg"));
+        String token = bearer(783101L, 9L, UserRoleEnum.CONSOLE);
+
+        mockMvc.perform(get("/api/desk/messages/9001/media").header("Authorization", token))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type", "image/jpeg"))
+            .andExpect(content().bytes(bytes));
+
+        // 渠道给出无法使用的内容类型时按二进制流返回，不误报格式
+        when(deskMediaService.media(any(JwtUser.class), eq("9002"), eq("1")))
+            .thenReturn(new DeskMediaVO(bytes, "not a media type"));
+        mockMvc.perform(get("/api/desk/messages/9002/media?index=1").header("Authorization", token))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type", "application/octet-stream"));
+        ArgumentCaptor<String> index = ArgumentCaptor.forClass(String.class);
+        verify(deskMediaService, times(2)).media(any(JwtUser.class), anyString(), index.capture());
+        assertThat(index.getAllValues()).containsExactly(null, "1");
+    }
+
+    @Test
+    void deskMediaEndpointIsGuardedAndPassesOrdinaryRErrorsThrough() throws Exception {
+        when(deskMediaService.media(any(JwtUser.class), anyString(), any()))
+            .thenThrow(new BizException(ApiEnum.REQUEST_THIRD_ERROR, "微信素材读取失败：40007 invalid media_id"));
+        String token = bearer(783101L, 9L, UserRoleEnum.CONSOLE);
+
+        mockMvc.perform(get("/api/desk/messages/9001/media").header("Authorization", token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(ApiEnum.REQUEST_THIRD_ERROR.code))
+            .andExpect(jsonPath("$.msg").value("微信素材读取失败：40007 invalid media_id"))
+            .andExpect(jsonPath("$.data").doesNotExist());
+
+        // 缺令牌与平台身份都不得进入服务
+        mockMvc.perform(get("/api/desk/messages/9001/media"))
+            .andExpect(jsonPath("$.code").value(ApiEnum.TOKEN_EMPTY.code));
+        mockMvc.perform(get("/api/desk/messages/9001/media")
+                .header("Authorization", bearer(null, 1L, UserRoleEnum.ADMIN)))
+            .andExpect(jsonPath("$.code").value(ApiEnum.FORBIDDEN.code));
+        verify(deskMediaService, times(1)).media(any(JwtUser.class), anyString(), any());
     }
 
     @Test

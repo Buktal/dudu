@@ -281,6 +281,68 @@ describe("http inbox live subscription", () => {
     expect(events).toEqual([]);
   });
 
+  it("maps a live message frame with a non-text body exactly like history", () => {
+    seed("stored-token");
+    const socket = fakeSocket();
+    const api = createHttpInboxApi({
+      origin: ORIGIN,
+      socket: () => socket as unknown as DeskSocket,
+    });
+    const events: InboxEvent[] = [];
+
+    api.subscribe({
+      context: CONTEXT,
+      signal: new AbortController().signal,
+      onConnection: () => {},
+      onEvent: (event) => events.push(event),
+    });
+    socket.receive({ type: "ready" });
+    socket.receive({
+      type: "message",
+      message: {
+        id: "9003",
+        conversationId: "41",
+        direction: "incoming",
+        body: {
+          type: "image",
+          media: {
+            kind: "image",
+            id: "MEDIA_IMAGE",
+            url: "https://mmbiz.qpic.cn/pic",
+          },
+        },
+        createdAt: "2026-10-12 09:38:00",
+        sequence: 38,
+        version: 1,
+      },
+    });
+
+    // 实时与历史共用同一消息体解析：可选字段缺失时省略，不填假值
+    expect(events).toEqual([
+      {
+        type: "message",
+        context: CONTEXT,
+        message: {
+          id: "9003",
+          conversationId: "41",
+          direction: "incoming",
+          body: {
+            type: "image",
+            media: {
+              kind: "image",
+              id: "MEDIA_IMAGE",
+              url: "https://mmbiz.qpic.cn/pic",
+            },
+          },
+          createdAt: "2026-10-12 09:38:00",
+          sequence: 38,
+          version: 1,
+        },
+        conversation: undefined,
+      },
+    ]);
+  });
+
   it("maps conversation frames to conversation events and drops malformed ones", () => {
     seed("stored-token");
     const socket = fakeSocket();

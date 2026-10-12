@@ -50,6 +50,7 @@ export type InboxRequestKey =
   | "events"
   | "recovery"
   | `attachment:${string}`
+  | `media:${string}`
   | `choices:${string}`
   | `${(typeof CONVERSATION_REQUEST_KINDS)[number]}:${string}`;
 
@@ -72,6 +73,8 @@ export const requestKeys = {
     conversationRequestKey("profile", conversationId),
   attachment: (attachmentId: string): InboxRequestKey =>
     `attachment:${attachmentId}`,
+  media: (messageId: string, index: number): InboxRequestKey =>
+    `media:${messageId}:${index}`,
   choices: (scope: string): InboxRequestKey => `choices:${scope}`,
   /** Choice scope for the next-visitor search started by an accepted reply. */
   next: (messageId: string): `next:${string}` => `next:${messageId}`,

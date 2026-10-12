@@ -1,5 +1,5 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type { MediaReference } from "../types";
+import type { PreparedAttachment } from "../types";
 import { blankDraft, type DraftAttachment, type InboxState } from "./state";
 
 export const attachmentReducers = {
@@ -30,7 +30,7 @@ export const attachmentReducers = {
   },
   attachmentReady(
     state: InboxState,
-    action: PayloadAction<{ id: string; media: MediaReference }>,
+    action: PayloadAction<{ id: string; media: PreparedAttachment }>,
   ) {
     const attachment = state.attachments[action.payload.id];
     if (attachment?.status !== "preparing") return;

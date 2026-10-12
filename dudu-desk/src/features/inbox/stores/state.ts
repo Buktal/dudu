@@ -7,7 +7,7 @@ import type {
   ConversationQuery,
   InboxMessage,
   LoadState,
-  MediaReference,
+  PreparedAttachment,
   SendKind,
   SendSubmission,
   VisitorProfile,
@@ -48,7 +48,7 @@ export type DraftAttachment = {
   mimeType: string;
   size: number;
   status: "preparing" | "ready" | "failed";
-  media?: MediaReference;
+  media?: PreparedAttachment;
   error?: string;
   previewUrl?: string;
 };
@@ -92,6 +92,12 @@ export function latestIncomingSequence(
   );
 }
 
+/** 消息媒体按「消息:下标」读取的状态；成功后 url 是本地对象 URL。 */
+export type MediaLoad = {
+  status: "loading" | "ready" | "error";
+  url?: string;
+};
+
 export type InboxState = {
   context: WorkContext;
   generation: number;
@@ -111,6 +117,8 @@ export type InboxState = {
     string,
     LoadState & { ids: string[]; failedRead?: "refresh" | "more" }
   >;
+  /** 消息媒体字节：有公开链接的素材不在此列，由界面直连渠道读取 */
+  media: Record<string, MediaLoad>;
   choices: Record<
     string,
     LoadState & {
@@ -160,6 +168,7 @@ export function initialInboxState(
     messages: {},
     queue: { ...emptyLoad(), ids: [], query: { ...emptyQuery } },
     histories: {},
+    media: {},
     choices: {},
     profiles: {},
     profileEdits: {},
