@@ -38,6 +38,25 @@ export const readReducers = {
     history.status = history.hasLoaded ? "ready" : "idle";
     history.error = null;
   },
+  /**
+   * 重连后的旧历史缓存失效（契约第 3 节）：丢弃已缓存的消息投影并把 hasLoaded 重置，
+   * 正在显示的访客按最近页重取，其余切回时按需重取；更早消息从新最近页的游标照常
+   * 向上分页。在途发送的本地气泡不是历史缓存——它们的投影保留到服务端结果或本地
+   * 结算落定为止。
+   */
+  historiesInvalidated(state: InboxState) {
+    for (const history of Object.values(state.histories)) {
+      history.ids = history.ids.filter((id) => {
+        const status = state.submissions[id]?.status;
+        return status === "sending" || status === "unconfirmed";
+      });
+      history.hasLoaded = false;
+      history.nextCursor = null;
+      history.status = "idle";
+      history.error = null;
+      delete history.failedRead;
+    }
+  },
   historyLoaded(
     state: InboxState,
     action: PayloadAction<{ conversationId: string; page: Page<InboxMessage> }>,

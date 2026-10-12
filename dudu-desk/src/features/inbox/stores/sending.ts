@@ -14,6 +14,43 @@ import {
 } from "./state";
 import type { InboxCommand, InboxDispatch, InboxRuntime } from "./store";
 
+/**
+ * 发送结果结算：已接受而尚未落定的提交，按合并后的消息结果结算——草稿仍是提交时的
+ * 修订就把结果落到提交并释放附件，否则视为已被后续编辑取代，直接释放附件。
+ * 实时来信、receipt 报文与其他端的发送结果都经此单点，重连重载合并同一消息结果后
+ * 也调用同一函数，结果判定不因来源而分叉。
+ */
+export function settleConfirmedReplies(): InboxCommand {
+  return (dispatch, getState, runtime) => {
+    for (const submission of Object.values(getState().inbox.submissions)) {
+      if (submission.status !== "accepted") continue;
+      const state = getState().inbox;
+      const draft = state.drafts[submission.request.target.conversationId];
+      const response = state.messages[submission.messageId];
+      if (!response) continue;
+      if (
+        draft &&
+        (draft.textRevision === submission.textRevision ||
+          draft.attachmentIds.some((id) =>
+            submission.draftAttachmentIds.includes(id),
+          ))
+      ) {
+        acceptSubmission(dispatch, runtime, submission, response);
+      } else {
+        releaseAttachmentResources(runtime, submission.draftAttachmentIds);
+      }
+    }
+    const state = getState().inbox;
+    if (
+      state.notice?.kind === "unconfirmed-send" &&
+      !Object.values(state.submissions).some(
+        (item) => item.status === "unconfirmed",
+      )
+    )
+      dispatch(inboxActions.noticeChanged(null));
+  };
+}
+
 export function editDraft(conversationId: string, text: string): InboxCommand {
   return (dispatch, getState) => {
     if (getState().inbox.conversations[conversationId])
@@ -31,9 +68,9 @@ export function focusReply(conversationId: string): InboxCommand {
 /**
  * Accepted-settlement seam: an accepted send means exactly this — record the
  * server response on the submission and release its draft attachments. Both
- * the send lifecycle (deliver below) and the Live events reconciler settle
- * through here, so accepted-means-cleaned-up lives in one module instead of
- * drifting across send / reconciler / merge writers.
+ * the send lifecycle (deliver below) and the Live events merge settle through
+ * here, so accepted-means-cleaned-up lives in one module instead of drifting
+ * across send / merge writers.
  */
 export function acceptSubmission(
   dispatch: InboxDispatch,

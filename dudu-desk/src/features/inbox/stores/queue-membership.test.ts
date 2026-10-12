@@ -66,39 +66,13 @@ describe("rewriteQueueIds", () => {
     ).toEqual(["a", "b"]);
   });
 
-  it("reconcile unions when no search is active", () => {
-    const conversations = world(["a", "b"]);
-    expect(
-      rewriteQueueIds({
-        conversations,
-        query: emptyQuery,
-        previousIds: ["a"],
-        incomingIds: ["b"],
-        mode: "reconcile",
-      }),
-    ).toEqual(["a", "b"]);
-  });
-
-  it("reconcile prunes to recovered ids while searching", () => {
-    const conversations = world(["a", "b"]);
-    expect(
-      rewriteQueueIds({
-        conversations,
-        query: { ...emptyQuery, search: "保修" },
-        previousIds: ["a"],
-        incomingIds: ["b"],
-        mode: "reconcile",
-      }),
-    ).toEqual(["b"]);
-  });
-
   it("drops ids that fail the queue filter in every mode", () => {
     const conversations: Record<string, Conversation> = {
       a: card("a"),
       b: card("b", { channelId: "telegram" }),
     };
     const query = { ...emptyQuery, channelId: "wechat-kf" };
-    for (const mode of ["refresh", "append", "reconcile"] as const) {
+    for (const mode of ["refresh", "append"] as const) {
       expect(
         rewriteQueueIds({
           conversations,
@@ -266,15 +240,11 @@ describe("applyQueuePageMeta", () => {
 
   it("a queue read finalizes ready meta and owns the total outright", () => {
     const queue = loadingQueue();
-    applyQueuePageMeta(
-      queue,
-      {
-        items: [],
-        nextCursor: "later",
-        counts: { active: 2, needsReply: 0, waiting: 0, closed: 0 },
-      },
-      { fallbackTotal: false },
-    );
+    applyQueuePageMeta(queue, {
+      items: [],
+      nextCursor: "later",
+      counts: { active: 2, needsReply: 0, waiting: 0, closed: 0 },
+    });
     expect(queue).toMatchObject({
       status: "ready",
       hasLoaded: true,
@@ -286,14 +256,10 @@ describe("applyQueuePageMeta", () => {
     expect(queue.total).toBeUndefined();
   });
 
-  it("a reconcile page only overrides a total the service reported", () => {
-    const reported = loadingQueue();
-    applyQueuePageMeta(
-      reported,
-      { items: [], nextCursor: null, total: 9 },
-      { fallbackTotal: true },
-    );
-    expect(reported).toMatchObject({
+  it("keeps a reported total and the last counts and channels when omitted", () => {
+    const queue = loadingQueue();
+    applyQueuePageMeta(queue, { items: [], nextCursor: null, total: 9 });
+    expect(queue).toMatchObject({
       status: "ready",
       hasLoaded: true,
       error: null,
@@ -302,13 +268,5 @@ describe("applyQueuePageMeta", () => {
       counts,
       channels,
     });
-
-    const omitted = loadingQueue();
-    applyQueuePageMeta(
-      omitted,
-      { items: [], nextCursor: null },
-      { fallbackTotal: true },
-    );
-    expect(omitted).toMatchObject({ total: 5, counts, channels });
   });
 });

@@ -1,7 +1,7 @@
 import { matchesConversationFilters } from "../conversation-query";
 import type { Conversation, InboxMessage, VisitorProfile } from "../types";
 import { receiptKeys, rememberReceipt } from "./receipts";
-import type { InboxState } from "./state";
+import { type InboxState, onScreenId } from "./state";
 
 /**
  * Live events merge kernel: the single place that knows how an incoming
@@ -14,9 +14,9 @@ import type { InboxState } from "./state";
  *
  * Queue-membership discipline: single live entities merge with
  * `updateQueue` (the default) so arrivals join/leave the visible queue
- * immediately. Bulk paths (`queueLoaded`, `conversationsReconciled`) pass
- * `false` and finish with one `rewriteQueueIds` transaction instead, so ids
- * are never written twice for the same payload.
+ * immediately. The bulk queue read (`queueLoaded`) passes `false` and
+ * finishes with one `rewriteQueueIds` transaction instead, so ids are never
+ * written twice for the same payload.
  */
 /**
  * Whether one conversation holds a message collection: its history was loaded,
@@ -31,10 +31,7 @@ export function holdsMessages(
 ): boolean {
   return (
     state.histories[conversationId]?.hasLoaded === true ||
-    state.activeId === conversationId ||
-    state.replyId === conversationId ||
-    state.pinnedId === conversationId ||
-    state.quickHistoryId === conversationId
+    onScreenId(state, conversationId)
   );
 }
 
@@ -193,11 +190,7 @@ export function orderMessages(state: InboxState, ids: string[]): string[] {
  * the notice itself stay with the caller.
  */
 export function detachConversation(state: InboxState, id: string): boolean {
-  const selected =
-    state.activeId === id ||
-    state.replyId === id ||
-    state.pinnedId === id ||
-    state.quickHistoryId === id;
+  const selected = onScreenId(state, id);
   if (state.activeId === id) state.activeId = null;
   if (state.replyId === id) state.replyId = null;
   if (state.quickHistoryId === id) state.quickHistoryId = null;

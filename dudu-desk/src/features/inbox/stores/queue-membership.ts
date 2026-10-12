@@ -13,13 +13,13 @@ import type { InboxState } from "./state";
  * be re-read, how one read's pages fold into one page and which meta a landed
  * page finalizes.
  *
- * Queue reads (refresh / append), the Live events reconciler, the Live events
+ * Queue reads (refresh / append), the reconnect reload, the Live events
  * subscription and the detail thunks all answer through here, so the search
  * carve-out, the keep rules, the page fold and the meta settle change in one
  * module instead of drifting across call sites. Entity merging stays in the
  * Live events merge kernel; this module owns only the queue projection.
  */
-export type QueueRewriteMode = "refresh" | "append" | "reconcile";
+export type QueueRewriteMode = "refresh" | "append";
 
 export function rewriteQueueIds(input: {
   conversations: Record<string, Conversation | undefined>;
@@ -36,7 +36,6 @@ export function rewriteQueueIds(input: {
   );
   const keepPrevious = (id: string): boolean => {
     if (mode === "append") return true;
-    if (mode === "reconcile" && !query.search.trim()) return true;
     return incoming.has(id) || preserved.has(id);
   };
   return [
@@ -49,7 +48,7 @@ export function rewriteQueueIds(input: {
  * into one page — items in page order, the last nextCursor and the newest
  * non-null total / counts / channels.
  *
- * Queue reads and the Live events reconciler fold behind this seam, so a new
+ * Queue reads and the reconnect reload fold behind this seam, so a new
  * queue meta field lands in one fold instead of drifting across paging
  * callbacks. Callers keep only their own stop guards and fold the collected
  * pages after the loop; folding left over `??` reproduces an incremental
@@ -72,26 +71,18 @@ export function foldConversationPages(
 /**
  * Queue page settle: the single place that finalizes a landed page's queue
  * meta — ready status, loaded flag, cleared error and nextCursor / total /
- * counts / channels.
- *
- * `queueLoaded` and `conversationsReconciled` finalize behind this seam, so a
- * new queue meta field lands in one settle instead of drifting across two
- * reducers. `fallbackTotal` keeps their total semantics explicit: a queue
- * read owns the total outright, while a reconcile page only overrides a total
- * the service actually reported.
+ * counts / channels. A queue read owns the total outright; counts and
+ * channels keep the last reported value when the page omits them.
  */
 export function applyQueuePageMeta(
   queue: InboxState["queue"],
   page: ConversationPage,
-  options: { fallbackTotal: boolean },
 ): void {
   queue.status = "ready";
   queue.hasLoaded = true;
   queue.error = null;
   queue.nextCursor = page.nextCursor;
-  queue.total = options.fallbackTotal
-    ? (page.total ?? queue.total)
-    : page.total;
+  queue.total = page.total;
   queue.counts = page.counts ?? queue.counts;
   queue.channels = page.channels ?? queue.channels;
 }

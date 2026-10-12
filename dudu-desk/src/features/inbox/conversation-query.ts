@@ -46,8 +46,8 @@ export function hasConversationFilters(query: ConversationQuery): boolean {
 }
 
 /**
- * One predicate for queue membership, shared by the queue reducers, the Live
- * events reconciler and the merge kernel. Missing conversations never belong.
+ * One predicate for queue membership, shared by the queue reducers, the
+ * reconnect reload and the merge kernel. Missing conversations never belong.
  * Search is deliberately excluded (see above): server-owned membership.
  */
 export function isQueueMember(

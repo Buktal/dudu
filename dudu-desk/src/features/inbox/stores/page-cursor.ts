@@ -4,7 +4,7 @@ import { DeskApiError } from "@/lib/api-response";
  * Conversation queue paged-list adapter: the single place that advances a
  * continuation cursor and rejects a repeated one.
  *
- * Queue reads, the Live events reconciler and receive-next all page behind
+ * Queue reads, receive-next and the visitor-queue list reads all page behind
  * this seam, so the duplicate-cursor guard changes in one module instead of
  * drifting across three call sites. Callers pass their own message so the
  * user-facing copy keeps its context.

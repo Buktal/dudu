@@ -61,7 +61,7 @@ export const queueReducers = {
       mode: append ? "append" : "refresh",
       preserveIds,
     });
-    applyQueuePageMeta(state.queue, page, { fallbackTotal: false });
+    applyQueuePageMeta(state.queue, page);
   },
   queueFailed(
     state: InboxState,

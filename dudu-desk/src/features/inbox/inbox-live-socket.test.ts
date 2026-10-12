@@ -179,6 +179,108 @@ describe("desk live socket protocol", () => {
   });
 });
 
+describe("desk live socket reconnect", () => {
+  function openedSockets() {
+    const sockets: FakeSocket[] = [];
+    const states: ConnectionState[] = [];
+    const unsubscribe = subscribeDeskSocket({
+      origin: ORIGIN,
+      token: "stored-token",
+      signal: new AbortController().signal,
+      onState: (state) => states.push(state),
+      onFrame: () => {},
+      socket: () => {
+        const socket = fakeSocket();
+        sockets.push(socket);
+        return socket as unknown as DeskSocket;
+      },
+    });
+    return { sockets, states, unsubscribe };
+  }
+
+  it("reopens a dropped connection with backoff and reports reconnecting until ready", () => {
+    vi.useFakeTimers();
+    try {
+      const { sockets, states } = openedSockets();
+      sockets[0].open();
+      sockets[0].receive({ type: "ready" });
+      expect(states).toEqual(["connected"]);
+
+      sockets[0].drop();
+      expect(states).toEqual(["connected", "disconnected"]);
+
+      // 首次重试在 1 秒后，重试期间上报 reconnecting
+      vi.advanceTimersByTime(1000);
+      expect(sockets).toHaveLength(2);
+      expect(states).toEqual(["connected", "disconnected", "reconnecting"]);
+
+      // 重试仍失败：下一次等待翻倍
+      sockets[1].open();
+      sockets[1].drop();
+      vi.advanceTimersByTime(1999);
+      expect(sockets).toHaveLength(2);
+      vi.advanceTimersByTime(1);
+      expect(sockets).toHaveLength(3);
+
+      // 新连接重新认证，ready 后恢复 connected 并重置退避
+      sockets[2].open();
+      expect(sockets[2].sent).toEqual([
+        JSON.stringify({ type: "auth", token: "stored-token" }),
+      ]);
+      sockets[2].receive({ type: "ready" });
+      expect(states).toEqual([
+        "connected",
+        "disconnected",
+        "reconnecting",
+        "disconnected",
+        "reconnecting",
+        "connected",
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stops retrying when the token is rejected or the subscription is released", () => {
+    vi.useFakeTimers();
+    try {
+      const rejected = openedSockets();
+      rejected.sockets[0].receive({
+        type: "error",
+        code: 10102,
+        msg: "登录状态无效，请重新登录",
+      });
+      vi.advanceTimersByTime(60_000);
+      expect(rejected.sockets).toHaveLength(1);
+      expect(rejected.states).toEqual(["unavailable"]);
+      rejected.unsubscribe();
+
+      // 释放订阅后不再重连：在途的重试计时一并取消
+      const controller = new AbortController();
+      const sockets: FakeSocket[] = [];
+      subscribeDeskSocket({
+        origin: ORIGIN,
+        token: "stored-token",
+        signal: controller.signal,
+        onState: () => {},
+        onFrame: () => {},
+        socket: () => {
+          const socket = fakeSocket();
+          sockets.push(socket);
+          return socket as unknown as DeskSocket;
+        },
+      });
+      sockets[0].drop();
+      controller.abort();
+      vi.advanceTimersByTime(60_000);
+      expect(sockets).toHaveLength(1);
+      expect(sockets[0].closed).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("http inbox live subscription", () => {
   function seed(token: string) {
     sessionStorage.setItem(

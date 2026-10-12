@@ -15,10 +15,12 @@ import {
 } from "./test-support";
 
 describe("recovered conversation queries", () => {
-  it("refreshes queue totals, status counts and channels across recovery pages", async () => {
+  it("re-reads the first queue page with the service's totals, counts and channels", async () => {
     let loaded = false;
     const store = testStore({
       listConversations: async ({ cursor }) => {
+        // 重连重读第一页：不续读旧快照，续读游标保留给滚动加载
+        expect(cursor).toBeUndefined();
         if (!loaded) {
           loaded = true;
           return {
@@ -34,11 +36,9 @@ describe("recovered conversation queries", () => {
             channels: [{ id: "wechat-kf", name: "微信客服" }],
           };
         }
-        if (cursor)
-          return { items: [secondConversation], nextCursor: null, total: 2 };
         return {
           items: [firstConversation],
-          nextCursor: "recovery-page-two",
+          nextCursor: "page-two",
           total: 2,
           counts: {
             active: 2,
@@ -52,15 +52,14 @@ describe("recovered conversation queries", () => {
           ],
         };
       },
-      getCapability: async () => ({ state: "allowed", kinds: ["text"] }),
     });
 
     await store.dispatch(loadConversations());
     await store.dispatch(reconnectInbox());
 
     expect(selectQueue(store.getState())).toMatchObject({
-      ids: ["conversation-a", "conversation-b"],
-      nextCursor: null,
+      ids: ["conversation-a"],
+      nextCursor: "page-two",
       total: 2,
       counts: {
         active: 2,

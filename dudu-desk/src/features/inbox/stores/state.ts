@@ -92,6 +92,20 @@ export function latestIncomingSequence(
   );
 }
 
+/**
+ * 正在显示的访客：专注选中、当前回复对象、并排固定或完整历史任一槽位。
+ * 消息集合持有的判定与重连重载的目标选择共用这一份定义；待处理提醒的免打扰
+ * 只看三种接待位置（专注、并排固定、卡片展开），不包含回复对象槽位。
+ */
+export function onScreenId(state: InboxState, conversationId: string): boolean {
+  return (
+    state.activeId === conversationId ||
+    state.replyId === conversationId ||
+    state.pinnedId === conversationId ||
+    state.quickHistoryId === conversationId
+  );
+}
+
 /** 消息媒体按「消息:下标」读取的状态；成功后 url 是本地对象 URL。 */
 export type MediaLoad = {
   status: "loading" | "ready" | "error";

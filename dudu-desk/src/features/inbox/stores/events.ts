@@ -1,11 +1,7 @@
 import type { InboxEvent } from "../types";
 import { applyAccessChanged } from "./access";
 import { createRefreshScheduler } from "./live-refresh";
-import {
-  connectionFromFailure,
-  reconcileInbox,
-  settleConfirmedReplies,
-} from "./reconciler";
+import { connectionFromFailure, reloadInbox } from "./reload";
 import { reminderChange } from "./reminders";
 import {
   abortRequest,
@@ -16,6 +12,7 @@ import {
   releaseAttachmentResources,
   requestKeys,
 } from "./requests";
+import { settleConfirmedReplies } from "./sending";
 import { inboxActions } from "./slice";
 import { type InboxCommand, onQueueSettled, releaseConnection } from "./store";
 
@@ -63,7 +60,7 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
               getState().inbox.connection === "disconnected"
             ) {
               needsRecovery = false;
-              const task = dispatch(reconcileInbox(request.current));
+              const task = dispatch(reloadInbox(request.current));
               recovery = task;
               void task.finally(() => {
                 if (recovery === task) {

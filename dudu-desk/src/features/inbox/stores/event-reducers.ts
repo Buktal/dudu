@@ -1,14 +1,6 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
-import type {
-  ConnectionState,
-  Conversation,
-  ConversationPage,
-  InboxEvent,
-  InboxMessage,
-  Page,
-  ReplyCapability,
-} from "../types";
+import type { ConnectionState, Conversation, InboxEvent } from "../types";
 import {
   detachConversation,
   holdsMessages,
@@ -17,7 +9,6 @@ import {
   mergeProfile,
   orderMessages,
 } from "./live-merge";
-import { applyQueuePageMeta, rewriteQueueIds } from "./queue-membership";
 import { receiptKeys, rememberReceipt } from "./receipts";
 import { emptyLoad, type InboxState } from "./state";
 
@@ -33,77 +24,6 @@ export const eventReducers = {
     const { conversationId, unread } = action.payload;
     if (unread > 0) state.reminders[conversationId] = unread;
     else delete state.reminders[conversationId];
-  },
-  conversationsReconciled(
-    state: InboxState,
-    action: PayloadAction<ConversationPage>,
-  ) {
-    const page = action.payload;
-    // Merge entities without touching queue membership: the reconcile rewrite
-    // below owns ids, mirroring the queueLoaded transaction.
-    for (const conversation of page.items)
-      mergeConversation(state, conversation, false);
-    state.queue.ids = rewriteQueueIds({
-      conversations: state.conversations,
-      query: state.queue.query,
-      previousIds: state.queue.ids,
-      incomingIds: page.items.map((item) => item.id),
-      mode: "reconcile",
-    });
-    applyQueuePageMeta(state.queue, page, { fallbackTotal: true });
-  },
-  historyReconciled(
-    state: InboxState,
-    action: PayloadAction<{
-      conversationId: string;
-      page: Page<InboxMessage>;
-      preserveCursor: boolean;
-    }>,
-  ) {
-    const { conversationId, page, preserveCursor } = action.payload;
-    if (!state.conversations[conversationId]) return;
-    state.histories[conversationId] ??= {
-      ...emptyLoad(),
-      ids: [],
-    };
-    const history = state.histories[conversationId];
-    const ids = page.items
-      .filter((item) => item.conversationId === conversationId)
-      .map((message) => mergeMessage(state, message));
-    history.ids = orderMessages(state, [...history.ids, ...ids]);
-    history.status = "ready";
-    history.hasLoaded = true;
-    history.error = null;
-    if (!preserveCursor) history.nextCursor = page.nextCursor;
-  },
-  capabilityRefreshed(
-    state: InboxState,
-    action: PayloadAction<{
-      conversationId: string;
-      capability: ReplyCapability;
-      expectedVersion: number;
-      expectedCapabilityVersion: number | null;
-    }>,
-  ) {
-    const {
-      conversationId,
-      capability,
-      expectedVersion,
-      expectedCapabilityVersion,
-    } = action.payload;
-    const conversation = state.conversations[conversationId];
-    if (
-      !conversation ||
-      conversation.version !== expectedVersion ||
-      (state.events.capabilities[conversationId]?.version ?? null) !==
-        expectedCapabilityVersion
-    )
-      return;
-    conversation.capability = capability;
-    state.events.capabilities[conversationId] = {
-      version: Math.max(expectedVersion, expectedCapabilityVersion ?? 0),
-      value: capability,
-    };
   },
   readStarted(
     state: InboxState,

@@ -49,6 +49,9 @@ function realStore(api: Parameters<typeof testStore>[0] = {}) {
         conversation,
       });
     },
+    drop() {
+      subscription.onConnection("disconnected");
+    },
   };
 }
 
@@ -174,6 +177,49 @@ describe("shared pending reminders", () => {
     expect(store.getState().inbox.reminders).toEqual({});
     expect(badge(store.getState(), "conversation-a")).toBe(0);
     expect(badge(store.getState(), "conversation-b")).toBe(0);
+  });
+
+  it("keeps reminders for still-unanswered visitors and clears them for served ones on reconnect", async () => {
+    let lists = 0;
+    const { store, live, drop } = realStore({
+      listConversations: async () => {
+        lists += 1;
+        return {
+          items: [
+            { ...firstConversation, unread: 0 },
+            {
+              ...secondConversation,
+              unread: 0,
+              version: lists + 1,
+              // 第三次读取（第二次重连）时同事已回复：状态变为等待中
+              status: lists >= 3 ? "waiting" : "needs-reply",
+            },
+          ],
+          nextCursor: null,
+          total: 2,
+        };
+      },
+    });
+    await store.dispatch(loadConversations());
+    live(
+      { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
+      { ...secondConversation, version: 2, messageCount: 2 },
+    );
+    expect(badge(store.getState(), "conversation-b")).toBe(1);
+
+    // 仍待回复：重查保留本地提醒
+    drop();
+    await store.dispatch(reconnectInbox());
+    expect(badge(store.getState(), "conversation-b")).toBe(1);
+
+    // 已处理：重查结果按服务端状态直接展示并清除提醒
+    drop();
+    await store.dispatch(reconnectInbox());
+    expect(store.getState().inbox.conversations["conversation-b"].status).toBe(
+      "waiting",
+    );
+    expect(badge(store.getState(), "conversation-b")).toBe(0);
+    expect(store.getState().inbox.reminders).toEqual({});
   });
 
   it("keeps the Mock's own unread data untouched outside the real chain", async () => {
