@@ -342,4 +342,119 @@ describe("visitor details", () => {
       },
     );
   });
+
+  it("applies another employee's profile update and keeps the local draft", async () => {
+    const store = testStore({
+      readProfile: async ({ conversationId }) => ({
+        conversationId,
+        version: 1,
+        fields: [],
+        tags: [],
+        note: "原备注",
+      }),
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadProfile(firstConversation.id));
+    store.dispatch(
+      editVisitorProfile(firstConversation.id, { tagsText: "本地标签" }),
+    );
+
+    profileEvent(store, {
+      conversationId: firstConversation.id,
+      version: 2,
+      fields: [],
+      tags: ["他人标签"],
+      note: "他人备注",
+    });
+
+    // 未在编辑的查看界面即时刷新；本地草稿原样保留
+    expect(store.getState().inbox.profiles[firstConversation.id]).toMatchObject(
+      {
+        status: "ready",
+        data: { version: 2, tags: ["他人标签"], note: "他人备注" },
+      },
+    );
+    expect(store.getState().inbox.profileEdits[firstConversation.id]).toEqual({
+      tagsText: "本地标签",
+      note: "原备注",
+      revision: 1,
+      savedRevision: 0,
+      baseVersion: 1,
+      status: "idle",
+      error: null,
+    });
+
+    // 较旧的名片报文不回退已确认的资料
+    profileEvent(store, {
+      conversationId: firstConversation.id,
+      version: 1,
+      fields: [],
+      tags: [],
+      note: "过期备注",
+    });
+    expect(
+      store.getState().inbox.profiles[firstConversation.id].data?.note,
+    ).toBe("他人备注");
+  });
+
+  it("confirms an overwrite against the latest version while a plain save keeps its baseline", async () => {
+    let profile: VisitorProfile = {
+      conversationId: firstConversation.id,
+      version: 1,
+      fields: [],
+      tags: [],
+      note: "原备注",
+    };
+    const baselines: number[] = [];
+    const store = testStore({
+      readProfile: async () => profile,
+      saveProfile: async ({ tags, note, version }) => {
+        baselines.push(version);
+        // 版本基线是真前提：未经确认的旧基线保存被服务端拒绝
+        if (version !== profile.version)
+          throw new DeskApiError("business", "资料已更新，请重新读取后再保存");
+        profile = { ...profile, version: version + 1, tags, note };
+        return profile;
+      },
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadProfile(firstConversation.id));
+    store.dispatch(
+      editVisitorProfile(firstConversation.id, { note: "本地备注" }),
+    );
+    profile = { ...profile, version: 2, tags: ["他人标签"] };
+    profileEvent(store, profile);
+
+    await store.dispatch(saveVisitorProfile(firstConversation.id));
+    expect(baselines).toEqual([1]);
+    expect(
+      store.getState().inbox.profileEdits[firstConversation.id],
+    ).toMatchObject({ status: "error", note: "本地备注" });
+
+    // 确认覆盖：按最新已知版本重新提交，后保存覆盖
+    await store.dispatch(
+      saveVisitorProfile(firstConversation.id, { overwrite: true }),
+    );
+    expect(baselines).toEqual([1, 2]);
+    // 后保存覆盖：落库内容与本地的标签/备注提交一致，不与其人的修改合并
+    expect(
+      store.getState().inbox.profiles[firstConversation.id].data,
+    ).toMatchObject({ version: 3, note: "本地备注", tags: [] });
+    expect(
+      store.getState().inbox.profileEdits[firstConversation.id],
+    ).toMatchObject({ status: "saved", note: "本地备注" });
+  });
 });
+
+function profileEvent(
+  store: ReturnType<typeof testStore>,
+  profile: VisitorProfile,
+) {
+  store.dispatch(
+    inboxActions.eventReceived({
+      context: { agentId: "agent-a", workspaceId: "workspace-a" },
+      type: "profile",
+      profile,
+    }),
+  );
+}

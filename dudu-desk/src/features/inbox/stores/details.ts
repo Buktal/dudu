@@ -21,8 +21,16 @@ export function discardProfileEdits(conversationId: string): InboxCommand {
   };
 }
 
+/**
+ * Saves the local draft. `overwrite` is the confirmed path: the operator
+ * acknowledged another employee's update while editing, so the request rebases
+ * onto the latest version the client knows and the later save wins. Without it
+ * the original editing baseline is kept, so an unacknowledged stale save is
+ * rejected by a server that checks the version instead of silently winning.
+ */
 export function saveVisitorProfile(
   conversationId: string,
+  { overwrite = false }: { overwrite?: boolean } = {},
 ): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
     const state = getState().inbox;
@@ -53,7 +61,9 @@ export function saveVisitorProfile(
                 .filter(Boolean),
             ),
             note: edit.note,
-            version: edit.baseVersion,
+            version: overwrite
+              ? Math.max(edit.baseVersion, profile.version)
+              : edit.baseVersion,
           }),
         validate: (result) =>
           result.conversationId !== conversationId ||

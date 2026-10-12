@@ -99,13 +99,15 @@ export function applyQueuePageMeta(
 /**
  * Whether one Live events entity should schedule a queue re-read. Search and
  * counts views can shift under any conversation / message / removal event;
- * other event types never move the queue.
+ * a shared profile update only moves search hits (tags and note are searched),
+ * never counts or message order, so it reloads the search view alone.
  */
 export function needsQueueRefreshForEvent(
   type: InboxEvent["type"],
   query: ConversationQuery,
   counts: ConversationPage["counts"],
 ): boolean {
+  if (type === "profile") return query.search.trim() !== "";
   if (type !== "conversation" && type !== "message" && type !== "removed")
     return false;
   return query.search.trim() !== "" || counts !== undefined;

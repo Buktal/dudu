@@ -1,5 +1,5 @@
 import { matchesConversationFilters } from "../conversation-query";
-import type { Conversation, InboxMessage } from "../types";
+import type { Conversation, InboxMessage, VisitorProfile } from "../types";
 import { receiptKeys, rememberReceipt } from "./receipts";
 import type { InboxState } from "./state";
 
@@ -72,6 +72,28 @@ export function mergeConversation(
   } else {
     state.queue.ids = state.queue.ids.filter((id) => id !== conversation.id);
   }
+}
+
+/**
+ * Land one visitor profile — from a read or from a live profile frame. The
+ * version guard keeps confirmed data: an older profile still marks the entry
+ * ready for the panel but never rolls newer fields back, and a removed
+ * conversation keeps owning nothing. Local drafts live in `profileEdits` and
+ * are deliberately untouched, so editing survives another employee's save.
+ */
+export function mergeProfile(state: InboxState, profile: VisitorProfile): void {
+  if (state.events.removed[profile.conversationId] !== undefined) return;
+  const previous = state.profiles[profile.conversationId];
+  if (previous?.data && previous.data.version > profile.version) {
+    previous.status = "ready";
+    previous.error = null;
+    return;
+  }
+  state.profiles[profile.conversationId] = {
+    data: profile,
+    status: "ready",
+    error: null,
+  };
 }
 
 export function mergeMessage(state: InboxState, message: InboxMessage): string {

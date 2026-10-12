@@ -4,9 +4,11 @@ import com.dudu.duduserver.common.R;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.auth.Me;
 import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
+import com.dudu.duduserver.dto.DeskProfileUpdateDTO;
 import com.dudu.duduserver.dto.DeskSendDTO;
 import com.dudu.duduserver.dto.DeskStatusDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
+import com.dudu.duduserver.service.DeskProfileService;
 import com.dudu.duduserver.service.DeskReplyService;
 import com.dudu.duduserver.service.DeskVisitorService;
 import com.dudu.duduserver.vo.DeskCapabilityVO;
@@ -14,6 +16,7 @@ import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessagePageVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskVisitorPageVO;
+import com.dudu.duduserver.vo.DeskVisitorProfileVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,8 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Desk 访客资源入口：授权范围内的摘要列表查询、单访客当前快照、按需历史分页、
- * 文本回复、回复能力与结束 / 继续接待；组合筛选与分页用 POST + JSON 请求体，
- * 状态变更用 PUT + JSON 请求体，历史与能力简单查询用 GET，响应元信息容纳在 R.data。
+ * 文本回复、回复能力、结束 / 继续接待与共享名片读取 / 保存；组合筛选与分页用
+ * POST + JSON 请求体，状态与名片变更用 PUT + JSON 请求体，历史、能力与名片简单查询
+ * 用 GET，响应元信息容纳在 R.data。
  */
 @RestController
 @RequiredArgsConstructor
@@ -36,6 +40,7 @@ public class DeskVisitorController {
 
     private final DeskVisitorService deskVisitorService;
     private final DeskReplyService deskReplyService;
+    private final DeskProfileService deskProfileService;
 
     // 查询体可省略：全部字段都有契约缺省值，省略时按授权范围返回默认页
     @PostMapping("/query")
@@ -69,6 +74,20 @@ public class DeskVisitorController {
     @GetMapping("/{visitorId}/capability")
     public R<DeskCapabilityVO> capability(@Me JwtUser user, @PathVariable String visitorId) {
         return R.ok(deskReplyService.capability(user, visitorId));
+    }
+
+    // 名片读取：渠道资料三态原样返回，不重复身份字段
+    @GetMapping("/{visitorId}/profile")
+    public R<DeskVisitorProfileVO> profile(@Me JwtUser user, @PathVariable String visitorId) {
+        return R.ok(deskProfileService.profile(user, visitorId));
+    }
+
+    // 名片保存：只接受标签与备注，HTTP 返回与 profile 推送共用同一份完整名片
+    @PutMapping("/{visitorId}/profile")
+    public R<DeskVisitorProfileVO> saveProfile(@Me JwtUser user,
+                                               @PathVariable String visitorId,
+                                               @RequestBody DeskProfileUpdateDTO request) {
+        return R.ok(deskProfileService.save(user, visitorId, request));
     }
 
     // 结束（closed）或继续（needs-reply）接待：HTTP 返回与 conversation 推送共用同一份会话对象

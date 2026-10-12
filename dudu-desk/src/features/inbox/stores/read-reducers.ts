@@ -1,14 +1,19 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
 import type { InboxMessage, Page, VisitorProfile } from "../types";
-import { mergeMessage, orderMessages } from "./live-merge";
+import { mergeMessage, mergeProfile, orderMessages } from "./live-merge";
 import { emptyLoad, type InboxState } from "./state";
 
 /**
  * Re-exported from the Live events merge kernel (live-merge.ts) so existing
  * import sites keep working; new code imports from live-merge.ts directly.
  */
-export { mergeConversation, mergeMessage, orderMessages } from "./live-merge";
+export {
+  mergeConversation,
+  mergeMessage,
+  mergeProfile,
+  orderMessages,
+} from "./live-merge";
 
 export const readReducers = {
   conversationSelected(
@@ -71,17 +76,7 @@ export const readReducers = {
     };
   },
   profileLoaded(state: InboxState, action: PayloadAction<VisitorProfile>) {
-    const previous = state.profiles[action.payload.conversationId]?.data;
-    if (previous && previous.version > action.payload.version) {
-      state.profiles[action.payload.conversationId].status = "ready";
-      state.profiles[action.payload.conversationId].error = null;
-      return;
-    }
-    state.profiles[action.payload.conversationId] = {
-      data: action.payload,
-      status: "ready",
-      error: null,
-    };
+    mergeProfile(state, action.payload);
   },
   profileFailed(
     state: InboxState,

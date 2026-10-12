@@ -173,6 +173,11 @@ export type InboxEvent = {
       capability: ReplyCapability;
       version: number;
     }
+  | {
+      /** 渠道资料或共享标签/备注保存后：完整名片，不重复身份字段。 */
+      type: "profile";
+      profile: VisitorProfile;
+    }
   | { type: "removed"; conversationId: string; version: number }
 );
 

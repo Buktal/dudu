@@ -61,6 +61,19 @@ class FakeSocket {
   }
 }
 
+// 独立于实现写出的名片报文：渠道资料三态与共享标签/备注
+const SERVER_PROFILE = {
+  conversationId: "41",
+  version: 3,
+  fields: [
+    { label: "备注名", value: { state: "available", value: "张先生" } },
+    { label: "手机", value: { state: "empty" } },
+    { label: "公司", value: { state: "not-provided" } },
+  ],
+  tags: ["重点客户", "VIP"],
+  note: "记得跟进\n已下单",
+};
+
 function fakeSocket(): FakeSocket {
   return new FakeSocket();
 }
@@ -299,6 +312,44 @@ describe("http inbox live subscription", () => {
           version: 4,
           unread: 0,
         }),
+      },
+    ]);
+  });
+
+  it("maps a profile frame to a profile event with all three channel field states", () => {
+    seed("stored-token");
+    const socket = fakeSocket();
+    const api = createHttpInboxApi({
+      origin: ORIGIN,
+      socket: () => socket as unknown as DeskSocket,
+    });
+    const events: InboxEvent[] = [];
+
+    api.subscribe({
+      context: CONTEXT,
+      signal: new AbortController().signal,
+      onConnection: () => {},
+      onEvent: (event) => events.push(event),
+    });
+    socket.receive({ type: "ready" });
+    socket.receive({ type: "profile", profile: SERVER_PROFILE });
+
+    expect(events).toEqual([
+      {
+        type: "profile",
+        context: CONTEXT,
+        // 三态渠道资料原样进入事件，不猜测缺失项
+        profile: {
+          conversationId: "41",
+          version: 3,
+          fields: [
+            { label: "备注名", value: { state: "available", value: "张先生" } },
+            { label: "手机", value: { state: "empty" } },
+            { label: "公司", value: { state: "not-provided" } },
+          ],
+          tags: ["重点客户", "VIP"],
+          note: "记得跟进\n已下单",
+        },
       },
     ]);
   });

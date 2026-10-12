@@ -15,6 +15,7 @@ import type {
   ReplyCapability,
   SendKind,
   VisitorIdentity,
+  VisitorProfile,
   WorkContext,
 } from "./types";
 
@@ -121,6 +122,36 @@ function parseConversation(value: unknown): Conversation {
         : integer(value.messageCount),
     version: integer(value.version),
     capability: parseCapability(value.capability),
+  };
+}
+
+function parseProfileField(value: unknown): VisitorProfile["fields"][number] {
+  if (!isRecord(value) || !isRecord(value.value))
+    throw new TypeError("渠道资料项格式不完整");
+  const label = text(value.label);
+  const state = value.value.state;
+  // 缺失与空内容各有明确状态，不合并也不填假值
+  if (state === "available")
+    return { label, value: { state, value: text(value.value.value) } };
+  if (state === "empty" || state === "not-provided")
+    return { label, value: { state } };
+  throw new TypeError("渠道资料取值格式不完整");
+}
+
+function parseProfile(value: unknown): VisitorProfile {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.fields) ||
+    !Array.isArray(value.tags) ||
+    value.tags.some((tag) => typeof tag !== "string")
+  )
+    throw new TypeError("访客名片格式不完整");
+  return {
+    conversationId: nonEmptyText(value.conversationId),
+    version: integer(value.version),
+    fields: value.fields.map(parseProfileField),
+    tags: value.tags as string[],
+    note: text(value.note),
   };
 }
 
@@ -259,8 +290,8 @@ function writeConversationStatus(
   });
 }
 
-// 实时报文映射：message 帧携带本条消息引起的访客摘要，conversation 帧携带状态变更后的摘要；
-// 其余报文类型由后续实施票接通
+// 实时报文映射：message 帧携带本条消息引起的访客摘要，conversation 帧携带状态变更后的摘要，
+// profile 帧携带渠道资料或标签/备注保存后的完整名片；其余报文类型由后续实施票接通
 function parseLiveEvent(
   value: unknown,
   context: WorkContext,
@@ -272,6 +303,12 @@ function parseLiveEvent(
         type: "conversation",
         context,
         conversation: parseConversation(value.conversation),
+      };
+    if (value.type === "profile")
+      return {
+        type: "profile",
+        context,
+        profile: parseProfile(value.profile),
       };
     if (value.type !== "message") return undefined;
     return {
@@ -290,12 +327,13 @@ function parseLiveEvent(
 }
 
 /**
- * 真实接待适配器（访客摘要、按需历史、文本回复、结束 / 继续与实时通道）：列表查询走
- * POST /api/desk/visitors/query，历史分页走 GET /api/desk/visitors/{visitorId}/messages
- * （最近页无 beforeSequence，更早页用上一页 nextCursor）；回复走
- * POST /api/desk/visitors/{visitorId}/messages，能力走同一资源的 capability，
+ * 真实接待适配器（访客摘要、按需历史、文本回复、共享名片、结束 / 继续与实时通道）：
+ * 列表查询走 POST /api/desk/visitors/query，历史分页走
+ * GET /api/desk/visitors/{visitorId}/messages（最近页无 beforeSequence，更早页用上一页
+ * nextCursor）；回复走 POST /api/desk/visitors/{visitorId}/messages，能力走同一资源的
+ * capability，名片读取 / 保存走 GET/PUT /api/desk/visitors/{visitorId}/profile，
  * 结束 / 继续走 PUT /api/desk/visitors/{visitorId}/status；订阅连接 /ws/desk，
- * ready 后接收 message 与 conversation 报文；资料等其余能力沿用 unavailableInboxApi
+ * ready 后接收 message、conversation 与 profile 报文；其余能力沿用 unavailableInboxApi
  * 的语义；token 由账户适配器写入会话，这里按请求读取。
  */
 export function createHttpInboxApi(
@@ -377,6 +415,27 @@ export function createHttpInboxApi(
         signal,
         options.fetcher,
       );
+    },
+    async readProfile({ conversationId, signal }) {
+      return requestDesk({
+        url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/profile`,
+        token: readDeskToken(origin) ?? undefined,
+        signal,
+        parse: parseProfile,
+        fetcher: options.fetcher,
+      });
+    },
+    async saveProfile({ conversationId, tags, note, signal }) {
+      // 契约只接受标签与备注：渠道资料由入站管道维护，版本冲突不由服务端拒绝
+      return requestDesk({
+        url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/profile`,
+        method: "PUT",
+        token: readDeskToken(origin) ?? undefined,
+        signal,
+        body: { tags, note },
+        parse: parseProfile,
+        fetcher: options.fetcher,
+      });
     },
     async getCapability({ conversationId, signal }) {
       return requestDesk({

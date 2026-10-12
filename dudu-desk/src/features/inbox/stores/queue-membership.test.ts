@@ -159,6 +159,20 @@ describe("needsQueueRefreshForEvent", () => {
       ).toBe(false);
     }
   });
+
+  it("fires for a shared profile update only when the search view can move", () => {
+    expect(
+      needsQueueRefreshForEvent(
+        "profile",
+        { ...emptyQuery, search: "保修" },
+        counts,
+      ),
+    ).toBe(true);
+    // 名片更新不是消息活动：没有搜索词时排序与计数都不变，不重查
+    expect(needsQueueRefreshForEvent("profile", emptyQuery, counts)).toBe(
+      false,
+    );
+  });
 });
 
 describe("queue reload predicates", () => {

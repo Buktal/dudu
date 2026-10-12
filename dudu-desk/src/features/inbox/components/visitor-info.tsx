@@ -6,6 +6,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,10 +60,15 @@ export function VisitorInfo({
   );
   const id = useId();
   const [tagInputReset, setTagInputReset] = useState(0);
+  const [overwritePending, setOverwritePending] = useState(false);
   const profile = loaded?.data;
   const dirty = !!edit && edit.revision !== edit.savedRevision;
   const saving = edit?.status === "saving";
   const showEdit = dirty || saving;
+  // 服务端版本高于本次编辑的基线：别人已保存过名片，本地输入保留但保存前要确认一次
+  const serverUpdated =
+    !!profile && !!edit && profile.version > edit.baseVersion;
+  const outdated = dirty && serverUpdated;
   const saveStatus = saving
     ? "正在保存本次修改…"
     : edit?.status === "error"
@@ -72,6 +78,28 @@ export function VisitorInfo({
         : edit?.status === "saved"
           ? "已保存"
           : null;
+
+  // 保存入口：编辑期间收到更新时先提示一次是否覆盖，确认后按普通保存提交
+  function requestSave() {
+    if (saving) return;
+    if (outdated) {
+      setOverwritePending(true);
+      return;
+    }
+    void dispatch(saveVisitorProfile(conversationId));
+  }
+
+  function confirmOverwrite() {
+    setOverwritePending(false);
+    void dispatch(saveVisitorProfile(conversationId, { overwrite: true }));
+  }
+
+  // 取消覆盖显示最新服务端资料：放弃本地输入，不发起保存
+  function cancelOverwrite() {
+    setOverwritePending(false);
+    dispatch(discardProfileEdits(conversationId));
+    setTagInputReset((value) => value + 1);
+  }
 
   useEffect(() => {
     if (conversation && (!loaded || loaded.status === "idle"))
@@ -103,6 +131,11 @@ export function VisitorInfo({
           {(dirty || saving) && (
             <Badge variant="secondary" className="text-[10px]">
               {saving ? "保存中" : "未保存"}
+            </Badge>
+          )}
+          {outdated && (
+            <Badge variant="outline" className="text-[10px]">
+              资料已被更新
             </Badge>
           )}
         </div>
@@ -200,7 +233,7 @@ export function VisitorInfo({
             aria-describedby={saveStatus ? `${id}-save-status` : undefined}
             onSubmit={(event) => {
               event.preventDefault();
-              void dispatch(saveVisitorProfile(conversationId));
+              requestSave();
             }}
           >
             <FieldGroup className="gap-3">
@@ -249,6 +282,37 @@ export function VisitorInfo({
                 </p>
               </div>
             )}
+            {overwritePending && (
+              <Alert
+                variant="destructive"
+                role="alertdialog"
+                aria-label="确认覆盖资料"
+                className="rounded-xl px-3 py-2.5"
+              >
+                <AlertTitle className="text-xs">资料已被他人更新</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2 text-[11px]">
+                  资料已被他人更新，继续保存会覆盖对方的修改。
+                  <span className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={confirmOverwrite}
+                    >
+                      确认覆盖
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={cancelOverwrite}
+                    >
+                      取消
+                    </Button>
+                  </span>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="flex flex-wrap gap-2 px-1">
               <Button type="submit" size="sm" disabled={!dirty || saving}>
                 {saving && (
@@ -269,6 +333,7 @@ export function VisitorInfo({
                 size="sm"
                 disabled={!dirty || saving}
                 onClick={() => {
+                  setOverwritePending(false);
                   dispatch(discardProfileEdits(conversationId));
                   setTagInputReset((value) => value + 1);
                 }}

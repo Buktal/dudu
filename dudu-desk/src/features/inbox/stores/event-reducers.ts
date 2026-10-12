@@ -14,6 +14,7 @@ import {
   holdsMessages,
   mergeConversation,
   mergeMessage,
+  mergeProfile,
   orderMessages,
 } from "./live-merge";
 import { applyQueuePageMeta, rewriteQueueIds } from "./queue-membership";
@@ -211,6 +212,10 @@ export const eventReducers = {
           id: event.messageId ?? message.id,
           clientRequestId: event.clientRequestId ?? message.clientRequestId,
         });
+    }
+    if (event.type === "profile") {
+      // 渠道资料或共享标签/备注保存后：查看界面即时刷新，编辑草稿留在 profileEdits 不受影响
+      mergeProfile(state, event.profile);
     }
     if (event.type === "capability") {
       const previous = state.events.capabilities[event.conversationId];

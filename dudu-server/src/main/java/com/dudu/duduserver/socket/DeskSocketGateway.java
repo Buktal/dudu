@@ -6,6 +6,7 @@ import com.dudu.duduserver.service.DeskAuthService;
 import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
+import com.dudu.duduserver.vo.DeskVisitorProfileVO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Desk 实时网关：按员工维护多个已连接会话（多设备），只向认证成功且当前有权的
- * 已连接员工推送契约第 5 节报文；本票实现 message 与 conversation 报文（消息引起的
- * 访客更新合并在 message 中），profile / access-changed 由后续票接入。没有 eventId、
+ * 已连接员工推送契约第 5 节报文；已接入 message、conversation 与 profile 报文
+ * （消息引起的访客更新合并在 message 中），access-changed 由后续票接入。没有 eventId、
  * ack 与持久游标，未认证会话与离线员工不接收业务数据。
  */
 @Slf4j
@@ -108,6 +109,17 @@ public class DeskSocketGateway {
         Map<String, Object> frame = new LinkedHashMap<>();
         frame.put("type", "conversation");
         frame.put("conversation", conversation);
+        broadcast(companyId, companyChannelId, frame);
+    }
+
+    /**
+     * 推送一张名片变更（渠道资料或共享标签/备注保存后）：只发完整名片对象；
+     * 发给当前有权接待该账号的已连接员工（含操作者本人）。
+     */
+    public void pushProfile(Long companyId, Long companyChannelId, DeskVisitorProfileVO profile) {
+        Map<String, Object> frame = new LinkedHashMap<>();
+        frame.put("type", "profile");
+        frame.put("profile", profile);
         broadcast(companyId, companyChannelId, frame);
     }
 
