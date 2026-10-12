@@ -25,16 +25,13 @@ import java.nio.charset.StandardCharsets;
 public class WechatMpMediaReader implements ChannelMediaReader {
 
     private static final String DEFAULT_API_BASE = "https://api.weixin.qq.com";
-    private static final String PATH_TOKEN = "/cgi-bin/token";
     private static final String PATH_MEDIA_GET = "/cgi-bin/media/get";
-    private static final String GRANT_TYPE_CLIENT_CREDENTIAL = "client_credential";
-    private static final String KEY_ACCESS_TOKEN = "access_token";
-    private static final String KEY_ERROR_CODE = "errcode";
-    private static final String KEY_ERROR_MSG = "errmsg";
     private static final String KEY_VIDEO_URL = "video_url";
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
     private final RestClient restClient;
+
+    private final WechatMpAccessTokenClient accessTokenClient;
 
     // 视频素材的 video_url 是渠道给出的完整下载地址，用无 baseUrl 的客户端直取
     private final RestClient downloadClient;
@@ -42,6 +39,7 @@ public class WechatMpMediaReader implements ChannelMediaReader {
     public WechatMpMediaReader(RestClient.Builder builder,
                                @Value("${dudu.channel.wechat.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
         this.restClient = builder.baseUrl(apiBase).build();
+        this.accessTokenClient = new WechatMpAccessTokenClient(restClient);
         this.downloadClient = RestClient.builder().build();
     }
 
@@ -51,22 +49,14 @@ public class WechatMpMediaReader implements ChannelMediaReader {
         if (restriction != null) {
             return ChannelMediaResult.failed(restriction);
         }
-        WechatMpSendCredentials credentials = WechatMpSendCredentials.of(account);
+        WechatMpCredentials credentials = WechatMpCredentials.of(account);
         try {
-            JSONObject tokenResponse = JSONUtil.parseObj(restClient.get()
-                .uri(PATH_TOKEN + "?grant_type=" + GRANT_TYPE_CLIENT_CREDENTIAL + "&appid={appid}&secret={secret}",
-                    credentials.appId(), credentials.appSecret())
-                .retrieve()
-                .body(String.class));
-            if (errorCode(tokenResponse) != 0) {
-                return ChannelMediaResult.failed("获取微信接口凭据失败：" + error(tokenResponse));
-            }
-            String accessToken = tokenResponse.getStr(KEY_ACCESS_TOKEN);
-            if (accessToken == null || accessToken.isEmpty()) {
-                return ChannelMediaResult.failed("获取微信接口凭据失败：响应缺少 access_token");
+            WechatMpAccessTokenClient.TokenResult token = accessTokenClient.fetch(credentials);
+            if (!token.succeeded()) {
+                return ChannelMediaResult.failed(token.failureReason());
             }
             ResponseEntity<byte[]> response = restClient.get()
-                .uri(PATH_MEDIA_GET + "?access_token={token}&media_id={mediaId}", accessToken, externalMediaId)
+                .uri(PATH_MEDIA_GET + "?access_token={token}&media_id={mediaId}", token.accessToken(), externalMediaId)
                 .retrieve()
                 .toEntity(byte[].class);
             byte[] body = response.getBody() == null ? new byte[0] : response.getBody();
@@ -94,8 +84,8 @@ public class WechatMpMediaReader implements ChannelMediaReader {
             return ChannelMediaResult.media(
                 download.getBody() == null ? new byte[0] : download.getBody(), contentType(download));
         }
-        if (errorCode(response) != 0) {
-            return ChannelMediaResult.failed("微信素材读取失败：" + error(response));
+        if (WechatMpErrors.code(response) != 0) {
+            return ChannelMediaResult.failed("微信素材读取失败：" + WechatMpErrors.describe(response));
         }
         return ChannelMediaResult.failed("微信素材读取失败：响应无法识别");
     }
@@ -114,20 +104,5 @@ public class WechatMpMediaReader implements ChannelMediaReader {
     private String contentType(ResponseEntity<?> response) {
         MediaType contentType = response.getHeaders().getContentType();
         return contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString();
-    }
-
-    private int errorCode(JSONObject response) {
-        Integer code = response.getInt(KEY_ERROR_CODE, 0);
-        return code == null ? 0 : code;
-    }
-
-    // 渠道原始说明：errcode + errmsg；缺少时如实说明响应无法识别
-    private String error(JSONObject response) {
-        Integer code = response.getInt(KEY_ERROR_CODE);
-        String message = response.getStr(KEY_ERROR_MSG);
-        if (code == null && message == null) {
-            return "响应无法识别";
-        }
-        return code + " " + (message == null ? "" : message);
     }
 }

@@ -4,23 +4,11 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.dudu.duduserver.config.auth.JwtManager;
 import com.dudu.duduserver.constant.ChannelEnum;
-import com.dudu.duduserver.constant.EnableStatusEnum;
-import com.dudu.duduserver.constant.UserRoleEnum;
-import com.dudu.duduserver.dto.CompanyAdminInitDTO;
-import com.dudu.duduserver.dto.CompanyCreateDTO;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.entity.UserGroupMemberDO;
-import com.dudu.duduserver.service.CompanyChannelService;
-import com.dudu.duduserver.service.CompanyService;
-import com.dudu.duduserver.service.UserGroupMemberService;
-import com.dudu.duduserver.service.UserGroupService;
-import com.dudu.duduserver.service.UserService;
-import com.dudu.duduserver.util.PasswordHasher;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -28,34 +16,20 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.client.standard.StandardWebSocketClient;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * 权限变更与工作区清理在独立 MySQL、真实 HTTP 与真实 WebSocket 边界验收：
@@ -69,9 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "DUDU_INTEGRATION_TEST", matches = "true")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class DeskAccessIntegrationTest {
+class DeskAccessIntegrationTest extends DeskIntegrationSupport {
 
-    private static final String PASSWORD = "password123";
     private static final long COMPANY_ID = 794001L;
     private static final long OTHER_COMPANY_ID = 794002L;
     private static final long DIRTY_VISITOR_ID = 794101L;
@@ -85,15 +58,7 @@ class DeskAccessIntegrationTest {
         registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
     }
 
-    @LocalServerPort int port;
-    @Autowired MockMvc mvc;
-    @Autowired CompanyService companies;
-    @Autowired UserService users;
-    @Autowired UserGroupService groups;
-    @Autowired UserGroupMemberService members;
-    @Autowired CompanyChannelService channels;
-    @Autowired JwtManager jwtManager;
-    @Autowired JdbcTemplate jdbc;
+    @Autowired PlatformTransactionManager transactionManager;
 
     private long moveOldGroup;
     private long moveNewGroup;
@@ -126,12 +91,10 @@ class DeskAccessIntegrationTest {
     private String noAccessToken;
     private String otherToken;
 
-    private final List<WebSocketSession> openSessions = new ArrayList<>();
-
     @BeforeAll
     void seed() throws Exception {
-        companies.createCompany(company(COMPANY_ID, "accessowner"), 1L);
-        companies.createCompany(company(OTHER_COMPANY_ID, "otherowner"), 1L);
+        companies.createCompany(company(COMPANY_ID, "accessowner", "权限验收企业"), 1L);
+        companies.createCompany(company(OTHER_COMPANY_ID, "otherowner", "权限验收企业"), 1L);
 
         // 账号换组场景：账号随组迁移，原组与新组各有一名只属于该组的员工
         UserGroupDO oldGroup = group(COMPANY_ID, "迁出组");
@@ -189,16 +152,6 @@ class DeskAccessIntegrationTest {
         multiToken = login(COMPANY_ID, "access.multi");
         noAccessToken = login(COMPANY_ID, "access.none");
         otherToken = login(OTHER_COMPANY_ID, "access.other");
-    }
-
-    @AfterEach
-    void closeSockets() throws Exception {
-        for (WebSocketSession session : openSessions) {
-            if (session.isOpen()) {
-                session.close(CloseStatus.NORMAL);
-            }
-        }
-        openSessions.clear();
     }
 
     @Test
@@ -366,6 +319,30 @@ class DeskAccessIntegrationTest {
     }
 
     @Test
+    void accessChangedNotificationFollowsTransactionOutcome() throws Exception {
+        SocketClient owner = connectAndAuth(ownerToken);
+        UserGroupDO txGroup = group(COMPANY_ID, "事务组");
+        UserDO txMember = plainUser(COMPANY_ID, "access.tx");
+
+        // 事务回滚：成员关系与范围变更事件一起回滚，不产生任何推送
+        new TransactionTemplate(transactionManager).execute(status -> {
+            members.save(member(COMPANY_ID, txMember.getUserId(), txGroup.getGroupId()));
+            status.setRollbackOnly();
+            return null;
+        });
+        assertThat((Object) owner.next(Duration.ofMillis(700))).isNull();
+        assertThat(members.canAccessGroup(txMember.getUserId(), txGroup.getGroupId())).isFalse();
+
+        // 事务提交：提交后才收敛为 access-changed 报文
+        new TransactionTemplate(transactionManager).execute(status -> {
+            members.save(member(COMPANY_ID, txMember.getUserId(), txGroup.getGroupId()));
+            return null;
+        });
+        assertAccessChanged(owner);
+        assertThat(members.canAccessGroup(txMember.getUserId(), txGroup.getGroupId())).isTrue();
+    }
+
+    @Test
     void dirtyRelationsWithoutForeignKeysDoNotLeakAccessOrData() throws Exception {
         // 脏成员关系：本企业员工被声明属于其他企业的组，仍不获得任何范围
         members.save(member(COMPANY_ID, noAccess.getUserId(), otherGroup));
@@ -428,90 +405,51 @@ class DeskAccessIntegrationTest {
     }
 
     private JSONObject access(String token) throws Exception {
-        JSONObject response = JSONUtil.parseObj(mvc.perform(get("/api/desk/profile")
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
-        assertThat(response.getInt("code")).isZero();
-        return response.getJSONObject("data").getJSONObject("access");
+        return data(JSONUtil.parseObj(deskGet(token, "/api/desk/profile"))).getJSONObject("access");
     }
 
     private JSONObject query(String token, String search) throws Exception {
-        JSONObject response = JSONUtil.parseObj(mvc.perform(post("/api/desk/visitors/query")
-                .header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"search\": \"%s\"}".formatted(search)))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
-        assertThat(response.getInt("code")).isZero();
-        return response.getJSONObject("data");
+        return data(JSONUtil.parseObj(deskPost(token, "/api/desk/visitors/query",
+            "{\"search\": \"%s\"}".formatted(search))));
     }
 
     private JSONObject history(String token, Long visitorId) throws Exception {
-        JSONObject response = JSONUtil.parseObj(historyResponse(token, visitorId));
-        assertThat(response.getInt("code")).isZero();
-        return response.getJSONObject("data");
+        return data(JSONUtil.parseObj(historyResponse(token, visitorId)));
     }
 
     private String historyResponse(String token, Long visitorId) throws Exception {
-        return mvc.perform(get("/api/desk/visitors/" + visitorId + "/messages")
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return deskGet(token, "/api/desk/visitors/" + visitorId + "/messages");
     }
 
     private String getVisitor(String token, Long visitorId) throws Exception {
-        return mvc.perform(get("/api/desk/visitors/" + visitorId)
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return deskGet(token, "/api/desk/visitors/" + visitorId);
     }
 
     private String readProfile(String token, Long visitorId) throws Exception {
-        return mvc.perform(get("/api/desk/visitors/" + visitorId + "/profile")
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return deskGet(token, "/api/desk/visitors/" + visitorId + "/profile");
     }
 
     private String sendText(String token, Long visitorId, String text, String clientRequestId) throws Exception {
-        return mvc.perform(post("/api/desk/visitors/" + visitorId + "/messages")
-                .header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"clientRequestId\": \"%s\", \"text\": \"%s\"}".formatted(clientRequestId, text)))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return deskPost(token, "/api/desk/visitors/" + visitorId + "/messages",
+            "{\"clientRequestId\": \"%s\", \"text\": \"%s\"}".formatted(clientRequestId, text));
     }
 
     private String saveProfile(String token, Long visitorId) throws Exception {
-        return mvc.perform(put("/api/desk/visitors/" + visitorId + "/profile")
-                .header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"tags\": [\"越权\"], \"note\": \"越权\"}"))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return deskPut(token, "/api/desk/visitors/" + visitorId + "/profile",
+            "{\"tags\": [\"越权\"], \"note\": \"越权\"}");
     }
 
     private String capability(String token, Long visitorId) throws Exception {
-        return mvc.perform(get("/api/desk/visitors/" + visitorId + "/capability")
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return deskGet(token, "/api/desk/visitors/" + visitorId + "/capability");
     }
 
     private String updateStatus(String token, Long visitorId, String status) throws Exception {
-        return mvc.perform(put("/api/desk/visitors/" + visitorId + "/status")
-                .header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\": \"%s\"}".formatted(status)))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return deskPut(token, "/api/desk/visitors/" + visitorId + "/status",
+            "{\"status\": \"%s\"}".formatted(status));
     }
 
     private String media(String token, long messageId) throws Exception {
-        return mvc.perform(get("/api/desk/messages/" + messageId + "/media")
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-    }
-
-    private int code(String response) {
-        return JSONUtil.parseObj(response).getInt("code");
-    }
-
-    private List<String> accountIds(JSONObject access) {
-        return access.getJSONArray("accounts").stream()
-            .map(item -> ((JSONObject) item).getStr("companyChannelId")).toList();
+        return deskGet(token, "/api/desk/messages/" + messageId + "/media");
     }
 
     private int callback(long channelId, String token, String body) throws Exception {
@@ -540,107 +478,5 @@ class DeskAccessIntegrationTest {
             <CreateTime>%d</CreateTime><MsgType><![CDATA[text]]></MsgType>
             <Content><![CDATA[%s]]></Content><MsgId>%s</MsgId></xml>
             """.formatted(toUser, fromUser, DateUtil.currentSeconds(), text, msgId);
-    }
-
-    private SocketClient connectAndAuth(String token) throws Exception {
-        SocketClient client = new SocketClient();
-        WebSocketSession session = new StandardWebSocketClient()
-            .execute(client, "ws://127.0.0.1:" + port + "/ws/desk")
-            .get(5, TimeUnit.SECONDS);
-        openSessions.add(session);
-        client.session = session;
-        session.sendMessage(new TextMessage(JSONUtil.createObj().set("type", "auth").set("token", token).toString()));
-        JSONObject ready = client.next(Duration.ofSeconds(5));
-        assertThat((Object) ready).isNotNull();
-        assertThat(ready.getStr("type")).isEqualTo("ready");
-        return client;
-    }
-
-    private String login(long companyId, String username) throws Exception {
-        String body = mvc.perform(post("/api/desk/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {"companyId": "%s", "username": "%s", "password": "%s"}
-                    """.formatted(companyId, username, PASSWORD)))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-        JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
-        assertThat(data.getStr("token")).isNotBlank();
-        return data.getStr("token");
-    }
-
-    private CompanyCreateDTO company(long companyId, String adminUsername) {
-        return new CompanyCreateDTO(String.valueOf(companyId), "权限验收企业", null, null, null,
-            new CompanyAdminInitDTO(adminUsername, PASSWORD, null));
-    }
-
-    private UserGroupDO group(long companyId, String name) {
-        UserGroupDO group = new UserGroupDO();
-        group.setCompanyId(companyId);
-        group.setGroupName(name);
-        groups.save(group);
-        return group;
-    }
-
-    private long channel(long companyId, long groupId, ChannelEnum channel, String accountName, String token) {
-        CompanyChannelDO account = new CompanyChannelDO();
-        account.setCompanyId(companyId);
-        account.setGroupId(groupId);
-        account.setChannel(channel);
-        account.setAccountName(accountName);
-        account.setChannelInfo(Map.of("token", token));
-        channels.save(account);
-        return account.getCompanyChannelId();
-    }
-
-    private UserDO plainUser(long companyId, String username) {
-        return user(companyId, username, UserRoleEnum.USER);
-    }
-
-    private UserDO adminUser(long companyId, String username) {
-        return user(companyId, username, UserRoleEnum.CONSOLE);
-    }
-
-    private UserDO user(long companyId, String username, UserRoleEnum role) {
-        UserDO user = new UserDO();
-        user.setCompanyId(companyId);
-        user.setUsername(username);
-        user.setName(username);
-        user.setPasswordHash(PasswordHasher.hash(PASSWORD));
-        user.setRole(role);
-        user.setStatus(EnableStatusEnum.ENABLED);
-        users.save(user);
-        return user;
-    }
-
-    private UserGroupMemberDO member(long companyId, long userId, long groupId) {
-        UserGroupMemberDO member = new UserGroupMemberDO();
-        member.setCompanyId(companyId);
-        member.setUserId(userId);
-        member.setGroupId(groupId);
-        return member;
-    }
-
-    /**
-     * 真实 WebSocket 客户端：异步收集服务端报文，供断言 ready 与推送帧。
-     */
-    private static final class SocketClient extends TextWebSocketHandler {
-
-        private final BlockingQueue<JSONObject> frames = new LinkedBlockingQueue<>();
-        private final CountDownLatch closed = new CountDownLatch(1);
-        private WebSocketSession session;
-
-        @Override
-        protected void handleTextMessage(WebSocketSession session, TextMessage message) {
-            frames.add(JSONUtil.parseObj(message.getPayload()));
-        }
-
-        @Override
-        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-            closed.countDown();
-        }
-
-        JSONObject next(Duration timeout) throws InterruptedException {
-            return frames.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
-        }
     }
 }

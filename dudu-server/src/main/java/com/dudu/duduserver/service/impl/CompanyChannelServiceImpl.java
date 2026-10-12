@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * 渠道接入账号领域服务实现，SQL 全部经 MyBatis-Plus 通用能力与 Lambda 构造器表达。
- * 账号的归属写入（新增、换组）改变接待范围，写操作完成后发布范围变更事件，
+ * 账号的归属写入（新增、换组）改变接待范围，写操作提交后发布范围变更事件，
  * 由实时网关通知本企业已连接员工重查工作区；管理端操作本身沿用现有写方法。
  */
 @Service
@@ -57,7 +57,7 @@ public class CompanyChannelServiceImpl extends ServiceImpl<CompanyChannelMapper,
         return updated;
     }
 
-    // 当前管理端归属写入是单条写操作自动提交，通知在写操作返回后发布；企业为空时不发布
+    // 通知在事务提交后发布（无事务的自动提交写入按当前语义立即发布）；企业为空时不发布
     private void publishAccessChanged(Long companyId) {
         if (companyId != null) {
             eventPublisher.publishEvent(new DeskAccessChangedEvent(companyId));

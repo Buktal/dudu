@@ -23,6 +23,6 @@ public final class ChannelMediaCapabilities {
         if (account.getChannel() != ChannelEnum.WECHAT) {
             return "当前渠道暂未接入素材读取";
         }
-        return WechatMpSendCredentials.of(account) == null ? "渠道素材凭据未配置" : null;
+        return WechatMpCredentials.of(account) == null ? "渠道素材凭据未配置" : null;
     }
 }

@@ -8,4 +8,9 @@ import com.dudu.duduserver.constant.UserRoleEnum;
  * exp 为过期时间（epoch 秒），序列化即标准 exp claim。
  */
 public record JwtUser(Long companyId, Long userId, UserRoleEnum role, Long exp) {
+
+    // Desk 员工身份：带企业归属且不是平台管理员；HTTP 守卫与 Socket 认证共用同一判定
+    public boolean deskEmployee() {
+        return companyId != null && role != UserRoleEnum.ADMIN;
+    }
 }

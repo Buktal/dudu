@@ -2,7 +2,6 @@ package com.dudu.duduserver.config.auth;
 
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
-import com.dudu.duduserver.constant.UserRoleEnum;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,7 @@ public class DeskAuthInterceptor implements HandlerInterceptor {
                              @NonNull HttpServletResponse response,
                              @NonNull Object handler) {
         JwtUser user = jwtManager.parseAuthorization(request.getHeader(HttpHeaders.AUTHORIZATION));
-        if (user.companyId() == null || user.role() == UserRoleEnum.ADMIN) {
+        if (!user.deskEmployee()) {
             throw new BizException(ApiEnum.FORBIDDEN);
         }
         return true;

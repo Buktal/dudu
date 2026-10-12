@@ -17,6 +17,7 @@ import com.dudu.duduserver.util.DeskConversationViews;
 import com.dudu.duduserver.util.DeskMessagePreview;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
+import com.dudu.duduserver.vo.DeskVisitorProfileVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -27,6 +28,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 入站信件实现：来源唯一键 (company_id, company_channel_id, external_user_id) 找到或创建访客，
@@ -54,7 +56,8 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         if (visitor == null) {
             visitor = createVisitor(account, inbound, now);
         }
-        applyChannelProfile(visitor, inbound, now);
+        // 渠道资料有变化的名片随来信一起在提交后推送；没有变化时为空
+        VisitorProfileDO profileChange = applyChannelProfile(visitor, inbound, now);
         // message_count 与 version 单条 UPDATE 原子递增，行锁下并发来信依次排队
         visitorService.update(Wrappers.<VisitorDO>lambdaUpdate()
             .eq(VisitorDO::getVisitorId, visitor.getVisitorId())
@@ -70,13 +73,14 @@ public class DeskInboundServiceImpl implements DeskInboundService {
             .set(VisitorDO::getLastMessagePreview, DeskMessagePreview.of(inbound.content()))
             .set(VisitorDO::getLastMessageTime, message.getCreateTime())
             .set(VisitorDO::getStatus, VisitorStatusEnum.NEEDS_REPLY)
-            .set(!awaitingReply(visitor), VisitorDO::getWaitingSince, now)
+            .set(!visitor.awaitingReply(), VisitorDO::getWaitingSince, now)
             .set(VisitorDO::getUpdateTime, now));
-        pushAfterCommit(account, visitorService.getById(visitor.getVisitorId()), message);
+        pushAfterCommit(account, visitorService.getById(visitor.getVisitorId()), message, profileChange);
     }
 
-    // 渠道资料名称与头像为可选：null 表示未提供、保留原值，空串与有效值按渠道给出的内容保存
-    private void applyChannelProfile(VisitorDO visitor, ChannelInboundMessage inbound, LocalDateTime now) {
+    // 渠道资料名称与头像为可选：null 表示未提供、保留原值，空串与有效值按渠道给出的内容保存；
+    // 返回确实变化的渠道资料名片（供 profile 推送），没有变化返回 null
+    private VisitorProfileDO applyChannelProfile(VisitorDO visitor, ChannelInboundMessage inbound, LocalDateTime now) {
         boolean nameChanged = inbound.name() != null && !inbound.name().equals(visitor.getName());
         boolean avatarChanged = inbound.avatarUrl() != null && !inbound.avatarUrl().equals(visitor.getAvatarUrl());
         if (nameChanged || avatarChanged) {
@@ -87,18 +91,28 @@ public class DeskInboundServiceImpl implements DeskInboundService {
                 .set(VisitorDO::getUpdateTime, now));
         }
         if (inbound.channelFields().isEmpty()) {
-            return;
+            return null;
         }
         VisitorProfileDO profile = visitorProfileService.getById(visitor.getVisitorId());
         if (profile == null) {
-            return;
+            return null;
+        }
+        List<Map<String, Object>> merged = ChannelInboundMessage.mergeFields(
+            profile.getChannelFields(), inbound.channelFields());
+        if (merged.equals(profile.getChannelFields())) {
+            // 渠道资料逐项一致：没有实际变化，不写库也不推送
+            return null;
         }
         // 资料按标签就地合并；JSON 列经实体类型处理器写入，避免更新包装器绕过 typeHandler
         VisitorProfileDO patch = new VisitorProfileDO();
         patch.setVisitorId(visitor.getVisitorId());
-        patch.setChannelFields(ChannelInboundMessage.mergeFields(profile.getChannelFields(), inbound.channelFields()));
+        patch.setChannelFields(merged);
         patch.setVersion(profile.getVersion() + 1);
         visitorProfileService.updateById(patch);
+        // 推送用的名片带上共享标签与备注，与 profile 接口返回形状一致
+        patch.setTags(profile.getTags());
+        patch.setNote(profile.getNote());
+        return patch;
     }
 
     private VisitorDO findVisitor(CompanyChannelDO account, String externalUserId) {
@@ -152,36 +166,42 @@ public class DeskInboundServiceImpl implements DeskInboundService {
             .eq(VisitorDO::getExternalUserId, externalUserId);
     }
 
-    // 已待回复且本轮计时已开始：保留 waiting_since，等待时长不因再次来信重置
-    private boolean awaitingReply(VisitorDO visitor) {
-        return visitor.getStatus() == VisitorStatusEnum.NEEDS_REPLY && visitor.getWaitingSince() != null;
-    }
-
-    // 事务提交后再推送：读到的摘要与查询接口一致；推送失败只记录，不回滚已保存的来信
-    private void pushAfterCommit(CompanyChannelDO account, VisitorDO visitor, MessageDO message) {
+    // 事务提交后再推送：读到的摘要与查询接口一致；渠道资料有变化时追加一次 profile 推送（不另发 conversation）；
+    // 推送失败只记录，不回滚已保存的来信
+    private void pushAfterCommit(CompanyChannelDO account, VisitorDO visitor, MessageDO message,
+                                 VisitorProfileDO profileChange) {
         DeskConversationVO conversation = DeskConversationViews.conversation(visitor, account);
         DeskMessageVO messageVO = DeskMessageVO.of(message, null);
+        DeskVisitorProfileVO profileVO = profileChange == null ? null : DeskVisitorProfileVO.of(profileChange);
         Long companyId = account.getCompanyId();
         Long companyChannelId = account.getCompanyChannelId();
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    notifyAuthorized(companyId, companyChannelId, messageVO, conversation);
+                    notifyAuthorized(companyId, companyChannelId, messageVO, conversation, profileVO);
                 }
             });
             return;
         }
-        notifyAuthorized(companyId, companyChannelId, messageVO, conversation);
+        notifyAuthorized(companyId, companyChannelId, messageVO, conversation, profileVO);
     }
 
-    private void notifyAuthorized(Long companyId, Long companyChannelId,
-                                  DeskMessageVO message, DeskConversationVO conversation) {
+    private void notifyAuthorized(Long companyId, Long companyChannelId, DeskMessageVO message,
+                                  DeskConversationVO conversation, DeskVisitorProfileVO profile) {
         try {
             deskSocketGateway.pushMessage(companyId, companyChannelId, message, conversation);
         } catch (RuntimeException e) {
             log.error("[desk-inbound] 推送来信失败, messageId={}, visitorId={}",
                 message.id(), conversation.id(), e);
+        }
+        if (profile == null) {
+            return;
+        }
+        try {
+            deskSocketGateway.pushProfile(companyId, companyChannelId, profile);
+        } catch (RuntimeException e) {
+            log.error("[desk-inbound] 推送渠道资料失败, visitorId={}", profile.conversationId(), e);
         }
     }
 }

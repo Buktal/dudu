@@ -24,19 +24,17 @@ import java.util.Map;
 public class WechatMpTextSender implements ChannelOutboundSender {
 
     private static final String DEFAULT_API_BASE = "https://api.weixin.qq.com";
-    private static final String PATH_TOKEN = "/cgi-bin/token";
     private static final String PATH_CUSTOM_SEND = "/cgi-bin/message/custom/send";
-    private static final String GRANT_TYPE_CLIENT_CREDENTIAL = "client_credential";
     private static final String MSG_TYPE_TEXT = "text";
-    private static final String KEY_ACCESS_TOKEN = "access_token";
-    private static final String KEY_ERROR_CODE = "errcode";
-    private static final String KEY_ERROR_MSG = "errmsg";
 
     private final RestClient restClient;
+
+    private final WechatMpAccessTokenClient accessTokenClient;
 
     public WechatMpTextSender(RestClient.Builder builder,
                               @Value("${dudu.channel.wechat.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
         this.restClient = builder.baseUrl(apiBase).build();
+        this.accessTokenClient = new WechatMpAccessTokenClient(restClient);
     }
 
     @Override
@@ -45,27 +43,19 @@ public class WechatMpTextSender implements ChannelOutboundSender {
         if (restriction != null) {
             return ChannelSendResult.failed(restriction);
         }
-        WechatMpSendCredentials credentials = WechatMpSendCredentials.of(account);
+        WechatMpCredentials credentials = WechatMpCredentials.of(account);
         try {
-            JSONObject tokenResponse = JSONUtil.parseObj(restClient.get()
-                .uri(PATH_TOKEN + "?grant_type=" + GRANT_TYPE_CLIENT_CREDENTIAL + "&appid={appid}&secret={secret}",
-                    credentials.appId(), credentials.appSecret())
-                .retrieve()
-                .body(String.class));
-            if (errorCode(tokenResponse) != 0) {
-                return ChannelSendResult.failed("获取微信接口凭据失败：" + error(tokenResponse));
-            }
-            String accessToken = tokenResponse.getStr(KEY_ACCESS_TOKEN);
-            if (accessToken == null || accessToken.isEmpty()) {
-                return ChannelSendResult.failed("获取微信接口凭据失败：响应缺少 access_token");
+            WechatMpAccessTokenClient.TokenResult token = accessTokenClient.fetch(credentials);
+            if (!token.succeeded()) {
+                return ChannelSendResult.failed(token.failureReason());
             }
             JSONObject response = JSONUtil.parseObj(restClient.post()
-                .uri(PATH_CUSTOM_SEND + "?access_token={token}", accessToken)
+                .uri(PATH_CUSTOM_SEND + "?access_token={token}", token.accessToken())
                 .body(payload(externalUserId, text))
                 .retrieve()
                 .body(String.class));
-            if (errorCode(response) != 0) {
-                return ChannelSendResult.failed("微信客服消息发送失败：" + error(response));
+            if (WechatMpErrors.code(response) != 0) {
+                return ChannelSendResult.failed("微信客服消息发送失败：" + WechatMpErrors.describe(response));
             }
             return ChannelSendResult.sent(null);
         } catch (RuntimeException e) {
@@ -83,20 +73,5 @@ public class WechatMpTextSender implements ChannelOutboundSender {
         payload.put("msgtype", MSG_TYPE_TEXT);
         payload.put("text", Map.of("content", text));
         return payload;
-    }
-
-    private int errorCode(JSONObject response) {
-        Integer code = response.getInt(KEY_ERROR_CODE, 0);
-        return code == null ? 0 : code;
-    }
-
-    // 渠道原始说明：errcode + errmsg；缺少时如实说明响应无法识别
-    private String error(JSONObject response) {
-        Integer code = response.getInt(KEY_ERROR_CODE);
-        String message = response.getStr(KEY_ERROR_MSG);
-        if (code == null && message == null) {
-            return "响应无法识别";
-        }
-        return code + " " + (message == null ? "" : message);
     }
 }

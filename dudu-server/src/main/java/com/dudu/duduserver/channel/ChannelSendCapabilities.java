@@ -23,6 +23,6 @@ public final class ChannelSendCapabilities {
         if (account.getChannel() != ChannelEnum.WECHAT) {
             return "当前渠道暂未接入发送";
         }
-        return WechatMpSendCredentials.of(account) == null ? "渠道发送凭据未配置" : null;
+        return WechatMpCredentials.of(account) == null ? "渠道发送凭据未配置" : null;
     }
 }

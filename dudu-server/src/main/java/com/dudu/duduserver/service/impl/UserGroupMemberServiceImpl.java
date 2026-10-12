@@ -82,7 +82,7 @@ public class UserGroupMemberServiceImpl extends ServiceImpl<UserGroupMemberMappe
             .list().stream().map(UserGroupMemberDO::getGroupId).distinct().toList();
     }
 
-    // 当前管理端关系写入是单条写操作自动提交，通知在写操作返回后发布；企业为空时不发布
+    // 通知在事务提交后发布（无事务的自动提交写入按当前语义立即发布）；企业为空时不发布
     private void publishAccessChanged(Long companyId) {
         if (companyId != null) {
             eventPublisher.publishEvent(new DeskAccessChangedEvent(companyId));

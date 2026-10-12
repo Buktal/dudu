@@ -183,9 +183,11 @@ class DeskMediaIntegrationTest {
 
     @Test
     void neverProxiesPublicLinksOrReadsBeyondTheSavedReferences() throws Exception {
+        // 公开链接不代理、也不占用渠道能力码 12200：按普通参数错误说明，由 Desk 直连渠道
         JSONObject publicUrl = errorOf(mvc.perform(get("/api/desk/messages/" + publicUrlMessageId + "/media")
             .header("Authorization", "Bearer " + ownerToken)).andReturn());
-        assertThat(publicUrl.getInt("code")).isEqualTo(12200);
+        assertThat(publicUrl.getInt("code")).isEqualTo(11000);
+        assertThat(publicUrl.getStr("msg")).isEqualTo("该素材为公开链接，请直接使用其 URL");
         assertThat(mediaReader.mediaIds).isEmpty();
 
         JSONObject beyondIndex = errorOf(mvc.perform(get("/api/desk/messages/" + replyMessageId + "/media?index=2")

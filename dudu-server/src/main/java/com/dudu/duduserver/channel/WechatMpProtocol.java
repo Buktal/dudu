@@ -111,10 +111,11 @@ public class WechatMpProtocol {
         try {
             return switch (msgType) {
                 case MSG_TYPE_TEXT -> Map.of("type", "text", "text", fields.getOrDefault("Content", ""));
-                case MSG_TYPE_IMAGE -> media("image", fields.get("MediaId"), fields.get("PicUrl"), fields.get("MsgId"));
-                case MSG_TYPE_VOICE -> media("audio", fields.get("MediaId"), null, fields.get("MsgId"));
+                case MSG_TYPE_IMAGE ->
+                    media("image", msgType, fields.get("MediaId"), fields.get("PicUrl"), fields.get("MsgId"));
+                case MSG_TYPE_VOICE -> media("audio", msgType, fields.get("MediaId"), null, fields.get("MsgId"));
                 case MSG_TYPE_VIDEO, MSG_TYPE_SHORT_VIDEO ->
-                    media("video", fields.get("MediaId"), null, fields.get("MsgId"));
+                    media("video", msgType, fields.get("MediaId"), null, fields.get("MsgId"));
                 case MSG_TYPE_LOCATION -> location(fields);
                 case MSG_TYPE_LINK -> link(fields);
                 default -> unknown(msgType);
@@ -125,12 +126,20 @@ public class WechatMpProtocol {
         }
     }
 
-    // 媒体标识取渠道 MediaId；只有公开链接时用「消息 ID:媒体下标」派生稳定标识
-    private Map<String, Object> media(String kind, String mediaId, String url, String messageId) {
-        Map<String, Object> media = new LinkedHashMap<>();
+    // 媒体标识取渠道 MediaId；只有公开链接时用「消息 ID:媒体下标」派生稳定标识；
+    // 两者都没有时契约第 4 节要求媒体引用必有 id，没有可如实表达的引用，按 unknown 如实保存不填假值
+    private Map<String, Object> media(String kind, String msgType, String mediaId, String url, String messageId) {
         String id = blankToNull(mediaId);
+        if (id == null) {
+            String messageScoped = blankToNull(messageId);
+            if (messageScoped == null) {
+                return unknown(msgType);
+            }
+            id = messageScoped + ":0";
+        }
+        Map<String, Object> media = new LinkedHashMap<>();
         media.put("kind", kind);
-        media.put("id", id != null ? id : (messageId == null ? "" : messageId) + ":0");
+        media.put("id", id);
         String publicUrl = blankToNull(url);
         if (publicUrl != null) {
             media.put("url", publicUrl);

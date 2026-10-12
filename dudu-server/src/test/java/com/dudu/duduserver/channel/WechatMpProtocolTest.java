@@ -89,6 +89,20 @@ class WechatMpProtocolTest {
     }
 
     @Test
+    void mediaWithoutChannelOrMessageIdentifierStaysUnknownInsteadOfAFakeId() {
+        // 既无 MediaId 又无 MsgId：契约第 4 节要求媒体引用必有 id，没有可如实表达的引用时归 unknown
+        Map<String, Object> image = parse(imageXml()
+            .replace("<MediaId><![CDATA[media_id]]></MediaId>", "")
+            .replace("<MsgId>1234567890123456</MsgId>", "")).content();
+        assertThat(image).isEqualTo(Map.of("type", "unknown", "originalType", "image"));
+
+        Map<String, Object> voice = parse(voiceXml()
+            .replace("<MediaId><![CDATA[media_id]]></MediaId>", "")
+            .replace("<MsgId>1234567890123456</MsgId>", "")).content();
+        assertThat(voice).isEqualTo(Map.of("type", "unknown", "originalType", "voice"));
+    }
+
+    @Test
     void eventPushAcknowledgesWithoutVisitorMessage() {
         String event = """
             <xml><ToUserName><![CDATA[toUser]]></ToUserName><FromUserName><![CDATA[FromUser]]></FromUserName>

@@ -263,6 +263,11 @@ class DeskVisitorIntegrationTest {
         assertThat(miss.getJSONArray("items")).isEmpty();
         assertThat(miss.getLong("total")).isZero();
         assertThat(miss.getJSONObject("counts").getInt("active")).isEqualTo(6);
+
+        // LIKE 与 JSON_SEARCH 通配符按字面匹配：未转义时「发票%」会命中「发票问题」、「林_满」会命中「林小满」
+        assertThat(ids(data(query(token("owner"), "{\"search\": \"发票%\"}")))).isEmpty();
+        assertThat(ids(data(query(token("owner"), "{\"search\": \"林_满\"}")))).isEmpty();
+        assertThat(ids(data(query(token("owner"), "{\"search\": \"%\"}")))).isEmpty();
     }
 
     @Test

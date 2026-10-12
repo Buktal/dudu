@@ -6,7 +6,6 @@ import com.dudu.duduserver.config.auth.JwtManager;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
-import com.dudu.duduserver.constant.UserRoleEnum;
 import com.dudu.duduserver.service.DeskAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +58,7 @@ public class DeskSocketHandler extends TextWebSocketHandler {
         }
         try {
             JwtUser user = jwtManager.parseToken(frame.getStr("token"));
-            if (user.companyId() == null || user.role() == UserRoleEnum.ADMIN) {
+            if (!user.deskEmployee()) {
                 throw new BizException(ApiEnum.FORBIDDEN);
             }
             // 员工启用状态与企业归属复用接待范围解析，失败即身份无效

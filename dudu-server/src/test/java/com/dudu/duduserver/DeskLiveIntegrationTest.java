@@ -5,26 +5,14 @@ import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
-import com.dudu.duduserver.config.auth.JwtManager;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.constant.ChannelEnum;
-import com.dudu.duduserver.constant.EnableStatusEnum;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.UserRoleEnum;
-import com.dudu.duduserver.dto.CompanyAdminInitDTO;
-import com.dudu.duduserver.dto.CompanyCreateDTO;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
-import com.dudu.duduserver.entity.UserGroupMemberDO;
-import com.dudu.duduserver.service.CompanyChannelService;
-import com.dudu.duduserver.service.CompanyService;
 import com.dudu.duduserver.service.DeskInboundService;
-import com.dudu.duduserver.service.UserGroupMemberService;
-import com.dudu.duduserver.service.UserGroupService;
-import com.dudu.duduserver.service.UserService;
-import com.dudu.duduserver.util.PasswordHasher;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -32,18 +20,10 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.client.standard.StandardWebSocketClient;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -51,16 +31,12 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -79,9 +55,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "DUDU_INTEGRATION_TEST", matches = "true")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class DeskLiveIntegrationTest {
+class DeskLiveIntegrationTest extends DeskIntegrationSupport {
 
-    private static final String PASSWORD = "password123";
     private static final long COMPANY_ID = 788001L;
     private static final long OTHER_COMPANY_ID = 788002L;
     private static final String CALLBACK_TOKEN = "live-callback-token";
@@ -93,16 +68,7 @@ class DeskLiveIntegrationTest {
         registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
     }
 
-    @LocalServerPort int port;
-    @Autowired MockMvc mvc;
-    @Autowired CompanyService companies;
-    @Autowired UserService users;
-    @Autowired UserGroupService groups;
-    @Autowired UserGroupMemberService members;
-    @Autowired CompanyChannelService channels;
     @Autowired DeskInboundService deskInboundService;
-    @Autowired JwtManager jwtManager;
-    @Autowired JdbcTemplate jdbc;
 
     private long channelWechat;
     private long channelDouyin;
@@ -110,12 +76,10 @@ class DeskLiveIntegrationTest {
     private String scopedToken;
     private String outsideToken;
 
-    private final List<WebSocketSession> openSessions = new ArrayList<>();
-
     @BeforeAll
     void seed() throws Exception {
-        companies.createCompany(company(COMPANY_ID, "liveowner"), 1L);
-        companies.createCompany(company(OTHER_COMPANY_ID, "liveowner2"), 1L);
+        companies.createCompany(company(COMPANY_ID, "liveowner", "实时验收企业"), 1L);
+        companies.createCompany(company(OTHER_COMPANY_ID, "liveowner2", "实时验收企业"), 1L);
         UserGroupDO group = group(COMPANY_ID, "实时组");
         channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "公众号",
             Map.of("token", CALLBACK_TOKEN, "externalAccountId", "gh_live"));
@@ -124,19 +88,9 @@ class DeskLiveIntegrationTest {
         UserDO scoped = plainUser(COMPANY_ID, "live.scoped");
         members.save(member(COMPANY_ID, scoped.getUserId(), group.getGroupId()));
         plainUser(COMPANY_ID, "live.none");
-        ownerToken = login("liveowner");
-        scopedToken = login("live.scoped");
-        outsideToken = login("live.none");
-    }
-
-    @AfterEach
-    void closeSockets() throws Exception {
-        for (WebSocketSession session : openSessions) {
-            if (session.isOpen()) {
-                session.close(CloseStatus.NORMAL);
-            }
-        }
-        openSessions.clear();
+        ownerToken = login(COMPANY_ID, "liveowner");
+        scopedToken = login(COMPANY_ID, "live.scoped");
+        outsideToken = login(COMPANY_ID, "live.none");
     }
 
     @Test
@@ -253,6 +207,31 @@ class DeskLiveIntegrationTest {
             .contains("\"label\": \"城市\"").contains("\"state\": \"empty\"")
             .contains("\"label\": \"手机号\"").contains("\"state\": \"not-provided\"");
         assertThat(profileAfter.get("version")).isEqualTo(3L);
+
+        // 渠道资料确实变化时随来信追加 profile 帧（同一提交后，不额外发 conversation）
+        SocketClient client = connectAndAuth(scopedToken);
+        Long pushVisitorId = acceptWithFields(List.of(new ChannelInboundMessage.ChannelField("城市", "深圳")), "p3");
+        assertThat(client.next(Duration.ofSeconds(5)).getStr("type")).isEqualTo("message");
+        JSONObject pushed = client.next(Duration.ofSeconds(5));
+        assertThat(pushed.getStr("type")).isEqualTo("profile");
+        JSONObject pushedProfile = pushed.getJSONObject("profile");
+        assertThat(pushedProfile.getStr("conversationId")).isEqualTo(String.valueOf(pushVisitorId));
+        assertThat(pushedProfile.getJSONArray("fields").toString()).contains("深圳");
+
+        // 渠道资料与库中一致：只推来信，不重复推名片
+        acceptWithFields(List.of(new ChannelInboundMessage.ChannelField("城市", "深圳")), "p4");
+        assertThat(client.next(Duration.ofSeconds(5)).getStr("type")).isEqualTo("message");
+        assertThat((Object) client.next(Duration.ofMillis(700))).isNull();
+    }
+
+    // 受控样本：渠道给出的资料项随来信入库，返回访客 ID
+    private Long acceptWithFields(List<ChannelInboundMessage.ChannelField> fields, String externalMessageId) {
+        deskInboundService.accept(channels.getById(channelWechat), new ChannelInboundMessage(channelWechat,
+            "live-ext-profile-push", null, null, fields, externalMessageId,
+            MessageDirectionEnum.INCOMING, Map.of("type", "text", "text", "资料推送来信")));
+        return jdbc.queryForObject(
+            "SELECT visitor_id FROM visitor WHERE company_id = ? AND external_user_id = 'live-ext-profile-push'",
+            Long.class, COMPANY_ID);
     }
 
     @Test
@@ -396,28 +375,6 @@ class DeskLiveIntegrationTest {
         assertThat(conversation.getStr("id")).isNotBlank();
     }
 
-    private SocketClient connect() throws Exception {
-        SocketClient client = new SocketClient();
-        WebSocketSession session = new StandardWebSocketClient()
-            .execute(client, "ws://127.0.0.1:" + port + "/ws/desk")
-            .get(5, TimeUnit.SECONDS);
-        openSessions.add(session);
-        client.session = session;
-        return client;
-    }
-
-    private SocketClient connectAndAuth(String token) throws Exception {
-        SocketClient client = connect();
-        assertThat(sendAuth(client, token).getStr("type")).isEqualTo("ready");
-        return client;
-    }
-
-    private JSONObject sendAuth(SocketClient client, String token) throws Exception {
-        client.session.sendMessage(new TextMessage(
-            JSONUtil.createObj().set("type", "auth").set("token", token).toString()));
-        return client.next(Duration.ofSeconds(5));
-    }
-
     private long countMessagesOf(String externalUserId) {
         return jdbc.queryForObject("""
             SELECT COUNT(*) FROM message m JOIN visitor v ON v.visitor_id = m.visitor_id
@@ -471,94 +428,6 @@ class DeskLiveIntegrationTest {
     }
 
     private JSONObject detail(String token, Long visitorId) throws Exception {
-        return JSONUtil.parseObj(mvc.perform(get("/api/desk/visitors/" + visitorId)
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
-    }
-
-    private JSONObject data(JSONObject response) {
-        assertThat(response.getInt("code")).isZero();
-        return response.getJSONObject("data");
-    }
-
-    private String login(String username) throws Exception {
-        String body = mvc.perform(post("/api/desk/login").contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {"companyId": "%s", "username": "%s", "password": "%s"}
-                    """.formatted(COMPANY_ID, username, PASSWORD)))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-        JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
-        assertThat(data.getStr("token")).isNotBlank();
-        return data.getStr("token");
-    }
-
-    private CompanyCreateDTO company(long companyId, String adminUsername) {
-        return new CompanyCreateDTO(String.valueOf(companyId), "实时验收企业", null, null, null,
-            new CompanyAdminInitDTO(adminUsername, PASSWORD, null));
-    }
-
-    private UserGroupDO group(long companyId, String name) {
-        UserGroupDO group = new UserGroupDO();
-        group.setCompanyId(companyId);
-        group.setGroupName(name);
-        groups.save(group);
-        return group;
-    }
-
-    private long channel(long companyId, long groupId, ChannelEnum channel, String accountName,
-                         Map<String, Object> channelInfo) {
-        CompanyChannelDO account = new CompanyChannelDO();
-        account.setCompanyId(companyId);
-        account.setGroupId(groupId);
-        account.setChannel(channel);
-        account.setAccountName(accountName);
-        account.setChannelInfo(channelInfo);
-        channels.save(account);
-        return account.getCompanyChannelId();
-    }
-
-    private UserDO plainUser(long companyId, String username) {
-        UserDO user = new UserDO();
-        user.setCompanyId(companyId);
-        user.setUsername(username);
-        user.setName(username);
-        user.setPasswordHash(PasswordHasher.hash(PASSWORD));
-        user.setRole(UserRoleEnum.USER);
-        user.setStatus(EnableStatusEnum.ENABLED);
-        users.save(user);
-        return user;
-    }
-
-    private UserGroupMemberDO member(long companyId, long userId, long groupId) {
-        UserGroupMemberDO member = new UserGroupMemberDO();
-        member.setCompanyId(companyId);
-        member.setUserId(userId);
-        member.setGroupId(groupId);
-        return member;
-    }
-
-    /**
-     * 真实 WebSocket 客户端：异步收集服务端报文，供断言 ready / error 与推送帧。
-     */
-    private static final class SocketClient extends TextWebSocketHandler {
-
-        private final BlockingQueue<JSONObject> frames = new LinkedBlockingQueue<>();
-        private final CountDownLatch closed = new CountDownLatch(1);
-        private WebSocketSession session;
-
-        @Override
-        protected void handleTextMessage(WebSocketSession session, TextMessage message) {
-            frames.add(JSONUtil.parseObj(message.getPayload()));
-        }
-
-        @Override
-        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-            closed.countDown();
-        }
-
-        JSONObject next(Duration timeout) throws InterruptedException {
-            return frames.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
-        }
+        return JSONUtil.parseObj(deskGet(token, "/api/desk/visitors/" + visitorId));
     }
 }

@@ -66,6 +66,9 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     private static final String ORDER_MESSAGES =
         "ORDER BY message_count DESC, IFNULL(last_message_time, create_time) DESC, visitor_id ASC";
 
+    // 搜索词的通配符转义子句：显式 ESCAPE，按字面匹配不依赖数据库 sql_mode（片段见 applySearch）
+    private static final String LIKE_ESCAPE = " ESCAPE '\\\\'";
+
     private final DeskAuthService deskAuthService;
     private final VisitorService visitorService;
     private final MessageService messageService;
@@ -97,7 +100,8 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             Map<Long, CompanyChannelDO> accountById = companyChannelService
                 .listByIds(scoped.stream().map(account -> Long.valueOf(account.companyChannelId())).toList())
                 .stream()
-                .collect(Collectors.toMap(CompanyChannelDO::getCompanyChannelId, Function.identity()));
+                .collect(Collectors.toMap(CompanyChannelDO::getCompanyChannelId, Function.identity(),
+                    (existing, replacement) -> existing));
             items = rows.stream()
                 .map(row -> toConversation(row, accountById.get(row.getCompanyChannelId())))
                 .toList();
@@ -146,7 +150,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         VisitorDO visitor = authorized.visitor();
         LocalDateTime now = LocalDateTime.now();
         // 契约第 2 节：结束写 closed 并清空 waiting_since；继续在本轮计时未开始时重新计时，已待回复保留原值
-        boolean awaiting = awaitingReply(visitor);
+        boolean awaiting = visitor.awaitingReply();
         boolean changed = target == VisitorStatusEnum.CLOSED
             ? visitor.getStatus() != VisitorStatusEnum.CLOSED || visitor.getWaitingSince() != null
             : !awaiting;
@@ -184,11 +188,6 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             return VisitorStatusEnum.NEEDS_REPLY;
         }
         throw new BizException(ApiEnum.PARAM_ERROR, "接待状态只接受 closed 或 needs-reply");
-    }
-
-    // 已待回复且本轮计时已开始：继续时保留原 waiting_since，等待时长不重置（与入站来信同规则）
-    private boolean awaitingReply(VisitorDO visitor) {
-        return visitor.getStatus() == VisitorStatusEnum.NEEDS_REPLY && visitor.getWaitingSince() != null;
     }
 
     // 状态保存后推送一次 conversation 报文（含操作者本人）；推送失败只记录，不影响已保存的状态
@@ -233,7 +232,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         }
         return userService.listByIds(senderIds).stream()
             .filter(user -> user.getName() != null)
-            .collect(Collectors.toMap(UserDO::getUserId, UserDO::getName));
+            .collect(Collectors.toMap(UserDO::getUserId, UserDO::getName, (existing, replacement) -> existing));
     }
 
     // beforeSequence 只接受正整数的十进制字符串；缺省表示没有更早边界，取最近一页
@@ -332,18 +331,18 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         return wrapper;
     }
 
-    // 搜索按包含关系匹配姓名、外部用户 ID、账号名、渠道名、最后摘要与共享标签/备注
     private void applySearch(LambdaQueryWrapper<VisitorDO> wrapper, String term, List<DeskAccessVO.Account> scoped) {
         List<Long> matchedAccountIds = scoped.stream()
             .filter(account -> matchesAccountText(account, term))
             .map(account -> Long.valueOf(account.companyChannelId()))
             .toList();
-        String pattern = "%" + term + "%";
+        String pattern = "%" + escapeLike(term) + "%";
         wrapper.and(w -> {
-            // 姓名、外部用户 ID 与最后摘要走数据库 LIKE，参数绑定
-            w.like(VisitorDO::getName, term)
-                .or().like(VisitorDO::getExternalUserId, term)
-                .or().like(VisitorDO::getLastMessagePreview, term);
+            // 姓名、外部用户 ID 与最后摘要走数据库 LIKE；Lambda 的 like 无法表达 ESCAPE，
+            // 用受支持的固定 SQL 片段追加，词条仍走占位符参数绑定
+            w.apply("name LIKE {0}" + LIKE_ESCAPE, pattern)
+                .or().apply("external_user_id LIKE {0}" + LIKE_ESCAPE, pattern)
+                .or().apply("last_message_preview LIKE {0}" + LIKE_ESCAPE, pattern);
             if (!matchedAccountIds.isEmpty()) {
                 w.or().in(VisitorDO::getCompanyChannelId, matchedAccountIds);
             }
@@ -352,6 +351,11 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
                     + " AND (vp.note LIKE {0} OR JSON_SEARCH(vp.tags, 'one', {0}, NULL, '$[*]') IS NOT NULL)",
                 pattern);
         });
+    }
+
+    // 通配符转义：反斜杠自身先转义，% 与 _ 变为字面量；JSON_SEARCH 同样以反斜杠为转义符
+    private String escapeLike(String term) {
+        return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     // 账号名与渠道代码/显示名的包含匹配：授权账号已在本企业范围内，按数据库 ai_ci 语义近似处理

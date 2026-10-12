@@ -11,8 +11,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -140,8 +141,9 @@ public class DeskSocketGateway {
         }
     }
 
-    // 管理端关系写入完成后发布范围变更事件：由本监听在本企业已连接员工上收敛为 access-changed 报文
-    @EventListener
+    // 管理端关系写入完成后发布范围变更事件：事务内发布统一推迟到提交后收敛为 access-changed 报文，
+    // 回滚不产生通知；当前自动提交的单条写入没有事务，按 fallbackExecution 立即收敛，语义不变
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onAccessChanged(DeskAccessChangedEvent event) {
         pushAccessChanged(event.companyId());
     }

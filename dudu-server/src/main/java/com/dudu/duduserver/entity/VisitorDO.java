@@ -65,4 +65,9 @@ public class VisitorDO {
     // 最后修改时间
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+    // 已待回复且本轮计时已开始：再次来信或继续接待保留原 waiting_since，等待时长不重置
+    public boolean awaitingReply() {
+        return status == VisitorStatusEnum.NEEDS_REPLY && waitingSince != null;
+    }
 }

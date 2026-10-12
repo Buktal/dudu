@@ -53,9 +53,10 @@ public class DeskMediaServiceImpl implements DeskMediaService {
         if (reference == null) {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "该消息没有这个媒体");
         }
-        // 公开链接由 Desk 直连渠道读取，本接口不代理，也不需要渠道凭据
+        // 公开链接由 Desk 直连渠道读取，本接口不代理，也不需要渠道凭据；
+        // 这是请求目标不适用于本接口，按普通参数错误说明，不占用「渠道不允许」语义的 12200
         if (text(reference.get("url")) != null) {
-            throw new BizException(ApiEnum.DATA_NOT_ALLOW, "该素材提供公开链接，请直接打开");
+            throw new BizException(ApiEnum.PARAM_ERROR, "该素材为公开链接，请直接使用其 URL");
         }
         String channelMediaId = text(reference.get("id"));
         if (channelMediaId == null) {
