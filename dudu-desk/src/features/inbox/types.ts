@@ -185,6 +185,10 @@ export type InboxEvent = {
       type: "profile";
       profile: VisitorProfile;
     }
+  | {
+      /** 员工组或账号组关系变化后：报文只有 type，客户端重查身份与列表。 */
+      type: "access-changed";
+    }
   | { type: "removed"; conversationId: string; version: number }
 );
 

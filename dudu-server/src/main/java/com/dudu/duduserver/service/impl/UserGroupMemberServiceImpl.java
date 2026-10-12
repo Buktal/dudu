@@ -10,13 +10,18 @@ import com.dudu.duduserver.service.CompanyService;
 import com.dudu.duduserver.service.UserGroupMemberService;
 import com.dudu.duduserver.service.UserGroupService;
 import com.dudu.duduserver.service.UserService;
+import com.dudu.duduserver.socket.DeskAccessChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
  * 先检查企业隔离，再识别初始管理员或显式成员；普通管理员无隐式全组权限。
+ * 成员关系的写入入口在提交后发布范围变更事件，由实时网关通知本企业已连接员工重查工作区；
+ * 管理端操作本身沿用现有写方法，不新增管理接口。
  */
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,28 @@ public class UserGroupMemberServiceImpl extends ServiceImpl<UserGroupMemberMappe
     private final UserService userService;
     private final UserGroupService userGroupService;
     private final CompanyService companyService;
+    private final ApplicationEventPublisher eventPublisher;
+
+    // 加入组成员后通知本企业：新增权限的员工要立即可见新范围
+    @Override
+    public boolean save(UserGroupMemberDO entity) {
+        boolean saved = super.save(entity);
+        if (saved) {
+            publishAccessChanged(entity.getCompanyId());
+        }
+        return saved;
+    }
+
+    // 移出组成员（员工退组）后通知本企业：失去权限的员工也要收到，才能清理已无权数据
+    @Override
+    public boolean removeById(Serializable id) {
+        UserGroupMemberDO member = getById(id);
+        boolean removed = super.removeById(id);
+        if (removed && member != null) {
+            publishAccessChanged(member.getCompanyId());
+        }
+        return removed;
+    }
 
     @Override
     public boolean canAccessGroup(Long userId, Long groupId) {
@@ -53,5 +80,12 @@ public class UserGroupMemberServiceImpl extends ServiceImpl<UserGroupMemberMappe
             .eq(UserGroupMemberDO::getUserId, userId)
             .orderByAsc(UserGroupMemberDO::getGroupId)
             .list().stream().map(UserGroupMemberDO::getGroupId).distinct().toList();
+    }
+
+    // 当前管理端关系写入是单条写操作自动提交，通知在写操作返回后发布；企业为空时不发布
+    private void publishAccessChanged(Long companyId) {
+        if (companyId != null) {
+            eventPublisher.publishEvent(new DeskAccessChangedEvent(companyId));
+        }
     }
 }

@@ -7,7 +7,7 @@ import {
 } from "../development/fixtures";
 import type { Conversation, InboxMessage, SendSubmission } from "../types";
 import { startInboxUpdates } from "./events";
-import { createInboxStore } from "./store";
+import { createInboxStore, type InboxRuntime } from "./store";
 
 /**
  * Test-world card: the paired conversations the store suites share. Litmus
@@ -84,9 +84,14 @@ export function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-export function testStore(api: Partial<InboxApi> = {}, startUpdates = true) {
+export function testStore(
+  api: Partial<InboxApi> = {},
+  startUpdates = true,
+  runtime: Pick<InboxRuntime, "refreshAccess"> = {},
+) {
   const store = createInboxStore({
     context: { agentId: "agent-a", workspaceId: "workspace-a" },
+    refreshAccess: runtime.refreshAccess,
     api: {
       ...unavailableInboxApi,
       subscribe: ({ onConnection }) => {

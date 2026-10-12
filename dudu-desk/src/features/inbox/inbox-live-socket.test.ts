@@ -416,6 +416,28 @@ describe("http inbox live subscription", () => {
     ]);
   });
 
+  it("maps an access-changed frame to a workspace reload event", () => {
+    seed("stored-token");
+    const socket = fakeSocket();
+    const api = createHttpInboxApi({
+      origin: ORIGIN,
+      socket: () => socket as unknown as DeskSocket,
+    });
+    const events: InboxEvent[] = [];
+
+    api.subscribe({
+      context: CONTEXT,
+      signal: new AbortController().signal,
+      onConnection: () => {},
+      onEvent: (event) => events.push(event),
+    });
+    socket.receive({ type: "ready" });
+    socket.receive({ type: "access-changed" });
+
+    // 报文只有类型：事件不带任何快照，重查由工作区完成
+    expect(events).toEqual([{ type: "access-changed", context: CONTEXT }]);
+  });
+
   it("stays unavailable without a stored credential and opens no socket", () => {
     const open = vi.fn();
     const api = createHttpInboxApi({ origin: ORIGIN, socket: open });

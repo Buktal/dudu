@@ -59,7 +59,12 @@ export function useAccount() {
   const store = useContext(AccountContext);
   if (!store) throw new Error("useAccount must be used within AccountProvider");
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  return { ...snapshot, signIn: store.signIn, signOut: store.signOut };
+  return {
+    ...snapshot,
+    signIn: store.signIn,
+    signOut: store.signOut,
+    refresh: store.refresh,
+  };
 }
 
 export function AccountGate({ children }: { children: ReactNode }) {

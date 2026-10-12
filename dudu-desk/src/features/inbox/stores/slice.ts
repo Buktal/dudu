@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { WorkContext } from "../types";
+import { accessReducers } from "./access-reducers";
 import { attachmentReducers } from "./attachment-reducers";
 import { choiceReducers } from "./choices-reducers";
 import { detailReducers } from "./detail-reducers";
@@ -34,6 +35,7 @@ const inboxSlice = createSlice({
     ...mediaReducers,
     ...parallelReducers,
     ...attachmentReducers,
+    ...accessReducers,
     contextReset(state, action: PayloadAction<WorkContext>) {
       return initialInboxState(action.payload, state.generation + 1);
     },

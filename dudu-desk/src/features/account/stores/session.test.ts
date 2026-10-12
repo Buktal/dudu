@@ -74,6 +74,64 @@ describe("account session lifecycle", () => {
     );
   });
 
+  it("re-queries identity on refresh and publishes the new access scope", async () => {
+    const scoped: AgentSession = {
+      ...session,
+      access: {
+        allGroups: false,
+        groups: [{ groupId: "7", groupName: "新组" }],
+        accounts: [
+          {
+            companyChannelId: "51",
+            groupId: "7",
+            channel: "wechat",
+            accountName: "公众号",
+          },
+        ],
+      },
+    };
+    const getSession = vi
+      .fn()
+      .mockResolvedValueOnce(session)
+      .mockResolvedValueOnce(scoped);
+    const store = createAccountSession(accountApi({ getSession }));
+    await store.restore();
+
+    expect(await store.refresh()).toEqual(scoped);
+    expect(getSession).toHaveBeenCalledTimes(2);
+    expect(store.getSnapshot()).toEqual({
+      status: "signed-in",
+      session: scoped,
+    });
+  });
+
+  it("keeps the current account when a refresh fails without unusable credentials", async () => {
+    const getSession = vi
+      .fn()
+      .mockResolvedValueOnce(session)
+      .mockRejectedValueOnce(new DeskApiError("network", "网络不可用"));
+    const store = createAccountSession(accountApi({ getSession }));
+    await store.restore();
+
+    expect(await store.refresh()).toBeNull();
+    expect(store.getSnapshot()).toEqual({ status: "signed-in", session });
+  });
+
+  it("signs out when a refresh finds the credential unusable", async () => {
+    const getSession = vi
+      .fn()
+      .mockResolvedValueOnce(session)
+      .mockRejectedValueOnce(
+        new DeskApiError("authentication", "登录状态无效"),
+      );
+    const store = createAccountSession(accountApi({ getSession }));
+    await store.restore();
+
+    expect(await store.refresh()).toBeNull();
+    expect(store.getSnapshot().session).toBeNull();
+    expect(store.getSnapshot().status).toBe("signed-out");
+  });
+
   it("keeps failed authentication signed out and allows another attempt", async () => {
     const signIn = vi
       .fn()

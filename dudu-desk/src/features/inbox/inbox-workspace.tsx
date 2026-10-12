@@ -68,10 +68,13 @@ export function InboxWorkspace({
   api,
   context = defaultContext,
   accountMenu,
+  refreshAccess,
 }: {
   api?: InboxApi;
   context?: WorkContext;
   accountMenu?: ReactNode;
+  /** 权限范围变化时重查身份（账户会话）；缺失时只重查列表，不清理缓存。 */
+  refreshAccess?: () => Promise<ReadonlySet<string> | null>;
 }) {
   const [store, setStore] = useState<InboxStore>();
   const { mode, setMode } = useTheme();
@@ -94,6 +97,7 @@ export function InboxWorkspace({
             agentId: context.agentId,
             workspaceId: context.workspaceId,
           },
+          refreshAccess,
         });
         setStore(runtimeStore);
       });
@@ -102,7 +106,7 @@ export function InboxWorkspace({
       runtimeStore?.dispatch(destroyInbox());
       ownedAdapter?.dispose?.();
     };
-  }, [api, context.agentId, context.workspaceId]);
+  }, [api, context.agentId, context.workspaceId, refreshAccess]);
   return store ? (
     <Provider store={store}>
       <InboxSession accountMenu={accountMenu} />

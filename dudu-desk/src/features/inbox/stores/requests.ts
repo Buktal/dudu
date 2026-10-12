@@ -49,6 +49,7 @@ export type InboxRequestKey =
   | "queue"
   | "events"
   | "recovery"
+  | "access"
   | `attachment:${string}`
   | `media:${string}`
   | `choices:${string}`
@@ -67,6 +68,7 @@ export const requestKeys = {
   queue: "queue",
   events: "events",
   recovery: "recovery",
+  access: "access",
   history: (conversationId: string) =>
     conversationRequestKey("history", conversationId),
   profile: (conversationId: string) =>
@@ -95,13 +97,16 @@ export function beginRequest(
   }
   const signal = scope.begin();
   const { context, generation } = getState().inbox;
+  // 实时订阅不是一次可写回的结果：它跟随连接生命周期，不受范围代数约束（见 access.ts）；
+  // 上下文重置与销毁仍然经 dispose 停止订阅，其余请求在代数变化后一律不再写回
+  const stable = key === requestKeys.events;
   return {
     context,
     signal,
     current: () =>
       scope.isCurrent(signal) &&
       runtime.requests.get(key) === scope &&
-      getState().inbox.generation === generation,
+      (stable || getState().inbox.generation === generation),
     finish: () => {
       // Release-only: the original ritual deleted the key without aborting,
       // and callers (e.g. queue pagination tests) observe the completed
@@ -176,6 +181,18 @@ export function cancelRequests(runtime: InboxRuntime) {
   for (const url of runtime.previews.values()) URL.revokeObjectURL(url);
   runtime.previews.clear();
   runtime.files.clear();
+}
+
+/**
+ * 权限范围变化时取消全部在途读取，只保留实时订阅本身：订阅跟随连接生命周期，
+ * 继续接收后续报文（见 requests.ts 的范围代数守卫与 access.ts）。
+ */
+export function cancelScopeRequests(runtime: InboxRuntime) {
+  for (const [key, scope] of runtime.requests) {
+    if (key === requestKeys.events) continue;
+    scope.dispose();
+    runtime.requests.delete(key);
+  }
 }
 
 export function releaseAttachmentResources(

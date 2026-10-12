@@ -1,4 +1,4 @@
-import { type ApiFailure, failureOf } from "@/lib/api-response";
+import { type ApiFailure, DeskApiError, failureOf } from "@/lib/api-response";
 import { createRequestScope } from "@/lib/request-scope";
 import type { AccountApi, AgentSession, LoginCredentials } from "../api";
 
@@ -90,6 +90,36 @@ export function createAccountSession(api: AccountApi) {
             error: failureOf(error, "暂时无法完成操作，请重试"),
           });
         return false;
+      }
+    },
+    /**
+     * 重查身份（权限范围变化后由工作区调用）：成功后发布新会话并返回它；
+     * 凭据不可用（失效 / 无权限）时退出登录；其他失败保留当前会话供重试，返回 null。
+     */
+    refresh: async (): Promise<AgentSession | null> => {
+      if (disposed) return null;
+      const currentSession = snapshot.session;
+      const pending = begin(snapshot);
+      try {
+        const session = await api.getSession(pending);
+        if (!current(pending)) return null;
+        publish({ status: session ? "signed-in" : "signed-out", session });
+        return session;
+      } catch (error) {
+        if (!current(pending)) return null;
+        const unusable =
+          error instanceof DeskApiError &&
+          (error.kind === "authentication" || error.kind === "forbidden");
+        publish(
+          unusable
+            ? {
+                status: "signed-out",
+                session: null,
+                error: failureOf(error, "登录状态无效，请重新登录"),
+              }
+            : { status: "signed-in", session: currentSession },
+        );
+        return null;
       }
     },
     signOut: async () => {

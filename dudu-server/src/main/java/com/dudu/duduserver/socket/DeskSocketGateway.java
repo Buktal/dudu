@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -25,8 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Desk 实时网关：按员工维护多个已连接会话（多设备），只向认证成功且当前有权的
- * 已连接员工推送契约第 5 节报文；已接入 message、conversation 与 profile 报文
- * （消息引起的访客更新合并在 message 中），access-changed 由后续票接入。没有 eventId、
+ * 已连接员工推送契约第 5 节报文；已接入 message、conversation、profile 与
+ * access-changed 四类报文（消息引起的访客更新合并在 message 中）。没有 eventId、
  * ack 与持久游标，未认证会话与离线员工不接收业务数据。
  */
 @Slf4j
@@ -121,6 +122,28 @@ public class DeskSocketGateway {
         frame.put("type", "profile");
         frame.put("profile", profile);
         broadcast(companyId, companyChannelId, frame);
+    }
+
+    /**
+     * 推送一条权限范围变更（管理端改变员工-组或账号-组关系后）：报文只有 type，客户端据此重查身份与列表。
+     * 广播策略固定为「本企业全部已认证连接」：范围变化同时影响获得与失去权限的员工，而失去成员关系的员工
+     * 无法从剩余关系反推，也必须收到通知才能清理已无权数据；无外键的脏关联不影响本企业连接集合，
+     * 跨企业连接一律不收到。
+     */
+    public void pushAccessChanged(Long companyId) {
+        String payload = serialize(Map.of("type", "access-changed"));
+        for (Map.Entry<String, ConnectedSession> item : sessions.entrySet()) {
+            ConnectedSession entry = item.getValue();
+            if (entry.user() != null && companyId.equals(entry.user().companyId())) {
+                send(entry, payload);
+            }
+        }
+    }
+
+    // 管理端关系写入完成后发布范围变更事件：由本监听在本企业已连接员工上收敛为 access-changed 报文
+    @EventListener
+    public void onAccessChanged(DeskAccessChangedEvent event) {
+        pushAccessChanged(event.companyId());
     }
 
     // 按当前持久数据复核员工启用状态与接待范围后逐会话发送；同一员工的权限只解析一次

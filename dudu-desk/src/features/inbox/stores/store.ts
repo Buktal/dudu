@@ -18,6 +18,11 @@ export type InboxRuntime = {
   /** Request slots; keyed and cancelled only through stores/requests.ts. */
   requests: Map<string, RequestScope>;
   /**
+   * 权限范围变化时的身份重查缝隙：由组合层注入（账户会话），返回重查后的授权账号集合；
+   * null 表示身份未确认（刷新失败或已退出），此时不清理数据，工作区随退出流程销毁。
+   */
+  refreshAccess?: () => Promise<ReadonlySet<string> | null>;
+  /**
    * Startup gate between the live subscription and the first queue read: while
    * the socket subscription is in flight and the connection is still
    * "connecting", business reads wait for it to settle (ready or failed), so a
@@ -104,12 +109,14 @@ export function createInboxStore(options: {
   context: WorkContext;
   now?: () => string;
   id?: () => string;
+  refreshAccess?: () => Promise<ReadonlySet<string> | null>;
 }) {
   const runtime: InboxRuntime = {
     api: options.api,
     now: options.now ?? nowIso,
     id: options.id ?? (() => crypto.randomUUID()),
     requests: new Map(),
+    refreshAccess: options.refreshAccess,
     connection: createConnectionGate(),
     queueEvents: createSettledBus(),
     files: new Map(),

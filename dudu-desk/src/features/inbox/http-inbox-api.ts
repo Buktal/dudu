@@ -42,13 +42,15 @@ function writeConversationStatus(
 }
 
 // 实时报文映射：message 帧携带本条消息引起的访客摘要，conversation 帧携带状态变更后的摘要，
-// profile 帧携带渠道资料或标签/备注保存后的完整名片；其余报文类型由后续实施票接通
+// profile 帧携带渠道资料或标签/备注保存后的完整名片，access-changed 帧只有类型
 function parseLiveEvent(
   value: unknown,
   context: WorkContext,
 ): InboxEvent | undefined {
   if (!isRecord(value)) return undefined;
   try {
+    if (value.type === "access-changed")
+      return { type: "access-changed", context };
     if (value.type === "conversation")
       return {
         type: "conversation",
