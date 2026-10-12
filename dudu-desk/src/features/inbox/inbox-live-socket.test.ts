@@ -11,6 +11,25 @@ import type { ConnectionState, InboxEvent } from "./types";
 const ORIGIN = "https://desk.example.test";
 const CONTEXT = { agentId: "agent-a", workspaceId: "workspace-a" };
 
+// 独立于实现写出的会话报文：结束接待后服务端保存的 closed 会话
+const SERVER_CONVERSATION = {
+  id: "41",
+  identity: {
+    id: "41",
+    externalUserId: "external-a",
+    channelId: "wechat",
+    channelName: "微信",
+    accountId: "51",
+    accountName: "公众号",
+  },
+  status: "closed",
+  preview: "还想问问保修",
+  updatedAt: "2026-10-12 09:40:00",
+  messageCount: 36,
+  version: 4,
+  capability: { state: "restricted", kinds: [] },
+};
+
 class FakeSocket {
   sent: string[] = [];
   closed = false;
@@ -247,6 +266,41 @@ describe("http inbox live subscription", () => {
     socket.receive({ type: "ready" });
     socket.receive({ type: "message", message: { id: "9001" } });
     expect(events).toEqual([]);
+  });
+
+  it("maps conversation frames to conversation events and drops malformed ones", () => {
+    seed("stored-token");
+    const socket = fakeSocket();
+    const api = createHttpInboxApi({
+      origin: ORIGIN,
+      socket: () => socket as unknown as DeskSocket,
+    });
+    const events: InboxEvent[] = [];
+
+    api.subscribe({
+      context: CONTEXT,
+      signal: new AbortController().signal,
+      onConnection: () => {},
+      onEvent: (event) => events.push(event),
+    });
+    socket.receive({ type: "ready" });
+    socket.receive({ type: "conversation", conversation: SERVER_CONVERSATION });
+    // 不完整的 conversation 帧与其他报文类型不产生事件，连接不受影响
+    socket.receive({ type: "conversation" });
+    socket.receive({ type: "profile", profile: { conversationId: "41" } });
+
+    expect(events).toEqual([
+      {
+        type: "conversation",
+        context: CONTEXT,
+        conversation: expect.objectContaining({
+          id: "41",
+          status: "closed",
+          version: 4,
+          unread: 0,
+        }),
+      },
+    ]);
   });
 
   it("stays unavailable without a stored credential and opens no socket", () => {

@@ -240,13 +240,40 @@ function beforeSequence(cursor: string | undefined): string | undefined {
   return cursor;
 }
 
-// 实时报文映射：message 帧携带本条消息引起的访客摘要；其余报文类型由后续实施票接通
+// 接待状态写入：结束与继续共用同一资源，后端返回保存后的完整会话对象
+function writeConversationStatus(
+  origin: string,
+  conversationId: string,
+  status: ConversationStatus,
+  signal: AbortSignal,
+  fetcher?: typeof fetch,
+) {
+  return requestDesk({
+    url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/status`,
+    method: "PUT",
+    token: readDeskToken(origin) ?? undefined,
+    signal,
+    body: { status },
+    parse: parseConversation,
+    fetcher,
+  });
+}
+
+// 实时报文映射：message 帧携带本条消息引起的访客摘要，conversation 帧携带状态变更后的摘要；
+// 其余报文类型由后续实施票接通
 function parseLiveEvent(
   value: unknown,
   context: WorkContext,
 ): InboxEvent | undefined {
-  if (!isRecord(value) || value.type !== "message") return undefined;
+  if (!isRecord(value)) return undefined;
   try {
+    if (value.type === "conversation")
+      return {
+        type: "conversation",
+        context,
+        conversation: parseConversation(value.conversation),
+      };
+    if (value.type !== "message") return undefined;
     return {
       type: "message",
       context,
@@ -263,12 +290,13 @@ function parseLiveEvent(
 }
 
 /**
- * 真实接待适配器（访客摘要、按需历史、文本回复与实时通道）：列表查询走
+ * 真实接待适配器（访客摘要、按需历史、文本回复、结束 / 继续与实时通道）：列表查询走
  * POST /api/desk/visitors/query，历史分页走 GET /api/desk/visitors/{visitorId}/messages
  * （最近页无 beforeSequence，更早页用上一页 nextCursor）；回复走
- * POST /api/desk/visitors/{visitorId}/messages，能力走同一资源的 capability；
- * 订阅连接 /ws/desk，ready 后接收 message 报文；状态与资料等其余能力沿用
- * unavailableInboxApi 的语义；token 由账户适配器写入会话，这里按请求读取。
+ * POST /api/desk/visitors/{visitorId}/messages，能力走同一资源的 capability，
+ * 结束 / 继续走 PUT /api/desk/visitors/{visitorId}/status；订阅连接 /ws/desk，
+ * ready 后接收 message 与 conversation 报文；资料等其余能力沿用 unavailableInboxApi
+ * 的语义；token 由账户适配器写入会话，这里按请求读取。
  */
 export function createHttpInboxApi(
   options: {
@@ -331,6 +359,24 @@ export function createHttpInboxApi(
         parse: parseMessage,
         fetcher: options.fetcher,
       });
+    },
+    async endConversation({ conversationId, signal }) {
+      return writeConversationStatus(
+        origin,
+        conversationId,
+        "closed",
+        signal,
+        options.fetcher,
+      );
+    },
+    async resumeConversation({ conversationId, signal }) {
+      return writeConversationStatus(
+        origin,
+        conversationId,
+        "needs-reply",
+        signal,
+        options.fetcher,
+      );
     },
     async getCapability({ conversationId, signal }) {
       return requestDesk({

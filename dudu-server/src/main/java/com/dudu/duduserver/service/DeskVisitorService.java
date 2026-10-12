@@ -2,14 +2,15 @@ package com.dudu.duduserver.service;
 
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
+import com.dudu.duduserver.dto.DeskStatusDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessagePageVO;
 import com.dudu.duduserver.vo.DeskVisitorPageVO;
 
 /**
- * Desk 访客查询服务：先按当前授权账号范围筛选持久访客再做普通分页，
- * 计数与渠道来自数据库与现有账号关系，返回对象按最小对接契约第 4 节投影。
+ * Desk 访客资源服务：先按当前授权账号范围筛选持久访客再做普通分页，计数与渠道来自数据库与
+ * 现有账号关系；单访客快照、按需历史与接待状态变更共用同一份契约第 4 节投影。
  */
 public interface DeskVisitorService {
 
@@ -21,4 +22,7 @@ public interface DeskVisitorService {
 
     // 按需历史：最近一页或 beforeSequence 之前的更早一页；权限与错误语义同单访客快照
     DeskMessagePageVO history(JwtUser me, String visitorId, DeskHistoryQueryDTO query);
+
+    // 结束 / 继续接待：只改接待状态与等待计时，返回并推送后端保存的完整会话对象
+    DeskConversationVO updateStatus(JwtUser me, String visitorId, DeskStatusDTO request);
 }

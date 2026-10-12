@@ -16,6 +16,7 @@ import com.dudu.duduserver.entity.MessageDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.VisitorDO;
 import com.dudu.duduserver.service.impl.DeskVisitorServiceImpl;
+import com.dudu.duduserver.socket.DeskSocketGateway;
 import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessagePageVO;
@@ -54,8 +55,9 @@ class DeskVisitorServiceTest {
     private final MessageService messageService = mock(MessageService.class);
     private final UserService userService = mock(UserService.class);
     private final CompanyChannelService companyChannelService = mock(CompanyChannelService.class);
+    private final DeskSocketGateway deskSocketGateway = mock(DeskSocketGateway.class);
     private final DeskVisitorService deskVisitorService = new DeskVisitorServiceImpl(
-        deskAuthService, visitorService, messageService, userService, companyChannelService);
+        deskAuthService, visitorService, messageService, userService, companyChannelService, deskSocketGateway);
 
     private final JwtUser me = new JwtUser(COMPANY_ID, 9L, UserRoleEnum.CONSOLE, 0L);
 

@@ -1,6 +1,8 @@
 package com.dudu.duduserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
@@ -10,6 +12,7 @@ import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.VisitorQueryOrderEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
 import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
+import com.dudu.duduserver.dto.DeskStatusDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.MessageDO;
@@ -21,6 +24,7 @@ import com.dudu.duduserver.service.DeskVisitorService;
 import com.dudu.duduserver.service.MessageService;
 import com.dudu.duduserver.service.UserService;
 import com.dudu.duduserver.service.VisitorService;
+import com.dudu.duduserver.socket.DeskSocketGateway;
 import com.dudu.duduserver.util.DeskConversationViews;
 import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
@@ -28,6 +32,7 @@ import com.dudu.duduserver.vo.DeskMessagePageVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskVisitorPageVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -40,11 +45,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 访客查询实现：授权范围经 DeskAuthService.requireAccess 实时解析，访客始终由
+ * 访客资源实现：授权范围经 DeskAuthService.requireAccess 实时解析，访客始终由
  * 企业 + 授权账号集合过滤；排序与计数按契约固定规则表达，名片保存不影响消息排序。
  * 排序里的布尔表达式与空值回落无法用 Lambda 构造器表达，作为受支持的固定 SQL 片段追加。
  * 按需历史复用同一授权读取，按会话内 sequence 分页投影为契约第 4 节的消息对象。
+ * 结束 / 继续只改接待状态与等待计时，HTTP 返回与 conversation 推送共用同一份会话对象。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeskVisitorServiceImpl implements DeskVisitorService {
@@ -64,6 +71,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     private final MessageService messageService;
     private final UserService userService;
     private final CompanyChannelService companyChannelService;
+    private final DeskSocketGateway deskSocketGateway;
 
     @Override
     public DeskVisitorPageVO query(JwtUser me, DeskVisitorQueryDTO query) {
@@ -129,6 +137,70 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             .toList()
             .reversed();
         return new DeskMessagePageVO(items, nextCursor);
+    }
+
+    @Override
+    public DeskConversationVO updateStatus(JwtUser me, String visitorId, DeskStatusDTO request) {
+        VisitorStatusEnum target = requireStatus(request.status());
+        AuthorizedVisitor authorized = requireAuthorizedVisitor(me, parseVisitorId(visitorId));
+        VisitorDO visitor = authorized.visitor();
+        LocalDateTime now = LocalDateTime.now();
+        // 契约第 2 节：结束写 closed 并清空 waiting_since；继续在本轮计时未开始时重新计时，已待回复保留原值
+        boolean awaiting = awaitingReply(visitor);
+        boolean changed = target == VisitorStatusEnum.CLOSED
+            ? visitor.getStatus() != VisitorStatusEnum.CLOSED || visitor.getWaitingSince() != null
+            : !awaiting;
+        if (changed) {
+            LambdaUpdateWrapper<VisitorDO> update = Wrappers.<VisitorDO>lambdaUpdate()
+                .eq(VisitorDO::getVisitorId, visitor.getVisitorId())
+                .set(VisitorDO::getStatus, target)
+                .setSql("version = version + 1")
+                .set(VisitorDO::getUpdateTime, now);
+            if (target == VisitorStatusEnum.CLOSED) {
+                update.setSql("waiting_since = NULL");
+            } else if (!awaiting) {
+                update.set(VisitorDO::getWaitingSince, now);
+            }
+            visitorService.update(update);
+            visitor = visitorService.getById(visitor.getVisitorId());
+        }
+        CompanyChannelDO account = companyChannelService.getById(visitor.getCompanyChannelId());
+        DeskConversationVO conversation = toConversation(visitor, account);
+        if (changed) {
+            pushStatusChange(account, conversation);
+        }
+        return conversation;
+    }
+
+    // 状态只接受 closed 与 needs-reply：缺失 11100，其他取值 11000，不写库
+    private VisitorStatusEnum requireStatus(String status) {
+        if (status == null) {
+            throw new BizException(ApiEnum.PARAM_MISSING, "缺少接待状态");
+        }
+        if (VisitorStatusEnum.CLOSED.getCode().equals(status)) {
+            return VisitorStatusEnum.CLOSED;
+        }
+        if (VisitorStatusEnum.NEEDS_REPLY.getCode().equals(status)) {
+            return VisitorStatusEnum.NEEDS_REPLY;
+        }
+        throw new BizException(ApiEnum.PARAM_ERROR, "接待状态只接受 closed 或 needs-reply");
+    }
+
+    // 已待回复且本轮计时已开始：继续时保留原 waiting_since，等待时长不重置（与入站来信同规则）
+    private boolean awaitingReply(VisitorDO visitor) {
+        return visitor.getStatus() == VisitorStatusEnum.NEEDS_REPLY && visitor.getWaitingSince() != null;
+    }
+
+    // 状态保存后推送一次 conversation 报文（含操作者本人）；推送失败只记录，不影响已保存的状态
+    private void pushStatusChange(CompanyChannelDO account, DeskConversationVO conversation) {
+        if (account == null) {
+            return;
+        }
+        try {
+            deskSocketGateway.pushConversation(account.getCompanyId(), account.getCompanyChannelId(), conversation);
+        } catch (RuntimeException e) {
+            log.error("[desk-reception] 推送接待状态失败, visitorId={}", conversation.id(), e);
+        }
     }
 
     // 访客资源共用的授权读取：不存在 12100；在库但不属于当前企业或当前授权账号统一 10106，不泄漏他人数据

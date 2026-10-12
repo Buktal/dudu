@@ -24,9 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Desk 实时网关：按员工维护多个已连接会话（多设备），只向认证成功且当前有权的
- * 已连接员工推送契约第 5 节报文；本票实现 message 报文（消息引起的访客更新合并在
- * 报文中），conversation / profile / access-changed 由后续票接入。没有 eventId、ack
- * 与持久游标，未认证会话与离线员工不接收业务数据。
+ * 已连接员工推送契约第 5 节报文；本票实现 message 与 conversation 报文（消息引起的
+ * 访客更新合并在 message 中），profile / access-changed 由后续票接入。没有 eventId、
+ * ack 与持久游标，未认证会话与离线员工不接收业务数据。
  */
 @Slf4j
 @Component
@@ -97,6 +97,22 @@ public class DeskSocketGateway {
         frame.put("type", "message");
         frame.put("message", message);
         frame.put("conversation", conversation);
+        broadcast(companyId, companyChannelId, frame);
+    }
+
+    /**
+     * 推送一条会话状态变更（结束 / 继续）：只发完整会话对象，不含发送者个人字段；
+     * 发给当前有权接待该账号的已连接员工（含操作者本人）。
+     */
+    public void pushConversation(Long companyId, Long companyChannelId, DeskConversationVO conversation) {
+        Map<String, Object> frame = new LinkedHashMap<>();
+        frame.put("type", "conversation");
+        frame.put("conversation", conversation);
+        broadcast(companyId, companyChannelId, frame);
+    }
+
+    // 按当前持久数据复核员工启用状态与接待范围后逐会话发送；同一员工的权限只解析一次
+    private void broadcast(Long companyId, Long companyChannelId, Map<String, Object> frame) {
         String payload = serialize(frame);
         Map<Long, Boolean> accessByUser = new HashMap<>();
         for (Map.Entry<String, ConnectedSession> item : sessions.entrySet()) {

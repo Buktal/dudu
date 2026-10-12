@@ -3,9 +3,11 @@ import { DeskApiError } from "@/lib/api-response";
 import type { InboxApi } from "../api";
 import { emptyQuery } from "../conversation-query";
 import type { ConversationPage } from "../types";
+import { pinConversation } from "./parallel";
 import { loadConversations, retryConversations } from "./queue";
 import { resetContext } from "./reading";
 import { selectQueue, selectQuickQueueConversations } from "./selectors";
+import { editDraft } from "./sending";
 import {
   deferred,
   firstConversation,
@@ -69,6 +71,76 @@ describe("live queue refresh coordination", () => {
       expect(
         selectQuickQueueConversations(store.getState()).map(({ id }) => id),
       ).toEqual(["conversation-a", "conversation-b"]);
+    });
+  });
+
+  it("leaves the active queue on an end event and re-reads first page and counts without rolling back on stale frames", async () => {
+    let subscription!: Parameters<InboxApi["subscribe"]>[0];
+    let first = firstConversation;
+    let counts = { active: 2, needsReply: 2, waiting: 0, closed: 0 };
+    const store = testStore({
+      subscribe: (input) => {
+        subscription = input;
+        input.onConnection("connected");
+        return () => {};
+      },
+      listConversations: async () => ({
+        items: [first, secondConversation].filter(
+          (item) => item.status !== "closed",
+        ),
+        nextCursor: null,
+        total: 2,
+        counts,
+      }),
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(pinConversation("conversation-a"));
+    store.dispatch(editDraft("conversation-a", "结束前未发送的草稿"));
+    first = {
+      ...firstConversation,
+      status: "closed",
+      waitingSince: undefined,
+      version: 2,
+    };
+    counts = { active: 1, needsReply: 1, waiting: 0, closed: 1 };
+
+    // 其他端结束接待：conversation 报文就地出列，并按最新计数重读第一页
+    subscription.onEvent({
+      type: "conversation",
+      id: "other-end",
+      cursor: "other-end",
+      context: subscription.context,
+      conversation: first,
+    });
+    expect(
+      selectQuickQueueConversations(store.getState()).map(({ id }) => id),
+    ).toEqual(["conversation-b"]);
+    // 结束不影响已打开的内容：固定会话与未发送草稿都保留
+    expect(store.getState().inbox).toMatchObject({
+      pinnedId: "conversation-a",
+      drafts: { "conversation-a": { text: "结束前未发送的草稿" } },
+      conversations: { "conversation-a": { status: "closed", version: 2 } },
+    });
+    await vi.waitFor(() => {
+      expect(selectQueue(store.getState())).toMatchObject({
+        status: "ready",
+        counts: { active: 1, needsReply: 1, closed: 1 },
+      });
+    });
+
+    // 乱序：较旧版本的报文不把已结束状态倒退
+    subscription.onEvent({
+      type: "conversation",
+      id: "stale-snapshot",
+      cursor: "stale-snapshot",
+      context: subscription.context,
+      conversation: { ...firstConversation, version: 1 },
+    });
+    expect(
+      store.getState().inbox.conversations["conversation-a"],
+    ).toMatchObject({
+      status: "closed",
+      version: 2,
     });
   });
 

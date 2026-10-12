@@ -14,6 +14,7 @@ import com.dudu.duduserver.constant.VisitorQueryStatusEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
 import com.dudu.duduserver.dto.DeskHistoryQueryDTO;
 import com.dudu.duduserver.dto.DeskLoginDTO;
+import com.dudu.duduserver.dto.DeskStatusDTO;
 import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
 import com.dudu.duduserver.service.DeskAuthService;
 import com.dudu.duduserver.testutil.NoDatasourceSpringTest;
@@ -51,6 +52,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -299,6 +301,36 @@ class DeskApiTest extends NoDatasourceSpringTest {
                 .header("Authorization", bearer(null, 1L, UserRoleEnum.ADMIN)))
             .andExpect(jsonPath("$.code").value(ApiEnum.FORBIDDEN.code));
         verify(deskVisitorService, times(2)).history(any(JwtUser.class), anyString(), any(DeskHistoryQueryDTO.class));
+    }
+
+    @Test
+    void deskVisitorStatusAcceptsPutAndReturnsTheConversationEnvelope() throws Exception {
+        when(deskVisitorService.updateStatus(any(JwtUser.class), anyString(), any(DeskStatusDTO.class)))
+            .thenReturn(conversationResult());
+        String token = bearer(783101L, 9L, UserRoleEnum.CONSOLE);
+
+        mockMvc.perform(put("/api/desk/visitors/41/status").header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"closed\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(ApiEnum.OK.code))
+            .andExpect(jsonPath("$.data.id").value("41"))
+            .andExpect(jsonPath("$.data.identity.externalUserId").value("external-a"))
+            .andExpect(jsonPath("$.data.status").value("waiting"))
+            .andExpect(jsonPath("$.data.waitingSince").doesNotExist());
+        ArgumentCaptor<DeskStatusDTO> captor = ArgumentCaptor.forClass(DeskStatusDTO.class);
+        verify(deskVisitorService).updateStatus(any(JwtUser.class), eq("41"), captor.capture());
+        assertThat(captor.getValue().status()).isEqualTo("closed");
+
+        // 未认证与平台身份都不得进入服务
+        mockMvc.perform(put("/api/desk/visitors/41/status")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"closed\"}"))
+            .andExpect(jsonPath("$.code").value(ApiEnum.TOKEN_EMPTY.code));
+        mockMvc.perform(put("/api/desk/visitors/41/status")
+                .header("Authorization", bearer(null, 1L, UserRoleEnum.ADMIN))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"closed\"}"))
+            .andExpect(jsonPath("$.code").value(ApiEnum.FORBIDDEN.code));
+        verify(deskVisitorService, times(1))
+            .updateStatus(any(JwtUser.class), anyString(), any(DeskStatusDTO.class));
     }
 
     @Test

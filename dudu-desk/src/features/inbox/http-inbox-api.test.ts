@@ -290,8 +290,6 @@ describe("http inbox adapter", () => {
       () => api.readProfile(input),
       // 服务端没有已读接口：待处理提醒只在本地运行态维护，不调用它
       () => api.markRead({ ...input, throughSequence: 1 }),
-      () => api.endConversation(input),
-      () => api.resumeConversation(input),
     ]) {
       await expect(call()).rejects.toMatchObject({
         kind: "unavailable",
@@ -619,6 +617,80 @@ describe("http inbox reply adapter", () => {
       reason: undefined,
       nextStep: undefined,
     });
+  });
+
+  it("ends a reception with the PUT status contract and reads the saved conversation back", async () => {
+    seed("stored-token");
+    const fetcher = vi.fn(
+      async (url: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(url)).toBe(`${ORIGIN}/api/desk/visitors/41/status`);
+        expect(init?.method).toBe("PUT");
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          "Bearer stored-token",
+        );
+        expect(JSON.parse(String(init?.body))).toEqual({ status: "closed" });
+        return envelope({
+          ...SERVER_ITEM,
+          status: "closed",
+          waitingSince: undefined,
+          version: 4,
+        });
+      },
+    );
+    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
+
+    const conversation = await api.endConversation({
+      context: CONTEXT,
+      signal: signal(),
+      conversationId: "41",
+    });
+
+    expect(conversation).toEqual({
+      ...EXPECTED_ITEM,
+      status: "closed",
+      waitingSince: undefined,
+      version: 4,
+    });
+  });
+
+  it("resumes a closed reception as needs-reply and surfaces business failures", async () => {
+    seed("stored-token");
+    let body: unknown;
+    const fetcher = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        body = JSON.parse(String(init?.body));
+        return envelope({ ...SERVER_ITEM, status: "needs-reply", version: 5 });
+      },
+    );
+    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
+
+    const conversation = await api.resumeConversation({
+      context: CONTEXT,
+      signal: signal(),
+      conversationId: "41",
+    });
+
+    expect(body).toEqual({ status: "needs-reply" });
+    expect(conversation).toMatchObject({
+      id: "41",
+      status: "needs-reply",
+      version: 5,
+    });
+    expect(conversation.waitingSince).toBe("2026-10-12 10:00:00");
+
+    // 保存被业务拒绝时按服务端真实说明反馈，不猜测成功
+    const refused = createHttpInboxApi({
+      origin: ORIGIN,
+      fetcher: async () =>
+        Response.json({ code: 10106, msg: "无访问权限", data: null }),
+    });
+    await expect(
+      refused.endConversation({
+        context: CONTEXT,
+        signal: signal(),
+        conversationId: "41",
+      }),
+    ).rejects.toMatchObject({ kind: "forbidden", code: 10106 });
   });
 
   it("marks reminders as locally owned so the store never reads a server unread", () => {
