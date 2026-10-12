@@ -18,6 +18,26 @@ import type { InboxState } from "./state";
  * `false` and finish with one `rewriteQueueIds` transaction instead, so ids
  * are never written twice for the same payload.
  */
+/**
+ * Whether one conversation holds a message collection: its history was loaded,
+ * or it is on screen (focus, reply target, parallel pin or the full-history
+ * dialog). Live message events for any other conversation update the summary
+ * only — never the messages map — so an unopened visitor stays a card summary
+ * until its history is read on demand.
+ */
+export function holdsMessages(
+  state: InboxState,
+  conversationId: string,
+): boolean {
+  return (
+    state.histories[conversationId]?.hasLoaded === true ||
+    state.activeId === conversationId ||
+    state.replyId === conversationId ||
+    state.pinnedId === conversationId ||
+    state.quickHistoryId === conversationId
+  );
+}
+
 export function mergeConversation(
   state: InboxState,
   conversation: Conversation,

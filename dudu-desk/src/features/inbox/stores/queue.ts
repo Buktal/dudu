@@ -6,12 +6,14 @@ import { collectPaged } from "./page-cursor";
 import { foldConversationPages } from "./queue-membership";
 import {
   failedReadCursor,
+  hasInFlightRequest,
   operationFailure,
   requestKeys,
   runOperation,
 } from "./requests";
 import { inboxActions } from "./slice";
 import {
+  awaitConnectionSettled,
   type InboxCommand,
   type InboxRootState,
   notifyQueueSettled,
@@ -62,6 +64,14 @@ export function loadConversations(
     // refresh coordination skips while a queue request is in flight.
     try {
       await runOperation(runtime, requestKeys.queue, getState, async (op) => {
+        // 就绪后查询：订阅在途且连接仍在 connecting 时先等 Socket ready 或失败，
+        // 避免订阅与查询之间夹入的来信既收不到推送、也不在查询结果里
+        if (
+          getState().inbox.connection === "connecting" &&
+          hasInFlightRequest(runtime, requestKeys.events)
+        ) {
+          await awaitConnectionSettled(runtime, op.signal);
+        }
         dispatch(inboxActions.queueLoading(options.query));
         try {
           // Re-find mounted cards before pruning service-owned search membership.

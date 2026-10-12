@@ -35,6 +35,8 @@ describe("incremental inbox updates", () => {
     });
     store.dispatch(startInboxUpdates());
     await store.dispatch(loadConversations());
+    // 消息事件只落在已经打开（历史已加载或正在展示）的会话上
+    await store.dispatch(loadHistory("conversation-b"));
     store.dispatch(editDraft("conversation-a", "正在输入"));
     const message = { ...incomingMessage("conversation-b"), version: 3 };
     const incoming = event(input, { type: "message", message }, "event-1");
@@ -221,6 +223,8 @@ describe("incremental inbox updates", () => {
       },
     });
     await store.dispatch(loadConversations());
+    // 会话历史已加载（消息集合可收事件），但回执指向的消息本身仍未到达
+    await store.dispatch(loadHistory("conversation-b"));
     input.onEvent(
       event(
         input,
@@ -262,10 +266,10 @@ describe("incremental inbox updates", () => {
         "message-after-receipts",
       ),
     );
-    expect(selectMessages(store.getState(), "conversation-b")).toHaveLength(1);
-    expect(
-      selectMessages(store.getState(), "conversation-b")[0].delivery?.state,
-    ).toBe("read");
+    const received = selectMessages(store.getState(), "conversation-b").find(
+      (item) => item.id === "unknown-yet",
+    );
+    expect(received?.delivery?.state).toBe("read");
   });
 
   it("keeps newer capability evidence when older snapshots arrive", async () => {

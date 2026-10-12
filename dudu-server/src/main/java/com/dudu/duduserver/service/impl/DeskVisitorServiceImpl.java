@@ -19,12 +19,11 @@ import com.dudu.duduserver.service.DeskVisitorService;
 import com.dudu.duduserver.service.MessageService;
 import com.dudu.duduserver.service.UserService;
 import com.dudu.duduserver.service.VisitorService;
+import com.dudu.duduserver.util.DeskConversationViews;
 import com.dudu.duduserver.vo.DeskAccessVO;
-import com.dudu.duduserver.vo.DeskCapabilityVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessagePageVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
-import com.dudu.duduserver.vo.DeskVisitorIdentityVO;
 import com.dudu.duduserver.vo.DeskVisitorPageVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -57,10 +56,6 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     // messages：消息数降序，再按最后消息时间降序、访客 ID 升序
     private static final String ORDER_MESSAGES =
         "ORDER BY message_count DESC, IFNULL(last_message_time, create_time) DESC, visitor_id ASC";
-
-    // 渠道发送能力由后续消息票接通；当前如实返回不可发送与原因，不编造可发能力
-    private static final DeskCapabilityVO SEND_NOT_READY =
-        new DeskCapabilityVO("restricted", List.of(), "渠道发送能力尚未接入");
 
     private final DeskAuthService deskAuthService;
     private final VisitorService visitorService;
@@ -327,26 +322,8 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     }
 
     private DeskConversationVO toConversation(VisitorDO visitor, DeskAccessVO.Account account) {
-        ChannelEnum channel = account.channel();
-        DeskVisitorIdentityVO identity = new DeskVisitorIdentityVO(
-            String.valueOf(visitor.getVisitorId()),
-            visitor.getExternalUserId(),
-            visitor.getName(),
-            visitor.getAvatarUrl(),
-            channel == null ? null : channel.getCode(),
-            channel == null ? null : channel.getDisplayName(),
-            account.companyChannelId(),
-            account.accountName());
-        return new DeskConversationVO(
-            String.valueOf(visitor.getVisitorId()),
-            identity,
-            visitor.getStatus(),
-            visitor.getLastMessagePreview(),
-            visitor.getLastMessageTime() == null ? visitor.getCreateTime() : visitor.getLastMessageTime(),
-            visitor.getStatus() == VisitorStatusEnum.NEEDS_REPLY ? visitor.getWaitingSince() : null,
-            visitor.getMessageCount(),
-            visitor.getVersion(),
-            SEND_NOT_READY);
+        return DeskConversationViews.conversation(visitor, account.channel(),
+            account.companyChannelId(), account.accountName());
     }
 
     private Long parseVisitorId(String visitorId) {

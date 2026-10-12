@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import type { InboxApi } from "../api";
 import { emptyQuery } from "../conversation-query";
 import type { ConversationPage } from "../types";
+import { startInboxUpdates } from "./events";
 import { loadConversations } from "./queue";
 import {
   selectQuickQueueConversations,
@@ -9,6 +11,7 @@ import {
 import {
   deferred,
   firstConversation,
+  incomingMessage,
   secondConversation,
   testStore,
 } from "./test-support";
@@ -37,6 +40,59 @@ describe("conversation queue startup", () => {
     expect(
       selectQuickQueueConversations(store.getState()).map(({ id }) => id),
     ).toEqual(["conversation-a", "conversation-b"]);
+  });
+});
+
+describe("ready-then-query startup handoff", () => {
+  it("reads initial data only after the socket is ready and keeps a message that lands in between", async () => {
+    let subscription!: Parameters<InboxApi["subscribe"]>[0];
+    const calls: string[] = [];
+    const liveView = {
+      ...secondConversation,
+      id: "conversation-new",
+      identity: { ...secondConversation.identity, id: "conversation-new" },
+    };
+    const store = testStore(
+      {
+        subscribe: (input) => {
+          subscription = input;
+          calls.push("subscribe");
+          return () => {};
+        },
+        listConversations: async () => {
+          calls.push("query");
+          // 查询结果里的访客快照比实时报文旧：合并后以实时版本为准
+          return {
+            items: [firstConversation, { ...liveView, version: 1 }],
+            nextCursor: null,
+            total: 2,
+          };
+        },
+      },
+      false,
+    );
+    store.dispatch(startInboxUpdates());
+    const initial = store.dispatch(loadConversations());
+    await Promise.resolve();
+    expect(calls).toEqual(["subscribe"]);
+
+    subscription.onConnection("connected");
+    // ready 与初始查询返回之间夹入的首见访客来信
+    subscription.onEvent({
+      type: "message",
+      context: subscription.context,
+      message: { ...incomingMessage("conversation-new") },
+      conversation: { ...liveView, version: 2, preview: "实时摘要" },
+    });
+    await initial;
+
+    expect(calls).toEqual(["subscribe", "query"]);
+    const state = store.getState().inbox;
+    expect(state.conversations["conversation-new"]).toMatchObject({
+      version: 2,
+      preview: "实时摘要",
+    });
+    expect(state.queue.ids).toContain("conversation-new");
   });
 });
 

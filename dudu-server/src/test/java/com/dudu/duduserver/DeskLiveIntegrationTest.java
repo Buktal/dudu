@@ -1,0 +1,564 @@
+package com.dudu.duduserver;
+
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.crypto.digest.DigestUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.config.auth.JwtManager;
+import com.dudu.duduserver.config.auth.JwtUser;
+import com.dudu.duduserver.constant.ChannelEnum;
+import com.dudu.duduserver.constant.EnableStatusEnum;
+import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.constant.UserRoleEnum;
+import com.dudu.duduserver.dto.CompanyAdminInitDTO;
+import com.dudu.duduserver.dto.CompanyCreateDTO;
+import com.dudu.duduserver.entity.CompanyChannelDO;
+import com.dudu.duduserver.entity.UserDO;
+import com.dudu.duduserver.entity.UserGroupDO;
+import com.dudu.duduserver.entity.UserGroupMemberDO;
+import com.dudu.duduserver.service.CompanyChannelService;
+import com.dudu.duduserver.service.CompanyService;
+import com.dudu.duduserver.service.DeskInboundService;
+import com.dudu.duduserver.service.UserGroupMemberService;
+import com.dudu.duduserver.service.UserGroupService;
+import com.dudu.duduserver.service.UserService;
+import com.dudu.duduserver.util.PasswordHasher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * 实时来信与登录订阅衔接在独立 MySQL、真实 HTTP 与真实 WebSocket 边界验收：
+ * 新访客首信一次创建访客与空名片并推送完整报文（双客户端）、已有访客计数与等待时长规则、
+ * 未授权员工不接收推送、Socket 认证失败业务码、签名与未接入协议拒绝、GET 验证与并发首信 sequence。
+ * 通过环境变量显式启用，运行前需重建 dudu_review。
+ */
+@SpringBootTest(properties = {"dudu.auth.jwt-secret=integration-test-secret"},
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc
+@EnabledIfEnvironmentVariable(named = "DUDU_INTEGRATION_TEST", matches = "true")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class DeskLiveIntegrationTest {
+
+    private static final String PASSWORD = "password123";
+    private static final long COMPANY_ID = 788001L;
+    private static final long OTHER_COMPANY_ID = 788002L;
+    private static final String CALLBACK_TOKEN = "live-callback-token";
+
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
+        registry.add("spring.datasource.username", () -> "root");
+        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+    }
+
+    @LocalServerPort int port;
+    @Autowired MockMvc mvc;
+    @Autowired CompanyService companies;
+    @Autowired UserService users;
+    @Autowired UserGroupService groups;
+    @Autowired UserGroupMemberService members;
+    @Autowired CompanyChannelService channels;
+    @Autowired DeskInboundService deskInboundService;
+    @Autowired JwtManager jwtManager;
+    @Autowired JdbcTemplate jdbc;
+
+    private long channelWechat;
+    private long channelDouyin;
+    private String ownerToken;
+    private String scopedToken;
+    private String outsideToken;
+
+    private final List<WebSocketSession> openSessions = new ArrayList<>();
+
+    @BeforeAll
+    void seed() throws Exception {
+        companies.createCompany(company(COMPANY_ID, "liveowner"), 1L);
+        companies.createCompany(company(OTHER_COMPANY_ID, "liveowner2"), 1L);
+        UserGroupDO group = group(COMPANY_ID, "实时组");
+        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "公众号",
+            Map.of("token", CALLBACK_TOKEN, "externalAccountId", "gh_live"));
+        channelDouyin = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.DOUYIN, "抖音号", Map.of("token", "x"));
+
+        UserDO scoped = plainUser(COMPANY_ID, "live.scoped");
+        members.save(member(COMPANY_ID, scoped.getUserId(), group.getGroupId()));
+        plainUser(COMPANY_ID, "live.none");
+        ownerToken = login("liveowner");
+        scopedToken = login("live.scoped");
+        outsideToken = login("live.none");
+    }
+
+    @AfterEach
+    void closeSockets() throws Exception {
+        for (WebSocketSession session : openSessions) {
+            if (session.isOpen()) {
+                session.close(CloseStatus.NORMAL);
+            }
+        }
+        openSessions.clear();
+    }
+
+    @Test
+    void firstMessageCreatesVisitorWithEmptyProfileAndPushesFullFrameToBothClients() throws Exception {
+        SocketClient owner = connectAndAuth(ownerToken);
+        // 同一员工的第二台设备同样收到推送
+        SocketClient ownerSecondDevice = connectAndAuth(ownerToken);
+        SocketClient scoped = connectAndAuth(scopedToken);
+
+        String msgId = "msg-" + System.nanoTime();
+        assertThat(callback(channelWechat, signedParams(), textPush("live-ext-1", "你好，想咨询发货时间", msgId)))
+            .isEqualTo(200);
+
+        assertFrame(owner.next(Duration.ofSeconds(5)), "live-ext-1", "你好，想咨询发货时间", msgId, 1);
+        assertFrame(ownerSecondDevice.next(Duration.ofSeconds(5)), "live-ext-1", "你好，想咨询发货时间", msgId, 1);
+        assertFrame(scoped.next(Duration.ofSeconds(5)), "live-ext-1", "你好，想咨询发货时间", msgId, 1);
+
+        Long visitorId = jdbc.queryForObject(
+            "SELECT visitor_id FROM visitor WHERE company_id = ? AND external_user_id = 'live-ext-1'", Long.class,
+            COMPANY_ID);
+        JSONObject conversation = detail(ownerToken, visitorId).getJSONObject("data");
+        assertThat(conversation.getStr("status")).isEqualTo("needs-reply");
+        assertThat(conversation.getStr("preview")).isEqualTo("你好，想咨询发货时间");
+        assertThat(conversation.getInt("messageCount")).isEqualTo(1);
+        assertThat(conversation.getInt("version")).isEqualTo(2);
+        assertThat(conversation.getStr("waitingSince")).isNotBlank();
+
+        // 同一事务创建空名片；消息体按契约结构保存
+        Map<String, Object> profile = jdbc.queryForMap("SELECT * FROM visitor_profile WHERE visitor_id = ?", visitorId);
+        assertThat(profile.get("channel_fields")).isEqualTo("[]");
+        assertThat(profile.get("tags")).isEqualTo("[]");
+        Map<String, Object> row = jdbc.queryForMap("SELECT * FROM message WHERE visitor_id = ?", visitorId);
+        assertThat(row.get("direction")).isEqualTo("incoming");
+        assertThat(row.get("sequence")).isEqualTo(1L);
+        assertThat(row.get("external_message_id")).isEqualTo(msgId);
+        assertThat(row.get("content").toString()).contains("\"text\": \"你好，想咨询发货时间\"");
+
+        // 推送后经查询接口读到的摘要与报文一致
+        JSONObject page = data(JSONUtil.parseObj(mvc.perform(post("/api/desk/visitors/query")
+                .header("Authorization", "Bearer " + scopedToken)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"search\": \"live-ext-1\"}"))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()));
+        assertThat(page.getLong("total")).isEqualTo(1L);
+        JSONObject item = page.getJSONArray("items").getJSONObject(0);
+        assertThat(item.getStr("id")).isEqualTo(String.valueOf(visitorId));
+        assertThat(item.getStr("preview")).isEqualTo("你好，想咨询发货时间");
+        assertThat(item.getInt("messageCount")).isEqualTo(1);
+
+        JSONObject history = data(JSONUtil.parseObj(mvc.perform(get("/api/desk/visitors/" + visitorId + "/messages")
+                .header("Authorization", "Bearer " + scopedToken))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()));
+        JSONObject message = history.getJSONArray("items").getJSONObject(0);
+        assertThat(message.getInt("sequence")).isEqualTo(1);
+        assertThat(message.getStr("direction")).isEqualTo("incoming");
+        assertThat(message.getJSONObject("body").getStr("text")).isEqualTo("你好，想咨询发货时间");
+    }
+
+    @Test
+    void repeatedMessagesIncrementSequenceAndKeepWaitingSince() throws Exception {
+        callback(channelWechat, signedParams(), textPush("live-ext-2", "第一条", "m2-1"));
+        Long visitorId = jdbc.queryForObject(
+            "SELECT visitor_id FROM visitor WHERE company_id = ? AND external_user_id = 'live-ext-2'", Long.class,
+            COMPANY_ID);
+        LocalDateTime waitingSince = waitingSince(visitorId);
+
+        Thread.sleep(50);
+        assertThat(callback(channelWechat, signedParams(), textPush("live-ext-2", "第二条", "m2-2"))).isEqualTo(200);
+
+        assertThat(waitingSince(visitorId)).isEqualTo(waitingSince);
+        Map<String, Object> visitor = jdbc.queryForMap("SELECT * FROM visitor WHERE visitor_id = ?", visitorId);
+        assertThat(visitor.get("message_count")).isEqualTo(2L);
+        assertThat(visitor.get("version")).isEqualTo(3L);
+        assertThat(visitor.get("last_message_preview")).isEqualTo("第二条");
+        assertThat(visitor.get("status")).isEqualTo("needs-reply");
+        List<Integer> sequences = jdbc.queryForList(
+            "SELECT sequence FROM message WHERE visitor_id = ? ORDER BY sequence", Integer.class, visitorId);
+        assertThat(sequences).containsExactly(1, 2);
+    }
+
+    @Test
+    void channelProfileUpdatesDistinguishMissingEmptyAndAvailableValues() throws Exception {
+        CompanyChannelDO account = channels.getById(channelWechat);
+        deskInboundService.accept(account, new ChannelInboundMessage(channelWechat, "live-ext-profile",
+            "渠道昵称", "http://avatar/1",
+            List.of(new ChannelInboundMessage.ChannelField("城市", "广州"),
+                new ChannelInboundMessage.ChannelField("手机号", null)),
+            "p1", MessageDirectionEnum.INCOMING, Map.of("type", "text", "text", "带资料来信")));
+
+        Long visitorId = jdbc.queryForObject(
+            "SELECT visitor_id FROM visitor WHERE company_id = ? AND external_user_id = 'live-ext-profile'",
+            Long.class, COMPANY_ID);
+        Map<String, Object> visitor = jdbc.queryForMap("SELECT * FROM visitor WHERE visitor_id = ?", visitorId);
+        assertThat(visitor.get("name")).isEqualTo("渠道昵称");
+        assertThat(visitor.get("avatar_url")).isEqualTo("http://avatar/1");
+        Map<String, Object> profile = jdbc.queryForMap("SELECT * FROM visitor_profile WHERE visitor_id = ?", visitorId);
+        // MySQL 的 JSON 列在读出时带空格，断言按 JSON 语义匹配
+        assertThat(profile.get("channel_fields").toString())
+            .contains("\"label\": \"城市\"").contains("\"state\": \"available\"").contains("广州")
+            .contains("\"label\": \"手机号\"").contains("\"state\": \"not-provided\"");
+        assertThat(profile.get("version")).isEqualTo(2L);
+
+        // 未提供的名称与资料保留原值；空串按渠道给出的空值覆盖
+        deskInboundService.accept(account, new ChannelInboundMessage(channelWechat, "live-ext-profile",
+            null, null,
+            List.of(new ChannelInboundMessage.ChannelField("城市", "")),
+            "p2", MessageDirectionEnum.INCOMING, Map.of("type", "text", "text", "第二条")));
+
+        Map<String, Object> after = jdbc.queryForMap("SELECT * FROM visitor WHERE visitor_id = ?", visitorId);
+        assertThat(after.get("name")).isEqualTo("渠道昵称");
+        assertThat(after.get("avatar_url")).isEqualTo("http://avatar/1");
+        Map<String, Object> profileAfter = jdbc.queryForMap("SELECT * FROM visitor_profile WHERE visitor_id = ?",
+            visitorId);
+        assertThat(profileAfter.get("channel_fields").toString())
+            .contains("\"label\": \"城市\"").contains("\"state\": \"empty\"")
+            .contains("\"label\": \"手机号\"").contains("\"state\": \"not-provided\"");
+        assertThat(profileAfter.get("version")).isEqualTo(3L);
+    }
+
+    @Test
+    void incomingRestartsWaitingClockForWaitingVisitorAndReopensClosedVisitor() throws Exception {
+        LocalDateTime created = LocalDateTime.of(2026, 10, 1, 8, 0, 0);
+        insertVisitor(788101L, "live-ext-3", "waiting", null, created);
+        insertVisitor(788102L, "live-ext-4", "closed", null, created);
+
+        callback(channelWechat, signedParams(), textPush("live-ext-3", "再来一条", "m3"));
+        callback(channelWechat, signedParams(), textPush("live-ext-4", "又来了", "m4"));
+
+        for (long visitorId : new long[] {788101L, 788102L}) {
+            Map<String, Object> visitor = jdbc.queryForMap("SELECT * FROM visitor WHERE visitor_id = ?", visitorId);
+            assertThat(visitor.get("status")).isEqualTo("needs-reply");
+            assertThat(waitingSince(visitorId)).isAfter(created);
+        }
+    }
+
+    @Test
+    void unauthorizedEmployeeStaysConnectedWithoutReceivingPushes() throws Exception {
+        SocketClient owner = connectAndAuth(ownerToken);
+        SocketClient outside = connectAndAuth(outsideToken);
+
+        callback(channelWechat, signedParams(), textPush("live-ext-5", "只推给有权员工", "m5"));
+
+        assertThat((Object) owner.next(Duration.ofSeconds(5))).isNotNull();
+        assertThat((Object) outside.next(Duration.ofMillis(700))).isNull();
+    }
+
+    @Test
+    void socketRejectsInvalidTokenAndKeepsBusinessCodes() throws Exception {
+        SocketClient broken = connect();
+        JSONObject error = sendAuth(broken, "not-a-token");
+        assertThat(error.getStr("type")).isEqualTo("error");
+        assertThat(error.getInt("code")).isEqualTo(10102);
+        assertThat(error.getStr("msg")).isEqualTo("登录状态无效，请重新登录");
+        assertThat(broken.closed.await(5, TimeUnit.SECONDS)).isTrue();
+
+        // 平台管理员令牌不属于企业接待身份
+        SocketClient admin = connect();
+        JSONObject forbidden = sendAuth(admin, jwtManager.createToken(
+            new JwtUser(null, 1L, UserRoleEnum.ADMIN, DateUtil.currentSeconds() + 600)));
+        assertThat(forbidden.getInt("code")).isEqualTo(10106);
+
+        // 归属企业不符的令牌按登录状态无效处理
+        SocketClient mismatched = connect();
+        JSONObject invalid = sendAuth(mismatched, jwtManager.createToken(
+            new JwtUser(OTHER_COMPANY_ID, 1L, UserRoleEnum.USER, DateUtil.currentSeconds() + 600)));
+        assertThat(invalid.getInt("code")).isEqualTo(10102);
+    }
+
+    @Test
+    void callbackRejectsBadSignatureUnknownAccountAndUnsupportedProtocol() throws Exception {
+        assertThat(callback(channelWechat, tamperedParams(), textPush("live-ext-6", "伪造", "m6"))).isEqualTo(403);
+        assertThat(countMessagesOf("live-ext-6")).isZero();
+
+        Map<String, String> params = signedParams();
+        params.put("echostr", "echo-live");
+        assertThat(mvc.perform(get("/api/channels/" + channelWechat + "/callback").params(queryParams(params)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).isEqualTo("echo-live");
+
+        assertThat(mvc.perform(get("/api/channels/" + channelWechat + "/callback").params(queryParams(tamperedParams())))
+            .andExpect(status().isForbidden()).andReturn().getResponse().getContentAsString()).isEmpty();
+        assertThat(mvc.perform(get("/api/channels/99999999/callback").params(queryParams(signedParams())))
+            .andExpect(status().isNotFound()).andReturn().getResponse().getStatus()).isEqualTo(404);
+
+        // 已接入协议之外的渠道与加密模式都返回不支持，不模拟成功
+        assertThat(callback(channelDouyin, signedParams(), textPush("live-ext-7", "抖音", "m7"))).isEqualTo(501);
+        Map<String, String> secure = signedParams();
+        secure.put("encrypt_type", "aes");
+        assertThat(callback(channelWechat, secure, textPush("live-ext-8", "安全模式", "m8"))).isEqualTo(501);
+        assertThat(countMessagesOf("live-ext-7")).isZero();
+    }
+
+    @Test
+    void concurrentFirstMessagesAllocateDistinctSequences() throws Exception {
+        String xmlA = textPush("live-ext-9", "并发甲", "m9-a");
+        String xmlB = textPush("live-ext-9", "并发乙", "m9-b");
+        HttpClient client = HttpClient.newHttpClient();
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> first = pool.submit(() -> postOverHttp(client, xmlA));
+            Future<Integer> second = pool.submit(() -> postOverHttp(client, xmlB));
+            assertThat(List.of(first.get(), second.get())).containsExactly(200, 200);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        List<Integer> sequences = jdbc.queryForList("""
+            SELECT m.sequence FROM message m JOIN visitor v ON v.visitor_id = m.visitor_id
+            WHERE v.external_user_id = 'live-ext-9' ORDER BY m.sequence
+            """, Integer.class);
+        assertThat(sequences).containsExactly(1, 2);
+        assertThat(jdbc.queryForObject("""
+            SELECT COUNT(*) FROM visitor WHERE company_id = ? AND external_user_id = 'live-ext-9'
+            """, Integer.class, COMPANY_ID)).isEqualTo(1);
+    }
+
+    private int callback(long channelId, Map<String, String> params, String body) throws Exception {
+        return mvc.perform(post("/api/channels/" + channelId + "/callback").params(queryParams(params))
+                .contentType(MediaType.valueOf("text/xml")).content(body))
+            .andReturn().getResponse().getStatus();
+    }
+
+    private LinkedMultiValueMap<String, String> queryParams(Map<String, String> source) {
+        LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        source.forEach(params::add);
+        return params;
+    }
+
+    private int postOverHttp(HttpClient client, String body) throws Exception {
+        StringBuilder url = new StringBuilder("http://127.0.0.1:" + port + "/api/channels/" + channelWechat + "/callback");
+        signedParams().forEach((key, value) -> url.append("&").append(key).append("=").append(value));
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url.toString().replaceFirst("&", "?")))
+            .header("Content-Type", "text/xml")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .timeout(Duration.ofSeconds(10))
+            .build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode();
+    }
+
+    private void assertFrame(JSONObject frame, String externalUserId, String text, String msgId, int sequence) {
+        assertThat((Object) frame).isNotNull();
+        assertThat(frame.getStr("type")).isEqualTo("message");
+        JSONObject message = frame.getJSONObject("message");
+        assertThat(message.getStr("direction")).isEqualTo("incoming");
+        assertThat(message.getInt("sequence")).isEqualTo(sequence);
+        assertThat(message.getJSONObject("body").getStr("text")).isEqualTo(text);
+        assertThat(message.getJSONObject("body").getStr("type")).isEqualTo("text");
+        assertThat(message.getStr("createdAt")).isNotBlank();
+        JSONObject conversation = frame.getJSONObject("conversation");
+        assertThat(conversation.getStr("status")).isEqualTo("needs-reply");
+        assertThat(conversation.getStr("preview")).isEqualTo(text);
+        assertThat(conversation.getInt("messageCount")).isEqualTo(sequence);
+        assertThat(conversation.getStr("waitingSince")).isNotBlank();
+        assertThat(conversation.getJSONObject("identity").getStr("externalUserId")).isEqualTo(externalUserId);
+        assertThat(conversation.getJSONObject("identity").getStr("channelId")).isEqualTo("wechat");
+        assertThat(conversation.getJSONObject("identity").getStr("accountId")).isEqualTo(String.valueOf(channelWechat));
+        assertThat(conversation.getJSONObject("capability").getStr("state")).isEqualTo("restricted");
+        assertThat(message.getStr("id")).isNotBlank();
+        assertThat(conversation.getStr("id")).isNotBlank();
+    }
+
+    private SocketClient connect() throws Exception {
+        SocketClient client = new SocketClient();
+        WebSocketSession session = new StandardWebSocketClient()
+            .execute(client, "ws://127.0.0.1:" + port + "/ws/desk")
+            .get(5, TimeUnit.SECONDS);
+        openSessions.add(session);
+        client.session = session;
+        return client;
+    }
+
+    private SocketClient connectAndAuth(String token) throws Exception {
+        SocketClient client = connect();
+        assertThat(sendAuth(client, token).getStr("type")).isEqualTo("ready");
+        return client;
+    }
+
+    private JSONObject sendAuth(SocketClient client, String token) throws Exception {
+        client.session.sendMessage(new TextMessage(
+            JSONUtil.createObj().set("type", "auth").set("token", token).toString()));
+        return client.next(Duration.ofSeconds(5));
+    }
+
+    private long countMessagesOf(String externalUserId) {
+        return jdbc.queryForObject("""
+            SELECT COUNT(*) FROM message m JOIN visitor v ON v.visitor_id = m.visitor_id
+            WHERE v.external_user_id = ?
+            """, Long.class, externalUserId);
+    }
+
+    private LocalDateTime waitingSince(Long visitorId) {
+        return jdbc.queryForObject("SELECT waiting_since FROM visitor WHERE visitor_id = ?", LocalDateTime.class,
+            visitorId);
+    }
+
+    private void insertVisitor(long visitorId, String externalUserId, String status, LocalDateTime waitingSince,
+                               LocalDateTime createTime) {
+        jdbc.update("INSERT INTO visitor(visitor_id, company_id, company_channel_id, external_user_id, name, status,"
+                + " last_message_preview, last_message_time, waiting_since, message_count, version, create_time, update_time)"
+                + " VALUES(?, ?, ?, ?, NULL, ?, '', NULL, ?, 0, 1, ?, ?)",
+            visitorId, COMPANY_ID, channelWechat, externalUserId, status, waitingSince, createTime, createTime);
+        jdbc.update("INSERT INTO visitor_profile(visitor_id, channel_fields, tags, note, version, create_time, update_time)"
+            + " VALUES(?, JSON_ARRAY(), JSON_ARRAY(), '', 1, ?, ?)", visitorId, createTime, createTime);
+    }
+
+    private Map<String, String> signedParams() {
+        Map<String, String> params = new java.util.HashMap<>();
+        String timestamp = String.valueOf(DateUtil.currentSeconds());
+        String nonce = "nonce-" + System.nanoTime();
+        params.put("timestamp", timestamp);
+        params.put("nonce", nonce);
+        params.put("signature", signature(CALLBACK_TOKEN, timestamp, nonce));
+        return params;
+    }
+
+    private Map<String, String> tamperedParams() {
+        Map<String, String> params = signedParams();
+        params.put("signature", "0".repeat(40));
+        return params;
+    }
+
+    private String signature(String token, String timestamp, String nonce) {
+        String[] parts = {token, timestamp, nonce};
+        Arrays.sort(parts);
+        return DigestUtil.sha1Hex(String.join("", parts));
+    }
+
+    private String textPush(String from, String text, String msgId) {
+        return """
+            <xml><ToUserName><![CDATA[gh_live]]></ToUserName><FromUserName><![CDATA[%s]]></FromUserName>
+            <CreateTime>%d</CreateTime><MsgType><![CDATA[text]]></MsgType>
+            <Content><![CDATA[%s]]></Content><MsgId>%s</MsgId></xml>
+            """.formatted(from, DateUtil.currentSeconds(), text, msgId);
+    }
+
+    private JSONObject detail(String token, Long visitorId) throws Exception {
+        return JSONUtil.parseObj(mvc.perform(get("/api/desk/visitors/" + visitorId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    }
+
+    private JSONObject data(JSONObject response) {
+        assertThat(response.getInt("code")).isZero();
+        return response.getJSONObject("data");
+    }
+
+    private String login(String username) throws Exception {
+        String body = mvc.perform(post("/api/desk/login").contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"companyId": "%s", "username": "%s", "password": "%s"}
+                    """.formatted(COMPANY_ID, username, PASSWORD)))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        JSONObject data = JSONUtil.parseObj(body).getJSONObject("data");
+        assertThat(data.getStr("token")).isNotBlank();
+        return data.getStr("token");
+    }
+
+    private CompanyCreateDTO company(long companyId, String adminUsername) {
+        return new CompanyCreateDTO(String.valueOf(companyId), "实时验收企业", null, null, null,
+            new CompanyAdminInitDTO(adminUsername, PASSWORD, null));
+    }
+
+    private UserGroupDO group(long companyId, String name) {
+        UserGroupDO group = new UserGroupDO();
+        group.setCompanyId(companyId);
+        group.setGroupName(name);
+        groups.save(group);
+        return group;
+    }
+
+    private long channel(long companyId, long groupId, ChannelEnum channel, String accountName,
+                         Map<String, Object> channelInfo) {
+        CompanyChannelDO account = new CompanyChannelDO();
+        account.setCompanyId(companyId);
+        account.setGroupId(groupId);
+        account.setChannel(channel);
+        account.setAccountName(accountName);
+        account.setChannelInfo(channelInfo);
+        channels.save(account);
+        return account.getCompanyChannelId();
+    }
+
+    private UserDO plainUser(long companyId, String username) {
+        UserDO user = new UserDO();
+        user.setCompanyId(companyId);
+        user.setUsername(username);
+        user.setName(username);
+        user.setPasswordHash(PasswordHasher.hash(PASSWORD));
+        user.setRole(UserRoleEnum.USER);
+        user.setStatus(EnableStatusEnum.ENABLED);
+        users.save(user);
+        return user;
+    }
+
+    private UserGroupMemberDO member(long companyId, long userId, long groupId) {
+        UserGroupMemberDO member = new UserGroupMemberDO();
+        member.setCompanyId(companyId);
+        member.setUserId(userId);
+        member.setGroupId(groupId);
+        return member;
+    }
+
+    /**
+     * 真实 WebSocket 客户端：异步收集服务端报文，供断言 ready / error 与推送帧。
+     */
+    private static final class SocketClient extends TextWebSocketHandler {
+
+        private final BlockingQueue<JSONObject> frames = new LinkedBlockingQueue<>();
+        private final CountDownLatch closed = new CountDownLatch(1);
+        private WebSocketSession session;
+
+        @Override
+        protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+            frames.add(JSONUtil.parseObj(message.getPayload()));
+        }
+
+        @Override
+        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+            closed.countDown();
+        }
+
+        JSONObject next(Duration timeout) throws InterruptedException {
+            return frames.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
+        }
+    }
+}

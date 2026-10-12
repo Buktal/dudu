@@ -1,6 +1,6 @@
 # DUDU Server
 
-Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、JWT 认证与参数注入、校验分组、MyBatis-Plus 分页与时间填充）之外，已提供 DuduAdmin 首版全部后端接口：平台登录、企业管理（开通、编辑、停用恢复、ID 候选与检测、重置初始管理员密码、资源汇总）、运营概览与操作记录查询。企业侧已按 [Desk 认证子契约](../docs/design/dudu-desk/ticket-01-login.md)实现 DuduDesk 企业登录、身份恢复与无状态退出（`/api/desk/login`、`/api/desk/profile`、`/api/desk/logout`），返回企业员工身份与当前接待范围；访客侧已实现授权范围内的摘要查询、单访客快照与按需历史分页（`POST /api/desk/visitors/query`、`GET /api/desk/visitors/{visitorId}`、`GET /api/desk/visitors/{visitorId}/messages`），并随首张访客票建立 visitor、visitor_profile、message 三表；发送、名片与 Socket 接口仍待后续实施票接通。
+Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、JWT 认证与参数注入、校验分组、MyBatis-Plus 分页与时间填充）之外，已提供 DuduAdmin 首版全部后端接口：平台登录、企业管理（开通、编辑、停用恢复、ID 候选与检测、重置初始管理员密码、资源汇总）、运营概览与操作记录查询。企业侧已按 [Desk 认证子契约](../docs/design/dudu-desk/ticket-01-login.md)实现 DuduDesk 企业登录、身份恢复与无状态退出（`/api/desk/login`、`/api/desk/profile`、`/api/desk/logout`），返回企业员工身份与当前接待范围；访客侧已实现授权范围内的摘要查询、单访客快照与按需历史分页（`POST /api/desk/visitors/query`、`GET /api/desk/visitors/{visitorId}`、`GET /api/desk/visitors/{visitorId}/messages`），并随首张访客票建立 visitor、visitor_profile、message 三表；来信侧已实现**微信公众号（明文模式）回调入口** `/api/channels/{companyChannelId}/callback`（GET 验签回显 echostr、POST 验签解析 XML 入站）与入站管道（找到或创建访客与空名片、原子分配 sequence、更新最后摘要与待回复状态），事务提交后经 `/ws/desk` 实时网关向当前有权员工推送完整 message 报文。渠道接入范围如实记录：只接入公众号明文模式（协议事实见 [docs/research/channels/wechat-mp.md](../docs/research/channels/wechat-mp.md)，可用 mock-pulse 的 wechat-mp 剧本做受控替身），其他渠道与加密模式返回不支持、事件推送只应答不落库；发送、名片、状态流转与重连补齐仍待后续实施票接通。
 
 ## 开发入口
 
@@ -11,7 +11,7 @@ Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、
 - [统一返回决策](../docs/adr/0006-always-200-segmented-error-codes.md)。
 - [认证决策](../docs/adr/0007-jwt-auth-chain.md)。
 
-Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `config.auth`。响应体 `R` 与分页响应 `P`（平铺 code/msg/list/total/page/pageSize）位于 `common`，业务异常位于 `config.exception`。Admin 接口位于 `controller/admin/`，统一前缀 `/api/admin`，仅 `admin` 角色可访问（登录端点除外）；Desk 接口位于 `controller/desk/`，统一前缀 `/api/desk`，仅企业员工（`console`/`user`）可访问（登录端点除外），平台身份访问 Desk 资源返回 10106。数据库操作优先使用 MyBatis-Plus `IService` 与 Lambda 条件构造器，不新增 XML 或注解 SQL。
+Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `config.auth`。响应体 `R` 与分页响应 `P`（平铺 code/msg/list/total/page/pageSize）位于 `common`，业务异常位于 `config.exception`。Admin 接口位于 `controller/admin/`，统一前缀 `/api/admin`，仅 `admin` 角色可访问（登录端点除外）；Desk 接口位于 `controller/desk/`，统一前缀 `/api/desk`，仅企业员工（`console`/`user`）可访问（登录端点除外），平台身份访问 Desk 资源返回 10106；渠道回调位于 `controller/channel/`，只开放 `/api/channels/*/callback` 且走渠道自身签名校验，不使用 Desk JWT，响应按渠道协议返回（echostr / success）而不套 R 包装；`/ws/desk` 实时网关在 `socket/`，连接后以 auth 报文完成同一套认证。数据库操作优先使用 MyBatis-Plus `IService` 与 Lambda 条件构造器，不新增 XML 或注解 SQL。
 
 ## 配置与检查
 
@@ -19,7 +19,8 @@ Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `c
 - 密钥与数据源明文写在 `application.yaml`（本地开发默认值，开箱即跑）。生产在 jar 同目录 `.env` 用同名键覆盖（`dudu.auth.jwt-secret` 至少 32 字节随机值）；空白密钥仍启动失败，但漏写 `.env` 时应用会以开发密钥静默启动，部署时须人工核对。
 - 首个平台管理员在启动时初始化：库中无平台账号时以 `AdminInitializer` 内置凭据 `Admin`/`admin` 创建（与前端登录表单预填约定一致，不是生产凭据，首登后经改密接口更换）。改密接口要求新密码 8–72 字符；初始化凭据不做该长度校验，如需改回短密码须重建初始化账号。
 - 数据源为 `application.yaml` 明文默认值（`127.0.0.1:3306`、`dudu`/`123456`），无 `.env`、无环境变量直接跑；生产覆盖方式见「线上部署边界」。
-- `/api/**` 默认需要 `Authorization: Bearer <token>`；放行路径仅 `POST /api/admin/login` 与 `POST /api/desk/login`，`/api/admin/**` 叠加 admin 角色校验，`/api/desk/**` 叠加企业员工身份校验。
+- `/api/**` 默认需要 `Authorization: Bearer <token>`；放行路径为 `POST /api/admin/login`、`POST /api/desk/login` 与渠道回调 `/api/channels/*/callback`，`/api/admin/**` 叠加 admin 角色校验，`/api/desk/**` 叠加企业员工身份校验。
+- 公众号回调验签读取账号 `company_channel.channel_info` 中的 `token` 键（服务器配置 Token），未配置该键的账号返回不支持；`/ws/desk` 由连接后的 `{"type":"auth","token":…}` 报文认证，不属于 `/api/**` 拦截链。
 - 业务表由 Flyway 版本化迁移维护（当前 V4：V1–V2 建立 company、user、operation_log、user_group、user_group_member、company_channel 六张基础表，V3 移除全部外键，V4 新增 visitor、visitor_profile、message 三张访客会话表）；已提交迁移不可变，变更新增迁移。
 
 ## 本地 MySQL

@@ -15,7 +15,7 @@ import {
   requestKeys,
 } from "./requests";
 import { inboxActions } from "./slice";
-import { type InboxCommand, onQueueSettled } from "./store";
+import { type InboxCommand, onQueueSettled, releaseConnection } from "./store";
 
 function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
@@ -52,6 +52,8 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
         },
         onConnection: (connection) => {
           if (!request.current()) return;
+          // 连接离开 connecting 即放行初始读取：ready 后查询，失败也照常查询以呈现错误
+          if (connection !== "connecting") releaseConnection(runtime);
           if (connection === "connected") {
             if (recovery) return;
             if (
@@ -99,6 +101,7 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
       const current = request.current();
       controller?.abort();
       request.finish();
+      releaseConnection(runtime);
       if (current)
         dispatch(
           inboxActions.connectionChanged(

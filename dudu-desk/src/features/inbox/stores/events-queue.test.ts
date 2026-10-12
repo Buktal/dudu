@@ -9,6 +9,7 @@ import { selectQueue, selectQuickQueueConversations } from "./selectors";
 import {
   deferred,
   firstConversation,
+  incomingMessage,
   secondConversation,
   testStore,
 } from "./test-support";
@@ -69,6 +70,51 @@ describe("live queue refresh coordination", () => {
         selectQuickQueueConversations(store.getState()).map(({ id }) => id),
       ).toEqual(["conversation-a", "conversation-b"]);
     });
+  });
+
+  it("re-reads the first page and counts when a message event moves the summary", async () => {
+    let subscription!: Parameters<InboxApi["subscribe"]>[0];
+    let first = firstConversation;
+    let counts = { active: 1, needsReply: 1, waiting: 0, closed: 0 };
+    const store = testStore({
+      subscribe: (input) => {
+        subscription = input;
+        input.onConnection("connected");
+        return () => {};
+      },
+      listConversations: async () => ({
+        items: [first],
+        nextCursor: null,
+        total: 1,
+        counts,
+      }),
+    });
+    await store.dispatch(loadConversations());
+    first = { ...firstConversation, status: "waiting", version: 2 };
+    counts = { active: 1, needsReply: 0, waiting: 1, closed: 0 };
+
+    subscription.onEvent({
+      type: "message",
+      id: "message-moved-summary",
+      cursor: "message-moved-summary",
+      context: subscription.context,
+      // 真实报文的访客摘要与消息同帧；摘要变化影响排序/计数视图时重读第一页与 counts
+      message: incomingMessage("conversation-a"),
+      conversation: first,
+    });
+
+    await vi.waitFor(() => {
+      expect(selectQueue(store.getState())).toMatchObject({
+        status: "ready",
+        counts: { needsReply: 0, waiting: 1 },
+      });
+      expect(
+        selectQuickQueueConversations(store.getState()).map(({ id }) => id),
+      ).toEqual(["conversation-a"]);
+    });
+    expect(
+      store.getState().inbox.conversations["conversation-a"],
+    ).toMatchObject({ status: "waiting", version: 2 });
   });
 
   it.each(["query", "context"])(

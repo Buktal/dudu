@@ -147,12 +147,18 @@ export type ConnectionState =
   | "reconnecting"
   | "disconnected";
 export type InboxEvent = {
-  id: string;
+  /** 真实 Socket 没有 eventId 与游标；Mock 保留自身字段用于回放与去重。 */
+  id?: string;
   context: WorkContext;
-  cursor: string;
+  cursor?: string;
 } & (
   | { type: "conversation"; conversation: Conversation }
-  | { type: "message"; message: InboxMessage }
+  | {
+      type: "message";
+      message: InboxMessage;
+      /** 本条消息引起的访客摘要；真实报文与消息同帧下发。 */
+      conversation?: Conversation;
+    }
   | {
       type: "receipt";
       conversationId: string;

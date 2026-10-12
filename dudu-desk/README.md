@@ -2,7 +2,7 @@
 
 嘟嘟（DuDu）的客服坐席桌面端，使用 React 19、Vite、Tailwind CSS、shadcn、Redux Toolkit 和 Tauri 2。本阶段将已确认的接待原型迁入正式前端，统一三种接待模式、八套主题、会话状态与 API 契约；初始范围见 [规格 #50](https://github.com/Buktal/dudu/issues/50)，当前功能见 [功能图谱](../docs/features/dudu-desk.md)。
 
-真实 Server 的消息收发与推送接口留到后续实施票。2026-10-10 已将本轮发送收窄为纯文本，附件准备/上传/发送延期，收到的非文本消息展示保留；当前 Mock 附件入口尚未修改，真实对接时按[文本回复实施票](https://github.com/Buktal/dudu/issues/89)停用。企业登录、身份恢复与接待范围已按 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)接入真实 Server：未启用 Mock 时使用真实账户适配器，未登录时显示企业登录页，`unavailableInboxApi` 仍不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
+真实 Server 的消息发送接口留到后续实施票，来信接收与推送已接通：未启用 Mock 时使用真实账户、访客摘要、按需历史与 `/ws/desk` 实时通道适配器，登录后先建立 Socket、收到 ready 再读取初始数据，来信按 ID/version 合并（未打开访客只更新摘要，首次打开仍取最近页）。2026-10-10 已将本轮发送收窄为纯文本，附件准备/上传/发送延期，收到的非文本消息展示保留；当前 Mock 附件入口尚未修改，真实对接时按[文本回复实施票](https://github.com/Buktal/dudu/issues/89)停用。企业登录、身份恢复与接待范围已按 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)接入真实 Server：未登录时显示企业登录页，`unavailableInboxApi` 仍不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
 
 ## 运行与检查
 
@@ -28,7 +28,7 @@ yarn tauri:build
 
 桌面命令需要本机 Tauri/Rust 构建环境。
 
-开发运行时 Vite 将 `/api` 同源代理到 `127.0.0.1:8080`（见 [vite.config.ts](vite.config.ts)），浏览器与桌面端都不需要跨域配置，本地 Server 用 `mvn spring-boot:run` 启动即可。打包运行时用 `VITE_API_ORIGIN` 注入线上 API 源地址（只允许协议、主机与端口），由部署层处理跨域。真实账户适配器与访客摘要适配器共用会话凭据：JWT 保存在内存与 `sessionStorage` 的 `dudu-desk.session` 中，登录后由账户适配器写入、inbox 按请求读取（见 [desk-session.ts](src/lib/desk-session.ts)），且与 API 源地址绑定；关闭窗口不承诺记住登录。
+开发运行时 Vite 将 `/api` 同源代理到 `127.0.0.1:8080`、将 `/ws` 以 WebSocket 代理到同一 Server（见 [vite.config.ts](vite.config.ts)），浏览器与桌面端都不需要跨域配置，本地 Server 用 `mvn spring-boot:run` 启动即可。打包运行时用 `VITE_API_ORIGIN` 注入线上 API 源地址（只允许协议、主机与端口），由部署层处理跨域，实时通道按该地址派生 wss/ws。真实适配器共用会话凭据：JWT 保存在内存与 `sessionStorage` 的 `dudu-desk.session` 中，登录后由账户适配器写入、inbox 按请求读取（见 [desk-session.ts](src/lib/desk-session.ts)），且与 API 源地址绑定；关闭窗口不承诺记住登录。
 
 ### Mock 打包测试
 

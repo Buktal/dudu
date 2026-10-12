@@ -11,6 +11,7 @@ import type {
 } from "../types";
 import {
   detachConversation,
+  holdsMessages,
   mergeConversation,
   mergeMessage,
   orderMessages,
@@ -131,25 +132,32 @@ export const eventReducers = {
     const event = action.payload;
     if (
       event.context.agentId !== state.context.agentId ||
-      event.context.workspaceId !== state.context.workspaceId ||
-      state.events.seenIds.includes(event.id)
+      event.context.workspaceId !== state.context.workspaceId
     )
       return;
-    state.events.seenIds.push(event.id);
-    if (state.events.seenIds.length > 2048) state.events.seenIds.shift();
-    state.events.cursor = event.cursor;
+    // 真实 Socket 报文没有 eventId 与游标，不做去重与续订游标维护；Mock 仍按自身字段生效
+    if (event.id !== undefined) {
+      if (state.events.seenIds.includes(event.id)) return;
+      state.events.seenIds.push(event.id);
+      if (state.events.seenIds.length > 2048) state.events.seenIds.shift();
+    }
+    if (event.cursor !== undefined) state.events.cursor = event.cursor;
     if (event.type === "conversation") {
       mergeConversation(state, event.conversation);
     }
     if (event.type === "message") {
       const message = event.message;
       if (state.events.removed[message.conversationId] !== undefined) return;
+      // 本条消息引起的访客更新合并在 message 中（Mock 以独立 conversation 事件表达）
+      if (event.conversation) mergeConversation(state, event.conversation);
       if (message.direction === "incoming") {
         state.events.incomingSequence[message.conversationId] = Math.max(
           state.events.incomingSequence[message.conversationId] ?? 0,
           message.sequence,
         );
       }
+      // 未打开的访客只更新摘要与状态：不置 hasLoaded、不建消息集合，首次打开仍取最近页
+      if (!holdsMessages(state, message.conversationId)) return;
       const id = mergeMessage(state, message);
       state.histories[message.conversationId] ??= {
         ...emptyLoad(),

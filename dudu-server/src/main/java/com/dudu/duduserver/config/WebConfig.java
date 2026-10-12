@@ -20,6 +20,9 @@ public class WebConfig implements WebMvcConfigurer {
     private static final String ADMIN_LOGIN_PATH = "/api/admin/login";
     private static final String DESK_LOGIN_PATH = "/api/desk/login";
 
+    // 渠道回调只开放这一条路由，走渠道自身的签名校验，不使用 Desk JWT
+    private static final String CHANNEL_CALLBACK_PATH = "/api/channels/*/callback";
+
     private final AuthInterceptor authInterceptor;
     private final AdminAuthInterceptor adminAuthInterceptor;
     private final DeskAuthInterceptor deskAuthInterceptor;
@@ -29,7 +32,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
             .addPathPatterns("/api/**")
-            .excludePathPatterns(ADMIN_LOGIN_PATH, DESK_LOGIN_PATH);
+            .excludePathPatterns(ADMIN_LOGIN_PATH, DESK_LOGIN_PATH, CHANNEL_CALLBACK_PATH);
         registry.addInterceptor(adminAuthInterceptor)
             .addPathPatterns("/api/admin/**")
             .excludePathPatterns(ADMIN_LOGIN_PATH);

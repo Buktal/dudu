@@ -2,17 +2,20 @@ import { DeskApiError } from "@/lib/api-response";
 import { requestDesk } from "@/lib/desk-http";
 import { readDeskToken, resolveDeskOrigin } from "@/lib/desk-session";
 import { type InboxApi, unavailableInboxApi } from "./api";
+import { type DeskSocket, subscribeDeskSocket } from "./inbox-live-socket";
 import type {
   Conversation,
   ConversationPage,
   ConversationStatus,
   DeliveryState,
+  InboxEvent,
   InboxMessage,
   MessageBody,
   Page,
   ReplyCapability,
   SendKind,
   VisitorIdentity,
+  WorkContext,
 } from "./types";
 
 /** 访客摘要页大小：与契约默认 pageSize 一致，翻页由页码游标驱动。 */
@@ -237,19 +240,65 @@ function beforeSequence(cursor: string | undefined): string | undefined {
   return cursor;
 }
 
+// 实时报文映射：message 帧携带本条消息引起的访客摘要；其余报文类型由后续实施票接通
+function parseLiveEvent(
+  value: unknown,
+  context: WorkContext,
+): InboxEvent | undefined {
+  if (!isRecord(value) || value.type !== "message") return undefined;
+  try {
+    return {
+      type: "message",
+      context,
+      message: parseMessage(value.message),
+      conversation:
+        value.conversation === undefined
+          ? undefined
+          : parseConversation(value.conversation),
+    };
+  } catch {
+    // 不完整报文丢弃该帧，已建立的连接与既有数据不受影响
+    return undefined;
+  }
+}
+
 /**
- * 真实接待适配器（访客摘要与按需历史）：列表查询走 POST /api/desk/visitors/query，
+ * 真实接待适配器（访客摘要、按需历史与实时通道）：列表查询走 POST /api/desk/visitors/query，
  * 历史分页走 GET /api/desk/visitors/{visitorId}/messages（最近页无 beforeSequence，
- * 更早页用上一页 nextCursor）；其余能力（发送、状态、资料、订阅）暂未接入，
- * 沿用 unavailableInboxApi 的语义；token 由账户适配器写入会话，这里按请求读取。
+ * 更早页用上一页 nextCursor）；订阅连接 /ws/desk，ready 后接收 message 报文；
+ * 其余能力（发送、状态、资料）暂未接入，沿用 unavailableInboxApi 的语义；
+ * token 由账户适配器写入会话，这里按请求读取。
  */
 export function createHttpInboxApi(
-  options: { origin?: string; fetcher?: typeof fetch } = {},
+  options: {
+    origin?: string;
+    fetcher?: typeof fetch;
+    socket?: (url: string) => DeskSocket;
+  } = {},
 ): InboxApi {
   const origin = resolveDeskOrigin(options.origin);
 
   return {
     ...unavailableInboxApi,
+    subscribe({ context, signal, onEvent, onConnection }) {
+      const token = readDeskToken(origin);
+      if (token === null) {
+        // 无登录凭据时不发起连接，按服务未接入如实上报
+        onConnection("unavailable");
+        return () => {};
+      }
+      return subscribeDeskSocket({
+        origin,
+        token,
+        signal,
+        socket: options.socket,
+        onState: onConnection,
+        onFrame: (frame) => {
+          const event = parseLiveEvent(frame, context);
+          if (event) onEvent(event);
+        },
+      });
+    },
     async listMessages({ conversationId, cursor, signal }) {
       const before = beforeSequence(cursor);
       const params = new URLSearchParams();

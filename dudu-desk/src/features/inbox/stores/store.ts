@@ -18,6 +18,14 @@ export type InboxRuntime = {
   /** Request slots; keyed and cancelled only through stores/requests.ts. */
   requests: Map<string, RequestScope>;
   /**
+   * Startup gate between the live subscription and the first queue read: while
+   * the socket subscription is in flight and the connection is still
+   * "connecting", business reads wait for it to settle (ready or failed), so a
+   * message persisted in between cannot fall through both the push and the
+   * initial query. Touch only through the helpers below.
+   */
+  connection: ConnectionGate;
+  /**
    * Coordination seam between the Conversation queue and Live events modules:
    * the queue notifies after every refresh/more settles (see queue.ts), and
    * the Live events refresh scheduler listens to re-read once the queue is
@@ -43,6 +51,46 @@ export function onQueueSettled(
   runtime.queueEvents.subscribe(listener, signal);
 }
 
+/**
+ * 初始读取闸门：Socket 订阅已报告 ready 或失败后释放，幂等（重复释放无害）。
+ */
+export type ConnectionGate = {
+  readonly settled: Promise<void>;
+  release: () => void;
+};
+
+function createConnectionGate(): ConnectionGate {
+  let release = () => {};
+  const settled = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { settled, release };
+}
+
+/** Release the startup gate once the subscription has left "connecting". */
+export function releaseConnection(runtime: Pick<InboxRuntime, "connection">) {
+  runtime.connection.release();
+}
+
+/** Wait for the connection to leave "connecting"; a cancelled read ends as an abort. */
+export function awaitConnectionSettled(
+  runtime: Pick<InboxRuntime, "connection">,
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("操作已取消", "AbortError"));
+      return;
+    }
+    runtime.connection.settled.then(resolve);
+    signal.addEventListener(
+      "abort",
+      () => reject(new DOMException("操作已取消", "AbortError")),
+      { once: true },
+    );
+  });
+}
+
 export type InboxRootState = { inbox: InboxState };
 export type InboxCommand<R = void> = ThunkAction<
   R,
@@ -62,6 +110,7 @@ export function createInboxStore(options: {
     now: options.now ?? nowIso,
     id: options.id ?? (() => crypto.randomUUID()),
     requests: new Map(),
+    connection: createConnectionGate(),
     queueEvents: createSettledBus(),
     files: new Map(),
     previews: new Map(),

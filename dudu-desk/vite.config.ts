@@ -34,6 +34,8 @@ export default defineConfig(() => ({
     proxy: {
       // 本地开发同源转发到 Server（8080），浏览器无跨域；生产由部署层处理跨域
       "/api": "http://127.0.0.1:8080",
+      // 实时通道同样是同源路径，Vite 以 ws 转发到 Server 的 /ws/desk
+      "/ws": { target: "ws://127.0.0.1:8080", ws: true },
     },
     hmr: host
       ? {
