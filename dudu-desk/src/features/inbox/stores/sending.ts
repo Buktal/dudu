@@ -1,5 +1,5 @@
 import { buildReplySubmission, replyReadiness } from "../reply/pipeline";
-import type { InboxMessage } from "../types";
+import type { DeliveryState, InboxMessage } from "../types";
 import { receiveNext } from "./next-reception";
 import {
   releaseAttachmentResources,
@@ -105,6 +105,21 @@ function watermarks(state: InboxState, conversationId: string) {
   };
 }
 
+/**
+ * 可确认的发送结果：契约第 4 节三态（真实适配器只能返回这三种，其余取值在
+ * http-inbox-contract 的解析边界按无效响应拒绝）加 Mock 适配层自有词表——
+ * accepted/delivered/read/unconfirmed 只可能来自 Mock 世界，不参与真实解析。
+ */
+const CONFIRMABLE_DELIVERY_STATES: DeliveryState[] = [
+  "sending",
+  "sent",
+  "failed",
+  "accepted",
+  "delivered",
+  "read",
+  "unconfirmed",
+];
+
 function deliver(
   submission: ReplySubmission,
   message: InboxMessage,
@@ -125,9 +140,7 @@ function deliver(
           response.direction !== "outgoing" ||
           !response.delivery ||
           // 渠道失败也是已保存的持久消息：同样是合法结果，按失败气泡显示
-          !["accepted", "sent", "delivered", "read", "failed"].includes(
-            response.delivery.state,
-          ) ||
+          !CONFIRMABLE_DELIVERY_STATES.includes(response.delivery.state) ||
           (response.clientRequestId &&
             response.clientRequestId !== submission.request.clientRequestId)
             ? "服务未返回可确认的发送结果"
@@ -203,21 +216,42 @@ export function sendReply(
  * a new message with a fresh clientRequestId, while the persisted failure stays
  * in the timeline as its own record. Reusing the original request id would
  * overwrite the failed row instead of resending.
+ *
+ * A failure loaded from history (re-login or another端加载) has no local
+ * submission; the message itself carries the visitor and the text, so the retry
+ * addresses the same conversation and body. The retry never touches the draft:
+ * sentinel revisions keep the settlement from clearing text written later.
  */
 export function retryReply(messageId: string): InboxCommand<Promise<void>> {
   return async (dispatch, getState, runtime) => {
     const state = getState().inbox;
     const original = state.submissions[messageId];
-    const conversation = original
-      ? state.conversations[original.request.target.conversationId]
+    const message = state.messages[messageId];
+    const retryable =
+      original === undefined
+        ? message?.direction === "outgoing" &&
+          message.delivery?.state === "failed" &&
+          message.body.type === "text"
+        : original.status === "failed";
+    const conversationId = original
+      ? original.request.target.conversationId
+      : message?.conversationId;
+    const conversation = conversationId
+      ? state.conversations[conversationId]
       : undefined;
     if (
-      original?.status !== "failed" ||
+      !retryable ||
       !conversation ||
       state.sendingByConversation[conversation.id]
     )
       return;
-    const { attachments, text } = original.request;
+    // 本地提交缺失（历史加载的失败消息）时从消息自身取原访客与正文，草稿不参与
+    const attachments = original ? original.request.attachments : [];
+    const text = original
+      ? original.request.text
+      : message?.body.type === "text"
+        ? message.body.text
+        : "";
     const readiness = replyReadiness({
       conversation,
       connection: state.connection,
@@ -237,12 +271,13 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
         dispatch(inboxActions.noticeChanged(readiness.notice));
       return;
     }
-    const { submission, message } = buildReplySubmission({
+    const { submission, message: bubble } = buildReplySubmission({
       conversation,
       text,
-      draftRevision: original.draftRevision,
-      textRevision: original.textRevision,
-      draftAttachmentIds: [...original.draftAttachmentIds],
+      // 历史重试不占用草稿：哨兵修订值让结算永不匹配当前草稿
+      draftRevision: original?.draftRevision ?? -1,
+      textRevision: original?.textRevision ?? -1,
+      draftAttachmentIds: original ? [...original.draftAttachmentIds] : [],
       media: attachments,
       ...watermarks(state, conversation.id),
       selectionRevision: state.selectionRevision,
@@ -250,7 +285,7 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
       now: runtime.now(),
       next: false,
     });
-    await dispatch(deliver(submission, message));
+    await dispatch(deliver(submission, bubble));
   };
 }
 

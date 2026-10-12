@@ -454,7 +454,7 @@ describe("development InboxApi", () => {
     const image = await findMessage((message) => message.body.type === "image");
     await expect(
       api.loadMessageMedia({ ...input, messageId: image?.id ?? "", index: 0 }),
-    ).rejects.toMatchObject({ kind: "business", code: 12200 });
+    ).rejects.toMatchObject({ kind: "business", code: 11000 });
 
     await expect(
       api.loadMessageMedia({ ...input, messageId: image?.id ?? "", index: 3 }),

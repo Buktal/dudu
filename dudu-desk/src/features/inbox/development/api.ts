@@ -194,12 +194,12 @@ export function createDevelopmentInboxApi({
         if (!media) {
           throw new DeskApiError("business", "该消息没有这个媒体", 12100);
         }
-        // 与真实服务一致：公开链接由界面直连，不经媒体接口代理
+        // 与真实服务一致：公开链接由界面直连，不经媒体接口代理（按普通参数错误说明）
         if (media.url) {
           throw new DeskApiError(
             "business",
-            "该素材提供公开链接，请直接打开",
-            12200,
+            "该素材为公开链接，请直接使用其 URL",
+            11000,
           );
         }
         return developmentMediaBytes(media);

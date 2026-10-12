@@ -129,9 +129,10 @@ function receiveInboxEvent(event: InboxEvent): InboxCommand {
       return;
     }
     const state = getState().inbox;
-    // 服务端不返回个人已读：真实链路的待处理提醒按本次运行的事件增减
+    // 服务端不返回个人已读：真实链路的待处理提醒按本次运行的事件增减；
+    // 传合并后的状态，结束报文按最新共享状态判定（较新的待回复不被误清）
     if (runtime.api.localUnread) {
-      const reminder = reminderChange(previous, event);
+      const reminder = reminderChange(state, event);
       if (reminder) dispatch(inboxActions.reminderChanged(reminder));
     }
     if (state === previous) return;

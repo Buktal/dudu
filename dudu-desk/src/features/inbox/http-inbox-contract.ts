@@ -194,15 +194,9 @@ const MESSAGE_DIRECTIONS: InboxMessage["direction"][] = [
   "outgoing",
   "system",
 ];
-const DELIVERY_STATES: DeliveryState[] = [
-  "sending",
-  "sent",
-  "failed",
-  "accepted",
-  "delivered",
-  "read",
-  "unconfirmed",
-];
+// 契约第 4 节的发送结果三态。其余取值（accepted/delivered/read/unconfirmed 等
+// Mock 世界的词表）不猜、不静默通过，统一按无效响应拒绝；真实链路只认这三种。
+const DELIVERY_STATES: DeliveryState[] = ["sending", "sent", "failed"];
 
 const MEDIA_KINDS: MediaReference["kind"][] = [
   "image",

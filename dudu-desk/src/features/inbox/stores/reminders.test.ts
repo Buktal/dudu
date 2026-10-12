@@ -49,6 +49,13 @@ function realStore(api: Parameters<typeof testStore>[0] = {}) {
         conversation,
       });
     },
+    conversation(frame: Conversation) {
+      subscription.onEvent({
+        type: "conversation",
+        context: subscription.context,
+        conversation: frame,
+      });
+    },
     drop() {
       subscription.onConnection("disconnected");
     },
@@ -146,6 +153,94 @@ describe("shared pending reminders", () => {
     );
 
     expect(badge(store.getState(), "conversation-b")).toBe(1);
+  });
+
+  it("clears the reminder when another agent ends the conversation", async () => {
+    const { store, live, conversation } = realStore();
+    await store.dispatch(loadConversations());
+    await store.dispatch(selectConversation("conversation-a"));
+    live(
+      { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
+      wire({ ...secondConversation, version: 2, messageCount: 2 }),
+    );
+    expect(badge(store.getState(), "conversation-b")).toBe(1);
+
+    // 他端结束接待：conversation 报文把共享状态带到已结束，其他端的提醒同步消除
+    conversation(
+      wire({
+        ...secondConversation,
+        status: "closed",
+        version: 3,
+        messageCount: 2,
+      }),
+    );
+
+    expect(badge(store.getState(), "conversation-b")).toBe(0);
+    expect(store.getState().inbox.reminders).toEqual({});
+  });
+
+  it("keeps the reminder when a newer incoming still awaits a reply", async () => {
+    const { store, live, conversation } = realStore();
+    await store.dispatch(loadConversations());
+    await store.dispatch(selectConversation("conversation-a"));
+    // 较新的来信把访客带回待回复
+    live(
+      { ...incomingMessage("conversation-b"), id: "b-4", sequence: 4 },
+      wire({ ...secondConversation, version: 4, messageCount: 4 }),
+    );
+    expect(badge(store.getState(), "conversation-b")).toBe(1);
+
+    // 迟到的较旧结束报文不覆盖较新的待回复状态，也不清除提醒
+    conversation(
+      wire({
+        ...secondConversation,
+        status: "closed",
+        version: 3,
+        messageCount: 2,
+      }),
+    );
+
+    expect(store.getState().inbox.conversations["conversation-b"].status).toBe(
+      "needs-reply",
+    );
+    expect(badge(store.getState(), "conversation-b")).toBe(1);
+  });
+
+  it("clears closed visitors on reconnect without rebuilding reminders", async () => {
+    let closed = false;
+    const { store, live, drop } = realStore({
+      listConversations: async () => ({
+        items: [
+          { ...firstConversation, unread: 0 },
+          {
+            ...secondConversation,
+            unread: 0,
+            status: closed ? "closed" : "needs-reply",
+            version: closed ? 3 : 1,
+          },
+        ],
+        nextCursor: null,
+        total: 2,
+      }),
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(selectConversation("conversation-a"));
+    live(
+      { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
+      wire({ ...secondConversation, version: 2, messageCount: 2 }),
+    );
+    expect(badge(store.getState(), "conversation-b")).toBe(1);
+
+    // 重连补回的是已结束的访客：提醒不重建
+    closed = true;
+    drop();
+    await store.dispatch(reconnectInbox());
+
+    expect(store.getState().inbox.conversations["conversation-b"].status).toBe(
+      "closed",
+    );
+    expect(badge(store.getState(), "conversation-b")).toBe(0);
+    expect(store.getState().inbox.reminders).toEqual({});
   });
 
   it("clears locally when the agent reads to the bottom without calling the server", async () => {

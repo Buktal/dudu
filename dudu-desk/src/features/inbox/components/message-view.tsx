@@ -91,32 +91,37 @@ export function MessageView({
             </time>
           </MessageFooter>
         </div>
-        {needsAttention && message.delivery && (
-          <MessageFooter className="flex-wrap gap-2 px-0 text-[11px]">
-            <span
-              className={cn(
-                message.delivery?.state === "failed" && "text-destructive",
-              )}
-              title={message.delivery?.reason}
-            >
-              {message.delivery.state === "failed" ? "发送失败" : "结果未确认"}
-            </span>
-            {message.delivery?.state === "failed" && onRetry && (
-              <Button
-                size="xs"
-                variant="link"
-                className="h-auto gap-1 p-0 has-data-[icon=inline-start]:pl-0 [--primary:var(--destructive)]"
-                onClick={onRetry}
+        {(needsAttention || message.delivery?.state === "sending") &&
+          message.delivery && (
+            <MessageFooter className="flex-wrap gap-2 px-0 text-[11px]">
+              <span
+                className={cn(
+                  message.delivery?.state === "failed" && "text-destructive",
+                )}
+                title={message.delivery?.reason}
               >
-                <RotateCcw data-icon="inline-start" />
-                <span className="text-[11px]">重试原消息</span>
-              </Button>
-            )}
-            {message.delivery?.state === "unconfirmed" && (
-              <span>请等待回执，避免重复发送</span>
-            )}
-          </MessageFooter>
-        )}
+                {message.delivery.state === "failed"
+                  ? "发送失败"
+                  : message.delivery.state === "sending"
+                    ? "发送中"
+                    : "结果未确认"}
+              </span>
+              {message.delivery?.state === "failed" && onRetry && (
+                <Button
+                  size="xs"
+                  variant="link"
+                  className="h-auto gap-1 p-0 has-data-[icon=inline-start]:pl-0 [--primary:var(--destructive)]"
+                  onClick={onRetry}
+                >
+                  <RotateCcw data-icon="inline-start" />
+                  <span className="text-[11px]">重试原消息</span>
+                </Button>
+              )}
+              {message.delivery?.state === "unconfirmed" && (
+                <span>请等待回执，避免重复发送</span>
+              )}
+            </MessageFooter>
+          )}
       </MessageContent>
     </Message>
   );

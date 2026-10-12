@@ -10,6 +10,7 @@ import {
   acceptedMessage,
   deferred,
   firstConversation,
+  incomingMessage,
   testStore,
 } from "./test-support";
 
@@ -112,6 +113,102 @@ describe("replies through the inbox workflow", () => {
     );
     expect(retried?.clientRequestId).toBe(submissions[1].clientRequestId);
     expect(retried?.delivery?.state).toBe("accepted");
+  });
+
+  it("retries a failed message loaded from history without a local submission", async () => {
+    const submissions: SendSubmission[] = [];
+    const failedFromHistory: InboxMessage = {
+      id: "server-failed",
+      clientRequestId: "client-history",
+      conversationId: "conversation-a",
+      direction: "outgoing",
+      body: { type: "text", text: "历史里的失败内容" },
+      createdAt: "2026-09-16T00:01:00Z",
+      sequence: 2,
+      version: 1,
+      delivery: { state: "failed", reason: "渠道明确拒绝" },
+    };
+    const store = testStore({
+      listMessages: async () => ({
+        items: [incomingMessage("conversation-a"), failedFromHistory],
+        nextCursor: null,
+      }),
+      send: async (input) => {
+        submissions.push(input);
+        return acceptedMessage(input);
+      },
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
+    // 重登/他端加载的失败消息没有本地提交记录
+    expect(
+      store.getState().inbox.submissions[failedFromHistory.id],
+    ).toBeUndefined();
+
+    await store.dispatch(retryReply(failedFromHistory.id));
+
+    expect(submissions).toHaveLength(1);
+    expect(submissions[0].target.conversationId).toBe("conversation-a");
+    expect(submissions[0].target.externalUserId).toBe("external-a");
+    expect(submissions[0].text).toBe("历史里的失败内容");
+    expect(submissions[0].clientRequestId).not.toBe("client-history");
+    const messages = selectMessages(store.getState(), "conversation-a");
+    // 原失败记录保留，重发按新消息处理
+    expect(
+      messages.find((item) => item.id === failedFromHistory.id),
+    ).toMatchObject({ delivery: { state: "failed", reason: "渠道明确拒绝" } });
+    expect(
+      messages.filter((item) => item.direction === "outgoing"),
+    ).toHaveLength(2);
+  });
+
+  it("does not consume the current draft when retrying a history failure", async () => {
+    const failedFromHistory: InboxMessage = {
+      id: "server-failed",
+      conversationId: "conversation-a",
+      direction: "outgoing",
+      body: { type: "text", text: "很久以前的失败回复" },
+      createdAt: "2026-09-16T00:01:00Z",
+      sequence: 2,
+      version: 1,
+      delivery: { state: "failed", reason: "渠道明确拒绝" },
+    };
+    const store = testStore({
+      listMessages: async () => ({
+        items: [incomingMessage("conversation-a"), failedFromHistory],
+        nextCursor: null,
+      }),
+      send: async (input) => acceptedMessage(input),
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
+    store.dispatch(editDraft("conversation-a", "正在写的新草稿"));
+    await store.dispatch(retryReply(failedFromHistory.id));
+
+    expect(store.getState().inbox.drafts["conversation-a"].text).toBe(
+      "正在写的新草稿",
+    );
+  });
+
+  it("settles the contract's sending result as an accepted submission", async () => {
+    const store = testStore({
+      send: async (input) => ({
+        ...acceptedMessage(input),
+        delivery: { state: "sending" },
+      }),
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
+    store.dispatch(editDraft("conversation-a", "受理中的回复"));
+    await store.dispatch(sendReply("conversation-a"));
+
+    const message = selectMessages(store.getState(), "conversation-a")[1];
+    // 契约第 4 节的受理记录：如实显示发送中，不判成无效响应或结果未确认
+    expect(message.delivery).toEqual({ state: "sending" });
+    expect(store.getState().inbox.submissions[message.id].status).toBe(
+      "accepted",
+    );
+    expect(store.getState().inbox.notice?.kind).not.toBe("unconfirmed-send");
   });
 
   it("settles a persisted channel failure as the failed bubble with its real reason", async () => {
