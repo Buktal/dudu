@@ -1,4 +1,4 @@
-package com.dudu.duduserver.channel;
+package com.dudu.duduserver.channel.wechatmp;
 
 import com.dudu.duduserver.entity.CompanyChannelDO;
 

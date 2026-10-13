@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel;
 
 import com.dudu.duduserver.constant.ChannelEnum;
+import com.dudu.duduserver.channel.wechatmp.WechatMpCredentials;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 /**

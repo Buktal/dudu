@@ -1,5 +1,7 @@
-package com.dudu.duduserver.channel;
+package com.dudu.duduserver.channel.wechatmp;
 
+import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.sun.net.httpserver.HttpServer;

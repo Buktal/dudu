@@ -1,7 +1,10 @@
-package com.dudu.duduserver.channel;
+package com.dudu.duduserver.channel.wechatmp;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.dudu.duduserver.channel.ChannelMediaCapabilities;
+import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.ChannelMediaReader;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
