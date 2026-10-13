@@ -73,7 +73,7 @@ class ChannelCallbackServiceTest {
         when(companyChannelService.getById(CHANNEL_ID)).thenReturn(account(ChannelEnum.DOUYIN, Map.of("token", TOKEN)));
         assertThat(service.verifyUrl(String.valueOf(CHANNEL_ID), signedQuery()).status()).isEqualTo(501);
 
-        when(companyChannelService.getById(CHANNEL_ID)).thenReturn(account(ChannelEnum.WECHAT, Map.of()));
+        when(companyChannelService.getById(CHANNEL_ID)).thenReturn(account(ChannelEnum.WECHAT_MP, Map.of()));
         assertThat(service.verifyUrl(String.valueOf(CHANNEL_ID), signedQuery()).status()).isEqualTo(501);
     }
 
@@ -126,7 +126,7 @@ class ChannelCallbackServiceTest {
     }
 
     private CompanyChannelDO wechatAccount() {
-        return account(ChannelEnum.WECHAT, Map.of("token", TOKEN));
+        return account(ChannelEnum.WECHAT_MP, Map.of("token", TOKEN));
     }
 
     private CompanyChannelDO account(ChannelEnum channel, Map<String, Object> info) {

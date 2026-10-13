@@ -65,7 +65,7 @@ class DeskVisitorServiceTest {
     void setUp() {
         when(deskAuthService.requireAccess(me)).thenReturn(
             new DeskAccessVO(false, List.of(new DeskAccessVO.Group("31", "售前")),
-                List.of(new DeskAccessVO.Account(ACCOUNT_ID, "31", ChannelEnum.WECHAT, "公众号"))));
+                List.of(new DeskAccessVO.Account(ACCOUNT_ID, "31", ChannelEnum.WECHAT_MP, "公众号"))));
     }
 
     @ParameterizedTest
@@ -104,8 +104,8 @@ class DeskVisitorServiceTest {
         assertThat(view.version()).isEqualTo(3);
         assertThat(view.identity().id()).isEqualTo("41");
         assertThat(view.identity().externalUserId()).isEqualTo("external-a");
-        assertThat(view.identity().channelId()).isEqualTo("wechat");
-        assertThat(view.identity().channelName()).isEqualTo("微信");
+        assertThat(view.identity().channelId()).isEqualTo("wechat-mp");
+        assertThat(view.identity().channelName()).isEqualTo("微信公众号");
         assertThat(view.identity().accountId()).isEqualTo(ACCOUNT_ID);
         assertThat(view.identity().accountName()).isEqualTo("公众号");
         assertThat(view.capability().state()).isEqualTo("restricted");
@@ -311,7 +311,7 @@ class DeskVisitorServiceTest {
     private CompanyChannelDO channelAccount(Map<String, Object> channelInfo) {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setCompanyChannelId(Long.valueOf(ACCOUNT_ID));
-        account.setChannel(ChannelEnum.WECHAT);
+        account.setChannel(ChannelEnum.WECHAT_MP);
         account.setAccountName("公众号");
         account.setChannelInfo(channelInfo);
         return account;

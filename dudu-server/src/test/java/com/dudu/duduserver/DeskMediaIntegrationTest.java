@@ -125,9 +125,9 @@ class DeskMediaIntegrationTest {
         companies.createCompany(new CompanyCreateDTO(String.valueOf(COMPANY_ID), "媒体验收企业", null, null, null,
             new CompanyAdminInitDTO("mediaowner", PASSWORD, null)), 1L);
         UserGroupDO group = group(COMPANY_ID, "媒体组");
-        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "媒体公众号",
+        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "媒体公众号",
             Map.of("token", "media-token", "appId", "wx_media_appid", "appSecret", "media-secret"));
-        channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "未配凭据公众号",
+        channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "未配凭据公众号",
             Map.of("token", "media-token-2"));
         channelDouyin = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.DOUYIN, "抖音号", Map.of("token", "x"));
         plainUser(COMPANY_ID, "media.outside");

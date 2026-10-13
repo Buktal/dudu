@@ -110,9 +110,9 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
         companies.createCompany(company(COMPANY_ID, "replyowner", "回复验收企业"), 1L);
         companies.createCompany(company(OTHER_COMPANY_ID, "replyowner2", "回复验收企业"), 1L);
         UserGroupDO group = group(COMPANY_ID, "回复组");
-        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "公众号",
+        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "公众号",
             Map.of("token", "reply-token", "appId", "wx_reply_appid", "appSecret", "reply-secret"));
-        channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "未配凭据公众号",
+        channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "未配凭据公众号",
             Map.of("token", "reply-token"));
         channelDouyin = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.DOUYIN, "抖音号",
             Map.of("token", "reply-token"));
@@ -434,7 +434,7 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
 
     private long otherCompanyVisitor() {
         UserGroupDO otherGroup = group(OTHER_COMPANY_ID, "外部回复组");
-        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT, "外部公众号",
+        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT_MP, "外部公众号",
             Map.of("token", "reply-token", "appId", "wx_other", "appSecret", "other-secret"));
         deskInboundService.accept(channels.getById(otherChannel), new ChannelInboundMessage(otherChannel,
             "reply-ext-foreign", null, null, List.of(), "seed-foreign", MessageDirectionEnum.INCOMING,

@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ChannelEnum {
 
-    WECHAT("wechat", "微信"),
+    WECHAT_MP("wechat-mp", "微信公众号"),
     ALIPAY("alipay", "支付宝"),
     DOUYIN("douyin", "抖音"),
     XIAOHONGSHU("xiaohongshu", "小红书"),

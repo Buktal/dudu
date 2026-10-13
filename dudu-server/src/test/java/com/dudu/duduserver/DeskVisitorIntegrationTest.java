@@ -86,7 +86,7 @@ class DeskVisitorIntegrationTest {
         companies.createCompany(company(OTHER_COMPANY_ID, "owner2"), 1L);
         UserGroupDO first = group(COMPANY_ID, "售前");
         UserGroupDO second = group(COMPANY_ID, "售后");
-        channelWechat = channel(COMPANY_ID, first.getGroupId(), ChannelEnum.WECHAT, "公众号");
+        channelWechat = channel(COMPANY_ID, first.getGroupId(), ChannelEnum.WECHAT_MP, "公众号");
         channelDouyin = channel(COMPANY_ID, second.getGroupId(), ChannelEnum.DOUYIN, "抖音号");
         channelAlipay = channel(COMPANY_ID, second.getGroupId(), ChannelEnum.ALIPAY, "生活号");
 
@@ -116,7 +116,7 @@ class DeskVisitorIntegrationTest {
 
         // 其他企业的访客与账号：任何查询与详情都不得泄漏
         UserGroupDO otherGroup = group(OTHER_COMPANY_ID, "外部组");
-        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT, "外部公众号");
+        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT_MP, "外部公众号");
         insertVisitor(OTHER_VISITOR_ID, OTHER_COMPANY_ID, otherChannel, "ext-foreign", "外部访客",
             VisitorStatusEnum.NEEDS_REPLY, at(1), at(2), at(0), 4, 1, "外部企业摘要");
     }
@@ -147,8 +147,8 @@ class DeskVisitorIntegrationTest {
         assertThat(identity.getStr("id")).isEqualTo("784102");
         assertThat(identity.getStr("externalUserId")).isEqualTo("ext-zhou");
         assertThat(identity.getStr("name")).isEqualTo("周越");
-        assertThat(identity.getStr("channelId")).isEqualTo("wechat");
-        assertThat(identity.getStr("channelName")).isEqualTo("微信");
+        assertThat(identity.getStr("channelId")).isEqualTo("wechat-mp");
+        assertThat(identity.getStr("channelName")).isEqualTo("微信公众号");
         assertThat(identity.getStr("accountId")).isEqualTo(String.valueOf(channelWechat));
         assertThat(identity.getStr("accountName")).isEqualTo("公众号");
         assertThat(first.getJSONObject("capability").getStr("state")).isEqualTo("restricted");
@@ -282,7 +282,7 @@ class DeskVisitorIntegrationTest {
         assertThat(data.getInt("version")).isEqualTo(2);
         assertThat(data.getJSONObject("identity").getStr("name")).isEqualTo("林小满");
         assertThat(data.getJSONObject("identity").getStr("externalUserId")).isEqualTo("ext-lin");
-        assertThat(data.getJSONObject("identity").getStr("channelName")).isEqualTo("微信");
+        assertThat(data.getJSONObject("identity").getStr("channelName")).isEqualTo("微信公众号");
 
         // 无消息时间回落到创建时间，非待回复省略 waitingSince
         JSONObject closed = detail(token("owner"), "784104").getJSONObject("data");

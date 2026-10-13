@@ -144,7 +144,7 @@ class WechatMpTextSenderTest {
     }
 
     private CompanyChannelDO wechatAccount(Map<String, Object> channelInfo) {
-        return account(ChannelEnum.WECHAT, channelInfo);
+        return account(ChannelEnum.WECHAT_MP, channelInfo);
     }
 
     private CompanyChannelDO account(ChannelEnum channel, Map<String, Object> channelInfo) {

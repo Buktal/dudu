@@ -58,7 +58,7 @@ class DeskSocketHandlerTest {
     void validEmployeeTokenReceivesReadyAndRegistersPushIdentity() throws Exception {
         when(deskAuthService.requireAccess(any()))
             .thenReturn(new DeskAccessVO(false, List.of(),
-                List.of(new DeskAccessVO.Account("7", "3", ChannelEnum.WECHAT, "公众号"))));
+                List.of(new DeskAccessVO.Account("7", "3", ChannelEnum.WECHAT_MP, "公众号"))));
 
         handler.handleTextMessage(session, auth(employeeToken()));
 

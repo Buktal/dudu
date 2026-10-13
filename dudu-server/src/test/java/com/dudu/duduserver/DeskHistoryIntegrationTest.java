@@ -85,7 +85,7 @@ class DeskHistoryIntegrationTest {
         companies.createCompany(company(OTHER_COMPANY_ID, "owner2"), 1L);
         UserGroupDO presale = group(COMPANY_ID, "售前");
         UserGroupDO aftersale = group(COMPANY_ID, "售后");
-        long wechat = channel(COMPANY_ID, presale.getGroupId(), ChannelEnum.WECHAT, "公众号");
+        long wechat = channel(COMPANY_ID, presale.getGroupId(), ChannelEnum.WECHAT_MP, "公众号");
         long alipay = channel(COMPANY_ID, aftersale.getGroupId(), ChannelEnum.ALIPAY, "生活号");
         UserDO agent = plainUser(COMPANY_ID, "agent.one", "客服一号");
         senderUserId = agent.getUserId();
@@ -105,7 +105,7 @@ class DeskHistoryIntegrationTest {
 
         // 其他企业的会话：任何查询与详情都不得泄漏
         UserGroupDO otherGroup = group(OTHER_COMPANY_ID, "外部组");
-        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT, "外部公众号");
+        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT_MP, "外部公众号");
         insertVisitor(OTHER_CONVERSATION_ID, OTHER_COMPANY_ID, otherChannel, "ext-foreign", "外部访客");
         insertMessage(OTHER_CONVERSATION_ID, 1, "incoming", "外部企业消息");
     }

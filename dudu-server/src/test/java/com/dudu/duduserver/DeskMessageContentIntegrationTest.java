@@ -88,7 +88,7 @@ class DeskMessageContentIntegrationTest {
         companies.createCompany(new CompanyCreateDTO(String.valueOf(COMPANY_ID), "内容验收企业", null, null, null,
             new CompanyAdminInitDTO("contentowner", PASSWORD, null)), 1L);
         UserGroupDO group = group(COMPANY_ID, "内容组");
-        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "内容公众号",
+        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "内容公众号",
             Map.of("token", CALLBACK_TOKEN, "appId", "wx_content_appid", "appSecret", "content-secret"));
         ownerToken = login();
     }

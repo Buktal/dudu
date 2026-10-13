@@ -82,7 +82,7 @@ public class ChannelCallbackServiceImpl implements ChannelCallbackService {
 
     // 只接入微信公众号协议：其他渠道代码与未配置 Token 的账号都按不支持处理
     private String wechatMpToken(CompanyChannelDO account) {
-        if (account.getChannel() != ChannelEnum.WECHAT) {
+        if (account.getChannel() != ChannelEnum.WECHAT_MP) {
             return null;
         }
         Map<String, Object> info = account.getChannelInfo();

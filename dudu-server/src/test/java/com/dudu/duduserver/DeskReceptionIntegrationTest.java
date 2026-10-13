@@ -106,7 +106,7 @@ class DeskReceptionIntegrationTest {
         companies.createCompany(company(COMPANY_ID, "receptionowner"), 1L);
         companies.createCompany(company(OTHER_COMPANY_ID, "receptionowner2"), 1L);
         UserGroupDO group = group(COMPANY_ID, "接待组");
-        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "公众号",
+        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "公众号",
             Map.of("token", "reception-token"));
 
         UserDO scoped = plainUser(COMPANY_ID, "reception.scoped");
@@ -313,7 +313,7 @@ class DeskReceptionIntegrationTest {
 
     private long otherCompanyVisitor() {
         UserGroupDO otherGroup = group(OTHER_COMPANY_ID, "外部接待组");
-        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT, "外部公众号",
+        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT_MP, "外部公众号",
             Map.of("token", "reception-token"));
         deskInboundService.accept(channels.getById(otherChannel), new ChannelInboundMessage(otherChannel,
             "reception-ext-other", null, null, List.of(), "seed-other", MessageDirectionEnum.INCOMING,

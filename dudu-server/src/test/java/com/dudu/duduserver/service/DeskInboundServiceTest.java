@@ -100,7 +100,7 @@ class DeskInboundServiceTest {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setCompanyId(COMPANY_ID);
         account.setCompanyChannelId(COMPANY_CHANNEL_ID);
-        account.setChannel(ChannelEnum.WECHAT);
+        account.setChannel(ChannelEnum.WECHAT_MP);
         account.setAccountName("公众号");
         return account;
     }
