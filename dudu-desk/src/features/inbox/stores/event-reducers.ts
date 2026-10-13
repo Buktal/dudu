@@ -80,7 +80,7 @@ export const eventReducers = {
       event.context.workspaceId !== state.context.workspaceId
     )
       return;
-    // 真实 Socket 报文没有 eventId 与游标，不做去重与续订游标维护；Mock 仍按自身字段生效
+    // 真实 Socket 报文没有 eventId 与游标；字段保留用于既有事件合并的去重与关联，存在时才处理
     if (event.id !== undefined) {
       if (state.events.seenIds.includes(event.id)) return;
       state.events.seenIds.push(event.id);
@@ -93,7 +93,7 @@ export const eventReducers = {
     if (event.type === "message") {
       const message = event.message;
       if (state.events.removed[message.conversationId] !== undefined) return;
-      // 本条消息引起的访客更新合并在 message 中（Mock 以独立 conversation 事件表达）
+      // 本条消息引起的访客更新可与消息同帧下发；未携带时由独立 conversation 事件合并
       if (event.conversation) mergeConversation(state, event.conversation);
       if (message.direction === "incoming") {
         state.events.incomingSequence[message.conversationId] = Math.max(

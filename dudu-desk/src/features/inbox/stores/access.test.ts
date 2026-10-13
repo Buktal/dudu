@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InboxApi } from "../api";
-import { defineProfile } from "../development/fixtures";
+import { defineProfile } from "../test-fixtures";
 import type { ConversationPage, InboxEvent } from "../types";
 import { startInboxUpdates } from "./events";
 import { pinConversation } from "./parallel";

@@ -317,7 +317,7 @@ describe("shared pending reminders", () => {
     expect(store.getState().inbox.reminders).toEqual({});
   });
 
-  it("keeps the Mock's own unread data untouched outside the real chain", async () => {
+  it("leaves the conversation's own unread untouched when the adapter keeps no local reminders", async () => {
     let subscription!: Subscription;
     const store = testStore({
       subscribe: (input) => {
@@ -339,7 +339,7 @@ describe("shared pending reminders", () => {
       },
     });
 
-    // Mock 的未读来自自身可复现的数据，本地提醒不参与计数
+    // 适配器不维护本地提醒时事件不产生提醒，角标沿用会话自身未读
     expect(store.getState().inbox.reminders).toEqual({});
     expect(badge(store.getState(), "conversation-b")).toBe(2);
   });

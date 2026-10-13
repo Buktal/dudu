@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { defineMessage } from "../development/fixtures";
+import { defineMessage } from "../test-fixtures";
 import type { DeliveryState } from "../types";
 import { MessageView } from "./message-view";
 

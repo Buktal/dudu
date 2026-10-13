@@ -2,16 +2,17 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { afterEach, expect, it } from "vitest";
 import { DESK_SESSION_KEY } from "@/lib/desk-session";
-import { createDevelopmentInboxApi } from "../development/api";
 import { createHttpInboxApi } from "../http-inbox-api";
 import { loadConversations } from "../stores/queue";
 import { inboxActions } from "../stores/slice";
 import { createInboxStore } from "../stores/store";
+import { firstConversation, testStore } from "../stores/test-support";
+import { allowedCapability } from "../test-fixtures";
 import { AttachmentPicker } from "./attachment-picker";
 
 /**
- * 附件入口门禁：本轮真实链路只发纯文本，选择入口按能力停用并说明原因（不伪装可用）；
- * Mock 场景按自身可复现的能力数据保持可用。
+ * 附件入口门禁：真实链路只发纯文本，选择入口按能力停用并说明原因（不伪装可用）；
+ * 能力声明附件限制时入口可用并展示限制说明。
  */
 afterEach(cleanup);
 
@@ -77,20 +78,31 @@ it("disables the attachment picker in the text-only real integration", async () 
   expect(screen.getByTitle("当前会话仅支持文字回复")).toBeInTheDocument();
 });
 
-it("keeps the attachment picker available with the Mock's own capability", async () => {
-  const { api } = createDevelopmentInboxApi();
-  const store = createInboxStore({
-    api,
-    context: { agentId: "agent", workspaceId: "desk" },
+it("keeps the attachment picker available when the capability declares attachment limits", async () => {
+  const conversation = {
+    ...firstConversation,
+    capability: allowedCapability(["text", "image"], {
+      maxCount: 3,
+      maxBytes: 5 * 1024 * 1024,
+      mimeTypes: ["image/*"],
+    }),
+  };
+  const store = testStore({
+    listConversations: async () => ({
+      items: [conversation],
+      nextCursor: null,
+      total: 1,
+    }),
   });
-  store.dispatch(inboxActions.connectionChanged("connected"));
   await store.dispatch(loadConversations());
-  const conversationId = store.getState().inbox.queue.ids[0];
   render(
     <Provider store={store}>
-      <AttachmentPicker conversationId={conversationId} />
+      <AttachmentPicker conversationId={conversation.id} />
     </Provider>,
   );
 
   expect(screen.getByRole("button", { name: "添加附件" })).toBeEnabled();
+  expect(
+    screen.getByTitle("添加附件 · 最多 3 个，单个不超过 5.0 MB"),
+  ).toBeInTheDocument();
 });

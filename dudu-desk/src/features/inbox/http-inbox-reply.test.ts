@@ -87,7 +87,7 @@ describe("http inbox reply adapter", () => {
 
   it("rejects delivery states outside the contract three-state vocabulary", async () => {
     seed("stored-token");
-    // 契约三态之外（Mock 世界的词表）不得被判为成功或静默通过：按无效响应拒绝
+    // 契约三态之外的取值不得被判为成功或静默通过：按无效响应拒绝
     for (const state of ["accepted", "delivered", "read", "unconfirmed"]) {
       const api = createHttpInboxApi({
         origin: ORIGIN,

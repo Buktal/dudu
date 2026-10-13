@@ -113,8 +113,8 @@ function watermarks(state: InboxState, conversationId: string) {
 
 /**
  * 可确认的发送结果：契约第 4 节三态（真实适配器只能返回这三种，其余取值在
- * http-inbox-contract 的解析边界按无效响应拒绝）加 Mock 适配层自有词表——
- * accepted/delivered/read/unconfirmed 只可能来自 Mock 世界，不参与真实解析。
+ * http-inbox-contract 的解析边界按无效响应拒绝）。列表中的其余取值属 store
+ * 既有事件模型的兼容词表，真实报文经解析边界不会出现。
  */
 const CONFIRMABLE_DELIVERY_STATES: DeliveryState[] = [
   "sending",

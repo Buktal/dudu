@@ -9,12 +9,10 @@ import {
 import { Provider } from "react-redux";
 import { afterEach, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { createDevelopmentInboxApi } from "../development/api";
 import { openQuickHistory } from "../stores/parallel";
 import { loadConversations } from "../stores/queue";
 import { loadHistory } from "../stores/reading";
 import { inboxActions } from "../stores/slice";
-import { createInboxStore } from "../stores/store";
 import {
   firstConversation,
   incomingMessage,
@@ -25,11 +23,7 @@ import { QuickCard } from "./quick-card";
 
 afterEach(cleanup);
 async function setup() {
-  const { api } = createDevelopmentInboxApi();
-  const store = createInboxStore({
-    api,
-    context: { agentId: "agent", workspaceId: "workspace" },
-  });
+  const store = testStore();
   await store.dispatch(loadConversations({}));
   const conversation =
     store.getState().inbox.conversations[store.getState().inbox.queue.ids[0]];

@@ -3,13 +3,13 @@ import {
   defineTestConversation,
   firstConversation,
   secondConversation,
-} from "../stores/test-support";
+} from "./stores/test-support";
 import {
   allowedCapability,
   defineConversation,
   restrictedCapability,
   unknownCapability,
-} from "./fixtures";
+} from "./test-fixtures";
 
 const identity = {
   id: "visitor-a",

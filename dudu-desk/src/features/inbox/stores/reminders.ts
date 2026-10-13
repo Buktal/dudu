@@ -9,7 +9,7 @@ import type { InboxRootState } from "./store";
  * closed 时清除对应提示（别人处理后其他端同步消除，以最新服务端状态为准，较新的
  * 待回复状态不被较旧的结束报文误清）。提醒只由实时来信产生，登录或重连的初始化
  * 数据不制造旧提示——重连重查只按结果收敛（reminderSettlement）；退出重登由上下文
- * 重置清空。Mock 沿用自身可复现的未读数据。
+ * 重置清空。
  */
 export type ReminderChange = { conversationId: string; unread: number };
 
@@ -63,8 +63,8 @@ function onScreen(state: InboxState, conversationId: string): boolean {
 }
 
 // 已处理：成功的 outgoing 结果，或本条消息把访客带到 waiting；失败与发送中不算。
-// accepted/delivered/read 与 sending.ts 可确认词表中的 Mock 专属取值一致
-// （真实解析边界只认 sending/sent/failed）
+// accepted/delivered/read 属 store 既有事件模型的兼容词表，真实解析边界只认
+// sending/sent/failed
 function served(event: InboxEvent): boolean {
   if (event.type !== "message") return false;
   if (event.conversation?.status === "waiting") return true;
@@ -77,7 +77,7 @@ function served(event: InboxEvent): boolean {
   );
 }
 
-/** 会话角标：本地待处理提醒优先，Mock 的未读照旧 */
+/** 会话角标：本地待处理提醒优先，无提醒时用会话自身未读 */
 export function unreadBadge(
   state: InboxRootState,
   conversation: Conversation,

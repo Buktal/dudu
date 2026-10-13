@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { defineConversation } from "../development/fixtures";
 import { firstConversation } from "../stores/test-support";
+import { defineConversation } from "../test-fixtures";
 import type { Conversation } from "../types";
 import {
   buildReplySubmission,

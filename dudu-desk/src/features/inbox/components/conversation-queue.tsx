@@ -31,7 +31,7 @@ function ConversationRow({
     (state) => state.inbox.drafts[conversation.id],
   );
   const order = useInboxSelector((state) => state.inbox.queue.query.order);
-  // 真实链路的待处理提醒在本地运行态，Mock 沿用自身未读数据
+  // 待处理提醒在本地运行态维护；角标以本地提醒优先
   const unread = useInboxSelector((state) => unreadBadge(state, conversation));
   const canPin = !!onPin && conversation.status !== "closed";
   return (

@@ -4,7 +4,7 @@ import {
   defineMessage,
   defineProfile,
   FIXTURE_NOW,
-} from "../development/fixtures";
+} from "../test-fixtures";
 import type { Conversation, InboxMessage, SendSubmission } from "../types";
 import { startInboxUpdates } from "./events";
 import { createInboxStore, type InboxRuntime } from "./store";

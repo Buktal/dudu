@@ -2,7 +2,7 @@
 
 嘟嘟（DuDu）的客服坐席桌面端，使用 React 19、Vite、Tailwind CSS、shadcn、Redux Toolkit 和 Tauri 2。本阶段将已确认的接待原型迁入正式前端，统一三种接待模式、八套主题、会话状态与 API 契约；初始范围见 [规格 #50](https://github.com/Buktal/dudu/issues/50)，当前功能见 [功能图谱](../docs/features/dudu-desk.md)。
 
-2026-10-12 纯文本回复与实时推送已接通：未启用 Mock 时使用真实账户、访客摘要、按需历史、文本回复与 `/ws/desk` 实时通道适配器，登录后先建立 Socket、收到 ready 再读取初始数据，来信按 ID/version 合并（未打开访客只更新摘要，首次打开仍取最近页）；发送中先显示本地气泡，HTTP 返回与 Socket 通知按同一消息 ID 合并为一条，渠道失败按已保存的失败气泡展示真实原因并可手动重试（新 `clientRequestId`，原失败记录保留）；服务端不返回个人已读，待处理提醒在本次运行的内存态维护。收到 `access-changed`（员工-组或账号-组关系变化）后重查身份与列表，清理已无权的对话、名片、草稿、固定与提醒并保留仍有权数据，旧请求的迟到结果不写回新范围。断线后实时通道按退避自动重连，重连 ready 重新执行同一初始化查询——重查身份/权限、重读访客列表第一页与计数，显示中访客重取名片与最近页、旧历史缓存失效重载（更早消息照常向上分页），结果直接取查询结果；临时断线保留合法草稿与提醒，已处理事项不重新提醒，退出重登仍清空。本轮发送收窄为纯文本：附件准备/上传/发送延期，收到的非文本消息展示保留，真实适配器下附件入口按能力停用（不伪装可用），Mock 场景按自身能力数据保持可用。企业登录、身份恢复与接待范围已按 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)接入真实 Server：未登录时显示企业登录页，`unavailableInboxApi` 仍不会假装收发成功。Mock 数据需显式开启，开发运行与打包测试共用同一个开关，见下文。
+2026-10-12 纯文本回复与实时推送已接通：已接入真实账户、访客摘要、按需历史、文本回复与 `/ws/desk` 实时通道适配器，登录后先建立 Socket、收到 ready 再读取初始数据，来信按 ID/version 合并（未打开访客只更新摘要，首次打开仍取最近页）；发送中先显示本地气泡，HTTP 返回与 Socket 通知按同一消息 ID 合并为一条，渠道失败按已保存的失败气泡展示真实原因并可手动重试（新 `clientRequestId`，原失败记录保留）；服务端不返回个人已读，待处理提醒在本次运行的内存态维护。收到 `access-changed`（员工-组或账号-组关系变化）后重查身份与列表，清理已无权的对话、名片、草稿、固定与提醒并保留仍有权数据，旧请求的迟到结果不写回新范围。断线后实时通道按退避自动重连，重连 ready 重新执行同一初始化查询——重查身份/权限、重读访客列表第一页与计数，显示中访客重取名片与最近页、旧历史缓存失效重载（更早消息照常向上分页），结果直接取查询结果；临时断线保留合法草稿与提醒，已处理事项不重新提醒，退出重登仍清空。本轮发送收窄为纯文本：附件准备/上传/发送延期，收到的非文本消息展示保留，真实适配器下附件入口按能力停用（不伪装可用）。企业登录、身份恢复与接待范围已按 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)接入真实 Server：未登录时显示企业登录页，`unavailableInboxApi` 仍不会假装收发成功。
 
 ## 运行与检查
 
@@ -29,20 +29,6 @@ yarn tauri:build
 桌面命令需要本机 Tauri/Rust 构建环境。
 
 开发运行时 Vite 将 `/api` 同源代理到 `127.0.0.1:8080`、将 `/ws` 以 WebSocket 代理到同一 Server（见 [vite.config.ts](vite.config.ts)），浏览器与桌面端都不需要跨域配置，本地 Server 用 `mvn spring-boot:run` 启动即可。打包运行时用 `VITE_API_ORIGIN` 注入线上 API 源地址（只允许协议、主机与端口），由部署层处理跨域，实时通道按该地址派生 wss/ws。真实适配器共用会话凭据：JWT 保存在内存与 `sessionStorage` 的 `dudu-desk.session` 中，登录后由账户适配器写入、inbox 按请求读取（见 [desk-session.ts](src/lib/desk-session.ts)），且与 API 源地址绑定；关闭窗口不承诺记住登录。
-
-### Mock 打包测试
-
-`VITE_DESK_MOCK=true` 在开发运行和生产构建中都生效：恢复模拟坐席身份，并加载相同的会话、消息和异常场景。无需另改登录页或滚动实现。
-
-在 `dudu-desk/.env.local` 中开启可同时用于开发和打包；仅测试打包时，可写入 `dudu-desk/.env.production.local`：
-
-```dotenv
-VITE_DESK_MOCK=true
-```
-
-然后运行原有的 `yarn tauri:build`，启动 `dudu-desk/src-tauri/target/release/dudu-desk.exe`。这些 `.local` 文件不提交到 Git；开关在构建时确定，修改后需要重新打包。开关未设置或为 `false` 时不加载 Mock 适配器，生产构建会排除对应数据模块。此前在 Mock 中退出登录的同一运行会话仍保持退出状态，可用开发账号 `linzhou` / `desk123` 登录；登录表单中的企业 ID 填任意合法六位数字即可，Mock 不按企业区分。
-
-`VITE_DESK_SCENARIO` 继续选择已有的 Mock 异常场景，缺省使用 `default`；拼错场景名会报错。
 
 ## 接待与偏好
 
@@ -112,18 +98,16 @@ src/
 │   ├── account-provider.tsx    恢复身份、登录门禁与生命周期
 │   ├── components/             企业登录页、账户菜单与坐席信息
 │   ├── stores/session.ts       登录、退出、取消与竞态保护
-│   ├── runtime.ts               适配器注入（显式 Mock 开关选择）
-│   ├── http-account-api.ts      真实 Server 企业登录适配器与 token 管理
-│   └── mocks.ts                 隔离的开发身份
+│   ├── runtime.ts               真实适配器加载
+│   └── http-account-api.ts      真实 Server 企业登录适配器与 token 管理
 ├── features/inbox/
 │   ├── index.ts                 feature 公开入口
 │   ├── inbox-workspace.tsx      工作上下文、store 与适配器生命周期
 │   ├── api.ts / types.ts        API 签名与领域载体
-│   ├── runtime.ts               正式 / 开发适配器注入
+│   ├── runtime.ts               真实适配器加载
 │   ├── components/             三种布局及共享接待组件
 │   ├── hooks/                  接待逻辑 hooks
-│   ├── stores/                 状态、操作命令与 selectors
-│   └── development/            Mock 适配器与固定数据工厂（按开关加载）
+│   └── stores/                 状态、操作命令与 selectors
 ├── components/                 工作台外壳、设置、控件、动效与共享 UI
 └── lib/                        偏好、时间、HTTP、附件等共享逻辑
 src-tauri/                      Tauri 桌面宿主与本地平台桥接
@@ -146,6 +130,5 @@ Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、�
 - [工作台交互调整与验收截图](../docs/design/dudu-desk/workspace-polish/README.md)
 - [正式规格 #50](https://github.com/Buktal/dudu/issues/50)
 - [最小对接契约：三表、HTTP 与 Socket](../docs/design/dudu-desk/implementation-contract.md)
-- [开发数据与异常场景](src/features/inbox/development/)
 - [原型视觉与交互参考](../docs/prototype/dudu-desk/README.md)：仅作参考，不参与正式运行
 - [领域词汇](../GLOSSARY.md)、[工程规范](../AGENTS.md)、[架构决策](../docs/adr/)

@@ -154,7 +154,7 @@ export type ConnectionState =
   | "reconnecting"
   | "disconnected";
 export type InboxEvent = {
-  /** 真实 Socket 没有 eventId 与游标；Mock 保留自身字段用于回放与去重。 */
+  /** 真实 Socket 没有 eventId 与游标；字段保留用于既有事件合并的去重与关联，不再由任何适配器产生。 */
   id?: string;
   context: WorkContext;
   cursor?: string;

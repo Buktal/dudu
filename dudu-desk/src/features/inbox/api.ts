@@ -19,7 +19,7 @@ export type InboxApi = {
   dispose?: () => void;
   /**
    * 服务端不返回个人已读：待处理提醒（会话未读角标）由本次运行的内存态维护，
-   * 标记已读只清除本地提示。真实适配器为 true；Mock 保留自身可复现的未读数据。
+   * 标记已读只清除本地提示。真实适配器为 true。
    */
   localUnread?: boolean;
   listConversations: (

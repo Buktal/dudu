@@ -4,17 +4,11 @@ import type {
   ReplyCapability,
   SendKind,
   VisitorProfile,
-} from "../types";
+} from "./types";
 
 /**
- * FixtureBuilder module: one place that knows what a valid Conversation
- * looks like. Both the seeded development world (mocks.ts) and the hand-built
- * test world (stores/test-support.ts) build through here, so a new required
- * field or invariant lands in both universes at once.
- *
- * Defaults are frozen instants (`FIXTURE_NOW`); live clocks stay injected by
- * the caller (testStore `now`, development driver `now`). Only dev/test
- * modules import this kernel; packaged mock builds use the same fixtures.
+ * 测试夹具内核：stores 与组件测试共用的合法领域对象工厂。
+ * 默认时间取固定时刻（FIXTURE_NOW）；实时钟仍由调用方注入（如 testStore 的 now）。
  */
 export const FIXTURE_NOW = "2026-09-16T00:00:00Z";
 
