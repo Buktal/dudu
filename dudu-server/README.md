@@ -21,7 +21,7 @@ Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `c
 - 数据源为 `application.yaml` 明文默认值（`127.0.0.1:3306`、`dudu`/`123456`），无 `.env`、无环境变量直接跑；生产覆盖方式见「线上部署边界」。
 - `/api/**` 默认需要 `Authorization: Bearer <token>`；放行路径为 `POST /api/admin/login`、`POST /api/desk/login` 与渠道回调 `/api/channels/*/callback`，`/api/admin/**` 叠加 admin 角色校验，`/api/desk/**` 叠加企业员工身份校验。
 - 公众号回调验签读取账号 `company_channel.channel_info` 中的 `token` 键（服务器配置 Token），未配置该键的账号返回不支持；`/ws/desk` 由连接后的 `{"type":"auth","token":…}` 报文认证，不属于 `/api/**` 拦截链。
-- 业务表由 Flyway 版本化迁移维护（当前 V4：V1–V2 建立 company、user、operation_log、user_group、user_group_member、company_channel 六张基础表，V3 移除全部外键，V4 新增 visitor、visitor_profile、message 三张访客会话表）；已提交迁移不可变，变更新增迁移。
+- 业务表由 Flyway 版本化迁移维护（当前 V5：V1–V2 建立 company、user、operation_log、user_group、user_group_member、company_channel 六张基础表，V3 移除全部外键，V4 新增 visitor、visitor_profile、message 三张访客会话表，V5 将公众号渠道码值 `wechat` 统一为 `wechat-mp`）；已提交迁移不可变，变更新增迁移。
 
 ## 本地 MySQL
 
