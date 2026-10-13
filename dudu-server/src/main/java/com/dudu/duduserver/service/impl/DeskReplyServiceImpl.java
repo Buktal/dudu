@@ -1,7 +1,7 @@
 package com.dudu.duduserver.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.dudu.duduserver.channel.ChannelOutboundSender;
+import com.dudu.duduserver.channel.ChannelAdapterRegistry;
 import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
@@ -60,7 +60,8 @@ public class DeskReplyServiceImpl implements DeskReplyService {
     private final MessageService messageService;
     private final CompanyChannelService companyChannelService;
     private final UserService userService;
-    private final ChannelOutboundSender channelOutboundSender;
+    private final ChannelAdapterRegistry channelAdapters;
+    private final DeskConversationViews deskConversationViews;
     private final DeskSocketGateway deskSocketGateway;
     private final TransactionTemplate transactionTemplate;
 
@@ -154,7 +155,7 @@ public class DeskReplyServiceImpl implements DeskReplyService {
         UserDO sender = userService.getById(message.getSenderUserId());
         return new SendOutcome(
             DeskMessageVO.of(message, sender == null ? null : sender.getName()),
-            DeskConversationViews.conversation(visitor, account),
+            deskConversationViews.conversation(visitor, account),
             account == null ? null : account.getCompanyId(),
             account == null ? null : account.getCompanyChannelId());
     }
@@ -176,7 +177,7 @@ public class DeskReplyServiceImpl implements DeskReplyService {
     // 渠道边界负责翻译渠道协议；异常也按真实原因记录为失败，不猜测发送结果
     private ChannelSendResult sendToChannel(CompanyChannelDO account, String externalUserId, String text) {
         try {
-            return channelOutboundSender.send(account, externalUserId, text);
+            return channelAdapters.send(account, externalUserId, text);
         } catch (RuntimeException e) {
             log.error("[desk-reply] 渠道发送异常, companyChannelId={}",
                 account == null ? null : account.getCompanyChannelId(), e);

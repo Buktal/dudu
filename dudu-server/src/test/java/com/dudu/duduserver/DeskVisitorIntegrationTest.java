@@ -168,7 +168,7 @@ class DeskVisitorIntegrationTest {
         assertThat(data.getJSONObject("counts").getInt("closed")).isEqualTo(1);
         // channels 为授权账号用到的渠道代码与显示名
         assertThat(data.getJSONArray("channels").toString())
-            .isEqualTo("[{\"id\":\"wechat\",\"name\":\"微信\"},{\"id\":\"douyin\",\"name\":\"抖音\"}"
+            .isEqualTo("[{\"id\":\"wechat-mp\",\"name\":\"微信公众号\"},{\"id\":\"douyin\",\"name\":\"抖音\"}"
                 + ",{\"id\":\"alipay\",\"name\":\"支付宝\"}]");
     }
 
@@ -203,7 +203,7 @@ class DeskVisitorIntegrationTest {
         assertThat(scoped.getJSONObject("counts").getInt("waiting")).isEqualTo(1);
         assertThat(scoped.getJSONObject("counts").getInt("closed")).isEqualTo(1);
         assertThat(scoped.getJSONArray("channels").toString())
-            .isEqualTo("[{\"id\":\"wechat\",\"name\":\"微信\"}]");
+            .isEqualTo("[{\"id\":\"wechat-mp\",\"name\":\"微信公众号\"}]");
 
         // 授权账号之外的访客：列表不出现，详情按无访问权限处理
         JSONObject all = data(query(token("agent.one"), "{\"status\": \"all\"}"));

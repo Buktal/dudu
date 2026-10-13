@@ -47,6 +47,7 @@ public class DeskInboundServiceImpl implements DeskInboundService {
     private final VisitorProfileService visitorProfileService;
     private final MessageService messageService;
     private final DeskSocketGateway deskSocketGateway;
+    private final DeskConversationViews deskConversationViews;
 
     @Override
     @Transactional
@@ -170,7 +171,7 @@ public class DeskInboundServiceImpl implements DeskInboundService {
     // 推送失败只记录，不回滚已保存的来信
     private void pushAfterCommit(CompanyChannelDO account, VisitorDO visitor, MessageDO message,
                                  VisitorProfileDO profileChange) {
-        DeskConversationVO conversation = DeskConversationViews.conversation(visitor, account);
+        DeskConversationVO conversation = deskConversationViews.conversation(visitor, account);
         DeskMessageVO messageVO = DeskMessageVO.of(message, null);
         DeskVisitorProfileVO profileVO = profileChange == null ? null : DeskVisitorProfileVO.of(profileChange);
         Long companyId = account.getCompanyId();

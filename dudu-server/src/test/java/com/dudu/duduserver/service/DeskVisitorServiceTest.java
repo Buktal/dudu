@@ -4,6 +4,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
+import com.dudu.duduserver.channel.ChannelAdapterRegistry;
+import com.dudu.duduserver.channel.wechatmp.WechatMpAdapter;
+import com.dudu.duduserver.channel.wechatmp.WechatMpMediaReader;
+import com.dudu.duduserver.channel.wechatmp.WechatMpProtocol;
+import com.dudu.duduserver.channel.wechatmp.WechatMpTextSender;
+import com.dudu.duduserver.util.DeskConversationViews;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.MessageSendStatusEnum;
@@ -26,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.web.client.RestClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,7 +64,16 @@ class DeskVisitorServiceTest {
     private final CompanyChannelService companyChannelService = mock(CompanyChannelService.class);
     private final DeskSocketGateway deskSocketGateway = mock(DeskSocketGateway.class);
     private final DeskVisitorService deskVisitorService = new DeskVisitorServiceImpl(
-        deskAuthService, visitorService, messageService, userService, companyChannelService, deskSocketGateway);
+        deskAuthService, visitorService, messageService, userService, companyChannelService, deskSocketGateway,
+        deskConversationViews());
+    // 能力说明走真实注册表与公众号适配器；本类只用其限制说明，不发起渠道请求
+    private static DeskConversationViews deskConversationViews() {
+        WechatMpAdapter wechatMp = new WechatMpAdapter(new WechatMpProtocol(),
+            new WechatMpTextSender(RestClient.builder(), "http://127.0.0.1:9"),
+            new WechatMpMediaReader(RestClient.builder(), "http://127.0.0.1:9"));
+        return new DeskConversationViews(new ChannelAdapterRegistry(List.of(wechatMp)));
+    }
+
 
     private final JwtUser me = new JwtUser(COMPANY_ID, 9L, UserRoleEnum.CONSOLE, 0L);
 

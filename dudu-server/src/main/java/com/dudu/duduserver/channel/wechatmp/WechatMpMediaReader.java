@@ -2,9 +2,7 @@ package com.dudu.duduserver.channel.wechatmp;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.dudu.duduserver.channel.ChannelMediaCapabilities;
 import com.dudu.duduserver.channel.ChannelMediaResult;
-import com.dudu.duduserver.channel.ChannelMediaReader;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,11 +19,11 @@ import java.nio.charset.StandardCharsets;
  * GET /cgi-bin/media/get?access_token=&media_id=；成功按二进制返回并带渠道内容类型，
  * 视频素材按官方行为返回 JSON video_url（短时下载地址），需再取一次字节；
  * 失败原样记录 errcode 与 errmsg，接口地址默认官方域名，可用
- * dudu.channel.wechat.api-base 覆盖为受控替身。
+ * dudu.channel.wechat-mp.api-base 覆盖为受控替身。
  */
 @Slf4j
 @Component
-public class WechatMpMediaReader implements ChannelMediaReader {
+public class WechatMpMediaReader {
 
     private static final String DEFAULT_API_BASE = "https://api.weixin.qq.com";
     private static final String PATH_MEDIA_GET = "/cgi-bin/media/get";
@@ -40,18 +38,13 @@ public class WechatMpMediaReader implements ChannelMediaReader {
     private final RestClient downloadClient;
 
     public WechatMpMediaReader(RestClient.Builder builder,
-                               @Value("${dudu.channel.wechat.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
+                               @Value("${dudu.channel.wechat-mp.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
         this.restClient = builder.baseUrl(apiBase).build();
         this.accessTokenClient = new WechatMpAccessTokenClient(restClient);
         this.downloadClient = RestClient.builder().build();
     }
 
-    @Override
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
-        String restriction = ChannelMediaCapabilities.readRestriction(account);
-        if (restriction != null) {
-            return ChannelMediaResult.failed(restriction);
-        }
         WechatMpCredentials credentials = WechatMpCredentials.of(account);
         try {
             WechatMpAccessTokenClient.TokenResult token = accessTokenClient.fetch(credentials);

@@ -2,9 +2,7 @@ package com.dudu.duduserver.channel.wechatmp;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.dudu.duduserver.channel.ChannelOutboundSender;
 import com.dudu.duduserver.channel.ChannelSendResult;
-import com.dudu.duduserver.channel.ChannelSendCapabilities;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,11 +18,11 @@ import java.util.Map;
  * 都取一次，不做进程内缓存），再 POST /cgi-bin/message/custom/send 下发 text 报文；
  * 成功以 errcode=0 为准（客服消息接口不返回消息标识），失败原样记录 errcode 与 errmsg，
  * 网络与响应解析异常按调用失败如实返回。接口地址默认官方域名，可用
- * dudu.channel.wechat.api-base 覆盖为受控替身。
+ * dudu.channel.wechat-mp.api-base 覆盖为受控替身。
  */
 @Slf4j
 @Component
-public class WechatMpTextSender implements ChannelOutboundSender {
+public class WechatMpTextSender {
 
     private static final String DEFAULT_API_BASE = "https://api.weixin.qq.com";
     private static final String PATH_CUSTOM_SEND = "/cgi-bin/message/custom/send";
@@ -35,17 +33,12 @@ public class WechatMpTextSender implements ChannelOutboundSender {
     private final WechatMpAccessTokenClient accessTokenClient;
 
     public WechatMpTextSender(RestClient.Builder builder,
-                              @Value("${dudu.channel.wechat.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
+                              @Value("${dudu.channel.wechat-mp.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
         this.restClient = builder.baseUrl(apiBase).build();
         this.accessTokenClient = new WechatMpAccessTokenClient(restClient);
     }
 
-    @Override
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
-        String restriction = ChannelSendCapabilities.sendRestriction(account);
-        if (restriction != null) {
-            return ChannelSendResult.failed(restriction);
-        }
         WechatMpCredentials credentials = WechatMpCredentials.of(account);
         try {
             WechatMpAccessTokenClient.TokenResult token = accessTokenClient.fetch(credentials);

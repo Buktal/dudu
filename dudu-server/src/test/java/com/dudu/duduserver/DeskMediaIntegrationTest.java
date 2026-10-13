@@ -3,7 +3,7 @@ package com.dudu.duduserver;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
-import com.dudu.duduserver.channel.ChannelMediaReader;
+import com.dudu.duduserver.channel.wechatmp.WechatMpMediaReader;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.EnableStatusEnum;
@@ -32,6 +32,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -75,11 +76,16 @@ class DeskMediaIntegrationTest {
     }
 
     // 渠道素材读取替身：记录被读取的渠道标识，按构造好的公众号事实响应返回
-    static class RecordingMediaReader implements ChannelMediaReader {
+    static class RecordingMediaReader extends WechatMpMediaReader {
 
         volatile Function<String, ChannelMediaResult> answer =
             id -> ChannelMediaResult.media(IMAGE_BYTES, "image/jpeg");
         final List<String> mediaIds = new CopyOnWriteArrayList<>();
+
+        RecordingMediaReader() {
+            // 替身不发起渠道请求：接口地址指向本机保留端口，误请求会以连接失败暴露
+            super(RestClient.builder(), "http://127.0.0.1:9");
+        }
 
         @Override
         public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {

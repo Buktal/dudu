@@ -4,8 +4,8 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
-import com.dudu.duduserver.channel.ChannelOutboundSender;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.wechatmp.WechatMpTextSender;
 import com.dudu.duduserver.config.auth.JwtManager;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.constant.ChannelEnum;
@@ -28,6 +28,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -70,11 +71,16 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
     }
 
     // 渠道发送替身：成功/失败响应按公众号事实构造，可观察调用时的持久状态
-    static class RecordingSender implements ChannelOutboundSender {
+    static class RecordingSender extends WechatMpTextSender {
 
         volatile Function<String, ChannelSendResult> answer = text -> ChannelSendResult.sent(null);
         volatile Consumer<String> observer = text -> { };
         final List<String> texts = new CopyOnWriteArrayList<>();
+
+        RecordingSender() {
+            // 替身不发起渠道请求：接口地址指向本机保留端口，误请求会以连接失败暴露
+            super(RestClient.builder(), "http://127.0.0.1:9");
+        }
 
         @Override
         public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {

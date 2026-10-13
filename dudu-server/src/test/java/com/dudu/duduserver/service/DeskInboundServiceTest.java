@@ -4,6 +4,12 @@ import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.ChannelAdapterRegistry;
+import com.dudu.duduserver.channel.wechatmp.WechatMpAdapter;
+import com.dudu.duduserver.channel.wechatmp.WechatMpMediaReader;
+import com.dudu.duduserver.channel.wechatmp.WechatMpProtocol;
+import com.dudu.duduserver.channel.wechatmp.WechatMpTextSender;
+import com.dudu.duduserver.util.DeskConversationViews;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
@@ -14,6 +20,7 @@ import com.dudu.duduserver.service.impl.DeskInboundServiceImpl;
 import com.dudu.duduserver.socket.DeskSocketGateway;
 import com.dudu.duduserver.vo.DeskVisitorProfileVO;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.springframework.web.client.RestClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +54,15 @@ class DeskInboundServiceTest {
     private final MessageService messageService = mock(MessageService.class);
     private final DeskSocketGateway deskSocketGateway = mock(DeskSocketGateway.class);
     private final DeskInboundService deskInboundService = new DeskInboundServiceImpl(
-        visitorService, visitorProfileService, messageService, deskSocketGateway);
+        visitorService, visitorProfileService, messageService, deskSocketGateway, deskConversationViews());
+    // 能力说明走真实注册表与公众号适配器；本类只用其限制说明，不发起渠道请求
+    private static DeskConversationViews deskConversationViews() {
+        WechatMpAdapter wechatMp = new WechatMpAdapter(new WechatMpProtocol(),
+            new WechatMpTextSender(RestClient.builder(), "http://127.0.0.1:9"),
+            new WechatMpMediaReader(RestClient.builder(), "http://127.0.0.1:9"));
+        return new DeskConversationViews(new ChannelAdapterRegistry(List.of(wechatMp)));
+    }
+
 
     @BeforeAll
     static void registerTableInfo() {

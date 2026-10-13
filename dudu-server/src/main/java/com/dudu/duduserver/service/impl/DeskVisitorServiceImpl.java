@@ -76,6 +76,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     private final UserService userService;
     private final CompanyChannelService companyChannelService;
     private final DeskSocketGateway deskSocketGateway;
+    private final DeskConversationViews deskConversationViews;
 
     @Override
     public DeskVisitorPageVO query(JwtUser me, DeskVisitorQueryDTO query) {
@@ -410,7 +411,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     }
 
     private DeskConversationVO toConversation(VisitorDO visitor, CompanyChannelDO account) {
-        return DeskConversationViews.conversation(visitor, account);
+        return deskConversationViews.conversation(visitor, account);
     }
 
     private Long parseVisitorId(String visitorId) {

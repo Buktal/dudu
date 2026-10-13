@@ -126,32 +126,13 @@ class WechatMpTextSenderTest {
         assertThat(unreadable.failureReason()).isNotBlank();
     }
 
-    @Test
-    void refusesAccountsThatCannotSendWithoutCallingTheChannel() {
-        handle("/cgi-bin/token", 200, TOKEN_OK);
-        ChannelSendResult missingSecret = sender().send(
-            wechatAccount(Map.of("appId", "wx_test_appid")), "openid-1", "在吗");
-        ChannelSendResult otherChannel = sender().send(
-            account(ChannelEnum.DOUYIN, Map.of("appId", "x", "appSecret", "y")), "openid-1", "在吗");
-
-        assertThat(missingSecret.succeeded()).isFalse();
-        assertThat(missingSecret.failureReason()).isEqualTo("渠道发送凭据未配置");
-        assertThat(otherChannel.succeeded()).isFalse();
-        assertThat(otherChannel.failureReason()).isEqualTo("当前渠道暂未接入发送");
-        assertThat(requestLines).isEmpty();
-    }
-
     private WechatMpTextSender sender() {
         return new WechatMpTextSender(RestClient.builder(), baseUrl);
     }
 
     private CompanyChannelDO wechatAccount(Map<String, Object> channelInfo) {
-        return account(ChannelEnum.WECHAT_MP, channelInfo);
-    }
-
-    private CompanyChannelDO account(ChannelEnum channel, Map<String, Object> channelInfo) {
         CompanyChannelDO account = new CompanyChannelDO();
-        account.setChannel(channel);
+        account.setChannel(ChannelEnum.WECHAT_MP);
         account.setChannelInfo(channelInfo);
         return account;
     }
