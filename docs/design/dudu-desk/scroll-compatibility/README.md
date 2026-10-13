@@ -1,6 +1,6 @@
 # DUDU Desk 消息滚动验证记录
 
-日期：2026-10-09。本文与同目录脚本、采样为本次诊断的历史资料，不是当前业务契约。下列命令从仓库根目录执行。
+日期：2026-10-09。本文与同目录脚本、采样为本次诊断的历史资料，不是当前业务契约。下列命令从仓库根目录执行。文中所述 `VITE_DESK_MOCK` 运行时与 Mock 适配器已于 2026-10-13 移除，相关步骤不可复现。
 
 ## 已确认的现象
 
@@ -37,6 +37,6 @@ node docs/design/dudu-desk/scroll-compatibility/check-scroll.cjs
 
 ## 本次保留的变更
 
-账号与会话 runtime 仅根据 `VITE_DESK_MOCK === "true"` 加载现有 Mock，允许开发与打包测试使用相同的模拟坐席和消息。配置与打包方式见 [DUDU Desk README](../../../../dudu-desk/README.md#mock-打包测试)。没有新增依赖。
+账号与会话 runtime 仅根据 `VITE_DESK_MOCK === "true"` 加载现有 Mock，允许开发与打包测试使用相同的模拟坐席和消息。配置与打包方式见 [DUDU Desk README](../../../../dudu-desk/README.md)。没有新增依赖。
 
 验证：282 项前端测试通过，lint、类型检查通过；关闭 Mock 的生产构建通过；正常 Tauri 配置的 Release 构建通过。用户自行打包的 EXE 已确认不抖动，开发版反弹根因仍未定位。

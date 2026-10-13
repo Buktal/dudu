@@ -72,7 +72,7 @@ async function unavailable(): Promise<never> {
   throw new DeskApiError("unavailable", "接待服务尚未连接，当前操作暂不可用");
 }
 
-/** Production has no guessed routes or fallback data. A real adapter is injected here later. */
+/** Production has no guessed routes or fallback data; runtime.ts always injects the real adapter, this is the not-yet-connected failure fallback. */
 export const unavailableInboxApi: InboxApi = {
   listConversations: unavailable,
   listMessages: unavailable,
