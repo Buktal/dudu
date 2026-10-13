@@ -471,12 +471,4 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         params.forEach(query::add);
         return query;
     }
-
-    private String textPush(String toUser, String fromUser, String text, String msgId) {
-        return """
-            <xml><ToUserName><![CDATA[%s]]></ToUserName><FromUserName><![CDATA[%s]]></FromUserName>
-            <CreateTime>%d</CreateTime><MsgType><![CDATA[text]]></MsgType>
-            <Content><![CDATA[%s]]></Content><MsgId>%s</MsgId></xml>
-            """.formatted(toUser, fromUser, DateUtil.currentSeconds(), text, msgId);
-    }
 }

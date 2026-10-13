@@ -66,8 +66,9 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     private static final String ORDER_MESSAGES =
         "ORDER BY message_count DESC, IFNULL(last_message_time, create_time) DESC, visitor_id ASC";
 
-    // 搜索词的通配符转义子句：显式 ESCAPE，按字面匹配不依赖数据库 sql_mode（片段见 applySearch）
-    private static final String LIKE_ESCAPE = " ESCAPE '\\\\'";
+    // 搜索词的通配符转义子句：转义字符显式指定为 !，字面匹配语义固定，不随连接的默认转义字符、
+    // sql_mode 变化（片段见 applySearch）
+    private static final String LIKE_ESCAPE = " ESCAPE '!'";
 
     private final DeskAuthService deskAuthService;
     private final VisitorService visitorService;
@@ -339,23 +340,27 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         String pattern = "%" + escapeLike(term) + "%";
         wrapper.and(w -> {
             // 姓名、外部用户 ID 与最后摘要走数据库 LIKE；Lambda 的 like 无法表达 ESCAPE，
-            // 用受支持的固定 SQL 片段追加，词条仍走占位符参数绑定
+            // 用受支持的固定 SQL 片段追加，转义字符显式指定为 !、不随连接默认值变化，
+            // 词条仍走占位符参数绑定
             w.apply("name LIKE {0}" + LIKE_ESCAPE, pattern)
                 .or().apply("external_user_id LIKE {0}" + LIKE_ESCAPE, pattern)
                 .or().apply("last_message_preview LIKE {0}" + LIKE_ESCAPE, pattern);
             if (!matchedAccountIds.isEmpty()) {
                 w.or().in(VisitorDO::getCompanyChannelId, matchedAccountIds);
             }
-            // 标签为 JSON 数组，Lambda 构造器无法表达 JSON 函数；exists 片段的词条同样参数绑定
+            // 标签为 JSON 数组，Lambda 构造器无法表达 JSON 函数；exists 片段的词条同样参数绑定，
+            // LIKE 与 JSON_SEARCH 共用同一显式转义字符 !（JSON_SEARCH 的 escape_char 与 pattern 一致）
             w.or().exists("SELECT 1 FROM visitor_profile vp WHERE vp.visitor_id = visitor.visitor_id"
-                    + " AND (vp.note LIKE {0} OR JSON_SEARCH(vp.tags, 'one', {0}, NULL, '$[*]') IS NOT NULL)",
+                    + " AND (vp.note LIKE {0}" + LIKE_ESCAPE
+                    + " OR JSON_SEARCH(vp.tags, 'one', {0}, '!', '$[*]') IS NOT NULL)",
                 pattern);
         });
     }
 
-    // 通配符转义：反斜杠自身先转义，% 与 _ 变为字面量；JSON_SEARCH 同样以反斜杠为转义符
+    // 通配符转义：! 自身先转义（后两步替换会引入 !），% 与 _ 变为字面量；与 SQL 中显式
+    // ESCAPE '!' 及 JSON_SEARCH 的 escape_char 一致，字面匹配不随连接默认转义字符、sql_mode 变化
     private String escapeLike(String term) {
-        return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        return term.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     // 账号名与渠道代码/显示名的包含匹配：授权账号已在本企业范围内，按数据库 ai_ci 语义近似处理

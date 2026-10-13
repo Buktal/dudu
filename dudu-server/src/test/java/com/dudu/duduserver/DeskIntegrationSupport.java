@@ -1,5 +1,6 @@
 package com.dudu.duduserver;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.config.auth.JwtManager;
@@ -178,6 +179,15 @@ abstract class DeskIntegrationSupport {
         return mvc.perform(put(path).header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON).content(json))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+    }
+
+    // 渠道入站 text 消息的 XML 报文：ToUserName 为公众号原始 ID，创建时间取当前秒
+    protected String textPush(String toUser, String fromUser, String text, String msgId) {
+        return """
+            <xml><ToUserName><![CDATA[%s]]></ToUserName><FromUserName><![CDATA[%s]]></FromUserName>
+            <CreateTime>%d</CreateTime><MsgType><![CDATA[text]]></MsgType>
+            <Content><![CDATA[%s]]></Content><MsgId>%s</MsgId></xml>
+            """.formatted(toUser, fromUser, DateUtil.currentSeconds(), text, msgId);
     }
 
     protected int code(String response) {

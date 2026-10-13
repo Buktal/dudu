@@ -6,8 +6,8 @@ import org.springframework.web.client.RestClient;
 
 /**
  * 公众号 access_token 换取（事实见 docs/research/channels/wechat-mp.md §6）：用 channel_info
- * 的 appId/appSecret 请求 /cgi-bin/token，每次调用都取一次、不做进程内缓存；发送与素材读取
- * 共用同一次换取与同一份失败说明，渠道错误原样记录 errcode 与 errmsg。
+ * 的 appId/appSecret 请求 /cgi-bin/token。发送与素材读取各自每次调用都换取一次（无进程内
+ * 缓存），复用同一换取逻辑与同一份失败说明格式；渠道错误原样记录 errcode 与 errmsg。
  */
 class WechatMpAccessTokenClient {
 

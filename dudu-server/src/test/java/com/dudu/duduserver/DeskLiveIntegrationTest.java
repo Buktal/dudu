@@ -101,7 +101,7 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
         SocketClient scoped = connectAndAuth(scopedToken);
 
         String msgId = "msg-" + System.nanoTime();
-        assertThat(callback(channelWechat, signedParams(), textPush("live-ext-1", "你好，想咨询发货时间", msgId)))
+        assertThat(callback(channelWechat, signedParams(), textPush("gh_live", "live-ext-1", "你好，想咨询发货时间", msgId)))
             .isEqualTo(200);
 
         assertFrame(owner.next(Duration.ofSeconds(5)), "live-ext-1", "你好，想咨询发货时间", msgId, 1);
@@ -150,14 +150,14 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
 
     @Test
     void repeatedMessagesIncrementSequenceAndKeepWaitingSince() throws Exception {
-        callback(channelWechat, signedParams(), textPush("live-ext-2", "第一条", "m2-1"));
+        callback(channelWechat, signedParams(), textPush("gh_live", "live-ext-2", "第一条", "m2-1"));
         Long visitorId = jdbc.queryForObject(
             "SELECT visitor_id FROM visitor WHERE company_id = ? AND external_user_id = 'live-ext-2'", Long.class,
             COMPANY_ID);
         LocalDateTime waitingSince = waitingSince(visitorId);
 
         Thread.sleep(50);
-        assertThat(callback(channelWechat, signedParams(), textPush("live-ext-2", "第二条", "m2-2"))).isEqualTo(200);
+        assertThat(callback(channelWechat, signedParams(), textPush("gh_live", "live-ext-2", "第二条", "m2-2"))).isEqualTo(200);
 
         assertThat(waitingSince(visitorId)).isEqualTo(waitingSince);
         Map<String, Object> visitor = jdbc.queryForMap("SELECT * FROM visitor WHERE visitor_id = ?", visitorId);
@@ -240,8 +240,8 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
         insertVisitor(788101L, "live-ext-3", "waiting", null, created);
         insertVisitor(788102L, "live-ext-4", "closed", null, created);
 
-        callback(channelWechat, signedParams(), textPush("live-ext-3", "再来一条", "m3"));
-        callback(channelWechat, signedParams(), textPush("live-ext-4", "又来了", "m4"));
+        callback(channelWechat, signedParams(), textPush("gh_live", "live-ext-3", "再来一条", "m3"));
+        callback(channelWechat, signedParams(), textPush("gh_live", "live-ext-4", "又来了", "m4"));
 
         for (long visitorId : new long[] {788101L, 788102L}) {
             Map<String, Object> visitor = jdbc.queryForMap("SELECT * FROM visitor WHERE visitor_id = ?", visitorId);
@@ -255,7 +255,7 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
         SocketClient owner = connectAndAuth(ownerToken);
         SocketClient outside = connectAndAuth(outsideToken);
 
-        callback(channelWechat, signedParams(), textPush("live-ext-5", "只推给有权员工", "m5"));
+        callback(channelWechat, signedParams(), textPush("gh_live", "live-ext-5", "只推给有权员工", "m5"));
 
         assertThat((Object) owner.next(Duration.ofSeconds(5))).isNotNull();
         assertThat((Object) outside.next(Duration.ofMillis(700))).isNull();
@@ -285,7 +285,7 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
 
     @Test
     void callbackRejectsBadSignatureUnknownAccountAndUnsupportedProtocol() throws Exception {
-        assertThat(callback(channelWechat, tamperedParams(), textPush("live-ext-6", "伪造", "m6"))).isEqualTo(403);
+        assertThat(callback(channelWechat, tamperedParams(), textPush("gh_live", "live-ext-6", "伪造", "m6"))).isEqualTo(403);
         assertThat(countMessagesOf("live-ext-6")).isZero();
 
         Map<String, String> params = signedParams();
@@ -299,17 +299,17 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
             .andExpect(status().isNotFound()).andReturn().getResponse().getStatus()).isEqualTo(404);
 
         // 已接入协议之外的渠道与加密模式都返回不支持，不模拟成功
-        assertThat(callback(channelDouyin, signedParams(), textPush("live-ext-7", "抖音", "m7"))).isEqualTo(501);
+        assertThat(callback(channelDouyin, signedParams(), textPush("gh_live", "live-ext-7", "抖音", "m7"))).isEqualTo(501);
         Map<String, String> secure = signedParams();
         secure.put("encrypt_type", "aes");
-        assertThat(callback(channelWechat, secure, textPush("live-ext-8", "安全模式", "m8"))).isEqualTo(501);
+        assertThat(callback(channelWechat, secure, textPush("gh_live", "live-ext-8", "安全模式", "m8"))).isEqualTo(501);
         assertThat(countMessagesOf("live-ext-7")).isZero();
     }
 
     @Test
     void concurrentFirstMessagesAllocateDistinctSequences() throws Exception {
-        String xmlA = textPush("live-ext-9", "并发甲", "m9-a");
-        String xmlB = textPush("live-ext-9", "并发乙", "m9-b");
+        String xmlA = textPush("gh_live", "live-ext-9", "并发甲", "m9-a");
+        String xmlB = textPush("gh_live", "live-ext-9", "并发乙", "m9-b");
         HttpClient client = HttpClient.newHttpClient();
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {
@@ -417,14 +417,6 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
         String[] parts = {token, timestamp, nonce};
         Arrays.sort(parts);
         return DigestUtil.sha1Hex(String.join("", parts));
-    }
-
-    private String textPush(String from, String text, String msgId) {
-        return """
-            <xml><ToUserName><![CDATA[gh_live]]></ToUserName><FromUserName><![CDATA[%s]]></FromUserName>
-            <CreateTime>%d</CreateTime><MsgType><![CDATA[text]]></MsgType>
-            <Content><![CDATA[%s]]></Content><MsgId>%s</MsgId></xml>
-            """.formatted(from, DateUtil.currentSeconds(), text, msgId);
     }
 
     private JSONObject detail(String token, Long visitorId) throws Exception {
