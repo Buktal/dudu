@@ -62,7 +62,9 @@ function onScreen(state: InboxState, conversationId: string): boolean {
   );
 }
 
-// 已处理：成功的 outgoing 结果，或本条消息把访客带到 waiting；失败与发送中不算
+// 已处理：成功的 outgoing 结果，或本条消息把访客带到 waiting；失败与发送中不算。
+// accepted/delivered/read 与 sending.ts 可确认词表中的 Mock 专属取值一致
+// （真实解析边界只认 sending/sent/failed）
 function served(event: InboxEvent): boolean {
   if (event.type !== "message") return false;
   if (event.conversation?.status === "waiting") return true;

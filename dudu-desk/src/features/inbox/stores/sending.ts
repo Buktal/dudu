@@ -15,6 +15,12 @@ import {
 import type { InboxCommand, InboxDispatch, InboxRuntime } from "./store";
 
 /**
+ * 历史重试（本地提交缺失，重登或他端加载的失败消息）不占用草稿：用永不可能与草稿
+ * 修订相等的哨兵值，让结果结算匹配不到当前草稿，重试不会清掉后来写下的正文或附件。
+ */
+const NO_DRAFT_MATCH = -1;
+
+/**
  * 发送结果结算：已接受而尚未落定的提交，按合并后的消息结果结算——草稿仍是提交时的
  * 修订就把结果落到提交并释放附件，否则视为已被后续编辑取代，直接释放附件。
  * 实时来信、receipt 报文与其他端的发送结果都经此单点，重连重载合并同一消息结果后
@@ -227,12 +233,18 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
     const state = getState().inbox;
     const original = state.submissions[messageId];
     const message = state.messages[messageId];
-    const retryable =
-      original === undefined
-        ? message?.direction === "outgoing" &&
+    // 重试正文同时是可否重试的单点判别：有本地提交时按失败状态决定，正文取提交里的；
+    // 无本地提交（重登/他端加载的历史消息）时仅 outgoing + failed + 文本成立——真实
+    // 链路的 outgoing 失败必为文本（服务端拒绝非文本发送），非文本的历史失败不进入重试。
+    const text = original
+      ? original.status === "failed"
+        ? original.request.text
+        : undefined
+      : message?.direction === "outgoing" &&
           message.delivery?.state === "failed" &&
           message.body.type === "text"
-        : original.status === "failed";
+        ? message.body.text
+        : undefined;
     const conversationId = original
       ? original.request.target.conversationId
       : message?.conversationId;
@@ -240,18 +252,13 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
       ? state.conversations[conversationId]
       : undefined;
     if (
-      !retryable ||
+      text === undefined ||
       !conversation ||
       state.sendingByConversation[conversation.id]
     )
       return;
     // 本地提交缺失（历史加载的失败消息）时从消息自身取原访客与正文，草稿不参与
     const attachments = original ? original.request.attachments : [];
-    const text = original
-      ? original.request.text
-      : message?.body.type === "text"
-        ? message.body.text
-        : "";
     const readiness = replyReadiness({
       conversation,
       connection: state.connection,
@@ -275,8 +282,8 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
       conversation,
       text,
       // 历史重试不占用草稿：哨兵修订值让结算永不匹配当前草稿
-      draftRevision: original?.draftRevision ?? -1,
-      textRevision: original?.textRevision ?? -1,
+      draftRevision: original?.draftRevision ?? NO_DRAFT_MATCH,
+      textRevision: original?.textRevision ?? NO_DRAFT_MATCH,
       draftAttachmentIds: original ? [...original.draftAttachmentIds] : [],
       media: attachments,
       ...watermarks(state, conversation.id),

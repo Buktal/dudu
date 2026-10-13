@@ -4,44 +4,8 @@ import {
   deskSocketUrl,
   subscribeDeskSocket,
 } from "./inbox-live-socket";
+import { FakeSocket, ORIGIN } from "./inbox-live-test-support";
 import type { ConnectionState } from "./types";
-
-const ORIGIN = "https://desk.example.test";
-
-class FakeSocket {
-  sent: string[] = [];
-  closed = false;
-  onopen: (() => void) | null = null;
-  onmessage: ((event: { data: unknown }) => void) | null = null;
-  onerror: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-
-  send(data: string) {
-    this.sent.push(data);
-  }
-
-  close() {
-    this.closed = true;
-  }
-
-  open() {
-    this.onopen?.();
-  }
-
-  receive(frame: unknown) {
-    this.onmessage?.({
-      data: typeof frame === "string" ? frame : JSON.stringify(frame),
-    });
-  }
-
-  drop() {
-    this.onclose?.();
-  }
-}
-
-function fakeSocket(): FakeSocket {
-  return new FakeSocket();
-}
 
 function subscribeWith(
   socket: FakeSocket,
@@ -73,7 +37,7 @@ describe("desk live socket protocol", () => {
   });
 
   it("sends the auth frame on open and reports connected only after ready", () => {
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const onFrame = vi.fn();
     const { states } = subscribeWith(socket, { onFrame });
 
@@ -92,7 +56,7 @@ describe("desk live socket protocol", () => {
   });
 
   it("reports unavailable and closes when the server rejects the token", () => {
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const { states } = subscribeWith(socket);
 
     socket.receive({
@@ -109,7 +73,7 @@ describe("desk live socket protocol", () => {
   });
 
   it("ignores malformed frames and reports a dropped connection after ready", () => {
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const onFrame = vi.fn();
     const { states } = subscribeWith(socket, { onFrame });
 
@@ -123,7 +87,7 @@ describe("desk live socket protocol", () => {
   });
 
   it("closes the socket when the subscription is released", () => {
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const controller = new AbortController();
     const { unsubscribe } = subscribeWith(socket, {
       signal: controller.signal,
@@ -136,7 +100,7 @@ describe("desk live socket protocol", () => {
   });
 
   it("reports a failed connect without a ready frame", () => {
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const { states } = subscribeWith(socket);
 
     socket.drop();
@@ -155,7 +119,7 @@ describe("desk live socket reconnect", () => {
       onState: (state) => states.push(state),
       onFrame: () => {},
       socket: () => {
-        const socket = fakeSocket();
+        const socket = new FakeSocket();
         sockets.push(socket);
         return socket as unknown as DeskSocket;
       },
@@ -230,7 +194,7 @@ describe("desk live socket reconnect", () => {
         onState: () => {},
         onFrame: () => {},
         socket: () => {
-          const socket = fakeSocket();
+          const socket = new FakeSocket();
           sockets.push(socket);
           return socket as unknown as DeskSocket;
         },

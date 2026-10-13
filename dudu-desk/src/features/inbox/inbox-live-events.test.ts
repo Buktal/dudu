@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DESK_SESSION_KEY } from "@/lib/desk-session";
 import { createHttpInboxApi } from "./http-inbox-api";
 import type { DeskSocket } from "./inbox-live-socket";
+import { FakeSocket, ORIGIN } from "./inbox-live-test-support";
 import type { ConnectionState, InboxEvent } from "./types";
 
-const ORIGIN = "https://desk.example.test";
 const CONTEXT = { agentId: "agent-a", workspaceId: "workspace-a" };
 
 // 独立于实现写出的会话报文：结束接待后服务端保存的 closed 会话
@@ -26,37 +26,6 @@ const SERVER_CONVERSATION = {
   capability: { state: "restricted", kinds: [] },
 };
 
-class FakeSocket {
-  sent: string[] = [];
-  closed = false;
-  onopen: (() => void) | null = null;
-  onmessage: ((event: { data: unknown }) => void) | null = null;
-  onerror: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-
-  send(data: string) {
-    this.sent.push(data);
-  }
-
-  close() {
-    this.closed = true;
-  }
-
-  open() {
-    this.onopen?.();
-  }
-
-  receive(frame: unknown) {
-    this.onmessage?.({
-      data: typeof frame === "string" ? frame : JSON.stringify(frame),
-    });
-  }
-
-  drop() {
-    this.onclose?.();
-  }
-}
-
 // 独立于实现写出的名片报文：渠道资料三态与共享标签/备注
 const SERVER_PROFILE = {
   conversationId: "41",
@@ -69,10 +38,6 @@ const SERVER_PROFILE = {
   tags: ["重点客户", "VIP"],
   note: "记得跟进\n已下单",
 };
-
-function fakeSocket(): FakeSocket {
-  return new FakeSocket();
-}
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -88,7 +53,7 @@ describe("http inbox live subscription", () => {
 
   it("connects with the stored credential and maps message frames to inbox events", () => {
     seed("stored-token");
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const open = vi.fn(() => socket as unknown as DeskSocket);
     const api = createHttpInboxApi({ origin: ORIGIN, socket: open });
     const states: ConnectionState[] = [];
@@ -162,7 +127,7 @@ describe("http inbox live subscription", () => {
 
   it("drops an incomplete message frame without breaking the connection", () => {
     seed("stored-token");
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const api = createHttpInboxApi({
       origin: ORIGIN,
       socket: () => socket as unknown as DeskSocket,
@@ -182,7 +147,7 @@ describe("http inbox live subscription", () => {
 
   it("maps a live message frame with a non-text body exactly like history", () => {
     seed("stored-token");
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const api = createHttpInboxApi({
       origin: ORIGIN,
       socket: () => socket as unknown as DeskSocket,
@@ -244,7 +209,7 @@ describe("http inbox live subscription", () => {
 
   it("maps conversation frames to conversation events and drops malformed ones", () => {
     seed("stored-token");
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const api = createHttpInboxApi({
       origin: ORIGIN,
       socket: () => socket as unknown as DeskSocket,
@@ -279,7 +244,7 @@ describe("http inbox live subscription", () => {
 
   it("maps a profile frame to a profile event with all three channel field states", () => {
     seed("stored-token");
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const api = createHttpInboxApi({
       origin: ORIGIN,
       socket: () => socket as unknown as DeskSocket,
@@ -317,7 +282,7 @@ describe("http inbox live subscription", () => {
 
   it("maps an access-changed frame to a workspace reload event", () => {
     seed("stored-token");
-    const socket = fakeSocket();
+    const socket = new FakeSocket();
     const api = createHttpInboxApi({
       origin: ORIGIN,
       socket: () => socket as unknown as DeskSocket,
