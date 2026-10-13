@@ -20,7 +20,7 @@ afterEach(() => vi.restoreAllMocks());
 const SEND_TARGET: SendTarget = {
   conversationId: "41",
   visitorId: "41",
-  channelId: "wechat",
+  channelId: "wechat-mp",
   accountId: "51",
   externalUserId: "external-a",
 };
