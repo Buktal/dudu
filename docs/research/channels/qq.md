@@ -159,7 +159,7 @@
 3. 签名体 `msg = timestamp + 原始Body字节`（timestamp 为 Header 的 `X-Signature-Timestamp` 字符串，Body 用原始字节）。
 4. `ed25519.Verify(publicKey, msg.Bytes(), sig)`。
 
-官方向量（sign 页逐字）：`secret: naOC0ocQE3shWLAfffVLB1rhYPG7` → `seed: naOC0ocQE3shWLAfffVLB1rhYPG7naOC` → `publicKey: [215 195 98 254 120 ... 103 58]`（32 字节，`privateKey` 前 32 字节即 seed ASCII）；`body: { "op": 0,"d": {}, "t": "GATEWAY_EVENT_NAME"}` + `timestamp: 1725442341` → `sig: 865ad13a61752ca65e26bde6676459cd36cf1be609375b37bd62af366e1dc25a8dc789ba7f14e017ada3d554c671a911bfdf075ba54835b23391d509579ed002`。可用作验签回归向量。
+官方向量（sign 页逐字）：`secret: naOC0ocQE3shWLAfffVLB1rhYPG7` → `seed: naOC0ocQE3shWLAfffVLB1rhYPG7naOC` → `publicKey: [215 195 98 254 120 ... 103 58]`（32 字节，`privateKey` 前 32 字节即 seed ASCII）；`body` 为换行缩进的 pretty-print JSON——`{\n  "op": 0,\n  "d": {},\n  "t": "GATEWAY_EVENT_NAME"\n}`（无结尾换行；2026-10-14 复核：页面渲染为内联形态致 09-10 记录失真，按字面字节穷举勘定与 `sig` 吻合者即此形态）+ `timestamp: 1725442341` → `sig: 865ad13a61752ca65e26bde6676459cd36cf1be609375b37bd62af366e1dc25a8dc789ba7f14e017ada3d554c671a911bfdf075ba54835b23391d509579ed002`。可用作验签回归向量（须按上述原始字节）。
 
 ### 4.3 回调验证签名（op13，webhook 页逐字）
 
