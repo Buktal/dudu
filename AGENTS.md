@@ -60,6 +60,7 @@
   - junction 仅以 `rmdir` 删除，勿递归穿透
 
   - Maven、Cargo 走全局缓存，不在此列
+- 本地 MySQL：复用常驻实例 `mysql-local`（`dudu-server/compose.yaml`，127.0.0.1:3306，未运行时 `docker compose -f dudu-server/compose.yaml up -d` 启动），禁止另建 MySQL 容器与 Testcontainers；隔离以数据库名实现，测试用 `dudu_review` 用户连接独立库 `dudu_review_<用途>`（自建自删），开发库 `dudu` 禁止改动；凭据与建用户语句见 compose.yaml。
 
 - 空值语义：区分缺失、空串和合法值；沿用模块表达，检查后取值。
 - 魔法值：业务字面值提取为常量或枚举，名称表达业务含义。
