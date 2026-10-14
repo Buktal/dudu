@@ -28,10 +28,8 @@ public class MeituanProtocol {
     // 签名参数名（§4.1）：参与传输但不参与待签串
     private static final String PARAM_SIG = "sig";
 
-    // 判型键（§5.3/§5.4/§5.5 逐字）：IM 聊天类型 / 订单号 / 门店操作类型
+    // 判型键（§5.4 逐字）：IM 聊天类型；订单/门店表单不解析内容只应答
     private static final String PARAM_BIZ_TYPE = "biz_type";
-    private static final String PARAM_ORDER_ID = "order_id";
-    private static final String PARAM_OP_TYPE = "op_type";
 
     // IM 单聊字段（§5.4 字段表）：biz_type 固定 1，app_poi_code 与 push_content 必填
     private static final String BIZ_TYPE_IM_CHAT = "1";

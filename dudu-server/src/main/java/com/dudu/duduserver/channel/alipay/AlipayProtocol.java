@@ -33,9 +33,8 @@ import java.util.Optional;
 @Component
 public class AlipayProtocol {
 
-    // 回调服务名（§3.2 网关验证、§2.3 被动通知）
+    // 回调服务名（§3.2 网关验证；其余验签通过按 §2.3 被动通知解析）
     static final String SERVICE_CHECK = "alipay.service.check";
-    static final String SERVICE_MESSAGE_NOTIFY = "alipay.mobile.public.message.notify";
 
     // POST 表单字段名（§3.2/§2.3）
     static final String FIELD_SERVICE = "service";

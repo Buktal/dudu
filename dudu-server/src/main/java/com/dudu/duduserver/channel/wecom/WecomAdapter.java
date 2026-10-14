@@ -27,7 +27,6 @@ public class WecomAdapter implements ChannelAdapter {
 
     // 推送通道标识（channel_info.system，serde 键对照 mock-pulse config.rs，缺省 agent）
     private static final String INFO_SYSTEM = "system";
-    private static final String SYSTEM_AGENT = "agent";
     private static final String SYSTEM_AIBOT = "aibot";
 
     // 凭据缺失与通道未接入的如实说明：不编造可发可读能力
