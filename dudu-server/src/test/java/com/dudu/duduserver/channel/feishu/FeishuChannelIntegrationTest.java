@@ -78,7 +78,9 @@ class FeishuChannelIntegrationTest {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
+        // 评审账号可用 DUDU_TEST_DB_USER 覆盖，默认与既有集成基建一致
+        registry.add("spring.datasource.username",
+            () -> System.getenv().getOrDefault("DUDU_TEST_DB_USER", "root"));
         registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
     }
 
