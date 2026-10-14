@@ -84,7 +84,7 @@ public class WeiboAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // 事件推送与被@不是访客消息：同样回空串应答，不产生访客与消息数据
-        return inbound.map(message -> new ChannelReceiveResult(ACK, message))
+        return inbound.map(message -> ChannelReceiveResult.accept(message, ACK))
             .orElseGet(() -> ChannelReceiveResult.answer(ACK));
     }
 
