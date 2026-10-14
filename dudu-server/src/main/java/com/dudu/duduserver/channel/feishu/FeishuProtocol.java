@@ -11,6 +11,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -181,14 +182,14 @@ public class FeishuProtocol {
     // 缺 key 时没有可如实表达的引用，按 unknown 如实保存不填假值
     private Map<String, Object> media(String msgType, String kind, String messageId, String keyField,
                                       String resourceType, JSONObject content) {
-        String mediaKey = blankToNull(content.getStr(keyField, null));
+        String mediaKey = Texts.blankToNull(content.getStr(keyField, null));
         if (mediaKey == null) {
             return unknown(msgType);
         }
         Map<String, Object> media = new LinkedHashMap<>();
         media.put("kind", kind);
         media.put("id", messageId + ":" + mediaKey + ":" + resourceType);
-        String name = blankToNull(content.getStr(KEY_FILE_NAME, null));
+        String name = Texts.blankToNull(content.getStr(KEY_FILE_NAME, null));
         if (name != null) {
             media.put("name", name);
         }
@@ -199,7 +200,7 @@ public class FeishuProtocol {
     private Map<String, Object> location(String msgType, JSONObject content) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", "location");
-        String name = blankToNull(content.getStr("name", null));
+        String name = Texts.blankToNull(content.getStr("name", null));
         if (name != null) {
             body.put("name", name);
         }
@@ -212,9 +213,6 @@ public class FeishuProtocol {
         return Map.of("type", "unknown", "originalType", msgType.isEmpty() ? "unknown" : msgType);
     }
 
-    private String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
-    }
 
     /**
      * url_verification 握手识别：明文三参（官方 §3.2）中 type=url_verification 时返回

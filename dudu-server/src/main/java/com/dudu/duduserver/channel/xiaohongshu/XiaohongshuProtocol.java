@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -79,10 +80,10 @@ public class XiaohongshuProtocol {
         try {
             JSONObject payload = JSONUtil.parseObj(body);
             XiaohongshuEnvelope envelope = new XiaohongshuEnvelope(
-                blankToNull(payload.getStr("Nonce")),
-                blankToNull(payload.getStr("Timestamp")),
-                blankToNull(payload.getStr("Encrypt")),
-                blankToNull(payload.getStr("MsgSignature")));
+                Texts.blankToNull(payload.getStr("Nonce")),
+                Texts.blankToNull(payload.getStr("Timestamp")),
+                Texts.blankToNull(payload.getStr("Encrypt")),
+                Texts.blankToNull(payload.getStr("MsgSignature")));
             return envelope.nonce() == null || envelope.timestamp() == null
                 || envelope.encrypt() == null || envelope.msgSignature() == null ? null : envelope;
         } catch (RuntimeException e) {
@@ -113,7 +114,7 @@ public class XiaohongshuProtocol {
             null,
             null,
             List.of(),
-            blankToNull(fields.get(FIELD_MSG_ID)),
+            Texts.blankToNull(fields.get(FIELD_MSG_ID)),
             MessageDirectionEnum.INCOMING,
             content(msgType, fields));
         return Optional.of(inbound);
@@ -152,14 +153,14 @@ public class XiaohongshuProtocol {
     // 小红书不提供媒体编号，只有公开链接：标识按「消息 ID:0」派生（契约第 4 节）；连消息 ID
     // 都没有时没有可如实表达的引用，按 unknown 保存不填假值
     private Map<String, Object> media(String kind, Map<String, String> fields, String urlField) {
-        String messageId = blankToNull(fields.get(FIELD_MSG_ID));
+        String messageId = Texts.blankToNull(fields.get(FIELD_MSG_ID));
         if (messageId == null) {
             return unknown(kind);
         }
         Map<String, Object> media = new LinkedHashMap<>();
         media.put("kind", kind);
         media.put("id", messageId + ":0");
-        String publicUrl = blankToNull(fields.get(urlField));
+        String publicUrl = Texts.blankToNull(fields.get(urlField));
         if (publicUrl != null) {
             media.put("url", publicUrl);
         }

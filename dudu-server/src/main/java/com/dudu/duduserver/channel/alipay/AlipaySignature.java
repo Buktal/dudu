@@ -1,5 +1,7 @@
 package com.dudu.duduserver.channel.alipay;
 
+import com.dudu.duduserver.channel.support.Texts;
+
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -48,7 +50,7 @@ final class AlipaySignature {
      * 两者都失败才视为验签失败。公钥无法解析或签名损坏按失败返回。
      */
     static boolean verify(AlipayCredentials credentials, Map<String, String> params) {
-        if (credentials == null || params == null || isBlank(params.get(FIELD_SIGN))) {
+        if (credentials == null || params == null || Texts.isBlank(params.get(FIELD_SIGN))) {
             return false;
         }
         PublicKey publicKey;
@@ -162,7 +164,4 @@ final class AlipaySignature {
         return toVerify.toString();
     }
 
-    private static boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
 }

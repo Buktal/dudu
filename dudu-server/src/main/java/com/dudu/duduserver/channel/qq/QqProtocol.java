@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -84,7 +85,7 @@ public class QqProtocol {
      * 拒绝（官方预检口径）。
      */
     public boolean verify(String appSecret, String signatureHeader, String timestampHeader, String body) {
-        if (isBlank(appSecret) || isBlank(signatureHeader) || isBlank(timestampHeader) || body == null) {
+        if (Texts.isBlank(appSecret) || Texts.isBlank(signatureHeader) || Texts.isBlank(timestampHeader) || body == null) {
             return false;
         }
         byte[] received;
@@ -148,14 +149,14 @@ public class QqProtocol {
     // 消息事件统一装配：访客身份 = 场景前缀 + 会话对象，缺会话对象即无法入站
     private ChannelInboundMessage message(Long companyChannelId, String scene, String conversationId,
                                           JSONObject d) {
-        if (isBlank(conversationId)) {
+        if (Texts.isBlank(conversationId)) {
             throw new IllegalArgumentException("渠道报文缺少会话对象身份");
         }
         JSONObject author = d.getJSONObject("author");
         return new ChannelInboundMessage(companyChannelId, scene + ":" + conversationId,
-            author == null ? null : text(author.getStr("username")),
-            author == null ? null : text(author.getStr("avatar")),
-            List.of(), text(d.getStr("id")), MessageDirectionEnum.INCOMING, content(d));
+            author == null ? null : Texts.blankToNull(author.getStr("username")),
+            author == null ? null : Texts.blankToNull(author.getStr("avatar")),
+            List.of(), Texts.blankToNull(d.getStr("id")), MessageDirectionEnum.INCOMING, content(d));
     }
 
     // 契约第 4 节统一消息体：附件优先（url 即可读引用），message_type=0 为文本；频道消息
@@ -167,7 +168,7 @@ public class QqProtocol {
         }
         Integer messageType = d.getInt("message_type");
         if (messageType == null) {
-            String text = text(d.getStr("content"));
+            String text = Texts.blankToNull(d.getStr("content"));
             if (text != null) {
                 return Map.of(KEY_TYPE, TYPE_TEXT, "text", text);
             }
@@ -189,7 +190,7 @@ public class QqProtocol {
             if (!(item instanceof JSONObject attachment)) {
                 continue;
             }
-            String url = text(attachment.getStr("url"));
+            String url = Texts.blankToNull(attachment.getStr("url"));
             if (url == null) {
                 continue;
             }
@@ -226,7 +227,7 @@ public class QqProtocol {
             return null;
         }
         for (String key : keys) {
-            String value = text(author.getStr(key));
+            String value = Texts.blankToNull(author.getStr(key));
             if (value != null) {
                 return value;
             }
@@ -234,13 +235,7 @@ public class QqProtocol {
         return null;
     }
 
-    private String text(String value) {
-        return value == null || value.isBlank() ? null : value;
-    }
 
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
 
     // 用 seed 派生私钥对消息片段依次签名；JDK 缺少 Ed25519 实现属运行环境错误
     byte[] sign(String appSecret, byte[]... messageParts) {

@@ -5,6 +5,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -91,10 +92,10 @@ public class DingtalkProtocol {
         ChannelInboundMessage inbound = new ChannelInboundMessage(
             companyChannelId,
             senderId,
-            blankToNull(fields.getStr("senderNick")),
+            Texts.blankToNull(fields.getStr("senderNick")),
             null,
             List.of(),
-            blankToNull(fields.getStr("msgId")),
+            Texts.blankToNull(fields.getStr("msgId")),
             MessageDirectionEnum.INCOMING,
             content(msgType, fields));
         return Optional.of(inbound);
@@ -122,14 +123,14 @@ public class DingtalkProtocol {
 
     // 媒体标识取渠道 downloadCode；没有可如实表达的渠道标识时按 unknown 不填假值
     private Map<String, Object> media(String kind, String msgType, JSONObject payload) {
-        String downloadCode = payload == null ? null : blankToNull(payload.getStr("downloadCode"));
+        String downloadCode = payload == null ? null : Texts.blankToNull(payload.getStr("downloadCode"));
         if (downloadCode == null) {
             return unknown(msgType);
         }
         Map<String, Object> media = new LinkedHashMap<>();
         media.put("kind", kind);
         media.put("id", downloadCode);
-        String name = payload == null ? null : blankToNull(payload.getStr("fileName"));
+        String name = payload == null ? null : Texts.blankToNull(payload.getStr("fileName"));
         if (name != null) {
             media.put("name", name);
         }
@@ -147,7 +148,7 @@ public class DingtalkProtocol {
                 if (segment == null) {
                     continue;
                 }
-                String downloadCode = blankToNull(segment.getStr("downloadCode"));
+                String downloadCode = Texts.blankToNull(segment.getStr("downloadCode"));
                 if (downloadCode != null) {
                     Map<String, Object> attachment = new LinkedHashMap<>();
                     attachment.put("kind", attachmentKind(segment.getStr("type")));

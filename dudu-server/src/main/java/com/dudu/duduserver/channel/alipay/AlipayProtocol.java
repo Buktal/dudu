@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.alipay;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -149,7 +150,7 @@ public class AlipayProtocol {
             userName(fields.get(FIELD_USER_INFO)),
             null,
             List.of(),
-            blankToNull(fields.get(FIELD_MSG_ID)),
+            Texts.blankToNull(fields.get(FIELD_MSG_ID)),
             MessageDirectionEnum.INCOMING,
             content(msgType, fields)));
     }
@@ -220,7 +221,7 @@ public class AlipayProtocol {
     // 图片消息：MediaId 为唯一下载凭据（multimedia.do），无公开链接；MediaId 缺失没有可
     // 如实表达的引用，按 unknown 保存不填假值（契约第 4 节媒体引用必有 id）
     private Map<String, Object> media(Map<String, String> fields) {
-        String mediaId = blankToNull(fields.get(FIELD_IMAGE_MEDIA_ID));
+        String mediaId = Texts.blankToNull(fields.get(FIELD_IMAGE_MEDIA_ID));
         if (mediaId == null) {
             return Map.of("type", "unknown", "originalType", MSG_TYPE_IMAGE);
         }
@@ -236,17 +237,14 @@ public class AlipayProtocol {
             return null;
         }
         try {
-            return blankToNull(JSONUtil.parseObj(userInfo).getStr(FIELD_USER_NAME));
+            return Texts.blankToNull(JSONUtil.parseObj(userInfo).getStr(FIELD_USER_NAME));
         } catch (RuntimeException e) {
             return null;
         }
     }
 
     private String firstNonBlank(String left, String right) {
-        return blankToNull(left) != null ? left : right;
+        return Texts.blankToNull(left) != null ? left : right;
     }
 
-    private String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
-    }
 }

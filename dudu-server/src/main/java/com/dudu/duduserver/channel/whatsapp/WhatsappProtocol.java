@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -61,7 +62,7 @@ public class WhatsappProtocol {
      * 不足一律 false，不抛异常。verifyToken 不参与 POST 验签（仅 GET 握手用）。
      */
     public boolean verify(String appSecret, String signatureHeader, String body) {
-        if (isBlank(appSecret) || isBlank(signatureHeader) || body == null
+        if (Texts.isBlank(appSecret) || Texts.isBlank(signatureHeader) || body == null
             || !signatureHeader.startsWith(SIGNATURE_PREFIX)) {
             return false;
         }
@@ -117,8 +118,8 @@ public class WhatsappProtocol {
         if (!(first instanceof JSONObject payload)) {
             return Optional.empty();
         }
-        String from = text(payload.getStr("from"));
-        String wamid = text(payload.getStr("id"));
+        String from = Texts.blankToNull(payload.getStr("from"));
+        String wamid = Texts.blankToNull(payload.getStr("id"));
         if (from == null || wamid == null) {
             throw new IllegalArgumentException("渠道来语缺少发送方身份或 wamid 幂等键");
         }
@@ -134,7 +135,7 @@ public class WhatsappProtocol {
         for (Object raw : contacts) {
             if (raw instanceof JSONObject contact && from.equals(contact.getStr("wa_id"))) {
                 JSONObject profile = contact.getJSONObject("profile");
-                return profile == null ? null : text(profile.getStr("name"));
+                return profile == null ? null : Texts.blankToNull(profile.getStr("name"));
             }
         }
         return null;
@@ -170,14 +171,14 @@ public class WhatsappProtocol {
     // 载荷灰度下发的 url 需 Bearer 下载，不是公开直链，不进媒体引用（§2.3/§5.6）
     private Map<String, Object> media(String msgType, String kind, JSONObject payload) {
         JSONObject body = payload.getJSONObject(msgType);
-        String id = body == null ? null : text(body.getStr("id"));
+        String id = body == null ? null : Texts.blankToNull(body.getStr("id"));
         if (id == null) {
             return unknown(msgType);
         }
         Map<String, Object> media = new LinkedHashMap<>();
         media.put("kind", kind);
         media.put("id", id);
-        String name = text(body.getStr("filename"));
+        String name = Texts.blankToNull(body.getStr("filename"));
         if (name != null) {
             media.put("name", name);
         }
@@ -194,9 +195,9 @@ public class WhatsappProtocol {
         }
         Map<String, Object> content = new LinkedHashMap<>();
         content.put(KEY_TYPE, TYPE_LOCATION);
-        String label = text(body.getStr("name"));
+        String label = Texts.blankToNull(body.getStr("name"));
         if (label == null) {
-            label = text(body.getStr("address"));
+            label = Texts.blankToNull(body.getStr("address"));
         }
         if (label != null) {
             content.put("label", label);
@@ -212,7 +213,7 @@ public class WhatsappProtocol {
         if (body != null) {
             for (String shape : new String[] {"button_reply", "list_reply"}) {
                 JSONObject reply = body.getJSONObject(shape);
-                String title = reply == null ? null : text(reply.getStr("title"));
+                String title = reply == null ? null : Texts.blankToNull(reply.getStr("title"));
                 if (title != null) {
                     return Map.of(KEY_TYPE, TYPE_TEXT, "text", title);
                 }
@@ -224,7 +225,7 @@ public class WhatsappProtocol {
     // 模板 quick-reply 点击（type:button，§2.3）：button.text 即来语文本
     private Map<String, Object> button(JSONObject payload) {
         JSONObject body = payload.getJSONObject(MSG_BUTTON);
-        String label = body == null ? null : text(body.getStr("text"));
+        String label = body == null ? null : Texts.blankToNull(body.getStr("text"));
         return label == null ? unknown(MSG_BUTTON) : Map.of(KEY_TYPE, TYPE_TEXT, "text", label);
     }
 
@@ -239,11 +240,5 @@ public class WhatsappProtocol {
         return Digests.hmacSha256(appSecret.getBytes(StandardCharsets.UTF_8), body.getBytes(StandardCharsets.UTF_8));
     }
 
-    private String text(String value) {
-        return value == null || value.isBlank() ? null : value;
-    }
 
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
 }

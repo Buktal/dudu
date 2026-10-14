@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -109,7 +110,7 @@ public class WeiboProtocol {
     // 媒体引用必有 id：tovfid 缺失时没有可如实表达的引用，按 unknown 保存不填假值
     private Map<String, Object> media(String kind, JSONObject payload) {
         JSONObject data = payload.getJSONObject("data");
-        String fileId = data == null ? null : blankToNull(data.getStr(DATA_TOVFID, ""));
+        String fileId = data == null ? null : Texts.blankToNull(data.getStr(DATA_TOVFID, ""));
         if (fileId == null) {
             return unknown(payload.getStr("type", ""));
         }

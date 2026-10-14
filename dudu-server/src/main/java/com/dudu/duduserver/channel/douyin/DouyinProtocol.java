@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -170,7 +171,7 @@ public class DouyinProtocol {
         if (isBlank(serverMessageId)) {
             return unknown(messageType);
         }
-        String resourceUrl = blankToNull(content.getStr(KEY_RESOURCE_URL, null));
+        String resourceUrl = Texts.blankToNull(content.getStr(KEY_RESOURCE_URL, null));
         String identifier = firstNonBlank(content.getStr(KEY_ITEM_ID, null),
             content.getStr(KEY_MEDIA_ID, null), resourceUrl, serverMessageId + DERIVED_INDEX);
         Map<String, Object> media = new LinkedHashMap<>();
@@ -187,7 +188,7 @@ public class DouyinProtocol {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", "card");
         body.put("kind", messageType);
-        String cardId = blankToNull(content.getStr(KEY_CARD_ID, null));
+        String cardId = Texts.blankToNull(content.getStr(KEY_CARD_ID, null));
         if (cardId != null) {
             body.put("externalId", cardId);
         }
@@ -208,9 +209,6 @@ public class DouyinProtocol {
         return null;
     }
 
-    private String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
-    }
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();

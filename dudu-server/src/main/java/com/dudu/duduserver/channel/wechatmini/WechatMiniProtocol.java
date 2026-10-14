@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -83,7 +84,7 @@ public class WechatMiniProtocol {
             null,
             null,
             List.of(),
-            blankToNull(fields.get("MsgId")),
+            Texts.blankToNull(fields.get("MsgId")),
             MessageDirectionEnum.INCOMING,
             content(msgType, fields));
         return Optional.of(inbound);
@@ -97,13 +98,13 @@ public class WechatMiniProtocol {
         String trimmed = body == null ? "" : body.stripLeading();
         if (!trimmed.startsWith("{")) {
             try {
-                return blankToNull(xmlFields(trimmed).get("Encrypt"));
+                return Texts.blankToNull(xmlFields(trimmed).get("Encrypt"));
             } catch (IllegalArgumentException e) {
                 return null;
             }
         }
         try {
-            return blankToNull(JSONUtil.parseObj(trimmed).getStr("Encrypt"));
+            return Texts.blankToNull(JSONUtil.parseObj(trimmed).getStr("Encrypt"));
         } catch (RuntimeException e) {
             return null;
         }
@@ -170,9 +171,9 @@ public class WechatMiniProtocol {
     // 媒体标识取渠道 MediaId；只有公开链接时用「消息 ID:媒体下标」派生稳定标识；
     // 两者都没有时契约第 4 节要求媒体引用必有 id，没有可如实表达的引用，按 unknown 如实保存不填假值
     private Map<String, Object> media(String kind, String msgType, String mediaId, String url, String messageId) {
-        String id = blankToNull(mediaId);
+        String id = Texts.blankToNull(mediaId);
         if (id == null) {
-            String messageScoped = blankToNull(messageId);
+            String messageScoped = Texts.blankToNull(messageId);
             if (messageScoped == null) {
                 return unknown(msgType);
             }
@@ -181,7 +182,7 @@ public class WechatMiniProtocol {
         Map<String, Object> media = new LinkedHashMap<>();
         media.put("kind", kind);
         media.put("id", id);
-        String publicUrl = blankToNull(url);
+        String publicUrl = Texts.blankToNull(url);
         if (publicUrl != null) {
             media.put("url", publicUrl);
         }
@@ -194,7 +195,7 @@ public class WechatMiniProtocol {
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("type", "card");
         content.put("kind", MSG_TYPE_MINI_PROGRAM_PAGE);
-        String title = blankToNull(fields.get("Title"));
+        String title = Texts.blankToNull(fields.get("Title"));
         if (title != null) {
             content.put("title", title);
         }
