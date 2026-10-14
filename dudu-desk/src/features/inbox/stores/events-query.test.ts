@@ -92,7 +92,6 @@ describe("recovered conversation queries", () => {
           ? { items: [secondConversation], nextCursor: null }
           : { items: [thirdConversation], nextCursor: "history-matches" };
       },
-      getCapability: async () => ({ state: "allowed", kinds: ["text"] }),
     });
     await store.dispatch(
       loadConversations({ query: { ...emptyQuery, search: "保修工单" } }),
@@ -136,7 +135,6 @@ describe("recovered conversation queries", () => {
           nextCursor: null,
         };
       },
-      getCapability: async () => ({ state: "allowed", kinds: ["text"] }),
     });
     await store.dispatch(
       loadConversations({ query: { ...emptyQuery, search: "保修工单" } }),
@@ -145,8 +143,6 @@ describe("recovered conversation queries", () => {
     const recovery = store.dispatch(reconnectInbox());
     subscription.onEvent({
       type: "message",
-      id: "recovery-history-match",
-      cursor: "recovery-history-match",
       context: subscription.context,
       message: {
         ...incomingMessage(secondConversation.id),

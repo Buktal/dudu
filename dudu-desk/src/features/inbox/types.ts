@@ -27,7 +27,6 @@ export type Conversation = {
   id: string;
   identity: VisitorIdentity;
   status: ConversationStatus;
-  unread: number;
   preview: string;
   updatedAt: string;
   waitingSince?: string;
@@ -79,14 +78,12 @@ export type MessageBody =
       sourceUrl?: string;
     };
 
-export type DeliveryState =
-  | "sending"
-  | "accepted"
-  | "sent"
-  | "delivered"
-  | "read"
-  | "failed"
-  | "unconfirmed";
+/**
+ * 契约第 4 节的发送结果：服务端只产 sending/sent/failed，unconfirmed 是本地
+ * 对网络失败等不确定结果的乐观标注（见 send-reducers），渠道送达与已读回执
+ * 按真实渠道能力另表达，不在这份词表里虚构。
+ */
+export type DeliveryState = "sending" | "sent" | "failed" | "unconfirmed";
 
 export type InboxMessage = {
   id: string;
@@ -150,32 +147,14 @@ export type ConnectionState =
   | "connected"
   | "reconnecting"
   | "disconnected";
-export type InboxEvent = {
-  /** 真实 Socket 没有 eventId 与游标；字段保留用于既有事件合并的去重与关联，不再由任何适配器产生。 */
-  id?: string;
-  context: WorkContext;
-  cursor?: string;
-} & (
+/** 契约第 5 节的真实 Socket 报文：只有四类，没有 eventId、游标或回执/移除事件。 */
+export type InboxEvent = { context: WorkContext } & (
   | { type: "conversation"; conversation: Conversation }
   | {
       type: "message";
       message: InboxMessage;
       /** 本条消息引起的访客摘要；真实报文与消息同帧下发。 */
       conversation?: Conversation;
-    }
-  | {
-      type: "receipt";
-      conversationId: string;
-      messageId?: string;
-      clientRequestId?: string;
-      version: number;
-      delivery: NonNullable<InboxMessage["delivery"]>;
-    }
-  | {
-      type: "capability";
-      conversationId: string;
-      capability: ReplyCapability;
-      version: number;
     }
   | {
       /** 渠道资料或共享标签/备注保存后：完整名片，不重复身份字段。 */
@@ -186,7 +165,6 @@ export type InboxEvent = {
       /** 员工组或账号组关系变化后：报文只有 type，客户端重查身份与列表。 */
       type: "access-changed";
     }
-  | { type: "removed"; conversationId: string; version: number }
 );
 
 export type LoadState = {

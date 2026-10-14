@@ -38,8 +38,6 @@ describe("reception queue ordering", () => {
 
     subscription.onEvent({
       type: "conversation",
-      id: "first-reply-confirmed",
-      cursor: "first-reply-confirmed",
       context: subscription.context,
       conversation: {
         ...first,
@@ -78,8 +76,6 @@ describe("reception queue ordering", () => {
 
     subscription.onEvent({
       type: "conversation",
-      id: "second-has-more-messages",
-      cursor: "second-has-more-messages",
       context: subscription.context,
       conversation: updatedSecond,
     });

@@ -11,15 +11,14 @@ import { createInboxStore, type InboxRuntime } from "./store";
 
 /**
  * Test-world card: the paired conversations the store suites share. Litmus
- * (name, preview, unread) lives here — not in the shared kernel — so test
- * semantics never load the production-importable graph.
+ * (name, preview) lives here — not in the shared kernel — so test semantics
+ * never load the production-importable graph.
  */
 export function defineTestConversation(
   input: Pick<Conversation, "id" | "identity"> & Partial<Conversation>,
 ): Conversation {
   return defineConversation({
     status: "needs-reply",
-    unread: 1,
     preview: "你好，想问一下",
     ...input,
   });
@@ -70,7 +69,7 @@ export function acceptedMessage(input: SendSubmission): InboxMessage {
     createdAt: "2026-09-16T00:01:00Z",
     sequence: 2,
     version: 1,
-    delivery: { state: "accepted" },
+    delivery: { state: "sent" },
   });
 }
 

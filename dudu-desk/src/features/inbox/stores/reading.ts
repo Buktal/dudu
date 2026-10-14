@@ -155,41 +155,19 @@ export function markConversationRead(
   conversationId: string,
   throughSequence: number,
 ): InboxCommand<Promise<void>> {
-  return async (dispatch, getState, runtime) => {
+  return async (dispatch, getState) => {
     const state = getState().inbox;
     if (
       !state.conversations[conversationId] ||
       state.connection !== "connected" ||
       !Number.isSafeInteger(throughSequence) ||
       throughSequence <= 0 ||
-      throughSequence <=
-        Math.max(
-          state.events.readThrough[conversationId] ?? 0,
-          state.events.readingThrough[conversationId] ?? 0,
-        )
+      throughSequence <= (state.events.readThrough[conversationId] ?? 0)
     )
       return;
-    if (runtime.api.localUnread) {
-      // 服务端没有已读接口：只清除本地待处理提醒，不发请求
-      dispatch(
-        inboxActions.readHandledLocally({ conversationId, throughSequence }),
-      );
-      return;
-    }
-    await runConversationOperation(runtime, getState, conversationId, "read", {
-      loading: () =>
-        dispatch(inboxActions.readStarted({ conversationId, throughSequence })),
-      call: (io) =>
-        runtime.api.markRead({ ...io, conversationId, throughSequence }),
-      validate: (conversation) =>
-        conversation.id !== conversationId
-          ? "已读确认未关联到当前会话"
-          : undefined,
-      loaded: (conversation) => {
-        dispatch(inboxActions.readConfirmed({ conversation, throughSequence }));
-      },
-      failed: (failure) =>
-        dispatch(inboxActions.readFailed({ conversationId, error: failure })),
-    });
+    // 服务端没有已读接口：只清除本地待处理提醒，不发请求
+    dispatch(
+      inboxActions.readHandledLocally({ conversationId, throughSequence }),
+    );
   };
 }

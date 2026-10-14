@@ -58,7 +58,6 @@ export const EXPECTED_ITEM: Conversation = {
     accountName: "公众号",
   },
   status: "needs-reply",
-  unread: 0,
   preview: "最后一条摘要",
   updatedAt: "2026-10-12 10:30:15",
   waitingSince: "2026-10-12 10:00:00",

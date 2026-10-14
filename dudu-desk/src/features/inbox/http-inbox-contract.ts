@@ -76,7 +76,7 @@ export function parseIdentity(value: unknown): VisitorIdentity {
   };
 }
 
-export function parseCapability(value: unknown): ReplyCapability {
+function parseCapability(value: unknown): ReplyCapability {
   if (
     !isRecord(value) ||
     !CAPABILITY_STATES.includes(value.state as ReplyCapability["state"]) ||
@@ -101,8 +101,6 @@ export function parseConversation(value: unknown): Conversation {
     id: nonEmptyText(value.id),
     identity: parseIdentity(value.identity),
     status: value.status as ConversationStatus,
-    // 服务端不返回个人已读；待处理提醒由本地运行态维护（stores/reminders.ts），重登不制造旧提示
-    unread: 0,
     preview: text(value.preview),
     updatedAt: nonEmptyText(value.updatedAt),
     waitingSince: optionalText(value.waitingSince),

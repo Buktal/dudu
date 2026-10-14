@@ -107,7 +107,7 @@ describe("needsQueueRefreshForEvent", () => {
     closed: 0,
   };
   it("fires for queue-moving types when searching or counts exist", () => {
-    for (const type of ["conversation", "message", "removed"] as const) {
+    for (const type of ["conversation", "message"] as const) {
       expect(
         needsQueueRefreshForEvent(
           type,
@@ -122,16 +122,14 @@ describe("needsQueueRefreshForEvent", () => {
     }
   });
 
-  it("never fires for receipt or capability events", () => {
-    for (const type of ["receipt", "capability"] as const) {
-      expect(
-        needsQueueRefreshForEvent(
-          type,
-          { ...emptyQuery, search: "保修" },
-          counts,
-        ),
-      ).toBe(false);
-    }
+  it("never fires for access-changed events", () => {
+    expect(
+      needsQueueRefreshForEvent(
+        "access-changed",
+        { ...emptyQuery, search: "保修" },
+        counts,
+      ),
+    ).toBe(false);
   });
 
   it("fires for a shared profile update only when the search view can move", () => {

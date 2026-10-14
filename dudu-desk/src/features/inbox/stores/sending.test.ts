@@ -31,7 +31,7 @@ describe("replies through the inbox workflow", () => {
           createdAt: "2026-09-16T00:01:00Z",
           sequence: 2,
           version: 1,
-          delivery: { state: "accepted" },
+          delivery: { state: "sent" },
         };
       },
     });
@@ -47,7 +47,7 @@ describe("replies through the inbox workflow", () => {
     );
     expect(
       selectMessages(store.getState(), "conversation-a")[1].delivery?.state,
-    ).toBe("accepted");
+    ).toBe("sent");
     expect(store.getState().inbox.replyId).toBe("conversation-b");
   });
 
@@ -112,7 +112,7 @@ describe("replies through the inbox workflow", () => {
       (item) => item.id !== failed.id && item.direction === "outgoing",
     );
     expect(retried?.clientRequestId).toBe(submissions[1].clientRequestId);
-    expect(retried?.delivery?.state).toBe("accepted");
+    expect(retried?.delivery?.state).toBe("sent");
   });
 
   it("retries a failed message loaded from history without a local submission", async () => {
@@ -464,9 +464,6 @@ describe("replies through the inbox workflow", () => {
     await store.dispatch(endReception("conversation-a"));
     expect(store.getState().inbox.conversations["conversation-a"].status).toBe(
       "closed",
-    );
-    expect(store.getState().inbox.conversations["conversation-a"].unread).toBe(
-      1,
     );
   });
 });

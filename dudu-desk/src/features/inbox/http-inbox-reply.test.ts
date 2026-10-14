@@ -168,26 +168,6 @@ describe("http inbox reply adapter", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("reads the reply capability of the visitor", async () => {
-    seed("stored-token");
-    const fetcher = vi.fn(async (url: RequestInfo | URL) => {
-      expect(String(url)).toBe(`${ORIGIN}/api/desk/visitors/41/capability`);
-      return envelope({ state: "allowed", kinds: ["text"] });
-    });
-    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
-
-    const capability = await api.getCapability({
-      context: CONTEXT,
-      signal: signal(),
-      conversationId: "41",
-    });
-
-    expect(capability).toEqual({
-      state: "allowed",
-      kinds: ["text"],
-    });
-  });
-
   it("ends a reception with the PUT status contract and reads the saved conversation back", async () => {
     seed("stored-token");
     const fetcher = vi.fn(
@@ -260,11 +240,5 @@ describe("http inbox reply adapter", () => {
         conversationId: "41",
       }),
     ).rejects.toMatchObject({ kind: "forbidden", code: 10106 });
-  });
-
-  it("marks reminders as locally owned so the store never reads a server unread", () => {
-    expect(
-      createHttpInboxApi({ origin: ORIGIN, fetcher: vi.fn() }).localUnread,
-    ).toBe(true);
   });
 });

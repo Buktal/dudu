@@ -91,7 +91,7 @@ export function VisitorInfo({
 
   function confirmOverwrite() {
     setOverwritePending(false);
-    void dispatch(saveVisitorProfile(conversationId, { overwrite: true }));
+    void dispatch(saveVisitorProfile(conversationId));
   }
 
   // 取消覆盖显示最新服务端资料：放弃本地输入，不发起保存

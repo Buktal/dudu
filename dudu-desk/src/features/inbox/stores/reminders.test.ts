@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { InboxApi } from "../api";
 import type { Conversation, InboxMessage } from "../types";
 import { reconnectInbox } from "./events";
@@ -16,19 +16,14 @@ import {
 type Subscription = Parameters<InboxApi["subscribe"]>[0];
 
 /**
- * 真实链路（localUnread）的商店：订阅报文由本测试直接驱动，
+ * 真实链路的商店：订阅报文由本测试直接驱动，
  * 待处理提醒的增减走生产同一条 thunk 与合并路径。
  */
 function realStore(api: Parameters<typeof testStore>[0] = {}) {
   let subscription!: Subscription;
   const store = testStore({
-    localUnread: true,
-    // 真实适配器解析出的会话不带个人已读
     listConversations: async () => ({
-      items: [
-        { ...firstConversation, unread: 0 },
-        { ...secondConversation, unread: 0 },
-      ],
+      items: [firstConversation, secondConversation],
       nextCursor: null,
       total: 2,
     }),
@@ -67,11 +62,6 @@ function badge(state: InboxRootState, conversationId: string) {
   return conversation ? unreadBadge(state, conversation) : 0;
 }
 
-/** 真实适配器解析出的会话与报文都不带个人已读 */
-function wire(conversation: Conversation): Conversation {
-  return { ...conversation, unread: 0 };
-}
-
 describe("shared pending reminders", () => {
   it("counts a new incoming for a visitor the agent is not viewing", async () => {
     const { store, live } = realStore();
@@ -79,13 +69,11 @@ describe("shared pending reminders", () => {
     await store.dispatch(selectConversation("conversation-a"));
     live(
       { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
-      wire({ ...secondConversation, version: 2, messageCount: 2 }),
+      { ...secondConversation, version: 2, messageCount: 2 },
     );
 
     const state = store.getState();
     expect(badge(state, "conversation-b")).toBe(1);
-    // 服务端不返回个人已读：会话自身仍保持 0，提醒只在本机运行态
-    expect(state.inbox.conversations["conversation-b"].unread).toBe(0);
   });
 
   it("keeps quiet while the visitor is on screen", async () => {
@@ -94,7 +82,7 @@ describe("shared pending reminders", () => {
     await store.dispatch(selectConversation("conversation-b"));
     live(
       { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
-      wire({ ...secondConversation, version: 2, messageCount: 2 }),
+      { ...secondConversation, version: 2, messageCount: 2 },
     );
 
     expect(badge(store.getState(), "conversation-b")).toBe(0);
@@ -106,7 +94,7 @@ describe("shared pending reminders", () => {
     await store.dispatch(selectConversation("conversation-a"));
     live(
       { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
-      wire({ ...secondConversation, version: 2, messageCount: 2 }),
+      { ...secondConversation, version: 2, messageCount: 2 },
     );
     expect(badge(store.getState(), "conversation-b")).toBe(1);
 
@@ -120,12 +108,12 @@ describe("shared pending reminders", () => {
         clientRequestId: "colleague-1",
         delivery: { state: "sent" },
       },
-      wire({
+      {
         ...secondConversation,
         status: "waiting",
         version: 3,
         messageCount: 3,
-      }),
+      },
     );
 
     expect(badge(store.getState(), "conversation-b")).toBe(0);
@@ -137,7 +125,7 @@ describe("shared pending reminders", () => {
     await store.dispatch(selectConversation("conversation-a"));
     live(
       { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
-      wire({ ...secondConversation, version: 2, messageCount: 2 }),
+      { ...secondConversation, version: 2, messageCount: 2 },
     );
 
     live(
@@ -149,7 +137,7 @@ describe("shared pending reminders", () => {
         clientRequestId: "mine-1",
         delivery: { state: "failed", reason: "渠道拒绝" },
       },
-      wire({ ...secondConversation, version: 3, messageCount: 3 }),
+      { ...secondConversation, version: 3, messageCount: 3 },
     );
 
     expect(badge(store.getState(), "conversation-b")).toBe(1);
@@ -161,19 +149,17 @@ describe("shared pending reminders", () => {
     await store.dispatch(selectConversation("conversation-a"));
     live(
       { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
-      wire({ ...secondConversation, version: 2, messageCount: 2 }),
+      { ...secondConversation, version: 2, messageCount: 2 },
     );
     expect(badge(store.getState(), "conversation-b")).toBe(1);
 
     // 他端结束接待：conversation 报文把共享状态带到已结束，其他端的提醒同步消除
-    conversation(
-      wire({
-        ...secondConversation,
-        status: "closed",
-        version: 3,
-        messageCount: 2,
-      }),
-    );
+    conversation({
+      ...secondConversation,
+      status: "closed",
+      version: 3,
+      messageCount: 2,
+    });
 
     expect(badge(store.getState(), "conversation-b")).toBe(0);
     expect(store.getState().inbox.reminders).toEqual({});
@@ -186,19 +172,17 @@ describe("shared pending reminders", () => {
     // 较新的来信把访客带回待回复
     live(
       { ...incomingMessage("conversation-b"), id: "b-4", sequence: 4 },
-      wire({ ...secondConversation, version: 4, messageCount: 4 }),
+      { ...secondConversation, version: 4, messageCount: 4 },
     );
     expect(badge(store.getState(), "conversation-b")).toBe(1);
 
     // 迟到的较旧结束报文不覆盖较新的待回复状态，也不清除提醒
-    conversation(
-      wire({
-        ...secondConversation,
-        status: "closed",
-        version: 3,
-        messageCount: 2,
-      }),
-    );
+    conversation({
+      ...secondConversation,
+      status: "closed",
+      version: 3,
+      messageCount: 2,
+    });
 
     expect(store.getState().inbox.conversations["conversation-b"].status).toBe(
       "needs-reply",
@@ -211,10 +195,9 @@ describe("shared pending reminders", () => {
     const { store, live, drop } = realStore({
       listConversations: async () => ({
         items: [
-          { ...firstConversation, unread: 0 },
+          firstConversation,
           {
             ...secondConversation,
-            unread: 0,
             status: closed ? "closed" : "needs-reply",
             version: closed ? 3 : 1,
           },
@@ -227,7 +210,7 @@ describe("shared pending reminders", () => {
     await store.dispatch(selectConversation("conversation-a"));
     live(
       { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
-      wire({ ...secondConversation, version: 2, messageCount: 2 }),
+      { ...secondConversation, version: 2, messageCount: 2 },
     );
     expect(badge(store.getState(), "conversation-b")).toBe(1);
 
@@ -244,12 +227,11 @@ describe("shared pending reminders", () => {
   });
 
   it("clears locally when the agent reads to the bottom without calling the server", async () => {
-    const markRead = vi.fn();
-    const { store, live } = realStore({ markRead });
+    const { store, live } = realStore();
     await store.dispatch(loadConversations());
     live(
       { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
-      wire({ ...secondConversation, version: 2, messageCount: 2 }),
+      { ...secondConversation, version: 2, messageCount: 2 },
     );
     expect(badge(store.getState(), "conversation-b")).toBe(1);
 
@@ -257,7 +239,6 @@ describe("shared pending reminders", () => {
     await store.dispatch(markConversationRead("conversation-b", 2));
 
     expect(badge(store.getState(), "conversation-b")).toBe(0);
-    expect(markRead).not.toHaveBeenCalled();
     expect(store.getState().inbox.notice).toBeNull();
   });
 
@@ -281,10 +262,9 @@ describe("shared pending reminders", () => {
         lists += 1;
         return {
           items: [
-            { ...firstConversation, unread: 0 },
+            firstConversation,
             {
               ...secondConversation,
-              unread: 0,
               version: lists + 1,
               // 第三次读取（第二次重连）时同事已回复：状态变为等待中
               status: lists >= 3 ? "waiting" : "needs-reply",
@@ -315,32 +295,5 @@ describe("shared pending reminders", () => {
     );
     expect(badge(store.getState(), "conversation-b")).toBe(0);
     expect(store.getState().inbox.reminders).toEqual({});
-  });
-
-  it("leaves the conversation's own unread untouched when the adapter keeps no local reminders", async () => {
-    let subscription!: Subscription;
-    const store = testStore({
-      subscribe: (input) => {
-        subscription = input;
-        input.onConnection("connected");
-        return () => {};
-      },
-    });
-    await store.dispatch(loadConversations());
-    subscription.onEvent({
-      type: "message",
-      context: subscription.context,
-      message: { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
-      conversation: {
-        ...secondConversation,
-        unread: 2,
-        version: 2,
-        messageCount: 2,
-      },
-    });
-
-    // 适配器不维护本地提醒时事件不产生提醒，角标沿用会话自身未读
-    expect(store.getState().inbox.reminders).toEqual({});
-    expect(badge(store.getState(), "conversation-b")).toBe(2);
   });
 });

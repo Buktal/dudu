@@ -91,12 +91,12 @@ it("refreshes the visible profile from a shared update while nobody is editing",
 });
 
 it("keeps the local input, marks the update and saves the confirmed overwrite", async () => {
-  const baselines: number[] = [];
+  const saves: { tags: string[]; note: string }[] = [];
   const store = readyStore({
     readProfile: async () => profile(1, "原备注"),
-    saveProfile: async ({ conversationId, tags, note, version }) => {
-      baselines.push(version);
-      return { conversationId, version: version + 1, fields: [], tags, note };
+    saveProfile: async ({ conversationId, tags, note }) => {
+      saves.push({ tags, note });
+      return { conversationId, version: 3, fields: [], tags, note };
     },
   });
   render(panel(store, firstConversation.id));
@@ -111,14 +111,14 @@ it("keeps the local input, marks the update and saves the confirmed overwrite", 
 
   // 保存前提示一次是否覆盖：未确认不发起保存
   fireEvent.click(screen.getByRole("button", { name: "保存资料" }));
-  expect(baselines).toEqual([]);
+  expect(saves).toEqual([]);
   expect(
     screen.getByText("资料已被他人更新，继续保存会覆盖对方的修改。"),
   ).toBeInTheDocument();
 
   // 确认后普通保存：以后保存为准，保存内容与用户提交一致
   fireEvent.click(screen.getByRole("button", { name: "确认覆盖" }));
-  await waitFor(() => expect(baselines).toEqual([2]));
+  await waitFor(() => expect(saves).toEqual([{ tags: [], note: "本地备注" }]));
   await waitFor(() =>
     expect(store.getState().inbox.profiles[firstConversation.id].data).toEqual({
       conversationId: firstConversation.id,

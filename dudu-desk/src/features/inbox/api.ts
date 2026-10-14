@@ -8,7 +8,6 @@ import type {
   InboxMessage,
   Page,
   PreparedAttachment,
-  ReplyCapability,
   RequestOptions,
   SendSubmission,
   SendTarget,
@@ -17,11 +16,6 @@ import type {
 
 export type InboxApi = {
   dispose?: () => void;
-  /**
-   * 服务端不返回个人已读：待处理提醒（会话未读角标）由本次运行的内存态维护，
-   * 标记已读只清除本地提示。真实适配器为 true。
-   */
-  localUnread?: boolean;
   listConversations: (
     input: RequestOptions & { query: ConversationQuery; cursor?: string },
   ) => Promise<ConversationPage>;
@@ -31,9 +25,6 @@ export type InboxApi = {
   readProfile: (
     input: RequestOptions & { conversationId: string },
   ) => Promise<VisitorProfile>;
-  getCapability: (
-    input: RequestOptions & { conversationId: string },
-  ) => Promise<ReplyCapability>;
   send: (input: RequestOptions & SendSubmission) => Promise<InboxMessage>;
   prepareAttachment: (
     input: RequestOptions & { target: SendTarget; file: File },
@@ -42,15 +33,11 @@ export type InboxApi = {
   loadMessageMedia: (
     input: RequestOptions & { messageId: string; index: number },
   ) => Promise<Blob>;
-  markRead: (
-    input: RequestOptions & { conversationId: string; throughSequence: number },
-  ) => Promise<Conversation>;
   saveProfile: (
     input: RequestOptions & {
       conversationId: string;
       tags: string[];
       note: string;
-      version: number;
     },
   ) => Promise<VisitorProfile>;
   endConversation: (
@@ -61,7 +48,6 @@ export type InboxApi = {
   ) => Promise<Conversation>;
   subscribe: (
     input: RequestOptions & {
-      cursor?: string;
       onEvent: (event: InboxEvent) => void;
       onConnection: (state: ConnectionState) => void;
     },
@@ -77,11 +63,9 @@ export const unavailableInboxApi: InboxApi = {
   listConversations: unavailable,
   listMessages: unavailable,
   readProfile: unavailable,
-  getCapability: unavailable,
   send: unavailable,
   prepareAttachment: unavailable,
   loadMessageMedia: unavailable,
-  markRead: unavailable,
   saveProfile: unavailable,
   endConversation: unavailable,
   resumeConversation: unavailable,

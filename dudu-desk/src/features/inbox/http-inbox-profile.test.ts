@@ -83,7 +83,6 @@ describe("http inbox profile adapter", () => {
       conversationId: "41",
       tags: ["重点客户", "VIP"],
       note: "记得跟进",
-      version: 3,
     });
 
     expect(saved).toEqual({
@@ -107,7 +106,6 @@ describe("http inbox profile adapter", () => {
         conversationId: "41",
         tags: [],
         note: "",
-        version: 3,
       }),
     ).rejects.toMatchObject({ kind: "forbidden", code: 10106 });
 

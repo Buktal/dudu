@@ -9,12 +9,12 @@ import {
   destroyInbox,
   loadHistory,
   loadProfile,
-  markConversationRead,
   resetContext,
   selectConversation,
 } from "./reading";
 import { selectMessages, selectQueueConversations } from "./selectors";
 import { editDraft } from "./sending";
+import { inboxActions } from "./slice";
 import {
   deferred,
   firstConversation,
@@ -27,12 +27,9 @@ type Subscription = Parameters<InboxApi["subscribe"]>[0];
 
 function conversationEvent(
   input: Subscription,
-  id: string,
 ): Extract<InboxEvent, { type: "conversation" }> {
   return {
     type: "conversation",
-    id,
-    cursor: id,
     context: input.context,
     conversation: { ...firstConversation, version: 2 },
   };
@@ -58,14 +55,12 @@ describe("inbox connection recovery", () => {
     await store.dispatch(loadConversations());
     store.dispatch(editDraft("conversation-a", "持续保留"));
     const first = subscriptions[0];
-    first.onEvent(conversationEvent(first, "checkpoint"));
     store.dispatch(startInboxUpdates());
     expect(first.signal.aborted).toBe(true);
-    expect(subscriptions[1].cursor).toBe("checkpoint");
     expect(disposed).toBe(1);
     first.onConnection("unavailable");
     first.onEvent({
-      ...conversationEvent(first, "late"),
+      ...conversationEvent(first),
       conversation: {
         ...firstConversation,
         version: 10,
@@ -82,17 +77,13 @@ describe("inbox connection recovery", () => {
     store.dispatch(
       resetContext({ agentId: "agent-new", workspaceId: "workspace-new" }),
     );
-    subscriptions[1].onEvent(
-      conversationEvent(subscriptions[1], "wrong-context"),
-    );
+    subscriptions[1].onEvent(conversationEvent(subscriptions[1]));
     expect(subscriptions[1].signal.aborted).toBe(true);
     expect(store.getState().inbox.conversations).toEqual({});
     store.dispatch(startInboxUpdates());
     store.dispatch(destroyInbox());
     subscriptions[2].onConnection("connected");
-    subscriptions[2].onEvent(
-      conversationEvent(subscriptions[2], "after-disposal"),
-    );
+    subscriptions[2].onEvent(conversationEvent(subscriptions[2]));
     expect(subscriptions[2].signal.aborted).toBe(true);
     expect(disposed).toBe(3);
     expect(store.getState().inbox.conversations).toEqual({});
@@ -117,13 +108,11 @@ describe("inbox connection recovery", () => {
                 {
                   ...secondConversation,
                   version: 2,
-                  unread: 0,
                   preview: "重连后的摘要",
                 },
                 {
                   ...firstConversation,
                   version: 2,
-                  unread: 0,
                   capability: {
                     state: "restricted",
                     kinds: [],
@@ -192,104 +181,38 @@ describe("inbox connection recovery", () => {
 
   it("clears removed selections and pins without retargeting, and rejects stale reads that would resurrect them", async () => {
     let input!: Subscription;
+    let allowed = new Set(["account-a", "account-b"]);
     const store = testStore({
       subscribe: (subscription) => {
         input = subscription;
         input.onConnection("connected");
         return () => {};
       },
+      listConversations: async () => ({
+        items: [firstConversation, secondConversation].filter((conversation) =>
+          allowed.has(conversation.identity.accountId),
+        ),
+        nextCursor: null,
+      }),
     });
     await store.dispatch(loadConversations());
     await store.dispatch(pinConversation("conversation-b"));
     store.dispatch(focusPane("pinned"));
     await store.dispatch(openQuickHistory("conversation-b"));
-    input.onEvent({
-      type: "removed",
-      id: "removed-pin",
-      cursor: "removed-pin",
-      context: input.context,
-      conversationId: "conversation-b",
-      version: 3,
-    });
+    // 无权范围清理：固定、速览与回复目标一并释放，选中不重定向到其他会话
+    allowed = new Set(["account-a"]);
+    store.dispatch(inboxActions.accessScopeApplied(["account-a"]));
     expect(store.getState().inbox.pinnedId).toBeNull();
     expect(store.getState().inbox.quickHistoryId).toBeNull();
     expect(store.getState().inbox.replyId).toBeNull();
     expect(store.getState().inbox.activeId).toBe("conversation-a");
     expect(store.getState().inbox.notice).toBeTruthy();
-    input.onEvent({
-      type: "removed",
-      id: "removed-primary",
-      cursor: "removed-primary",
-      context: input.context,
-      conversationId: "conversation-a",
-      version: 3,
-    });
+    allowed = new Set();
+    store.dispatch(inboxActions.accessScopeApplied([]));
     await store.dispatch(loadConversations());
     expect(selectQueueConversations(store.getState())).toEqual([]);
     expect(store.getState().inbox.activeId).toBeNull();
     expect(store.getState().inbox.replyId).toBeNull();
-  });
-
-  it("cancels in-flight conversation work when a removal invalidates its target", async () => {
-    let input!: Subscription;
-    let signal!: AbortSignal;
-    const pending = deferred<typeof firstConversation>();
-    const store = testStore({
-      subscribe: (subscription) => {
-        input = subscription;
-        input.onConnection("connected");
-        return () => {};
-      },
-      markRead: (request) => {
-        signal = request.signal;
-        return pending.promise;
-      },
-    });
-    await store.dispatch(loadConversations());
-    const reading = store.dispatch(markConversationRead("conversation-a", 1));
-    input.onEvent({
-      type: "removed",
-      id: "removed-target",
-      cursor: "removed-target",
-      context: input.context,
-      conversationId: "conversation-a",
-      version: 3,
-    });
-    expect(signal.aborted).toBe(true);
-    pending.resolve({ ...firstConversation, version: 100, unread: 0 });
-    await reading;
-    expect(
-      store.getState().inbox.conversations["conversation-a"],
-    ).toBeUndefined();
-    expect(store.getState().inbox.replyId).toBeNull();
-  });
-
-  it("keeps a live capability event newer than the reloaded conversation", async () => {
-    let input!: Subscription;
-    const store = testStore({
-      subscribe: (subscription) => {
-        input = subscription;
-        input.onConnection("connected");
-        return () => {};
-      },
-    });
-    await store.dispatch(loadConversations());
-    input.onConnection("disconnected");
-    const recovering = store.dispatch(reconnectInbox());
-    input.onEvent({
-      type: "capability",
-      id: "fresh-capability",
-      cursor: "fresh-capability",
-      context: input.context,
-      conversationId: "conversation-a",
-      version: 10,
-      capability: { state: "restricted", kinds: [], reason: "最新能力事件" },
-    });
-    await recovering;
-    // 重读的会话摘要版本更旧：能力事件不被重载结果倒退
-    expect(
-      store.getState().inbox.conversations["conversation-a"].capability,
-    ).toMatchObject({ state: "restricted", reason: "最新能力事件" });
   });
 
   it("cancels an in-flight reload and ignores its late results after switching work context", async () => {

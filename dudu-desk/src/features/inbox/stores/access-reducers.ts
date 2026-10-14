@@ -24,7 +24,7 @@ export const accessReducers = {
       delete state.drafts[id];
     }
     if (selectionCleared) {
-      // 与 removed 事件相同：被清理的会话正是当前选中/固定对象时提示重新选择
+      // 被清理的会话正是当前选中/固定对象时提示重新选择
       state.selectionRevision++;
       state.notice = {
         kind: "information",

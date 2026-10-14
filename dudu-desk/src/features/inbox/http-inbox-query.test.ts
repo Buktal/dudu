@@ -221,17 +221,6 @@ describe("http inbox adapter", () => {
 
   it("keeps capabilities the server does not provide unavailable", async () => {
     const api = createHttpInboxApi({ origin: ORIGIN, fetcher: vi.fn() });
-    const input = { context: CONTEXT, signal: signal(), conversationId: "41" };
-
-    for (const call of [
-      // 服务端没有已读接口：待处理提醒只在本地运行态维护，不调用它
-      () => api.markRead({ ...input, throughSequence: 1 }),
-    ]) {
-      await expect(call()).rejects.toMatchObject({
-        kind: "unavailable",
-        message: "接待服务尚未连接，当前操作暂不可用",
-      });
-    }
 
     let connection = "connecting";
     const unsubscribe = api.subscribe({

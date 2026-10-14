@@ -63,7 +63,7 @@ describe("visitor details", () => {
     expect(store.getState().inbox.queue.query.search).toBe("保修");
   });
 
-  it("does not overwrite concurrent server changes with an older editing baseline", async () => {
+  it("sends no version and lets the later save overwrite a concurrent server update", async () => {
     let profile: VisitorProfile = {
       conversationId: firstConversation.id,
       version: 1,
@@ -73,10 +73,9 @@ describe("visitor details", () => {
     };
     const store = testStore({
       readProfile: async () => profile,
-      saveProfile: async ({ tags, note, version }) => {
-        if (version !== profile.version)
-          throw new DeskApiError("business", "资料已更新，请核对后重试");
-        profile = { ...profile, tags, note, version: version + 1 };
+      saveProfile: async ({ tags, note }) => {
+        // 契约不携带版本：保存以提交内容为准，版本由服务端分配
+        profile = { ...profile, tags, note, version: profile.version + 1 };
         return profile;
       },
     });
@@ -85,16 +84,14 @@ describe("visitor details", () => {
     store.dispatch(
       editVisitorProfile(firstConversation.id, { note: "正在编辑的备注" }),
     );
+    // 他人保存先落库：编辑中的草稿保留，不与服务端字段合并
     profile = { ...profile, version: 2, tags: ["服务端新标签"] };
     await store.dispatch(loadProfile(firstConversation.id));
     await store.dispatch(saveVisitorProfile(firstConversation.id));
 
     expect(
       store.getState().inbox.profiles[firstConversation.id].data,
-    ).toMatchObject({ version: 2, tags: ["服务端新标签"] });
-    expect(
-      store.getState().inbox.profileEdits[firstConversation.id],
-    ).toMatchObject({ status: "error", note: "正在编辑的备注" });
+    ).toMatchObject({ version: 3, note: "正在编辑的备注", tags: [] });
   });
 
   it("discards late profile writes after the agent context changes", async () => {
@@ -137,19 +134,11 @@ describe("visitor details", () => {
       editVisitorProfile(firstConversation.id, { note: "移除后才返回的备注" }),
     );
     const saving = store.dispatch(saveVisitorProfile(firstConversation.id));
-    // Detach through the reducer-level removal only: the live subscription
-    // path would also cancel the request, and this pins the settle guard
-    // itself — a current operation whose conversation is gone writes nothing.
-    store.dispatch(
-      inboxActions.eventReceived({
-        context: { agentId: "agent-a", workspaceId: "workspace-a" },
-        id: "removed-a",
-        cursor: "removed-a",
-        type: "removed",
-        conversationId: firstConversation.id,
-        version: 3,
-      }),
-    );
+    // Detach through the reducer-level access cleanup only: the live
+    // subscription path would also cancel the request, and this pins the
+    // settle guard itself — a current operation whose conversation is gone
+    // writes nothing.
+    store.dispatch(inboxActions.accessScopeApplied(["account-b"]));
     pendingProfile.resolve({
       conversationId: firstConversation.id,
       version: 2,
@@ -204,9 +193,15 @@ describe("visitor details", () => {
   it("retains failed edits per visitor and retries the original identity after switching", async () => {
     let fail = true;
     const store = testStore({
-      saveProfile: async ({ conversationId, tags, note, version }) => {
+      saveProfile: async ({ conversationId, tags, note }) => {
         if (fail) throw new DeskApiError("business", "备注暂时无法保存");
-        return { conversationId, tags, note, version: version + 1, fields: [] };
+        return {
+          conversationId,
+          tags,
+          note,
+          version: 2,
+          fields: [],
+        };
       },
     });
     await store.dispatch(loadConversations());
@@ -319,11 +314,11 @@ describe("visitor details", () => {
 
   it("keeps the saved profile ready when a refresh returns an older version", async () => {
     const store = testStore({
-      saveProfile: async ({ conversationId, tags, note, version }) => ({
+      saveProfile: async ({ conversationId, tags, note }) => ({
         conversationId,
         tags,
         note,
-        version: version + 1,
+        version: 2,
         fields: [],
       }),
     });
@@ -395,54 +390,6 @@ describe("visitor details", () => {
     expect(
       store.getState().inbox.profiles[firstConversation.id].data?.note,
     ).toBe("他人备注");
-  });
-
-  it("confirms an overwrite against the latest version while a plain save keeps its baseline", async () => {
-    let profile: VisitorProfile = {
-      conversationId: firstConversation.id,
-      version: 1,
-      fields: [],
-      tags: [],
-      note: "原备注",
-    };
-    const baselines: number[] = [];
-    const store = testStore({
-      readProfile: async () => profile,
-      saveProfile: async ({ tags, note, version }) => {
-        baselines.push(version);
-        // 版本基线是真前提：未经确认的旧基线保存被服务端拒绝
-        if (version !== profile.version)
-          throw new DeskApiError("business", "资料已更新，请重新读取后再保存");
-        profile = { ...profile, version: version + 1, tags, note };
-        return profile;
-      },
-    });
-    await store.dispatch(loadConversations());
-    await store.dispatch(loadProfile(firstConversation.id));
-    store.dispatch(
-      editVisitorProfile(firstConversation.id, { note: "本地备注" }),
-    );
-    profile = { ...profile, version: 2, tags: ["他人标签"] };
-    profileEvent(store, profile);
-
-    await store.dispatch(saveVisitorProfile(firstConversation.id));
-    expect(baselines).toEqual([1]);
-    expect(
-      store.getState().inbox.profileEdits[firstConversation.id],
-    ).toMatchObject({ status: "error", note: "本地备注" });
-
-    // 确认覆盖：按最新已知版本重新提交，后保存覆盖
-    await store.dispatch(
-      saveVisitorProfile(firstConversation.id, { overwrite: true }),
-    );
-    expect(baselines).toEqual([1, 2]);
-    // 后保存覆盖：落库内容与本地的标签/备注提交一致，不与其人的修改合并
-    expect(
-      store.getState().inbox.profiles[firstConversation.id].data,
-    ).toMatchObject({ version: 3, note: "本地备注", tags: [] });
-    expect(
-      store.getState().inbox.profileEdits[firstConversation.id],
-    ).toMatchObject({ status: "saved", note: "本地备注" });
   });
 });
 

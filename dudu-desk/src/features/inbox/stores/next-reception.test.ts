@@ -51,7 +51,7 @@ describe("send and receive the next visitor", () => {
     expect(
       selectMessages(store.getState(), "conversation-a").slice(-1)[0]?.delivery
         ?.state,
-    ).toBe("accepted");
+    ).toBe("sent");
     // The per-message candidate scope is spent once the next visitor is
     // picked; no choices state outlives the search.
     expect(Object.keys(store.getState().inbox.choices)).toEqual([]);
@@ -76,8 +76,6 @@ describe("send and receive the next visitor", () => {
     store.dispatch(editDraft("conversation-a", "正在为你处理"));
     const sending = store.dispatch(sendReply("conversation-a", true));
     receive({
-      id: "follow-up-event",
-      cursor: "follow-up-cursor",
       context: store.getState().inbox.context,
       type: "message",
       message: {
@@ -95,7 +93,7 @@ describe("send and receive the next visitor", () => {
       selectMessages(store.getState(), "conversation-a").find(
         (message) => message.direction === "outgoing",
       )?.delivery?.state,
-    ).toBe("accepted");
+    ).toBe("sent");
   });
 
   it("stays with a new follow-up whose history response arrives before its event", async () => {
@@ -134,8 +132,6 @@ describe("send and receive the next visitor", () => {
     history = [...history, followUp];
     await store.dispatch(loadHistory("conversation-a"));
     receive({
-      id: "query-first-follow-up-event",
-      cursor: "query-first-follow-up-cursor",
       context: store.getState().inbox.context,
       type: "message",
       message: followUp,
@@ -148,7 +144,7 @@ describe("send and receive the next visitor", () => {
       selectMessages(store.getState(), "conversation-a").find(
         (message) => message.direction === "outgoing",
       )?.delivery?.state,
-    ).toBe("accepted");
+    ).toBe("sent");
   });
 
   it("can advance when a subscription replays an incoming message known before submission", async () => {
@@ -171,8 +167,6 @@ describe("send and receive the next visitor", () => {
     store.dispatch(editDraft("conversation-a", "已经为你确认"));
     const sending = store.dispatch(sendReply("conversation-a", true));
     receive({
-      id: "known-history-event",
-      cursor: "known-history-cursor",
       context: store.getState().inbox.context,
       type: "message",
       message: incomingMessage("conversation-a"),
@@ -241,8 +235,6 @@ describe("send and receive the next visitor", () => {
     store.dispatch(editDraft("conversation-a", "回复已安排"));
     const sending = store.dispatch(sendReply("conversation-a", true));
     receive({
-      id: "closed-event",
-      cursor: "closed-cursor",
       context: store.getState().inbox.context,
       type: "conversation",
       conversation: { ...firstConversation, status: "closed", version: 2 },
@@ -277,7 +269,7 @@ describe("send and receive the next visitor", () => {
     expect(
       selectMessages(store.getState(), "conversation-a").slice(-1)[0]?.delivery
         ?.state,
-    ).toBe("accepted");
+    ).toBe("sent");
     expect(store.getState().inbox.notice?.message).toContain(
       "暂时无法获取下一位",
     );

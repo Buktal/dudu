@@ -232,8 +232,6 @@ describe("reading conversations through the inbox workflow", () => {
       const loading = store.dispatch(loadConversations());
       subscription.onEvent({
         type: "conversation",
-        id: "new-conversation",
-        cursor: "new-conversation",
         context: subscription.context,
         conversation,
       });
@@ -256,7 +254,7 @@ describe("reading conversations through the inbox workflow", () => {
     },
   );
 
-  it("aligns filtered queue membership after API-only end and read responses without changing targets", async () => {
+  it("aligns filtered queue membership after an end response and a local read without changing targets", async () => {
     const first = firstConversation;
     const second = secondConversation;
     const store = testStore({
@@ -265,7 +263,6 @@ describe("reading conversations through the inbox workflow", () => {
         nextCursor: null,
       }),
       endConversation: async () => ({ ...first, version: 2, status: "closed" }),
-      markRead: async () => ({ ...second, version: 2, unread: 0 }),
     });
     await store.dispatch(
       loadConversations({
@@ -283,10 +280,11 @@ describe("reading conversations through the inbox workflow", () => {
     expect(
       selectQueueConversations(store.getState()).map((item) => item.id),
     ).toEqual(["conversation-b"]);
+    // 本地已读不产生请求：待回复状态与队列成员保持不变，目标不重定向
     await store.dispatch(markConversationRead("conversation-b", 1));
     expect(
       store.getState().inbox.conversations["conversation-b"],
-    ).toMatchObject({ status: "needs-reply", unread: 0 });
+    ).toMatchObject({ status: "needs-reply" });
     expect(store.getState().inbox).toMatchObject({
       activeId,
       replyId,

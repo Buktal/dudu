@@ -112,17 +112,13 @@ function watermarks(state: InboxState, conversationId: string) {
 }
 
 /**
- * 可确认的发送结果：契约第 4 节三态（真实适配器只能返回这三种，其余取值在
- * http-inbox-contract 的解析边界按无效响应拒绝）。列表中的其余取值属 store
- * 既有事件模型的兼容词表，真实报文经解析边界不会出现。
+ * 可确认的发送结果：服务端契约三态（sending/sent/failed，解析边界拒收其余取值）
+ * 加本地网络失败时标注的 unconfirmed（见 send-reducers）。
  */
 const CONFIRMABLE_DELIVERY_STATES: DeliveryState[] = [
   "sending",
   "sent",
   "failed",
-  "accepted",
-  "delivered",
-  "read",
   "unconfirmed",
 ];
 

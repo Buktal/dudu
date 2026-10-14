@@ -46,8 +46,6 @@ describe("quick-card and full-history workflow", () => {
     store.dispatch(editDraft("conversation-b", "仍在输入"));
     const context = store.getState().inbox.context;
     emit({
-      id: "new-message",
-      cursor: "1",
       context,
       type: "message",
       message: {
@@ -58,15 +56,11 @@ describe("quick-card and full-history workflow", () => {
       },
     });
     emit({
-      id: "update-card",
-      cursor: "2",
       context,
       type: "conversation",
       conversation: { ...firstConversation, version: 3, preview: "新的来信" },
     });
     emit({
-      id: "new-visitor",
-      cursor: "3",
       context,
       type: "conversation",
       conversation: { ...secondConversation, id: "conversation-c", version: 3 },

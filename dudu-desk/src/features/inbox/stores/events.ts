@@ -6,10 +6,8 @@ import { reminderChange } from "./reminders";
 import {
   abortRequest,
   beginRequest,
-  cancelConversationRequests,
   getRequestScope,
   operationFailure,
-  releaseAttachmentResources,
   requestKeys,
 } from "./requests";
 import { settleConfirmedReplies } from "./sending";
@@ -42,7 +40,6 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
       const unsubscribe = runtime.api.subscribe({
         context: request.context,
         signal: request.signal,
-        cursor: getState().inbox.events.cursor ?? undefined,
         onEvent: (event) => {
           if (!request.current()) return;
           const previous = getState().inbox;
@@ -120,7 +117,7 @@ export function reconnectInbox(): InboxCommand<Promise<void>> {
 }
 
 function receiveInboxEvent(event: InboxEvent): InboxCommand {
-  return (dispatch, getState, runtime) => {
+  return (dispatch, getState) => {
     const previous = getState().inbox;
     dispatch(inboxActions.eventReceived(event));
     // 权限范围变化：重查身份与列表并清理已无权数据（处理顺序见 access.ts）
@@ -129,28 +126,11 @@ function receiveInboxEvent(event: InboxEvent): InboxCommand {
       return;
     }
     const state = getState().inbox;
-    // 服务端不返回个人已读：真实链路的待处理提醒按本次运行的事件增减；
+    // 服务端不返回个人已读：待处理提醒按本次运行的事件增减；
     // 传合并后的状态，结束报文按最新共享状态判定（较新的待回复不被误清）
-    if (runtime.api.localUnread) {
-      const reminder = reminderChange(state, event);
-      if (reminder) dispatch(inboxActions.reminderChanged(reminder));
-    }
+    const reminder = reminderChange(state, event);
+    if (reminder) dispatch(inboxActions.reminderChanged(reminder));
     if (state === previous) return;
-    if (
-      event.type === "removed" &&
-      !state.conversations[event.conversationId] &&
-      state.events.removed[event.conversationId] === event.version
-    ) {
-      const id = event.conversationId;
-      cancelConversationRequests(runtime, id);
-      releaseAttachmentResources(
-        runtime,
-        Object.values(previous.attachments)
-          .filter((attachment) => attachment.conversationId === id)
-          .map((attachment) => attachment.id),
-      );
-    }
-    if (event.type === "message" || event.type === "receipt")
-      dispatch(settleConfirmedReplies());
+    if (event.type === "message") dispatch(settleConfirmedReplies());
   };
 }

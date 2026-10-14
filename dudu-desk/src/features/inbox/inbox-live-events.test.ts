@@ -119,7 +119,6 @@ describe("http inbox live subscription", () => {
           preview: "还想问问保修",
           messageCount: 36,
           version: 2,
-          unread: 0,
         }),
       },
     ]);
@@ -236,7 +235,6 @@ describe("http inbox live subscription", () => {
           id: "41",
           status: "closed",
           version: 4,
-          unread: 0,
         }),
       },
     ]);

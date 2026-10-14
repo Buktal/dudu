@@ -6,7 +6,6 @@ import {
   beforeSequence,
   isRecord,
   pageNumber,
-  parseCapability,
   parseConversation,
   parseConversationPage,
   parseMessage,
@@ -83,11 +82,11 @@ function parseLiveEvent(
  * 真实接待适配器（访客摘要、按需历史、文本回复、共享名片、结束 / 继续与实时通道）：
  * 列表查询走 POST /api/desk/visitors/query，历史分页走
  * GET /api/desk/visitors/{visitorId}/messages（最近页无 beforeSequence，更早页用上一页
- * nextCursor）；回复走 POST /api/desk/visitors/{visitorId}/messages，能力走同一资源的
- * capability，名片读取 / 保存走 GET/PUT /api/desk/visitors/{visitorId}/profile，
+ * nextCursor）；回复走 POST /api/desk/visitors/{visitorId}/messages（回复能力随会话
+ * 下发，不单独取），名片读取 / 保存走 GET/PUT /api/desk/visitors/{visitorId}/profile，
  * 结束 / 继续走 PUT /api/desk/visitors/{visitorId}/status；订阅连接 /ws/desk，
- * ready 后接收 message、conversation 与 profile 报文；其余能力沿用 unavailableInboxApi
- * 的语义；token 由账户适配器写入会话，这里按请求读取。
+ * ready 后接收 message、conversation、profile 与 access-changed 报文；其余能力沿用
+ * unavailableInboxApi 的语义；token 由账户适配器写入会话，这里按请求读取。
  */
 export function createHttpInboxApi(
   options: {
@@ -100,8 +99,6 @@ export function createHttpInboxApi(
 
   return {
     ...unavailableInboxApi,
-    // 服务端不返回个人已读：待处理提醒、标记已读都留在本地运行态
-    localUnread: true,
     subscribe({ context, signal, onEvent, onConnection }) {
       const token = readDeskToken(origin);
       if (token === null) {
@@ -196,15 +193,6 @@ export function createHttpInboxApi(
         url: `${origin}/api/desk/messages/${encodeURIComponent(messageId)}/media?index=${index}`,
         token: readDeskToken(origin) ?? undefined,
         signal,
-        fetcher: options.fetcher,
-      });
-    },
-    async getCapability({ conversationId, signal }) {
-      return requestDesk({
-        url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/capability`,
-        token: readDeskToken(origin) ?? undefined,
-        signal,
-        parse: parseCapability,
         fetcher: options.fetcher,
       });
     },

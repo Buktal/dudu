@@ -98,10 +98,8 @@ export const sendReducers = {
     const conversationId = submission.request.target.conversationId;
     const message = state.messages[messageId];
     const evidence = message.delivery?.state;
-    if (
-      evidence &&
-      ["accepted", "sent", "delivered", "read", "failed"].includes(evidence)
-    ) {
+    // 已落定的服务端证据（sent/failed）直接定案：本地请求虽失败，结果已经可知
+    if (evidence && ["sent", "failed"].includes(evidence)) {
       submission.status = evidence === "failed" ? "failed" : "accepted";
       if (state.sendingByConversation[conversationId] === messageId)
         delete state.sendingByConversation[conversationId];

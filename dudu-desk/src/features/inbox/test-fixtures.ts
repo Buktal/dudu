@@ -17,7 +17,6 @@ export function defineConversation(
 ): Conversation {
   return {
     status: "needs-reply",
-    unread: 0,
     preview: "",
     updatedAt: FIXTURE_NOW,
     version: 1,

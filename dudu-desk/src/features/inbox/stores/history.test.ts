@@ -155,8 +155,6 @@ describe("on-demand conversation history", () => {
     await store.dispatch(loadConversations());
     subscription.onEvent({
       type: "message",
-      id: "event-1",
-      cursor: "1",
       context: subscription.context,
       message: pushed,
     });
@@ -196,8 +194,6 @@ describe("on-demand conversation history", () => {
 
     subscription.onEvent({
       type: "message",
-      id: "event-1",
-      cursor: "1",
       context: subscription.context,
       message: {
         ...incomingMessage(firstConversation.id),

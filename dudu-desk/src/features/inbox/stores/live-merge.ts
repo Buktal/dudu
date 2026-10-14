@@ -5,8 +5,8 @@ import { type InboxState, onScreenId } from "./state";
 
 /**
  * Live events merge kernel: the single place that knows how an incoming
- * entity lands in state — version guards, capability overlay, receipt-key
- * correlation, queue membership and teardown.
+ * entity lands in state — version guards, receipt-key correlation, queue
+ * membership and teardown.
  *
  * Read, queue, send, detail and event reducers all write through here, so a
  * change to merge semantics lands in every universe at once. Reducer files
@@ -40,19 +40,9 @@ export function mergeConversation(
   conversation: Conversation,
   updateQueue = true,
 ) {
-  const removed = state.events.removed[conversation.id];
-  if (removed !== undefined && conversation.version <= removed) return;
   const previous = state.conversations[conversation.id];
   if (!previous || conversation.version > previous.version) {
-    const capability = state.events.capabilities[conversation.id];
-    state.conversations[conversation.id] = {
-      ...conversation,
-      capability:
-        capability && capability.version >= conversation.version
-          ? capability.value
-          : conversation.capability,
-    };
-    if (removed !== undefined) delete state.events.removed[conversation.id];
+    state.conversations[conversation.id] = conversation;
   }
   if (!updateQueue) return;
   if (
@@ -74,12 +64,11 @@ export function mergeConversation(
 /**
  * Land one visitor profile — from a read or from a live profile frame. The
  * version guard keeps confirmed data: an older profile still marks the entry
- * ready for the panel but never rolls newer fields back, and a removed
- * conversation keeps owning nothing. Local drafts live in `profileEdits` and
- * are deliberately untouched, so editing survives another employee's save.
+ * ready for the panel but never rolls newer fields back. Local drafts live
+ * in `profileEdits` and are deliberately untouched, so editing survives
+ * another employee's save.
  */
 export function mergeProfile(state: InboxState, profile: VisitorProfile): void {
-  if (state.events.removed[profile.conversationId] !== undefined) return;
   const previous = state.profiles[profile.conversationId];
   if (previous?.data && previous.data.version > profile.version) {
     previous.status = "ready";
@@ -94,7 +83,6 @@ export function mergeProfile(state: InboxState, profile: VisitorProfile): void {
 }
 
 export function mergeMessage(state: InboxState, message: InboxMessage): string {
-  if (state.events.removed[message.conversationId] !== undefined) return "";
   const collision = state.messages[message.id];
   if (collision && collision.conversationId !== message.conversationId)
     return "";
@@ -206,7 +194,6 @@ export function detachConversation(state: InboxState, id: string): boolean {
   delete state.profileEdits[id];
   delete state.ending[id];
   delete state.sendingByConversation[id];
-  delete state.events.readingThrough[id];
   delete state.events.incomingSequence[id];
   for (const message of Object.values(state.messages)) {
     if (message.conversationId !== id) continue;

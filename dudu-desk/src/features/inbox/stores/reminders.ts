@@ -3,7 +3,7 @@ import type { InboxState } from "./state";
 import type { InboxRootState } from "./store";
 
 /**
- * 待处理提醒（契约第 4 节）：服务端不返回个人已读，真实链路（api.localUnread）
+ * 待处理提醒（契约第 4 节）：服务端不返回个人已读，真实链路
  * 在本次运行的内存里维护提醒——收到来信且该访客不在屏幕上时提示；收到成功的
  * outgoing 结果、本条消息把访客带到 waiting，或 conversation 报文把共享状态带到
  * closed 时清除对应提示（别人处理后其他端同步消除，以最新服务端状态为准，较新的
@@ -62,25 +62,18 @@ function onScreen(state: InboxState, conversationId: string): boolean {
   );
 }
 
-// 已处理：成功的 outgoing 结果，或本条消息把访客带到 waiting；失败与发送中不算。
-// accepted/delivered/read 属 store 既有事件模型的兼容词表，真实解析边界只认
-// sending/sent/failed
+// 已处理：成功的 outgoing 结果（sent），或本条消息把访客带到 waiting；失败与发送中不算
 function served(event: InboxEvent): boolean {
   if (event.type !== "message") return false;
   if (event.conversation?.status === "waiting") return true;
   const message: InboxMessage = event.message;
-  return (
-    message.direction === "outgoing" &&
-    ["accepted", "sent", "delivered", "read"].includes(
-      message.delivery?.state ?? "",
-    )
-  );
+  return message.direction === "outgoing" && message.delivery?.state === "sent";
 }
 
-/** 会话角标：本地待处理提醒优先，无提醒时用会话自身未读 */
+/** 会话角标：本地待处理提醒；服务端不返回个人已读，无提醒即无角标 */
 export function unreadBadge(
   state: InboxRootState,
   conversation: Conversation,
 ): number {
-  return state.inbox.reminders[conversation.id] ?? conversation.unread;
+  return state.inbox.reminders[conversation.id] ?? 0;
 }

@@ -41,8 +41,6 @@ describe("receipt correlation across response ordering", () => {
     input.onEvent({
       type: "message",
       context: input.context,
-      id: "between",
-      cursor: "between",
       message: {
         ...incomingMessage("conversation-a"),
         id: "between-message",
@@ -52,8 +50,6 @@ describe("receipt correlation across response ordering", () => {
     input.onEvent({
       type: "message",
       context: input.context,
-      id: "uncorrelated",
-      cursor: "uncorrelated",
       message: {
         ...accepted,
         clientRequestId: undefined,
@@ -93,14 +89,14 @@ describe("receipt correlation across response ordering", () => {
     store.dispatch(editDraft("conversation-a", "保留失败内容"));
     const sending = store.dispatch(sendReply("conversation-a", true));
     input.onEvent({
-      type: "receipt",
+      type: "message",
       context: input.context,
-      id: "failed",
-      cursor: "failed",
-      conversationId: "conversation-a",
-      clientRequestId: submission.clientRequestId,
-      version: 3,
-      delivery: { state: "failed", reason: "渠道明确拒绝" },
+      message: {
+        ...acceptedMessage(submission),
+        version: 3,
+        sequence: 3,
+        delivery: { state: "failed", reason: "渠道明确拒绝" },
+      },
     });
     pending.resolve(acceptedMessage(submission));
     await sending;
@@ -118,7 +114,7 @@ describe("receipt correlation across response ordering", () => {
     expect(store.getState().inbox.replyId).toBe("conversation-a");
   });
 
-  it("retains a confirmed receipt and later draft edits when the original HTTP request fails", async () => {
+  it("retains a server-confirmed result and later draft edits when the original HTTP request fails", async () => {
     let input!: Subscription;
     let submission!: SendSubmission;
     const pending = deferred<InboxMessage>();
@@ -139,19 +135,19 @@ describe("receipt correlation across response ordering", () => {
     const sending = store.dispatch(sendReply("conversation-a", true));
     store.dispatch(editDraft("conversation-a", "之后继续输入"));
     input.onEvent({
-      type: "receipt",
+      type: "message",
       context: input.context,
-      id: "read",
-      cursor: "read",
-      conversationId: "conversation-a",
-      clientRequestId: submission.clientRequestId,
-      version: 3,
-      delivery: { state: "read" },
+      message: {
+        ...acceptedMessage(submission),
+        version: 3,
+        sequence: 3,
+        delivery: { state: "sent" },
+      },
     });
     pending.reject(new DeskApiError("business", "过期请求的拒绝响应"));
     await sending;
     const message = selectMessages(store.getState(), "conversation-a")[1];
-    expect(message.delivery?.state).toBe("read");
+    expect(message.delivery?.state).toBe("sent");
     expect(store.getState().inbox.submissions[message.id].status).toBe(
       "accepted",
     );
@@ -162,7 +158,7 @@ describe("receipt correlation across response ordering", () => {
     expect(store.getState().inbox.notice).toBeNull();
   });
 
-  it("keeps a newer send locked and preserves its later draft when an older receipt settles shared attachments", async () => {
+  it("keeps a newer send locked and preserves its later draft when an older server confirmation settles shared attachments", async () => {
     let input!: Subscription;
     const submissions: SendSubmission[] = [];
     const pending = deferred<InboxMessage>();
@@ -217,14 +213,14 @@ describe("receipt correlation across response ordering", () => {
     const newestAttachmentId =
       store.getState().inbox.drafts["conversation-a"].attachmentIds[1];
     input.onEvent({
-      type: "receipt",
+      type: "message",
       context: input.context,
-      id: "old-read",
-      cursor: "old-read",
-      conversationId: "conversation-a",
-      clientRequestId: submissions[0].clientRequestId,
-      version: 3,
-      delivery: { state: "read" },
+      message: {
+        ...acceptedMessage(submissions[0]),
+        version: 3,
+        sequence: 3,
+        delivery: { state: "sent" },
+      },
     });
     expect(store.getState().inbox.sendingByConversation["conversation-a"]).toBe(
       activeMessageId,

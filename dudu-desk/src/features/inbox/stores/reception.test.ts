@@ -106,28 +106,42 @@ describe("reception commands", () => {
       status: "closed",
       version: 2,
     };
-    const store = testStore({
-      subscribe: (input) => {
-        receive = input.onEvent;
-        input.onConnection("connected");
-        return () => {};
+    let allowed = new Set(["account-a", "account-b"]);
+    const store = testStore(
+      {
+        subscribe: (input) => {
+          receive = input.onEvent;
+          input.onConnection("connected");
+          return () => {};
+        },
+        listConversations: async () => ({
+          items: [closed].filter((conversation) =>
+            allowed.has(conversation.identity.accountId),
+          ),
+          nextCursor: null,
+        }),
+        resumeConversation: (input) => {
+          signal = input.signal;
+          return pending.promise;
+        },
       },
-      listConversations: async () => ({ items: [closed], nextCursor: null }),
-      resumeConversation: (input) => {
-        signal = input.signal;
-        return pending.promise;
+      true,
+      {
+        refreshAccess: async () => {
+          allowed = new Set(["account-b"]);
+          return allowed;
+        },
       },
-    });
+    );
     await store.dispatch(loadConversations());
     const resuming = store.dispatch(resumeReception("conversation-a"));
     receive?.({
       context: { agentId: "agent-a", workspaceId: "workspace-a" },
-      id: "removed-a",
-      cursor: "1",
-      type: "removed",
-      conversationId: "conversation-a",
-      version: 3,
+      type: "access-changed",
     });
+    // 冲掉 access-changed 触发的 thunk 链，让范围清理与列表重查完成
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(signal?.aborted).toBe(true);
     pending.resolve({ ...closed, status: "needs-reply", version: 4 });
@@ -158,8 +172,6 @@ describe("reception commands", () => {
     const resuming = store.dispatch(resumeReception("conversation-a"));
     receive?.({
       context: { agentId: "agent-a", workspaceId: "workspace-a" },
-      id: "closed-again-a",
-      cursor: "1",
       type: "conversation",
       conversation: { ...closed, version: 4 },
     });

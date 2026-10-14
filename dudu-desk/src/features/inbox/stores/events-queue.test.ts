@@ -53,8 +53,6 @@ describe("live queue refresh coordination", () => {
 
     subscription.onEvent({
       type: "conversation",
-      id: "first-conversation-updated",
-      cursor: "first-conversation-updated",
       context: subscription.context,
       conversation: first,
     });
@@ -107,8 +105,6 @@ describe("live queue refresh coordination", () => {
     // 其他端结束接待：conversation 报文就地出列，并按最新计数重读第一页
     subscription.onEvent({
       type: "conversation",
-      id: "other-end",
-      cursor: "other-end",
       context: subscription.context,
       conversation: first,
     });
@@ -131,8 +127,6 @@ describe("live queue refresh coordination", () => {
     // 乱序：较旧版本的报文不把已结束状态倒退
     subscription.onEvent({
       type: "conversation",
-      id: "stale-snapshot",
-      cursor: "stale-snapshot",
       context: subscription.context,
       conversation: { ...firstConversation, version: 1 },
     });
@@ -167,8 +161,6 @@ describe("live queue refresh coordination", () => {
 
     subscription.onEvent({
       type: "message",
-      id: "message-moved-summary",
-      cursor: "message-moved-summary",
       context: subscription.context,
       // 真实报文的访客摘要与消息同帧；摘要变化影响排序/计数视图时重读第一页与 counts
       message: incomingMessage("conversation-a"),
@@ -228,8 +220,6 @@ describe("live queue refresh coordination", () => {
       const loadingMore = store.dispatch(loadConversations({ more: true }));
       subscription.onEvent({
         type: "conversation",
-        id: "stale-query-update",
-        cursor: "stale-query-update",
         context: subscription.context,
         conversation: { ...firstConversation, version: 2 },
       });
@@ -294,8 +284,6 @@ describe("live queue refresh coordination", () => {
       counts = { active: 2, needsReply: 1, waiting: 1, closed: 0 };
       subscription.onEvent({
         type: "conversation",
-        id: "update-before-failed-page",
-        cursor: "update-before-failed-page",
         context: subscription.context,
         conversation: first,
       });

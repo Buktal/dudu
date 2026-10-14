@@ -24,7 +24,6 @@ describe("fixture builder", () => {
   it("fills version and a text-only capability by default", () => {
     expect(defineConversation({ id: "a", identity })).toMatchObject({
       status: "needs-reply",
-      unread: 0,
       version: 1,
       capability: { state: "allowed", kinds: ["text"] },
     });
@@ -34,7 +33,6 @@ describe("fixture builder", () => {
     expect(firstConversation).toMatchObject({
       id: "conversation-a",
       status: "needs-reply",
-      unread: 1,
       preview: "你好，想问一下",
       version: 1,
       capability: { state: "allowed", kinds: ["text"] },
@@ -44,7 +42,6 @@ describe("fixture builder", () => {
   it("shares litmus between the paired test cards", () => {
     expect(secondConversation).toMatchObject({
       status: firstConversation.status,
-      unread: firstConversation.unread,
       preview: firstConversation.preview,
     });
     expect(

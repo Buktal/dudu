@@ -36,7 +36,6 @@ describe("access changes", () => {
     let released = 0;
     const store = testStore(
       {
-        localUnread: true,
         subscribe: (subscription) => {
           subscriptions.push(subscription);
           subscription.onConnection("connected");
