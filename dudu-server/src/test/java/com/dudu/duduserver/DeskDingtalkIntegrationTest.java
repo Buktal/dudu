@@ -48,7 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DeskDingtalkIntegrationTest extends DeskIntegrationSupport {
 
-    private static final long COMPANY_ID = 795001L;
+    private static final long COMPANY_ID = 796001L;
     private static final String TOKEN = "dt-callback-token";
     private static final String AES_KEY = "4g5j64qlyl3zvetqxz5jiocdr586fn2zvjpa8zls3ij";
     private static final String OWNER = "ding9f50b15bxxxx16741";
