@@ -17,6 +17,8 @@ public enum ChannelEnum {
     WECHAT_MP("wechat-mp", "微信公众号"),
     WECHAT_MINI("wechat-mini", "微信小程序"),
     WECOM("wecom", "企业微信"),
+    WEIBO("weibo", "微博"),
+    FEISHU("feishu", "飞书"),
     ALIPAY("alipay", "支付宝"),
     DOUYIN("douyin", "抖音"),
     XIAOHONGSHU("xiaohongshu", "小红书"),

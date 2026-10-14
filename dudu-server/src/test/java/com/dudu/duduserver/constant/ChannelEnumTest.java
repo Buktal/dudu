@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 渠道枚举验收：微信小程序、小红书按各票面口径落码值与显示名，数据库与 JSON 均交换业务代码。
+ * 渠道枚举验收：各渠道按票面口径落码值与显示名，数据库与 JSON 均交换业务代码。
  */
 class ChannelEnumTest {
 
@@ -22,5 +22,12 @@ class ChannelEnumTest {
         assertThat(ChannelEnum.XIAOHONGSHU.getCode()).isEqualTo("xiaohongshu");
         assertThat(ChannelEnum.XIAOHONGSHU.getDisplayName()).isEqualTo("小红书");
         assertThat(ChannelEnum.fromCode("xiaohongshu")).isEqualTo(ChannelEnum.XIAOHONGSHU);
+    }
+
+    @Test
+    void weiboCarriesTheTicketCodeAndDisplayName() {
+        assertThat(ChannelEnum.WEIBO.getCode()).isEqualTo("weibo");
+        assertThat(ChannelEnum.WEIBO.getDisplayName()).isEqualTo("微博");
+        assertThat(ChannelEnum.fromCode("weibo")).isEqualTo(ChannelEnum.WEIBO);
     }
 }
