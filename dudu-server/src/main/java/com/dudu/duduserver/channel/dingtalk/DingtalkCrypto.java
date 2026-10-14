@@ -1,9 +1,9 @@
 package com.dudu.duduserver.channel.dingtalk;
 
 import com.dudu.duduserver.channel.support.AesEnvelopeCodec;
+import com.dudu.duduserver.channel.support.Digests;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -34,19 +34,7 @@ public final class DingtalkCrypto {
     public static String buildSignature(String token, String timestamp, String nonce, String encrypt) {
         String[] params = {token, timestamp, nonce, encrypt};
         Arrays.sort(params);
-        try {
-            MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
-            byte[] digest = sha1.digest(String.join("", params).getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder(digest.length * 2);
-            for (byte item : digest) {
-                hex.append(Character.forDigit((item >> 4) & 0xF, 16));
-                hex.append(Character.forDigit(item & 0xF, 16));
-            }
-            return hex.toString();
-        } catch (Exception e) {
-            // SHA-1 为 JVM 必带算法，此处仅收拢受检异常
-            throw new IllegalStateException("SHA-1 摘要不可用", e);
-        }
+        return Digests.sha1Hex(String.join("", params));
     }
 
     /**

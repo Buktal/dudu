@@ -2,15 +2,13 @@ package com.dudu.duduserver.channel.meituan;
 
 import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +58,7 @@ public class MeituanProtocol {
             toSign.append(entry.getKey()).append('=').append(entry.getValue());
             first = false;
         }
-        return md5Hex(toSign.append(appSecret).toString());
+        return Digests.md5Hex(toSign.append(appSecret).toString());
     }
 
     /**
@@ -144,16 +142,6 @@ public class MeituanProtocol {
             return URLDecoder.decode(value, StandardCharsets.UTF_8);
         } catch (IllegalArgumentException e) {
             return value;
-        }
-    }
-
-    // 官方口径「MD5 加密得 32 位签名，字母小写」
-    private String md5Hex(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("MD5").digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("当前运行环境缺少 MD5 实现", e);
         }
     }
 }

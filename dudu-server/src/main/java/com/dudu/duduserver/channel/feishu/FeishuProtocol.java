@@ -9,13 +9,11 @@ import cn.hutool.crypto.symmetric.AES;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -286,11 +284,7 @@ public class FeishuProtocol {
         byte[] input = new byte[prefix.length + rawBody.length];
         System.arraycopy(prefix, 0, input, 0, prefix.length);
         System.arraycopy(rawBody, 0, input, prefix.length, rawBody.length);
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(input));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("当前运行环境缺少 SHA-256 实现", e);
-        }
+        return Digests.sha256Hex(input);
     }
 
     private boolean isBlank(String value) {

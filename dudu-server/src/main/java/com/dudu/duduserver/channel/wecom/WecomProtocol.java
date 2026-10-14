@@ -2,6 +2,7 @@ package com.dudu.duduserver.channel.wecom;
 
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.AesEnvelopeCodec;
+import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -14,10 +15,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -201,7 +199,7 @@ public class WecomProtocol {
         }
         String[] parts = {token, timestamp, nonce, msgEncrypt};
         Arrays.sort(parts);
-        return signature.equalsIgnoreCase(sha1Hex(String.join("", parts)));
+        return signature.equalsIgnoreCase(Digests.sha1Hex(String.join("", parts)));
     }
 
     /**
@@ -230,14 +228,5 @@ public class WecomProtocol {
     public String encrypt(String encodingAesKey, byte[] random16, byte[] xml, String receiveid) {
         return AesEnvelopeCodec.encrypt(AesEnvelopeCodec.decodeKey(encodingAesKey), random16, xml,
             receiveid.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private String sha1Hex(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-1").digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("当前运行环境缺少 SHA-1 实现", e);
-        }
     }
 }
