@@ -143,8 +143,10 @@ class ServerIntegrationTest {
 
     @Test
     void v1UpgradePreservesExistingRowsAndMovesExternalIdToJson() {
-        // 升级库名从门闩 URL 解析派生（任意 dudu_review_* 形态均可），同实例另建独立库
+        // 升级库名从门闩 URL 解析派生（任意 dudu_review_* 形态均可），同实例另建独立库；
+        // 先清残留保证可重复执行
         String upgradeDatabase = IntegrationTestEnv.databaseOf(IntegrationTestEnv.jdbcUrl()) + "_upgrade";
+        jdbc.execute("DROP DATABASE IF EXISTS " + upgradeDatabase);
         jdbc.execute("CREATE DATABASE " + upgradeDatabase);
         String url = IntegrationTestEnv.withDatabase(IntegrationTestEnv.jdbcUrl(), upgradeDatabase);
         String user = IntegrationTestEnv.dbUser();
