@@ -319,10 +319,10 @@ class QqChannelIntegrationTest extends DeskIntegrationSupport {
         assertThat(payload.getStr("content")).isEqualTo("好的，今天发出");
         assertThat(payload.getInt("msg_type")).isZero();
 
-        // 群会话路由到群接口（§5.9）
+        // 群会话路由到群接口（§5.9）；令牌进程内缓存复用，本条不再重复换取
         long groupId = newVisitor("group:GROUP_SEND_1", "群里的第一条");
         data(send(scopedToken, groupId, body("qq-cr-g", "群回复")));
-        assertThat(apiRequests.get(3)).isEqualTo("POST /v2/groups/GROUP_SEND_1/messages");
+        assertThat(apiRequests.get(2)).isEqualTo("POST /v2/groups/GROUP_SEND_1/messages");
 
         // 渠道拒绝（官方去重码 40054005）：失败原因如实落库，不冒成功
         userSendBody = SEND_DEDUP;

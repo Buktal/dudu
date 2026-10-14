@@ -331,8 +331,9 @@ class WecomChannelIntegrationTest extends DeskIntegrationSupport {
                 .header("Authorization", "Bearer " + scopedToken)).andReturn());
         assertThat(restricted.getInt("code")).isEqualTo(12200);
         assertThat(restricted.getStr("msg")).isEqualTo("渠道素材凭据未配置");
-        // 未配置凭据的读取不再发起令牌与素材请求
-        assertThat(apiRequests).hasSize(4);
+        // 令牌按缓存窗口复用：两次读取共用一次换取（1 换取 + 2 读取）；
+        // 未配置素材凭据的读取不发起任何渠道请求
+        assertThat(apiRequests).hasSize(3);
     }
 
     // ---------- 回调报文构造（官方 §3.3/§5.1 与 mock-pulse agent 通道同形） ----------
