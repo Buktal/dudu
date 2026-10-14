@@ -29,6 +29,8 @@
 | 员工离职 contact.user.deleted_v3 | https://open.feishu.cn/document/server-docs/contact-v3/user/events/deleted | WebFetch 全文 |
 | 自建应用获取 tenant_access_token | https://open.feishu.cn/document/server-docs/authentication-management/access-token/tenant_access_token_internal | WebFetch 全文 |
 | 发送消息 POST /open-apis/im/v1/messages | https://open.feishu.cn/document/server-docs/im-v1/message/create | WebFetch 全文 |
+| 接收消息内容结构（message_type 全表与各 content JSON） | https://open.feishu.cn/document/server-docs/im-v1/message-content-description/message_content | webReader 官方全文（2026-10-14 复核，见 §5.12） |
+| 获取消息中的资源文件 GET /open-apis/im/v1/messages/:message_id/resources/:file_key | https://open.feishu.cn/document/server-docs/im-v1/message/get-2 | webReader 官方全文（2026-10-14 复核，见 §5.13；页面别名 message-resource/get） |
 | 审批实例状态变更事件 | https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/approval-v4/instance/events/status_changed | `[摘录]`（标题+触发语义） |
 | 审批事件概述（含 subscribe 前置接口/3s/幂等） | https://open.feishu.cn/document/server-docs/approval-v4/event/function-introduction | WebFetch 全文（2026-09-10 复核升级） |
 | 审批定义更新 approval.approval.updated_v4 | https://open.feishu.cn/document/server-docs/approval-v4/event/common-event/custom-approval-event | WebFetch 全文（页面为空字符串模板，ID 为示意，见 §5.8 注） |
@@ -379,7 +381,7 @@ print($decrypt);
 }
 ```
 
-要点：`content` 是 JSON 序列化字符串；`chat_type: p2p/group`；`sender_type: user/bot`；`message_type` 全表见 message_content 页（待核验(09-27)）。
+要点：`content` 是 JSON 序列化字符串；`chat_type: p2p/group`；`sender_type: user/bot`；`message_type` 全表与各类型 `content` JSON 结构见 §5.12（官方原文已核验）。
 
 ### 5.5 im.message.message_read_v1（message_read 页逐字）
 
@@ -666,6 +668,45 @@ print($decrypt);
 }
 ```
 
+### 5.12 接收消息内容结构 message_content 全表（message_content 页官方原文，2026-10-14 webReader 补证）
+
+`content` 字段的 JSON 结构由 `message_type` 决定。下表为页面收录的全部消息类型；字段名与结构为官方原文，示例值取自官方页（省略号为原文截断）。
+
+| message_type | content JSON 结构（官方） | 备注（页面原文要点） |
+|---|---|---|
+| `text` | `{"text":"hello"}` | @ 人为 `@_user_1` 占位符并配合 `mentions`；链接为 `[标题](url)` 形态 |
+| `post`（富文本） | `{"title":"...","content":[[{"tag":"...","...":"..."}]],"content_v2":[[...]]}` | 二维数组按段落；tag 含 text/a/at/img/media/emotion/code_block/hr/md |
+| `image` | `{"image_key":"img_v2_..."}` | — |
+| `file` | `{"file_key":"file_v2_...","file_name":"test.txt"}` | — |
+| `audio` | `{"file_key":"file_v2_...","duration":2000}` | duration 单位毫秒 |
+| `media`（视频） | `{"file_key":"file_v2_...","image_key":"img_v2_...","file_name":"...","duration":2000}` | — |
+| `sticker`（表情包） | `{"file_key":"file_v2_..."}` | 页面原文：表情包不支持下载、不可通过 API 获取文件 |
+| `folder` | `{"file_key":"...","file_name":"folder"}` | 文件夹不支持 API 下载 |
+| `interactive`（卡片） | 卡片 JSON 字符串（title/elements 卡片结构） | — |
+| `share_chat` | `{"chat_id":"oc_..."}` | — |
+| `share_user` | `{"user_id":"ou_..."}` | — |
+| `system` | `{"template":"...","from_user":[...],"to_chatters":[...]}` | 系统消息 |
+| `location` | `{"name":"xx省xx市","longitude":"116.397755","latitude":"39.903179"}` | **经纬度为字符串类型数字** |
+| `hongbao` | `{"text":"[红包]"}` | — |
+| `share_calendar_event` / `share_calendar` / `general_calendar` | `{"summary":"...","start_time":"...","end_time":"..."}` | — |
+| `video_chat` | `{"topic":"...","start_time":"..."}` | — |
+| `todo` | `{"task_id":"...","summary":{post 结构},"due_time":"..."}` | — |
+| `vote` | `{"topic":"...","options":[...]}` | — |
+| `merge_forward` | `{"content":"Merged and Forwarded Message"}` | 合并转发 |
+
+- 下载入口：`image` 可走「获取消息中的资源文件」（§5.13）；`file`/`audio`/`media` 同接口 `type=file`；`sticker`/`folder` 明确不可下载。
+
+### 5.13 获取消息中的资源文件（get-2 页官方原文，2026-10-14 webReader 补证；页面别名 message-resource/get）
+
+请求：`GET https://open.feishu.cn/open-apis/im/v1/messages/:message_id/resources/:file_key?type=image|file`，`Authorization: Bearer <tenant_access_token>`。
+
+- 语义：获取指定消息内包含的资源文件（音频、视频、图片、文件），**成功返回二进制文件流**。
+- 前提：应用需开启机器人能力。
+- 约束：资源大小不超过 100MB；不支持下载表情包；`type=image` 取图片与富文本消息内的图片，`type=file` 取文件/音频/视频；`file_key` 必须取自该 `message_id` 消息内容中的 `image_key`/`file_key`，二者需匹配。
+- 限流：约 1000 次/分钟、50 次/秒。
+- 错误码：230110 族、234001–234043。
+- 出自 §5.4 事件的资源下载路径：`message_id`（事件内）+ `image_key`/`file_key`（`content` 内）拼出该接口地址。
+
 ---
 
 ## 6. token / 凭证模型
@@ -694,7 +735,7 @@ print($decrypt);
 6. **频控表全文直抓**：`server-docs/api-call-guide/frequency-control`（等级表/不可提频原文）。→ 待核验(09-27)
 7. **challenge 时限口径**：现行事件页 1s vs 历史卡片页 3s（§3.2 已照录双口径；模拟器按 1s 实现、兼容 3s）。→ 待核验(09-27)
 8. **历史卡片 sha1(Token) 验签现行有效性**（§4.4，历史文档自声明不再维护）。→ 待核验(09-27)
-9. **`message_type`（message_content）全表**：文本/图片/富文本/卡片/文件等 `content` 结构。→ 待核验(09-27)
+9. ~~**`message_type`（message_content）全表**~~：已核验（2026-10-14 webReader 官方原文），全表见 §5.12；媒体下载接口专章见 §5.13。
 10. **事件全量**：动态目录无静态枚举，57 页为 `[本地]` 保守下限。→ 待核验(09-27)
 11. **准入链路**：个人注册→免费建团队（租户）→建企业自建应用→管理员自审批跑通收发（`[本地]` cn-others.md §一.8 + 11-feishu.md §3；控制台流程页未直抓，ISV 商店应用需企业资质为官方原文已核验）。→ 待核验(09-27)
 12. **官方 SDK 仓库直验**：`larksuite/oapi-sdk-*` GitHub 本体（包名出自官方文档，仓库内容未取）。→ 待核验(09-27)
