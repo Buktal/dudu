@@ -100,7 +100,7 @@ class DeskVisitorServiceTest {
             Arguments.of(ApiEnum.PARAM_ERROR.code, query(1, 0, "", "all")),
             Arguments.of(ApiEnum.PARAM_EXCEED.code, query(1, 101, "", "all")),
             Arguments.of(ApiEnum.PARAM_EXCEED.code, query(1, 30, "x".repeat(101), "all")),
-            Arguments.of(ApiEnum.PARAM_ERROR.code, query(1, 30, "", "telegram")));
+            Arguments.of(ApiEnum.PARAM_ERROR.code, query(1, 30, "", "no-such-channel")));
     }
 
     @Test
