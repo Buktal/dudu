@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.telegram;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -19,12 +20,7 @@ public record TelegramSendCredentials(String url) {
 
     public static TelegramSendCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String url = text(info, INFO_URL);
+        String url = ChannelInfoText.text(info, INFO_URL);
         return url == null ? null : new TelegramSendCredentials(url);
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 }

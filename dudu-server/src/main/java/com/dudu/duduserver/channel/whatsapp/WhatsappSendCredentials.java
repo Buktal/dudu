@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.whatsapp;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -19,15 +20,10 @@ public record WhatsappSendCredentials(String accessToken, String phoneNumberId) 
 
     public static WhatsappSendCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String accessToken = text(info, INFO_ACCESS_TOKEN);
-        String phoneNumberId = text(info, INFO_PHONE_NUMBER_ID);
+        String accessToken = ChannelInfoText.text(info, INFO_ACCESS_TOKEN);
+        String phoneNumberId = ChannelInfoText.text(info, INFO_PHONE_NUMBER_ID);
         return accessToken == null || phoneNumberId == null
             ? null
             : new WhatsappSendCredentials(accessToken, phoneNumberId);
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 }

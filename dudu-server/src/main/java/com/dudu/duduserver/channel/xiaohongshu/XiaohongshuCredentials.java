@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.xiaohongshu;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -19,16 +20,11 @@ public record XiaohongshuCredentials(String token, String encodingAesKey, String
 
     public static XiaohongshuCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String token = text(info, INFO_TOKEN);
-        String encodingAesKey = text(info, INFO_ENCODING_AES_KEY);
-        String appId = text(info, INFO_APP_ID);
+        String token = ChannelInfoText.text(info, INFO_TOKEN);
+        String encodingAesKey = ChannelInfoText.text(info, INFO_ENCODING_AES_KEY);
+        String appId = ChannelInfoText.text(info, INFO_APP_ID);
         return token == null || encodingAesKey == null || appId == null
             ? null
             : new XiaohongshuCredentials(token, encodingAesKey, appId);
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 }

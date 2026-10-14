@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.wecom;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -30,9 +31,9 @@ public record WecomCredentials(String corpId, String corpSecret, String agentId)
      */
     public static WecomCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = info(account);
-        String corpId = text(info, INFO_CORP_ID);
-        String corpSecret = text(info, INFO_CORP_SECRET);
-        String agentId = text(info, INFO_AGENT_ID);
+        String corpId = ChannelInfoText.text(info, INFO_CORP_ID);
+        String corpSecret = ChannelInfoText.text(info, INFO_CORP_SECRET);
+        String agentId = ChannelInfoText.text(info, INFO_AGENT_ID);
         return corpId == null || corpSecret == null || agentId == null
             ? null
             : new WecomCredentials(corpId, corpSecret, agentId);
@@ -44,9 +45,9 @@ public record WecomCredentials(String corpId, String corpSecret, String agentId)
      */
     public static CallbackKey callbackOf(CompanyChannelDO account) {
         Map<String, Object> info = info(account);
-        String corpId = text(info, INFO_CORP_ID);
-        String token = text(info, INFO_TOKEN);
-        String encodingAesKey = text(info, INFO_ENCODING_AES_KEY);
+        String corpId = ChannelInfoText.text(info, INFO_CORP_ID);
+        String token = ChannelInfoText.text(info, INFO_TOKEN);
+        String encodingAesKey = ChannelInfoText.text(info, INFO_ENCODING_AES_KEY);
         return corpId == null || token == null || encodingAesKey == null
             ? null
             : new CallbackKey(corpId, token, encodingAesKey);
@@ -56,8 +57,4 @@ public record WecomCredentials(String corpId, String corpSecret, String agentId)
         return account == null ? null : account.getChannelInfo();
     }
 
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
-    }
 }

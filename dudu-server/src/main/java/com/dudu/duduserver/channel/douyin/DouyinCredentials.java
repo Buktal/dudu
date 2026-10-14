@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.douyin;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -20,17 +21,12 @@ public record DouyinCredentials(String clientKey, String clientSecret, String re
 
     public static DouyinCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String clientKey = text(info, INFO_CLIENT_KEY);
-        String clientSecret = text(info, INFO_CLIENT_SECRET);
+        String clientKey = ChannelInfoText.text(info, INFO_CLIENT_KEY);
+        String clientSecret = ChannelInfoText.text(info, INFO_CLIENT_SECRET);
         if (clientKey == null || clientSecret == null) {
             return null;
         }
         // refreshToken 可选：未完成用户授权的账号回调收发不受影响（§6.1）
-        return new DouyinCredentials(clientKey, clientSecret, text(info, INFO_REFRESH_TOKEN));
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
+        return new DouyinCredentials(clientKey, clientSecret, ChannelInfoText.text(info, INFO_REFRESH_TOKEN));
     }
 }

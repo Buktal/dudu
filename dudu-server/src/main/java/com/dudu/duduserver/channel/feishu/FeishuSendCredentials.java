@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.feishu;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -19,13 +20,8 @@ public record FeishuSendCredentials(String appId, String appSecret) {
 
     public static FeishuSendCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String appId = text(info, INFO_APP_ID);
-        String appSecret = text(info, INFO_APP_SECRET);
+        String appId = ChannelInfoText.text(info, INFO_APP_ID);
+        String appSecret = ChannelInfoText.text(info, INFO_APP_SECRET);
         return appId == null || appSecret == null ? null : new FeishuSendCredentials(appId, appSecret);
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 }

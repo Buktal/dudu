@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.weibo;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -16,12 +17,7 @@ public record WeiboCredentials(String accessToken) {
 
     public static WeiboCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String accessToken = text(info, INFO_ACCESS_TOKEN);
+        String accessToken = ChannelInfoText.text(info, INFO_ACCESS_TOKEN);
         return accessToken == null ? null : new WeiboCredentials(accessToken);
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 }

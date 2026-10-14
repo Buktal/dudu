@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.alipay;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -20,16 +21,11 @@ public record AlipayCredentials(String appId, String appPrivateKey, String alipa
 
     public static AlipayCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String appId = text(info, INFO_APP_ID);
-        String appPrivateKey = text(info, INFO_APP_PRIVATE_KEY);
-        String alipayPublicKey = text(info, INFO_ALIPAY_PUBLIC_KEY);
+        String appId = ChannelInfoText.text(info, INFO_APP_ID);
+        String appPrivateKey = ChannelInfoText.text(info, INFO_APP_PRIVATE_KEY);
+        String alipayPublicKey = ChannelInfoText.text(info, INFO_ALIPAY_PUBLIC_KEY);
         return appId == null || appPrivateKey == null || alipayPublicKey == null
             ? null
             : new AlipayCredentials(appId, appPrivateKey, alipayPublicKey);
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 }

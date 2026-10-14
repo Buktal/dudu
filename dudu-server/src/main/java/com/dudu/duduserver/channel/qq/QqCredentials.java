@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.qq;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -23,8 +24,8 @@ public record QqCredentials(String appId, String appSecret) {
      */
     public static QqCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = info(account);
-        String appId = text(info, INFO_APP_ID);
-        String appSecret = text(info, INFO_APP_SECRET);
+        String appId = ChannelInfoText.text(info, INFO_APP_ID);
+        String appSecret = ChannelInfoText.text(info, INFO_APP_SECRET);
         return appId == null || appSecret == null ? null : new QqCredentials(appId, appSecret);
     }
 
@@ -33,15 +34,10 @@ public record QqCredentials(String appId, String appSecret) {
      * 账号按未配置回调处理。
      */
     public static String callbackSecretOf(CompanyChannelDO account) {
-        return text(info(account), INFO_APP_SECRET);
+        return ChannelInfoText.text(info(account), INFO_APP_SECRET);
     }
 
     private static Map<String, Object> info(CompanyChannelDO account) {
         return account == null ? null : account.getChannelInfo();
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 }

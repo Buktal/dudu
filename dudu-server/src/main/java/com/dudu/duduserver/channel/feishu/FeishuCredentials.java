@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.feishu;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -21,17 +22,12 @@ public record FeishuCredentials(String appId, String verificationToken, String e
 
     public static FeishuCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String appId = text(info, INFO_APP_ID);
-        String verificationToken = text(info, INFO_VERIFICATION_TOKEN);
+        String appId = ChannelInfoText.text(info, INFO_APP_ID);
+        String verificationToken = ChannelInfoText.text(info, INFO_VERIFICATION_TOKEN);
         if (appId == null || verificationToken == null) {
             return null;
         }
         // encryptKey 可选：缺失即明文模式（官方 §4.1 默认低安全形态）
-        return new FeishuCredentials(appId, verificationToken, text(info, INFO_ENCRYPT_KEY));
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
+        return new FeishuCredentials(appId, verificationToken, ChannelInfoText.text(info, INFO_ENCRYPT_KEY));
     }
 }

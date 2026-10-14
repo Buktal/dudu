@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.dingtalk;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -17,16 +18,11 @@ public record DingtalkSendCredentials(String appKey, String appSecret, String ag
 
     public static DingtalkSendCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String appKey = text(info, INFO_APP_KEY);
-        String appSecret = text(info, INFO_APP_SECRET);
-        String agentId = text(info, INFO_AGENT_ID);
+        String appKey = ChannelInfoText.text(info, INFO_APP_KEY);
+        String appSecret = ChannelInfoText.text(info, INFO_APP_SECRET);
+        String agentId = ChannelInfoText.text(info, INFO_AGENT_ID);
         return appKey == null || appSecret == null || agentId == null
             ? null
             : new DingtalkSendCredentials(appKey, appSecret, agentId);
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 }

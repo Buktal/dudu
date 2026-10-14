@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.dingtalk;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 
 import java.util.Map;
@@ -22,21 +23,16 @@ public record DingtalkCredentials(String url, String system, String token, Strin
 
     public static DingtalkCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String token = text(info, INFO_TOKEN);
-        String encodingAesKey = text(info, INFO_ENCODING_AES_KEY);
-        String ownerKey = text(info, INFO_OWNER_KEY);
+        String token = ChannelInfoText.text(info, INFO_TOKEN);
+        String encodingAesKey = ChannelInfoText.text(info, INFO_ENCODING_AES_KEY);
+        String ownerKey = ChannelInfoText.text(info, INFO_OWNER_KEY);
         if (token == null || encodingAesKey == null || ownerKey == null) {
             return null;
         }
         // url 仅为配置自描述（推送目标），system 缺省本票唯一形态
-        String url = text(info, INFO_URL);
-        String system = text(info, INFO_SYSTEM);
+        String url = ChannelInfoText.text(info, INFO_URL);
+        String system = ChannelInfoText.text(info, INFO_SYSTEM);
         return new DingtalkCredentials(url, system == null ? SYSTEM_HTTP_CRYPTO : system, token, encodingAesKey,
             ownerKey);
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 }
