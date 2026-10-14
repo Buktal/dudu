@@ -274,8 +274,15 @@ sign = md5_hex_lowercase(signString)
 - https://web.archive.org/web/20260112045127id_/.../getDocDetailNew ✔（docDetailId=1 空内容）
 - https://web.archive.org/web/20260112045128id_/.../getDocNavigationSecondListNew ✔（电子面单子树）
 
+**发送侧补证（2026-10-14，issue #117 动工前置，curl 直抓 SSR 正文）**
+- https://miniapp.xiaohongshu.com/doc/DC234367 ✔（发送客服消息全文，见 §12.1）
+- https://miniapp.xiaohongshu.com/doc/DC010382 ✔（获取应用调用凭证全文，见 §12.2）
+- https://miniapp.xiaohongshu.com/doc/DC853803 ✔（服务端 API 简介全文，见 §12.3）
+- https://miniapp.xiaohongshu.com/doc/DC897608 ✔（接收消息与发送消息，48h 原句复核，见 §12.4）
+
 **GitHub（gh api）**
 - zsmhub/xhs-sdk：api_base.go / api_client.go / api_tool.go / api_http.go / api_oauth.go / oauth-获取访问令牌.go / oauth-刷新访问令牌.go / constant.go / message/*（10 事件）/ README.md / demo/message.go / 订单API-批量解密.go
+- fireworkor/demo-work：xhs-meiz/xhs-meiz/api-case/request-payment/request-payment.js（`/api/rmp/token` 实调佐证，§12.2）
 - zeasin/qihang-erp-open：open-sdk/.../xhsTokenApiHelper.java、TokenVo.java（签名交叉验证）
 - cxjava/xhs-sdk：examples/paid_order_flow/main.go（推送用法注释）
 - jtrhb/sxt：engine/pysxt/core.py、message.py、message_type.py（私信通逆向）
@@ -390,3 +397,107 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 - §10.7「支付结果回调正文未抓」→ 关闭（§11.1 字段表）。
 - §7.1/7.5 部分缓解：miniapp 域消息推送的加解密与签名算法已实锤；开发文档正文其余章节与电商 ark 侧仍待核验(09-27)。
 - MockPulse 伪造实现：企微那套 AES-256-CBC 伪造代码可直接复用于小红书，仅三处不同——JSON 信封、receiveid 用 appId、签名值放 body 字段而非 query。
+
+---
+
+## 12. 三次补摄：发送侧官方规格（2026-10-14，issue #117 动工前置）
+
+> 背景：#117 票面注明「发送报文字段细节事实库未入库」为已知缺口，动工前先官方补证。三页文档页均为 SSR 正文，curl 直抓成功（DC591932 那种裸 doc id 只回骨架的坑在 DC234367/DC010382 不存在）。
+
+### 12.1 发送客服消息（DC234367，`[官方]`）
+
+来源：https://miniapp.xiaohongshu.com/doc/DC234367 （页脚更新时间 2025-02-28 14:12:09；页面标签「支持第三方调用」「支持沙箱环境调用」；左侧目录「客服能力」下仅此一个接口）
+
+- 请求地址：`POST https://miniapp.xiaohongshu.com/api/rmp/message/custom`
+- 公共请求参数：
+
+| 名称 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| app_id | string | 是 | 小程序appid |
+| access_token | string | 是 | 小程序调用凭证 |
+
+- 业务请求参数：
+
+| 名称 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| openid | string | 是 | 回复用户的Open ID |
+| msg_type | string | 是 | 消息类型 |
+| content | string | 否 | 文本内容，msg_type 为 text 时必填 |
+| pic_url | string | 否 | 图片链接，msg_type 为 image 时必填 |
+| out_product_id | string | 否 | 外部商品 ID，msg_type 为 item 时必填 |
+| out_order_id | string | 否 | 外部订单 ID，msg_type 为 order 时必填 |
+
+- 请求示例（body 逐字，仅业务参数）：
+
+```json
+{
+    "openid":"string",
+    "msg_type":"string",
+    "content":"string",
+    "pic_url":"string",
+    "out_product_id":"string",
+    "out_order_id":"string"
+}
+```
+
+- 响应参数：`success`（bool，是否成功）、`msg`（string，说明，正确响应时为 success，错误响应时为错误描述）、`code`（int32，错误码，正确响应时为 0，错误响应时非0）。响应示例逐字：
+
+```json
+{
+    "success":true,
+    "msg":"string",
+    "code":0
+}
+```
+
+- **不返回消息标识**——发送成功无处取 `external_message_id`，与微信客服消息同病。
+- 业务错误码：页面仅写「参见错误码」未内联枚举。
+- **公共参数携带位置未明示**（待核验·真实凭据联调）：请求示例 body 只含业务参数，`app_id`/`access_token` 走 query 还是 body 官方未写；服务端按微信族惯例走 query（`?app_id=&access_token=`），若有出入只需调整调用处一处拼接。
+
+### 12.2 获取应用调用凭证（DC010382，`[官方]`）
+
+来源：https://miniapp.xiaohongshu.com/doc/DC010382 （页脚更新时间 2025-03-18 19:40:03；标签同 §12.1）
+
+- 请求地址：`POST https://miniapp.xiaohongshu.com/api/rmp/token`
+- 请求参数：`appid`（string，必填，小程序 appid）、`secret`（string，必填，小程序 appsecret）。请求示例逐字：
+
+```json
+{
+  "appid": "APPID",
+  "secret": "SECRET"
+}
+```
+
+- 返回参数：`data`（object，错误响应时为空，但正确响应时不保证非空）内 `access_token`（string，调用凭证）与 `expire_in`（integer，有效期秒），外层 `success`（boolean）、`msg`（string，正确响应时为 success，错误响应时为错误描述）、`code`（integer，0 成功）。返回示例逐字：
+
+```json
+{
+  "data": {
+    "access_token": "ACCESS_TOKEN",
+    "expire_in": 7200
+  },
+  "success": true,
+  "msg": "success",
+  "code": 0
+}
+```
+
+- 凭证规则（原文要点）：有效期目前 2 小时；存储至少保留 128 字符空间；新生成 token 时上一个剩余有效期 >5 分钟的缩至 5 分钟；同一时间最多最近两个 token 生效。
+- 多源佐证 `[多源]`：fireworkor/demo-work（xhs-meiz 官方示例工程）`request-payment.js` 以 `POST {appid, secret}` JSON body 实调 `/api/rmp/token`，与文档一致。
+
+### 12.3 服务端 API 通用约定（DC853803，`[官方]`）
+
+- access_token 是调用服务端 API 的唯一凭证：有效期 2 小时，重复获取使上次 token 失效（5 分钟平滑期后过期）。
+- POST 接口 body 参数以 JSON 写入并设 `content-type: application/json`；GET/POST 严格按各接口文档定义调用。
+- 客服接口能力需开通交易能力后授权调用（基础/地点/群聊/小说等接口创建小程序应用后默认开放）。
+
+### 12.4 48h 窗口复核与媒体结论维持
+
+- DC897608（接收消息与发送消息）正文原句「48h内可以使用发送客服消息接口进行回复。各消息类型的推送…」——§10.3 的 48h 回复通道复核成立（2026-10-14 实抓）。当前版 DC234367 页面无频次/限额章节。
+- 发送侧补证后，事实库仍无「按 media_id 拉取临时素材」的接口记录（「客服能力」目录仅 DC234367 一项）——媒体读取走链接下载的结论维持（§10.3 image PicUrl / video VideoUrl 链接直出）。
+
+### 12.5 对 #117 服务端实现的口径
+
+- 发送：先 `POST /api/rmp/token`（appid/secret，JSON body）换 `access_token`，再 `POST /api/rmp/message/custom` 下发 `msg_type=text` 的 `content`；成功以 `success=true` 且 `code=0` 为准，`external_message_id` 为空。
+- `appSecret` 为服务端按公众号先例补入 channel_info 的键（mock-pulse config 无此键——其不模拟 token 换取，同 wechat-mini §6.1 口径）。
+- 接口地址配置键 `dudu.channel.xiaohongshu.api-base`（缺省 `https://miniapp.xiaohongshu.com`，可覆盖为受控替身）。
