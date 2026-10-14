@@ -8,6 +8,7 @@ import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.service.DeskInboundService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.BeforeAll;
@@ -159,9 +160,9 @@ class TelegramChannelIntegrationTest extends DeskIntegrationSupport {
     @DynamicPropertySource
     static void contextProperties(DynamicPropertyRegistry registry) {
         // 事故防线（曾两次误连开发库 dudu）：四变量缺一即失败，URL 必须指向本票独立评审库
-        String url = requireEnv("DUDU_TEST_JDBC_URL");
-        String user = requireEnv("DUDU_TEST_DB_USER");
-        String password = requireEnv("DUDU_TEST_DB_PASSWORD");
+        String url = IntegrationTestEnv.required(IntegrationTestEnv.JDBC_URL);
+        String user = IntegrationTestEnv.required(IntegrationTestEnv.DB_USER);
+        String password = IntegrationTestEnv.required(IntegrationTestEnv.DB_PASSWORD);
         if (!url.contains("/" + REVIEW_DB + "?")) {
             throw new IllegalStateException("DUDU_TEST_JDBC_URL 必须指向独立评审库 " + REVIEW_DB + "，当前：" + url);
         }
@@ -169,15 +170,6 @@ class TelegramChannelIntegrationTest extends DeskIntegrationSupport {
         registry.add("spring.datasource.url", () -> url);
         registry.add("spring.datasource.username", () -> user);
         registry.add("spring.datasource.password", () -> password);
-    }
-
-    private static String requireEnv(String name) {
-        String value = System.getenv(name);
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("集成测试环境变量缺失：" + name
-                + "（DUDU_INTEGRATION_TEST=true 时四件套缺一不可，缺失会回落 application.yaml 误连开发库）");
-        }
-        return value;
     }
 
     // 共享评审库自建自删：开始先重置为全新库，Flyway 空库迁移建表

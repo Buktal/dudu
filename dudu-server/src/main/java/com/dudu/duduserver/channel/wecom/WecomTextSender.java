@@ -15,7 +15,7 @@ import java.util.Map;
 /**
  * 企业微信纯文本发送（应用消息 text，事实见 docs/research/channels/wecom.md §2 出站补证
  * /90236）：先用 channel_info 的 corpId/corpSecret 经 /cgi-bin/gettoken 换取 access_token
- * （每次发送都取一次，不做进程内缓存），再 POST /cgi-bin/message/send 下发
+ * （进程内缓存复用，临期自动换新），再 POST /cgi-bin/message/send 下发
  * {touser, msgtype:text, agentid, text:{content}}；成功以 errcode=0 为准，msgid 为渠道
  * 消息标识（用于撤回）；部分接收人无效时仍按 errcode 判断。失败原样记录 errcode 与
  * errmsg，网络与响应解析异常按调用失败如实返回。接口地址默认官方域名，可用

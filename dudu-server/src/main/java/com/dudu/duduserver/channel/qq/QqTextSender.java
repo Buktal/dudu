@@ -14,8 +14,7 @@ import java.util.Map;
 
 /**
  * QQ 纯文本发送（事实见 docs/research/channels/qq.md §5.8/§5.9/§6）：凭 channel_info 的
- * appId/appSecret 经 POST /app/getAppAccessToken 换取 access_token（每次发送都取一次，
- * 不做进程内缓存），再按访客身份的场景前缀路由 POST /v2/users/{openid}/messages 或
+ * appId/appSecret 经 POST /app/getAppAccessToken 换取 access_token（进程内缓存复用，临期自动换新），再按访客身份的场景前缀路由 POST /v2/users/{openid}/messages 或
  * /v2/groups/{openid}/messages，报文 {content, msg_type:0}；成功以 err_code 缺省/0 为准，
  * 返回的 id 为渠道消息标识。报文不带 msg_id/msg_seq——按主动消息发送（被动回复需事件
  * msg_id，发送边界未携带；主动消息受官方频控约束，失败如实落库）。频道会话要求 WS 在线，

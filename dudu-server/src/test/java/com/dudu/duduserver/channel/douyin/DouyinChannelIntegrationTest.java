@@ -20,6 +20,8 @@ import com.dudu.duduserver.service.DeskInboundService;
 import com.dudu.duduserver.service.UserGroupMemberService;
 import com.dudu.duduserver.service.UserGroupService;
 import com.dudu.duduserver.service.UserService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import com.dudu.duduserver.util.PasswordHasher;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -140,10 +142,9 @@ class DouyinChannelIntegrationTest {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username",
-            () -> System.getenv().getOrDefault("DUDU_TEST_DB_USER", "root"));
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
         // 发送链路指向本机替身：真实发送代码 + 可控渠道响应
         registry.add("dudu.channel.douyin.api-base",
             () -> "http://127.0.0.1:" + STUB.getAddress().getPort());

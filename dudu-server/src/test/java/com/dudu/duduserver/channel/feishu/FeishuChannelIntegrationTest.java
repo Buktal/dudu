@@ -21,6 +21,8 @@ import com.dudu.duduserver.service.DeskInboundService;
 import com.dudu.duduserver.service.UserGroupMemberService;
 import com.dudu.duduserver.service.UserGroupService;
 import com.dudu.duduserver.service.UserService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import com.dudu.duduserver.util.PasswordHasher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -77,11 +79,9 @@ class FeishuChannelIntegrationTest {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        // 评审账号可用 DUDU_TEST_DB_USER 覆盖，默认与既有集成基建一致
-        registry.add("spring.datasource.username",
-            () -> System.getenv().getOrDefault("DUDU_TEST_DB_USER", "root"));
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     // 渠道发送替身：按构造好的飞书事实响应返回，可观察调用时的持久状态

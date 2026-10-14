@@ -8,6 +8,8 @@ import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.service.DeskInboundService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -71,11 +73,9 @@ class DeskDingtalkIntegrationTest extends DeskIntegrationSupport {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        // 共享评审库用户可由环境指定，缺省维持本地 root
-        registry.add("spring.datasource.username",
-            () -> System.getenv().getOrDefault("DUDU_TEST_DB_USER", "root"));
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
         String stubUrl = "http://127.0.0.1:" + STUB.getAddress().getPort();
         registry.add("dudu.channel.dingtalk.api-base", () -> stubUrl);
         registry.add("dudu.channel.dingtalk.oapi-base", () -> stubUrl);

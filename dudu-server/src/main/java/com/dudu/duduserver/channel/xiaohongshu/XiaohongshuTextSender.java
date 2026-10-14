@@ -15,8 +15,7 @@ import java.util.Map;
 /**
  * 小红书纯文本主动回复（发送客服消息），事实见 docs/research/channels/xiaohongshu.md
  * §12.1、§12.2、§12.5：收到客服消息后 48h 窗口内经 POST /api/rmp/message/custom 主动下发；
- * 先用 channel_info 的 appId/appSecret 经 /api/rmp/token 换取 access_token（每次发送都取
- * 一次，不做进程内缓存），再下发 msg_type=text 的 content。公共参数 app_id/access_token
+ * 先用 channel_info 的 appId/appSecret 经 /api/rmp/token 换取 access_token（进程内缓存复用，临期自动换新），再下发 msg_type=text 的 content。公共参数 app_id/access_token
  * 官方未明示携带位置，按微信族惯例走 query（若有出入只需调整调用处一处拼接，§12.1 待
  * 核验）；成功以 success=true 且 code=0 为准，接口不返回消息标识；失败原样记录 code 与
  * msg，网络与响应解析异常按调用失败如实返回。接口地址默认官方域名，可用

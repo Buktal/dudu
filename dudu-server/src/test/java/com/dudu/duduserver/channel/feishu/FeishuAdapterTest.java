@@ -16,7 +16,6 @@ import org.springframework.web.client.RestClient;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -165,10 +164,13 @@ class FeishuAdapterTest {
         return account;
     }
 
-    // 测试侧按官方 §4.3 构造加密信封：key = sha256(encrypt_key)，随机 16B IV 置于密文头部
+    // 测试侧按官方 §4.3 构造加密信封：key = sha256(encrypt_key)，16B IV 置于密文头部。
+    // IV 固定取值——错钥密文的 PKCS#7 校验是概率事件（约 1/256 概率侥幸过填充校验），
+    // 随机 IV 会让「错钥拒绝」用例偶发翻车，固定后结果可复现
+    private static final byte[] FIXED_IV = "0123456789abcdef".getBytes(StandardCharsets.US_ASCII);
+
     private String envelope(String encryptKey, String plaintextJson) {
-        byte[] iv = new byte[16];
-        new SecureRandom().nextBytes(iv);
+        byte[] iv = FIXED_IV.clone();
         AES aes = new AES(Mode.CBC, Padding.PKCS5Padding, DigestUtil.sha256(encryptKey), iv);
         byte[] encrypted = aes.encrypt(plaintextJson.getBytes(StandardCharsets.UTF_8));
         byte[] data = ByteBuffer.allocate(16 + encrypted.length).put(iv).put(encrypted).array();

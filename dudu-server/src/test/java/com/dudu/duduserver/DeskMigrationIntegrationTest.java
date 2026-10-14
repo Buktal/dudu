@@ -1,5 +1,6 @@
 package com.dudu.duduserver;
 
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.output.MigrateResult;
 import org.junit.jupiter.api.Test;
@@ -62,12 +63,14 @@ class DeskMigrationIntegrationTest {
     @Test
     void v3DatabaseUpgradesToLatestPreservingExistingRowsAndServesNewTables() {
         String adminUrl = url();
-        JdbcTemplate admin = new JdbcTemplate(new DriverManagerDataSource(adminUrl, "root", password()));
-        admin.execute("DROP DATABASE IF EXISTS dudu_review_v3v4");
-        admin.execute("CREATE DATABASE dudu_review_v3v4 CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
-        String url = adminUrl.replace("/dudu_review?", "/dudu_review_v3v4?");
-        Flyway.configure().dataSource(url, "root", password()).target("3").load().migrate();
-        JdbcTemplate old = new JdbcTemplate(new DriverManagerDataSource(url, "root", password()));
+        // 升级库名从门闩 URL 解析派生（任意 dudu_review_* 形态均可），同实例另建独立库
+        String v3v4Database = IntegrationTestEnv.databaseOf(adminUrl) + "_v3v4";
+        JdbcTemplate admin = new JdbcTemplate(new DriverManagerDataSource(adminUrl, user(), password()));
+        admin.execute("DROP DATABASE IF EXISTS " + v3v4Database);
+        admin.execute("CREATE DATABASE " + v3v4Database + " CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+        String url = IntegrationTestEnv.withDatabase(adminUrl, v3v4Database);
+        Flyway.configure().dataSource(url, user(), password()).target("3").load().migrate();
+        JdbcTemplate old = new JdbcTemplate(new DriverManagerDataSource(url, user(), password()));
 
         // V3 状态的基线数据：企业、初始管理员、组、成员关系与渠道账号
         old.update("INSERT INTO company(company_id, company_name, create_time, update_time)"
@@ -82,7 +85,7 @@ class DeskMigrationIntegrationTest {
         old.update("INSERT INTO company_channel(company_channel_id, company_id, group_id, channel, account_name,"
             + " create_time, update_time) VALUES(78454, 784501, 78452, 'wechat', '旧账号', NOW(3), NOW(3))");
 
-        MigrateResult upgraded = Flyway.configure().dataSource(url, "root", password()).load().migrate();
+        MigrateResult upgraded = Flyway.configure().dataSource(url, user(), password()).load().migrate();
 
         // 执行 V4 与 V5 两个迁移，既有 Admin 基线数据保留且重启可读
         assertThat(upgraded.migrationsExecuted).isEqualTo(2);
@@ -114,18 +117,19 @@ class DeskMigrationIntegrationTest {
             .isEqualTo(1);
 
         // 已是最新版本时重复迁移不再执行
-        assertThat(Flyway.configure().dataSource(url, "root", password()).load().migrate().migrationsExecuted).isZero();
+        assertThat(Flyway.configure().dataSource(url, user(), password()).load().migrate().migrationsExecuted).isZero();
     }
 
     @Test
     void v4DatabaseUpgradesToV5RenamingWechatRowsAndLeavingOtherChannelsUntouched() {
         String adminUrl = url();
-        JdbcTemplate admin = new JdbcTemplate(new DriverManagerDataSource(adminUrl, "root", password()));
-        admin.execute("DROP DATABASE IF EXISTS dudu_review_v4v5");
-        admin.execute("CREATE DATABASE dudu_review_v4v5 CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
-        String url = adminUrl.replace("/dudu_review?", "/dudu_review_v4v5?");
-        Flyway.configure().dataSource(url, "root", password()).target("4").load().migrate();
-        JdbcTemplate v4 = new JdbcTemplate(new DriverManagerDataSource(url, "root", password()));
+        String v4v5Database = IntegrationTestEnv.databaseOf(adminUrl) + "_v4v5";
+        JdbcTemplate admin = new JdbcTemplate(new DriverManagerDataSource(adminUrl, user(), password()));
+        admin.execute("DROP DATABASE IF EXISTS " + v4v5Database);
+        admin.execute("CREATE DATABASE " + v4v5Database + " CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+        String url = IntegrationTestEnv.withDatabase(adminUrl, v4v5Database);
+        Flyway.configure().dataSource(url, user(), password()).target("4").load().migrate();
+        JdbcTemplate v4 = new JdbcTemplate(new DriverManagerDataSource(url, user(), password()));
 
         // V4 状态的存量账号：旧码值 wechat、已是新码值的 wechat-mp 与无关渠道各一行
         v4.update("INSERT INTO company_channel(company_channel_id, company_id, group_id, channel, account_name,"
@@ -135,7 +139,7 @@ class DeskMigrationIntegrationTest {
         v4.update("INSERT INTO company_channel(company_channel_id, company_id, group_id, channel, account_name,"
             + " create_time, update_time) VALUES(78564, 78560, 78562, 'douyin', '抖音号', NOW(3), NOW(3))");
 
-        MigrateResult upgraded = Flyway.configure().dataSource(url, "root", password()).load().migrate();
+        MigrateResult upgraded = Flyway.configure().dataSource(url, user(), password()).load().migrate();
 
         // 只执行 V5：旧码值改写为新码值，其余渠道不动
         assertThat(upgraded.migrationsExecuted).isEqualTo(1);
@@ -146,23 +150,27 @@ class DeskMigrationIntegrationTest {
         assertThat(v4.queryForObject("SELECT channel FROM company_channel WHERE company_channel_id = 78564", String.class))
             .isEqualTo("douyin");
         // 重复执行不再改写
-        assertThat(Flyway.configure().dataSource(url, "root", password()).load().migrate().migrationsExecuted).isZero();
+        assertThat(Flyway.configure().dataSource(url, user(), password()).load().migrate().migrationsExecuted).isZero();
     }
 
     private JdbcTemplate current() {
-        return new JdbcTemplate(new DriverManagerDataSource(url(), "root", password()));
+        return new JdbcTemplate(new DriverManagerDataSource(url(), user(), password()));
     }
 
     private Flyway flyway(String url) {
-        return Flyway.configure().dataSource(url, "root", password()).load();
+        return Flyway.configure().dataSource(url, user(), password()).load();
     }
 
     private static String url() {
-        return System.getenv("DUDU_TEST_JDBC_URL");
+        return IntegrationTestEnv.jdbcUrl();
+    }
+
+    private static String user() {
+        return IntegrationTestEnv.dbUser();
     }
 
     private static String password() {
-        return System.getenv("DUDU_TEST_DB_PASSWORD");
+        return IntegrationTestEnv.dbPassword();
     }
 
     private List<String> tableNames(JdbcTemplate jdbc) {

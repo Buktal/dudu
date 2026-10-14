@@ -12,6 +12,8 @@ import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.entity.UserGroupMemberDO;
 import com.dudu.duduserver.service.*;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -41,9 +43,9 @@ class ServerIntegrationTest {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     @Autowired MockMvc mvc;
@@ -141,19 +143,22 @@ class ServerIntegrationTest {
 
     @Test
     void v1UpgradePreservesExistingRowsAndMovesExternalIdToJson() {
-        jdbc.execute("CREATE DATABASE dudu_review_upgrade");
-        String url = System.getenv("DUDU_TEST_JDBC_URL").replace("/dudu_review?", "/dudu_review_upgrade?");
-        String password = System.getenv("DUDU_TEST_DB_PASSWORD");
-        Flyway.configure().dataSource(url, "root", password).target("1").load().migrate();
-        JdbcTemplate old = new JdbcTemplate(new DriverManagerDataSource(url, "root", password));
+        // 升级库名从门闩 URL 解析派生（任意 dudu_review_* 形态均可），同实例另建独立库
+        String upgradeDatabase = IntegrationTestEnv.databaseOf(IntegrationTestEnv.jdbcUrl()) + "_upgrade";
+        jdbc.execute("CREATE DATABASE " + upgradeDatabase);
+        String url = IntegrationTestEnv.withDatabase(IntegrationTestEnv.jdbcUrl(), upgradeDatabase);
+        String user = IntegrationTestEnv.dbUser();
+        String password = IntegrationTestEnv.dbPassword();
+        Flyway.configure().dataSource(url, user, password).target("1").load().migrate();
+        JdbcTemplate old = new JdbcTemplate(new DriverManagerDataSource(url, user, password));
         old.update("INSERT INTO company(company_id,company_name,create_time,update_time) VALUES(782001,'旧企业',NOW(),NOW())");
         old.update("INSERT INTO reception_group(group_id,company_id,group_name,create_time,update_time) VALUES(1,782001,'旧组',NOW(),NOW())");
         old.update("INSERT INTO channel_account(company_id,group_id,channel,account_name,external_account_id,create_time,update_time) VALUES(782001,1,'wechat','旧账号','old-id',NOW(),NOW())");
-        Flyway.configure().dataSource(url, "root", password).load().migrate();
+        Flyway.configure().dataSource(url, user, password).load().migrate();
         assertThat(old.queryForObject("SELECT channel_info->>'$.externalAccountId' FROM company_channel", String.class))
             .isEqualTo("old-id");
         assertThat(old.queryForObject("SELECT COUNT(*) FROM user_group", Long.class)).isEqualTo(1);
-        assertThat(Flyway.configure().dataSource(url, "root", password).load().migrate().migrationsExecuted).isZero();
+        assertThat(Flyway.configure().dataSource(url, user, password).load().migrate().migrationsExecuted).isZero();
     }
 
     private String login() throws Exception {

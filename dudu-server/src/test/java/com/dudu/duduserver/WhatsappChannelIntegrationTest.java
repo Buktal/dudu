@@ -8,6 +8,7 @@ import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.service.DeskInboundService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterAll;
@@ -127,16 +128,11 @@ class WhatsappChannelIntegrationTest extends DeskIntegrationSupport {
 
     @DynamicPropertySource
     static void contextProperties(DynamicPropertyRegistry registry) {
-        String url = System.getenv("DUDU_TEST_JDBC_URL");
-        dbUser = System.getenv("DUDU_TEST_DB_USER");
-        dbPassword = System.getenv("DUDU_TEST_DB_PASSWORD");
         // 环境变量四件套缺一即失败：杜绝回落 application.yaml 直连开发库 dudu
-        if (url == null || dbUser == null || dbPassword == null) {
-            throw new IllegalStateException("WhatsApp 集成测试必须显式提供 DUDU_TEST_JDBC_URL/"
-                + "DUDU_TEST_DB_USER/DUDU_TEST_DB_PASSWORD，禁止回落默认数据源");
-        }
-        String pathless = url.split("\\?")[0];
-        database = pathless.substring(pathless.lastIndexOf('/') + 1);
+        String url = IntegrationTestEnv.jdbcUrl();
+        dbUser = IntegrationTestEnv.dbUser();
+        dbPassword = IntegrationTestEnv.dbPassword();
+        database = IntegrationTestEnv.databaseOf(url);
         if (!database.startsWith("dudu_review_whatsapp")) {
             throw new IllegalStateException("本测试只允许使用 dudu_review_whatsapp 评审库，实际库：" + database);
         }

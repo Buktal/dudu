@@ -8,6 +8,8 @@ import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.service.DeskInboundService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.BeforeAll;
@@ -106,11 +108,9 @@ class AlipayChannelIntegrationTest extends DeskIntegrationSupport {
 
     @DynamicPropertySource
     static void contextProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        // 共享评审库用户可由环境指定，缺省维持本地 root
-        registry.add("spring.datasource.username",
-            () -> System.getenv().getOrDefault("DUDU_TEST_DB_USER", "root"));
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
         // 真实发送/媒体实现全程走本地替身：请求与响应都按官方接口形状对拍
         String stubBase = "http://127.0.0.1:" + API.getAddress().getPort();
         registry.add("dudu.channel.alipay.api-base", () -> stubBase);
