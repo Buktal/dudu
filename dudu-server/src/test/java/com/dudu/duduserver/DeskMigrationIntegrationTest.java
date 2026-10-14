@@ -87,8 +87,8 @@ class DeskMigrationIntegrationTest {
 
         MigrateResult upgraded = Flyway.configure().dataSource(url, user(), password()).load().migrate();
 
-        // 执行 V4 与 V5 两个迁移，既有 Admin 基线数据保留且重启可读
-        assertThat(upgraded.migrationsExecuted).isEqualTo(2);
+        // 执行 V4、V5 与 V6 三个迁移，既有 Admin 基线数据保留且重启可读
+        assertThat(upgraded.migrationsExecuted).isEqualTo(3);
         assertThat(old.queryForObject("SELECT company_name FROM company WHERE company_id = 784501", String.class))
             .isEqualTo("升级企业");
         assertThat(old.queryForObject("SELECT username FROM user WHERE user_id = 78451", String.class))
@@ -141,8 +141,8 @@ class DeskMigrationIntegrationTest {
 
         MigrateResult upgraded = Flyway.configure().dataSource(url, user(), password()).load().migrate();
 
-        // 只执行 V5：旧码值改写为新码值，其余渠道不动
-        assertThat(upgraded.migrationsExecuted).isEqualTo(1);
+        // 执行 V5 与 V6：旧码值改写为新码值，其余渠道不动
+        assertThat(upgraded.migrationsExecuted).isEqualTo(2);
         assertThat(v4.queryForObject("SELECT channel FROM company_channel WHERE company_channel_id = 78561", String.class))
             .isEqualTo("wechat-mp");
         assertThat(v4.queryForObject("SELECT channel FROM company_channel WHERE company_channel_id = 78563", String.class))

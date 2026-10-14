@@ -106,7 +106,7 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
     @Autowired RecordingSender sender;
 
     private long channelWechat;
-    private long channelDouyin;
+    private long channelBilibili;
     private long channelUnconfigured;
     private long scopedUserId;
     private String ownerToken;
@@ -122,7 +122,9 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
             Map.of("token", "reply-token", "appId", "wx_reply_appid", "appSecret", "reply-secret"));
         channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "未配凭据公众号",
             Map.of("token", "reply-token"));
-        channelDouyin = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.DOUYIN, "抖音号",
+        // 哔哩哔哩未接入渠道适配器：回复能力按暂未接入如实受限（抖音已接入发送，
+        // 缺凭据时的说明是渠道发送凭据未配置，不再是暂未接入）
+        channelBilibili = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.BILIBILI, "哔哩哔哩号",
             Map.of("token", "reply-token"));
 
         UserDO scoped = plainUser(COMPANY_ID, "reply.scoped", "坐席甲");
@@ -346,18 +348,18 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
         assertThat(unconfigured.getStr("state")).isEqualTo("restricted");
         assertThat(unconfigured.getJSONArray("kinds")).isEmpty();
         assertThat(unconfigured.getStr("reason")).isEqualTo("渠道发送凭据未配置");
-        JSONObject otherChannel = capability(channelDouyin, "reply-ext-9");
+        JSONObject otherChannel = capability(channelBilibili, "reply-ext-9");
         assertThat(otherChannel.getStr("state")).isEqualTo("restricted");
         assertThat(otherChannel.getStr("reason")).isEqualTo("当前渠道暂未接入发送");
 
         // 发送端再校验一次：不可发渠道不落库、不调用渠道
-        long douyinVisitor = visitorIdOf(channelDouyin, "reply-ext-9");
-        JSONObject rejected = send(scopedToken, douyinVisitor, body("cr-restricted-1", "抖音回复"));
+        long bilibiliVisitor = visitorIdOf(channelBilibili, "reply-ext-9");
+        JSONObject rejected = send(scopedToken, bilibiliVisitor, body("cr-restricted-1", "哔哩哔哩回复"));
         assertThat(rejected.getInt("code")).isEqualTo(12200);
         assertThat(rejected.getStr("msg")).isEqualTo("当前渠道暂未接入发送");
         assertThat(sender.texts).isEmpty();
         assertThat(jdbc.queryForObject("SELECT message_count FROM visitor WHERE visitor_id = ?", Integer.class,
-            douyinVisitor)).isEqualTo(1);
+            bilibiliVisitor)).isEqualTo(1);
 
         // 会话对象与能力接口同源：可发账号 allowed + ["text"]
         JSONObject conversation = data(JSONUtil.parseObj(mvc.perform(get("/api/desk/visitors/" +

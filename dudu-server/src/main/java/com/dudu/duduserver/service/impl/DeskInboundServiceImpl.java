@@ -128,8 +128,14 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         return patch;
     }
 
-    // 锁定读找到访客：同一访客的并发来信在此排队，重推判定与计数递增串行于行锁之后
+    // 锁定读找到访客：同一访客的并发来信在此排队，重推判定与计数递增串行于行锁之后。
+    // 先普通读再对存在的行加锁——对缺失行做锁定读会持间隙锁，与并发首信的插入意向锁
+    // 互为目标形成死锁（MySQL 判负一方整库回滚）；存在行的锁定读是纯记录锁，无此问题
     private VisitorDO findVisitor(CompanyChannelDO account, String externalUserId) {
+        VisitorDO visitor = visitorService.getOne(sourceOf(account, externalUserId));
+        if (visitor == null) {
+            return null;
+        }
         return visitorService.getOne(sourceOf(account, externalUserId).last(LOCK_ROW));
     }
 

@@ -117,7 +117,7 @@ class DeskMediaIntegrationTest {
 
     private long channelWechat;
     private long channelUnconfigured;
-    private long channelDouyin;
+    private long channelBilibili;
     private String ownerToken;
     private String outsideToken;
 
@@ -125,7 +125,7 @@ class DeskMediaIntegrationTest {
     private long publicUrlMessageId;
     private long replyMessageId;
     private long cardMessageId;
-    private long douyinMessageId;
+    private long bilibiliMessageId;
     private long unconfiguredMessageId;
 
     @BeforeAll
@@ -137,7 +137,8 @@ class DeskMediaIntegrationTest {
             Map.of("token", "media-token", "appId", "wx_media_appid", "appSecret", "media-secret"));
         channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "未配凭据公众号",
             Map.of("token", "media-token-2"));
-        channelDouyin = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.DOUYIN, "抖音号", Map.of("token", "x"));
+        // 哔哩哔哩未接入渠道适配器：素材读取按暂未接入如实受限
+        channelBilibili = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.BILIBILI, "哔哩哔哩号", Map.of("token", "x"));
         plainUser(COMPANY_ID, "media.outside");
         ownerToken = login("mediaowner");
         outsideToken = login("media.outside");
@@ -152,7 +153,7 @@ class DeskMediaIntegrationTest {
                 List.of(Map.of("kind", "image", "id", "ATT_A"), Map.of("kind", "file", "id", "ATT_B"))));
         cardMessageId = seedMessage(channelWechat, "media-ext-card",
             Map.of("type", "card", "kind", "order", "title", "订单卡片"));
-        douyinMessageId = seedMessage(channelDouyin, "media-ext-douyin",
+        bilibiliMessageId = seedMessage(channelBilibili, "media-ext-bilibili",
             Map.of("type", "image", "media", Map.of("kind", "image", "id", "DY_MEDIA")));
         unconfiguredMessageId = seedMessage(channelUnconfigured, "media-ext-nocreds",
             Map.of("type", "image", "media", Map.of("kind", "image", "id", "NO_CRED_MEDIA")));
@@ -238,10 +239,10 @@ class DeskMediaIntegrationTest {
 
     @Test
     void reportsUnsupportedChannelsAndChannelFailuresAsOrdinaryRErrors() throws Exception {
-        JSONObject douyin = errorOf(mvc.perform(get("/api/desk/messages/" + douyinMessageId + "/media")
+        JSONObject bilibili = errorOf(mvc.perform(get("/api/desk/messages/" + bilibiliMessageId + "/media")
             .header("Authorization", "Bearer " + ownerToken)).andReturn());
-        assertThat(douyin.getInt("code")).isEqualTo(12200);
-        assertThat(douyin.getStr("msg")).isEqualTo("当前渠道暂未接入素材读取");
+        assertThat(bilibili.getInt("code")).isEqualTo(12200);
+        assertThat(bilibili.getStr("msg")).isEqualTo("当前渠道暂未接入素材读取");
 
         JSONObject unconfigured = errorOf(mvc.perform(
             get("/api/desk/messages/" + unconfiguredMessageId + "/media")

@@ -241,7 +241,7 @@ class DeskVisitorIntegrationTest {
         JSONObject pending = data(query(token("owner"), "{\"status\": \"needs-reply\"}"));
         assertThat(ids(pending)).containsExactly("784102", "784101", "784107");
 
-        assertThat(query(token("owner"), "{\"channelId\": \"telegram\"}").getInt("code")).isEqualTo(11000);
+        assertThat(query(token("owner"), "{\"channelId\": \"no-such-channel\"}").getInt("code")).isEqualTo(11000);
         assertThat(query(token("owner"), "{\"status\": \"bogus\"}").getInt("code")).isEqualTo(11000);
         assertThat(query(token("owner"), "{\"order\": \"bogus\"}").getInt("code")).isEqualTo(11000);
     }
