@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.meituan;
 
 import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 
 /**
  * 美团合作中心错误响应描述（docs/research/channels/meituan.md §5.6、§6、§8 第 5 条）：
@@ -11,6 +12,17 @@ import cn.hutool.json.JSONObject;
 final class MeituanErrors {
 
     private MeituanErrors() {
+    }
+
+    /**
+     * 从原始响应识别错误形状：非 JSON 对象形态（含 XML 形态字符串，hutool 会将其解析为
+     * JSONObject，须按原文先判形）一律返回「响应无法识别」，不把无法识别的响应当成功。
+     */
+    static String describe(String rawResponse) {
+        if (rawResponse == null || !startsWithObject(rawResponse)) {
+            return "响应无法识别";
+        }
+        return describe(JSONUtil.parseObj(rawResponse));
     }
 
     // 识别到家族错误形状返回「code msg」描述，null 表示无错误形状
@@ -48,5 +60,17 @@ final class MeituanErrors {
             return codeText;
         }
         return codeText + " " + message;
+    }
+
+    // 首个非空白字符是 '{' 才按 JSON 对象解析（与微博素材读取的 isJson 同口径）
+    private static boolean startsWithObject(String raw) {
+        for (int i = 0; i < raw.length(); i++) {
+            char value = raw.charAt(i);
+            if (Character.isWhitespace(value)) {
+                continue;
+            }
+            return value == '{';
+        }
+        return false;
     }
 }

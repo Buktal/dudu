@@ -72,8 +72,8 @@ public class MeituanTextSender {
                 .body(form)
                 .retrieve()
                 .body(String.class);
-            JSONObject body = JSONUtil.parseObj(response);
-            String error = MeituanErrors.describe(body);
+            // 原文先判形再解析：XML 形态字符串会被 hutool 解析成 JSONObject，不能当成功
+            String error = MeituanErrors.describe(response);
             if (error != null) {
                 return ChannelSendResult.failed("美团消息发送失败：" + error);
             }
