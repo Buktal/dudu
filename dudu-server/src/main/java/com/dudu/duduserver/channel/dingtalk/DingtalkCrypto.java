@@ -18,7 +18,7 @@ import java.util.Base64;
  * 校验包尾 ownerKey 与期望一致。密钥与密文形态错误、包损坏、ownerKey 不一致一律抛
  * {@link IllegalArgumentException}，由协议层转拒绝响应。
  */
-final class DingtalkCrypto {
+public final class DingtalkCrypto {
 
     // AES 信封几何：随机串 16 字节 + 明文长度 4 字节（大端），其后是明文与 ownerKey
     private static final int RANDOM_BYTES = 16;
@@ -42,7 +42,7 @@ final class DingtalkCrypto {
      * @param encrypt   密文（Base64）
      * @return 签名十六进制串
      */
-    static String buildSignature(String token, String timestamp, String nonce, String encrypt) {
+    public static String buildSignature(String token, String timestamp, String nonce, String encrypt) {
         String[] params = {token, timestamp, nonce, encrypt};
         Arrays.sort(params);
         try {
@@ -70,7 +70,7 @@ final class DingtalkCrypto {
      * @param encrypt   密文（Base64）
      * @return 签名是否一致
      */
-    static boolean verify(String signature, String token, String timestamp, String nonce, String encrypt) {
+    public static boolean verify(String signature, String token, String timestamp, String nonce, String encrypt) {
         if (signature == null || signature.isEmpty()) {
             return false;
         }
@@ -86,7 +86,7 @@ final class DingtalkCrypto {
      * @param expectOwner 期望 ownerKey（企业 CorpId / 应用 appKey / 套件 SuiteKey）
      * @return 明文与实际包尾 ownerKey
      */
-    static PlainMessage decrypt(String encrypt, String aesKeyB64, String expectOwner) {
+    public static PlainMessage decrypt(String encrypt, String aesKeyB64, String expectOwner) {
         byte[] aesKey = deriveAesKey(aesKeyB64);
         byte[] packed = aesCbc(false, decodeStrict(encrypt, "密文不是合法 Base64"), aesKey);
         if (packed.length < RANDOM_BYTES + LENGTH_BYTES) {
@@ -127,7 +127,7 @@ final class DingtalkCrypto {
      * @param ownerKey 包尾归属标识
      * @return 密文（Base64）
      */
-    static String encrypt(String message, String aesKeyB64, String ownerKey) {
+    public static String encrypt(String message, String aesKeyB64, String ownerKey) {
         byte[] aesKey = deriveAesKey(aesKeyB64);
         byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
         byte[] ownerBytes = ownerKey.getBytes(StandardCharsets.UTF_8);
@@ -180,6 +180,6 @@ final class DingtalkCrypto {
     /**
      * 解密产物：明文与包尾 ownerKey（钉钉 ReceiveId 双维度：企业 CorpId / 应用 appKey）。
      */
-    record PlainMessage(String message, String ownerKey) {
+    public record PlainMessage(String message, String ownerKey) {
     }
 }
