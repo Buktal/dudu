@@ -33,15 +33,19 @@ import java.util.Map;
 /**
  * 入站信件实现：来源唯一键 (company_id, company_channel_id, external_user_id) 找到或创建访客，
  * 同事务创建空名片；message_count 用单条 UPDATE 原子递增并回读分配 sequence，随后写入消息与
- * 最后消息/接待状态。渠道推送按 at-least-once 重发，同访客同渠道消息标识已落库即幂等跳过；
- * 渠道资料按未提供、空值与有效值区分更新，推送在事务提交后发出且失败不影响落库。
+ * 最后消息/接待状态。渠道推送按 at-least-once 重发，同访客同渠道消息标识已落库即幂等跳过：
+ * 来信先锁定访客行串行化同一访客的并发来信，重推判定基于锁定后读到的最新已提交数据，
+ * message.message 的唯一键 uk_message_external (visitor_id, external_message_id)（V6）作
+ * 数据库最终防线，冲突事务整体回滚即不产生重复计数；渠道资料按未提供、空值与有效值区分更新，
+ * 推送在事务提交后发出且失败不影响落库。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeskInboundServiceImpl implements DeskInboundService {
 
-    // 并发首信撞唯一键后回读用的行锁片段：锁定读绕过可重复读快照，取另一事务已提交的行
+    // 行锁片段：锁定读绕过可重复读快照，读到并发事务已提交的最新行（来信串行化与
+    // 并发首信撞唯一键后的回读共用）
     private static final String LOCK_ROW = "FOR UPDATE";
 
     private final VisitorService visitorService;
@@ -57,8 +61,10 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         VisitorDO visitor = findVisitor(account, inbound.externalUserId());
         if (visitor == null) {
             visitor = createVisitor(account, inbound, now);
-        } else if (redelivered(visitor.getVisitorId(), inbound)) {
-            // 渠道应答超时后重推同一封信（at-least-once）：已落库即幂等跳过，不重复计数
+        }
+        if (redelivered(visitor.getVisitorId(), inbound)) {
+            // 渠道应答超时后重推同一封信（at-least-once）：已落库即幂等跳过，不重复计数；
+            // 判定在访客行锁之后，并发首信创建访客的败方也能看到胜方已落库的同标识消息
             log.info("[desk] 来信重推幂等跳过, companyChannelId={}, externalMessageId={}",
                 account.getCompanyChannelId(), inbound.externalMessageId());
             return;
@@ -122,8 +128,9 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         return patch;
     }
 
+    // 锁定读找到访客：同一访客的并发来信在此排队，重推判定与计数递增串行于行锁之后
     private VisitorDO findVisitor(CompanyChannelDO account, String externalUserId) {
-        return visitorService.getOne(sourceOf(account, externalUserId));
+        return visitorService.getOne(sourceOf(account, externalUserId).last(LOCK_ROW));
     }
 
     // 渠道消息标识（wamid/msgid 等）在本访客名下已落库即重推；未提供标识的信件不判重

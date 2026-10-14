@@ -23,9 +23,6 @@ class QqAdapterTest {
     private static final String GOLDEN_SECRET = "DG5g3B4j9X2KOErG";
     private static final String GOLDEN_PLAIN_TOKEN = "Arq0D5A61EgUu4OxUvOp";
     private static final String GOLDEN_EVENT_TS = "1725442341";
-    private static final String GOLDEN_HANDSHAKE_SIGNATURE =
-        "87befc99c42c651b3aac0278e71ada338433ae26fcb24307bdc5ad38c1adc2d0"
-            + "1bcfcadc0842edac85e85205028a1132afe09280305f13aa6909ffc2d652c706";
 
     private final QqProtocol protocol = new QqProtocol();
     private final QqAdapter adapter = new QqAdapter(protocol,
@@ -45,21 +42,43 @@ class QqAdapterTest {
     }
 
     @Test
-    void handshakeAnswersGoldenSignatureAndUnverifiableRequestsBadRequest() {
-        // 官方 op13 握手（§3.2）：应答 plain_token 回显 + 黄金签名
+    void handshakeAnswersFreshRequestAndUnverifiableOrStaleRequestsBadRequest() {
+        // 官方 op13 握手（§3.2）：应答 plain_token 回显 + event_ts+plain_token 签名；
+        // 黄金签名本身由 QqProtocolTest 锚定，适配器层只应答新鲜 event_ts（防滥用窗口）
+        String freshTs = String.valueOf(java.time.Instant.now().getEpochSecond());
         ChannelReceiveResult ok = adapter.receive(account(Map.of("appSecret", GOLDEN_SECRET)), Map.of(),
             new HttpHeaders(), "{\"op\":13,\"d\":{\"plain_token\":\"" + GOLDEN_PLAIN_TOKEN
-                + "\",\"event_ts\":\"" + GOLDEN_EVENT_TS + "\"}}");
+                + "\",\"event_ts\":\"" + freshTs + "\"}}");
         assertThat(ok.message()).isNull();
         assertThat(ok.response().status()).isEqualTo(200);
-        assertThat(ok.response().body()).isEqualTo("{\"plain_token\":\"" + GOLDEN_PLAIN_TOKEN
-            + "\",\"signature\":\"" + GOLDEN_HANDSHAKE_SIGNATURE + "\"}");
+        assertThat(ok.response().body())
+            .isEqualTo(protocol.handshakeResponse(GOLDEN_SECRET, GOLDEN_PLAIN_TOKEN, freshTs));
 
-        // 握手报文缺 plain_token / event_ts 无法应答，按参数错误拒绝
+        // 窗口下沿（恰 300 秒前）仍应答签名
+        String edgeTs = String.valueOf(java.time.Instant.now().getEpochSecond() - 300);
         assertThat(adapter.receive(account(Map.of("appSecret", GOLDEN_SECRET)), Map.of(), new HttpHeaders(),
-            "{\"op\":13,\"d\":{\"event_ts\":\"" + GOLDEN_EVENT_TS + "\"}}").response().status()).isEqualTo(400);
+            "{\"op\":13,\"d\":{\"plain_token\":\"p\",\"event_ts\":\"" + edgeTs + "\"}}")
+            .response().status()).isEqualTo(200);
+
+        // 超窗握手不应答签名（官方黄金报文的 2024 年时间戳在此被拒）：旧握手骗签可再攻击
+        // op0 验签（协议弱点缓解）
+        assertThat(adapter.receive(account(Map.of("appSecret", GOLDEN_SECRET)), Map.of(), new HttpHeaders(),
+            "{\"op\":13,\"d\":{\"plain_token\":\"" + GOLDEN_PLAIN_TOKEN + "\",\"event_ts\":\""
+                + GOLDEN_EVENT_TS + "\"}}").response().status()).isEqualTo(400);
+        // 未来时间超窗同样拒绝
+        String futureTs = String.valueOf(java.time.Instant.now().getEpochSecond() + 301);
+        assertThat(adapter.receive(account(Map.of("appSecret", GOLDEN_SECRET)), Map.of(), new HttpHeaders(),
+            "{\"op\":13,\"d\":{\"plain_token\":\"p\",\"event_ts\":\"" + futureTs + "\"}}")
+            .response().status()).isEqualTo(400);
+
+        // 握手报文缺 plain_token / event_ts / 非数字 event_ts 无法应答，按参数错误拒绝
+        assertThat(adapter.receive(account(Map.of("appSecret", GOLDEN_SECRET)), Map.of(), new HttpHeaders(),
+            "{\"op\":13,\"d\":{\"event_ts\":\"" + freshTs + "\"}}").response().status()).isEqualTo(400);
         assertThat(adapter.receive(account(Map.of("appSecret", GOLDEN_SECRET)), Map.of(), new HttpHeaders(),
             "{\"op\":13,\"d\":{}}").response().status()).isEqualTo(400);
+        assertThat(adapter.receive(account(Map.of("appSecret", GOLDEN_SECRET)), Map.of(), new HttpHeaders(),
+            "{\"op\":13,\"d\":{\"plain_token\":\"p\",\"event_ts\":\"not-a-number\"}}")
+            .response().status()).isEqualTo(400);
     }
 
     @Test
@@ -122,8 +141,10 @@ class QqAdapterTest {
             "{\"op\":0,\"t\":\"X\",\"d\":{}}").response().status()).isEqualTo(501);
 
         // 只配 appSecret 的账号仍可回调验签
+        String freshTs = String.valueOf(java.time.Instant.now().getEpochSecond());
         assertThat(adapter.receive(account(Map.of("appSecret", GOLDEN_SECRET)), Map.of(), new HttpHeaders(),
-            "{\"op\":13,\"d\":{\"plain_token\":\"p\",\"event_ts\":\"1\"}}").response().status()).isEqualTo(200);
+            "{\"op\":13,\"d\":{\"plain_token\":\"p\",\"event_ts\":\"" + freshTs + "\"}}")
+            .response().status()).isEqualTo(200);
 
         // 接口凭据缺失如实限制发送；素材读取凭 URL 直读，不受凭据限制
         assertThat(adapter.sendRestriction(account(Map.of("appSecret", GOLDEN_SECRET))))

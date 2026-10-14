@@ -10,6 +10,7 @@
 > 3. 支付宝官方 GitHub `alipay-sdk-php-all` V3 文档（AlipayOpenPublicMessageCustomApi）——custom.send 频控与 48h 窗口第二源。
 > 第 1、3 条域不在上方 primary 名单内（名单系 09-27 那轮 WebSearch 口径），因同为支付宝官方发布渠道而采信；文档年代（2016/2017）照录，未见官方声明废弃。
 > GBK 落地注意（10-14）：网关验证与被动通知实测口径 `charset=GBK`（示例工程常量、握手样例一致）；DUDU 服务端按原始字符串读 body，ASCII 内容安全，中文 Content 的实际编码行为待真实环境核验。
+> 验签钥落地注意（10-14 review 修正）：回调验签按 §4.3/§3.2 用**支付宝平台公钥**（控制台开发设置页下发的"支付宝公钥"，DUDU channel_info 存 `alipayPublicKey`，X.509 Base64/PEM）；应用私钥（`appPrivateKey`）只作请求加签与握手回包签名（`biz_content` 开发者公钥由它推导）。官方 rsaCheckV2 示例（§3.2 逐字）第二参数即支付宝公钥——误用应用公钥验签时官方真实推送全部验签失败，此为 2026-10-14 review 修正项。
 
 ## 1. 官方文档入口与关键页面地址
 

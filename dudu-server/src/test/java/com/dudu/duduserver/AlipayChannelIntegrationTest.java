@@ -437,6 +437,8 @@ class AlipayChannelIntegrationTest extends DeskIntegrationSupport {
         info.put("url", "https://dudu.example.com/api/channels/alipay-full/callback");
         info.put("appId", APP_ID);
         info.put("appPrivateKey", Base64.getMimeEncoder().encodeToString(keyPair.getPrivate().getEncoded()));
+        // 回调验签钥（§4.3 支付宝平台公钥）：本测试报文由自造密钥对加签，平台公钥即其对钥
+        info.put("alipayPublicKey", Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()));
         return info;
     }
 

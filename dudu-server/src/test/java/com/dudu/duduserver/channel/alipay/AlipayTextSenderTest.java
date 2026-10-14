@@ -40,6 +40,9 @@ class AlipayTextSenderTest {
     private static final String SEND_PATH = "/gateway.do";
     private static final Pattern TIMESTAMP = Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}");
 
+    // 平台公钥（回调验签用）：发送链路不解析它，但凭据集要求三键齐全
+    private static final String ALIPAY_PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA";
+
     private static KeyPair keyPair;
 
     private final List<String> contentTypes = new CopyOnWriteArrayList<>();
@@ -153,7 +156,8 @@ class AlipayTextSenderTest {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setChannel(ChannelEnum.ALIPAY);
         account.setChannelInfo(Map.of("appId", "2014072300007148",
-            "appPrivateKey", Base64.getMimeEncoder().encodeToString(keyPair.getPrivate().getEncoded())));
+            "appPrivateKey", Base64.getMimeEncoder().encodeToString(keyPair.getPrivate().getEncoded()),
+            "alipayPublicKey", ALIPAY_PUBLIC_KEY));
         return account;
     }
 

@@ -11,21 +11,24 @@ import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Map;
 import java.util.TreeMap;
 
 /**
  * 支付宝 RSA2 签名与验签（事实见 docs/research/channels/alipay.md §3.2、§4.1、§4.3）：
- * RSA2 = SHA256WithRSA（2048 位），sign 为 Base64。回调验签双口径——生活号口径待验签串
- * **保留 sign_type**（仅剔除 sign；官方示例工程 rsaCheckV2 实证，§4.3 生活号例外），通用
- * 口径剔除 sign 与 sign_type（rsaCheckV1，支付类通知与 mock-pulse 探测语义）；两条均为
- * 官方 02mse7 载明规则，任一通过即认定来自持密方。请求加签按官方规则剔除 sign 与空值参数
- * （sign_type 参与）。§4.3 的 url_decode 在参数收集处完成（Servlet 表单解析已解码），本类
- * 不再二次解码。GBK 注意：待签串按 UTF-8 字节签名，官方网关实测 GBK——ASCII 参数两种
- * 编码字节一致，中文内容参数的真实环境行为见事实库 GBK 落地注意。PKCS#1 私钥格式 JDK
- * 不能直读（密钥工具 Java 版产出 PKCS#8），按无法解析如实失败；凭据公钥由私钥推导
- * （CRT 私钥自带模数与公钥指数；非 CRT 私钥按 RSA 应用实践取 65537）。
+ * RSA2 = SHA256WithRSA（2048 位），sign 为 Base64。回调验签按官方口径用支付宝平台公钥
+ * （§4.3 第 4 步、§3.2 rsaCheckV2 逐字），双口径——生活号口径待验签串**保留 sign_type**
+ * （仅剔除 sign；官方示例工程 rsaCheckV2 实证，§4.3 生活号例外），通用口径剔除 sign 与
+ * sign_type（rsaCheckV1，支付类通知与 mock-pulse 探测语义）；两条均为官方 02mse7 载明
+ * 规则，任一通过即认定来自持密方。请求加签与握手回包签名用应用私钥，按官方规则剔除
+ * sign 与空值参数（sign_type 参与）。§4.3 的 url_decode 在参数收集处完成（Servlet 表单
+ * 解析已解码），本类不再二次解码。GBK 注意：待签串按 UTF-8 字节签名，官方网关实测
+ * GBK——ASCII 参数两种编码字节一致，中文内容参数的真实环境行为见事实库 GBK 落地注意。
+ * PKCS#1 私钥格式 JDK 不能直读（密钥工具 Java 版产出 PKCS#8），按无法解析如实失败；
+ * 握手回包的开发者公钥由私钥推导（CRT 私钥自带模数与公钥指数；非 CRT 私钥按 RSA 应用
+ * 实践取 65537）。
  */
 final class AlipaySignature {
 
@@ -40,8 +43,9 @@ final class AlipaySignature {
     }
 
     /**
-     * 回调验签双口径：生活号口径（保留 sign_type）优先，不通过再按通用口径（剔除
-     * sign_type）复核；两者都失败才视为验签失败。私钥无法解析或签名损坏按失败返回。
+     * 回调验签双口径：验签钥为 channel_info 配置的支付宝平台公钥（§4.3 第 4 步）。
+     * 生活号口径（保留 sign_type）优先，不通过再按通用口径（剔除 sign_type）复核；
+     * 两者都失败才视为验签失败。公钥无法解析或签名损坏按失败返回。
      */
     static boolean verify(AlipayCredentials credentials, Map<String, String> params) {
         if (credentials == null || params == null || isBlank(params.get(FIELD_SIGN))) {
@@ -49,7 +53,7 @@ final class AlipaySignature {
         }
         PublicKey publicKey;
         try {
-            publicKey = publicKeyOf(credentials.appPrivateKey());
+            publicKey = platformPublicKeyOf(credentials.alipayPublicKey());
         } catch (GeneralSecurityException | IllegalArgumentException e) {
             return false;
         }
@@ -87,12 +91,19 @@ final class AlipaySignature {
      * 解析 channel_info 存放的应用私钥（PKCS#8 Base64/PEM）为 {@link PrivateKey}。
      */
     static PrivateKey privateKeyOf(String appPrivateKey) throws GeneralSecurityException {
-        return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(privateKeyDer(appPrivateKey)));
+        return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(storedKeyDer(appPrivateKey)));
+    }
+
+    /**
+     * 解析 channel_info 存放的支付宝平台公钥（X.509 Base64/PEM）为 {@link PublicKey}。
+     */
+    static PublicKey platformPublicKeyOf(String alipayPublicKey) throws GeneralSecurityException {
+        return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(storedKeyDer(alipayPublicKey)));
     }
 
     private static PublicKey publicKeyOf(String appPrivateKey) throws GeneralSecurityException {
         PrivateKey privateKey = KeyFactory.getInstance("RSA")
-            .generatePrivate(new PKCS8EncodedKeySpec(privateKeyDer(appPrivateKey)));
+            .generatePrivate(new PKCS8EncodedKeySpec(storedKeyDer(appPrivateKey)));
         // CRT 私钥自带模数与公钥指数，公钥可严格推导
         if (privateKey instanceof RSAPrivateCrtKey crtKey) {
             return KeyFactory.getInstance("RSA")
@@ -102,8 +113,8 @@ final class AlipaySignature {
             .generatePublic(new RSAPublicKeySpec(((RSAPrivateKey) privateKey).getModulus(), RSA_PUBLIC_EXPONENT));
     }
 
-    // channel_info 私钥值：兼容 PKCS#8 的 PEM 盔甲与裸 Base64 DER 两种存放形态
-    private static byte[] privateKeyDer(String stored) {
+    // channel_info 密钥值：兼容 PEM 盔甲（私钥 PKCS#8、公钥 X.509）与裸 Base64 DER 两种存放形态
+    private static byte[] storedKeyDer(String stored) {
         StringBuilder base64 = new StringBuilder();
         for (String line : stored.split("\\r?\\n")) {
             if (line.contains("-----")) {

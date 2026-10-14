@@ -16,10 +16,12 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 支付宝回调验签验证（事实见 docs/research/channels/alipay.md §3.2、§4.3）：生活号口径为
- * 待验签串保留 sign_type（仅剔除 sign，官方示例工程 rsaCheckV2 实证），向量用本测试自造
- * RSA 密钥对生成；mock-pulse 探测按通用 rsaCheckV1 语义加签（剔除 sign 与 sign_type），
- * 官方通用规则亦然，实现须两者都接受（生活号口径优先）。事实库 §5.1 拼串不可作验签向量。
+ * 支付宝回调验签验证（事实见 docs/research/channels/alipay.md §3.2、§4.3）：回调验签用
+ * 支付宝平台公钥（§4.3 第 4 步），向量以本测试自造的平台密钥对加签生成；应用私钥只作
+ * 握手回包签名（biz_content 开发者公钥由它推导）。生活号口径为待验签串保留 sign_type
+ * （仅剔除 sign，官方示例工程 rsaCheckV2 实证）；mock-pulse 探测按通用 rsaCheckV1 语义
+ * 加签（剔除 sign 与 sign_type），官方通用规则亦然，实现须两者都接受（生活号口径优先）。
+ * 事实库 §5.1 拼串不可作验签向量。
  */
 class AlipayProtocolTest {
 
@@ -30,15 +32,19 @@ class AlipayProtocolTest {
             + "<ActionParam></ActionParam><AgreementId></AgreementId><AccountNo></AccountNo></XML>";
 
     private static KeyPair keyPair;
+    private static KeyPair platformKeyPair;
     private static AlipayCredentials credentials;
     private final AlipayProtocol protocol = new AlipayProtocol();
 
     @BeforeAll
     static void generateKeyPair() throws Exception {
-        // 测试自造 RSA2 密钥对（2048 位）：channel_info 只存 PKCS#8 私钥（Base64），与生产形状一致
+        // 测试自造两对 RSA2 密钥对（2048 位）：应用对作握手回包签名与开发者公钥推导，
+        // 平台对模拟支付宝侧加签（channel_info 存其公钥，PKCS#8/X.509 Base64 与生产一致）
         keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair();
+        platformKeyPair = KeyPairGenerator.getInstance("RSA").genKeyPair();
         credentials = new AlipayCredentials("2014072300007148",
-            Base64.getMimeEncoder().encodeToString(keyPair.getPrivate().getEncoded()));
+            Base64.getMimeEncoder().encodeToString(keyPair.getPrivate().getEncoded()),
+            Base64.getMimeEncoder().encodeToString(platformKeyPair.getPublic().getEncoded()));
     }
 
     @Test
@@ -64,6 +70,10 @@ class AlipayProtocolTest {
         KeyPair foreign = KeyPairGenerator.getInstance("RSA").genKeyPair();
         Map<String, String> foreignParams = handshakeParams(signWith(foreign, toVerify()));
         assertThat(protocol.verify(credentials, foreignParams)).isFalse();
+
+        // 用应用私钥签出的签名（官方验签方为支付宝平台公钥）：验签必须失败
+        Map<String, String> appSignedParams = handshakeParams(signWith(keyPair, toVerify()));
+        assertThat(protocol.verify(credentials, appSignedParams)).isFalse();
     }
 
     @Test
@@ -233,9 +243,9 @@ class AlipayProtocolTest {
         return "biz_content=" + HANDSHAKE_XML + "&charset=GBK&service=alipay.service.check&sign_type=RSA2";
     }
 
-    // 用本测试密钥对作 SHA256withRSA 签名（官方加签算法，§4.1）
+    // 用本测试平台密钥对作 SHA256withRSA 签名（官方加签算法与验签方，§4.1/§4.3）
     private String sign(String toVerify) throws Exception {
-        return signWith(keyPair, toVerify);
+        return signWith(platformKeyPair, toVerify);
     }
 
     private String signWith(KeyPair pair, String toVerify) throws Exception {

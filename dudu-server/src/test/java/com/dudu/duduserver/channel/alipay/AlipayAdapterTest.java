@@ -40,6 +40,7 @@ class AlipayAdapterTest {
             + "<EventType><![CDATA[follow]]></EventType></XML>";
 
     private static KeyPair keyPair;
+    private static KeyPair platformKeyPair;
     private static AlipayCredentials credentials;
 
     private final AlipayProtocol protocol = new AlipayProtocol();
@@ -47,9 +48,12 @@ class AlipayAdapterTest {
 
     @BeforeAll
     static void generateKeyPair() throws Exception {
+        // 应用对作握手回包签名与开发者公钥推导；平台对模拟支付宝侧加签（验签钥为其公钥）
         keyPair = KeyPairGenerator.getInstance("RSA").genKeyPair();
+        platformKeyPair = KeyPairGenerator.getInstance("RSA").genKeyPair();
         credentials = new AlipayCredentials("2014072300007148",
-            Base64.getMimeEncoder().encodeToString(keyPair.getPrivate().getEncoded()));
+            Base64.getMimeEncoder().encodeToString(keyPair.getPrivate().getEncoded()),
+            Base64.getMimeEncoder().encodeToString(platformKeyPair.getPublic().getEncoded()));
     }
 
     @Test
@@ -198,7 +202,7 @@ class AlipayAdapterTest {
     private String sign(String toVerify) {
         try {
             Signature signature = Signature.getInstance("SHA256withRSA");
-            signature.initSign(keyPair.getPrivate());
+            signature.initSign(platformKeyPair.getPrivate());
             signature.update(toVerify.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(signature.sign());
         } catch (Exception e) {
@@ -212,7 +216,8 @@ class AlipayAdapterTest {
         account.setChannel(ChannelEnum.ALIPAY);
         if (channelCredentials != null) {
             account.setChannelInfo(Map.of("appId", channelCredentials.appId(),
-                "appPrivateKey", channelCredentials.appPrivateKey()));
+                "appPrivateKey", channelCredentials.appPrivateKey(),
+                "alipayPublicKey", channelCredentials.alipayPublicKey()));
         }
         return account;
     }

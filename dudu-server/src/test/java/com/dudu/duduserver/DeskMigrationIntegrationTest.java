@@ -12,9 +12,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * V4 三表与 V5 渠道码值迁移的独立 MySQL 验收：空库（或已迁移库）上全程执行后的结构契约、
- * V3 状态库升级后旧数据保留与三表可用、V4 状态库存量 wechat 行改写为 wechat-mp；
- * 通过环境变量显式启用，不使用开发库。空库路径由运行前重建 dudu_review 保证；本类同时可独立运行。
+ * V4 三表、V5 渠道码值与 V6 消息唯一键迁移的独立 MySQL 验收：空库（或已迁移库）上全程
+ * 执行后的结构契约、V3 状态库升级后旧数据保留与三表可用、V4 状态库存量 wechat 行改写为
+ * wechat-mp；通过环境变量显式启用，不使用开发库。空库路径由运行前重建 dudu_review 保证；
+ * 本类同时可独立运行。
  */
 @EnabledIfEnvironmentVariable(named = "DUDU_INTEGRATION_TEST", matches = "true")
 class DeskMigrationIntegrationTest {
@@ -35,6 +36,10 @@ class DeskMigrationIntegrationTest {
         assertThat(jdbc.queryForObject(
             "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '5' AND success = 1", Long.class))
             .isEqualTo(1);
+        // V6 全程跑通：渠道重推幂等唯一键迁移记录成功
+        assertThat(jdbc.queryForObject(
+            "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '6' AND success = 1", Long.class))
+            .isEqualTo(1);
 
         // 外部标识保留大小写：二进制排序规则
         assertThat(collationOf(jdbc, "visitor", "external_user_id")).isEqualTo(VARCHAR_EXTERNAL_BIN);
@@ -47,7 +52,7 @@ class DeskMigrationIntegrationTest {
         // 三表契约索引
         assertThat(indexNames(jdbc, "visitor")).contains("uk_visitor_source", "idx_visitor_account_status");
         assertThat(indexNames(jdbc, "visitor_profile")).containsExactly("PRIMARY");
-        assertThat(indexNames(jdbc, "message")).contains("uk_message_sequence");
+        assertThat(indexNames(jdbc, "message")).contains("uk_message_sequence", "uk_message_external");
         // 不设外键的约定在 V4 之后仍成立
         assertThat(jdbc.queryForObject(
             "SELECT COUNT(*) FROM information_schema.referential_constraints WHERE constraint_schema = DATABASE()", Long.class))

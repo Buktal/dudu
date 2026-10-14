@@ -36,6 +36,9 @@ class AlipayMediaReaderTest {
     private static final String MEDIA_PATH = "/chat/multimedia.do";
     private static final byte[] IMAGE_BYTES = new byte[]{(byte) 0x89, 'P', 'N', 'G', 1, 2, 3, 4};
 
+    // 平台公钥（回调验签用）：媒体链路不解析它，但凭据集要求三键齐全
+    private static final String ALIPAY_PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA";
+
     private static KeyPair keyPair;
 
     private final List<String> bodies = new CopyOnWriteArrayList<>();
@@ -128,7 +131,8 @@ class AlipayMediaReaderTest {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setChannel(ChannelEnum.ALIPAY);
         account.setChannelInfo(Map.of("appId", "2014072300007148",
-            "appPrivateKey", Base64.getMimeEncoder().encodeToString(keyPair.getPrivate().getEncoded())));
+            "appPrivateKey", Base64.getMimeEncoder().encodeToString(keyPair.getPrivate().getEncoded()),
+            "alipayPublicKey", ALIPAY_PUBLIC_KEY));
         return account;
     }
 

@@ -17,11 +17,12 @@ import java.util.Optional;
 /**
  * 支付宝生活号适配器：组合回调验签协议、客服消息纯文本发送与媒体下载，聚合该渠道的
  * 服务器验证、入站接收与发送/读取能力说明（事实见 docs/research/channels/alipay.md）。
- * 回调凭据 appId/appPrivateKey 住在 channel_info（{@link AlipayCredentials}）；官方网关
- * 验证握手为 POST 表单（§3.2，官方示例工程 doGet 委托 doPost），无 GET 验证阶段，
- * verifyUrl 按不支持应答；POST 侧 service=alipay.service.check 回签名 XML 信封完成
- * 开发者模式激活，被动通知按 MsgType 落访客消息并回无签名 XML ack（§2.3）；无
- * biz_content 的表单推送（支付类通知形态、mock-pulse 探测）验签通过后按 success 应答。
+ * 回调凭据 appId/appPrivateKey/alipayPublicKey 住在 channel_info（{@link AlipayCredentials}
+ * ，验签用平台公钥）；官方网关验证握手为 POST 表单（§3.2，官方示例工程 doGet 委托
+ * doPost），无 GET 验证阶段，verifyUrl 按不支持应答；POST 侧 service=alipay.service.check
+ * 回签名 XML 信封完成开发者模式激活，被动通知按 MsgType 落访客消息并回无签名 XML ack
+ * （§2.3）；无 biz_content 的表单推送（支付类通知形态、mock-pulse 探测）验签通过后按
+ * success 应答。
  */
 @Component
 public class AlipayAdapter implements ChannelAdapter {
