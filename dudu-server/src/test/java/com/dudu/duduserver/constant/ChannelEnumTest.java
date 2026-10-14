@@ -17,6 +17,14 @@ class ChannelEnumTest {
     }
 
     @Test
+    void xiaohongshuKeepsThePreexistingCodeAndDisplayNameUnchanged() {
+        // #117 动工前枚举已存在：码值与显示名维持原样，接入不改值
+        assertThat(ChannelEnum.XIAOHONGSHU.getCode()).isEqualTo("xiaohongshu");
+        assertThat(ChannelEnum.XIAOHONGSHU.getDisplayName()).isEqualTo("小红书");
+        assertThat(ChannelEnum.fromCode("xiaohongshu")).isEqualTo(ChannelEnum.XIAOHONGSHU);
+    }
+
+    @Test
     void weiboCarriesTheTicketCodeAndDisplayName() {
         assertThat(ChannelEnum.WEIBO.getCode()).isEqualTo("weibo");
         assertThat(ChannelEnum.WEIBO.getDisplayName()).isEqualTo("微博");
