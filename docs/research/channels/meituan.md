@@ -287,6 +287,21 @@ POST https://waimaiopen.meituan.com/gw/mop/order/query（到店秒提查询，�
 
 ---
 
+## 8. 实施补证（2026-10-14，#109 动工前置）
+
+方法：WebSearch 官方站内摘录（docDetail/455、456、842、844、845 标题与请求示例片段）+ mock-pulse meituan 适配器源码对拍（行为基线，只读）+ cnblogs 美团回调生产代码互证。仍未取得官方原文的部分维持 §7 待核验，不编造。
+
+1. **推送验签待签串含完整回调 URL**（§4.1 的 URL 语义补实）：mock-pulse `meituan/tests/chain.rs` 接收侧重签用 `url = format!("http://{host}{}", request_path)`，cnblogs 生产代码用 `"https://" + serverName + requestURI + "?" + TreeMap 排序串 + secret` → MD5 小写——两源一致证明待签串中的「请求 url」= `scheme://host/path` 全路径，排序串以 `?` 与 URL 相接。Server 侧落地：回调路径由统一路由确定性派生（`/api/channels/{id}/callback`），host 取请求 Host 头重建；scheme 恒 `http`（官方端口仅 80/8080 明文，guide/6），反代 https 场景未加 X-Forwarded-Proto 防御（边界注明，不为假想场景加逻辑）。
+2. **「解码 2 次」的工程语义**：Spring `@RequestParam` 表单值已被容器解码一次，适配器对每个值再 `URLDecoder.decode` 一次即官方口径；解码失败（畸形 `%` 序列）保留一次解码值。cnblogs 生产代码对整个待签串再 decode 一次，与逐值 decode 等价（中文值一次解码后不再含 `%`/`+`）。
+3. **IM 接口族路径前缀实锤**：`https://waimaiopen.meituan.com/api/v1/wm/IM/setPoiIMStatus`（docDetail/456 摘录）、`getPoiIMStatus`（docDetail/455）——IM 管理/发送接口在 `/api/v1/wm/IM/` 族下；但 `msg/send`（docDetail/845 标题实锤的官方 API 名）的完整 URL 未取得官方原文。落地：发送地址 = `dudu.channel.meituan.api-base`（默认 `https://waimaiopen.meituan.com/api/v1`）+ `/msg/send`，生产接入时按 docDetail/845 原文核对路径段。
+4. **docDetail/842 字段表与请求示例**：搜索摘录显示请求示例含 `"extended_field": "example"`，字段 `biz_type/app_poi_code/push_content/extended_field` 与 §5.4 一致；`push_content` 内部结构（图片/语音/订单卡片）仍未取得官方原文（§7 第 5 条维持待核验）。guide/40（IM WebSocket SDK）摘录露出字段族 `msg_source`（1 商家/2 用户）、`msg_type`（1 文字/2 图片/3 其他）、`open_user_id`、`order_id`——佐证顾客级标识存在，但 HTTP 回调内的承载形态未实锤。
+5. **msg/send 应用级参数与响应形状**：未取得官方原文（§7 第 6 条相关）。落地按以下实现选择（生产接入须核对）：会话目标与内容沿用回调字段同名词法 `biz_type=1`（两方会话，§2.4 实锤支持值）+ `app_poi_code` + `push_content`；响应按「合作中心 API 家族错误形状缺席即成功」解析——已实锤的错误形状为 `{"data":"ng","error":{"code":808,"msg":…}}`（§5.6）与 `{"code":803,"msg":"不存在此门店"}`（context7 官方文档镜像摘录）、`code 703 签名错/700 系统错`（§6），三类任一出现如实失败，否则成功（接口不返回消息标识）。
+6. **访客身份粒度**：IM 单聊回调已实锤字段中无顾客级标识（见第 4 条），`app_poi_code` 是唯一实锤的会话归属标识 → 落地选择 externalUserId = `app_poi_code`（会话粒度=门店），`push_content` 结构实锤后再细化到顾客级。发送侧 `app_poi_code` 即该会话目标，往返自洽。
+7. **入站媒体**：官方素材下载接口未实锤（§7 第 5/6 条）→ 媒体读取按现状如实处理：未配置凭据按受限说明；凭据齐备时也如实返回「接口未实锤」失败，不编造下载链路（票面渠道要点第 4 条口径）。
+8. **未知表单形态**：验签通过的推送若不含 `biz_type`/`order_id`/`op_type` 任一判型键（美团推送族以事件为主体），按事件只应答 `{"data":"ok"}`，不落访客数据、不拒绝（拒绝会触发渠道 1 分钟×3 重推+短信报警）。
+
+---
+
 ## 附：对 MockPulse 模拟的直接含义（速查）
 
 - 模拟"美团推单给回调"：`POST` 普通表单参数（**非 JSON，Content-Type: text**，参数未排序），至少含 `app_id/timestamp/sig/order_id/app_poi_code`，签名= `MD5(回调URL全路径 + ? + 全字段除sig字母序&连接 + app_secret)` 小写；中文先 utf8、再中文二次解码后验签；端口仅 80/8080。
