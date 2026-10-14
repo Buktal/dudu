@@ -181,6 +181,15 @@ class WecomProtocolTest {
             <MsgId>1234567890123456</MsgId><AgentID>1</AgentID></xml>
             """).content();
         assertThat(broken.get("type")).isEqualTo("unknown");
+
+        // 坐标溢出为非有限值（parseDouble 对 1e999 不抛异常）同样落 unknown，不产出契约外数值
+        Map<String, Object> overflow = parse("""
+            <xml><ToUserName><![CDATA[toUser]]></ToUserName><FromUserName><![CDATA[fromUser]]></FromUserName>
+            <CreateTime>1351776360</CreateTime><MsgType><![CDATA[location]]></MsgType>
+            <Location_X>1e999</Location_X><Location_Y>113.358803</Location_Y>
+            <MsgId>1234567890123456</MsgId><AgentID>1</AgentID></xml>
+            """).content();
+        assertThat(overflow).isEqualTo(Map.of("type", "unknown", "originalType", "location"));
     }
 
     @Test

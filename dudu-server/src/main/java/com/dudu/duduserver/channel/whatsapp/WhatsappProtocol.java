@@ -181,7 +181,10 @@ public class WhatsappProtocol {
         JSONObject body = payload.getJSONObject(MSG_LOCATION);
         Double latitude = body == null ? null : body.getDouble("latitude", null);
         Double longitude = body == null ? null : body.getDouble("longitude", null);
-        if (latitude == null || longitude == null) {
+        // JSON 数值 token（如 1e999）可转得非有限 Double，与缺失/非数值同按 unknown 保存，
+        // 非有限值落库会被 Desk 按无效响应拒绝整页
+        if (latitude == null || longitude == null
+            || !Double.isFinite(latitude) || !Double.isFinite(longitude)) {
             return MessageBodies.unknown(MSG_LOCATION);
         }
         Map<String, Object> content = new LinkedHashMap<>();

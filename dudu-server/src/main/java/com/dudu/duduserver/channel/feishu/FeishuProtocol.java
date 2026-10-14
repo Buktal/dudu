@@ -9,6 +9,7 @@ import cn.hutool.crypto.symmetric.AES;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.support.Coordinates;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
@@ -200,8 +201,8 @@ public class FeishuProtocol {
         if (name != null) {
             body.put("label", name);
         }
-        body.put("longitude", Double.parseDouble(content.getStr("longitude")));
-        body.put("latitude", Double.parseDouble(content.getStr("latitude")));
+        body.put("longitude", Coordinates.parse(content.getStr("longitude")));
+        body.put("latitude", Coordinates.parse(content.getStr("latitude")));
         return body;
     }
 

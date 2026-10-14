@@ -87,6 +87,11 @@ class WechatMpProtocolTest {
         Map<String, Object> broken = parse(locationXml().replace("<Location_X>23.134521</Location_X>", "<Location_X>abc</Location_X>"))
             .content();
         assertThat(broken.get("type")).isEqualTo("unknown");
+
+        // 坐标溢出为非有限值（parseDouble 对 1e999 不抛异常）同样落 unknown，不产出契约外数值
+        Map<String, Object> overflow = parse(locationXml().replace("<Location_X>23.134521</Location_X>", "<Location_X>1e999</Location_X>"))
+            .content();
+        assertThat(overflow).isEqualTo(Map.of("type", "unknown", "originalType", "location"));
     }
 
     @Test

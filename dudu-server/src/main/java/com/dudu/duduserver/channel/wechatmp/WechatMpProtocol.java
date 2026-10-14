@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.wechatmp;
 
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.support.Coordinates;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
@@ -112,8 +113,8 @@ public class WechatMpProtocol {
         if (label != null && !label.isEmpty()) {
             content.put("label", label);
         }
-        content.put("latitude", Double.parseDouble(fields.get("Location_X")));
-        content.put("longitude", Double.parseDouble(fields.get("Location_Y")));
+        content.put("latitude", Coordinates.parse(fields.get("Location_X")));
+        content.put("longitude", Coordinates.parse(fields.get("Location_Y")));
         return content;
     }
 

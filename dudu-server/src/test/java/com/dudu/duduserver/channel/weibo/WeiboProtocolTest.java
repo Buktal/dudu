@@ -74,6 +74,24 @@ class WeiboProtocolTest {
         assertThat(inbound.content()).containsEntry("type", "location");
         assertThat(inbound.content().get("latitude")).isEqualTo(39.982525d);
         assertThat(inbound.content().get("longitude")).isEqualTo(116.308586d);
+
+        // 坐标溢出为非有限值（parseDouble 对 1e999 不抛异常）时按 unknown 如实保存，
+        // 非有限数值落库会被 Desk 按无效响应拒绝整页
+        ChannelInboundMessage overflow = protocol.parse(3101L, """
+            {
+                "type": "position",
+                "receiver_id": 1902538057,
+                "sender_id": 2489518277,
+                "created_at": "Mon Jul 16 18:09:20 +0800 2012",
+                "text": "我在这里: http://t.cn/zQgLLYO",
+                "data": {
+                    "longitude": "1e999",
+                    "latitude": "39.982525"
+                  }
+            }
+            """).orElseThrow();
+        assertThat(overflow.content())
+            .isEqualTo(Map.of("type", "unknown", "originalType", "position"));
     }
 
     @Test

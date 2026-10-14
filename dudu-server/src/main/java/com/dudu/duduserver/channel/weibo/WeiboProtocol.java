@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.weibo;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.support.Coordinates;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
@@ -104,8 +105,8 @@ public class WeiboProtocol {
     private Map<String, Object> location(JSONObject data) {
         return Map.of(
             "type", "location",
-            "latitude", Double.parseDouble(data.getStr("latitude", "")),
-            "longitude", Double.parseDouble(data.getStr("longitude", "")));
+            "latitude", Coordinates.parse(data.getStr("latitude", "")),
+            "longitude", Coordinates.parse(data.getStr("longitude", "")));
     }
 
     // 媒体引用必有 id：tovfid 缺失时没有可如实表达的引用，按 unknown 保存不填假值

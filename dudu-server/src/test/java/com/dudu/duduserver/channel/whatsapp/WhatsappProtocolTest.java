@@ -196,6 +196,15 @@ class WhatsappProtocolTest {
             "type":"location","location":{"latitude":1.5,"longitude":2.5}}]}}]}],
             "object":"whatsapp_business_account"}"""))
             .isEqualTo(Map.of("type", "location", "latitude", 1.5, "longitude", 2.5));
+
+        // JSON 数值 token 溢出为非有限 Double（getDouble 不抛异常）时按 unknown 保存，
+        // 非有限数值落库会被 Desk 按无效响应拒绝整页
+        assertThat(content("""
+            {"object":"whatsapp_business_account","entry":[{"id":"1","changes":[{"field":"messages",
+            "value":{"messages":[{"from":"16505551234","id":"wamid.LOC3","timestamp":"1744344496",
+            "type":"location","location":{"latitude":1e999,"longitude":2.5}}]}}]}],
+            "object":"whatsapp_business_account"}"""))
+            .isEqualTo(Map.of("type", "unknown", "originalType", "location"));
     }
 
     @Test
