@@ -336,7 +336,12 @@ export function parseMessage(value: unknown): InboxMessage {
     version: integer(value.version),
     senderUserId: outgoing ? optionalText(value.senderUserId) : undefined,
     senderName: outgoing ? optionalText(value.senderName) : undefined,
-    delivery: outgoing ? parseDelivery(value.delivery) : undefined,
+    // server 对缺 send_status 的 outgoing 消息省略 delivery（types 标可选），
+    // 缺失按无发送结果接受；出现时取值仍须是契约三态
+    delivery:
+      outgoing && value.delivery !== undefined
+        ? parseDelivery(value.delivery)
+        : undefined,
   };
 }
 

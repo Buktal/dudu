@@ -142,6 +142,29 @@ describe("http inbox reply adapter", () => {
     expect(message.delivery).toEqual({ state: "sending" });
   });
 
+  it("accepts an outgoing message without a delivery block", async () => {
+    seed("stored-token");
+    // server 对缺 send_status 的 outgoing 消息省略 delivery（types 标可选），
+    // 缺失按无发送结果接受，不因存在性拒绝整条消息
+    const api = createHttpInboxApi({
+      origin: ORIGIN,
+      fetcher: async () => {
+        const { delivery: _omitted, ...withoutDelivery } = SERVER_OUTGOING;
+        return envelope(withoutDelivery);
+      },
+    });
+    const message = await api.send({
+      context: CONTEXT,
+      signal: signal(),
+      clientRequestId: "client-1",
+      target: SEND_TARGET,
+      text: "好的，已登记",
+      attachments: [],
+    });
+    expect(message.id).toBe("9002");
+    expect(message.delivery).toBeUndefined();
+  });
+
   it("refuses to send attachments in the text-only integration", async () => {
     seed("stored-token");
     const fetcher = vi.fn();
