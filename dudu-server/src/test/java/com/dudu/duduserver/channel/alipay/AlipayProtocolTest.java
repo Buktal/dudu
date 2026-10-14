@@ -214,18 +214,28 @@ class AlipayProtocolTest {
     }
 
     @Test
-    void buildsUnsignedAckCarryingSenderIdAndAppId() {
+    void buildsUnsignedAckEchoingFromUserIdAndFallingBackToAlipayUserId() {
         // §2.3 官方 ack 形状（无签名，官方示例工程 buildBaseAckMsg 同款）：ToUserId=来报
-        // 发送方、AppId、CreateTime 裸毫秒、MsgType=ack
-        String ack = protocol.ackReply("2088102111111111", credentials);
-
-        assertThat(ack).isEqualTo("<XML><ToUserId><![CDATA[2088102111111111]]></ToUserId>"
+        // FromUserId、AppId、CreateTime 裸毫秒、MsgType=ack
+        String both = protocol.ackReply(credentials, envelope(
+            "<MsgType><![CDATA[text]]></MsgType>"
+                + "<FromUserId><![CDATA[2088102123456789]]></FromUserId>"
+                + "<FromAlipayUserId><![CDATA[2088102111111111]]></FromAlipayUserId>"
+                + "<Text><Content><![CDATA[hi]]></Content></Text>"));
+        assertThat(both).isEqualTo("<XML><ToUserId><![CDATA[2088102123456789]]></ToUserId>"
             + "<AppId><![CDATA[2014072300007148]]></AppId>"
-            + "<CreateTime>" + ack.replaceAll("(?s).*<CreateTime>(\\d+)</CreateTime>.*", "$1")
+            + "<CreateTime>" + both.replaceAll("(?s).*<CreateTime>(\\d+)</CreateTime>.*", "$1")
             + "</CreateTime><MsgType><![CDATA[ack]]></MsgType></XML>");
 
+        // 来报缺 FromUserId（verifygw 事件、仅带现用 userid 的报文）回退 FromAlipayUserId
+        String onlyAlipay = protocol.ackReply(credentials, envelope(
+            "<MsgType><![CDATA[text]]></MsgType>"
+                + "<FromAlipayUserId><![CDATA[2088102111111111]]></FromAlipayUserId>"
+                + "<Text><Content><![CDATA[hi]]></Content></Text>"));
+        assertThat(onlyAlipay).contains("<ToUserId><![CDATA[2088102111111111]]></ToUserId>");
+
         // CreateTime 为当前毫秒：取值应在测试窗口内
-        long createTime = Long.parseLong(ack.replaceAll("(?s).*<CreateTime>(\\d+)</CreateTime>.*", "$1"));
+        long createTime = Long.parseLong(both.replaceAll("(?s).*<CreateTime>(\\d+)</CreateTime>.*", "$1"));
         assertThat(createTime).isBetween(System.currentTimeMillis() - 60_000, System.currentTimeMillis() + 60_000);
     }
 

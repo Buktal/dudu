@@ -105,20 +105,14 @@ public class AlipayProtocol {
     }
 
     /**
-     * 被动通知接收成功应答（§2.3 官方逐字形状，无签名）：ToUserId=来报发送方、AppId、
-     * CreateTime 为当前毫秒（裸数字，官方示例工程同款）、MsgType=ack。收到被动通知必须
-     * 同步应答，否则视为推送失败（开启重试的产品按 2 次、间隔 5s 重推）。
-     */
-    public String ackReply(String fromUserId, AlipayCredentials credentials) {
-        return buildAck(fromUserId, credentials.appId());
-    }
-
-    /**
-     * 从来报 biz_content 提取发送方后构建 ack（事件族等未产出入站消息的应答路径）。
+     * 从来报 biz_content 提取发送方后构建 ack（消息与事件族共用应答路径）：ToUserId 官方
+     * 要求回显来报 FromUserId（示例工程 buildBaseAckMsg 口径），来报缺失该字段（verifygw
+     * 事件、仅带现用 userid 的报文）时回退 FromAlipayUserId；访客身份落库仍以 FromAlipayUserId
+     * 优先（现用唯一标识），与 ack 回显口径互不影响。
      */
     public String ackReply(AlipayCredentials credentials, String bizContent) {
         Map<String, String> fields = fields(bizContent);
-        return buildAck(firstNonBlank(fields.get(FIELD_FROM_ALIPAY_USER_ID), fields.get(FIELD_FROM_USER_ID)),
+        return buildAck(firstNonBlank(fields.get(FIELD_FROM_USER_ID), fields.get(FIELD_FROM_ALIPAY_USER_ID)),
             credentials.appId());
     }
 

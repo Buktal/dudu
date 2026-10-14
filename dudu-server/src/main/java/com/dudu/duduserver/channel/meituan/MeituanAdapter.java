@@ -57,8 +57,9 @@ public class MeituanAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         String url = "http://" + host + "/api/channels/" + account.getCompanyChannelId() + "/callback";
-        // 表单值已被容器解码一次，按官方「解码 2 次」再解码后参签与解析
-        Map<String, String> form = protocol.decodeTwice(query);
+        // 合并 query 与 body 表单（网关以非标准内容类型直发 body 时容器不解析），按官方
+        // 「解码 2 次」口径解码后参签与解析
+        Map<String, String> form = protocol.paramsOf(query, body);
         if (!protocol.verify(url, form, credentials.appSecret())) {
             return ChannelReceiveResult.answer(ChannelCallbackResult.rejected());
         }

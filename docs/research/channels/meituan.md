@@ -299,6 +299,7 @@ POST https://waimaiopen.meituan.com/gw/mop/order/query（到店秒提查询，�
 6. **访客身份粒度**：IM 单聊回调已实锤字段中无顾客级标识（见第 4 条），`app_poi_code` 是唯一实锤的会话归属标识 → 落地选择 externalUserId = `app_poi_code`（会话粒度=门店），`push_content` 结构实锤后再细化到顾客级。发送侧 `app_poi_code` 即该会话目标，往返自洽。
 7. **入站媒体**：官方素材下载接口未实锤（§7 第 5/6 条）→ 媒体读取按现状如实处理：未配置凭据按受限说明；凭据齐备时也如实返回「接口未实锤」失败，不编造下载链路（票面渠道要点第 4 条口径）。
 8. **未知表单形态**：验签通过的推送若不含 `biz_type`/`order_id`/`op_type` 任一判型键（美团推送族以事件为主体），按事件只应答 `{"data":"ok"}`，不落访客数据、不拒绝（拒绝会触发渠道 1 分钟×3 重推+短信报警）。
+9. **body 直发表单的参数合并**（2026-10-14 review 修正）：§3/§5 载荷显示历史网关以 `Content-Type: text` 直发表单——容器不解析 body，此前仅取 query 会因参数不全验签失败。落地：`paramsOf(query, body)` 双源合并，query 值补第二次解码、body 原始串按 x-www-form-urlencoded 拆对后两次解码（与 query 路径同一基准），query 同名键优先；畸形 `%` 序列保留已解码值不拒绝整单推送（第 2 条口径不变）。
 
 ---
 

@@ -58,6 +58,12 @@ public class DouyinMediaReader {
             MediaType contentType = entity.getHeaders().getContentType();
             return ChannelMediaResult.media(entity.getBody(),
                 contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString());
+        } catch (IllegalArgumentException e) {
+            // 非 RFC2396 形态的直链（含空格等非法字符）在 URI 构造即失败：与其他失败
+            // 同路返回渠道原因，不以未知异常 500 逃逸
+            log.warn("[douyin] 素材读取失败, companyChannelId={}, exception={}",
+                account.getCompanyChannelId(), e.getClass().getSimpleName());
+            return ChannelMediaResult.failed("抖音素材读取失败：素材链接不是合法 URI");
         } catch (RestClientException e) {
             log.warn("[douyin] 素材读取失败, companyChannelId={}, exception={}",
                 account.getCompanyChannelId(), e.getClass().getSimpleName());

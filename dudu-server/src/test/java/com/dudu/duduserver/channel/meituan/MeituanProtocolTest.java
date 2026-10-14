@@ -123,19 +123,20 @@ class MeituanProtocolTest {
     }
 
     @Test
-    void decodesTheSecondTimeAsTheOfficialRuleRequires() {
-        // §3.1/§8 第 2 条：容器已解码一次，适配器再解码一次即官方「解码 2 次」；
-        // 畸形 % 序列保留一次解码值，不抛异常
-        Map<String, String> wire = new HashMap<>();
-        wire.put("wm_poi_name", "%E8%8D%AF%E5%93%8101%E5%BA%97");
-        wire.put("recipient_phone", "13812345678_1236");
-        wire.put("garbled", "bad%2seq");
+    void paramsOfMergesQueryAndRawBodyWithOfficialDoubleDecoding() {
+        // §3.1/§8 第 2 条：query 值容器已解码一次补第二次；body 原始串（容器不解析）两次
+        // 解码与 query 同一基准；畸形 % 序列保留已解码值，不抛异常
+        Map<String, String> query = new HashMap<>();
+        query.put("wm_poi_name", "%E8%8D%AF%E5%93%8101%E5%BA%97");
+        query.put("garbled", "bad%2seq");
 
-        Map<String, String> decoded = protocol.decodeTwice(wire);
+        Map<String, String> decoded = protocol.paramsOf(query,
+            "recipient_phone=13812345678_1236&push_content=%E4%BD%A0%E5%A5%BD%EF%BC%8C%E5%9C%A8%E5%90%97%EF%BC%9F");
 
         assertThat(decoded.get("wm_poi_name")).isEqualTo("药品01店");
-        assertThat(decoded.get("recipient_phone")).isEqualTo("13812345678_1236");
         assertThat(decoded.get("garbled")).isEqualTo("bad%2seq");
+        assertThat(decoded.get("recipient_phone")).isEqualTo("13812345678_1236");
+        assertThat(decoded.get("push_content")).isEqualTo("你好，在吗？");
     }
 
     // §5.4 IM 单聊字段值：app_poi_code 沿用官方样本门店 668921

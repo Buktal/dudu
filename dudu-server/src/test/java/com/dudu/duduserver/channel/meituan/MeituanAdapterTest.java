@@ -16,6 +16,8 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestClient;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +81,25 @@ class MeituanAdapterTest {
         assertThat(inbound.externalUserId()).isEqualTo("668921");
         assertThat(inbound.direction()).isEqualTo(MessageDirectionEnum.INCOMING);
         assertThat(inbound.content()).isEqualTo(Map.of("type", "text", "text", "你好，在吗？"));
+    }
+
+    @Test
+    void receiveVerifiesBodyFormPushWhenContainerDoesNotParseTheBody() {
+        // 事实库 §3/§5：历史网关以 Content-Type: text 直发表单——容器不解析 body，
+        // query 为空时同样验签通过并落库（body 两次解码与 query 路径同一基准）
+        Map<String, String> form = imChat();
+        sign(form);
+        StringBuilder wire = new StringBuilder();
+        form.forEach((key, value) -> wire.append(URLEncoder.encode(key, StandardCharsets.UTF_8))
+            .append('=').append(URLEncoder.encode(value, StandardCharsets.UTF_8)).append('&'));
+        wire.deleteCharAt(wire.length() - 1);
+
+        ChannelCallbackResult result = service.receive(String.valueOf(CHANNEL_ID), Map.of(),
+            REQUEST_HEADERS, wire.toString());
+
+        assertThat(result.status()).isEqualTo(200);
+        assertThat(result.body()).isEqualTo("{\"data\":\"OK\"}");
+        assertThat(capturedInbound().content()).isEqualTo(Map.of("type", "text", "text", "你好，在吗？"));
     }
 
     @Test

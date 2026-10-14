@@ -75,13 +75,28 @@ public class MeituanProtocol {
     }
 
     /**
-     * 官方「解码 2 次」（§3.1）：容器已解码一次，这里对每个值再解码一次；畸形 % 序列
-     * 保留一次解码值，不为假想的乱码形态拒绝整单推送。
+     * 合并回调表单（官方「解码 2 次」§3.1）：query 值容器已解码一次，这里补第二次；
+     * body 原始串按 x-www-form-urlencoded 拆对后两次解码（网关以非标准内容类型直发
+     * body 时容器不解析）；query 同名键优先。畸形 % 序列保留已解码值，不为假想的
+     * 乱码形态拒绝整单推送。
      */
-    public Map<String, String> decodeTwice(Map<String, String> params) {
-        Map<String, String> decoded = new LinkedHashMap<>();
-        params.forEach((key, value) -> decoded.put(key, decodeOnce(value)));
-        return decoded;
+    public Map<String, String> paramsOf(Map<String, String> query, String body) {
+        Map<String, String> params = new LinkedHashMap<>();
+        if (query != null) {
+            query.forEach((key, value) -> params.put(key, decodeOnce(value)));
+        }
+        if (body != null && !body.isBlank()) {
+            for (String pair : body.split("&")) {
+                int eq = pair.indexOf('=');
+                if (eq <= 0) {
+                    continue;
+                }
+                // body 为原始编码串（容器未解码），两次解码与 query 路径同一基准
+                params.putIfAbsent(decodeOnce(decodeOnce(pair.substring(0, eq))),
+                    decodeOnce(decodeOnce(pair.substring(eq + 1))));
+            }
+        }
+        return params;
     }
 
     /**

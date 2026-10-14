@@ -98,6 +98,17 @@ class DouyinMediaReaderTest {
         assertThat(result.failureReason()).isNotBlank();
     }
 
+    @Test
+    void failsHonestlyForLinksThatAreNotLegalUris() {
+        // 直链含空格等非法字符在 URI 构造即失败：与其他失败同路返回渠道原因，不以
+        // 未知异常 500 逃逸
+        ChannelMediaResult result = new DouyinMediaReader(RestClient.builder())
+            .read(account(Map.of("clientKey", "k", "clientSecret", "s")),
+                "http://p3.douyinpic.com/emoji file.gif");
+        assertThat(result.succeeded()).isFalse();
+        assertThat(result.failureReason()).contains("素材读取失败");
+    }
+
     private CompanyChannelDO account(Map<String, Object> channelInfo) {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setChannel(ChannelEnum.DOUYIN);

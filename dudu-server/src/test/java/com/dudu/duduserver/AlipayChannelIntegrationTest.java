@@ -217,7 +217,9 @@ class AlipayChannelIntegrationTest extends DeskIntegrationSupport {
             "charset", "GBK", "biz_content", TEXT_ENVELOPE), false);
         assertThat(text.getResponse().getStatus()).isEqualTo(200);
         String ack = text.getResponse().getContentAsString(StandardCharsets.UTF_8);
-        assertThat(ack).startsWith("<XML><ToUserId><![CDATA[2088102111111111]]></ToUserId>")
+        // ack ToUserId 回显来报 FromUserId（官方 buildBaseAckMsg 口径）；落库身份仍取
+        // FromAlipayUserId（见下方 visitorRow 断言）
+        assertThat(ack).startsWith("<XML><ToUserId><![CDATA[2088102123456789]]></ToUserId>")
             .contains("<AppId><![CDATA[" + APP_ID + "]]></AppId>")
             .endsWith("<MsgType><![CDATA[ack]]></MsgType></XML>");
 

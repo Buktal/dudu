@@ -83,12 +83,12 @@ public class AlipayAdapter implements ChannelAdapter {
         } catch (IllegalArgumentException e) {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
-        // 文本/图片落访客消息并回无签名 ack；事件族与无法解析的报文只应答 ack
+        // 文本/图片落访客消息并回无签名 ack（ToUserId 按官方口径回显来报 FromUserId，见协议层）；
+        // 事件族与无法解析的报文只应答 ack
+        ChannelCallbackResult ack = new ChannelCallbackResult(200, protocol.ackReply(credentials, bizContent));
         return inbound
-            .map(message -> ChannelReceiveResult.accept(message,
-                new ChannelCallbackResult(200, protocol.ackReply(message.externalUserId(), credentials))))
-            .orElseGet(() -> ChannelReceiveResult.answer(new ChannelCallbackResult(200,
-                protocol.ackReply(credentials, bizContent))));
+            .map(message -> ChannelReceiveResult.accept(message, ack))
+            .orElseGet(() -> ChannelReceiveResult.answer(ack));
     }
 
     @Override

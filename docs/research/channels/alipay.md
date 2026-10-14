@@ -128,7 +128,7 @@
     <XML><ToUserId><![CDATA[2088802608984030]]></ToUserId><AppId><![CDATA[2014042900005397]]></AppId><CreateTime><![CDATA[1406165628612]]></CreateTime><MsgType><![CDATA[ack]]></MsgType></XML>
     ```
 
-    `ToUserId` 取来报 `FromUserId`，`AppId` 为生活号 appId（官方示例工程 `AlipayMsgBuildUtil.buildBaseAckMsg` 逐字对照）。
+    `ToUserId` 取来报 `FromUserId`，`AppId` 为生活号 appId（官方示例工程 `AlipayMsgBuildUtil.buildBaseAckMsg` 逐字对照）。DUDU 落地分工（2026-10-14 review 修正）：ack 回显按本条以 `FromUserId` 优先、来报缺失该字段时回退 `FromAlipayUserId`（verifygw 事件载荷只有空 `FromUserId`）；访客身份落库仍以 `FromAlipayUserId` 优先（现用唯一 userid），两处口径互不影响。
   - 媒体下载（同源 105937）：网关 `https://openfile.alipay.com/chat/multimedia.do`（与消息网关分离，"消息体及调用方式相同"），接口 `alipay.mobile.public.multimedia.download`，`biz_content={"mediaId":"…"}`，签名方式同普通 OpenAPI 请求（§4.1）；成功时 HTTP 响应体即图片内容（Content-Type 为图片类型，流式返回，无 JSON 信封）。
 - 下行（生活号 → 用户）接口族（接口名前缀 `alipay.open.public.*` / `alipay.mobile.public.message.*`，OpenLife，见 https://opendocs.alipay.com/isv/03l221 产品能力表 + https://opendocs.alipay.com/open/53/104550?pathHash=c9669c5b §3.3 标题）：
   - 群发文本 `alipay.open.public.message.total.send`（EasySDK 映射 `sendText`，非 primary 域，接口名本身在官方能力语义"群发本文消息"中可互证，`[全文待核验]`）；
