@@ -9,6 +9,8 @@ import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.entity.UserGroupMemberDO;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -53,9 +55,9 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     @Autowired PlatformTransactionManager transactionManager;
@@ -101,7 +103,7 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         UserGroupDO newGroup = group(COMPANY_ID, "迁入组");
         moveOldGroup = oldGroup.getGroupId();
         moveNewGroup = newGroup.getGroupId();
-        moveChannel = channel(COMPANY_ID, moveOldGroup, ChannelEnum.WECHAT, "迁组公众号", CALLBACK_TOKEN);
+        moveChannel = channel(COMPANY_ID, moveOldGroup, ChannelEnum.WECHAT_MP, "迁组公众号", CALLBACK_TOKEN);
         moveOld = plainUser(COMPANY_ID, "access.move.old");
         moveNew = plainUser(COMPANY_ID, "access.move.new");
         members.save(member(COMPANY_ID, moveOld.getUserId(), moveOldGroup));
@@ -110,7 +112,7 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         // 员工退组场景：同一组里的两名员工，退组只影响其中一人
         UserGroupDO leaving = group(COMPANY_ID, "退组组");
         leaveGroup = leaving.getGroupId();
-        leaveChannel = channel(COMPANY_ID, leaveGroup, ChannelEnum.WECHAT, "退组公众号", "leave-callback-token");
+        leaveChannel = channel(COMPANY_ID, leaveGroup, ChannelEnum.WECHAT_MP, "退组公众号", "leave-callback-token");
         leaver = plainUser(COMPANY_ID, "access.leaver");
         leaverMember = member(COMPANY_ID, leaver.getUserId(), leaveGroup);
         members.save(leaverMember);
@@ -120,7 +122,7 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         // 增权场景：初始没有组的员工，加入新组后可见新组数据
         UserGroupDO granting = group(COMPANY_ID, "增权组");
         grantGroup = granting.getGroupId();
-        grantChannel = channel(COMPANY_ID, grantGroup, ChannelEnum.WECHAT, "增权公众号", "grant-callback-token");
+        grantChannel = channel(COMPANY_ID, grantGroup, ChannelEnum.WECHAT_MP, "增权公众号", "grant-callback-token");
         granted = plainUser(COMPANY_ID, "access.granted");
 
         // 多组员工：两个组都加入，账号在组间迁移不影响其权限
@@ -128,7 +130,7 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         UserGroupDO second = group(COMPANY_ID, "多组二");
         multiFirst = first.getGroupId();
         multiSecond = second.getGroupId();
-        multiChannel = channel(COMPANY_ID, multiSecond, ChannelEnum.WECHAT, "多组公众号", "multi-callback-token");
+        multiChannel = channel(COMPANY_ID, multiSecond, ChannelEnum.WECHAT_MP, "多组公众号", "multi-callback-token");
         multi = plainUser(COMPANY_ID, "access.multi");
         members.save(member(COMPANY_ID, multi.getUserId(), multiFirst));
         members.save(member(COMPANY_ID, multi.getUserId(), multiSecond));
@@ -137,12 +139,12 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         noAccess = plainUser(COMPANY_ID, "access.none");
         UserGroupDO foreign = group(OTHER_COMPANY_ID, "他企业组");
         otherGroup = foreign.getGroupId();
-        otherChannel = channel(OTHER_COMPANY_ID, otherGroup, ChannelEnum.WECHAT, "他企业公众号", OTHER_CALLBACK_TOKEN);
+        otherChannel = channel(OTHER_COMPANY_ID, otherGroup, ChannelEnum.WECHAT_MP, "他企业公众号", OTHER_CALLBACK_TOKEN);
         UserDO otherUser = plainUser(OTHER_COMPANY_ID, "access.other");
         members.save(member(OTHER_COMPANY_ID, otherUser.getUserId(), otherGroup));
 
         // 无外键的脏关联：本企业账号挂在其他企业的组上，任何授权范围都不能放行
-        dirtyChannel = channel(COMPANY_ID, otherGroup, ChannelEnum.WECHAT, "脏账号", "dirty-callback-token");
+        dirtyChannel = channel(COMPANY_ID, otherGroup, ChannelEnum.WECHAT_MP, "脏账号", "dirty-callback-token");
 
         ownerToken = login(COMPANY_ID, "accessowner");
         moveOldToken = login(COMPANY_ID, "access.move.old");
@@ -284,7 +286,7 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
     void initialAdminNormalAdminMultiGroupAndCrossCompanyFollowCurrentMembership() throws Exception {
         // 初始管理员拥有本企业全部组：本用例自建组与账号，不依赖其他用例的迁移结果
         UserGroupDO adminGroup = group(COMPANY_ID, "管理员组");
-        long adminChannel = channel(COMPANY_ID, adminGroup.getGroupId(), ChannelEnum.WECHAT, "管理员公众号",
+        long adminChannel = channel(COMPANY_ID, adminGroup.getGroupId(), ChannelEnum.WECHAT_MP, "管理员公众号",
             "admin-callback-token");
         assertThat(access(ownerToken).getBool("allGroups")).isTrue();
         assertThat(accountIds(access(ownerToken))).contains(String.valueOf(adminChannel));

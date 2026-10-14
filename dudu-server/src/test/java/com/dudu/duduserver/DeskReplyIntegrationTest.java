@@ -4,8 +4,8 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
-import com.dudu.duduserver.channel.ChannelOutboundSender;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.wechatmp.WechatMpTextSender;
 import com.dudu.duduserver.config.auth.JwtManager;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.constant.ChannelEnum;
@@ -16,6 +16,8 @@ import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.service.DeskInboundService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -64,17 +67,22 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     // 渠道发送替身：成功/失败响应按公众号事实构造，可观察调用时的持久状态
-    static class RecordingSender implements ChannelOutboundSender {
+    static class RecordingSender extends WechatMpTextSender {
 
         volatile Function<String, ChannelSendResult> answer = text -> ChannelSendResult.sent(null);
         volatile Consumer<String> observer = text -> { };
         final List<String> texts = new CopyOnWriteArrayList<>();
+
+        RecordingSender() {
+            // 替身不发起渠道请求：接口地址指向本机保留端口，误请求会以连接失败暴露
+            super(RestClient.builder(), "http://127.0.0.1:9");
+        }
 
         @Override
         public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
@@ -98,7 +106,7 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
     @Autowired RecordingSender sender;
 
     private long channelWechat;
-    private long channelDouyin;
+    private long channelBilibili;
     private long channelUnconfigured;
     private long scopedUserId;
     private String ownerToken;
@@ -110,11 +118,13 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
         companies.createCompany(company(COMPANY_ID, "replyowner", "回复验收企业"), 1L);
         companies.createCompany(company(OTHER_COMPANY_ID, "replyowner2", "回复验收企业"), 1L);
         UserGroupDO group = group(COMPANY_ID, "回复组");
-        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "公众号",
+        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "公众号",
             Map.of("token", "reply-token", "appId", "wx_reply_appid", "appSecret", "reply-secret"));
-        channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "未配凭据公众号",
+        channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "未配凭据公众号",
             Map.of("token", "reply-token"));
-        channelDouyin = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.DOUYIN, "抖音号",
+        // 哔哩哔哩未接入渠道适配器：回复能力按暂未接入如实受限（抖音已接入发送，
+        // 缺凭据时的说明是渠道发送凭据未配置，不再是暂未接入）
+        channelBilibili = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.BILIBILI, "哔哩哔哩号",
             Map.of("token", "reply-token"));
 
         UserDO scoped = plainUser(COMPANY_ID, "reply.scoped", "坐席甲");
@@ -338,18 +348,18 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
         assertThat(unconfigured.getStr("state")).isEqualTo("restricted");
         assertThat(unconfigured.getJSONArray("kinds")).isEmpty();
         assertThat(unconfigured.getStr("reason")).isEqualTo("渠道发送凭据未配置");
-        JSONObject otherChannel = capability(channelDouyin, "reply-ext-9");
+        JSONObject otherChannel = capability(channelBilibili, "reply-ext-9");
         assertThat(otherChannel.getStr("state")).isEqualTo("restricted");
         assertThat(otherChannel.getStr("reason")).isEqualTo("当前渠道暂未接入发送");
 
         // 发送端再校验一次：不可发渠道不落库、不调用渠道
-        long douyinVisitor = visitorIdOf(channelDouyin, "reply-ext-9");
-        JSONObject rejected = send(scopedToken, douyinVisitor, body("cr-restricted-1", "抖音回复"));
+        long bilibiliVisitor = visitorIdOf(channelBilibili, "reply-ext-9");
+        JSONObject rejected = send(scopedToken, bilibiliVisitor, body("cr-restricted-1", "哔哩哔哩回复"));
         assertThat(rejected.getInt("code")).isEqualTo(12200);
         assertThat(rejected.getStr("msg")).isEqualTo("当前渠道暂未接入发送");
         assertThat(sender.texts).isEmpty();
         assertThat(jdbc.queryForObject("SELECT message_count FROM visitor WHERE visitor_id = ?", Integer.class,
-            douyinVisitor)).isEqualTo(1);
+            bilibiliVisitor)).isEqualTo(1);
 
         // 会话对象与能力接口同源：可发账号 allowed + ["text"]
         JSONObject conversation = data(JSONUtil.parseObj(mvc.perform(get("/api/desk/visitors/" +
@@ -434,7 +444,7 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
 
     private long otherCompanyVisitor() {
         UserGroupDO otherGroup = group(OTHER_COMPANY_ID, "外部回复组");
-        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT, "外部公众号",
+        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT_MP, "外部公众号",
             Map.of("token", "reply-token", "appId", "wx_other", "appSecret", "other-secret"));
         deskInboundService.accept(channels.getById(otherChannel), new ChannelInboundMessage(otherChannel,
             "reply-ext-foreign", null, null, List.of(), "seed-foreign", MessageDirectionEnum.INCOMING,

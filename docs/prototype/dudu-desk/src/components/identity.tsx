@@ -1,4 +1,4 @@
-import { type CSSProperties, useId } from "react";
+import { useId } from "react";
 import { type ChannelKey, channels, type Visitor } from "../types";
 
 export function SourceLogo({ channel }: { channel: ChannelKey }) {
@@ -55,13 +55,8 @@ export function SourceTag({
   const source = channels[channel];
   return (
     <span
-      className="source-tag source-identity"
-      style={
-        {
-          "--source-color": source.color,
-          "--source-background": source.background,
-        } as CSSProperties
-      }
+      className="source-tag"
+      style={{ color: source.color, background: source.background }}
     >
       <SourceLogo channel={channel} />
       <span>{full ? source.name : source.short}</span>
@@ -98,12 +93,7 @@ export function Avatar({
   return (
     <span
       className={`avatar avatar-${size}`}
-      style={
-        {
-          background: visitor.color,
-          "--avatar-color": visitor.color,
-        } as CSSProperties
-      }
+      style={{ background: visitor.color }}
     >
       {visitor.avatar === null ? (
         <span className="avatar-fallback">{visitor.name.slice(0, 1)}</span>
@@ -160,12 +150,8 @@ export function Avatar({
       )}
       {badge && (
         <span
-          className="avatar-source source-identity"
-          style={
-            {
-              "--source-color": channels[visitor.channel].color,
-            } as CSSProperties
-          }
+          className="avatar-source"
+          style={{ color: channels[visitor.channel].color }}
           title={channels[visitor.channel].name}
         >
           <SourceLogo channel={visitor.channel} />

@@ -13,8 +13,8 @@ const SERVER_CONVERSATION = {
   identity: {
     id: "41",
     externalUserId: "external-a",
-    channelId: "wechat",
-    channelName: "微信",
+    channelId: "wechat-mp",
+    channelName: "微信公众号",
     accountId: "51",
     accountName: "公众号",
   },
@@ -85,8 +85,8 @@ describe("http inbox live subscription", () => {
         identity: {
           id: "41",
           externalUserId: "external-a",
-          channelId: "wechat",
-          channelName: "微信",
+          channelId: "wechat-mp",
+          channelName: "微信公众号",
           accountId: "51",
           accountName: "公众号",
         },

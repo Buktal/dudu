@@ -4,16 +4,25 @@ import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.ChannelAdapterRegistry;
+import com.dudu.duduserver.channel.wechatmp.WechatMpAdapter;
+import com.dudu.duduserver.channel.wechatmp.WechatMpMediaReader;
+import com.dudu.duduserver.channel.wechatmp.WechatMpProtocol;
+import com.dudu.duduserver.channel.wechatmp.WechatMpTextSender;
+import com.dudu.duduserver.util.DeskConversationViews;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
+import com.dudu.duduserver.entity.MessageDO;
 import com.dudu.duduserver.entity.VisitorDO;
 import com.dudu.duduserver.entity.VisitorProfileDO;
 import com.dudu.duduserver.service.impl.DeskInboundServiceImpl;
 import com.dudu.duduserver.socket.DeskSocketGateway;
 import com.dudu.duduserver.vo.DeskVisitorProfileVO;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.web.client.RestClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +56,15 @@ class DeskInboundServiceTest {
     private final MessageService messageService = mock(MessageService.class);
     private final DeskSocketGateway deskSocketGateway = mock(DeskSocketGateway.class);
     private final DeskInboundService deskInboundService = new DeskInboundServiceImpl(
-        visitorService, visitorProfileService, messageService, deskSocketGateway);
+        visitorService, visitorProfileService, messageService, deskSocketGateway, deskConversationViews());
+    // 能力说明走真实注册表与公众号适配器；本类只用其限制说明，不发起渠道请求
+    private static DeskConversationViews deskConversationViews() {
+        WechatMpAdapter wechatMp = new WechatMpAdapter(new WechatMpProtocol(),
+            new WechatMpTextSender(RestClient.builder(), "http://127.0.0.1:9"),
+            new WechatMpMediaReader(RestClient.builder(), "http://127.0.0.1:9"));
+        return new DeskConversationViews(new ChannelAdapterRegistry(List.of(wechatMp)));
+    }
+
 
     @BeforeAll
     static void registerTableInfo() {
@@ -96,11 +113,41 @@ class DeskInboundServiceTest {
         verify(deskSocketGateway, never()).pushProfile(anyLong(), anyLong(), any());
     }
 
+    @Test
+    void skipsRedeliveredMessageWithoutCountingSavingOrPushing() {
+        // 渠道重推（同访客同渠道消息标识已落库）：幂等跳过，不递增计数、不落消息、不推送
+        when(messageService.count(any(Wrapper.class))).thenReturn(1L);
+
+        deskInboundService.accept(account(), inbound(List.of()));
+
+        verify(visitorService, never()).update(any(Wrapper.class));
+        verify(messageService, never()).save(any(MessageDO.class));
+        verify(deskSocketGateway, never()).pushMessage(anyLong(), anyLong(), any(), any());
+        verify(deskSocketGateway, never()).pushProfile(anyLong(), anyLong(), any());
+    }
+
+    @Test
+    void concurrentFirstMessageLoserSkipsAfterSeeingWinnerCommittedMessage() {
+        // 并发首信创建访客撞唯一键：败方锁定读回读胜方访客后，重推判定看到胜方已落库的
+        // 同标识消息即幂等跳过（uk_message_external 数据库防线，不产生重复计数）
+        when(visitorService.getOne(any(Wrapper.class)))
+            .thenReturn(null, visitor(VisitorStatusEnum.NEEDS_REPLY, null));
+        when(visitorService.save(any(VisitorDO.class))).thenThrow(new DuplicateKeyException("uk_visitor_source"));
+        when(messageService.count(any(Wrapper.class))).thenReturn(1L);
+
+        deskInboundService.accept(account(), inbound(List.of()));
+
+        verify(messageService, never()).save(any(MessageDO.class));
+        verify(visitorService, never()).update(any(Wrapper.class));
+        verify(deskSocketGateway, never()).pushMessage(anyLong(), anyLong(), any(), any());
+        verify(deskSocketGateway, never()).pushProfile(anyLong(), anyLong(), any());
+    }
+
     private CompanyChannelDO account() {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setCompanyId(COMPANY_ID);
         account.setCompanyChannelId(COMPANY_CHANNEL_ID);
-        account.setChannel(ChannelEnum.WECHAT);
+        account.setChannel(ChannelEnum.WECHAT_MP);
         account.setAccountName("公众号");
         return account;
     }

@@ -1,3 +1,5 @@
+> 历史标注（2026-10-13）：DuduDesk Mock 模式已整体移除，`VITE_DESK_MOCK` 开关与开发适配器不存在；本文中涉及 Mock 开关与「关闭 Mock」的步骤仅作存档，当前行为一律按真实适配器理解。
+
 ## Parent
 
 [DuduDesk 对接 Spec：共享接待、访客名片与消息同步 #84](https://github.com/Buktal/dudu/issues/84)

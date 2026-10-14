@@ -3,7 +3,7 @@ package com.dudu.duduserver;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
-import com.dudu.duduserver.channel.ChannelMediaReader;
+import com.dudu.duduserver.channel.wechatmp.WechatMpMediaReader;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.EnableStatusEnum;
@@ -19,6 +19,8 @@ import com.dudu.duduserver.service.CompanyService;
 import com.dudu.duduserver.service.DeskInboundService;
 import com.dudu.duduserver.service.UserGroupService;
 import com.dudu.duduserver.service.UserService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import com.dudu.duduserver.util.PasswordHasher;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +34,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -69,17 +72,22 @@ class DeskMediaIntegrationTest {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     // 渠道素材读取替身：记录被读取的渠道标识，按构造好的公众号事实响应返回
-    static class RecordingMediaReader implements ChannelMediaReader {
+    static class RecordingMediaReader extends WechatMpMediaReader {
 
         volatile Function<String, ChannelMediaResult> answer =
             id -> ChannelMediaResult.media(IMAGE_BYTES, "image/jpeg");
         final List<String> mediaIds = new CopyOnWriteArrayList<>();
+
+        RecordingMediaReader() {
+            // 替身不发起渠道请求：接口地址指向本机保留端口，误请求会以连接失败暴露
+            super(RestClient.builder(), "http://127.0.0.1:9");
+        }
 
         @Override
         public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
@@ -109,7 +117,7 @@ class DeskMediaIntegrationTest {
 
     private long channelWechat;
     private long channelUnconfigured;
-    private long channelDouyin;
+    private long channelBilibili;
     private String ownerToken;
     private String outsideToken;
 
@@ -117,7 +125,7 @@ class DeskMediaIntegrationTest {
     private long publicUrlMessageId;
     private long replyMessageId;
     private long cardMessageId;
-    private long douyinMessageId;
+    private long bilibiliMessageId;
     private long unconfiguredMessageId;
 
     @BeforeAll
@@ -125,11 +133,12 @@ class DeskMediaIntegrationTest {
         companies.createCompany(new CompanyCreateDTO(String.valueOf(COMPANY_ID), "媒体验收企业", null, null, null,
             new CompanyAdminInitDTO("mediaowner", PASSWORD, null)), 1L);
         UserGroupDO group = group(COMPANY_ID, "媒体组");
-        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "媒体公众号",
+        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "媒体公众号",
             Map.of("token", "media-token", "appId", "wx_media_appid", "appSecret", "media-secret"));
-        channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "未配凭据公众号",
+        channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "未配凭据公众号",
             Map.of("token", "media-token-2"));
-        channelDouyin = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.DOUYIN, "抖音号", Map.of("token", "x"));
+        // 哔哩哔哩未接入渠道适配器：素材读取按暂未接入如实受限
+        channelBilibili = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.BILIBILI, "哔哩哔哩号", Map.of("token", "x"));
         plainUser(COMPANY_ID, "media.outside");
         ownerToken = login("mediaowner");
         outsideToken = login("media.outside");
@@ -144,7 +153,7 @@ class DeskMediaIntegrationTest {
                 List.of(Map.of("kind", "image", "id", "ATT_A"), Map.of("kind", "file", "id", "ATT_B"))));
         cardMessageId = seedMessage(channelWechat, "media-ext-card",
             Map.of("type", "card", "kind", "order", "title", "订单卡片"));
-        douyinMessageId = seedMessage(channelDouyin, "media-ext-douyin",
+        bilibiliMessageId = seedMessage(channelBilibili, "media-ext-bilibili",
             Map.of("type", "image", "media", Map.of("kind", "image", "id", "DY_MEDIA")));
         unconfiguredMessageId = seedMessage(channelUnconfigured, "media-ext-nocreds",
             Map.of("type", "image", "media", Map.of("kind", "image", "id", "NO_CRED_MEDIA")));
@@ -230,10 +239,10 @@ class DeskMediaIntegrationTest {
 
     @Test
     void reportsUnsupportedChannelsAndChannelFailuresAsOrdinaryRErrors() throws Exception {
-        JSONObject douyin = errorOf(mvc.perform(get("/api/desk/messages/" + douyinMessageId + "/media")
+        JSONObject bilibili = errorOf(mvc.perform(get("/api/desk/messages/" + bilibiliMessageId + "/media")
             .header("Authorization", "Bearer " + ownerToken)).andReturn());
-        assertThat(douyin.getInt("code")).isEqualTo(12200);
-        assertThat(douyin.getStr("msg")).isEqualTo("当前渠道暂未接入素材读取");
+        assertThat(bilibili.getInt("code")).isEqualTo(12200);
+        assertThat(bilibili.getStr("msg")).isEqualTo("当前渠道暂未接入素材读取");
 
         JSONObject unconfigured = errorOf(mvc.perform(
             get("/api/desk/messages/" + unconfiguredMessageId + "/media")

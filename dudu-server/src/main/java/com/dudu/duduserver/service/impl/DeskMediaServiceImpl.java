@@ -1,7 +1,7 @@
 package com.dudu.duduserver.service.impl;
 
-import com.dudu.duduserver.channel.ChannelMediaCapabilities;
-import com.dudu.duduserver.channel.ChannelMediaReader;
+
+import com.dudu.duduserver.channel.ChannelAdapterRegistry;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
@@ -38,7 +38,7 @@ public class DeskMediaServiceImpl implements DeskMediaService {
     private final MessageService messageService;
     private final DeskVisitorService deskVisitorService;
     private final CompanyChannelService companyChannelService;
-    private final ChannelMediaReader channelMediaReader;
+    private final ChannelAdapterRegistry channelAdapters;
 
     @Override
     public DeskMediaVO media(JwtUser me, String messageId, String index) {
@@ -63,11 +63,11 @@ public class DeskMediaServiceImpl implements DeskMediaService {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "该媒体没有可读取的渠道标识");
         }
         CompanyChannelDO account = accountOf(conversation);
-        String restriction = ChannelMediaCapabilities.readRestriction(account);
+        String restriction = channelAdapters.mediaRestriction(account);
         if (restriction != null) {
             throw new BizException(ApiEnum.DATA_NOT_ALLOW, restriction);
         }
-        ChannelMediaResult result = channelMediaReader.read(account, channelMediaId);
+        ChannelMediaResult result = channelAdapters.readMedia(account, channelMediaId);
         if (!result.succeeded()) {
             throw new BizException(ApiEnum.REQUEST_THIRD_ERROR, result.failureReason());
         }

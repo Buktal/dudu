@@ -21,7 +21,7 @@ const SERVER_IDENTITY = {
       {
         companyChannelId: "51",
         groupId: "31",
-        channel: "wechat",
+        channel: "wechat-mp",
         accountName: "公众号",
       },
     ],
@@ -38,7 +38,7 @@ const SESSION: AgentSession = {
       {
         companyChannelId: "51",
         groupId: "31",
-        channel: "wechat",
+        channel: "wechat-mp",
         accountName: "公众号",
       },
     ],

@@ -24,7 +24,7 @@ describe("account details", () => {
           {
             companyChannelId: "51",
             groupId: "31",
-            channel: "wechat",
+            channel: "wechat-mp",
             accountName: "公众号",
           },
         ],

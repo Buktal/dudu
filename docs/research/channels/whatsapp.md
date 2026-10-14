@@ -1,6 +1,7 @@
 # WhatsApp Cloud API 事件推送 事实库
 
 > 研究日期：2026-09-11。方法：WebSearch 官方站内摘录（developers.facebook.com / whatsappbusiness.com 全文片段）+ WebFetch（`whatsappbusiness.com/products/platform-pricing/` 全文成功；`developers.facebook.com` 文档页 WebFetch 返回 400，直抓失败，故全部标 `[摘录]`）。
+> 增补（2026-10-14，#112 动工前回填）：换用 `/documentation/business-messaging/whatsapp/...` 镜像路径（无尾斜杠）后 `developers.facebook.com` 可 WebFetch 全文——新增 §2.3（inbound 各媒体 type 载荷）与 §5.6（媒体下载端点），官方页全文取得标 `[官方全文]`、全文取得但源站引文限制致 JSON 由官方逐字段片段拼合核对标 `[官方原文·分段]`；销项 §7 第 1/10 条。
 > 标注约定：`[摘录]` = WebSearch 返回的官方页面原文摘录（未取全文）；无标注 = 本次已核验的公开原文（仅定价主站 WebFetch 全文）；`待核验(09-27)` = 未能取得官方原文或口径矛盾，需复核。
 > 事实分级参照 `feishu.md`：本库 §2–§6 均为官方来源摘录；第三方解读（如 Hookdeck/WebhookRelay/黄页式博客）仅作机制互证，不作事实依据。
 > 所有示例载荷均为官方文档摘录原文逐字拷贝（含官方占位符原文）。
@@ -68,6 +69,68 @@
 
 - 另有 `smb_*`（SBM 相关行，摘录截断）与 calls 通道字段（新版总览称 messages 权限覆盖 "messages and calls webhooks"）→ 待核验(09-27)。
 - 错误参考页独立存在（errors/unsupported/status 三页互链）→ 待核验(09-27)。
+
+### 2.3 inbound 各媒体 type 载荷细节（2026-10-14 回填，全部官方）
+
+来源：messages 参考页各 type 子页 https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/{type} （image/audio/video/document/sticker/location/contacts/interactive/button/reaction/unsupported 同目录），2026-10-14。
+
+**共同形态**：`messages[]` 元素 = `from`/`id`（wamid）/`timestamp`（秒级字符串）/`type` + 与 type 同名的载荷对象。**媒体对象灰度直带 `url`**：自 2025-11-12 起官方逐步灰度在 webhook 媒体对象内直接下发 `url` 字段（各 type 参考页均注明 "This JSON property is being released to developers gradually over several weeks, starting November 12, 2025"），可能暂缺；url 同样 5 分钟过期（§5.6）、下载同样必须带 Bearer token——**不是免鉴权公开直链**。
+
+| type | 载荷对象字段 | 备注 |
+|---|---|---|
+| `image` | `caption`?、`mime_type`、`sha256`、`id`、`url`?(灰度) | 无 filename。[官方原文·分段] |
+| `audio` | `mime_type`、`sha256`、`id`、`url`?(灰度)、`voice`(boolean，是否语音录制) | 无 caption。示例 `"mime_type": "audio/ogg; codecs=opus"`。[官方原文·分段] |
+| `video` | `caption`?、`mime_type`、`sha256`、`id`、`url`?(灰度) | 无 filename。[官方原文·分段] |
+| `document` | `caption`?、`filename`、`mime_type`、`sha256`、`id`、`url`?(灰度) | 示例 `"filename": "receipt.pdf"`、`"mime_type": "application/pdf"`。无 page_count。[官方原文·分段] |
+| `sticker` | `mime_type`、`sha256`、`id`、`url`?(灰度)、`animated`(boolean) | 示例 `"mime_type": "image/webp"`。[官方原文·分段] |
+| `location` | `address`?、`latitude`(数值)、`longitude`(数值)、`name`?、`url`(地点链接，仅商家位置常见) | 无媒体 id、不可下载——url 是地点（商家）链接非媒体直链。[官方全文] |
+| `contacts` | 消息内 `contacts[]`（被分享名片）：`name{formatted_name,first_name,last_name,middle_name,suffix,prefix}`?、`org{company,department,title}`?、`phones[{phone,wa_id,type}]`?、`emails[{email,type}]`?、`urls[{url,type}]`?、`addresses[…]`?、`birthday`? | 官方明示用户可选择不共享任意属性，全部字段须按可缺省解析。[官方原文·分段] |
+| `reaction` | `reaction{message_id(被回应 wamid), emoji}` | 撤销 reaction 时 `emoji` 省略；无 context。[官方全文·片段逐字] |
+| `interactive` | `interactive{type:"button_reply", button_reply{id,title}}` 或 `interactive{type:"list_reply", list_reply{id,title,description}}` | 入站仅此两形态；用户点按的 title 即回复内容；带 context{from,id}。[官方原文·分段] |
+| `button` | `button{payload, text}`（两字段同值，模板 quick-reply 点击） | 带 context{from,id}。[官方原文·分段] |
+| `unsupported` | `unsupported{type}`（引发 unsupported 的底层特性）+ `errors[]`：`code`(131051/131060)、`title`、`message`、`error_data{details}` | 消息本体不可取回。[官方原文·分段] |
+
+**context 出现条件**（官方各 type 页原文）：① 转发：`context{forwarded:true, frequently_forwarded:true}`（>5 次转发置 frequently_forwarded）；② "Message business" 按钮来源：`context{from,id,referred_product{catalog_id,product_retailer_id}}`；③ 模板 quick-reply 点击与 interactive 回复：`context{from(商家号码), id(被点消息 wamid)}`；④ referral（Click to WhatsApp 广告进线，独立对象）：`source_url/source_id/source_type/body/headline/media_type/...`。普通引用回复（swipe-reply）是否必然带 context{from,id}：官方页无通用条陈，第三方一致报告存在（Infobip、Chatwoot #14953）[第三方互证] → 实现按可选建模。
+
+官方 image 示例逐字（image 子页 [官方原文·分段]，2026-10-14）：
+
+```json
+"messages": [
+  {
+    "from": "16505551234",
+    "id": "wamid.HBgLMTY1MDM4Nzk0MzkVAgASGBQzQTRBNjU5OUFFRTAzODEwMTQ0RgA=",
+    "timestamp": "1744344496",
+    "type": "image",
+    "image": {
+      "caption": "Taj Mahal",
+      "mime_type": "image/jpeg",
+      "sha256": "SfInY0gGKTsJlUWbwxC1k+FAD0FZHvzwfpvO0zX0GUI=",
+      "id": "1003383421387256",
+      "url": "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=133..."
+    }
+  }
+]
+```
+
+官方 location 示例逐字（location 子页 [官方全文]，2026-10-14）：
+
+```json
+"messages": [
+  {
+    "from": "16505551234",
+    "id": "wamid.HBgLMTY1MDM4Nzk0MzkVAgASGBQzQUFERjg0NDEzNDdFODU3MUMxMAA=",
+    "timestamp": "1744344496",
+    "location": {
+      "address": "101 Forest Ave, Palo Alto, CA 94301",
+      "latitude": 37.44221496582,
+      "longitude": -122.16165924072,
+      "name": "Philz Coffee",
+      "url": "https://philzcoffee.com/"
+    },
+    "type": "location"
+  }
+]
+```
 
 ---
 
@@ -347,6 +410,35 @@ curl 'https://graph.facebook.com/v23.0/<TEST_BUSINESS_PHONE_NUMBER_ID>/messages'
 ```
 - 组合限额提升时另触发 `business_capability_update`（`max_daily_conversations_per_business` / 旧 `max_daily_conversation_per_phone`，messaging-limits 页 `[摘录]`）。
 
+### 5.6 媒体下载端点（2026-10-14 回填，官方全文）
+
+来源：media 参考页 https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media 与同文新版镜像 https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/media （双路径同文，2026-10-14 WebFetch 全文，[官方全文]）。
+
+**两步下载**（官方 curl 逐字口径）：
+
+1. 第一步 `GET https://graph.facebook.com/<API_VERSION>/<MEDIA_ID>`，头 `Authorization: Bearer <token>`（`phone_number_id` query 参数可选，提供时仅匹配该号码下媒体）。返回六字段（官方逐字）：
+
+```json
+{
+  "messaging_product": "whatsapp",
+  "url": "<MEDIA_URL>",
+  "mime_type": "<MEDIA_MIME_TYPE>",
+  "sha256": "<SHA_256_HASH>",
+  "file_size": "<MEDIA_FILE_SIZE>",
+  "id": "<MEDIA_ID>"
+}
+```
+
+2. 第二步对返回 `url` 再 GET，**必须带 `Authorization: Bearer` 头**（官方原句 "If you omit your token, the request will fail."；非裸 GET、未见 query token 写法）；成功返回媒体二进制（content-type 头标示 MIME），失败回 404——先换新 url 重试、再换新 token。
+
+- **url 有效期**：官方原句 "Media URLs expire after 5 minutes, after which you must query the ID again to get a new URL."——5 分钟。url 域名 `lookaside.fbsbx.com`。
+- **媒体 id 时效**："Media IDs returned by the API expire after 30 days. Media IDs in webhooks expire after 7 days."——API 响应 id 30 天、webhook 内 id 7 天内可下载。
+- **服务器保留期**："All media files sent through this API are encrypted and persist for 30 days, unless they are deleted earlier."
+- **入站上限**：官方明写 "Cloud API supports max 100 MB for incoming media"，超限触发 webhook 错误 `131052`（title "Media file size too big."）——入站不按 type 分别限制；per-type 表（Audio 16MB/ Documents 100MB/ Images 5MB/ Stickers 500KB 动图 100KB 静态/ Video 16MB）约束的是 API 收发编码。任务线索 "image 8MB" 未见于现行官方页，不采用。
+- `file_size` 单位：官方两页均未标注（响应中为字符串占位）；第三方一致按字节数处理（context7 收录 ericvera/whatsapp-cloudapi、wizmessage）[第三方互证]。
+- `mime_type` 已见官方取值含参数后缀形态（如 `audio/ogg; codecs=opus`），解析勿做等值比较。
+- 同页另有 `DELETE /<API_VERSION>/<MEDIA_ID>?phone_number_id=` （返回 `{"success": true}`）与上传 `POST /<PHONE_NUMBER_ID>/media`（multipart：`file`+`type`+`messaging_product=whatsapp`，返回 `{"id": ...}`）——本票只需下载，顺手记录。
+
 ---
 
 ## 6. token / 凭证与计费模型
@@ -371,7 +463,7 @@ curl 'https://graph.facebook.com/v23.0/<TEST_BUSINESS_PHONE_NUMBER_ID>/messages'
 
 ## 7. 待核验清单（统一标待核验(09-27)）
 
-1. **全文直抓**：`developers.facebook.com` 文档页 WebFetch 均 400，本库全为 `[摘录]`，需换链路（`documentation/business-messaging/...` 镜像路径、Graph API 版本化路径、或官方 GitHub 示例）复核 §2–§5 全文。→ 待核验(09-27)
+1. ~~**全文直抓**~~ → **已销项（2026-10-14）**：`/documentation/business-messaging/whatsapp/...` 镜像路径（无尾斜杠）WebFetch 全文成功，本次增补 §2.3/§5.6 即按此链路取得；早期 `[摘录]` 段落（§1–§6 原有内容）仍为摘录口径，未逐一复核全文。
 2. **GET 握手"裸值非 JSON"**：官方示例 `res.status(200).send(challenge)` 实锤裸值，但无"must NOT return JSON"字样；超时/时限（第三方称无）亦无官方 SLA。→ 待核验(09-27)
 3. **POST 响应时限与批量上限**：3s/2xx、单 POST entry 上限、3MB 上限等第三方口径无官方摘录。→ 待核验(09-27)
 4. **幂等键官方化**：`wamid` 去重为工程通行做法，官方仅承认"重试致重复"，未指定键；`statuses[].id` 与发送响应 `messages[].id` 同源已实锤，可写实现，标注非官方强制。→ 待核验(09-27)
@@ -380,7 +472,7 @@ curl 'https://graph.facebook.com/v23.0/<TEST_BUSINESS_PHONE_NUMBER_ID>/messages'
 7. **App Secret 路径**：App Settings > Basic 为第三方口径。→ 待核验(09-27)
 8. **单 App 单 Callback URL**：官方页未明写"只能配一个"。→ 待核验(09-27)
 9. **系统用户 token 有效期选项**（Never vs 60 天）与 Business Integration System User 伙伴链路全文。→ 待核验(09-27)
-10. **各 inbound `type` 载荷细节**（image/audio/video/document/sticker/location/contacts/interactive/reaction/unsupported 等）与 calls 字段。→ 待核验(09-27)
+10. ~~**各 inbound `type` 载荷细节**~~ → **已销项（2026-10-14）**：官方各 type 子页全文取得，落定 §2.3；媒体下载端点落定 §5.6。仅剩两个小点仍无官方原文：`file_size` 单位（第三方一致 bytes）、swipe-reply 场景 context{from,id} 的通用条款（第三方一致存在），均按 [第三方互证] 挂账。calls 字段未查证。
 11. **管理面字段载荷细节**：`account_update` 全事件表（PARTNER_*/VOLUME_BASED_PRICING_TIER_UPDATE 等）、`message_template_components_update`、`phone_number_name_update`、`smb_*`。→ 待核验(09-27)
 12. **10-01 计费口径**：开发者文档（service/utility 开收）vs 定价主站（service 免费）矛盾；以何者为准、何时切换、既有 WABA 过渡条款。→ 待核验(09-27)（存疑，不得写死）
 13. **官方 SDK 本体**：官方 `whatsapp` Node SDK（发送用）仓库与 webhook 验签 helper 是否存在；Graph API SDK 覆盖范围。→ 待核验(09-27)
@@ -395,4 +487,5 @@ curl 'https://graph.facebook.com/v23.0/<TEST_BUSINESS_PHONE_NUMBER_ID>/messages'
 - ID 形态：`wamid.HBgL…`（inbound `messages[].id` = outbound `statuses[].id` = 发送响应 `messages[].id`，三处同源归一）；`wa_id`/电话为纯数字（如 `16505551234`）；`phone_number_id` 数字串（如 `106540352242922`）；`timestamp` 秒级字符串。
 - 重试语义：非 200/不可达即递减重试最长 7 天（No Storage 号 1 小时），重试广播给所有订阅该 WABA 的 App，消费方按 `wamid` 幂等；不保证有序。
 - 发送模拟：`POST https://graph.facebook.com/v23.0/{phone_number_id}/messages` + `Authorization: Bearer <token>`，同步仅返回受理（含 `wamid`），投递经 status webhooks（sent→delivered→read）异步到达。
+- 媒体读取（§5.6，2026-10-14 回填）：两步——`GET /{API_VERSION}/{MEDIA_ID}`（Bearer）换 `url`（5 分钟有效、`lookaside.fbsbx.com`）→ 对 `url` 带 `Authorization: Bearer` 再 GET 取二进制；webhook 内媒体 id 7 天有效；入站统一 100 MB 上限（超限错误 131052）。webhook 媒体对象灰度直带的 `url` 字段同样要 Bearer，**不是公开直链**。
 - 计费模拟：service/utility 收费做可配置开关（默认按主站现状免费，10-01 口径标存疑可切换），不得写死。

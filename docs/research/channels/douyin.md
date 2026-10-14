@@ -34,6 +34,8 @@
 | 获取 access_token | https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/account-permission/get-access-token |
 | 刷新 access_token | https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/account-permission/refresh-access-token/ |
 | 生成 client_token | https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/account-permission/client-token |
+| 发送私信消息（/im/send/msg/ 专章，2026-10-14 补证） | https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/instant-message/private-message/send-message |
+| 即时消息 FAQ（token 分类/错误排查，2026-10-14 补证） | https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/instant-message/FAQ |
 
 页面时效参考：event-list 页内元数据显示 `saved_time: 2025-10-13`；clue 页标注 PR 编号 2024112059215、能力版本 v1.0.5（2026.6）。
 
@@ -643,6 +645,57 @@ XML 格式：
 - 用户可在抖音 App「我-设置-账号与安全-授权管理」取消授权，取消后 access_token 立即失效；平台会定期清理不合规授权。
 - 关键错误码：10002 参数错误、10003/10013 key/secret 错误、10007 code 过期、10010 refresh_token 过期、10014 client_key 不匹配、10020 client_token 频控。
 - 注意：dop webhook 事件推送本身**不携带/不需要 token**，验签只用 client_secret + body。
+
+### 6.1 发送私信消息接口专章（2026-10-14 补证，send-message 页逐字）
+
+来源：mini-app 树 `reach-marketing/instant-message/private-message/send-message` 页（新版主动私信接口）。curl 直抓 SSR，Quill delta 抽取逐字；该页 JSON 样例含尾逗号（官方一贯坑，见 §5.5）。
+
+- HTTP URL：`https://open.douyin.com/im/send/msg/`（**path 末尾带 `/`**，FAQ 明确末尾斜杠影响路由命中）；Method：POST；Query：`open_id=<发送方 open_id>`（curl 示例 `?open_id=aa-aa-aa`）；Header：`Content-Type: application/json` + `access-token: act.<...>`。
+- Scope：`im.direct_message`（需用户授权）；若发送用户公开视频还需 `ma.item.data`（需申请权限 + 用户授权）。发送方需认证企业号及其员工号、小程序品牌号或员工号身份，且小程序通过试运营期、已在后台申请发送私信能力。
+- 请求体（场景一/二单条形态）：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| scene | string | 场景一可选，场景二~四必传 | 场景一 `im_reply_msg`（回复私信，默认）；场景二 `im_enter_direct_msg`（用户进私）；场景三 `im_b2b_direct_message`（B2B 触达）；场景四 `im_authorize_message`（主动私信持续触达） |
+| content | struct | 场景一/二必传 | 消息体，见下方 content 构造 |
+| content_list | []struct | 场景三/四必传 | 最多 3 条，场景三必须含 1 条小程序卡片 |
+| msg_id | string | 场景一/二必传 | 来源：接收私信消息事件 webhook 的 `content.server_message_id`（**有效期 24 小时**）；进私事件同字段同时效 |
+| conversation_id | string | 场景一/二必传 | 来源：webhook 的 `content.conversation_short_id`（**长期有效**） |
+| to_user_id | string | 是 | 消息接收方 open_id（即私信对端的访客 open_id） |
+
+- content 构造（msgType 对照，补全 §2.2 发送侧表）：文本 `{"msg_type":1,"text":{"text":"你好"}}`（text ≤1000 字、不可含外部 http 超链接）；图片 `{"msg_type":2,"image":{"media_id":"@..."}}`（media_id 来自图片上传接口的 image_id）；视频 `{"msg_type":3,"video":{"item_id":"@..."}}`（只能发用户自己的公开视频，发布者 uid 要与 OpenID 相同）；群邀请 `msg_type:9` group_invitation；小程序引导卡片 `msg_type:10` applet_card；小程序券 `msg_type:11` applet_coupon；主动私信授权卡片 `msg_type:12` auth_private_message_card；问题引导卡（发消息）`msg_type:204`、（发链接）`msg_type:205`。
+- 场景一规则（逐字要点）：需订阅「接收私信消息事件」并从 webhook 解析 msg_id（24 小时时效）；「仅支持消息回复，在用户未发送下一条消息前，24 小时内可向用户发送 6 条消息」；最新规则以抖音 app 内发送消息为准。场景二：收到进私 webhook 后 30 秒内调用，每条 webhook 最多调用 3 次，两次回复间隔需 >1 小时。
+- 成功响应（场景一，逐字）：
+
+```json
+{
+        "extra": {
+                "description": "",
+                "sub_error_code": 0,
+                "sub_description": "",
+                "now": 1648797449,
+                "logid": "021648797449846fd1b1111000700600000000000000086dfb920",
+                "error_code": 0
+        },
+        "data": {
+                "error_code": 0,
+                "description": ""
+        },
+        "msg_id": "@c29bfc000+MNggFhRkwGuX1ntuc0RPc0VHKefj/yWEJ8DtjU=="
+}
+```
+
+  成功判据 `data.error_code = 0`；渠道消息标识取响应顶层 `msg_id`（「消息ID，传入content时返回」；传 content_list 时改返回 `msg_list` 数组，新版还放量 `all_send_success`/`send_msg_status_list`，官方注明逐步放量中、不应依赖）。
+- 主要错误（HTTP 状态码恒 200，错误在 body；逐字摘录）：2100005 参数不合法；2190001 quota 已用完（免费额度每日 8 点刷新）；2190002 access_token 无效；2190008 access_token 过期；**2190015 请求参数 access_token openid 不匹配**（token 与 query open_id 必须同一授权用户）；28001005 系统内部错误；28001038 content/msg_id/conversation_id 参数不合法（含「msg_id 为空/无效」「conversation_id 为空/无效」「主动私信场景最多发送三条消息」）；28003080 消息已过期（「传入正确的 msg_id 或在收到进私事件后 30s 内调用」）；28003081 上条消息已超 24 小时无法回复；28003082 消息对象不匹配（发送/接收方与 open_id、to_user_id 不匹配）；28029006 用户未授权应用发送主动私信；28003070 超出频控；28029030/28029031 全部/部分消息发送失败（看 send_msg_status_list）。
+- **凭证类别结论**：本接口是用户授权类接口——query `open_id` 必须与 `access-token` 的授权用户匹配（2190015/28001003 语义，FAQ「在需要授权的接口中传入 client_token 或反之都会出现此报错」）；client_token（应用身份）**不可**用于发送私信。页面另有「通过 BusinessToken 进行调用（示例 `bus_act.<...>`）」的调用形态（B 端经营 Token，`biz_refresh_token` 30 天，经 `/oauth/refresh_biz_token/` 续期，FAQ 页逐字），为 B 端经营者场景的替代凭证；本票按 §6 用户授权链路实施（refresh_token 续期 access_token），BusinessToken 留作后续票评估。
+- 实施侧结论（#118）：channel_info 仅靠 clientKey/clientSecret **无法**换取发送凭证（access_token 需用户授权 code，10 分钟一次性），票面「access_token/refresh_token 由 clientKey/clientSecret 换取」的前提经本专章证伪；实施以 channel_info 可选 `refreshToken`（§6 用户授权 refresh_token，运营侧完成用户授权后录入，30 天有效期且刷新不续自身）承载数据面授权。回复三要素（msg_id/conversation_id/发送方 open_id）均来自入站 webhook：server_message_id 与 conversation_short_id 只存在于消息载荷，发送方 open_id 即信封 `to_user_id`，由渠道适配器在入站落库时随消息留存、发送时取访客最近一封来信组装。
+
+### 6.2 入站媒体与下载能力核查（2026-10-14 补证）
+
+- 图片/本地图片（image/user_local_image）：官方黄金样本（§5.7）content 仅含 conversation_short_id / server_message_id / conversation_type / create_time / message_type / index，**不含任何素材标识或 URL**；站内（含 BFF 搜索）未检出到「私信图片下载」类接口 → 入站私信图片无官方读取通道。
+- 表情（emoji）：带 `resource_url`（可空串）+ resource_width/height（§5.6）；非空时为抖音 CDN 直链，可直接 GET 取字节（无需凭证）；空串则无素材可读。
+- 视频分享（video）：带 `item_id`（@-加密串，§5.8）；开放平台视频接口族（/video/list/、/video/data/ 等）面向**授权账号本人的视频**（发送文档明确「视频发布者 uid 要与 OpenID 相同」「只能发送用户自己的公开视频」），访客分享的他人视频 item_id 无公开下载接口 → 不可读。
+- 实施侧结论（#118）：入站媒体可读范围 = emoji 的非空 resource_url 直链下载；图片类无标识（统一消息体按既有先例以「消息 ID:媒体下标」派生稳定标识落库，读取时如实返回「无素材标识/无下载接口」）、视频类如实返回「无公开下载接口」。媒体下载接口专章核查完毕：**官方不存在 dop IM 私信入站媒体的通用下载接口**，票面「媒体下载接口专章未收录，实施时补证」到此收口。
 
 ## 7. 待核验清单（均标：待核验(09-27)）
 

@@ -20,6 +20,8 @@ import com.dudu.duduserver.service.CompanyService;
 import com.dudu.duduserver.service.UserGroupMemberService;
 import com.dudu.duduserver.service.UserGroupService;
 import com.dudu.duduserver.service.UserService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import com.dudu.duduserver.util.PasswordHasher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -52,9 +54,9 @@ class DeskIntegrationTest {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     @Autowired MockMvc mvc;
@@ -128,7 +130,7 @@ class DeskIntegrationTest {
         UserGroupDO mine = group(783205L, "自有组");
         UserGroupDO other = group(783205L, "他组");
         UserGroupDO foreign = group(783206L, "外部企业组");
-        CompanyChannelDO mineChannel = channel(783205L, mine.getGroupId(), ChannelEnum.WECHAT, "公众号");
+        CompanyChannelDO mineChannel = channel(783205L, mine.getGroupId(), ChannelEnum.WECHAT_MP, "公众号");
         CompanyChannelDO otherChannel = channel(783205L, other.getGroupId(), ChannelEnum.ALIPAY, "生活号");
         // 无外键也放行的脏关联：账号记录挂在其他企业的组上，不能进入任何授权范围
         channel(783205L, foreign.getGroupId(), ChannelEnum.DOUYIN, "脏账号");
@@ -153,7 +155,7 @@ class DeskIntegrationTest {
         assertThat(account.keySet())
             .containsExactlyInAnyOrder("companyChannelId", "groupId", "channel", "accountName");
         assertThat(account.getStr("groupId")).isEqualTo(String.valueOf(mine.getGroupId()));
-        assertThat(account.getStr("channel")).isEqualTo("wechat");
+        assertThat(account.getStr("channel")).isEqualTo("wechat-mp");
         assertThat(account.getStr("accountName")).isEqualTo("公众号");
 
         UserDO agent = plainUser(783205L, "agent.one");

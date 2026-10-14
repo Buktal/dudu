@@ -1,0 +1,141 @@
+.prototype-root[data-variant="D"] {
+  --canvas: #f2f7f4;
+}
+.prototype-root[data-variant="E"] {
+  --canvas: #f7f5fa;
+  --line: #ebe7ee;
+}
+.parallel-window-actions {
+  display: flex;
+  gap: 8px;
+  color: #566b8b;
+}
+.parallel-window-actions [data-slot="button"] {
+  font-size: 11px;
+}
+.parallel-rule {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #718098;
+  margin: -2px 2px 13px;
+}
+.parallel-panes.single-pane {
+  grid-template-columns: minmax(0, 1fr);
+}
+.parallel-picker {
+  height: min(540px, 60dvh);
+  display: flex;
+}
+.parallel-picker .conversation-list {
+  width: 100%;
+}
+.parallel-queue-tip {
+  line-height: 1.8;
+}
+.fold-app-header,
+.stream-app-header {
+  display: flex;
+  align-items: center;
+  min-height: 65px;
+  padding: 0 26px;
+  background: white;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.fold-heading,
+.stream-app-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--primary);
+  white-space: nowrap;
+}
+.fold-heading h1,
+.stream-app-title h1 {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink);
+}
+@media (max-width: 1090px) {
+  .fold-workspace > .visitor-info,
+  .stream-workspace > .visitor-info {
+    top: 65px;
+  }
+}
+@media (max-width: 760px) {
+  .prototype-dock {
+    max-width: 100%;
+    gap: 0;
+    padding: 6px 5px;
+  }
+  .prototype-dock [data-slot="button"] {
+    width: 23px;
+  }
+  .variant-options {
+    gap: 1px;
+  }
+  .variant-options button {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+  .dock-action {
+    padding: 7px;
+  }
+  .dock-action > span {
+    display: none;
+  }
+  .dock-help {
+    display: flex;
+    padding: 6px;
+  }
+  .parallel-window-actions {
+    gap: 2px;
+  }
+  .parallel-window-actions [data-slot="button"] {
+    font-size: 10px;
+    padding: 3px 5px;
+  }
+  .parallel-rule {
+    font-size: 10px;
+    margin-bottom: 8px;
+    align-items: flex-start;
+  }
+  .parallel-rule svg {
+    margin-top: 3px;
+  }
+  .parallel-panes.single-pane > .chat-panel {
+    display: flex;
+  }
+  .fold-app-header,
+  .stream-app-header {
+    padding: 0 14px;
+    min-height: 59px;
+  }
+  .fold-heading,
+  .stream-app-title {
+    gap: 5px;
+  }
+  .fold-heading h1,
+  .stream-app-title h1 {
+    font-size: 12px;
+  }
+  .fold-app-header .header-divider,
+  .stream-app-header .header-divider {
+    margin: 0 10px;
+  }
+  .fold-app-header .app-header-right,
+  .stream-app-header .app-header-right {
+    gap: 2px;
+  }
+  .fold-app-header .app-header-right > .prototype-badge + button,
+  .stream-app-header .app-header-right > .prototype-badge + button {
+    display: none;
+  }
+  .fold-workspace > .visitor-info,
+  .stream-workspace > .visitor-info {
+    top: 59px;
+  }
+}

@@ -107,7 +107,7 @@ class DeskApiTest extends NoDatasourceSpringTest {
             .andExpect(jsonPath("$.data.access.groups[0].groupName").value("售前"))
             .andExpect(jsonPath("$.data.access.accounts[0].companyChannelId").value("51"))
             .andExpect(jsonPath("$.data.access.accounts[0].groupId").value("31"))
-            .andExpect(jsonPath("$.data.access.accounts[0].channel").value("wechat"))
+            .andExpect(jsonPath("$.data.access.accounts[0].channel").value("wechat-mp"))
             .andExpect(jsonPath("$.data.access.accounts[0].accountName").value("公众号"))
             .andExpect(jsonPath("$.data.access.accounts[0].channelInfo").doesNotExist());
 
@@ -202,15 +202,15 @@ class DeskApiTest extends NoDatasourceSpringTest {
         mockMvc.perform(post("/api/desk/visitors/query").header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"search": " 林 ", "channelId": "wechat", "status": "all", "order": "messages", "page": 2, "pageSize": 5}
+                    {"search": " 林 ", "channelId": "wechat-mp", "status": "all", "order": "messages", "page": 2, "pageSize": 5}
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(ApiEnum.OK.code))
             .andExpect(jsonPath("$.data.items[0].id").value("41"))
             .andExpect(jsonPath("$.data.items[0].identity.externalUserId").value("external-a"))
             .andExpect(jsonPath("$.data.items[0].identity.name").value("林小满"))
-            .andExpect(jsonPath("$.data.items[0].identity.channelId").value("wechat"))
-            .andExpect(jsonPath("$.data.items[0].identity.channelName").value("微信"))
+            .andExpect(jsonPath("$.data.items[0].identity.channelId").value("wechat-mp"))
+            .andExpect(jsonPath("$.data.items[0].identity.channelName").value("微信公众号"))
             .andExpect(jsonPath("$.data.items[0].identity.accountId").value("51"))
             .andExpect(jsonPath("$.data.items[0].identity.accountName").value("公众号"))
             .andExpect(jsonPath("$.data.items[0].preview").value("最后一条摘要"))
@@ -225,13 +225,13 @@ class DeskApiTest extends NoDatasourceSpringTest {
             .andExpect(jsonPath("$.data.counts.needsReply").value(3))
             .andExpect(jsonPath("$.data.counts.waiting").value(1))
             .andExpect(jsonPath("$.data.counts.closed").value(2))
-            .andExpect(jsonPath("$.data.channels[0].id").value("wechat"))
-            .andExpect(jsonPath("$.data.channels[0].name").value("微信"));
+            .andExpect(jsonPath("$.data.channels[0].id").value("wechat-mp"))
+            .andExpect(jsonPath("$.data.channels[0].name").value("微信公众号"));
 
         ArgumentCaptor<DeskVisitorQueryDTO> captor = ArgumentCaptor.forClass(DeskVisitorQueryDTO.class);
         verify(deskVisitorService).query(any(JwtUser.class), captor.capture());
         assertThat(captor.getValue().search()).isEqualTo("林");
-        assertThat(captor.getValue().channelId()).isEqualTo("wechat");
+        assertThat(captor.getValue().channelId()).isEqualTo("wechat-mp");
         assertThat(captor.getValue().status()).isEqualTo(VisitorQueryStatusEnum.ALL);
         assertThat(captor.getValue().order()).isEqualTo(VisitorQueryOrderEnum.MESSAGES);
         assertThat(captor.getValue().page()).isEqualTo(2);
@@ -433,7 +433,7 @@ class DeskApiTest extends NoDatasourceSpringTest {
             new DeskCompanyVO("783101", "验收企业"),
             new DeskAccessVO(true,
                 List.of(new DeskAccessVO.Group("31", "售前")),
-                List.of(new DeskAccessVO.Account("51", "31", ChannelEnum.WECHAT, "公众号"))));
+                List.of(new DeskAccessVO.Account("51", "31", ChannelEnum.WECHAT_MP, "公众号"))));
     }
 
     private DeskProfileVO profileResult() {
@@ -445,7 +445,7 @@ class DeskApiTest extends NoDatasourceSpringTest {
     private DeskVisitorPageVO pageResult() {
         return new DeskVisitorPageVO(List.of(conversationResult()), 1L, 2, 5,
             new DeskVisitorPageVO.Counts(4, 3, 1, 2),
-            List.of(new DeskVisitorPageVO.Channel("wechat", "微信")));
+            List.of(new DeskVisitorPageVO.Channel("wechat-mp", "微信公众号")));
     }
 
     private DeskMessagePageVO historyResult() {
@@ -462,7 +462,7 @@ class DeskApiTest extends NoDatasourceSpringTest {
     private DeskConversationVO conversationResult() {
         return new DeskConversationVO("41",
             new DeskVisitorIdentityVO("41", "external-a", "林小满", null,
-                "wechat", "微信", "51", "公众号"),
+                "wechat-mp", "微信公众号", "51", "公众号"),
             VisitorStatusEnum.WAITING, "最后一条摘要",
             LocalDateTime.of(2026, 10, 12, 10, 30, 15), null, 7, 3,
             new DeskCapabilityVO("restricted", List.of(), "渠道发送能力尚未接入"));

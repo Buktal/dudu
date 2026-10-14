@@ -18,6 +18,8 @@ import com.dudu.duduserver.service.CompanyService;
 import com.dudu.duduserver.service.UserGroupMemberService;
 import com.dudu.duduserver.service.UserGroupService;
 import com.dudu.duduserver.service.UserService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import com.dudu.duduserver.util.PasswordHasher;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -64,9 +66,9 @@ class DeskHistoryIntegrationTest {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     @Autowired MockMvc mvc;
@@ -85,7 +87,7 @@ class DeskHistoryIntegrationTest {
         companies.createCompany(company(OTHER_COMPANY_ID, "owner2"), 1L);
         UserGroupDO presale = group(COMPANY_ID, "售前");
         UserGroupDO aftersale = group(COMPANY_ID, "售后");
-        long wechat = channel(COMPANY_ID, presale.getGroupId(), ChannelEnum.WECHAT, "公众号");
+        long wechat = channel(COMPANY_ID, presale.getGroupId(), ChannelEnum.WECHAT_MP, "公众号");
         long alipay = channel(COMPANY_ID, aftersale.getGroupId(), ChannelEnum.ALIPAY, "生活号");
         UserDO agent = plainUser(COMPANY_ID, "agent.one", "客服一号");
         senderUserId = agent.getUserId();
@@ -105,7 +107,7 @@ class DeskHistoryIntegrationTest {
 
         // 其他企业的会话：任何查询与详情都不得泄漏
         UserGroupDO otherGroup = group(OTHER_COMPANY_ID, "外部组");
-        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT, "外部公众号");
+        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT_MP, "外部公众号");
         insertVisitor(OTHER_CONVERSATION_ID, OTHER_COMPANY_ID, otherChannel, "ext-foreign", "外部访客");
         insertMessage(OTHER_CONVERSATION_ID, 1, "incoming", "外部企业消息");
     }

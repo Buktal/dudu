@@ -4,6 +4,13 @@
 > 标注约定：无标注 = 下方给出的官方页面摘录原文已核验（以摘录为准，全文待复核）；`[全文待核验]` = 仅见标题/单句摘录；`待核验(09-27)` = 未能取得官方原文，需复核。
 > 只认 primary sources：`opendocs.alipay.com`、`open.alipay.com`。其他域内容一律未采用。
 > 范围：小程序客服消息、生活号、支付结果异步通知 notify_url、RSA2/SHA256withRSA 验签、app_auth_token、重试幂等、准入。
+> 补证（2026-10-14，#116 动工前置）：票面指出的四个缺口——网关验证握手后半程（§3.2）、被动通知事件表/字段命名/应答（§2.3）、下行接口全文+频控（§2.3）、媒体下载（§2.3）——已按官方原文回填，标注 `已核验(10-14)`。取材三条，均为支付宝官方自有渠道：
+> 1. 蚂蚁开放平台老版"生活号（原服务窗）"文档树的官方镜像 `https://developer.alibaba.com/docs/doc.htm?treeId=279&articleId=<id>&docType=1`（服务端直出全文；105933 快速接入、105937 事件订阅（2016-12-19 更新）、105938 发送消息（2017-06-29 更新））——opendocs.alipay.com 对应页现为 JS 壳，抓不到正文，镜像页与 opendocs 页同源同树；
+> 2. 官方"服务窗 Demo（Java）"整包 `http://p.tb.cn/rmsportal_6680_ServiceWindow_Demo_Java.zip`（2017-11-06 版，GatewayServlet / InAlipayVerifyExecutor / AlipayMsgBuildUtil / Dispatcher 逐字）——握手验签 API 与回包包装逻辑的官方参考实现；
+> 3. 支付宝官方 GitHub `alipay-sdk-php-all` V3 文档（AlipayOpenPublicMessageCustomApi）——custom.send 频控与 48h 窗口第二源。
+> 第 1、3 条域不在上方 primary 名单内（名单系 09-27 那轮 WebSearch 口径），因同为支付宝官方发布渠道而采信；文档年代（2016/2017）照录，未见官方声明废弃。
+> GBK 落地注意（10-14）：网关验证与被动通知实测口径 `charset=GBK`（示例工程常量、握手样例一致）；DUDU 服务端按原始字符串读 body，ASCII 内容安全，中文 Content 的实际编码行为待真实环境核验。
+> 验签钥落地注意（10-14 review 修正）：回调验签按 §4.3/§3.2 用**支付宝平台公钥**（控制台开发设置页下发的"支付宝公钥"，DUDU channel_info 存 `alipayPublicKey`，X.509 Base64/PEM）；应用私钥（`appPrivateKey`）只作请求加签与握手回包签名（`biz_content` 开发者公钥由它推导）。官方 rsaCheckV2 示例（§3.2 逐字）第二参数即支付宝公钥——误用应用公钥验签时官方真实推送全部验签失败，此为 2026-10-14 review 修正项。
 
 ## 1. 官方文档入口与关键页面地址
 
@@ -111,12 +118,24 @@
 
 - 产品定位（https://open.alipay.com/channel/publicAppIndex.htm）："支付宝生活号是支付宝为企业、组织和个人提供的直接触达用户的服务平台，入驻商户可以通过此平台对用户进行信息推送、交易场景打通和会员服务管理。"接入四步：注册认证（推荐企业账户，部分功能仅企业开放）→ 创建生活号 → 配置生活号 → 上架生活号。
 - 开发者模式激活（https://opendocs.alipay.com/fw/guide；https://opendocs.alipay.com/fw/03kpzu）："开发者验签成功之后，需要向支付宝网关回复一条消息，表示验签成功。支付宝收到符合规则的消息之后，开发者模式就激活了"；"激活开发者模式后，支付宝会认为开发者有能力对接生活号相关接口，开发者才能调用相关的生活号 api 接口"；激活步骤始于"登录蚂蚁金服开放平台，点击"管理中心"，进入生活号应用详情页面，点击"验证应用网关""（后继步骤未抓全 → 待核验(09-27)）。
-- 被动通知：生活号被动通知发往应用网关（https://opendocs.alipay.com/common/02qibh）。关注/取关/菜单点击等具体 eventType 与字段 → 待核验(09-27)。
+- 被动通知（已核验(10-14)，官方镜像 105937《生活号事件订阅》，2016-12-19 更新；接口 `alipay.mobile.public.message.notify`）：生活号被动通知发往应用网关（https://opendocs.alipay.com/common/02qibh），**POST 表单**：`service=alipay.mobile.public.message.notify`、`sign_type=RSA2`、`sign=<base64>`、`biz_content=<XML 报文>`（GBK 编码，§GBK 落地注意）。
+  - XML 信封字段：`AppId`（生活号 appId）、`FromUserId`（用户 OpenId，官方标注已废弃，仍随报文下发）、`FromAlipayUserId`（现用唯一用户标识 userid）、`CreateTime`（毫秒时间戳）、`MsgType`（`event`/`text`/`image`…）、`EventType`（仅 event 类携带）、`ActionParam`（菜单点击时携带菜单 action 参数）、`AgreementId`、`AccountNo`、`MsgId`（消息 id，可选，供幂等去重）、`UserInfo`（JSON 字符串：`logon_id`/`user_name`，可能缺省）。
+  - 事件表（MsgType=event，EventType 取值）：`follow` 关注、`unfollow` 取关、`enter` 进入生活号、`click` 自定义菜单点击、`verifygw` 开发者模式网关验证（§3.2）。
+  - 文本消息（MsgType=text）：`<Text><Content><![CDATA[Hello]]></Content></Text>` + 信封字段；图片消息（MsgType=image）：`<Image><MediaId><![CDATA[…]]></MediaId><Format><![CDATA[jpg]]></Format></Image>` + 信封字段；`MediaId` 为媒体下载凭据（见下）。
+  - 接收应答（同源）：收到被动通知**必须同步应答接收成功**，否则视为推送失败；开启重试的产品按 **2 次、间隔 5s** 重试，菜单点击事件与接入验证消息不作重试。应答为**无签名 XML ack**，官方示例逐字（注：示例中 `CreateTime` 写作 `![CDATA[1406165628612]]` 系文档笔误，官方示例工程输出为裸毫秒数，无 CDATA）：
+
+    ```xml
+    <XML><ToUserId><![CDATA[2088802608984030]]></ToUserId><AppId><![CDATA[2014042900005397]]></AppId><CreateTime><![CDATA[1406165628612]]></CreateTime><MsgType><![CDATA[ack]]></MsgType></XML>
+    ```
+
+    `ToUserId` 取来报 `FromUserId`，`AppId` 为生活号 appId（官方示例工程 `AlipayMsgBuildUtil.buildBaseAckMsg` 逐字对照）。DUDU 落地分工（2026-10-14 review 修正）：ack 回显按本条以 `FromUserId` 优先、来报缺失该字段时回退 `FromAlipayUserId`（verifygw 事件载荷只有空 `FromUserId`）；访客身份落库仍以 `FromAlipayUserId` 优先（现用唯一 userid），两处口径互不影响。
+  - 媒体下载（同源 105937）：网关 `https://openfile.alipay.com/chat/multimedia.do`（与消息网关分离，"消息体及调用方式相同"），接口 `alipay.mobile.public.multimedia.download`，`biz_content={"mediaId":"…"}`，签名方式同普通 OpenAPI 请求（§4.1）；成功时 HTTP 响应体即图片内容（Content-Type 为图片类型，流式返回，无 JSON 信封）。
 - 下行（生活号 → 用户）接口族（接口名前缀 `alipay.open.public.*` / `alipay.mobile.public.message.*`，OpenLife，见 https://opendocs.alipay.com/isv/03l221 产品能力表 + https://opendocs.alipay.com/open/53/104550?pathHash=c9669c5b §3.3 标题）：
   - 群发文本 `alipay.open.public.message.total.send`（EasySDK 映射 `sendText`，非 primary 域，接口名本身在官方能力语义"群发本文消息"中可互证，`[全文待核验]`）；
   - 群发图文（`sendImageText`）、创建/更新图文素材（`createImageTextContent` / `modifyImageTextContent`）（https://opendocs.alipay.com/isv/03l221）；
   - 单发模板消息、消息撤回 `alipay.open.public.life.msg.recall`（非 primary 域映射，→ 待核验(09-27)）；
-  - 客服单发 `alipay.mobile.public.message.custom.send`（"3.3.1. 异步单发消息（客服接口）"，https://opendocs.alipay.com/open/53/104550?pathHash=c9669c5b，标题级 → 待核验(09-27)）。
+  - 客服单发 `alipay.open.public.message.custom.send`（已核验(10-14)，官方镜像 105938《发送消息》，2017-06-29 更新）：窗口口径逐字——"用户主动与生活号交互的48小时之内，生活号可以使用该接口向该用户进行消息推送"；文本 biz_content：`{"to_user_id":"2088283746283746","msg_type":"text","text":{"content":"你好"}}`；频控（官方 V3 SDK 文档 AlipayOpenPublicMessageCustomApi，GitHub alipay-sdk-php-all）逐字——"每个生活号每天只能向1个用户推送100条消息，超过这个数目会报错频率超限"。同族已核验：`alipay.open.public.message.total.send`（群发，无 `to_user_id`）、`alipay.open.public.message.single.send`（单发模板消息，图文 article ≤6 篇）。
+    - 接口名勘误：104550 §3.3.1 标题所载 `alipay.mobile.public.message.custom.send` 为老接口名；现行文档与 2017 版官方示例工程（`AlipayOpenPublicMessageCustomSendRequest`）均用 `alipay.open.public.*`，DUDU 按后者实现。
 - 群发定时发送能力存在（https://opendocs.alipay.com/b/06y1fh，标题级 → 待核验(09-27)）。
 - 小程序 × 生活号联动（https://opendocs.alipay.com/mini/introduce/life；https://opendocs.alipay.com/b/05hggn）："在支付宝 10.1.50 版本之后，小程序…关于面板…新增了生活号通道能力；在小程序绑定了生活号的情况下，在关于面板中将直接展示生活号入口；小程序通过生活号下发的消息都会直接显示，新消息将通过红点形式提示用户"。
 
@@ -162,11 +181,28 @@
 - 四地址对照（授权回调地址=授权后带 auth_code 跳转，需与授权链接 redirect_uri 一致；应用网关=收异步通知；同步回调 return_url=页面跳转；异步回调 notify_url=判交易状态；全应用级地址各仅 1 个）见 opendocs 站内搜索页摘录（`[全文待核验]`）→ 待核验(09-27)。
 - 生活号开发者模式验证是第 4 种握手（§3.2），不是业务推送。
 
-### 3.2 生活号开发者模式验证握手（网关验证）
+### 3.2 生活号开发者模式验证握手（网关验证）——已核验(10-14)
 
-- 流程（https://opendocs.alipay.com/fw/03kpzu）："1. 登录蚂蚁金服开放平台，点击"管理中心"，进入生活号应用详情页面，点击"验证应用网关"。2. …"（步骤 2 起未抓到 → 待核验(09-27)）。
-- 成功条件（https://opendocs.alipay.com/fw/guide）："开发者验签成功之后，需要向支付宝网关回复一条消息，表示验签成功。支付宝收到符合规则的消息之后，开发者模式就激活了。回复消息的格式在公钥…"（后半截未抓到 → 待核验(09-27)）。
-- 含义：验证串本质是"支付宝用开发者应用公钥加密/签名下发验证消息 → 开发者私钥验签解密 → 按规则回消息"的双向能力证明，与飞书 challenge 回显不同（类比需谨慎，细节 → 待核验(09-27)）。
+来源：官方镜像 105933《生活号快速接入》（treeId=279）+ 官方服务窗 Java 示例工程（2017-11-06）`GatewayServlet`/`InAlipayVerifyExecutor` 逐字对照；§3.2 原有 fw/guide、fw/03kpzu 摘录与此互证。
+
+- 触发：开放平台应用详情页点"验证应用网关"后，支付宝网关向应用网关地址发 **POST 表单**（示例工程 `doGet` 直接委托 `doPost`，无 GET 形态握手）：`service=alipay.service.check`、`charset=GBK`、`sign_type=RSA2`、`sign=<base64>`、`biz_content=<XML>`。biz_content XML（官方样例逐字）：
+
+  ```xml
+  <?xml version="1.0" encoding="gbk"?><XML><AppId><![CDATA[2014072300007148]]></AppId><FromUserId></FromUserId><CreateTime><![CDATA[1406083506817]]></CreateTime><MsgType><![CDATA[event]]></MsgType><EventType><![CDATA[verifygw]]></EventType><ActionParam></ActionParam><AgreementId></AgreementId><AccountNo></AccountNo></XML>
+  ```
+
+- 验签（示例工程逐字）：`AlipaySignature.rsaCheckV2(params, 支付宝公钥, "GBK", "RSA2")` —— 待验签串**保留 `sign_type`**（仅剔除 `sign`），即 §4.3 生活号例外；`rsaCheckV2` 就是"保留 sign_type"的官方 SDK 实现，`rsaCheckV1` 则剔除 `sign`+`sign_type`（支付类通知用）。§7-5 要的示例串补全：对上面握手报文，待验签串为 `biz_content=<url解码后XML>&charset=GBK&service=alipay.service.check&sign_type=RSA2`（ASCII 升序拼接，仅去 `sign`）。
+- 成功回复（官方文档逐字 + 示例工程 `encryptAndSign` 包装逻辑）：
+
+  ```xml
+  <?xml version="1.0" encoding="GBK"?><alipay><response><biz_content><开发者公钥></biz_content><success>true</success></response><sign><RSA2签名></sign><sign_type>RSA2</sign_type></alipay>
+  ```
+
+  - `sign` = **应用私钥**对 `<response>` 节点内容（无空格的 `<biz_content>…</biz_content><success>true</success>`）作 SHA256WithRSA 后 base64；响应 Content-Type `text/xml;charset=GBK`。
+  - 节点顺序两源略有出入（官方文档 biz_content 在前，示例工程 `<success>true</success>` 在前）：顺序本身不敏感，**签名必须与实际输出内容自洽**。
+  - `<biz_content>` 内的开发者公钥 = 该生活号配置的应用公钥（示例工程常量注释"开发者公钥"；即应用私钥的配对公钥）。
+- 失败行为：验签失败或回复不符合规则则开发者模式不激活（https://opendocs.alipay.com/fw/guide："支付宝收到符合规则的消息之后，开发者模式就激活了"）。
+- 含义：验证串本质是"支付宝用生活号配置的密钥加签下发验证消息 → 开发者验签 → 按规则回签消息"的双向能力证明，与飞书 challenge 回显不同（原类比作废）。
 
 ### 3.3 应答与重试
 
@@ -338,10 +374,10 @@ my.requestSubscribeMessage({ entityIds: [<模板id>×≤3，同为一次性或�
 ## 7. 待核验清单（统一标待核验(09-27)）
 
 1. **异步通知完整原始 POST body 全文**（§5.1 系表格行拼接，非官方原始串；含 total_amount/gmt_refund 等业务字段全表）：`open/270/105902` 全文直抓。→ 待核验(09-27)
-2. **生活号开发者模式验证后半程**：验证应用网关点击后的交互步骤、"回复消息的格式"全文（`fw/guide` 截断处）、加解密算法（公钥加密下发？RSA+AES？）。→ 待核验(09-27)
-3. **生活号被动通知事件表**：关注/取关/菜单点击/模板消息送达等 eventType 与字段；`fromUserId`/`msgType` 命名。→ 待核验(09-27)
-4. **生活号下行接口全文**：`alipay.open.public.message.total.send` / `single.send` / `custom.send`（`alipay.mobile.public.message.custom.send` §3.3.1）、`alipay.open.public.life.msg.recall`、群发定时 `b/06y1fh` 的入参与频控。→ 待核验(09-27)
-5. **生活号异步验签保留 sign_type 的原因与示例串**（规则已核验，机理与向量缺）。→ 待核验(09-27)
+2. ~~**生活号开发者模式验证后半程**~~ **已核验(10-14)**：POST 表单 `service=alipay.service.check` + `EventType=verifygw`，验签 rsaCheckV2（保留 sign_type），回包为签名 XML（开发者公钥入 biz_content）——全文见 §3.2。原"公钥加密下发？"猜测不成立：是签名不是加密。
+3. ~~**生活号被动通知事件表**~~ **已核验(10-14)**：接口 `alipay.mobile.public.message.notify`，事件 `follow`/`unfollow`/`enter`/`click`/`verifygw`，字段 `FromUserId`(废弃 OpenId)/`FromAlipayUserId`(现用 userid)/`MsgType`/`CreateTime`(毫秒)/`MsgId`/`UserInfo` 等，应答为无签名 XML ack，重试 2 次×5s——全文见 §2.3。模板消息送达事件未见此文档树记载（生活号 doc 树 2016 版只列五事件）。
+4. ~~**生活号下行接口全文**~~ **部分已核验(10-14)**：`custom.send` 全文+48h 窗口+频控（接口名勘误为 `alipay.open.public.message.custom.send`）、`total.send`（群发，无 to_user_id）、`single.send`（模板单发）见 §2.3；`alipay.open.public.life.msg.recall` 与群发定时 `b/06y1fh` 入参 → 仍待核验(09-27)。
+5. ~~**生活号异步验签保留 sign_type 的原因与示例串**~~ **已核验(10-14)**：示例串见 §3.2（`…&charset=GBK&service=…&sign_type=RSA2`）；机制由官方示例工程 `rsaCheckV2` 实证（V2=保留 sign_type，V1=剔除）；保留原因官方仍未述，不影响实现。
 6. **小程序客服服务端接口全文**：`alipay.open.mini.miniapp.serviceconfig.modify` 入参（客服电话/在线客服开关？）；云客服访客名片 `ext-info` 中 `cinfo/key` 语义；客服下行 card 推送的频控与模板。→ 待核验(09-27)
 7. **小程序模板消息接口全文**：`templatemessage.send` / `batchsend` 的 biz_content 全字段（to_user_id/user_template_id/page/data keyword 结构）、频控、错误码；`page` 带参跳转 FAQ 全文（`mini/03l8bx`）。→ 待核验(09-27)
 8. **四地址对照页全文**（授权回调/应用网关/return_url/notify_url 各 1 个口径，当前仅站内搜索摘录）。→ 待核验(09-27)
@@ -359,7 +395,9 @@ my.requestSubscribeMessage({ entityIds: [<模板id>×≤3，同为一次性或�
 
 - 模拟"支付宝推支付结果"：`POST` 表单（非 JSON）到 `notify_url`，字段含 `notify_time/notify_type=trade_status_sync/notify_id/charset/version/sign_type/sign/auth_app_id/trade_no/app_id/out_trade_no[/out_biz_no/gmt_refund/refund_fee]/trade_status/total_amount`；签名=`RSA2(SHA256withRSA)`，待签串=去 `sign/sign_type` → `url_decode` → 字典排序 → `k=v&…`，`sign` 为 base64；**生活号通知验签串保留 `sign_type`**。
 - 模拟成功判定：回 `HTTP 200` + 纯文本 `success`（无空格/HTML/重定向）；`fail` 或非 200 即按 25h/8 次（支付 4m 首重 / From 蚂蚁 2m 首重，后续 10m/10m/1h/2h/6h/15h）重推；幂等键 `notify_id`（同条重试不变）+ `out_trade_no`；仅 `TRADE_SUCCESS/FINISHED` 认付款成功，且必须回查 `out_trade_no` 存在性与 `total_amount` 金额一致性。
-- 模拟"生活号被动通知"：发往**应用网关**（非 notify_url）；开发者模式激活需先过"验证应用网关"握手（细节待核验，勿硬编码）。
+- 模拟"生活号被动通知"：发往**应用网关**（非 notify_url）：`POST service=alipay.mobile.public.message.notify` + `biz_content=<XML 信封>`（§2.3）；须同步回**无签名 XML ack**；重试 2 次、间隔 5s（菜单点击与 verifygw 不重试）。
+- 模拟"验证应用网关"握手（已核验(10-14)，勿再引"细节待核验"旧口径）：`POST service=alipay.service.check`、`EventType=verifygw`（§3.2）；验签**保留 sign_type**（rsaCheckV2 语义）；回 `<alipay><response><biz_content>开发者公钥</biz_content><success>true</success></response><sign>…</sign><sign_type>RSA2</sign_type></alipay>`，sign 对 response 节点内容。
+- **mock-pulse 分歧（10-14 照录）**：`mock-pulse/src-tauri/src/connections/alipay/mod.rs` 按通用 rsaCheckV1 语义加签——`signing_concat` 剔除 `sign` **和** `sign_type`（其头部注释自述"rsaCheckV1 语义"）；探测（GOLDEN_PROBE_BODY=§5.1 支付通知形态）只要求 HTTP 200、不校验应答体（`no_body_check`），且未实现 alipay.service.check XML 握手（其注释自述"官方网关验证握手细节待核验(09-27)…不硬编码"）。DUDU #116 按票面/事实库以**生活号口径（保留 sign_type）**实现，故 mock-pulse 探测报文的**签名值不可作 DUDU 验签向量**；报文形态（表单编码、键、percent-encode 的 sign 位置）仍按其对拍。该分歧需在 #116 票评如实说明（mock-pulse 侧为只读，不在本票修改）。
 - 模拟"小程序客服"：**无服务端推送可模拟**——客服=前端 `contact-button(tnt-inst-id+scene)` + 零号云客服；可模拟的是客服下行 card 提醒（默认 30 分钟一次）与未读同步语义。
 - 模拟"小程序订阅消息"：先 `my.requestSubscribeMessage(entityIds≤3)` 获用户同意 → 服务端调 `templatemessage.send(trade_no/formId/ftoken)`；批量与订阅关系查询接口另计。
 - 三方代调用：请求公共参数带 `app_auth_token`（`app_auth_code` 一次性、24h；token 准永久；重复授权刷旧值）；非三方通知里 `auth_app_id=app_id`。

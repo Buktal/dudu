@@ -2,7 +2,7 @@
 
 记录当前前端工作台的功能、入口与限制。子项目概览见 [DuduDesk README](../../dudu-desk/README.md)，当前接口边界见 [InboxApi](../../dudu-desk/src/features/inbox/api.ts)，后端对接实施依据见已定稿的[最小契约](../design/dudu-desk/implementation-contract.md)；企业登录、访客摘要列表、按需对话历史、实时来信订阅、纯文本回复、结束／继续接待、共享名片、全部消息类型的展示及媒体查看、权限变更重载与断线重连重新加载已接通，附件准备尚待逐项接通。
 
-2026-10-13 移除 Mock 模式：删除 `VITE_DESK_MOCK` / `VITE_DESK_SCENARIO` 开关、开发适配器与固定数据工厂、调试场景及相应测试，应用恒走真实适配器；stores 与组件测试共用的测试夹具迁入 `dudu-desk/src/features/inbox/test-fixtures.ts`。
+2026-10-13 移除 Mock 模式：删除 `VITE_DESK_MOCK` / `VITE_DESK_SCENARIO` 开关、开发适配器与固定数据工厂、调试场景及相应测试，应用恒走真实适配器；stores 与组件测试共用的测试夹具迁入 `dudu-desk/src/features/inbox/test-fixtures.ts`。下文历史条目中的 Mock 表述自即日起失效，以本条移除记录为准。
 
 2026-10-13 审查修复（双轴审查结论落地）：失败气泡重试不再只认本次运行的本地提交——重试优先用本地提交，缺失时（重登或他端加载的失败消息）从消息自身取原访客与正文生成新的 `clientRequestId` 调同一发送接口，原失败记录保留、当前草稿不被占用；重新登录后按库展示的 `sending` 受理记录显示「发送中」，failed/unconfirmed 的提示与重试入口不变；delivery 解析收紧到契约三态 `sending/sent/failed`，契约外取值（accepted/delivered/read/unconfirmed）在真实报文里按无效响应拒绝，Mock 世界仍用自身词表；结束接待（closed）与其他端一致地清除本端待处理提醒，较新的待回复状态不被较旧的结束报文误清，重连补回已结束的访客不重建提醒。
 

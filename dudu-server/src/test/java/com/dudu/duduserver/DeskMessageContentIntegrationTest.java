@@ -12,6 +12,8 @@ import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.service.CompanyChannelService;
 import com.dudu.duduserver.service.CompanyService;
 import com.dudu.duduserver.service.UserGroupService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -66,9 +68,9 @@ class DeskMessageContentIntegrationTest {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     @LocalServerPort int port;
@@ -88,7 +90,7 @@ class DeskMessageContentIntegrationTest {
         companies.createCompany(new CompanyCreateDTO(String.valueOf(COMPANY_ID), "内容验收企业", null, null, null,
             new CompanyAdminInitDTO("contentowner", PASSWORD, null)), 1L);
         UserGroupDO group = group(COMPANY_ID, "内容组");
-        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "内容公众号",
+        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "内容公众号",
             Map.of("token", CALLBACK_TOKEN, "appId", "wx_content_appid", "appSecret", "content-secret"));
         ownerToken = login();
     }

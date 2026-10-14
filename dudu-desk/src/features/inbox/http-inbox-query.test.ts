@@ -16,7 +16,7 @@ afterEach(() => vi.restoreAllMocks());
 
 const QUERY: ConversationQuery = {
   search: "林",
-  channelId: "wechat",
+  channelId: "wechat-mp",
   status: "active",
   order: "wait",
 };
@@ -33,7 +33,7 @@ function pageData(input: {
     page: input.page ?? 1,
     pageSize: input.pageSize ?? 30,
     counts: { active: 4, needsReply: 3, waiting: 1, closed: 2 },
-    channels: [{ id: "wechat", name: "微信" }],
+    channels: [{ id: "wechat-mp", name: "微信公众号" }],
   };
 }
 
@@ -49,7 +49,7 @@ describe("http inbox adapter", () => {
         );
         expect(JSON.parse(String(init?.body))).toEqual({
           search: "林",
-          channelId: "wechat",
+          channelId: "wechat-mp",
           status: "active",
           order: "wait",
           page: 1,
@@ -75,7 +75,7 @@ describe("http inbox adapter", () => {
       waiting: 1,
       closed: 2,
     });
-    expect(page.channels).toEqual([{ id: "wechat", name: "微信" }]);
+    expect(page.channels).toEqual([{ id: "wechat-mp", name: "微信公众号" }]);
   });
 
   it("omits identity fields the channel never provided", async () => {

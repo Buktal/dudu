@@ -4,6 +4,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
+import com.dudu.duduserver.channel.ChannelAdapterRegistry;
+import com.dudu.duduserver.channel.wechatmp.WechatMpAdapter;
+import com.dudu.duduserver.channel.wechatmp.WechatMpMediaReader;
+import com.dudu.duduserver.channel.wechatmp.WechatMpProtocol;
+import com.dudu.duduserver.channel.wechatmp.WechatMpTextSender;
+import com.dudu.duduserver.util.DeskConversationViews;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.MessageSendStatusEnum;
@@ -26,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.web.client.RestClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,7 +64,16 @@ class DeskVisitorServiceTest {
     private final CompanyChannelService companyChannelService = mock(CompanyChannelService.class);
     private final DeskSocketGateway deskSocketGateway = mock(DeskSocketGateway.class);
     private final DeskVisitorService deskVisitorService = new DeskVisitorServiceImpl(
-        deskAuthService, visitorService, messageService, userService, companyChannelService, deskSocketGateway);
+        deskAuthService, visitorService, messageService, userService, companyChannelService, deskSocketGateway,
+        deskConversationViews());
+    // 能力说明走真实注册表与公众号适配器；本类只用其限制说明，不发起渠道请求
+    private static DeskConversationViews deskConversationViews() {
+        WechatMpAdapter wechatMp = new WechatMpAdapter(new WechatMpProtocol(),
+            new WechatMpTextSender(RestClient.builder(), "http://127.0.0.1:9"),
+            new WechatMpMediaReader(RestClient.builder(), "http://127.0.0.1:9"));
+        return new DeskConversationViews(new ChannelAdapterRegistry(List.of(wechatMp)));
+    }
+
 
     private final JwtUser me = new JwtUser(COMPANY_ID, 9L, UserRoleEnum.CONSOLE, 0L);
 
@@ -65,7 +81,7 @@ class DeskVisitorServiceTest {
     void setUp() {
         when(deskAuthService.requireAccess(me)).thenReturn(
             new DeskAccessVO(false, List.of(new DeskAccessVO.Group("31", "售前")),
-                List.of(new DeskAccessVO.Account(ACCOUNT_ID, "31", ChannelEnum.WECHAT, "公众号"))));
+                List.of(new DeskAccessVO.Account(ACCOUNT_ID, "31", ChannelEnum.WECHAT_MP, "公众号"))));
     }
 
     @ParameterizedTest
@@ -84,7 +100,7 @@ class DeskVisitorServiceTest {
             Arguments.of(ApiEnum.PARAM_ERROR.code, query(1, 0, "", "all")),
             Arguments.of(ApiEnum.PARAM_EXCEED.code, query(1, 101, "", "all")),
             Arguments.of(ApiEnum.PARAM_EXCEED.code, query(1, 30, "x".repeat(101), "all")),
-            Arguments.of(ApiEnum.PARAM_ERROR.code, query(1, 30, "", "telegram")));
+            Arguments.of(ApiEnum.PARAM_ERROR.code, query(1, 30, "", "no-such-channel")));
     }
 
     @Test
@@ -104,8 +120,8 @@ class DeskVisitorServiceTest {
         assertThat(view.version()).isEqualTo(3);
         assertThat(view.identity().id()).isEqualTo("41");
         assertThat(view.identity().externalUserId()).isEqualTo("external-a");
-        assertThat(view.identity().channelId()).isEqualTo("wechat");
-        assertThat(view.identity().channelName()).isEqualTo("微信");
+        assertThat(view.identity().channelId()).isEqualTo("wechat-mp");
+        assertThat(view.identity().channelName()).isEqualTo("微信公众号");
         assertThat(view.identity().accountId()).isEqualTo(ACCOUNT_ID);
         assertThat(view.identity().accountName()).isEqualTo("公众号");
         assertThat(view.capability().state()).isEqualTo("restricted");
@@ -311,7 +327,7 @@ class DeskVisitorServiceTest {
     private CompanyChannelDO channelAccount(Map<String, Object> channelInfo) {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setCompanyChannelId(Long.valueOf(ACCOUNT_ID));
-        account.setChannel(ChannelEnum.WECHAT);
+        account.setChannel(ChannelEnum.WECHAT_MP);
         account.setAccountName("公众号");
         account.setChannelInfo(channelInfo);
         return account;

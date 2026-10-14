@@ -33,20 +33,26 @@ import java.util.Map;
 /**
  * 入站信件实现：来源唯一键 (company_id, company_channel_id, external_user_id) 找到或创建访客，
  * 同事务创建空名片；message_count 用单条 UPDATE 原子递增并回读分配 sequence，随后写入消息与
- * 最后消息/接待状态。渠道资料按未提供、空值与有效值区分更新，推送在事务提交后发出且失败不影响落库。
+ * 最后消息/接待状态。渠道推送按 at-least-once 重发，同访客同渠道消息标识已落库即幂等跳过：
+ * 来信先锁定访客行串行化同一访客的并发来信，重推判定基于锁定后读到的最新已提交数据，
+ * message.message 的唯一键 uk_message_external (visitor_id, external_message_id)（V6）作
+ * 数据库最终防线，冲突事务整体回滚即不产生重复计数；渠道资料按未提供、空值与有效值区分更新，
+ * 推送在事务提交后发出且失败不影响落库。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeskInboundServiceImpl implements DeskInboundService {
 
-    // 并发首信撞唯一键后回读用的行锁片段：锁定读绕过可重复读快照，取另一事务已提交的行
+    // 行锁片段：锁定读绕过可重复读快照，读到并发事务已提交的最新行（来信串行化与
+    // 并发首信撞唯一键后的回读共用）
     private static final String LOCK_ROW = "FOR UPDATE";
 
     private final VisitorService visitorService;
     private final VisitorProfileService visitorProfileService;
     private final MessageService messageService;
     private final DeskSocketGateway deskSocketGateway;
+    private final DeskConversationViews deskConversationViews;
 
     @Override
     @Transactional
@@ -55,6 +61,13 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         VisitorDO visitor = findVisitor(account, inbound.externalUserId());
         if (visitor == null) {
             visitor = createVisitor(account, inbound, now);
+        }
+        if (redelivered(visitor.getVisitorId(), inbound)) {
+            // 渠道应答超时后重推同一封信（at-least-once）：已落库即幂等跳过，不重复计数；
+            // 判定在访客行锁之后，并发首信创建访客的败方也能看到胜方已落库的同标识消息
+            log.info("[desk] 来信重推幂等跳过, companyChannelId={}, externalMessageId={}",
+                account.getCompanyChannelId(), inbound.externalMessageId());
+            return;
         }
         // 渠道资料有变化的名片随来信一起在提交后推送；没有变化时为空
         VisitorProfileDO profileChange = applyChannelProfile(visitor, inbound, now);
@@ -115,8 +128,22 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         return patch;
     }
 
+    // 锁定读找到访客：同一访客的并发来信在此排队，重推判定与计数递增串行于行锁之后。
+    // 先普通读再对存在的行加锁——对缺失行做锁定读会持间隙锁，与并发首信的插入意向锁
+    // 互为目标形成死锁（MySQL 判负一方整库回滚）；存在行的锁定读是纯记录锁，无此问题
     private VisitorDO findVisitor(CompanyChannelDO account, String externalUserId) {
-        return visitorService.getOne(sourceOf(account, externalUserId));
+        VisitorDO visitor = visitorService.getOne(sourceOf(account, externalUserId));
+        if (visitor == null) {
+            return null;
+        }
+        return visitorService.getOne(sourceOf(account, externalUserId).last(LOCK_ROW));
+    }
+
+    // 渠道消息标识（wamid/msgid 等）在本访客名下已落库即重推；未提供标识的信件不判重
+    private boolean redelivered(Long visitorId, ChannelInboundMessage inbound) {
+        return inbound.externalMessageId() != null && messageService.count(Wrappers.<MessageDO>lambdaQuery()
+            .eq(MessageDO::getVisitorId, visitorId)
+            .eq(MessageDO::getExternalMessageId, inbound.externalMessageId())) > 0;
     }
 
     // 首信并发：唯一键冲突说明另一事务已创建访客，锁定读回读该行继续本条消息
@@ -170,7 +197,7 @@ public class DeskInboundServiceImpl implements DeskInboundService {
     // 推送失败只记录，不回滚已保存的来信
     private void pushAfterCommit(CompanyChannelDO account, VisitorDO visitor, MessageDO message,
                                  VisitorProfileDO profileChange) {
-        DeskConversationVO conversation = DeskConversationViews.conversation(visitor, account);
+        DeskConversationVO conversation = deskConversationViews.conversation(visitor, account);
         DeskMessageVO messageVO = DeskMessageVO.of(message, null);
         DeskVisitorProfileVO profileVO = profileChange == null ? null : DeskVisitorProfileVO.of(profileChange);
         Long companyId = account.getCompanyId();

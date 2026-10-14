@@ -18,6 +18,8 @@ import com.dudu.duduserver.service.CompanyService;
 import com.dudu.duduserver.service.UserGroupMemberService;
 import com.dudu.duduserver.service.UserGroupService;
 import com.dudu.duduserver.service.UserService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import com.dudu.duduserver.util.PasswordHasher;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -63,9 +65,9 @@ class DeskVisitorIntegrationTest {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     @Autowired MockMvc mvc;
@@ -86,7 +88,7 @@ class DeskVisitorIntegrationTest {
         companies.createCompany(company(OTHER_COMPANY_ID, "owner2"), 1L);
         UserGroupDO first = group(COMPANY_ID, "售前");
         UserGroupDO second = group(COMPANY_ID, "售后");
-        channelWechat = channel(COMPANY_ID, first.getGroupId(), ChannelEnum.WECHAT, "公众号");
+        channelWechat = channel(COMPANY_ID, first.getGroupId(), ChannelEnum.WECHAT_MP, "公众号");
         channelDouyin = channel(COMPANY_ID, second.getGroupId(), ChannelEnum.DOUYIN, "抖音号");
         channelAlipay = channel(COMPANY_ID, second.getGroupId(), ChannelEnum.ALIPAY, "生活号");
 
@@ -116,7 +118,7 @@ class DeskVisitorIntegrationTest {
 
         // 其他企业的访客与账号：任何查询与详情都不得泄漏
         UserGroupDO otherGroup = group(OTHER_COMPANY_ID, "外部组");
-        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT, "外部公众号");
+        long otherChannel = channel(OTHER_COMPANY_ID, otherGroup.getGroupId(), ChannelEnum.WECHAT_MP, "外部公众号");
         insertVisitor(OTHER_VISITOR_ID, OTHER_COMPANY_ID, otherChannel, "ext-foreign", "外部访客",
             VisitorStatusEnum.NEEDS_REPLY, at(1), at(2), at(0), 4, 1, "外部企业摘要");
     }
@@ -147,8 +149,8 @@ class DeskVisitorIntegrationTest {
         assertThat(identity.getStr("id")).isEqualTo("784102");
         assertThat(identity.getStr("externalUserId")).isEqualTo("ext-zhou");
         assertThat(identity.getStr("name")).isEqualTo("周越");
-        assertThat(identity.getStr("channelId")).isEqualTo("wechat");
-        assertThat(identity.getStr("channelName")).isEqualTo("微信");
+        assertThat(identity.getStr("channelId")).isEqualTo("wechat-mp");
+        assertThat(identity.getStr("channelName")).isEqualTo("微信公众号");
         assertThat(identity.getStr("accountId")).isEqualTo(String.valueOf(channelWechat));
         assertThat(identity.getStr("accountName")).isEqualTo("公众号");
         assertThat(first.getJSONObject("capability").getStr("state")).isEqualTo("restricted");
@@ -168,7 +170,7 @@ class DeskVisitorIntegrationTest {
         assertThat(data.getJSONObject("counts").getInt("closed")).isEqualTo(1);
         // channels 为授权账号用到的渠道代码与显示名
         assertThat(data.getJSONArray("channels").toString())
-            .isEqualTo("[{\"id\":\"wechat\",\"name\":\"微信\"},{\"id\":\"douyin\",\"name\":\"抖音\"}"
+            .isEqualTo("[{\"id\":\"wechat-mp\",\"name\":\"微信公众号\"},{\"id\":\"douyin\",\"name\":\"抖音\"}"
                 + ",{\"id\":\"alipay\",\"name\":\"支付宝\"}]");
     }
 
@@ -203,7 +205,7 @@ class DeskVisitorIntegrationTest {
         assertThat(scoped.getJSONObject("counts").getInt("waiting")).isEqualTo(1);
         assertThat(scoped.getJSONObject("counts").getInt("closed")).isEqualTo(1);
         assertThat(scoped.getJSONArray("channels").toString())
-            .isEqualTo("[{\"id\":\"wechat\",\"name\":\"微信\"}]");
+            .isEqualTo("[{\"id\":\"wechat-mp\",\"name\":\"微信公众号\"}]");
 
         // 授权账号之外的访客：列表不出现，详情按无访问权限处理
         JSONObject all = data(query(token("agent.one"), "{\"status\": \"all\"}"));
@@ -239,7 +241,7 @@ class DeskVisitorIntegrationTest {
         JSONObject pending = data(query(token("owner"), "{\"status\": \"needs-reply\"}"));
         assertThat(ids(pending)).containsExactly("784102", "784101", "784107");
 
-        assertThat(query(token("owner"), "{\"channelId\": \"telegram\"}").getInt("code")).isEqualTo(11000);
+        assertThat(query(token("owner"), "{\"channelId\": \"no-such-channel\"}").getInt("code")).isEqualTo(11000);
         assertThat(query(token("owner"), "{\"status\": \"bogus\"}").getInt("code")).isEqualTo(11000);
         assertThat(query(token("owner"), "{\"order\": \"bogus\"}").getInt("code")).isEqualTo(11000);
     }
@@ -282,7 +284,7 @@ class DeskVisitorIntegrationTest {
         assertThat(data.getInt("version")).isEqualTo(2);
         assertThat(data.getJSONObject("identity").getStr("name")).isEqualTo("林小满");
         assertThat(data.getJSONObject("identity").getStr("externalUserId")).isEqualTo("ext-lin");
-        assertThat(data.getJSONObject("identity").getStr("channelName")).isEqualTo("微信");
+        assertThat(data.getJSONObject("identity").getStr("channelName")).isEqualTo("微信公众号");
 
         // 无消息时间回落到创建时间，非待回复省略 waitingSince
         JSONObject closed = detail(token("owner"), "784104").getJSONObject("data");

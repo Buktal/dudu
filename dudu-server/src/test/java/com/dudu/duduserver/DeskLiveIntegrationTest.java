@@ -13,6 +13,8 @@ import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.service.DeskInboundService;
+import com.dudu.duduserver.testutil.IntegrationTestEnv;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -63,9 +65,9 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
+        registry.add("spring.datasource.url", IntegrationTestEnv::jdbcUrl);
+        registry.add("spring.datasource.username", IntegrationTestEnv::dbUser);
+        registry.add("spring.datasource.password", IntegrationTestEnv::dbPassword);
     }
 
     @Autowired DeskInboundService deskInboundService;
@@ -81,7 +83,7 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
         companies.createCompany(company(COMPANY_ID, "liveowner", "实时验收企业"), 1L);
         companies.createCompany(company(OTHER_COMPANY_ID, "liveowner2", "实时验收企业"), 1L);
         UserGroupDO group = group(COMPANY_ID, "实时组");
-        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT, "公众号",
+        channelWechat = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.WECHAT_MP, "公众号",
             Map.of("token", CALLBACK_TOKEN, "externalAccountId", "gh_live"));
         channelDouyin = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.DOUYIN, "抖音号", Map.of("token", "x"));
 
@@ -368,7 +370,7 @@ class DeskLiveIntegrationTest extends DeskIntegrationSupport {
         assertThat(conversation.getInt("messageCount")).isEqualTo(sequence);
         assertThat(conversation.getStr("waitingSince")).isNotBlank();
         assertThat(conversation.getJSONObject("identity").getStr("externalUserId")).isEqualTo(externalUserId);
-        assertThat(conversation.getJSONObject("identity").getStr("channelId")).isEqualTo("wechat");
+        assertThat(conversation.getJSONObject("identity").getStr("channelId")).isEqualTo("wechat-mp");
         assertThat(conversation.getJSONObject("identity").getStr("accountId")).isEqualTo(String.valueOf(channelWechat));
         assertThat(conversation.getJSONObject("capability").getStr("state")).isEqualTo("restricted");
         assertThat(message.getStr("id")).isNotBlank();
