@@ -260,6 +260,43 @@ https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getMe
 
 ---
 
+## 8. 实施记录（2026-10-14，#107）
+
+Server 侧按本事实库落地 `dudu-server` 的 `channel/telegram/` 四件套（`TelegramAdapter`/`TelegramProtocol`/
+`TelegramCredentials`/`TelegramTextSender`/`TelegramMediaReader`）。以下为实现选择与边界，均标注依据：
+
+1. **`channel_info.url` 的语义 = 含 `/bot<token>` 路径段的 Bot API 基址**（§5.4 请求基式
+   `https://api.telegram.org/bot<token>/METHOD` 的直接展开）。票面钉死 `channel_info` 只有两键
+   `url`/`secretToken`（与 mock-pulse `config.rs` Telegram 变体一致，`secret_token` 1–256 字符
+   `[A-Za-z0-9_-]`），而发送/素材必须携带 bot token 走 URL 路径鉴权——两者唯一的自洽组合就是
+   url 本身含 token 段：发送 `POST {url}/sendMessage`、素材 `GET {url}/getFile`，下载地址由基址在
+   `bot` 段前插 `file` 段派生为 `/file/bot<token>/<file_path>`（§6 文件下载路径，同源同 token）。
+   先例：QQ 也是「键对齐 mock-pulse、语义由 Server 侧定义」。
+2. **验签即恒等头原样比对**（§4.1）：头值与配置 secretToken 经 `MessageDigest.isEqual`（UTF-8 字节）
+   常量时间比较，无 HMAC、无签名、无 query 参数参与；伪造与缺失头一律 403 拒绝且不落任何数据。
+   官方无 challenge 握手，GET 验证按接口默认不支持应答（501）。
+3. **入站映射**（§2.1 Update 信封 + 契约第 4 节统一消息体）：只处理 `message` 字段——text 文本；
+   photo 取面积最大一档的 `file_id` 归 image；voice/audio 归 audio（name 取 `title`，缺则
+   `file_name`）；video/video_note 归 video；document 归 file（name 取 `file_name`）；sticker 等
+   契约外内容与纯服务消息如实落 unknown（`originalType` 取排除结构键后首个内容键名）。
+   `caption` 契约无处承载，不落（同飞书先例）。幂等以 `update_id` 为准（§3.3 官方以 update_id
+   排序、处理方自行去重）；`chat.id`/`from.id` 按 64 位处理。其余 26 类事件字段只应答 `success`
+   不落库。
+4. **发送成功判据**（§5.3 + #making-requests）：HTTP 2XY 且包络 `ok=true` 才算成功，取
+   `result.message_id` 作渠道消息标识；`ok=false` 的 `error_code`/`description`/`parameters.retry_after`
+   （429 频控，§6 三档超限）原样转述落库，不模拟成功、不做自动重试。`chat_id` 数字标识按官方样本
+   以数字下发（64 位），非数字（`@channelusername` 形态）原样字符串。
+5. **素材**（§6 文件尺寸行 + api#getfile）：凭消息中已存 `file_id` 换 `file_path` 再下载；上传
+   ≤50MB/下载 ≤20MB 超限由渠道自身在 getFile/下载时拒绝（官方明示 bots can download files of up
+   to 20MB），错误包络如实透传（13100），不伪装字节；凭据缺失 12200、空素材标识不发请求。
+6. **凭据保护**：token 在 URL 路径上，RestClient 异常消息可能含完整带 token 的地址——发送/素材的
+   失败原因与日志只记异常类简单名，不落异常消息，凭据不写日志也不返回 Desk。
+7. **集成验收**（`TelegramChannelIntegrationTest`，独立评审库 `dudu_review_telegram` 自建自删）：
+   mock-pulse `GOLDEN_PROBE_PLAINTEXT`（即 §5.2 官方自测样本）逐字探针 + 合规恒等头直发对拍；
+   发送/素材经本地 HttpServer 替身按 §5.3 包络与 §6 下载路径形状应答。
+
+---
+
 ## 附：对 MockPulse 模拟的直接含义（速查）
 
 - 模拟"TG 推事件给回调"：`POST {update_id: Int, <事件字段其一>: {...}}`，头 `X-Telegram-Bot-Api-Secret-Token: <1–256字符 [A-Za-z0-9_-]>` 原样比对（无 HMAC）；成功判 `2XY`，否则按"合理次数"重推（精确时刻表未知，按通用指数退避实现并可配置）。
