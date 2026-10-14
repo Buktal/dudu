@@ -1,9 +1,10 @@
 # Local development only. Production deployment is configured separately.
-name: dudu-local
+name: mysql-local
 
 services:
   mysql:
     image: mysql:8.4.11
+    container_name: mysql-local
     restart: unless-stopped
     ports:
       - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
@@ -30,5 +31,10 @@ services:
         max-size: "10m"
         max-file: "3"
 
+# 评审用户（集成测试连独立评审库用，授权仅 dudu_review_% 库）。
+# MySQL 初始化仅在空数据目录首次启动生效，已有卷上缺失时用 root 执行一次：
+#   CREATE USER IF NOT EXISTS 'dudu_review'@'%' IDENTIFIED BY 'dudu_review_local';
+#   GRANT ALL PRIVILEGES ON `dudu_review_%`.* TO 'dudu_review'@'%'; FLUSH PRIVILEGES;
 volumes:
   mysql-data:
+    name: mysql-local-data

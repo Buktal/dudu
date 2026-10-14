@@ -13,6 +13,11 @@ public record ChannelReceiveResult(ChannelCallbackResult response, ChannelInboun
 
     // 解析出访客消息：业务层落库后按 success 应答
     public static ChannelReceiveResult accept(ChannelInboundMessage message) {
-        return new ChannelReceiveResult(ChannelCallbackResult.success(), message);
+        return accept(message, ChannelCallbackResult.success());
+    }
+
+    // 解析出访客消息并按渠道协议应答：钉钉等渠道要求以加密 success 包应答而非明文
+    public static ChannelReceiveResult accept(ChannelInboundMessage message, ChannelCallbackResult response) {
+        return new ChannelReceiveResult(response, message);
     }
 }
