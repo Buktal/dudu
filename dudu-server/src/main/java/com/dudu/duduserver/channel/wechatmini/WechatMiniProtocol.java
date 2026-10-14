@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.MediaMessages;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -179,14 +180,7 @@ public class WechatMiniProtocol {
             }
             id = messageScoped + ":0";
         }
-        Map<String, Object> media = new LinkedHashMap<>();
-        media.put("kind", kind);
-        media.put("id", id);
-        String publicUrl = Texts.blankToNull(url);
-        if (publicUrl != null) {
-            media.put("url", publicUrl);
-        }
-        return Map.of("type", kind, "media", media);
+        return MediaMessages.of(kind, id, url, null);
     }
 
     // 小程序卡片映射 card：Title 进 title；PagePath 是小程序页内路径不是外链、ThumbMediaId

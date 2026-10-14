@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.MediaMessages;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -157,14 +158,7 @@ public class XiaohongshuProtocol {
         if (messageId == null) {
             return unknown(kind);
         }
-        Map<String, Object> media = new LinkedHashMap<>();
-        media.put("kind", kind);
-        media.put("id", messageId + ":0");
-        String publicUrl = Texts.blankToNull(fields.get(urlField));
-        if (publicUrl != null) {
-            media.put("url", publicUrl);
-        }
-        return Map.of("type", kind, "media", media);
+        return MediaMessages.of(kind, messageId + ":0", fields.get(urlField), null);
     }
 
     // item/order 映射 card：kind 记录推送类型，externalId 为外部商品/订单标识

@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.MediaMessages;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +18,6 @@ import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.HexFormat;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -162,9 +162,9 @@ public class QqProtocol {
     // 契约第 4 节统一消息体：附件优先（url 即可读引用），message_type=0 为文本；频道消息
     // 无 message_type 按正文判断；其余类型如实落 unknown 不猜正文
     private Map<String, Object> content(JSONObject d) {
-        Map<String, Object> media = firstAttachment(d);
-        if (media != null) {
-            return Map.of("type", media.get("kind"), "media", media);
+        Map<String, Object> attachment = firstAttachment(d);
+        if (attachment != null) {
+            return attachment;
         }
         Integer messageType = d.getInt("message_type");
         if (messageType == null) {
@@ -194,12 +194,7 @@ public class QqProtocol {
             if (url == null) {
                 continue;
             }
-            String kind = kindOf(attachment.getStr("content_type"));
-            Map<String, Object> media = new LinkedHashMap<>();
-            media.put("kind", kind);
-            media.put("id", url);
-            media.put("url", url);
-            return media;
+            return MediaMessages.of(kindOf(attachment.getStr("content_type")), url, url, null);
         }
         return null;
     }

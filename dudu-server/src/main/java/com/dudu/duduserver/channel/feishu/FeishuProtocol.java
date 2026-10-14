@@ -11,6 +11,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.MediaMessages;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -186,14 +187,8 @@ public class FeishuProtocol {
         if (mediaKey == null) {
             return unknown(msgType);
         }
-        Map<String, Object> media = new LinkedHashMap<>();
-        media.put("kind", kind);
-        media.put("id", messageId + ":" + mediaKey + ":" + resourceType);
-        String name = Texts.blankToNull(content.getStr(KEY_FILE_NAME, null));
-        if (name != null) {
-            media.put("name", name);
-        }
-        return Map.of("type", kind, "media", media);
+        return MediaMessages.of(kind, messageId + ":" + mediaKey + ":" + resourceType, null,
+            content.getStr(KEY_FILE_NAME, null));
     }
 
     // 官方 location 的经纬度为字符串数字，转数值保存；精度非法由 content() 兜底落 unknown

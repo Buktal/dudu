@@ -5,6 +5,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.MediaMessages;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -127,14 +128,7 @@ public class DingtalkProtocol {
         if (downloadCode == null) {
             return unknown(msgType);
         }
-        Map<String, Object> media = new LinkedHashMap<>();
-        media.put("kind", kind);
-        media.put("id", downloadCode);
-        String name = payload == null ? null : Texts.blankToNull(payload.getStr("fileName"));
-        if (name != null) {
-            media.put("name", name);
-        }
-        return Map.of("type", kind, "media", media);
+        return MediaMessages.of(kind, downloadCode, null, payload.getStr("fileName"));
     }
 
     // 富文本：文本段顺序拼接；有图片等附件段落时按契约 reply 分支，否则退化为纯文本

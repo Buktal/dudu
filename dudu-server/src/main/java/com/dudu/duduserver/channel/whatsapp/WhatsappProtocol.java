@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.MediaMessages;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -175,14 +176,7 @@ public class WhatsappProtocol {
         if (id == null) {
             return unknown(msgType);
         }
-        Map<String, Object> media = new LinkedHashMap<>();
-        media.put("kind", kind);
-        media.put("id", id);
-        String name = Texts.blankToNull(body.getStr("filename"));
-        if (name != null) {
-            media.put("name", name);
-        }
-        return Map.of(KEY_TYPE, kind, KEY_MEDIA, media);
+        return MediaMessages.of(kind, id, null, body.getStr("filename"));
     }
 
     // location（§2.3）：名称优先作 label、地址回退；坐标为数值，缺失即按 unknown

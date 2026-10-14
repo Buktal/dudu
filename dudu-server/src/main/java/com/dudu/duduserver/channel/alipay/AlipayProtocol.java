@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.alipay;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.MediaMessages;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -225,10 +226,7 @@ public class AlipayProtocol {
         if (mediaId == null) {
             return Map.of("type", "unknown", "originalType", MSG_TYPE_IMAGE);
         }
-        Map<String, Object> media = new LinkedHashMap<>();
-        media.put("kind", MSG_TYPE_IMAGE);
-        media.put("id", mediaId);
-        return Map.of("type", MSG_TYPE_IMAGE, "media", media);
+        return MediaMessages.of(MSG_TYPE_IMAGE, mediaId, null, null);
     }
 
     // UserInfo 为 JSON 字符串（logon_id/user_name）：损坏或缺失返回 null，不阻塞收信

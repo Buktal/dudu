@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
+import com.dudu.duduserver.channel.support.MediaMessages;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -174,13 +175,7 @@ public class DouyinProtocol {
         String resourceUrl = Texts.blankToNull(content.getStr(KEY_RESOURCE_URL, null));
         String identifier = firstNonBlank(content.getStr(KEY_ITEM_ID, null),
             content.getStr(KEY_MEDIA_ID, null), resourceUrl, serverMessageId + DERIVED_INDEX);
-        Map<String, Object> media = new LinkedHashMap<>();
-        media.put("kind", kind);
-        media.put("id", identifier);
-        if (resourceUrl != null) {
-            media.put("url", resourceUrl);
-        }
-        return Map.of("type", kind, "media", media);
+        return MediaMessages.of(kind, identifier, resourceUrl, null);
     }
 
     // 留资卡片：card 分支只承载 kind 与 card_id（契约 card 无逐项数据位，card_data 不映射为假字段）
