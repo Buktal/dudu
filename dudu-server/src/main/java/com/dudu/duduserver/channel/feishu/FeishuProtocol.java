@@ -191,13 +191,14 @@ public class FeishuProtocol {
             content.getStr(KEY_FILE_NAME, null));
     }
 
-    // 官方 location 的经纬度为字符串数字，转数值保存；精度非法由 content() 兜底落 unknown
+    // 官方 location 的经纬度为字符串数字，转数值保存；地点名的统一消息体键为 label
+    // （契约 types.ts 的 location 分支），官方字段名 name 映射进 label；精度非法由 content() 兜底落 unknown
     private Map<String, Object> location(String msgType, JSONObject content) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", "location");
         String name = Texts.blankToNull(content.getStr("name", null));
         if (name != null) {
-            body.put("name", name);
+            body.put("label", name);
         }
         body.put("longitude", Double.parseDouble(content.getStr("longitude")));
         body.put("latitude", Double.parseDouble(content.getStr("latitude")));

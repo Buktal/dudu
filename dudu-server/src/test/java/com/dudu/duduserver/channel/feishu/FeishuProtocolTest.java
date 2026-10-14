@@ -183,7 +183,7 @@ class FeishuProtocolTest {
             "{\"name\":\"xx省xx市\",\"longitude\":\"116.397755\",\"latitude\":\"39.903179\"}");
         assertThat(location)
             .containsEntry("type", "location")
-            .containsEntry("name", "xx省xx市")
+            .containsEntry("label", "xx省xx市")
             .containsEntry("longitude", 116.397755d)
             .containsEntry("latitude", 39.903179d);
     }
