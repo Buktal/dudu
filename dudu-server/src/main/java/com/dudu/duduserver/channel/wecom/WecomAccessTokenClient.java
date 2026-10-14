@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wecom;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
@@ -30,14 +31,6 @@ class WecomAccessTokenClient {
 
     WecomAccessTokenClient(RestClient restClient) {
         this.restClient = restClient;
-    }
-
-    // 换取结果：成功只带 access_token，失败只带已成型的原因说明
-    record TokenResult(String accessToken, String failureReason) {
-
-        boolean succeeded() {
-            return accessToken != null;
-        }
     }
 
     TokenResult fetch(WecomCredentials credentials) {

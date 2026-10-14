@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wechatmp;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,7 +48,7 @@ public class WechatMpMediaReader {
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
         WechatMpCredentials credentials = WechatMpCredentials.of(account);
         try {
-            WechatMpAccessTokenClient.TokenResult token = accessTokenClient.fetch(credentials);
+            TokenResult token = accessTokenClient.fetch(credentials);
             if (!token.succeeded()) {
                 return ChannelMediaResult.failed(token.failureReason());
             }

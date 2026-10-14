@@ -2,22 +2,23 @@ package com.dudu.duduserver.channel.douyin;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 抖音接口凭据换取（事实见 docs/research/channels/douyin.md §6、§6.1）：发送私信
  * 是用户授权类接口，access_token 只能由用户授权链路获得——以 channel_info 的
  * refreshToken POST /oauth/refresh_token/（form-urlencoded：client_key、client_secret、
  * refresh_token、grant_type=refresh_token）续期，15 天寿命、刷新不续 refresh_token
- * 自身；access_token 与用户授权绑定，进程内按 clientKey+refreshToken 缓存复用（同一
- * clientKey 换绑到另一授权用户后旧缓存自然失效），窗口取响应 expires_in，失败不缓存以便重试。
+ * 自身；access_token 与用户授权绑定，进程内按 clientKey+refreshToken 缓存复用
+ * （AccessTokenCache 骨架，剩余不足 30 分钟视为过期；同一 clientKey 换绑到另一
+ * 授权用户后旧缓存自然失效），窗口取响应 expires_in，失败不缓存以便重试。
  * 渠道错误原样记录 code 与 description；用户取消授权后 access_token 即时失效。
  */
 class DouyinTokenClient {
@@ -34,9 +35,6 @@ class DouyinTokenClient {
     private static final String KEY_ERROR_CODE = "error_code";
     private static final String KEY_DESCRIPTION = "description";
 
-    // 剩余有效期不足 30 分钟即续期（与飞书缓存窗口口径一致）
-    private static final long REFRESH_AHEAD_MILLIS = Duration.ofMinutes(30).toMillis();
-
     // §6：access_token 寿命 15 天（expires_in=1296000）；响应缺 expires_in 时按此处理
     private static final long DEFAULT_EXPIRE_MILLIS = Duration.ofDays(15).toMillis();
 
@@ -48,21 +46,10 @@ class DouyinTokenClient {
 
     // 按 clientKey+refreshToken 缓存：access_token 是用户授权凭据，同 clientKey 换绑
     // 授权后 refreshToken 变化，旧缓存不可复用
-    private final Map<CacheKey, CachedToken> cache = new ConcurrentHashMap<>();
+    private final AccessTokenCache<CacheKey> cache = new AccessTokenCache<>();
 
     DouyinTokenClient(RestClient restClient) {
         this.restClient = restClient;
-    }
-
-    // 换取结果：成功只带 access_token，失败只带已成型的原因说明
-    record TokenResult(String accessToken, String failureReason) {
-
-        boolean succeeded() {
-            return accessToken != null;
-        }
-    }
-
-    private record CachedToken(String token, long expiresAtMillis) {
     }
 
     // 缓存键：同一应用（clientKey）的不同授权用户以 refreshToken 区分
@@ -73,17 +60,16 @@ class DouyinTokenClient {
         if (credentials.refreshToken() == null) {
             return new TokenResult(null, REFRESH_TOKEN_MISSING);
         }
-        long now = System.currentTimeMillis();
-        CachedToken cached = cache.get(new CacheKey(credentials.clientKey(), credentials.refreshToken()));
-        if (cached != null && cached.expiresAtMillis() - now > REFRESH_AHEAD_MILLIS) {
-            return new TokenResult(cached.token(), null);
+        String cached = cache.get(new CacheKey(credentials.clientKey(), credentials.refreshToken())).orElse(null);
+        if (cached != null) {
+            return new TokenResult(cached, null);
         }
         // 请求成功由 request 写缓存（窗口取响应 expires_in），失败不缓存以便下次重试
-        return request(credentials, now);
+        return request(credentials);
     }
 
     // 请求渠道：form 四参（§6），access_token 出现即成功并按 expires_in 决定缓存窗口
-    private TokenResult request(DouyinCredentials credentials, long now) {
+    private TokenResult request(DouyinCredentials credentials) {
         try {
             MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
             form.add(KEY_CLIENT_KEY, credentials.clientKey());
@@ -106,7 +92,7 @@ class DouyinTokenClient {
                 return new TokenResult(null, "获取抖音接口凭据失败：响应缺少 access_token");
             }
             cache.put(new CacheKey(credentials.clientKey(), credentials.refreshToken()),
-                new CachedToken(accessToken, now + expireMillis(response)));
+                accessToken, expireMillis(response));
             return new TokenResult(accessToken, null);
         } catch (RuntimeException e) {
             return new TokenResult(null, "获取抖音接口凭据失败：" + e.getMessage());

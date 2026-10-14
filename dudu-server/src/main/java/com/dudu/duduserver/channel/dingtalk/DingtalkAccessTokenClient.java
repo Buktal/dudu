@@ -2,6 +2,7 @@ package com.dudu.duduserver.channel.dingtalk;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.web.client.RestClient;
 
 import java.util.HashMap;
@@ -52,13 +53,6 @@ class DingtalkAccessTokenClient {
         long expireInSeconds = response.getLong("expireIn", 7200L);
         cache.put(cacheKey, new CachedToken(accessToken, now + expireInSeconds * 1000 - REFRESH_MARGIN_MILLIS));
         return new TokenResult(accessToken, null);
-    }
-
-    record TokenResult(String accessToken, String failureReason) {
-
-        boolean succeeded() {
-            return accessToken != null;
-        }
     }
 
     private record CachedToken(String accessToken, long expireAtMillis) {

@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.dingtalk;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,7 +55,7 @@ public class DingtalkMediaReader {
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
         DingtalkSendCredentials credentials = DingtalkSendCredentials.of(account);
         try {
-            DingtalkAccessTokenClient.TokenResult token = accessTokenClient.fetch(credentials);
+            TokenResult token = accessTokenClient.fetch(credentials);
             if (!token.succeeded()) {
                 return ChannelMediaResult.failed(token.failureReason());
             }

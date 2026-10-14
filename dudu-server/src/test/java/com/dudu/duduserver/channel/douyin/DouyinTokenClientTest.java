@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.douyin;
 
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,8 +53,8 @@ class DouyinTokenClientTest {
         handle("/oauth/refresh_token/", 200, REFRESH_OK);
         DouyinTokenClient client = client();
 
-        DouyinTokenClient.TokenResult first = client.fetch(credentials());
-        DouyinTokenClient.TokenResult second = client.fetch(credentials());
+        TokenResult first = client.fetch(credentials());
+        TokenResult second = client.fetch(credentials());
 
         assertThat(first.succeeded()).isTrue();
         assertThat(first.accessToken()).isEqualTo("act.1d1021d2aee3d41fee2d2add43456badMFZnrhFhfWotu3Ec");
@@ -77,8 +78,8 @@ class DouyinTokenClientTest {
         handle("/oauth/refresh_token/", 200, REFRESH_OK);
         DouyinTokenClient client = client();
 
-        DouyinTokenClient.TokenResult first = client.fetch(credentials());
-        DouyinTokenClient.TokenResult rebound = client.fetch(
+        TokenResult first = client.fetch(credentials());
+        TokenResult rebound = client.fetch(
             new DouyinCredentials("asdfavetgbvasf", "9e096e3a2a8b4e0f9c0f", "rft.rebound"));
 
         assertThat(first.succeeded()).isTrue();
@@ -90,7 +91,7 @@ class DouyinTokenClientTest {
 
     @Test
     void reportsMissingRefreshTokenAsAuthorizationGapWithoutCallingTheEndpoint() {
-        DouyinTokenClient.TokenResult result = client().fetch(
+        TokenResult result = client().fetch(
             new DouyinCredentials("asdfavetgbvasf", "9e096e3a2a8b4e0f9c0f", null));
 
         assertThat(result.succeeded()).isFalse();
@@ -105,8 +106,8 @@ class DouyinTokenClientTest {
             "{\"data\":{\"error_code\":10010,\"description\":\"refresh_token 已过期\"},\"code\":10010}");
 
         DouyinTokenClient client = client();
-        DouyinTokenClient.TokenResult first = client.fetch(credentials());
-        DouyinTokenClient.TokenResult retried = client.fetch(credentials());
+        TokenResult first = client.fetch(credentials());
+        TokenResult retried = client.fetch(credentials());
 
         assertThat(first.succeeded()).isFalse();
         assertThat(first.failureReason()).contains("10010").contains("refresh_token 已过期");
@@ -118,7 +119,7 @@ class DouyinTokenClientTest {
     @Test
     void reportsTransportFailureInsteadOfPretendingSuccess() {
         // 替身未注册路径（HTTP 404）：如实记录调用失败
-        DouyinTokenClient.TokenResult result = client().fetch(credentials());
+        TokenResult result = client().fetch(credentials());
         assertThat(result.succeeded()).isFalse();
         assertThat(result.failureReason()).isNotBlank();
     }

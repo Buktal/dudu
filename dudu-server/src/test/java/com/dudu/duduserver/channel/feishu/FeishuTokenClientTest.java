@@ -2,6 +2,7 @@ package com.dudu.duduserver.channel.feishu;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,8 +50,8 @@ class FeishuTokenClientTest {
         handle(200, TOKEN_OK);
         FeishuTokenClient client = client();
 
-        FeishuTokenClient.TokenResult first = client.fetch(credentials());
-        FeishuTokenClient.TokenResult second = client.fetch(credentials());
+        TokenResult first = client.fetch(credentials());
+        TokenResult second = client.fetch(credentials());
 
         assertThat(first.succeeded()).isTrue();
         assertThat(first.accessToken()).isEqualTo("t-caecc734c2e3328a62489fe0648c4b98779515d3");
@@ -70,7 +71,7 @@ class FeishuTokenClientTest {
         FeishuTokenClient client = client();
 
         client.fetch(credentials());
-        FeishuTokenClient.TokenResult refreshed = client.fetch(credentials());
+        TokenResult refreshed = client.fetch(credentials());
 
         assertThat(refreshed.succeeded()).isTrue();
         assertThat(requestLines).hasSize(2);
@@ -80,7 +81,7 @@ class FeishuTokenClientTest {
     void reportsChannelRejectionWithTheOriginalErrorCodeAndMessage() {
         handle(200, "{\"code\":99991663,\"msg\":\"app id is not found\"}");
 
-        FeishuTokenClient.TokenResult result = client().fetch(credentials());
+        TokenResult result = client().fetch(credentials());
 
         assertThat(result.succeeded()).isFalse();
         assertThat(result.failureReason()).contains("99991663").contains("app id is not found");

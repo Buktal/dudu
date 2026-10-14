@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.qq;
 
 import cn.hutool.json.JSONUtil;
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,8 +62,8 @@ class QqAccessTokenClientTest {
         responseBody = TOKEN_OK;
         QqAccessTokenClient client = client();
 
-        QqAccessTokenClient.TokenResult first = client.fetch(credentials());
-        QqAccessTokenClient.TokenResult second = client.fetch(credentials());
+        TokenResult first = client.fetch(credentials());
+        TokenResult second = client.fetch(credentials());
 
         assertThat(first.succeeded()).isTrue();
         assertThat(first.accessToken()).isEqualTo("qq-token");
@@ -82,7 +83,7 @@ class QqAccessTokenClientTest {
         QqAccessTokenClient client = client();
 
         client.fetch(credentials());
-        QqAccessTokenClient.TokenResult refreshed = client.fetch(credentials());
+        TokenResult refreshed = client.fetch(credentials());
 
         assertThat(refreshed.succeeded()).isTrue();
         assertThat(refreshed.accessToken()).isEqualTo("qq-short");
@@ -97,7 +98,7 @@ class QqAccessTokenClientTest {
         assertThat(client.fetch(credentials()).succeeded()).isFalse();
 
         responseBody = TOKEN_OK;
-        QqAccessTokenClient.TokenResult retry = client.fetch(credentials());
+        TokenResult retry = client.fetch(credentials());
 
         assertThat(retry.succeeded()).isTrue();
         assertThat(retry.accessToken()).isEqualTo("qq-token");

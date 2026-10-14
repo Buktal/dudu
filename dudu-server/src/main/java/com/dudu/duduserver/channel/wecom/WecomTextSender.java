@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wecom;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,7 +44,7 @@ public class WecomTextSender {
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         WecomCredentials credentials = WecomCredentials.of(account);
         try {
-            WecomAccessTokenClient.TokenResult token = accessTokenClient.fetch(credentials);
+            TokenResult token = accessTokenClient.fetch(credentials);
             if (!token.succeeded()) {
                 return ChannelSendResult.failed(token.failureReason());
             }

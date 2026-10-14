@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.xiaohongshu;
 
 import cn.hutool.json.JSONUtil;
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,8 +62,8 @@ class XiaohongshuAccessTokenClientTest {
         responseBody = TOKEN_OK;
         XiaohongshuAccessTokenClient client = client();
 
-        XiaohongshuAccessTokenClient.TokenResult first = client.fetch(credentials());
-        XiaohongshuAccessTokenClient.TokenResult second = client.fetch(credentials());
+        TokenResult first = client.fetch(credentials());
+        TokenResult second = client.fetch(credentials());
 
         assertThat(first.succeeded()).isTrue();
         assertThat(first.accessToken()).isEqualTo("xhs-token");
@@ -82,7 +83,7 @@ class XiaohongshuAccessTokenClientTest {
         XiaohongshuAccessTokenClient client = client();
 
         client.fetch(credentials());
-        XiaohongshuAccessTokenClient.TokenResult refreshed = client.fetch(credentials());
+        TokenResult refreshed = client.fetch(credentials());
 
         assertThat(refreshed.succeeded()).isTrue();
         assertThat(refreshed.accessToken()).isEqualTo("xhs-short");
@@ -97,7 +98,7 @@ class XiaohongshuAccessTokenClientTest {
         assertThat(client.fetch(credentials()).succeeded()).isFalse();
 
         responseBody = TOKEN_OK;
-        XiaohongshuAccessTokenClient.TokenResult retry = client.fetch(credentials());
+        TokenResult retry = client.fetch(credentials());
 
         assertThat(retry.succeeded()).isTrue();
         assertThat(retry.accessToken()).isEqualTo("xhs-token");

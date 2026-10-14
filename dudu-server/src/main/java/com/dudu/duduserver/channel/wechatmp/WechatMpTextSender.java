@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wechatmp;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +42,7 @@ public class WechatMpTextSender {
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         WechatMpCredentials credentials = WechatMpCredentials.of(account);
         try {
-            WechatMpAccessTokenClient.TokenResult token = accessTokenClient.fetch(credentials);
+            TokenResult token = accessTokenClient.fetch(credentials);
             if (!token.succeeded()) {
                 return ChannelSendResult.failed(token.failureReason());
             }

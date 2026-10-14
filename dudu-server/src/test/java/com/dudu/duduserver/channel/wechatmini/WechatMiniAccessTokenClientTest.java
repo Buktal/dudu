@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.wechatmini;
 
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,8 +57,8 @@ class WechatMiniAccessTokenClientTest {
         responseBody = TOKEN_OK;
         WechatMiniAccessTokenClient client = client();
 
-        WechatMiniAccessTokenClient.TokenResult first = client.fetch(credentials());
-        WechatMiniAccessTokenClient.TokenResult second = client.fetch(credentials());
+        TokenResult first = client.fetch(credentials());
+        TokenResult second = client.fetch(credentials());
 
         assertThat(first.succeeded()).isTrue();
         assertThat(first.accessToken()).isEqualTo("mini-token");
@@ -76,7 +77,7 @@ class WechatMiniAccessTokenClientTest {
         WechatMiniAccessTokenClient client = client();
 
         client.fetch(credentials());
-        WechatMiniAccessTokenClient.TokenResult refreshed = client.fetch(credentials());
+        TokenResult refreshed = client.fetch(credentials());
 
         assertThat(refreshed.succeeded()).isTrue();
         assertThat(refreshed.accessToken()).isEqualTo("mini-short");
@@ -91,7 +92,7 @@ class WechatMiniAccessTokenClientTest {
         assertThat(client.fetch(credentials()).succeeded()).isFalse();
 
         responseBody = TOKEN_OK;
-        WechatMiniAccessTokenClient.TokenResult retry = client.fetch(credentials());
+        TokenResult retry = client.fetch(credentials());
 
         assertThat(retry.succeeded()).isTrue();
         assertThat(retry.accessToken()).isEqualTo("mini-token");

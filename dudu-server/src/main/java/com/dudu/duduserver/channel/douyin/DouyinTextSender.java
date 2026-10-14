@@ -4,6 +4,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,7 +74,7 @@ public class DouyinTextSender {
             || isBlank(reply.ownerOpenId())) {
             return ChannelSendResult.failed(REPLY_CONTEXT_MISSING);
         }
-        DouyinTokenClient.TokenResult token = tokenClient.fetch(credentials);
+        TokenResult token = tokenClient.fetch(credentials);
         if (!token.succeeded()) {
             return ChannelSendResult.failed(token.failureReason());
         }
