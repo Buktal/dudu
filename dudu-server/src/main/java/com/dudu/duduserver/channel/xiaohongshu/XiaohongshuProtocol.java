@@ -5,7 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
-import com.dudu.duduserver.channel.support.MediaMessages;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -147,7 +147,7 @@ public class XiaohongshuProtocol {
             case MSG_TYPE_VIDEO -> media("video", fields, FIELD_VIDEO_URL);
             case MSG_TYPE_ITEM -> card(MSG_TYPE_ITEM, fields.get(FIELD_OUT_PRODUCT_ID));
             case MSG_TYPE_ORDER -> card(MSG_TYPE_ORDER, fields.get(FIELD_OUT_ORDER_ID));
-            default -> unknown(msgType);
+            default -> MessageBodies.unknown(msgType);
         };
     }
 
@@ -156,9 +156,9 @@ public class XiaohongshuProtocol {
     private Map<String, Object> media(String kind, Map<String, String> fields, String urlField) {
         String messageId = Texts.blankToNull(fields.get(FIELD_MSG_ID));
         if (messageId == null) {
-            return unknown(kind);
+            return MessageBodies.unknown(kind);
         }
-        return MediaMessages.of(kind, messageId + ":0", fields.get(urlField), null);
+        return MessageBodies.media(kind, messageId + ":0", fields.get(urlField), null);
     }
 
     // item/order 映射 card：kind 记录推送类型，externalId 为外部商品/订单标识
@@ -170,10 +170,6 @@ public class XiaohongshuProtocol {
             content.put("externalId", externalId);
         }
         return content;
-    }
-
-    private Map<String, Object> unknown(String msgType) {
-        return Map.of("type", "unknown", "originalType", msgType.isEmpty() ? "unknown" : msgType);
     }
 
     private boolean isKnownMsgType(String msgType) {

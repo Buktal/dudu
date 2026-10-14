@@ -8,7 +8,7 @@ import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.support.Digests;
-import com.dudu.duduserver.channel.support.MediaMessages;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
@@ -142,7 +142,7 @@ public class TelegramProtocol {
         if (media != null) {
             return media;
         }
-        return Map.of("type", "unknown", "originalType", originalType(message));
+        return MessageBodies.unknown(originalType(message));
     }
 
     // 已知媒体字段按契约形态映射；引用缺失（空数组、缺 file_id）没有可如实表达的
@@ -219,7 +219,7 @@ public class TelegramProtocol {
         if (fileId == null || fileId.isBlank()) {
             return null;
         }
-        return MediaMessages.of(kind, fileId, null, name);
+        return MessageBodies.media(kind, fileId, null, name);
     }
 
     // unknown 的 originalType：内容字段名（排除结构键后的首个键），无内容键按 message

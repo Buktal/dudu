@@ -3,7 +3,7 @@ package com.dudu.duduserver.channel.alipay;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
-import com.dudu.duduserver.channel.support.MediaMessages;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -215,7 +215,7 @@ public class AlipayProtocol {
             case MSG_TYPE_TEXT -> Map.of("type", "text",
                 "text", fields.getOrDefault(FIELD_TEXT_CONTENT, ""));
             case MSG_TYPE_IMAGE -> media(fields);
-            default -> Map.of("type", "unknown", "originalType", msgType.isEmpty() ? "unknown" : msgType);
+            default -> MessageBodies.unknown(msgType);
         };
     }
 
@@ -224,9 +224,9 @@ public class AlipayProtocol {
     private Map<String, Object> media(Map<String, String> fields) {
         String mediaId = Texts.blankToNull(fields.get(FIELD_IMAGE_MEDIA_ID));
         if (mediaId == null) {
-            return Map.of("type", "unknown", "originalType", MSG_TYPE_IMAGE);
+            return MessageBodies.unknown(MSG_TYPE_IMAGE);
         }
-        return MediaMessages.of(MSG_TYPE_IMAGE, mediaId, null, null);
+        return MessageBodies.media(MSG_TYPE_IMAGE, mediaId, null, null);
     }
 
     // UserInfo 为 JSON 字符串（logon_id/user_name）：损坏或缺失返回 null，不阻塞收信

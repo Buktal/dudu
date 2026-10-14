@@ -4,6 +4,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
@@ -92,10 +93,10 @@ public class WeiboProtocol {
                 case MSG_TYPE_POSITION -> location(payload.getJSONObject("data"));
                 case MSG_TYPE_VOICE -> media("audio", payload);
                 case MSG_TYPE_IMAGE -> media("image", payload);
-                default -> unknown(type);
+                default -> MessageBodies.unknown(type);
             };
         } catch (RuntimeException e) {
-            return unknown(type);
+            return MessageBodies.unknown(type);
         }
     }
 
@@ -112,13 +113,9 @@ public class WeiboProtocol {
         JSONObject data = payload.getJSONObject("data");
         String fileId = data == null ? null : Texts.blankToNull(data.getStr(DATA_TOVFID, ""));
         if (fileId == null) {
-            return unknown(payload.getStr("type", ""));
+            return MessageBodies.unknown(payload.getStr("type", ""));
         }
         return Map.of("type", kind, "media", Map.of("kind", kind, "id", fileId));
-    }
-
-    private Map<String, Object> unknown(String type) {
-        return Map.of("type", "unknown", "originalType", type.isEmpty() ? "unknown" : type);
     }
 
     private boolean isBlank(String value) {

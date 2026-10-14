@@ -7,7 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
-import com.dudu.duduserver.channel.support.MediaMessages;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -38,9 +38,6 @@ public class WhatsappProtocol {
     private static final String KEY_TYPE = "type";
     private static final String TYPE_TEXT = "text";
     private static final String TYPE_LOCATION = "location";
-    private static final String TYPE_UNKNOWN = "unknown";
-    private static final String KEY_ORIGINAL_TYPE = "originalType";
-    private static final String KEY_MEDIA = "media";
     private static final String KIND_IMAGE = "image";
     private static final String KIND_AUDIO = "audio";
     private static final String KIND_VIDEO = "video";
@@ -160,11 +157,11 @@ public class WhatsappProtocol {
                 case MSG_INTERACTIVE -> interactive(payload);
                 case MSG_BUTTON -> button(payload);
                 // reaction/contacts/unsupported 等契约无对应形态，如实落 unknown
-                default -> unknown(type);
+                default -> MessageBodies.unknown(type);
             };
         } catch (RuntimeException e) {
             // 字段值不符合类型约定（如坐标缺失非数值）时如实落 unknown，不猜测内容
-            return unknown(type);
+            return MessageBodies.unknown(type);
         }
     }
 
@@ -174,9 +171,9 @@ public class WhatsappProtocol {
         JSONObject body = payload.getJSONObject(msgType);
         String id = body == null ? null : Texts.blankToNull(body.getStr("id"));
         if (id == null) {
-            return unknown(msgType);
+            return MessageBodies.unknown(msgType);
         }
-        return MediaMessages.of(kind, id, null, body.getStr("filename"));
+        return MessageBodies.media(kind, id, null, body.getStr("filename"));
     }
 
     // location（§2.3）：名称优先作 label、地址回退；坐标为数值，缺失即按 unknown
@@ -185,7 +182,7 @@ public class WhatsappProtocol {
         Double latitude = body == null ? null : body.getDouble("latitude", null);
         Double longitude = body == null ? null : body.getDouble("longitude", null);
         if (latitude == null || longitude == null) {
-            return unknown(MSG_LOCATION);
+            return MessageBodies.unknown(MSG_LOCATION);
         }
         Map<String, Object> content = new LinkedHashMap<>();
         content.put(KEY_TYPE, TYPE_LOCATION);
@@ -213,20 +210,14 @@ public class WhatsappProtocol {
                 }
             }
         }
-        return unknown(MSG_INTERACTIVE);
+        return MessageBodies.unknown(MSG_INTERACTIVE);
     }
 
     // 模板 quick-reply 点击（type:button，§2.3）：button.text 即来语文本
     private Map<String, Object> button(JSONObject payload) {
         JSONObject body = payload.getJSONObject(MSG_BUTTON);
         String label = body == null ? null : Texts.blankToNull(body.getStr("text"));
-        return label == null ? unknown(MSG_BUTTON) : Map.of(KEY_TYPE, TYPE_TEXT, "text", label);
-    }
-
-    private Map<String, Object> unknown(String msgType) {
-        return Map.of(KEY_TYPE, TYPE_UNKNOWN, KEY_ORIGINAL_TYPE, msgType == null || msgType.isEmpty()
-            ? TYPE_UNKNOWN
-            : msgType);
+        return label == null ? MessageBodies.unknown(MSG_BUTTON) : Map.of(KEY_TYPE, TYPE_TEXT, "text", label);
     }
 
     // HMAC-SHA256(appSecret, 原始 body 字节)

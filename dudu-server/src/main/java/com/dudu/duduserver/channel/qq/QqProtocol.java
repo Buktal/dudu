@@ -7,7 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
-import com.dudu.duduserver.channel.support.MediaMessages;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -57,8 +57,6 @@ public class QqProtocol {
     // 契约第 4 节统一消息体键名（与 wechat-mp/wecom 适配器同键）
     private static final String KEY_TYPE = "type";
     private static final String TYPE_TEXT = "text";
-    private static final String KEY_ORIGINAL_TYPE = "originalType";
-    private static final String TYPE_UNKNOWN = "unknown";
     private static final String KIND_IMAGE = "image";
     private static final String KIND_VIDEO = "video";
     private static final String KIND_AUDIO = "audio";
@@ -172,12 +170,12 @@ public class QqProtocol {
             if (text != null) {
                 return Map.of(KEY_TYPE, TYPE_TEXT, "text", text);
             }
-            return Map.of(KEY_TYPE, TYPE_UNKNOWN, KEY_ORIGINAL_TYPE, TYPE_UNKNOWN);
+            return MessageBodies.unknown(null);
         }
         if (messageType == 0) {
             return Map.of(KEY_TYPE, TYPE_TEXT, "text", d.getStr("content", ""));
         }
-        return Map.of(KEY_TYPE, TYPE_UNKNOWN, KEY_ORIGINAL_TYPE, String.valueOf(messageType));
+        return MessageBodies.unknown(String.valueOf(messageType));
     }
 
     // 附件的 url 是渠道唯一媒体引用（无独立 MediaId，qq.md §5.12），缺 url 的附件不冒充可读媒体
@@ -194,7 +192,7 @@ public class QqProtocol {
             if (url == null) {
                 continue;
             }
-            return MediaMessages.of(kindOf(attachment.getStr("content_type")), url, url, null);
+            return MessageBodies.media(kindOf(attachment.getStr("content_type")), url, url, null);
         }
         return null;
     }

@@ -5,7 +5,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
-import com.dudu.duduserver.channel.support.MediaMessages;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -115,10 +115,10 @@ public class DingtalkProtocol {
                 case MSG_TYPE_VIDEO -> media("video", msgType, payload);
                 case MSG_TYPE_FILE -> media("file", msgType, payload);
                 case MSG_TYPE_RICH_TEXT -> richText(payload);
-                default -> unknown(msgType);
+                default -> MessageBodies.unknown(msgType);
             };
         } catch (RuntimeException e) {
-            return unknown(msgType);
+            return MessageBodies.unknown(msgType);
         }
     }
 
@@ -126,9 +126,9 @@ public class DingtalkProtocol {
     private Map<String, Object> media(String kind, String msgType, JSONObject payload) {
         String downloadCode = payload == null ? null : Texts.blankToNull(payload.getStr("downloadCode"));
         if (downloadCode == null) {
-            return unknown(msgType);
+            return MessageBodies.unknown(msgType);
         }
-        return MediaMessages.of(kind, downloadCode, null, payload.getStr("fileName"));
+        return MessageBodies.media(kind, downloadCode, null, payload.getStr("fileName"));
     }
 
     // 富文本：文本段顺序拼接；有图片等附件段落时按契约 reply 分支，否则退化为纯文本
@@ -166,10 +166,6 @@ public class DingtalkProtocol {
             case "audio", "video" -> segmentType;
             default -> "file";
         };
-    }
-
-    private Map<String, Object> unknown(String msgType) {
-        return Map.of("type", "unknown", "originalType", msgType.isEmpty() ? "unknown" : msgType);
     }
 
     private String blankToNull(String value) {

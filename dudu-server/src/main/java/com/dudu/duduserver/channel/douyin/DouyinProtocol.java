@@ -7,7 +7,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
-import com.dudu.duduserver.channel.support.MediaMessages;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -157,11 +157,11 @@ public class DouyinProtocol {
                 case MSG_EMOJI -> media(messageType, KIND_IMAGE, serverMessageId, content);
                 case MSG_VIDEO, MSG_USER_LOCAL_VIDEO -> media(messageType, KIND_VIDEO, serverMessageId, content);
                 case MSG_RETAIN_CONSULT_CARD -> retainCard(messageType, content);
-                default -> unknown(messageType);
+                default -> MessageBodies.unknown(messageType);
             };
         } catch (RuntimeException e) {
             // 字段值不符合类型约定时如实落 unknown，不猜测内容
-            return unknown(messageType);
+            return MessageBodies.unknown(messageType);
         }
     }
 
@@ -170,12 +170,12 @@ public class DouyinProtocol {
     // 按 unknown 如实保存不填假值
     private Map<String, Object> media(String messageType, String kind, String serverMessageId, JSONObject content) {
         if (isBlank(serverMessageId)) {
-            return unknown(messageType);
+            return MessageBodies.unknown(messageType);
         }
         String resourceUrl = Texts.blankToNull(content.getStr(KEY_RESOURCE_URL, null));
         String identifier = firstNonBlank(content.getStr(KEY_ITEM_ID, null),
             content.getStr(KEY_MEDIA_ID, null), resourceUrl, serverMessageId + DERIVED_INDEX);
-        return MediaMessages.of(kind, identifier, resourceUrl, null);
+        return MessageBodies.media(kind, identifier, resourceUrl, null);
     }
 
     // 留资卡片：card 分支只承载 kind 与 card_id（契约 card 无逐项数据位，card_data 不映射为假字段）
@@ -188,11 +188,6 @@ public class DouyinProtocol {
             body.put("externalId", cardId);
         }
         return body;
-    }
-
-    private Map<String, Object> unknown(String messageType) {
-        return Map.of("type", "unknown", "originalType", messageType == null || messageType.isEmpty()
-            ? "unknown" : messageType);
     }
 
     private String firstNonBlank(String... values) {

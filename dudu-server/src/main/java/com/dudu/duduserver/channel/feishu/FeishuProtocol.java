@@ -11,7 +11,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
-import com.dudu.duduserver.channel.support.MediaMessages;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 
@@ -167,11 +167,11 @@ public class FeishuProtocol {
                 case MSG_TYPE_FILE -> media(msgType, KIND_FILE, messageId, KEY_FILE_KEY,
                     RESOURCE_TYPE_FILE, content);
                 case MSG_TYPE_LOCATION -> location(msgType, content);
-                default -> unknown(msgType);
+                default -> MessageBodies.unknown(msgType);
             };
         } catch (RuntimeException e) {
             // 字段值不符合类型约定时如实落 unknown，不猜测内容
-            return unknown(msgType);
+            return MessageBodies.unknown(msgType);
         }
     }
 
@@ -185,9 +185,9 @@ public class FeishuProtocol {
                                       String resourceType, JSONObject content) {
         String mediaKey = Texts.blankToNull(content.getStr(keyField, null));
         if (mediaKey == null) {
-            return unknown(msgType);
+            return MessageBodies.unknown(msgType);
         }
-        return MediaMessages.of(kind, messageId + ":" + mediaKey + ":" + resourceType, null,
+        return MessageBodies.media(kind, messageId + ":" + mediaKey + ":" + resourceType, null,
             content.getStr(KEY_FILE_NAME, null));
     }
 
@@ -202,10 +202,6 @@ public class FeishuProtocol {
         body.put("longitude", Double.parseDouble(content.getStr("longitude")));
         body.put("latitude", Double.parseDouble(content.getStr("latitude")));
         return body;
-    }
-
-    private Map<String, Object> unknown(String msgType) {
-        return Map.of("type", "unknown", "originalType", msgType.isEmpty() ? "unknown" : msgType);
     }
 
 

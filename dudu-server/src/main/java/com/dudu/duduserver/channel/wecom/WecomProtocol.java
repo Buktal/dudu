@@ -4,7 +4,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.AesEnvelopeCodec;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
-import com.dudu.duduserver.channel.support.MediaMessages;
+import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -121,11 +121,11 @@ public class WecomProtocol {
                 case MSG_TYPE_VIDEO -> media("video", msgType, fields.get("MediaId"), null, fields.get("MsgId"));
                 case MSG_TYPE_LOCATION -> location(fields);
                 case MSG_TYPE_LINK -> link(fields);
-                default -> unknown(msgType);
+                default -> MessageBodies.unknown(msgType);
             };
         } catch (RuntimeException e) {
             // 字段值不符合类型约定（如位置精度不是数字）时如实落 unknown，不猜测内容
-            return unknown(msgType);
+            return MessageBodies.unknown(msgType);
         }
     }
 
@@ -136,11 +136,11 @@ public class WecomProtocol {
         if (id == null) {
             String messageScoped = Texts.blankToNull(messageId);
             if (messageScoped == null) {
-                return unknown(msgType);
+                return MessageBodies.unknown(msgType);
             }
             id = messageScoped + ":0";
         }
-        return MediaMessages.of(kind, id, url, null);
+        return MessageBodies.media(kind, id, url, null);
     }
 
     // 官方定义 Location_X 为纬度、Location_Y 为经度
@@ -159,7 +159,7 @@ public class WecomProtocol {
     private Map<String, Object> link(Map<String, String> fields) {
         String url = Texts.blankToNull(fields.get("Url"));
         if (url == null) {
-            return unknown(MSG_TYPE_LINK);
+            return MessageBodies.unknown(MSG_TYPE_LINK);
         }
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("type", "link");
@@ -173,10 +173,6 @@ public class WecomProtocol {
             content.put("description", description);
         }
         return content;
-    }
-
-    private Map<String, Object> unknown(String msgType) {
-        return Map.of("type", "unknown", "originalType", msgType.isEmpty() ? "unknown" : msgType);
     }
 
     private String blankToNull(String value) {
