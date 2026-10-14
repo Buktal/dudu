@@ -299,7 +299,18 @@ class QqChannelIntegrationTest extends DeskIntegrationSupport {
     void sendRoutesBySceneAndPersistsRealChannelOutcome() throws Exception {
         long visitorId = newVisitor("c2c:C2C_SEND_1", "想咨询发货时间");
 
+        // 令牌失败按官方口径依据 code 判定（HTTP 恒 200），不再调用发送接口；
+        // 失败不写缓存（B6），下一次发送重新换取——须趁缓存未热时在最前验证
+        tokenBody = TOKEN_INVALID;
+        JSONObject tokenFailed = data(send(scopedToken, visitorId, body("qq-cr-0", "先试一次")));
+        assertThat(tokenFailed.getJSONObject("delivery").getStr("state")).isEqualTo("failed");
+        assertThat(tokenFailed.getJSONObject("delivery").getStr("reason"))
+            .contains("100016").contains("invalid appid or secret");
+        // 只有令牌请求，未触发发送接口
+        assertThat(apiRequests).hasSize(1);
+
         // 真实发送实现：先按官方 access-token 页换取令牌再按 §5.8 下发单聊文本
+        tokenBody = TOKEN_OK;
         JSONObject sent = data(send(scopedToken, visitorId, body("qq-cr-1", "好的，今天发出")));
         assertThat(sent.getJSONObject("delivery").getStr("state")).isEqualTo("sent");
         Map<String, Object> saved = jdbc.queryForMap("""
@@ -309,20 +320,20 @@ class QqChannelIntegrationTest extends DeskIntegrationSupport {
         assertThat(saved.get("send_status")).isEqualTo("sent");
         assertThat(saved.get("external_message_id")).isEqualTo("ROBOT1.0_send_796001");
         assertThat(saved.get("failure_reason")).isNull();
-        assertThat(apiRequests.get(0)).isEqualTo("POST /app/getAppAccessToken");
-        JSONObject tokenPayload = JSONUtil.parseObj(sendBodies.get(0));
+        assertThat(apiRequests.get(1)).isEqualTo("POST /app/getAppAccessToken");
+        JSONObject tokenPayload = JSONUtil.parseObj(sendBodies.get(1));
         assertThat(tokenPayload.getStr("appId")).isEqualTo(APP_ID);
         assertThat(tokenPayload.getStr("clientSecret")).isEqualTo(APP_SECRET);
-        assertThat(apiRequests.get(1)).isEqualTo("POST /v2/users/C2C_SEND_1/messages");
+        assertThat(apiRequests.get(2)).isEqualTo("POST /v2/users/C2C_SEND_1/messages");
         assertThat(authHeaders.get(0)).isEqualTo("QQBot ACCESS_TOKEN_796001");
-        JSONObject payload = JSONUtil.parseObj(sendBodies.get(1));
+        JSONObject payload = JSONUtil.parseObj(sendBodies.get(2));
         assertThat(payload.getStr("content")).isEqualTo("好的，今天发出");
         assertThat(payload.getInt("msg_type")).isZero();
 
         // 群会话路由到群接口（§5.9）；令牌进程内缓存复用，本条不再重复换取
         long groupId = newVisitor("group:GROUP_SEND_1", "群里的第一条");
         data(send(scopedToken, groupId, body("qq-cr-g", "群回复")));
-        assertThat(apiRequests.get(2)).isEqualTo("POST /v2/groups/GROUP_SEND_1/messages");
+        assertThat(apiRequests.get(3)).isEqualTo("POST /v2/groups/GROUP_SEND_1/messages");
 
         // 渠道拒绝（官方去重码 40054005）：失败原因如实落库，不冒成功
         userSendBody = SEND_DEDUP;
@@ -339,15 +350,6 @@ class QqChannelIntegrationTest extends DeskIntegrationSupport {
         // 失败不改接待状态：首次成功回复已转入 waiting，失败保持不变
         assertThat(jdbc.queryForObject("SELECT status FROM visitor WHERE visitor_id = ?", String.class, visitorId))
             .isEqualTo("waiting");
-
-        // 令牌失败按官方口径依据 code 判定（HTTP 恒 200），不再调用发送接口
-        tokenBody = TOKEN_INVALID;
-        int callsBefore = apiRequests.size();
-        JSONObject tokenFailed = data(send(scopedToken, visitorId, body("qq-cr-3", "再试一次")));
-        assertThat(tokenFailed.getJSONObject("delivery").getStr("state")).isEqualTo("failed");
-        assertThat(tokenFailed.getJSONObject("delivery").getStr("reason"))
-            .contains("100016").contains("invalid appid or secret");
-        assertThat(apiRequests).hasSize(callsBefore + 1);
     }
 
     @Test
