@@ -38,4 +38,12 @@ class ChannelEnumTest {
         assertThat(ChannelEnum.WHATSAPP.getDisplayName()).isEqualTo("WhatsApp");
         assertThat(ChannelEnum.fromCode("whatsapp")).isEqualTo(ChannelEnum.WHATSAPP);
     }
+
+    @Test
+    void telegramCarriesTheTicketCodeAndDisplayName() {
+        // #107：码值沿用 mock-pulse config.rs 的 serde 键 telegram
+        assertThat(ChannelEnum.TELEGRAM.getCode()).isEqualTo("telegram");
+        assertThat(ChannelEnum.TELEGRAM.getDisplayName()).isEqualTo("Telegram");
+        assertThat(ChannelEnum.fromCode("telegram")).isEqualTo(ChannelEnum.TELEGRAM);
+    }
 }
