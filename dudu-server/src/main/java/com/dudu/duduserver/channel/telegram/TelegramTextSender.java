@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.telegram;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -39,9 +40,6 @@ public class TelegramTextSender {
     private static final String KEY_PARAMETERS = "parameters";
     private static final String KEY_RETRY_AFTER = "retry_after";
 
-    // 凭据缺失的如实说明：不编造可发能力
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-
     private final RestClient restClient;
 
     public TelegramTextSender(RestClient.Builder builder) {
@@ -51,7 +49,7 @@ public class TelegramTextSender {
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         TelegramSendCredentials credentials = TelegramSendCredentials.of(account);
         if (credentials == null) {
-            return ChannelSendResult.failed(SEND_CREDENTIALS_MISSING);
+            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
         }
         JSONObject request = new JSONObject();
         request.set(PARAM_CHAT_ID, chatId(externalUserId));

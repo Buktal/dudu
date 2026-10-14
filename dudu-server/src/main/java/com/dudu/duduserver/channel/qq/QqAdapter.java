@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -26,9 +27,6 @@ import java.util.Optional;
  */
 @Component
 public class QqAdapter implements ChannelAdapter {
-
-    // 未配置相应凭据时的如实说明：不编造可发可读能力
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
 
     // 通用信封 opcode（官方 §5.1/payload 页）
     private static final int OP_DISPATCH = 0;
@@ -133,7 +131,7 @@ public class QqAdapter implements ChannelAdapter {
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        return QqCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
+        return QqCredentials.of(account) == null ? ChannelRestrictions.SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override

@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
@@ -26,9 +27,6 @@ public class DingtalkAdapter implements ChannelAdapter {
 
     // 推送通道形态：本票唯一接入的新 HTTP 密文信封（事实库 §5.11 对拍基线）
     private static final String SYSTEM_HTTP_CRYPTO = "http_crypto";
-
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
 
     private final DingtalkProtocol protocol;
     private final DingtalkTextSender textSender;
@@ -98,7 +96,7 @@ public class DingtalkAdapter implements ChannelAdapter {
     @Override
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         if (DingtalkSendCredentials.of(account) == null) {
-            return ChannelSendResult.failed(SEND_CREDENTIALS_MISSING);
+            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
         }
         return textSender.send(account, externalUserId, text);
     }
@@ -106,19 +104,19 @@ public class DingtalkAdapter implements ChannelAdapter {
     @Override
     public ChannelMediaResult readMedia(CompanyChannelDO account, String externalMediaId) {
         if (DingtalkSendCredentials.of(account) == null) {
-            return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
+            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         }
         return mediaReader.read(account, externalMediaId);
     }
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        return DingtalkSendCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
+        return DingtalkSendCredentials.of(account) == null ? ChannelRestrictions.SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
-        return DingtalkSendCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
+        return DingtalkSendCredentials.of(account) == null ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING : null;
     }
 
     // 推送报文取 {"encrypt": "..."}；缺失或非 JSON 由调用方按参数错误拒绝

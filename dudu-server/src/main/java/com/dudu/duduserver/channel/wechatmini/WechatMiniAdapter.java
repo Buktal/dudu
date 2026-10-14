@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -34,10 +35,6 @@ public class WechatMiniAdapter implements ChannelAdapter {
     private static final String PARAM_ENCRYPT_TYPE = "encrypt_type";
     private static final String PARAM_MSG_SIGNATURE = "msg_signature";
     private static final String ENCRYPT_TYPE_AES = "aes";
-
-    // 凭据缺失的如实说明：不编造可发可读能力
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
 
     private final WechatMiniProtocol protocol;
 
@@ -117,12 +114,12 @@ public class WechatMiniAdapter implements ChannelAdapter {
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        return WechatMiniCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
+        return WechatMiniCredentials.of(account) == null ? ChannelRestrictions.SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
-        return WechatMiniCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
+        return WechatMiniCredentials.of(account) == null ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING : null;
     }
 
     // 加密路径结果：payload 为解出的内层报文；failure 非空表示按该结果应答、不猜测明文

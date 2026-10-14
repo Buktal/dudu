@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.weibo;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,9 +29,6 @@ public class WeiboMediaReader {
     private static final String PATH_MSGET = "/2/mss/msget";
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
-    // 凭据缺失的如实说明：不编造可读能力
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
-
     private final RestClient restClient;
 
     public WeiboMediaReader(RestClient.Builder builder,
@@ -41,7 +39,7 @@ public class WeiboMediaReader {
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
         WeiboCredentials credentials = WeiboCredentials.of(account);
         if (credentials == null) {
-            return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
+            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         }
         try {
             ResponseEntity<byte[]> response = restClient.get()

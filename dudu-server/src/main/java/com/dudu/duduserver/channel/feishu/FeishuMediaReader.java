@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.feishu;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,9 +31,7 @@ public class FeishuMediaReader {
     private static final String DEFAULT_API_BASE = "https://open.feishu.cn";
     private static final String PATH_RESOURCE = "/open-apis/im/v1/messages/{messageId}/resources/{fileKey}";
     private static final String QUERY_TYPE = "type={resourceType}";
-    private static final String MEDIA_ID_UNRECOGNIZED = "飞书素材读取失败：素材标识无法识别";
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
+    private static final String MEDIA_ID_UNRECOGNIZED = "飞书素材读取失败：素材标识无法识别";    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final RestClient restClient;
@@ -53,7 +52,7 @@ public class FeishuMediaReader {
         }
         FeishuSendCredentials credentials = FeishuSendCredentials.of(account);
         if (credentials == null) {
-            return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
+            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         }
         FeishuTokenClient.TokenResult token = tokenClient.fetch(credentials);
         if (!token.succeeded()) {

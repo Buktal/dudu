@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -30,8 +31,6 @@ public class WecomAdapter implements ChannelAdapter {
     private static final String SYSTEM_AIBOT = "aibot";
 
     // 凭据缺失与通道未接入的如实说明：不编造可发可读能力
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
     private static final String SEND_AIBOT_NOT_CONNECTED = "企业微信智能机器人通道暂未接入发送";
     private static final String MEDIA_AIBOT_NOT_CONNECTED = "企业微信智能机器人通道暂未接入素材读取";
 
@@ -132,7 +131,7 @@ public class WecomAdapter implements ChannelAdapter {
         if (isAibot(account)) {
             return SEND_AIBOT_NOT_CONNECTED;
         }
-        return WecomCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
+        return WecomCredentials.of(account) == null ? ChannelRestrictions.SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override
@@ -140,7 +139,7 @@ public class WecomAdapter implements ChannelAdapter {
         if (isAibot(account)) {
             return MEDIA_AIBOT_NOT_CONNECTED;
         }
-        return WecomCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
+        return WecomCredentials.of(account) == null ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING : null;
     }
 
     // 回调材料缺失（或账号为空）按未配置回调处理，握手与推送一律不支持

@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.telegram;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -37,9 +38,7 @@ public class TelegramMediaReader {
     private static final String KEY_ERROR_CODE = "error_code";
     private static final String KEY_DESCRIPTION = "description";
 
-    private static final String MEDIA_ID_UNRECOGNIZED = "Telegram 素材读取失败：素材标识无法识别";
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
-    private static final String RESPONSE_UNRECOGNIZED = "Telegram 素材读取失败：响应无法识别";
+    private static final String MEDIA_ID_UNRECOGNIZED = "Telegram 素材读取失败：素材标识无法识别";    private static final String RESPONSE_UNRECOGNIZED = "Telegram 素材读取失败：响应无法识别";
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
     private final RestClient restClient;
@@ -54,7 +53,7 @@ public class TelegramMediaReader {
         }
         TelegramSendCredentials credentials = TelegramSendCredentials.of(account);
         if (credentials == null) {
-            return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
+            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         }
         FilePathResult lookup = requestFilePath(account, credentials, externalMediaId);
         if (lookup.failureReason() != null) {
