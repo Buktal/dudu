@@ -12,6 +12,10 @@ import org.xml.sax.InputSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.PrivateKey;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +85,7 @@ public class AlipayProtocol {
     }
 
     private String formDecode(String value) {
-        return java.net.URLDecoder.decode(value, java.nio.charset.StandardCharsets.UTF_8);
+        return URLDecoder.decode(value, StandardCharsets.UTF_8);
     }
 
     /**
@@ -93,13 +97,13 @@ public class AlipayProtocol {
      */
     public String handshakeReply(AlipayCredentials credentials) {
         try {
-            java.security.PrivateKey privateKey = AlipaySignature.privateKeyOf(credentials.appPrivateKey());
+            PrivateKey privateKey = AlipaySignature.privateKeyOf(credentials.appPrivateKey());
             String content = "<biz_content>" + AlipaySignature.publicKeyBase64(credentials.appPrivateKey())
                 + "</biz_content><success>true</success>";
             return "<?xml version=\"1.0\" encoding=\"GBK\"?><alipay><response>" + content
                 + "</response><sign>" + AlipaySignature.signContent(privateKey, content)
                 + "</sign><sign_type>RSA2</sign_type></alipay>";
-        } catch (java.security.GeneralSecurityException e) {
+        } catch (GeneralSecurityException e) {
             throw new IllegalStateException("应用私钥无法用于握手回包签名", e);
         }
     }
