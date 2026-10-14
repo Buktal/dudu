@@ -13,7 +13,7 @@ export function receiveNext(
   submission: ReplySubmission,
   requestIsCurrent: () => boolean,
 ): InboxCommand<Promise<void>> {
-  return async (dispatch, getState, runtime) => {
+  return async (dispatch, getState) => {
     const conversationId = submission.request.target.conversationId;
     const scope = requestKeys.next(submission.messageId);
     const canAdvance = () => {
@@ -58,12 +58,9 @@ export function receiveNext(
           picked = latest.items.find(
             (conversation) =>
               conversation.id !== conversationId &&
-              !sendRestriction(
-                conversation,
-                getState().inbox.connection,
-                ["text"],
-                runtime.now(),
-              ),
+              !sendRestriction(conversation, getState().inbox.connection, [
+                "text",
+              ]),
           );
           return picked !== undefined;
         },

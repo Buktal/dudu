@@ -126,7 +126,7 @@ Socket 到来不改变已加载历史的更早游标。第一次打开对话即�
 | identity | id 与 Conversation.id 相同；externalUserId、可选 name/avatarUrl；channelId/channelName 和 accountId/accountName 由现有 company_channel 派生 |
 | VisitorProfile | conversationId=visitor_id、version、fields=channel_fields、tags、note；不重复身份字段 |
 | InboxMessage | id=message_id、conversationId=visitor_id、可选 clientRequestId、direction、body=content、createdAt=create_time、sequence、version；outgoing 增加 senderUserId、senderName 和 delivery={state, 可选 reason} |
-| ReplyCapability | 沿用 state、kinds、可选 reason/nextStep/expiresAt/remaining；可发时 allowed + ["text"]，未配置或不支持时 restricted 并说明原因；不编造可发能力 |
+| ReplyCapability | state、kinds、可选 reason 三字段两态；可发时 allowed + ["text"]（reason 为空），未配置或不支持时 restricted + 空 kinds 并说明原因；不编造可发能力 |
 | counts / channels | counts 四个数字；channels 每项为 id（平台代码）、name（显示名） |
 
 所有业务 ID 为字符串，sequence/version/messageCount/counts 为普通整数。消息 senderName 查询现有员工显示名，不新增员工快照表。Server 不返回 unread；真实 Desk 在本次运行维护待处理提示，重新初始化不制造旧提示，别人处理后清除。原 markRead 不调用服务端。

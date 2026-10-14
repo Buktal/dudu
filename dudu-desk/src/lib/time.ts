@@ -42,10 +42,3 @@ export function timestamp(value?: string): number | undefined {
   const time = dayjs(value);
   return time.isValid() ? time.valueOf() : undefined;
 }
-
-export function isTimeAfter(value: string, reference: string): boolean | null {
-  const time = dayjs(value);
-  const boundary = dayjs(reference);
-  if (!time.isValid() || !boundary.isValid()) return null;
-  return time.isAfter(boundary);
-}

@@ -24,11 +24,8 @@ const CONVERSATION_STATUSES: ConversationStatus[] = [
   "waiting",
   "closed",
 ];
-const CAPABILITY_STATES: ReplyCapability["state"][] = [
-  "allowed",
-  "restricted",
-  "unknown",
-];
+// 服务端 capability() 只产 allowed/restricted 两态；契约外词表按无效响应拒绝
+const CAPABILITY_STATES: ReplyCapability["state"][] = ["allowed", "restricted"];
 const SEND_KINDS: SendKind[] = ["text", "image", "file", "audio", "video"];
 
 export type ParsedConversationPage = {
@@ -91,7 +88,6 @@ export function parseCapability(value: unknown): ReplyCapability {
     state: value.state as ReplyCapability["state"],
     kinds: value.kinds as SendKind[],
     reason: optionalText(value.reason),
-    nextStep: optionalText(value.nextStep),
   };
 }
 

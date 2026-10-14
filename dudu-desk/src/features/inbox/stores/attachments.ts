@@ -27,8 +27,6 @@ export function addAttachments(
         state.conversations[conversationId],
         state.connection,
         { name: file.name, size: file.size, mimeType: file.type },
-        (state.drafts[conversationId]?.attachmentIds.length ?? 0) + 1,
-        runtime.now(),
       );
       if (restriction) {
         dispatch(inboxActions.noticeChanged(`${file.name}：${restriction}`));
@@ -77,8 +75,6 @@ function prepareDraftAttachment(id: string): InboxCommand<Promise<void>> {
       conversation,
       state.connection,
       attachment,
-      state.drafts[attachment.conversationId]?.attachmentIds.length ?? 0,
-      runtime.now(),
     );
     if (restriction) {
       dispatch(inboxActions.attachmentFailed({ id, error: restriction }));
@@ -112,8 +108,6 @@ function prepareDraftAttachment(id: string): InboxCommand<Promise<void>> {
             current,
             latest.connection,
             media,
-            latest.drafts[attachment.conversationId]?.attachmentIds.length ?? 0,
-            runtime.now(),
           );
           if (restriction) throw new DeskApiError("business", restriction);
           dispatch(inboxActions.attachmentReady({ id, media }));

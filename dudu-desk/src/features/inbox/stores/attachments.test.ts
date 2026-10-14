@@ -22,42 +22,8 @@ import {
 } from "./test-support";
 
 afterEach(() => vi.unstubAllGlobals());
-const normalLimits = {
-  maxBytes: 1024,
-  maxCount: 4,
-  mimeTypes: ["text/plain", "image/png"],
-};
 
 describe("attachment drafts", () => {
-  it("waits for explicit attachment constraints before preparing a permitted kind", async () => {
-    const conversation: Conversation = {
-      ...firstConversation,
-      capability: { state: "allowed", kinds: ["file"] },
-    };
-    const store = testStore({
-      listConversations: async () => ({
-        items: [conversation],
-        nextCursor: null,
-      }),
-      prepareAttachment: async ({ file }) => ({
-        id: "unconstrained",
-        kind: "file",
-        name: file.name,
-        mimeType: file.type,
-        size: file.size,
-      }),
-    });
-    await store.dispatch(loadConversations());
-    await store.dispatch(
-      addAttachments("conversation-a", [
-        new File(["x"], "note.txt", { type: "text/plain" }),
-      ]),
-    );
-    expect(store.getState().inbox.attachments).toEqual({});
-    expect(store.getState().inbox.notice?.message).toContain(
-      "附件限制尚未确认",
-    );
-  });
   it("rejects an attachment before preparing when the channel only allows text", async () => {
     let preparations = 0;
     const store = testStore({
@@ -83,7 +49,6 @@ describe("attachment drafts", () => {
       capability: {
         state: "allowed" as const,
         kinds: ["text" as const, "file" as const],
-        attachments: { maxBytes: 1024, maxCount: 2, mimeTypes: ["text/plain"] },
       },
     };
     const store = testStore({
@@ -124,44 +89,6 @@ describe("attachment drafts", () => {
     expect(store.getState().inbox.drafts["conversation-b"]).toBeUndefined();
   });
 
-  it("enforces the server's size, MIME and count limits without losing accepted files", async () => {
-    const conversation = {
-      ...firstConversation,
-      capability: {
-        state: "allowed" as const,
-        kinds: ["file" as const],
-        attachments: { maxBytes: 4, maxCount: 1, mimeTypes: ["text/plain"] },
-      },
-    };
-    const store = testStore({
-      listConversations: async () => ({
-        items: [conversation],
-        nextCursor: null,
-      }),
-      prepareAttachment: async ({ file }) => ({
-        id: `prepared:${file.name}`,
-        kind: "file",
-        name: file.name,
-        mimeType: file.type,
-        size: file.size,
-      }),
-    });
-    await store.dispatch(loadConversations());
-    await store.dispatch(
-      addAttachments("conversation-a", [
-        new File(["12345"], "oversized.txt", { type: "text/plain" }),
-        new File(["x"], "wrong-type.pdf", { type: "application/pdf" }),
-        new File(["yes"], "accepted.txt", { type: "text/plain" }),
-        new File(["x"], "overflow.txt", { type: "text/plain" }),
-      ]),
-    );
-    expect(
-      Object.values(store.getState().inbox.attachments).map(
-        (item) => item.name,
-      ),
-    ).toEqual(["accepted.txt"]);
-  });
-
   it("retries a preparation failure for the original visitor while preserving the text draft", async () => {
     const targets: string[] = [];
     const conversation = {
@@ -169,7 +96,6 @@ describe("attachment drafts", () => {
       capability: {
         state: "allowed" as const,
         kinds: ["text" as const, "file" as const],
-        attachments: normalLimits,
       },
     };
     const store = testStore({
@@ -231,7 +157,6 @@ describe("attachment drafts", () => {
       capability: {
         state: "allowed" as const,
         kinds: ["image" as const],
-        attachments: normalLimits,
       },
     };
     const store = testStore({
@@ -278,7 +203,6 @@ describe("attachment drafts", () => {
       capability: {
         state: "allowed",
         kinds: ["file"],
-        attachments: normalLimits,
       },
     };
     const store = testStore({
@@ -322,7 +246,6 @@ describe("attachment drafts", () => {
       capability: {
         state: "allowed",
         kinds: ["file"],
-        attachments: normalLimits,
       },
     };
     const store = testStore({
@@ -356,7 +279,6 @@ describe("attachment drafts", () => {
       capability: {
         state: "allowed",
         kinds: ["text", "file"],
-        attachments: normalLimits,
       },
     };
     const store = testStore({
@@ -434,7 +356,6 @@ describe("attachment drafts", () => {
       capability: {
         state: "allowed",
         kinds: ["image"],
-        attachments: normalLimits,
       },
     };
     const store = testStore({

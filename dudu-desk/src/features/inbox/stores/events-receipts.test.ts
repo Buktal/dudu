@@ -171,7 +171,6 @@ describe("receipt correlation across response ordering", () => {
       capability: {
         state: "allowed",
         kinds: ["text", "file"],
-        attachments: { maxBytes: 1024, maxCount: 3, mimeTypes: ["text/plain"] },
       },
     };
     const store = testStore({

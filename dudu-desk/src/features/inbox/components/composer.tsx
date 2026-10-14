@@ -1,5 +1,4 @@
 import { useId, useRef } from "react";
-import { nowIso } from "@/lib/time";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { replyReadiness } from "../reply/pipeline";
 import { selectConversationById } from "../stores/selectors";
@@ -49,7 +48,6 @@ export function Composer({
     (state) => state.inbox.ending[conversationId],
   );
   if (!conversation) return null;
-  // One clock read per decision: the pipeline answers send+attachment together.
   const readiness = replyReadiness({
     conversation,
     connection,
@@ -58,7 +56,6 @@ export function Composer({
       .map((attachmentId) => attachments[attachmentId])
       .filter(Boolean),
     sending: busy,
-    now: nowIso(),
   });
   const notice = readiness.notice;
   const disabled = !readiness.sendable;
@@ -100,7 +97,6 @@ export function Composer({
         target,
         name,
         identity: conversation.identity,
-        nextStep: conversation.capability.nextStep,
         notice,
         ended,
         resumeDisabled:

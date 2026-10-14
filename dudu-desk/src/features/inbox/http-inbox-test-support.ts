@@ -68,7 +68,6 @@ export const EXPECTED_ITEM: Conversation = {
     state: "restricted",
     kinds: [],
     reason: "渠道发送能力尚未接入",
-    nextStep: undefined,
   },
 };
 

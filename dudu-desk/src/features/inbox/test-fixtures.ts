@@ -51,27 +51,10 @@ export function defineProfile(
   };
 }
 
-export function allowedCapability(
-  kinds: SendKind[],
-  attachments?: ReplyCapability["attachments"],
-): ReplyCapability {
-  return {
-    state: "allowed",
-    kinds,
-    ...(attachments ? { attachments } : {}),
-  };
+export function allowedCapability(kinds: SendKind[]): ReplyCapability {
+  return { state: "allowed", kinds };
 }
 
-export function restrictedCapability(
-  reason: string,
-  nextStep: string,
-): ReplyCapability {
-  return { state: "restricted", kinds: [], reason, nextStep };
-}
-
-export function unknownCapability(
-  reason: string,
-  nextStep: string,
-): ReplyCapability {
-  return { state: "unknown", kinds: [], reason, nextStep };
+export function restrictedCapability(reason: string): ReplyCapability {
+  return { state: "restricted", kinds: [], reason };
 }

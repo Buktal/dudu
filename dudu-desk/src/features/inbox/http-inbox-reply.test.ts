@@ -185,8 +185,6 @@ describe("http inbox reply adapter", () => {
     expect(capability).toEqual({
       state: "allowed",
       kinds: ["text"],
-      reason: undefined,
-      nextStep: undefined,
     });
   });
 

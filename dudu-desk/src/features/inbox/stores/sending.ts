@@ -180,7 +180,7 @@ export function sendReply(
     const draft = state.drafts[conversationId] ?? blankDraft;
     const conversation = state.conversations[conversationId];
     const attachments = draft.attachmentIds.map((id) => state.attachments[id]);
-    // One clock value per decision: the pipeline owns the
+    // One decision per accepted reply: the pipeline owns the
     // restriction + pending + empty + busy composition.
     const readiness = replyReadiness({
       conversation,
@@ -188,7 +188,6 @@ export function sendReply(
       text: draft.text,
       files: attachments.filter(Boolean),
       sending: !!state.sendingByConversation[conversationId],
-      now: runtime.now(),
     });
     if (!readiness.sendable) {
       if (readiness.notice)
@@ -271,7 +270,6 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
         media,
       })),
       sending: false,
-      now: runtime.now(),
     });
     if (!readiness.sendable) {
       if (readiness.notice)

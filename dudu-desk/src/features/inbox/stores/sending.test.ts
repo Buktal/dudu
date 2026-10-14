@@ -384,13 +384,8 @@ describe("replies through the inbox workflow", () => {
   });
 
   it.each<ReplyCapability>([
-    { state: "unknown", kinds: [] },
     { state: "restricted", kinds: ["text"], reason: "渠道权限不足" },
     { state: "allowed", kinds: ["image"] },
-    { state: "allowed", kinds: ["text"], expiresAt: "2026-09-15T00:00:00Z" },
-    { state: "allowed", kinds: ["text"], expiresAt: "not-a-time" },
-    { state: "allowed", kinds: ["text"], expiresAt: "" },
-    { state: "allowed", kinds: ["text"], remaining: 0 },
   ])(
     "blocks a send outside the current reply capability: %j",
     async (capability) => {

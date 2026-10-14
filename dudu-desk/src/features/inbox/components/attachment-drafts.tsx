@@ -19,7 +19,6 @@ import {
   AttachmentTitle,
 } from "@/components/ui/attachment";
 import { formatFileSize, safeAssetUrl } from "@/lib/attachment-utils";
-import { nowIso } from "@/lib/time";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { attachmentRestriction } from "../reply/attachment-rules";
 import { removeAttachment, retryAttachment } from "../stores/attachments";
@@ -63,8 +62,6 @@ export function AttachmentDrafts({
           conversation,
           connection,
           attachment,
-          draft.attachmentIds.length,
-          nowIso(),
         );
         return (
           <Attachment key={id} size="sm" state={states[attachment.status]}>

@@ -8,7 +8,6 @@ import {
   allowedCapability,
   defineConversation,
   restrictedCapability,
-  unknownCapability,
 } from "./test-fixtures";
 
 const identity = {
@@ -61,17 +60,10 @@ describe("fixture builder", () => {
       state: "allowed",
       kinds: ["text"],
     });
-    expect(restrictedCapability("r", "n")).toEqual({
+    expect(restrictedCapability("r")).toEqual({
       state: "restricted",
       kinds: [],
       reason: "r",
-      nextStep: "n",
-    });
-    expect(unknownCapability("r", "n")).toEqual({
-      state: "unknown",
-      kinds: [],
-      reason: "r",
-      nextStep: "n",
     });
   });
 });

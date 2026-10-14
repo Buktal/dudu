@@ -16,14 +16,11 @@ export type VisitorIdentity = {
   accountName: string;
 };
 
+/** 服务端真实产出：可发 allowed+["text"]，受限 restricted+空 kinds+原因文案。 */
 export type ReplyCapability = {
-  state: "allowed" | "restricted" | "unknown";
+  state: "allowed" | "restricted";
   kinds: SendKind[];
   reason?: string;
-  nextStep?: string;
-  expiresAt?: string;
-  remaining?: number;
-  attachments?: { maxBytes: number; maxCount: number; mimeTypes: string[] };
 };
 
 export type Conversation = {

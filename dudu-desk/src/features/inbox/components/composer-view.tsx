@@ -24,7 +24,6 @@ export type ComposerViewModel = {
   target: string;
   name: string;
   identity: VisitorIdentity;
-  nextStep?: string;
   notice: string | null;
   ended: boolean;
   resumeDisabled: boolean;
@@ -68,7 +67,6 @@ export function ComposerView({
     target,
     name,
     identity,
-    nextStep,
     notice,
     ended,
     resumeDisabled,
@@ -102,7 +100,6 @@ export function ComposerView({
           <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs">
               {ended ? "记录和当前草稿仍然保留。" : notice}
-              {!ended && nextStep && ` · ${nextStep}`}
             </span>
             {ended && (
               <Button

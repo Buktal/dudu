@@ -6,13 +6,10 @@ import { createHttpInboxApi } from "../http-inbox-api";
 import { loadConversations } from "../stores/queue";
 import { inboxActions } from "../stores/slice";
 import { createInboxStore } from "../stores/store";
-import { firstConversation, testStore } from "../stores/test-support";
-import { allowedCapability } from "../test-fixtures";
 import { AttachmentPicker } from "./attachment-picker";
 
 /**
- * 附件入口门禁：真实链路只发纯文本，选择入口按能力停用并说明原因（不伪装可用）；
- * 能力声明附件限制时入口可用并展示限制说明。
+ * 附件入口门禁：真实链路只发纯文本，选择入口按能力停用并说明原因（不伪装可用）。
  */
 afterEach(cleanup);
 
@@ -76,33 +73,4 @@ it("disables the attachment picker in the text-only real integration", async () 
   expect(screen.getByRole("button", { name: "添加附件" })).toBeDisabled();
   expect(screen.getByLabelText("选择待发送的附件")).toBeDisabled();
   expect(screen.getByTitle("当前会话仅支持文字回复")).toBeInTheDocument();
-});
-
-it("keeps the attachment picker available when the capability declares attachment limits", async () => {
-  const conversation = {
-    ...firstConversation,
-    capability: allowedCapability(["text", "image"], {
-      maxCount: 3,
-      maxBytes: 5 * 1024 * 1024,
-      mimeTypes: ["image/*"],
-    }),
-  };
-  const store = testStore({
-    listConversations: async () => ({
-      items: [conversation],
-      nextCursor: null,
-      total: 1,
-    }),
-  });
-  await store.dispatch(loadConversations());
-  render(
-    <Provider store={store}>
-      <AttachmentPicker conversationId={conversation.id} />
-    </Provider>,
-  );
-
-  expect(screen.getByRole("button", { name: "添加附件" })).toBeEnabled();
-  expect(
-    screen.getByTitle("添加附件 · 最多 3 个，单个不超过 5.0 MB"),
-  ).toBeInTheDocument();
 });

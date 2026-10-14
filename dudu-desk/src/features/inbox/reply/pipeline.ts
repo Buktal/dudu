@@ -7,7 +7,7 @@ import type {
   SendSubmission,
   SendTarget,
 } from "../types";
-import { attachmentBatchRestriction, attachmentKind } from "./attachment-rules";
+import { attachmentKind } from "./attachment-rules";
 import { sendRestriction } from "./send-rules";
 
 /**
@@ -44,9 +44,8 @@ export type ReplyReadiness =
   | { sendable: false; notice: string | null };
 
 /**
- * Reply policy: the reply-allowed decision.
- * Owns kinds-derivation and the send+attachment composition, so every caller
- * answers the same question with the same clock value.
+ * Reply policy: the reply-allowed decision. Owns kinds-derivation, so text
+ * and attachment drafts answer one sendRestriction question together.
  */
 export function replyRestriction(
   conversation: Conversation | undefined,
@@ -55,7 +54,6 @@ export function replyRestriction(
     text: string;
     files: { name: string; size: number; mimeType: string }[];
   },
-  now: string,
 ): string | null {
   const kinds: SendKind[] = [
     ...(content.text.trim() || !content.files.length
@@ -63,18 +61,13 @@ export function replyRestriction(
       : []),
     ...content.files.map((file) => attachmentKind(file.mimeType)),
   ];
-  return (
-    sendRestriction(conversation, connection, kinds, now) ||
-    attachmentBatchRestriction(conversation, connection, content.files, now)
-  );
+  return sendRestriction(conversation, connection, kinds);
 }
 
 /**
  * Deep module for the Reply pipeline send decision. Owns the
  * restriction + pending-attachment + empty-draft + busy composition, so the
- * Composer and the sendReply thunk answer the same question with the same
- * clock value. `now` stays a parameter: thunks pass the injected store
- * clock, UI passes a single wall-clock read per decision.
+ * Composer and the sendReply thunk answer the same question.
  *
  * A `null` notice with `sendable: false` is a silent block (empty draft or
  * already sending): disable without alerting. A string notice disables and
@@ -86,24 +79,18 @@ export function replyReadiness(input: {
   text: string;
   files: ReplyFile[];
   sending: boolean;
-  now: string;
 }): ReplyReadiness {
   if (input.sending) return { sendable: false, notice: null };
   if (!input.text.trim() && !input.files.length)
     return { sendable: false, notice: null };
-  const restriction = replyRestriction(
-    input.conversation,
-    input.connection,
-    {
-      text: input.text,
-      files: input.files.map((file) => ({
-        name: file.name,
-        size: file.size,
-        mimeType: file.mimeType,
-      })),
-    },
-    input.now,
-  );
+  const restriction = replyRestriction(input.conversation, input.connection, {
+    text: input.text,
+    files: input.files.map((file) => ({
+      name: file.name,
+      size: file.size,
+      mimeType: file.mimeType,
+    })),
+  });
   if (restriction) return { sendable: false, notice: restriction };
   if (
     input.files.some(
