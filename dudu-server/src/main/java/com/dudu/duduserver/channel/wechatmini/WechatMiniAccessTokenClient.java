@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wechatmini;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.Errcodes;
 import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.web.client.RestClient;
 
@@ -50,8 +51,8 @@ class WechatMiniAccessTokenClient {
                 credentials.appId(), credentials.appSecret())
             .retrieve()
             .body(String.class));
-        if (WechatMiniErrors.code(response) != 0) {
-            return new TokenResult(null, "获取微信接口凭据失败：" + WechatMiniErrors.describe(response));
+        if (Errcodes.code(response) != 0) {
+            return new TokenResult(null, "获取微信接口凭据失败：" + Errcodes.describe(response));
         }
         String accessToken = response.getStr(KEY_ACCESS_TOKEN);
         if (accessToken == null || accessToken.isEmpty()) {

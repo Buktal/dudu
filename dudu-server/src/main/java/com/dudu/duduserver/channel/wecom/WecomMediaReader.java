@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wecom;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.Errcodes;
 import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
@@ -55,7 +56,7 @@ public class WecomMediaReader {
             // 渠道对失败返回 JSON 错误报文，其余按二进制素材原样返回（成功无 JSON 形态）
             if (isJson(body)) {
                 return ChannelMediaResult.failed("企业微信素材读取失败："
-                    + WecomErrors.describe(JSONUtil.parseObj(new String(body, StandardCharsets.UTF_8))));
+                    + Errcodes.describe(JSONUtil.parseObj(new String(body, StandardCharsets.UTF_8))));
             }
             return ChannelMediaResult.media(body, contentType(response));
         } catch (RuntimeException e) {

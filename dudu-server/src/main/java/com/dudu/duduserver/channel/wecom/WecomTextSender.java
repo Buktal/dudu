@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wecom;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.Errcodes;
 import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
@@ -53,8 +54,8 @@ public class WecomTextSender {
                 .body(payload(credentials.agentId(), externalUserId, text))
                 .retrieve()
                 .body(String.class));
-            if (WecomErrors.code(response) != 0) {
-                return ChannelSendResult.failed("企业微信应用消息发送失败：" + WecomErrors.describe(response));
+            if (Errcodes.code(response) != 0) {
+                return ChannelSendResult.failed("企业微信应用消息发送失败：" + Errcodes.describe(response));
             }
             // msgid 用于撤回应用消息（90236）；响应缺省时不冒充标识
             return ChannelSendResult.sent(response.getStr(KEY_MSG_ID));

@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wechatmini;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.Errcodes;
 import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
@@ -51,8 +52,8 @@ public class WechatMiniTextSender {
                 .body(payload(externalUserId, text))
                 .retrieve()
                 .body(String.class));
-            if (WechatMiniErrors.code(response) != 0) {
-                return ChannelSendResult.failed("微信客服消息发送失败：" + WechatMiniErrors.describe(response));
+            if (Errcodes.code(response) != 0) {
+                return ChannelSendResult.failed("微信客服消息发送失败：" + Errcodes.describe(response));
             }
             return ChannelSendResult.sent(null);
         } catch (RuntimeException e) {

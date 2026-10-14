@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wecom;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.Errcodes;
 import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.web.client.RestClient;
 
@@ -49,8 +50,8 @@ class WecomAccessTokenClient {
                 credentials.corpId(), credentials.corpSecret())
             .retrieve()
             .body(String.class));
-        if (WecomErrors.code(response) != 0) {
-            return new TokenResult(null, "获取企业微信接口凭据失败：" + WecomErrors.describe(response));
+        if (Errcodes.code(response) != 0) {
+            return new TokenResult(null, "获取企业微信接口凭据失败：" + Errcodes.describe(response));
         }
         String accessToken = response.getStr(KEY_ACCESS_TOKEN);
         if (accessToken == null || accessToken.isEmpty()) {

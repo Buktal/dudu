@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wechatmp;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.Errcodes;
 import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
@@ -81,8 +82,8 @@ public class WechatMpMediaReader {
             return ChannelMediaResult.media(
                 download.getBody() == null ? new byte[0] : download.getBody(), contentType(download));
         }
-        if (WechatMpErrors.code(response) != 0) {
-            return ChannelMediaResult.failed("微信素材读取失败：" + WechatMpErrors.describe(response));
+        if (Errcodes.code(response) != 0) {
+            return ChannelMediaResult.failed("微信素材读取失败：" + Errcodes.describe(response));
         }
         return ChannelMediaResult.failed("微信素材读取失败：响应无法识别");
     }
