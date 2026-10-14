@@ -7,7 +7,6 @@ import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -30,7 +29,6 @@ public class DingtalkMediaReader {
     private static final String PATH_MESSAGE_FILES_DOWNLOAD = "/v1.0/robot/messageFiles/download";
     private static final String HEADER_ACCESS_TOKEN = "x-acs-dingtalk-access-token";
     private static final String KEY_DOWNLOAD_URL = "downloadUrl";
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
     private final RestClient apiClient;
     private final DingtalkAccessTokenClient accessTokenClient;
@@ -73,8 +71,7 @@ public class DingtalkMediaReader {
                 .uri(downloadUrl)
                 .retrieve()
                 .toEntity(byte[].class);
-            byte[] body = download.getBody() == null ? new byte[0] : download.getBody();
-            return ChannelMediaResult.media(body, contentType(download));
+                        return ChannelMediaResult.media(download);
         } catch (RuntimeException e) {
             // 网络、HTTP 状态与响应解析异常都按调用失败记录，不猜测素材内容
             log.warn("[dingtalk] 媒体读取失败, companyChannelId={}, exception={}",
@@ -83,9 +80,4 @@ public class DingtalkMediaReader {
         }
     }
 
-    // 渠道未给内容类型或给出无法使用时按二进制流返回，不猜具体格式
-    private String contentType(ResponseEntity<?> response) {
-        MediaType contentType = response.getHeaders().getContentType();
-        return contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString();
-    }
 }

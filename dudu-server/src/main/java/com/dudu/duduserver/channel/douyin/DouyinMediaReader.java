@@ -4,7 +4,6 @@ import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -27,8 +26,6 @@ public class DouyinMediaReader {
     private static final String HTTP_PREFIX = "http://";
 
     private static final String HTTPS_PREFIX = "https://";
-
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
     // §6.2：图片载荷不含素材标识、视频 item_id 无公开下载接口——官方下载通道不存在
     private static final String NO_DOWNLOAD_CHANNEL =
@@ -54,9 +51,7 @@ public class DouyinMediaReader {
                 .uri(URI.create(externalMediaId))
                 .retrieve()
                 .toEntity(byte[].class);
-            MediaType contentType = entity.getHeaders().getContentType();
-            return ChannelMediaResult.media(entity.getBody(),
-                contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString());
+            return ChannelMediaResult.media(entity);
         } catch (IllegalArgumentException e) {
             // 非 RFC2396 形态的直链（含空格等非法字符）在 URI 构造即失败：与其他失败
             // 同路返回渠道原因，不以未知异常 500 逃逸

@@ -48,7 +48,7 @@ public class XiaohongshuProtocol {
      * （§10.4 握手）。
      */
     public boolean verify(String token, String signature, String timestamp, String nonce) {
-        if (isBlank(token) || isBlank(signature) || isBlank(timestamp) || isBlank(nonce)) {
+        if (Texts.isBlank(token) || Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
             return false;
         }
         String[] parts = {token, timestamp, nonce};
@@ -62,7 +62,7 @@ public class XiaohongshuProtocol {
      */
     public boolean verifySignature(String token, String msgSignature, String timestamp, String nonce,
                                    String encrypt) {
-        if (isBlank(token) || isBlank(msgSignature) || isBlank(timestamp) || isBlank(nonce) || isBlank(encrypt)) {
+        if (Texts.isBlank(token) || Texts.isBlank(msgSignature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce) || Texts.isBlank(encrypt)) {
             return false;
         }
         String[] parts = {token, timestamp, nonce, encrypt};
@@ -175,13 +175,5 @@ public class XiaohongshuProtocol {
     private boolean isKnownMsgType(String msgType) {
         return MSG_TYPE_TEXT.equals(msgType) || MSG_TYPE_IMAGE.equals(msgType) || MSG_TYPE_VIDEO.equals(msgType)
             || MSG_TYPE_ITEM.equals(msgType) || MSG_TYPE_ORDER.equals(msgType);
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isEmpty();
-    }
-
-    private String blankToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
     }
 }

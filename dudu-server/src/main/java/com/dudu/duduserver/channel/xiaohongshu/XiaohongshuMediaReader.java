@@ -4,7 +4,6 @@ import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -19,8 +18,6 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 @Component
 public class XiaohongshuMediaReader {
-
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
     // 素材链接是渠道给出的完整公开地址（CDN 域名与接口域名不同），用无 baseUrl 的客户端直取
     private final RestClient downloadClient;
 
@@ -44,8 +41,7 @@ public class XiaohongshuMediaReader {
                 .uri(externalMediaId)
                 .retrieve()
                 .toEntity(byte[].class);
-            byte[] body = download.getBody() == null ? new byte[0] : download.getBody();
-            return ChannelMediaResult.media(body, contentType(download));
+                        return ChannelMediaResult.media(download);
         } catch (RuntimeException e) {
             // 网络、HTTP 状态与引用非法（非链接）都按读取失败记录，不猜测素材内容
             log.warn("[xiaohongshu] 素材读取失败, companyChannelId={}, exception={}",
@@ -54,9 +50,4 @@ public class XiaohongshuMediaReader {
         }
     }
 
-    // 渠道未给内容类型或给出无法使用时按二进制流返回，不猜具体格式
-    private String contentType(ResponseEntity<?> response) {
-        MediaType contentType = response.getHeaders().getContentType();
-        return contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString();
-    }
 }

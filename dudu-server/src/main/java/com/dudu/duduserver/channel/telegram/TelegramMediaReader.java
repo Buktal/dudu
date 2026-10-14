@@ -6,7 +6,6 @@ import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -38,8 +37,8 @@ public class TelegramMediaReader {
     private static final String KEY_ERROR_CODE = "error_code";
     private static final String KEY_DESCRIPTION = "description";
 
-    private static final String MEDIA_ID_UNRECOGNIZED = "Telegram 素材读取失败：素材标识无法识别";    private static final String RESPONSE_UNRECOGNIZED = "Telegram 素材读取失败：响应无法识别";
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
+    private static final String MEDIA_ID_UNRECOGNIZED = "Telegram 素材读取失败：素材标识无法识别";
+    private static final String RESPONSE_UNRECOGNIZED = "Telegram 素材读取失败：响应无法识别";
 
     private final RestClient restClient;
 
@@ -115,8 +114,7 @@ public class TelegramMediaReader {
                 .uri(downloadBase(credentials.url()) + "/" + filePath)
                 .retrieve()
                 .toEntity(byte[].class);
-            byte[] bytes = response.getBody() == null ? new byte[0] : response.getBody();
-            return ChannelMediaResult.media(bytes, contentType(response));
+            return ChannelMediaResult.media(response);
         } catch (HttpStatusCodeException e) {
             log.warn("[telegram] 素材下载被渠道拒绝, companyChannelId={}, status={}",
                 account.getCompanyChannelId(), e.getStatusCode().value());
@@ -168,8 +166,4 @@ public class TelegramMediaReader {
     }
 
     // 渠道给出的内容类型缺失或无法使用时按二进制流返回，不猜具体格式
-    private String contentType(ResponseEntity<?> response) {
-        MediaType contentType = response.getHeaders().getContentType();
-        return contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString();
-    }
 }

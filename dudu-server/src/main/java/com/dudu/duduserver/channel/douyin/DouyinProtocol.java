@@ -139,10 +139,10 @@ public class DouyinProtocol {
     // 回复三要素（§6.1）：三值齐全才构成复合标识，缺项时退化为裸 server_message_id
     // 或空——发送侧解析不出三段就如实失败，不猜会话
     private String replyContext(String serverMessageId, String conversationId, String ownerOpenId) {
-        if (isBlank(serverMessageId)) {
+        if (Texts.isBlank(serverMessageId)) {
             return null;
         }
-        if (isBlank(conversationId) || isBlank(ownerOpenId)) {
+        if (Texts.isBlank(conversationId) || Texts.isBlank(ownerOpenId)) {
             return serverMessageId;
         }
         return serverMessageId + ":" + conversationId + ":" + ownerOpenId;
@@ -169,7 +169,7 @@ public class DouyinProtocol {
     // 载荷不带标识时按「消息 ID:媒体下标」派生稳定标识；连消息标识都没有则无引用，
     // 按 unknown 如实保存不填假值
     private Map<String, Object> media(String messageType, String kind, String serverMessageId, JSONObject content) {
-        if (isBlank(serverMessageId)) {
+        if (Texts.isBlank(serverMessageId)) {
             return MessageBodies.unknown(messageType);
         }
         String resourceUrl = Texts.blankToNull(content.getStr(KEY_RESOURCE_URL, null));
@@ -192,16 +192,11 @@ public class DouyinProtocol {
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            if (!isBlank(value)) {
+            if (!Texts.isBlank(value)) {
                 return value;
             }
         }
         return null;
-    }
-
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 
     /**

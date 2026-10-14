@@ -7,7 +7,6 @@ import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -27,7 +26,6 @@ public class WeiboMediaReader {
 
     private static final String DEFAULT_MEDIA_BASE = "https://upload.api.weibo.com";
     private static final String PATH_MSGET = "/2/mss/msget";
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
     private final RestClient restClient;
 
@@ -52,7 +50,7 @@ public class WeiboMediaReader {
                 return ChannelMediaResult.failed(
                     "微博素材读取失败：" + WeiboErrors.describe(JSONUtil.parseObj(new String(body, StandardCharsets.UTF_8))));
             }
-            return ChannelMediaResult.media(body, contentType(response));
+            return ChannelMediaResult.media(response);
         } catch (RuntimeException e) {
             // 网络、HTTP 状态与响应解析异常都按调用失败记录，不猜测素材内容
             log.warn("[weibo] 素材读取失败, companyChannelId={}, exception={}",
@@ -71,9 +69,4 @@ public class WeiboMediaReader {
         return false;
     }
 
-    // 渠道未给内容类型或给出无法使用时按二进制流返回，不猜具体格式
-    private String contentType(ResponseEntity<?> response) {
-        MediaType contentType = response.getHeaders().getContentType();
-        return contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString();
-    }
 }

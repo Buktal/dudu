@@ -6,8 +6,8 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Coordinates;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.channel.support.MessageBodies;
-import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.Texts;
+import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -43,7 +43,7 @@ public class WeiboProtocol {
      * 材料缺失按校验失败处理。
      */
     public boolean verify(String appSecret, String signature, String timestamp, String nonce) {
-        if (isBlank(appSecret) || isBlank(signature) || isBlank(timestamp) || isBlank(nonce)) {
+        if (Texts.isBlank(appSecret) || Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
             return false;
         }
         String[] parts = {appSecret, timestamp, nonce};
@@ -117,14 +117,6 @@ public class WeiboProtocol {
             return MessageBodies.unknown(payload.getStr("type", ""));
         }
         return Map.of("type", kind, "media", Map.of("kind", kind, "id", fileId));
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isEmpty();
-    }
-
-    private String blankToNull(String value) {
-        return isBlank(value) ? null : value;
     }
 }
 

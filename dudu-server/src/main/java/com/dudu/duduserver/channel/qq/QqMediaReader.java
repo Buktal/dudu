@@ -3,7 +3,6 @@ package com.dudu.duduserver.channel.qq;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -22,7 +21,6 @@ public class QqMediaReader {
 
     private static final String SCHEME_HTTP = "http";
     private static final String SCHEME_HTTPS = "https";
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
     private static final String UNREADABLE_REFERENCE = "素材引用不是可读取的附件链接";
 
     private final RestClient restClient;
@@ -39,8 +37,7 @@ public class QqMediaReader {
         }
         try {
             ResponseEntity<byte[]> response = restClient.get().uri(uri).retrieve().toEntity(byte[].class);
-            byte[] body = response.getBody() == null ? new byte[0] : response.getBody();
-            return ChannelMediaResult.media(body, contentType(response));
+                        return ChannelMediaResult.media(response);
         } catch (RuntimeException e) {
             // 网络、HTTP 状态与响应解析异常都按调用失败记录，不猜测素材内容
             log.warn("[qq] 素材读取失败, companyChannelId={}, exception={}",
@@ -61,9 +58,4 @@ public class QqMediaReader {
         return SCHEME_HTTP.equalsIgnoreCase(scheme) || SCHEME_HTTPS.equalsIgnoreCase(scheme) ? uri : null;
     }
 
-    // 渠道未给内容类型或给出无法使用时按二进制流返回，不猜具体格式
-    private String contentType(ResponseEntity<?> response) {
-        MediaType contentType = response.getHeaders().getContentType();
-        return contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString();
-    }
 }

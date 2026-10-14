@@ -245,7 +245,7 @@ public class FeishuProtocol {
             return false;
         }
         if (credentials.encryptKey() != null) {
-            if (isBlank(signature) || isBlank(timestamp) || isBlank(nonce)) {
+            if (Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
                 return false;
             }
             return signature.equals(signature(credentials.encryptKey(), timestamp, nonce, body));
@@ -279,7 +279,4 @@ public class FeishuProtocol {
         return Digests.sha256Hex(input);
     }
 
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
 }

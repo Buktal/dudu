@@ -8,7 +8,6 @@ import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -30,7 +29,6 @@ public class WechatMiniMediaReader {
     private static final String DEFAULT_API_BASE = "https://api.weixin.qq.com";
     private static final String PATH_MEDIA_GET = "/cgi-bin/media/get";
     private static final String KEY_VIDEO_URL = "video_url";
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
     private final RestClient restClient;
 
@@ -62,7 +60,7 @@ public class WechatMiniMediaReader {
             if (isJson(body)) {
                 return fromJson(JSONUtil.parseObj(new String(body, StandardCharsets.UTF_8)));
             }
-            return ChannelMediaResult.media(body, contentType(response));
+            return ChannelMediaResult.media(response);
         } catch (RuntimeException e) {
             // 网络、HTTP 状态与响应解析异常都按调用失败记录，不猜测素材内容
             log.warn("[wechat-mini] 素材读取失败, companyChannelId={}, exception={}",
@@ -79,8 +77,7 @@ public class WechatMiniMediaReader {
                 .uri(videoUrl)
                 .retrieve()
                 .toEntity(byte[].class);
-            return ChannelMediaResult.media(
-                download.getBody() == null ? new byte[0] : download.getBody(), contentType(download));
+            return ChannelMediaResult.media(download);
         }
         if (Errcodes.code(response) != 0) {
             return ChannelMediaResult.failed("微信素材读取失败：" + Errcodes.describe(response));
@@ -98,9 +95,4 @@ public class WechatMiniMediaReader {
         return false;
     }
 
-    // 渠道未给内容类型或给出无法使用时按二进制流返回，不猜具体格式
-    private String contentType(ResponseEntity<?> response) {
-        MediaType contentType = response.getHeaders().getContentType();
-        return contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString();
-    }
 }

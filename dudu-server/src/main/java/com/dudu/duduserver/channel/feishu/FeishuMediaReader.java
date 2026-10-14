@@ -4,11 +4,11 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.Texts;
 import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -32,7 +32,7 @@ public class FeishuMediaReader {
     private static final String DEFAULT_API_BASE = "https://open.feishu.cn";
     private static final String PATH_RESOURCE = "/open-apis/im/v1/messages/{messageId}/resources/{fileKey}";
     private static final String QUERY_TYPE = "type={resourceType}";
-    private static final String MEDIA_ID_UNRECOGNIZED = "飞书素材读取失败：素材标识无法识别";    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
+    private static final String MEDIA_ID_UNRECOGNIZED = "飞书素材读取失败：素材标识无法识别";
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final RestClient restClient;
@@ -48,7 +48,7 @@ public class FeishuMediaReader {
 
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
         String[] parts = externalMediaId == null ? new String[0] : externalMediaId.split(":", 3);
-        if (parts.length != 3 || isBlank(parts[0]) || isBlank(parts[1]) || isBlank(parts[2])) {
+        if (parts.length != 3 || Texts.isBlank(parts[0]) || Texts.isBlank(parts[1]) || Texts.isBlank(parts[2])) {
             return ChannelMediaResult.failed(MEDIA_ID_UNRECOGNIZED);
         }
         FeishuSendCredentials credentials = FeishuSendCredentials.of(account);
@@ -65,8 +65,7 @@ public class FeishuMediaReader {
                 .header("Authorization", BEARER_PREFIX + token.accessToken())
                 .retrieve()
                 .toEntity(byte[].class);
-            byte[] body = response.getBody() == null ? new byte[0] : response.getBody();
-            return ChannelMediaResult.media(body, contentType(response));
+            return ChannelMediaResult.media(response);
         } catch (HttpStatusCodeException e) {
             // 渠道错误（HTTP 4xx/5xx）响应体为 {code,msg}，原样透出渠道说明
             log.warn("[feishu] 素材读取被渠道拒绝, companyChannelId={}, status={}",
@@ -90,13 +89,4 @@ public class FeishuMediaReader {
         }
     }
 
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    // 渠道未给内容类型或给出无法使用时按二进制流返回，不猜具体格式
-    private String contentType(ResponseEntity<?> response) {
-        MediaType contentType = response.getHeaders().getContentType();
-        return contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString();
-    }
 }

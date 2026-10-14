@@ -3,7 +3,9 @@ package com.dudu.duduserver.channel.douyin;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.Texts;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.Texts;
 import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
@@ -70,8 +72,8 @@ public class DouyinTextSender {
             return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
         }
         DouyinReplyContext.Reply reply = replyContext.lookup(account.getCompanyChannelId(), externalUserId);
-        if (reply == null || isBlank(reply.msgId()) || isBlank(reply.conversationId())
-            || isBlank(reply.ownerOpenId())) {
+        if (reply == null || Texts.isBlank(reply.msgId()) || Texts.isBlank(reply.conversationId())
+            || Texts.isBlank(reply.ownerOpenId())) {
             return ChannelSendResult.failed(REPLY_CONTEXT_MISSING);
         }
         TokenResult token = tokenClient.fetch(credentials);
@@ -120,13 +122,10 @@ public class DouyinTextSender {
     private String describe(Object errorCode, JSONObject response) {
         JSONObject data = response.getJSONObject(KEY_DATA);
         String description = data == null ? null : data.getStr(KEY_DESCRIPTION, null);
-        if (isBlank(description)) {
+        if (Texts.isBlank(description)) {
             description = response.getStr(KEY_DESCRIPTION, response.getStr("message", null));
         }
-        return errorCode + (isBlank(description) ? "" : " " + description);
+        return errorCode + (Texts.isBlank(description) ? "" : " " + description);
     }
 
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
 }

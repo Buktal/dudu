@@ -36,7 +36,7 @@ public class WechatMiniProtocol {
      * 三参验签：token/timestamp/nonce 字典序排序后拼接取 sha1 十六进制小写与渠道签名比对。
      */
     public boolean verify(String token, String signature, String timestamp, String nonce) {
-        if (isBlank(token) || isBlank(signature) || isBlank(timestamp) || isBlank(nonce)) {
+        if (Texts.isBlank(token) || Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
             return false;
         }
         String[] parts = {token, timestamp, nonce};
@@ -50,7 +50,7 @@ public class WechatMiniProtocol {
      */
     public boolean verifySignature(String token, String msgSignature, String timestamp, String nonce,
                                    String encrypt) {
-        if (isBlank(token) || isBlank(msgSignature) || isBlank(timestamp) || isBlank(nonce) || isBlank(encrypt)) {
+        if (Texts.isBlank(token) || Texts.isBlank(msgSignature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce) || Texts.isBlank(encrypt)) {
             return false;
         }
         String[] parts = {token, timestamp, nonce, encrypt};
@@ -163,13 +163,5 @@ public class WechatMiniProtocol {
             content.put("title", title);
         }
         return content;
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isEmpty();
-    }
-
-    private String blankToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
     }
 }

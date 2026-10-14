@@ -28,7 +28,6 @@ public class WecomMediaReader {
 
     private static final String DEFAULT_API_BASE = "https://qyapi.weixin.qq.com";
     private static final String PATH_MEDIA_GET = "/cgi-bin/media/get";
-    private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
     private final RestClient restClient;
 
@@ -58,7 +57,7 @@ public class WecomMediaReader {
                 return ChannelMediaResult.failed("企业微信素材读取失败："
                     + Errcodes.describe(JSONUtil.parseObj(new String(body, StandardCharsets.UTF_8))));
             }
-            return ChannelMediaResult.media(body, contentType(response));
+            return ChannelMediaResult.media(response);
         } catch (RuntimeException e) {
             // 网络、HTTP 状态与响应解析异常都按调用失败记录，不猜测素材内容
             log.warn("[wecom] 素材读取失败, companyChannelId={}, exception={}",
@@ -75,11 +74,5 @@ public class WecomMediaReader {
             return value == '{';
         }
         return false;
-    }
-
-    // 渠道未给内容类型或给出无法使用时按二进制流返回，不猜具体格式
-    private String contentType(ResponseEntity<?> response) {
-        org.springframework.http.MediaType contentType = response.getHeaders().getContentType();
-        return contentType == null ? DEFAULT_CONTENT_TYPE : contentType.toString();
     }
 }
