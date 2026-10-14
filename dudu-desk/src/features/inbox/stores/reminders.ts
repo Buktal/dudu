@@ -11,7 +11,7 @@ import type { InboxRootState } from "./store";
  * 数据不制造旧提示——重连重查只按结果收敛（reminderSettlement）；退出重登由上下文
  * 重置清空。
  */
-export type ReminderChange = { conversationId: string; unread: number };
+type ReminderChange = { conversationId: string; unread: number };
 
 export function reminderChange(
   state: InboxState,

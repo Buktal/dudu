@@ -18,7 +18,7 @@ import type { InboxMessage } from "../types";
  * maintains.
  */
 
-export type ReceiptEvidence = {
+type ReceiptEvidence = {
   version: number;
   delivery: NonNullable<InboxMessage["delivery"]>;
 };

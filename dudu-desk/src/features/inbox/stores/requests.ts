@@ -6,8 +6,8 @@
  * helpers below are the only way other modules abort, release, fan out, query
  * or run in-flight work, so `runtime.requests` stays an implementation detail
  * of this file. A new per-conversation request registers once in
- * CONVERSATION_REQUEST_KINDS: its key, the removed-conversation cancellation
- * and its runConversationOperation slot all derive from that table.
+ * CONVERSATION_REQUEST_KINDS: its key and its runConversationOperation slot
+ * both derive from that table.
  */
 import { type ApiFailure, DeskApiError, failureOf } from "@/lib/api-response";
 import { createRequestScope, type RequestScope } from "@/lib/request-scope";
@@ -22,10 +22,9 @@ export function operationFailure(error: unknown): ApiFailure {
 }
 
 /** Per-conversation request kinds. The per-conversation key constructors in
- *  `requestKeys`, `cancelConversationRequests` and the runConversationOperation
- *  slot domain all derive from this table, so a new per-conversation request
- *  registers here once, runs through the conversation operation interface and
- *  is cancelled with the rest when its conversation is removed. */
+ *  `requestKeys` and the runConversationOperation slot domain both derive from
+ *  this table, so a new per-conversation request registers here once and runs
+ *  through the conversation operation interface. */
 const CONVERSATION_REQUEST_KINDS = [
   "history",
   "profile",
@@ -37,15 +36,14 @@ const CONVERSATION_REQUEST_KINDS = [
 
 /** The runConversationOperation slot domain: one entry per row of
  *  CONVERSATION_REQUEST_KINDS. */
-export type ConversationRequestKind =
-  (typeof CONVERSATION_REQUEST_KINDS)[number];
+type ConversationRequestKind = (typeof CONVERSATION_REQUEST_KINDS)[number];
 
 /** Slot-key protocol for inbox requests: global singletons plus namespaced
  *  per-owner keys. A key must match one of these shapes to typecheck at
  *  `beginRequest`/`runOperation`; `requestKeys` builds the sanctioned
  *  spellings for the slots other modules still address directly — running a
  *  per-conversation slot goes through runConversationOperation instead. */
-export type InboxRequestKey =
+type InboxRequestKey =
   | "queue"
   | "events"
   | "recovery"
@@ -144,17 +142,6 @@ export function releaseRequest(
   return true;
 }
 
-/** Cancel every per-conversation request under `conversationId` (the kinds
- *  in CONVERSATION_REQUEST_KINDS). Attachment slots are not covered; they
- *  release together with their resources via releaseAttachmentResources. */
-export function cancelConversationRequests(
-  runtime: InboxRuntime,
-  conversationId: string,
-) {
-  for (const kind of CONVERSATION_REQUEST_KINDS)
-    releaseRequest(runtime, conversationRequestKey(kind, conversationId));
-}
-
 /** The registered scope under `key`, when in flight; callers hold it as the
  *  kill switch for a long-lived request (e.g. the live subscription). */
 export function getRequestScope(
@@ -209,7 +196,7 @@ export function releaseAttachmentResources(
   }
 }
 
-export type OperationScope = {
+type OperationScope = {
   context: WorkContext;
   signal: AbortSignal;
   /** True while this operation is still the latest for its key and generation. */
@@ -248,7 +235,7 @@ export async function runOperation<T>(
 
 /** One conversation-domain operation: which api call settles it, what a valid
  *  response matches, and the dispatch effects on each side. */
-export type ConversationOperation<T> = {
+type ConversationOperation<T> = {
   /** Opens the transition (the xLoading dispatch); runs once before the call. */
   loading: () => void;
   call: (io: RequestOptions) => Promise<T>;

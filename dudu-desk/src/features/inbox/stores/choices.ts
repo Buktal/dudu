@@ -16,7 +16,7 @@ export const pinPickerChoicesScope = "pin-picker";
 
 /** Which candidate list a choice read serves; the ConversationQuery spelling
  *  of each view lives here, not with its callers. */
-export type ChoiceView = "pinnable" | "replyable";
+type ChoiceView = "pinnable" | "replyable";
 
 function choicesQuery(view: ChoiceView, search: string): ConversationQuery {
   return {

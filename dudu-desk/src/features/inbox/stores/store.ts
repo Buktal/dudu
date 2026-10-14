@@ -59,7 +59,7 @@ export function onQueueSettled(
 /**
  * 初始读取闸门：Socket 订阅已报告 ready 或失败后释放，幂等（重复释放无害）。
  */
-export type ConnectionGate = {
+type ConnectionGate = {
   readonly settled: Promise<void>;
   release: () => void;
 };

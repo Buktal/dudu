@@ -19,7 +19,7 @@ import type { InboxState } from "./state";
  * module instead of drifting across call sites. Entity merging stays in the
  * Live events merge kernel; this module owns only the queue projection.
  */
-export type QueueRewriteMode = "refresh" | "append";
+type QueueRewriteMode = "refresh" | "append";
 
 export function rewriteQueueIds(input: {
   conversations: Record<string, Conversation | undefined>;

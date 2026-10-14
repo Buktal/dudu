@@ -19,12 +19,12 @@ export function emptyLoad(): LoadState {
   return { status: "idle", error: null, nextCursor: null, hasLoaded: false };
 }
 
-export type DetailSaveState = {
+type DetailSaveState = {
   status: "idle" | "saving" | "saved" | "error";
   error: ApiFailure | null;
 };
 
-export type ProfileEdit = DetailSaveState & {
+type ProfileEdit = DetailSaveState & {
   tagsText: string;
   note: string;
   revision: number;
@@ -34,7 +34,7 @@ export type ProfileEdit = DetailSaveState & {
 
 export type ProfileChanges = Partial<Pick<ProfileEdit, "tagsText" | "note">>;
 
-export type ReplyDraft = {
+type ReplyDraft = {
   text: string;
   attachmentIds: string[];
   revision: number;
@@ -63,7 +63,7 @@ export type ReplySubmission = {
   next: boolean;
   status: "sending" | "accepted" | "failed" | "unconfirmed";
 };
-export type EndState = {
+type EndState = {
   status: "saving" | "saved" | "error";
   error?: ApiFailure;
 };
@@ -107,7 +107,7 @@ export function onScreenId(state: InboxState, conversationId: string): boolean {
 }
 
 /** 消息媒体按「消息:下标」读取的状态；成功后 url 是本地对象 URL。 */
-export type MediaLoad = {
+type MediaLoad = {
   status: "loading" | "ready" | "error";
   url?: string;
 };
