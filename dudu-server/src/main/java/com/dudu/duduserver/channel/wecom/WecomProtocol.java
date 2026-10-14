@@ -5,17 +5,10 @@ import com.dudu.duduserver.channel.support.AesEnvelopeCodec;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
+import com.dudu.duduserver.channel.support.SecureXml;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
-import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -49,7 +42,7 @@ public class WecomProtocol {
      * {@link IllegalArgumentException}，由调用方按参数错误拒绝。
      */
     public Optional<ChannelInboundMessage> parse(Long companyChannelId, String xml) {
-        Map<String, String> fields = fields(xml);
+        Map<String, String> fields = SecureXml.flatFields(xml);
         String msgType = fields.getOrDefault("MsgType", "");
         if (MSG_TYPE_EVENT.equals(msgType)) {
             return Optional.empty();
@@ -74,40 +67,11 @@ public class WecomProtocol {
      * 信封无法解析或缺少 Encrypt 时抛出 {@link IllegalArgumentException}。
      */
     public String envelopeEncrypt(String envelope) {
-        String encrypt = fields(envelope).get("Encrypt");
+        String encrypt = SecureXml.flatFields(envelope).get("Encrypt");
         if (encrypt == null || encrypt.isEmpty()) {
             throw new IllegalArgumentException("回调信封缺少 Encrypt 密文");
         }
         return encrypt;
-    }
-
-    // 报文只取 <xml> 根元素的一级子元素，嵌套结构不参与消息体；XML 解析不假设严格 CDATA
-    private Map<String, String> fields(String xml) {
-        Document document;
-        try {
-            DocumentBuilder builder = secureBuilder();
-            document = builder.parse(new InputSource(new StringReader(xml)));
-        } catch (Exception e) {
-            throw new IllegalArgumentException("渠道回调报文无法解析", e);
-        }
-        Map<String, String> fields = new LinkedHashMap<>();
-        NodeList children = document.getDocumentElement().getChildNodes();
-        for (int index = 0; index < children.getLength(); index++) {
-            Node child = children.item(index);
-            if (child.getNodeType() == Node.ELEMENT_NODE) {
-                fields.put(child.getNodeName(), child.getTextContent());
-            }
-        }
-        return fields;
-    }
-
-    // 禁止 DTD 与外部实体：回调报文来自公网，不解析实体引用
-    private DocumentBuilder secureBuilder() throws Exception {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-        factory.setXIncludeAware(false);
-        factory.setExpandEntityReferences(false);
-        return factory.newDocumentBuilder();
     }
 
     // 按 MsgType 映射契约第 4 节统一消息体；渠道不提供的可选信息省略，无法映射的按 unknown 如实保存

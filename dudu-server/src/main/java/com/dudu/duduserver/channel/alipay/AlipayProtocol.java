@@ -4,6 +4,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
+import com.dudu.duduserver.channel.support.SecureXml;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -11,8 +12,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -164,7 +163,7 @@ public class AlipayProtocol {
         }
         Document document;
         try {
-            document = secureBuilder().parse(new InputSource(new StringReader(bizContent)));
+            document = SecureXml.builder().parse(new InputSource(new StringReader(bizContent)));
         } catch (Exception e) {
             return Map.of();
         }
@@ -198,15 +197,6 @@ public class AlipayProtocol {
             }
         }
         return false;
-    }
-
-    // 禁止 DTD 与外部实体：回调报文来自公网，不解析实体引用（与公众号族同一套防护）
-    private DocumentBuilder secureBuilder() throws Exception {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-        factory.setXIncludeAware(false);
-        factory.setExpandEntityReferences(false);
-        return factory.newDocumentBuilder();
     }
 
     // 按 MsgType 映射统一消息体；字段值不符合类型约定时如实落 unknown，不猜测内容
