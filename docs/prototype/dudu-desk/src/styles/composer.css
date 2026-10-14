@@ -1,45 +1,43 @@
 .composer {
-  @apply shrink-0 relative bg-transparent;
-  padding: 8px 12px 13px;
+  flex-shrink: 0;
+  position: relative;
+  padding: 7px 24px 22px;
+  background: var(--canvas);
 }
 .composer-editor {
-  @apply bg-card overflow-hidden rounded-xl;
-  border: 1px solid var(--border);
-  box-shadow: 0 7px 25px
-    color-mix(
-      in srgb,
-      light-dark(var(--foreground), var(--background)) 3%,
-      transparent
-    );
-  transition:
-    border-color 180ms,
-    box-shadow 180ms;
+  background: var(--surface);
+  border: 1px solid #dde3ef;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px #253f6303;
+  overflow: hidden;
 }
 .composer-editor:focus-within {
-  border-color: color-mix(in srgb, var(--ring) 35%, var(--border));
-  box-shadow: 0 4px 20px
-    color-mix(
-      in srgb,
-      light-dark(var(--foreground), var(--background)) 13%,
-      transparent
-    );
+  border-color: #b3bfe2;
+  box-shadow: 0 0 0 2px #dfe5f64d;
 }
 .composer-toolbar {
-  @apply flex items-center justify-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  padding: 11px 12px 0;
+  padding: 8px 10px 0;
 }
 .composer-toolbar > div {
-  @apply flex items-center text-muted-foreground;
-  gap: 5px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--secondary-ink);
+}
+.composer-toolbar [data-slot="button"] {
+  font-size: 11px;
 }
 .reply-target {
-  @apply flex items-center rounded-sm bg-muted;
+  display: flex;
+  align-items: center;
   gap: 5px;
-  margin-right: 6px;
-  padding: 3px 7px;
-  opacity: 1;
   font-size: 10px;
+  opacity: 0.88;
+  margin-right: 6px;
 }
 .reply-target > svg {
   width: 11px;
@@ -49,38 +47,53 @@
   font-weight: 550;
 }
 .composer-editor > textarea {
-  @apply block w-full bg-transparent border-0 text-foreground;
+  display: block;
+  width: 100%;
+  background: transparent;
+  padding: 12px 17px 7px;
+  height: 69px;
   min-height: 45px;
+  border: 0;
   outline: 0;
   font-size: 14px;
+  color: var(--ink);
   line-height: 1.8;
-  height: 77px;
-  padding: 13px 18px 7px;
 }
 .composer-editor > textarea:focus-visible {
   outline: 0;
 }
 .composer-editor > textarea::placeholder {
-  @apply text-muted-foreground;
+  color: #929bad;
 }
 .composer-bottom {
-  @apply flex items-center justify-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 6px 13px 13px 18px;
+  padding: 6px 12px 11px 17px;
 }
 .composer-hint {
-  @apply whitespace-nowrap text-muted-foreground;
-  font-size: 10px;
+  font-size: 9px;
+  color: #929bad;
+  white-space: nowrap;
 }
 .send-actions {
-  @apply flex items-center;
+  display: flex;
+  align-items: center;
   gap: 5px;
 }
+.send-actions [data-slot="button"] {
+  font-size: 12px;
+}
 .reply-limit {
-  @apply flex items-start bg-warning text-warning-foreground rounded-sm;
+  display: flex;
   gap: 9px;
+  align-items: flex-start;
   padding: 11px 12px;
   margin-bottom: 7px;
+  background: #fff6e9;
+  color: #9e7240;
+  border-radius: 9px;
   font-size: 10px;
 }
 .reply-limit > svg {
@@ -95,33 +108,31 @@
   max-width: 430px;
 }
 .reply-limit > [data-slot="button"] {
-  @apply ml-auto;
+  margin-left: auto;
 }
 .composer-blocked .composer-editor {
-  @apply bg-background;
+  background: var(--canvas);
 }
 .composer-blocked .composer-editor > textarea {
   height: 46px;
 }
 .composer-popup {
-  @apply absolute bg-card rounded-xl;
+  position: absolute;
   left: 24px;
   bottom: calc(100% - 1px);
   padding: 12px;
   width: 340px;
   max-width: calc(100% - 48px);
-  border: 1px solid var(--border);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px #24344f1a;
   z-index: 6;
-  border-color: var(--border);
-  box-shadow: 0 10px 30px
-    color-mix(
-      in srgb,
-      light-dark(var(--foreground), var(--background)) 10%,
-      transparent
-    );
 }
 .popup-heading {
-  @apply flex items-center justify-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 7px;
 }
 .popup-heading strong {
@@ -129,56 +140,64 @@
   font-weight: 600;
 }
 .quick-replies {
-  @apply flex flex-col;
+  display: flex;
+  flex-direction: column;
   gap: 3px;
 }
 .quick-replies button {
-  @apply relative flex flex-col items-start text-left rounded-md;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
   gap: 4px;
-  padding: 12px;
+  padding: 10px;
+  border-radius: 7px;
 }
 .quick-replies button:hover {
-  @apply bg-background;
+  background: var(--canvas);
 }
 .quick-replies strong {
+  font-size: 11px;
   font-weight: 550;
-  font-size: 12px;
 }
 .quick-replies span {
-  @apply text-muted-foreground;
+  font-size: 9px;
+  color: var(--secondary-ink);
   padding-right: 5px;
-  font-size: 11px;
-  line-height: 1.7;
 }
 .quick-replies svg {
-  @apply absolute text-muted-foreground;
+  position: absolute;
   right: 7px;
   top: 10px;
+  color: var(--secondary-ink);
 }
 .emoji-grid {
-  @apply grid;
+  display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
 }
 .emoji-grid button {
-  @apply rounded-md;
   padding: 9px;
+  border-radius: 7px;
   font-size: 23px;
 }
 .emoji-grid button:hover {
-  @apply bg-accent;
-  translate: 0 -2px;
+  background: var(--canvas);
 }
 .attachment-choice {
-  @apply grid items-center;
+  display: grid;
   grid-template-columns: 113px 1fr;
   gap: 15px;
+  align-items: center;
 }
 .attachment-choice > svg {
-  @apply rounded-sm;
+  border-radius: 9px;
 }
 .attachment-choice > div {
-  @apply flex flex-col items-start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 7px;
 }
 .attachment-choice strong {
@@ -186,44 +205,59 @@
   font-weight: 600;
 }
 .attachment-choice small {
-  @apply text-muted-foreground;
   font-size: 9px;
+  color: var(--secondary-ink);
+}
+.attachment-choice [data-slot="button"] {
+  font-size: 10px;
 }
 .attachment-file {
-  @apply flex items-center rounded-sm bg-background;
   grid-column: span 2;
+  display: flex;
   gap: 6px;
+  align-items: center;
   font-size: 10px;
   padding: 9px;
+  border-radius: 7px;
+  background: var(--canvas);
+}
+.chat-focus .composer {
+  background: white;
+  padding: 6px 27px 23px;
+}
+.chat-focus .composer-editor {
+  border-color: #d5e4dc;
+}
+.chat-focus .composer-editor > textarea {
+  height: 61px;
 }
 .chat-parallel .composer {
-  @apply bg-card;
-  padding: 6px 10px 12px;
+  padding: 7px 12px 13px;
+  background: #fcfdff;
 }
 .chat-parallel .composer-toolbar {
-  @apply flex-wrap;
+  flex-wrap: wrap;
+  row-gap: 0;
   padding: 6px 8px 0;
-  gap: 5px;
 }
 .chat-parallel .reply-target {
+  flex-basis: 100%;
+  margin-left: 6px;
   margin-top: 2px;
-  align-self: flex-start;
-  margin-left: 4px;
-  flex-basis: auto;
 }
 .chat-parallel .composer-toolbar [data-slot="button"] {
   height: 28px;
 }
 .chat-parallel .composer-editor > textarea {
-  padding: 9px 13px;
   height: 65px;
+  padding: 9px 13px;
   font-size: 13px;
 }
 .chat-parallel .composer-bottom {
   padding: 5px 9px 9px 13px;
 }
 .chat-parallel .composer-hint > span {
-  @apply hidden;
+  display: none;
 }
 .chat-parallel .composer-popup {
   left: 12px;
@@ -232,53 +266,4 @@
 .chat-parallel .attachment-choice {
   grid-template-columns: 82px 1fr;
   gap: 8px;
-}
-.chat-parallel .composer-editor {
-  @apply rounded-xl;
-}
-@media (max-width: 1260px) {
-  .composer {
-    padding: 7px 18px 20px;
-  }
-  .composer-hint > span {
-    @apply hidden;
-  }
-}
-@media (max-width: 760px) {
-  .composer {
-    padding: 7px 5px 8px;
-  }
-  .composer-toolbar {
-    @apply flex-wrap;
-    padding: 7px 7px 0;
-    gap: 6px;
-  }
-  .reply-target {
-    margin-right: 0;
-    font-size: 10px;
-    margin-left: 4px;
-  }
-  .composer-editor > textarea {
-    padding: 10px 13px 6px;
-    height: 67px;
-  }
-  .chat-parallel .composer {
-    padding: 7px 5px 8px;
-  }
-  .composer-editor {
-    @apply rounded-xl;
-  }
-  .composer-toolbar > div {
-    gap: 1px;
-  }
-  .composer-bottom {
-    padding: 4px 9px 10px 12px;
-  }
-  .composer-popup {
-    @apply overflow-y-auto;
-    left: 5px;
-    right: 5px;
-    width: auto;
-    max-height: min(420px, 56dvh);
-  }
 }

@@ -5,7 +5,7 @@ import {
   Search,
   Star,
 } from "lucide-react";
-import { IconButton } from "./components/primitives";
+import { Brand, IconButton } from "./components/primitives";
 import { ChatPanel } from "./features/inbox/chat-panel";
 import {
   ConversationList,
@@ -35,10 +35,30 @@ export type WorkspaceProps = {
   infoOpen: boolean;
   setInfoOpen: (value: boolean) => void;
   openHelp: () => void;
+  away: boolean;
+  toggleAway: () => void;
   mobileQueue: boolean;
   toggleQueue: () => void;
   search: () => void;
 };
+
+export function AgentStatus({
+  away,
+  toggleAway,
+}: Pick<WorkspaceProps, "away" | "toggleAway">) {
+  return (
+    <button
+      type="button"
+      className="agent-status"
+      onClick={toggleAway}
+      title="切换接待状态"
+    >
+      <i data-away={away} />
+      <span>{away ? "暂时离开" : "接待中"}</span>
+      <span className="agent-avatar">苏</span>
+    </button>
+  );
+}
 
 export function Details(props: WorkspaceProps) {
   return (
@@ -59,6 +79,7 @@ export function VariantA(props: WorkspaceProps) {
     >
       <div className="classic-navigation">
         <nav className="app-rail" aria-label="工作台导航">
+          <Brand compact />
           <div className="rail-main">
             <IconButton
               icon={MessageCircle}
@@ -89,6 +110,9 @@ export function VariantA(props: WorkspaceProps) {
               label="查看快捷键"
               onClick={props.openHelp}
             />
+            <span className="rail-agent">
+              苏<i />
+            </span>
           </div>
         </nav>
         <aside className="inbox-column">
@@ -123,6 +147,7 @@ export function VariantA(props: WorkspaceProps) {
             <span>
               <i />6 个消息来源
             </span>
+            <AgentStatus away={props.away} toggleAway={props.toggleAway} />
           </div>
         </aside>
       </div>

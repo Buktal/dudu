@@ -9,7 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BagIllustration, SourceLogo } from "../../components/identity";
 import { Button, IconButton } from "../../components/primitives";
 import { channels, type Visitor } from "../../types";
@@ -36,11 +36,13 @@ export function Composer({
   inbox,
   onNext,
   onFocus,
+  focusMode = false,
 }: {
   visitor: Visitor;
   inbox: Inbox;
   onNext: (fromId: string) => void;
   onFocus: () => void;
+  focusMode?: boolean;
 }) {
   const [popup, setPopup] = useState<"quick" | "emoji" | "attachment" | null>(
     null,
@@ -239,10 +241,7 @@ export function Composer({
               快捷回复
             </Button>
           </div>
-          <span
-            className="reply-target source-identity"
-            style={{ "--source-color": source.color } as CSSProperties}
-          >
+          <span className="reply-target" style={{ color: source.color }}>
             <SourceLogo channel={visitor.channel} />
             <span>
               回复给 <b>{visitor.name}</b> · {source.short}
@@ -277,24 +276,47 @@ export function Composer({
             Enter 发送<span> · Shift + Enter 换行</span>
           </span>
           <div className="send-actions">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              title="发送并接待下一位 · Ctrl + Enter"
-              aria-label={`发送给 ${visitor.name} 并接待下一位`}
-              disabled={blocked || !draft.trim()}
-              onClick={() => send(true)}
-            >
-              <ArrowUpRight data-icon="inline-start" />
-            </Button>
-            <Button
-              size="sm"
-              disabled={blocked || !draft.trim()}
-              onClick={() => send()}
-            >
-              发送
-              <ArrowUp data-icon="inline-end" />
-            </Button>
+            {focusMode ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={blocked || !draft.trim()}
+                  onClick={() => send()}
+                >
+                  仅发送
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={blocked || !draft.trim()}
+                  onClick={() => send(true)}
+                >
+                  发送并接待下一位
+                  <ArrowUpRight data-icon="inline-end" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  title="发送并接待下一位 · Ctrl + Enter"
+                  aria-label={`发送给 ${visitor.name} 并接待下一位`}
+                  disabled={blocked || !draft.trim()}
+                  onClick={() => send(true)}
+                >
+                  <ArrowUpRight data-icon="inline-start" />
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={blocked || !draft.trim()}
+                  onClick={() => send()}
+                >
+                  发送
+                  <ArrowUp data-icon="inline-end" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

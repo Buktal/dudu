@@ -1,0 +1,349 @@
+.fold-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.fold-instruction {
+  font-size: 11px;
+  color: var(--secondary-ink);
+  margin-left: 26px;
+}
+.fold-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+.fold-shell.with-info .fold-workspace {
+  grid-template-columns: minmax(0, 1fr) 278px;
+}
+.fold-inbox {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 17px 25px 0;
+}
+.fold-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 14px;
+  flex-shrink: 0;
+}
+.fold-toolbar .queue-tabs {
+  border: 0;
+  padding: 0;
+  gap: 23px;
+}
+.fold-toolbar .queue-tools {
+  padding: 0;
+}
+.fold-toolbar .search-field {
+  width: 210px;
+  background: white;
+}
+.fold-column-labels,
+.fold-row-button {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr) 96px 69px 18px;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+}
+.fold-column-labels {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--secondary-ink);
+  height: 35px;
+}
+.fold-list {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
+  padding: 2px 4px 8px 0;
+}
+.fold-row {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 9px;
+  margin-bottom: 7px;
+  overflow: clip;
+}
+.fold-row-button {
+  width: 100%;
+  min-height: 74px;
+  text-align: left;
+}
+.fold-row-button:hover {
+  background: #f9fcfd;
+}
+.fold-identity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+.fold-identity > .avatar {
+  width: 36px;
+  height: 36px;
+}
+.fold-identity > span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+}
+.fold-identity strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.fold-preview {
+  font-size: 13px;
+  color: #758692;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.fold-preview em {
+  color: var(--primary);
+  font-style: normal;
+  font-size: 11px;
+  margin-right: 4px;
+}
+.fold-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--secondary-ink);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.fold-status i {
+  width: 5px;
+  height: 5px;
+  background: #a3b4b3;
+  border-radius: 50%;
+}
+.fold-status.is-waiting {
+  color: #a37945;
+}
+.fold-status:where(.is-waiting) i {
+  background: #cea670;
+}
+.fold-wait {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondary-ink);
+}
+.fold-wait.wait-urgent {
+  color: var(--urgent);
+}
+.fold-toggle {
+  color: var(--secondary-ink);
+}
+.fold-row-open {
+  border-color: #87b7c8;
+  box-shadow: 0 3px 14px #377e9810;
+}
+.fold-row-open .fold-row-button {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #e8f2f7;
+  border-left: 3px solid var(--primary);
+  padding-left: 17px;
+}
+.fold-expanded {
+  height: clamp(270px, 37dvh, 355px);
+  display: flex;
+  flex-direction: column;
+  background: #f9fcfd;
+}
+.fold-chat-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 24px 0;
+  color: var(--secondary-ink);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.fold-chat-caption > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.fold-chat-caption i {
+  width: 5px;
+  height: 5px;
+  background: var(--primary);
+  border-radius: 50%;
+}
+.fold-chat-caption [data-slot="button"] {
+  font-size: 10px;
+}
+.chat-inline {
+  flex: 1;
+  min-height: 0;
+}
+.chat-inline .chat-header {
+  display: none;
+}
+.chat-inline .message-history {
+  padding: 15px 26px 5px;
+  max-width: 900px;
+}
+.chat-inline .conversation-start {
+  margin-bottom: 15px;
+}
+.chat-inline .composer {
+  background: #f9fcfd;
+  padding: 7px 22px 16px;
+}
+.chat-inline .composer-editor > textarea {
+  height: 48px;
+  padding-top: 7px;
+}
+.chat-inline .composer-toolbar {
+  padding-top: 4px;
+}
+.chat-inline .composer-editor {
+  border-color: #cddfe7;
+}
+.fold-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 38px;
+  font-size: 10px;
+  color: var(--secondary-ink);
+  flex-shrink: 0;
+}
+.fold-footer button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+}
+@media (max-width: 1260px) {
+  .fold-column-labels,
+  .fold-row-button {
+    grid-template-columns: 180px minmax(0, 1fr) 75px 53px 16px;
+    gap: 10px;
+    padding-right: 15px;
+  }
+  .fold-shell.with-info .fold-workspace {
+    grid-template-columns: minmax(0, 1fr) 250px;
+  }
+  .fold-toolbar .queue-tabs {
+    gap: 15px;
+  }
+  .fold-toolbar .search-field {
+    width: 170px;
+  }
+  .fold-toolbar .queue-tools-compact {
+    gap: 10px;
+  }
+}
+@media (max-width: 1090px) {
+  .fold-shell.with-info .fold-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fold-instruction {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .fold-inbox {
+    padding: 9px 10px 0;
+  }
+  .fold-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-bottom: 8px;
+  }
+  .fold-toolbar .queue-tools {
+    width: 100%;
+  }
+  .fold-toolbar .search-field {
+    flex: 1;
+    width: auto;
+  }
+  .fold-toolbar .queue-selects {
+    gap: 6px;
+  }
+  .fold-toolbar .queue-selects select {
+    max-width: 78px;
+  }
+  .fold-toolbar .search-field kbd,
+  .fold-column-labels,
+  .fold-row-button .fold-status,
+  .fold-row-button .fold-wait {
+    display: none;
+  }
+  .fold-row-button {
+    grid-template-columns: minmax(0, 1fr) 16px;
+    gap: 3px 8px;
+    padding: 11px 13px;
+  }
+  .fold-identity {
+    grid-column: 1;
+  }
+  .fold-identity > .avatar {
+    width: 30px;
+    height: 30px;
+  }
+  .fold-identity > span {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .fold-identity strong {
+    font-size: 13px;
+  }
+  .fold-preview {
+    grid-column: 1;
+    padding-left: 42px;
+    font-size: 11px;
+  }
+  .fold-toggle {
+    grid-row: 1 / 3;
+    grid-column: 2;
+  }
+  .fold-row-open .fold-row-button {
+    padding-left: 10px;
+  }
+  .fold-expanded {
+    height: 430px;
+  }
+  .fold-chat-caption {
+    padding: 8px 11px 0;
+    font-size: 9px;
+  }
+  .chat-inline .message-history {
+    padding: 13px 12px 0;
+  }
+  .chat-inline .composer {
+    padding: 6px 10px 11px;
+  }
+  .chat-inline .reply-target {
+    flex-basis: 100%;
+  }
+  .fold-footer {
+    font-size: 9px;
+  }
+  .fold-footer > span {
+    display: none;
+  }
+  .fold-footer button {
+    margin-left: auto;
+  }
+}
