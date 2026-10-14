@@ -141,7 +141,7 @@ public class DeskReplyServiceImpl implements DeskReplyService {
         MessageDO message = messageService.getById(messageId);
         VisitorDO visitor = visitorService.getById(message.getVisitorId());
 
-        if (succeeded && awaitingReply(visitor) && !hasNewerIncoming(message)) {
+        if (succeeded && visitor.awaitingReply() && !hasNewerIncoming(message)) {
             visitorService.update(Wrappers.<VisitorDO>lambdaUpdate()
                 .eq(VisitorDO::getVisitorId, visitor.getVisitorId())
                 .set(VisitorDO::getStatus, VisitorStatusEnum.WAITING)
@@ -158,12 +158,6 @@ public class DeskReplyServiceImpl implements DeskReplyService {
             deskConversationViews.conversation(visitor, account),
             account == null ? null : account.getCompanyId(),
             account == null ? null : account.getCompanyChannelId());
-    }
-
-    // 只处理未结束且需要变化的行：已是 waiting 且计时已清空时不重复写库、不增加 version
-    private boolean awaitingReply(VisitorDO visitor) {
-        return visitor.getStatus() != VisitorStatusEnum.CLOSED
-            && (visitor.getStatus() != VisitorStatusEnum.WAITING || visitor.getWaitingSince() != null);
     }
 
     // 直接查询本会话消息判断回复基线，不新增基线表：该 outgoing 之后还有更新的来信时保留当前状态
