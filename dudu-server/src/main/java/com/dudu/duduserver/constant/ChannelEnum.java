@@ -25,7 +25,8 @@ public enum ChannelEnum {
     XIAOHONGSHU("xiaohongshu", "小红书"),
     BILIBILI("bilibili", "哔哩哔哩"),
     DINGTALK("dingtalk", "钉钉"),
-    MEITUAN("meituan", "美团");
+    MEITUAN("meituan", "美团"),
+    WHATSAPP("whatsapp", "WhatsApp");
 
     @EnumValue
     @JsonValue

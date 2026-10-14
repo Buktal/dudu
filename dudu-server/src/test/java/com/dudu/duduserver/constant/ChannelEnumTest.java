@@ -30,4 +30,12 @@ class ChannelEnumTest {
         assertThat(ChannelEnum.WEIBO.getDisplayName()).isEqualTo("微博");
         assertThat(ChannelEnum.fromCode("weibo")).isEqualTo(ChannelEnum.WEIBO);
     }
+
+    @Test
+    void whatsappCarriesTheTicketCodeAndDisplayName() {
+        // #112：码值沿用 mock-pulse config.rs serde 键（小写），显示名供 Desk 渠道筛选展示
+        assertThat(ChannelEnum.WHATSAPP.getCode()).isEqualTo("whatsapp");
+        assertThat(ChannelEnum.WHATSAPP.getDisplayName()).isEqualTo("WhatsApp");
+        assertThat(ChannelEnum.fromCode("whatsapp")).isEqualTo(ChannelEnum.WHATSAPP);
+    }
 }

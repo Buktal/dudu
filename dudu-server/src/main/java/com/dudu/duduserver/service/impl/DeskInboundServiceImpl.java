@@ -33,7 +33,8 @@ import java.util.Map;
 /**
  * 入站信件实现：来源唯一键 (company_id, company_channel_id, external_user_id) 找到或创建访客，
  * 同事务创建空名片；message_count 用单条 UPDATE 原子递增并回读分配 sequence，随后写入消息与
- * 最后消息/接待状态。渠道资料按未提供、空值与有效值区分更新，推送在事务提交后发出且失败不影响落库。
+ * 最后消息/接待状态。渠道推送按 at-least-once 重发，同访客同渠道消息标识已落库即幂等跳过；
+ * 渠道资料按未提供、空值与有效值区分更新，推送在事务提交后发出且失败不影响落库。
  */
 @Slf4j
 @Service
@@ -56,6 +57,11 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         VisitorDO visitor = findVisitor(account, inbound.externalUserId());
         if (visitor == null) {
             visitor = createVisitor(account, inbound, now);
+        } else if (redelivered(visitor.getVisitorId(), inbound)) {
+            // 渠道应答超时后重推同一封信（at-least-once）：已落库即幂等跳过，不重复计数
+            log.info("[desk] 来信重推幂等跳过, companyChannelId={}, externalMessageId={}",
+                account.getCompanyChannelId(), inbound.externalMessageId());
+            return;
         }
         // 渠道资料有变化的名片随来信一起在提交后推送；没有变化时为空
         VisitorProfileDO profileChange = applyChannelProfile(visitor, inbound, now);
@@ -118,6 +124,13 @@ public class DeskInboundServiceImpl implements DeskInboundService {
 
     private VisitorDO findVisitor(CompanyChannelDO account, String externalUserId) {
         return visitorService.getOne(sourceOf(account, externalUserId));
+    }
+
+    // 渠道消息标识（wamid/msgid 等）在本访客名下已落库即重推；未提供标识的信件不判重
+    private boolean redelivered(Long visitorId, ChannelInboundMessage inbound) {
+        return inbound.externalMessageId() != null && messageService.count(Wrappers.<MessageDO>lambdaQuery()
+            .eq(MessageDO::getVisitorId, visitorId)
+            .eq(MessageDO::getExternalMessageId, inbound.externalMessageId())) > 0;
     }
 
     // 首信并发：唯一键冲突说明另一事务已创建访客，锁定读回读该行继续本条消息
