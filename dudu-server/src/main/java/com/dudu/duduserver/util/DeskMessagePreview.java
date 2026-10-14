@@ -1,11 +1,12 @@
 package com.dudu.duduserver.util;
 
+import java.util.List;
 import java.util.Map;
 
 /**
  * 最后消息摘要生成：按契约第 1 节规则从统一消息体提取列表与卡片摘要——文本取正文，
- * 图片/音视频/文件用类型和文件名，链接/卡片取标题，位置取名称，引用取回复文字；
- * 最多 500 字，不复制完整正文。
+ * 图片/音视频/文件用类型和文件名，链接/卡片取标题，位置取名称，引用取回复文字，
+ * 引用回复（文字加附件）同样取回复文字；最多 500 字，不复制完整正文。
  */
 public final class DeskMessagePreview {
 
@@ -25,6 +26,7 @@ public final class DeskMessagePreview {
             case "audio" -> media("语音", content.get("media"));
             case "video" -> media("视频", content.get("media"));
             case "file" -> media("文件", content.get("media"));
+            case "reply" -> reply(content);
             case "link" -> text(content.get("title"));
             case "card" -> text(content.get("title"));
             case "location" -> text(content.get("label"));
@@ -33,6 +35,17 @@ public final class DeskMessagePreview {
             default -> "";
         };
         return preview.length() > MAX_LENGTH ? preview.substring(0, MAX_LENGTH) : preview;
+    }
+
+    // 引用回复取回复文字；纯附件回复以附件占位，不落成空摘要
+    private static String reply(Map<String, Object> content) {
+        String text = text(content.get("text"));
+        if (!text.isEmpty()) {
+            return text;
+        }
+        return content.get("attachments") instanceof List<?> attachments && !attachments.isEmpty()
+            ? "附件"
+            : text;
     }
 
     private static String type(Map<String, Object> content) {

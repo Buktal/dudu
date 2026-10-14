@@ -135,12 +135,12 @@ public class QqProtocol {
     public Optional<ChannelInboundMessage> parse(Long companyChannelId, Envelope envelope) {
         return switch (envelope.t() == null ? "" : envelope.t()) {
             case EVENT_C2C -> Optional.of(message(companyChannelId, SCENE_C2C,
-                firstText(envelope.d(), "author", "user_openid", "id"), envelope.d()));
+                firstText(envelope.d().getJSONObject("author"), "user_openid", "id"), envelope.d()));
             case EVENT_GROUP_AT, EVENT_GROUP_ALL ->
                 Optional.of(message(companyChannelId, SCENE_GROUP, envelope.d().getStr("group_openid"),
                     envelope.d()));
             case EVENT_GUILD_AT -> Optional.of(message(companyChannelId, SCENE_GUILD,
-                firstText(envelope.d(), "author", "id", "id"), envelope.d()));
+                firstText(envelope.d().getJSONObject("author"), "id"), envelope.d()));
             default -> Optional.empty();
         };
     }
@@ -220,11 +220,18 @@ public class QqProtocol {
         return KIND_FILE;
     }
 
-    // 嵌套取 author 下首个非空字段；缺 author 时逐级回退由入参给定
-    private String firstText(JSONObject d, String nested, String primary, String fallback) {
-        JSONObject parent = d.getJSONObject(nested);
-        String value = parent == null ? null : text(parent.getStr(primary));
-        return value != null ? value : (parent == null ? null : text(parent.getStr(fallback)));
+    // author 下按序取首个非空字段；缺 author 或全空返回 null
+    private String firstText(JSONObject author, String... keys) {
+        if (author == null) {
+            return null;
+        }
+        for (String key : keys) {
+            String value = text(author.getStr(key));
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private String text(String value) {

@@ -3,12 +3,13 @@ package com.dudu.duduserver.util;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 最后消息摘要规则验收：文本/媒体/链接/位置/引用各自的取值与 500 字截断。
+ * 最后消息摘要规则验收：文本/媒体/引用回复/链接/位置/引用各自的取值与 500 字截断。
  */
 class DeskMessagePreviewTest {
 
@@ -43,6 +44,21 @@ class DeskMessagePreviewTest {
             .isEqualTo("广州塔");
         assertThat(DeskMessagePreview.of(Map.of("type", "quote", "text", "可以", "quotedText", "能发货吗")))
             .isEqualTo("可以");
+    }
+
+    @Test
+    void replyTakesReplyTextAndKeepsPlaceholderForAttachmentOnly() {
+        assertThat(DeskMessagePreview.of(Map.of("type", "reply",
+            "text", "发票也发一份过去",
+            "attachments", List.of(Map.of("kind", "image", "id", "d1")))))
+            .isEqualTo("发票也发一份过去");
+        // 钉钉纯附件富文本：文字为空但附件在场，占位不落成空摘要
+        assertThat(DeskMessagePreview.of(Map.of("type", "reply",
+            "text", "",
+            "attachments", List.of(Map.of("kind", "image", "id", "d1")))))
+            .isEqualTo("附件");
+        assertThat(DeskMessagePreview.of(Map.of("type", "reply", "text", "", "attachments", List.of())))
+            .isEmpty();
     }
 
     @Test
