@@ -9,7 +9,7 @@ import { WorkspaceMotion } from "@/components/workspace-motion";
 import { isDesktopWindow } from "@/lib/desktop-window";
 import type { ReceptionMode } from "@/lib/reception-mode";
 
-export type WorkspaceShellProps = {
+type WorkspaceShellProps = {
   mode: ReceptionMode;
   onModeChange: (mode: ReceptionMode) => void;
   children: ReactNode;

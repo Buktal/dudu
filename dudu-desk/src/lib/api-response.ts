@@ -1,4 +1,4 @@
-export type ApiErrorKind =
+type ApiErrorKind =
   | "authentication"
   | "forbidden"
   | "business"

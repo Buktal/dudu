@@ -22,10 +22,6 @@ export function nowIso(): string {
   return dayjs().toISOString();
 }
 
-export function relativeIso(value: string, seconds: number): string {
-  return dayjs(value).add(seconds, "second").toISOString();
-}
-
 export function elapsedSeconds(
   since: string,
   now = nowIso(),

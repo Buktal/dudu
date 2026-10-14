@@ -68,7 +68,7 @@ export async function requestDesk<T>(request: DeskRequest<T>): Promise<T> {
   }
 }
 
-export type DeskBlobRequest = {
+type DeskBlobRequest = {
   url: string | URL;
   token?: string;
   signal: AbortSignal;

@@ -13,7 +13,7 @@ type PreferenceOptions = {
   prefersDark?: () => boolean;
 };
 
-export const PREFERENCES_STORAGE_KEY = "dudu-desk.preferences";
+const PREFERENCES_STORAGE_KEY = "dudu-desk.preferences";
 const defaults: WorkspacePreferences = { theme: "daylight", mode: "calm" };
 
 function safely<T>(read: () => T): T | undefined {

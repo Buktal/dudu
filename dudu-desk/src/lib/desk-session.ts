@@ -14,7 +14,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 // 只接受协议、主机与端口的构建注入地址，禁止携带路径、凭据与查询参数
-export function parseOrigin(value: string): string {
+function parseOrigin(value: string): string {
   const url = new URL(value.trim());
   if (
     !["http:", "https:"].includes(url.protocol) ||
