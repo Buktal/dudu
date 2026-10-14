@@ -20,7 +20,8 @@ public enum ChannelEnum {
     ALIPAY("alipay", "支付宝"),
     DOUYIN("douyin", "抖音"),
     XIAOHONGSHU("xiaohongshu", "小红书"),
-    BILIBILI("bilibili", "哔哩哔哩");
+    BILIBILI("bilibili", "哔哩哔哩"),
+    DINGTALK("dingtalk", "钉钉");
 
     @EnumValue
     @JsonValue

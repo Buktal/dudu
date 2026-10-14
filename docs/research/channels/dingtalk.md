@@ -144,7 +144,7 @@
 | 服务窗关注/取关/授权结果 | 用户关注服务窗等 | 全文待核验(09-27) | 总目录 `event-official-account-*` |
 
 - 机器人收消息 ID 形态：`conversationId: cid…==`、`senderId/chatbotUserId/atUsers[].dingtalkId: $:LWCP_v1:$…`、`msgId: msgr…==`、`robotCode: dingo…`（自定义机器人无 robotCode）、`sessionWebhook: https://oapi.dingtalk.com/robot/sendBySession?session=…`、`conversationType: "1"单聊/"2"群聊`（字符串型）。
-- 媒体消息不直接给二进制，给 `downloadCode`，调服务端 API 换临时下载链接（图片/语音/视频/文件均同；语音多 `recognition` + `duration` 毫秒；视频多 `videoType`；文件多 `fileName`）。
+- 媒体消息不直接给二进制，给 `downloadCode`，调服务端 API 换临时下载链接（图片/语音/视频/文件均同；语音多 `recognition` + `duration` 毫秒；视频多 `videoType`；文件多 `fileName`）。换链 API 已直抓落定：`POST /v1.0/robot/messageFiles/download`（见 §5.11）。
 
 ### 2.4 待办 / 日程 / 文档 / 签到考勤
 
@@ -650,6 +650,15 @@ public class Test {
 - 新 HTTP 握手/运行时（help.dingtalk.io 镜像英文版全文逐字）：配置 URL 后平台发 `POST {"encrypt":"ajls384kdjx98XX"}`；须 1500ms 内回 JSON `{"msg_signature","timeStamp","nonce","encrypt":enc("success")}`；运行时同 1500ms，超时即判推送失败；URL 形 `http://<url>?signature=…&timestamp=…&nonce=…`；`OWNER_KEY`：控制台订阅=App 维度 APP_KEY，注册 API=组织维度（内部 appkey / 第三方 SUITE_KEY）；解密后通讯录示例 `{"EventType":"user_add_org","TimeStamp":43535463645,"UserId":["user1","user2"],"CorpId":"dinge8a56572f80b02a8ffexxxx"}`；FAQ 调试向量 `DingTalkEncryptor("123456","1234567890123456789012345678901234567890123","dingsnotzck6pm5veliw")` + `getDecryptMsg("9a95a004dd16f5c307e849b994173f76aa26e5eb","1614767836","A7Co0cJLMzIDtMMI","YvkvaGe4hQxd3VxRmEty0dVlnCOAqwf56xwTRHDHoOURqhalbmBJQk5FNcRk42Gl5T0YQXZNwpwWSm1xAFJ5ZA==")`。
 - 第三方通道总规则（callback-events-overview.md 搜索摘录，developers 域）：第三方必须注册事件回调收"企业授权开通应用事件"以初始化企业信息；RDS 推送支持第三方，SyncHTTP 强烈建议第三方使用，HTTP 仅历史第三方可用（不推荐）；小程序用 `dd.corpId`、微应用用 `$CORPID$` 占位取 corpId。
 
+### 5.11 实施补证（2026-10-14 复核直抓）
+
+- 中文 `configure-http-push`（https://open.dingtalk.com/document/orgapp/configure-http-push）全文直抓（§7.2 残项消项）：① token：**3~32 个字符**（只能使用英文或数字），aes_key：**43 位字符，只支持大小写字母和数字**；② `owner_key`：当前开发者后台应用上的事件订阅，**owner_key 需要传当前应用的 appkey 值**（控制台订阅=APP_KEY 维度的中文页原文背书）；③ 回包须为 JSON 且四字段值正确，否则钉钉报错 `HTTP请求结果校验返回字段值失败`；④ 服务端代码示例 `getEncryptedMap(params, accessToken, encodingAesKey, ownerKey)` 注明 **四个参数均来自钉钉服务器请求时带来的值**——回包 `timeStamp`/`nonce` 原样取请求带来的值获官方背书（MockPulse `verify_and_decrypt_reply` 同样以请求值重算签名）。
+- 机器人收消息（receive-message.md 全文直抓复核）：`msgtype` 全集 `text/richText/picture/audio/video/file` 六种；媒体字段嵌在 `content` 对象下——`picture:{downloadCode}`、`audio:{duration,downloadCode,recognition}`、`video:{duration,downloadCode,videoType}`、`file:{downloadCode,fileName}`、`richText:{richText:[{text}|{downloadCode,type:"picture"}]}`（§5.1 片段逐字为准，页面字段表格渲染是拍平的）；群 @ 不支持语音/文件/视频，人与人会话同限，人与机器人会话全支持。
+- `downloadCode` 换临时链接 API（机器人收消息页"获取媒体文件"直抓）：`POST https://api.dingtalk.com/v1.0/robot/messageFiles/download`，header `x-acs-dingtalk-access-token`，body `{"robotCode":"…","downloadCode":"…"}` → `{"downloadUrl":"…","fieldName":"…"}`；`downloadUrl` 为临时链接（短时效），按 `robotCode + downloadCode` 对取链；`robotCode` 取值与机器人所属应用的 `appKey` 同源（见下方实施假设）。
+- 工作通知 `asyncsend_v2`（asynchronous-sending-of-enterprise-session-messages.md 全文直抓确证 §5.9 摘录）：`POST https://oapi.dingtalk.com/topapi/message/corpconversation/asyncsend_v2?access_token=xxx`；`agent_id` Long 必填（应用 agentId）、`userid_list` String 逗号分隔 **max 100**（与 `dept_id_list`/`to_all_user` 三选一）、`msg` JSON 必填，text 型 `content` **最长 2048 字节**；成功返回 `{errcode:0, errmsg:"ok", task_id:256271667526, request_id:"4jzllmte0wau"}`；**频控四条**：单次推送内部企业 max 5000 人（第三方 1000）、同一用户同一内容 1 天 1 条、每人每天内部 500 条（第三方 100）、每分钟 max 5000 人——**超出后接口返回成功但用户收不到**（对接防坑：errcode=0 不代表触达）。消息通知权限创建应用时默认添加，无需额外申请。
+- MockPulse 对拍基线（代码直读，2026-10-14）：连接 `system=http_crypto` 时**所有模板明文（含机器人六 msgtype）统一经密文信封推送**（`shared.ts` 头注：解密后即各模板明文；`dispatch_event` 只按连接 `system` 路由）——Server 密文通道 receive 须同时承载事件信封（`EventType` 大写系）与机器人消息（`msgtype`）两类解密明文；回包由 `verify_and_decrypt_reply` 以请求原值重算 sha1 四参签名后解密，明文须含 `success`，`timeStamp` 为字符串型毫秒。
+- 实施假设（Server 落地取径，非官方原文，须在验收时如实标注）：① `robotCode == appKey`（owner_key=appKey 的中文页原文 + 机器人创建于企业内部应用之下推得）；② 单一新版 `accessToken`（`POST /v1.0/oauth2/accessToken`）同时用于 oapi 系 query `access_token` 与新 api 系 header `x-acs-dingtalk-access-token`（§6.1 单 token 准入链路：取 Token → 调工作通知/机器人发消息）；③ 发送侧 `channel_info` 追加键 `appKey/appSecret/agentId`（接收侧三元组 + url 之外，沿公众号 `appSecret` 先例，Server 专用）。
+
 ---
 
 ## 6. token / 凭证模型
@@ -682,7 +691,7 @@ public class Test {
 ## 7. 待核验清单（统一标待核验(09-27)）
 
 1. **第三方事件总览全文**：已落定（https://open.dingtalk.com/document/isvapp/event-subscription-overview.md `.md` 直抓全文，2026-09-10 复核；授权 4/通讯录 18/会话 11/审批 4/考勤 11/待办 3/日程 1/存储 3/AI 助理 2/项目 7/钉工牌 3/直播 4/会议 4/服务群 3/应用管理 4/应用市场 5/人事 6/招聘 5/财务 10/机器人 2/CRM 2/荣誉 2/专属 2/教育 10/医疗 2/行业通用 4；第三方通道规则见 §5.10 末）→ 本项消项。
-2. **新 HTTP 推送握手部分落定**：握手+运行时 1500ms、`{"encrypt"}` 信封、`getEncryptedMap("success")` 回包、`OWNER_KEY` 双维度语义、FAQ 调试向量均已由镜像英文版全文落定（见 §1 更新行/§3.2/§5.10，2026-09-10 复核）；中文 `configure-http-push` 系页面全文仍未直抓。→ 待核验(09-27)（残：中文全文页直抓）
+2. **新 HTTP 推送握手部分落定**：握手+运行时 1500ms、`{"encrypt"}` 信封、`getEncryptedMap("success")` 回包、`OWNER_KEY` 双维度语义、FAQ 调试向量均已由镜像英文版全文落定（见 §1 更新行/§3.2/§5.10，2026-09-10 复核）；中文 `configure-http-push` 全文已直抓（token 3~32 英数、aes_key 43 位字母数字、owner_key=appKey、回包字段校验报错原文、getEncryptedMap 四参取请求值，见 §5.11，2026-10-14 复核）→ 本项消项。
 3. **SyncHTTP 服务端全文**：`develop-synchttp-push-server` / `configure-synchttp-event-push` 中文页直抓仍失败（`.md` 变体回"淘宝网"反爬壳；镜像 404）；仅搜索摘录（2500ms、`getEncryptedMap("success")`、OWNER_KEY=ClientID）；RDS 表与 `biz_type` 见本项 §7.11 部分落定。→ 待核验(09-27)（残：SyncHTTP 服务端中文全文）
 4. **新事件重试/幂等原文**：新 Stream `LATER` 重投间隔、HTTP 重推次数、失败列表兜底仍未见（镜像全文仅"1500ms 超时判失败"，重推次数未给；旧体系 10s/30s + 失败列表已实锤）→ 待核验(09-27)
 5. **`tmp_auth_code` 授权事件体**：已落定（enterprise-authorized-application-activation-event-1.md 全文直抓，解密体 5 字段 + success 回包，见 §2.6/§5.10，2026-09-10 复核）→ 本项消项。
