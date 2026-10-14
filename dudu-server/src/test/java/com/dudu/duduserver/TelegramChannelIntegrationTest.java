@@ -197,6 +197,7 @@ class TelegramChannelIntegrationTest extends DeskIntegrationSupport {
     private String scopedToken;
     private long channelTelegram;
     private long channelHalfConfigured;
+    private long channelSendHalfConfigured;
 
     @BeforeAll
     void seed() throws Exception {
@@ -207,9 +208,12 @@ class TelegramChannelIntegrationTest extends DeskIntegrationSupport {
         fullInfo.put("url", "http://127.0.0.1:" + API.getAddress().getPort() + "/bot" + BOT_TOKEN);
         fullInfo.put("secretToken", SECRET_TOKEN);
         channelTelegram = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.TELEGRAM, "Telegram", fullInfo);
-        // 只配 url 缺 secretToken：无法验签也不可发送/读素材，能力限制按真实原因说明
+        // 只配 url 缺 secretToken：回调无法验签按不支持应答（发送/素材凭据在发送组，不受影响）
         channelHalfConfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.TELEGRAM, "半配置Telegram",
             Map.of("url", "https://api.telegram.org/bot" + BOT_TOKEN));
+        // 只配 secretToken 缺 url：回调可验签，但发送/素材按发送组凭据缺失如实受限
+        channelSendHalfConfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.TELEGRAM, "缺基址Telegram",
+            Map.of("secretToken", SECRET_TOKEN));
         UserDO scoped = plainUser(COMPANY_ID, "telegram.scoped", "坐席甲");
         members.save(member(COMPANY_ID, scoped.getUserId(), group.getGroupId()));
         scopedToken = login(COMPANY_ID, "telegram.scoped");
@@ -385,8 +389,8 @@ class TelegramChannelIntegrationTest extends DeskIntegrationSupport {
 
     @Test
     void mediaServesBytesAndReportsChannelErrorsHonestly() throws Exception {
-        // 半配置账号（缺 secretToken）：凭据缺失如实受限 12200，不发起渠道请求
-        long restrictedId = seedMessage(channelHalfConfigured, "7991079101",
+        // 半配置账号（缺发送组 url）：凭据缺失如实受限 12200，不发起渠道请求
+        long restrictedId = seedMessage(channelSendHalfConfigured, "7991079101",
             Map.of("type", "file", "media", Map.of("kind", "file", "id", "doc-0")));
         JSONObject restricted = errorOf(mvc.perform(get("/api/desk/messages/" + restrictedId + "/media")
                 .header("Authorization", "Bearer " + scopedToken)).andReturn());

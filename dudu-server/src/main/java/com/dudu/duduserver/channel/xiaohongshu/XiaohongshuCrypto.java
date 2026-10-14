@@ -122,6 +122,10 @@ public class XiaohongshuCrypto {
         if (encodingAesKey == null || encodingAesKey.isEmpty()) {
             throw new IllegalArgumentException("渠道未配置消息加解密密钥");
         }
+        // 官方规格：EncodingAESKey 固定 43 位，补 "=" 解出 32 字节（与企微族四实现统一口径）
+        if (encodingAesKey.length() != 43) {
+            throw new IllegalArgumentException("EncodingAESKey 须为 43 位");
+        }
         byte[] key;
         try {
             key = Base64.getDecoder().decode(encodingAesKey + "=");

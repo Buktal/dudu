@@ -51,8 +51,14 @@ public class AlipayAdapter implements ChannelAdapter {
         if (credentials == null) {
             return ChannelReceiveResult.answer(ChannelCallbackResult.unsupported());
         }
-        // POST 表单推送：参数可能经 Servlet 表单解析落在 query，也可能留在 body 原始串
-        Map<String, String> params = protocol.paramsOf(query, body);
+        // POST 表单推送：参数可能经 Servlet 表单解析落在 query，也可能留在 body 原始串；
+        // 畸形百分号编码无法解码时按参数错误拒绝（验签无从进行，不外泄 500）
+        Map<String, String> params;
+        try {
+            params = protocol.paramsOf(query, body);
+        } catch (IllegalArgumentException e) {
+            return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
+        }
         String sign = params.get(AlipaySignature.FIELD_SIGN);
         if (sign == null || sign.isBlank()) {
             // 缺签名材料无法验签，按参数错误处理

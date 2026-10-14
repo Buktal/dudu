@@ -225,6 +225,10 @@ class FeishuProtocolTest {
         assertThatThrownBy(() -> protocol.parse(CHANNEL_ID, event("ou_x", null)))
             .isInstanceOf(IllegalArgumentException.class);
 
+        // 字段值类型不符（message 为字符串）按参数错误拒绝，不作未知异常处理
+        assertThatThrownBy(() -> protocol.parse(CHANNEL_ID, "{\"event\":{\"message\":\"str\"}}"))
+            .isInstanceOf(IllegalArgumentException.class);
+
         // 已读、撤回等其余事件只应答不落库（官方 §5.5 reader 结构）
         assertThat(protocol.parse(CHANNEL_ID,
             "{\"event\":{\"reader\":{\"reader_id\":{\"open_id\":\"ou_x\"}},\"message_id_list\":[\"om_x\"]}}"))
@@ -236,7 +240,8 @@ class FeishuProtocolTest {
     private final FeishuProtocol protocol = new FeishuProtocol();
 
     private FeishuCredentials credentials(String encryptKey) {
-        return new FeishuCredentials("cli_9f5343c580712544", "dskLLdkasdjlasdKK", GOLDEN_EVENT_TOKEN, encryptKey);
+        // 回调组三参：appId + verificationToken + 可选 encryptKey（发送侧 appSecret 不在此组）
+        return new FeishuCredentials("cli_9f5343c580712544", GOLDEN_EVENT_TOKEN, encryptKey);
     }
 
     // 事实库 §5.4 im.message.receive_v1 官方样本（逐字，紧凑单行 = mock-pulse 直发的线上明文形态）

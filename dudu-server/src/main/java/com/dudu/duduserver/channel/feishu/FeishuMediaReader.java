@@ -51,7 +51,7 @@ public class FeishuMediaReader {
         if (parts.length != 3 || isBlank(parts[0]) || isBlank(parts[1]) || isBlank(parts[2])) {
             return ChannelMediaResult.failed(MEDIA_ID_UNRECOGNIZED);
         }
-        FeishuCredentials credentials = FeishuCredentials.of(account);
+        FeishuSendCredentials credentials = FeishuSendCredentials.of(account);
         if (credentials == null) {
             return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
         }

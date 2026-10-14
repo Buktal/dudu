@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.feishu;
 
 import cn.hutool.core.codec.Base64;
+import cn.hutool.json.JSONException;
 import cn.hutool.crypto.Mode;
 import cn.hutool.crypto.Padding;
 import cn.hutool.crypto.digest.DigestUtil;
@@ -108,7 +109,7 @@ public class FeishuProtocol {
         if (event == null) {
             throw new IllegalArgumentException("飞书事件缺少 event 字段");
         }
-        JSONObject message = event.getJSONObject(KEY_MESSAGE);
+        JSONObject message = objectField(event, KEY_MESSAGE);
         if (message == null) {
             // 已读、撤回等其余事件没有可落库的访客消息
             return Optional.empty();
@@ -137,8 +138,18 @@ public class FeishuProtocol {
     }
 
     private JSONObject senderId(JSONObject event) {
-        JSONObject sender = event.getJSONObject(KEY_SENDER);
-        return sender == null ? null : sender.getJSONObject(KEY_SENDER_ID);
+        JSONObject sender = objectField(event, KEY_SENDER);
+        return sender == null ? null : objectField(sender, KEY_SENDER_ID);
+    }
+
+    // hutool 对无法转为对象的值（如字符串、数组）抛 JSONException 或 ClassCastException，
+    // 统一转参数错误由调用方按 400 应答，而不是作为未知异常按 500 处理
+    private JSONObject objectField(JSONObject parent, String key) {
+        try {
+            return parent.getJSONObject(key);
+        } catch (JSONException | ClassCastException e) {
+            throw new IllegalArgumentException("飞书事件报文字段类型不符：" + key, e);
+        }
     }
 
     // 按 message_type 映射统一消息体；渠道不提供的可选信息省略，无法映射的按 unknown 如实保存

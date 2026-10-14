@@ -50,6 +50,14 @@ class WechatMiniCryptoTest {
     }
 
     @Test
+    void rejectsEncodingAesKeyNotFortyThreeChars() {
+        // 官方规格 43 位：42 位补 "=" 仍可解出 32 字节，仍按规格直接拒绝（企微族统一口径）
+        assertThatThrownBy(() -> crypto.decrypt("A".repeat(42), GOLDEN_PUSH_ENCRYPT))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("43 位");
+    }
+
+    @Test
     void roundTripsArbitraryPayloadAndRejectsAlteredCiphertextOrKey() {
         String payload = "<xml><MsgType><![CDATA[text]]></MsgType></xml>";
         String encrypted = crypto.encrypt(ENCODING_AES_KEY, GOLDEN_REPLY_RANDOM, payload, APP_ID);

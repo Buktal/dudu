@@ -158,7 +158,8 @@ class FeishuChannelIntegrationTest {
             "appId", "cli_9f5343c580712544",
             "appSecret", "dskLLdkasdjlasdKK",
             "verificationToken", TOKEN));
-        // 缺 appId/appSecret：凭据未配置，回调不支持、发送与素材受限
+        // 缺 appId（回调组与发送组共用的必填键）与 appSecret（发送组）：回调不支持、
+        // 发送与素材受限
         channelUnconfigured = channel(COMPANY_ID, group.getGroupId(), ChannelEnum.FEISHU, "未配凭据飞书",
             Map.of("verificationToken", TOKEN));
         UserDO scoped = plainUser(COMPANY_ID, "feishu.scoped", "坐席甲");

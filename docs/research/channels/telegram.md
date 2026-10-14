@@ -294,6 +294,10 @@ Server 侧按本事实库落地 `dudu-server` 的 `channel/telegram/` 四件套�
 7. **集成验收**（`TelegramChannelIntegrationTest`，独立评审库 `dudu_review_telegram` 自建自删）：
    mock-pulse `GOLDEN_PROBE_PLAINTEXT`（即 §5.2 官方自测样本）逐字探针 + 合规恒等头直发对拍；
    发送/素材经本地 HttpServer 替身按 §5.3 包络与 §6 下载路径形状应答。
+8. **凭据组拆分**（2026-10-14 review 修正，对齐钉钉/WhatsApp 先例）：`TelegramCredentials` 收窄为
+   回调组只含 `secretToken`（§4.1 验签唯一依赖），发送/素材另用 `TelegramSendCredentials` 只含
+   `url`（发送链路唯一依赖，见第 1 条）——回调可用而发送受限（缺 `url`）、或发送可用而回调不可
+   验签（缺 `secretToken`）的半配置账号各自如实 501/受限（12200），两组互不牵连。
 
 ---
 

@@ -99,8 +99,8 @@ public class QqProtocol {
     }
 
     /**
-     * 解析通用信封 {op,t,d}（§5.1）；报文为空、非 JSON、缺 op 或缺 d 时抛出
-     * {@link IllegalArgumentException}，由调用方按参数错误拒绝。
+     * 解析通用信封 {op,t,d}（§5.1）；报文为空、非 JSON、op/d 类型不符、缺 op 或缺 d 时
+     * 抛出 {@link IllegalArgumentException}，由调用方按参数错误拒绝。
      */
     public Envelope envelope(String body) {
         JSONObject root;
@@ -109,8 +109,15 @@ public class QqProtocol {
         } catch (JSONException e) {
             throw new IllegalArgumentException("回调报文不是合法 JSON", e);
         }
-        Integer op = root.getInt("op");
-        JSONObject d = root.getJSONObject("d");
+        // op/d 类型不符（字符串 op、字符串或数组 d 等）：按参数错误拒绝，不外泄 500
+        Integer op;
+        JSONObject d;
+        try {
+            op = root.getInt("op");
+            d = root.getJSONObject("d");
+        } catch (JSONException | ClassCastException e) {
+            throw new IllegalArgumentException("回调报文 op/d 类型不符", e);
+        }
         if (op == null) {
             throw new IllegalArgumentException("回调报文缺少 op");
         }

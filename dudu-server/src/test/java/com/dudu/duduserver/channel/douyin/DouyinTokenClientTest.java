@@ -19,8 +19,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 抖音接口凭据换取验收（事实见 docs/research/channels/douyin.md §6、§6.1）：
  * 用 channel_info 的 refreshToken POST /oauth/refresh_token/（form：client_key、
  * client_secret、refresh_token、grant_type=refresh_token）续期 access_token，
- * 进程内缓存复用、窗口取响应 expires_in；refreshToken 缺失与渠道错误如实返回原因，
- * access_token（用户授权凭证）不可凭 clientKey/clientSecret 直接换取。
+ * 进程内按 clientKey+refreshToken 缓存复用、窗口取响应 expires_in；refreshToken 缺失
+ * 与渠道错误如实返回原因，access_token（用户授权凭证）不可凭 clientKey/clientSecret
+ * 直接换取，同 clientKey 换绑授权后旧缓存不得复用。
  */
 class DouyinTokenClientTest {
 
@@ -47,7 +48,7 @@ class DouyinTokenClientTest {
     }
 
     @Test
-    void refreshesAccessTokenWithFormBodyAndCachesPerClientKey() {
+    void refreshesAccessTokenWithFormBodyAndCachesForReuse() {
         handle("/oauth/refresh_token/", 200, REFRESH_OK);
         DouyinTokenClient client = client();
 
@@ -56,7 +57,7 @@ class DouyinTokenClientTest {
 
         assertThat(first.succeeded()).isTrue();
         assertThat(first.accessToken()).isEqualTo("act.1d1021d2aee3d41fee2d2add43456badMFZnrhFhfWotu3Ec");
-        // 缓存复用：同一 clientKey 的第二次 fetch 不再出网
+        // 缓存复用：同一 clientKey+refreshToken 的第二次 fetch 不再出网
         assertThat(second.accessToken()).isEqualTo(first.accessToken());
         assertThat(requestLines).hasSize(1);
         assertThat(requestLines.get(0)).startsWith("POST /oauth/refresh_token/");
@@ -67,6 +68,24 @@ class DouyinTokenClientTest {
         assertThat(form.get("client_secret")).isEqualTo("9e096e3a2a8b4e0f9c0f");
         assertThat(form.get("refresh_token")).isEqualTo("rft.1d1021d2aee3d41fee2d2ad");
         assertThat(form.get("grant_type")).isEqualTo("refresh_token");
+    }
+
+    @Test
+    void doesNotShareCachedTokenAcrossRefreshTokensForTheSameClientKey() {
+        // access_token 与用户授权绑定：同一 clientKey 换绑（refreshToken 变化）后不得复用
+        // 旧缓存，必须按新 refreshToken 重新换取
+        handle("/oauth/refresh_token/", 200, REFRESH_OK);
+        DouyinTokenClient client = client();
+
+        DouyinTokenClient.TokenResult first = client.fetch(credentials());
+        DouyinTokenClient.TokenResult rebound = client.fetch(
+            new DouyinCredentials("asdfavetgbvasf", "9e096e3a2a8b4e0f9c0f", "rft.rebound"));
+
+        assertThat(first.succeeded()).isTrue();
+        assertThat(rebound.succeeded()).isTrue();
+        // 换绑后重新出网换新授权的 token（按 clientKey 单键缓存的旧实现会直接复用 first）
+        assertThat(requestLines).hasSize(2);
+        assertThat(form(bodies.get(1)).get("refresh_token")).isEqualTo("rft.rebound");
     }
 
     @Test

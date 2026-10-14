@@ -46,6 +46,14 @@ class XiaohongshuCryptoTest {
     }
 
     @Test
+    void rejectsEncodingAesKeyNotFortyThreeChars() {
+        // 官方规格 43 位：42 位补 "=" 仍可解出 32 字节，仍按规格直接拒绝（企微族统一口径）
+        assertThatThrownBy(() -> crypto.decrypt("A".repeat(42), GOLDEN_ENCRYPT))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("43 位");
+    }
+
+    @Test
     void roundTripsArbitraryPayloadAndRejectsAlteredCiphertextOrBadKey() {
         String payload = "{\"MsgType\":\"text\",\"Content\":\"你好，请问这款有货吗\"}";
         String encrypted = crypto.encrypt(ENCODING_AES_KEY, GOLDEN_RANDOM, payload, APP_ID);

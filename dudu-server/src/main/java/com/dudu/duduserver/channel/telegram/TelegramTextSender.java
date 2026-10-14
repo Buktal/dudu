@@ -49,7 +49,7 @@ public class TelegramTextSender {
     }
 
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
-        TelegramCredentials credentials = TelegramCredentials.of(account);
+        TelegramSendCredentials credentials = TelegramSendCredentials.of(account);
         if (credentials == null) {
             return ChannelSendResult.failed(SEND_CREDENTIALS_MISSING);
         }

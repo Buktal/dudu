@@ -50,7 +50,7 @@ public class FeishuTextSender {
     }
 
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
-        FeishuCredentials credentials = FeishuCredentials.of(account);
+        FeishuSendCredentials credentials = FeishuSendCredentials.of(account);
         if (credentials == null) {
             return ChannelSendResult.failed(SEND_CREDENTIALS_MISSING);
         }

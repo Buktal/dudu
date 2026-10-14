@@ -187,6 +187,14 @@ class QqProtocolTest {
 
         // 报文不是 JSON 无法入站
         assertThatThrownBy(() -> protocol.envelope("not json")).isInstanceOf(IllegalArgumentException.class);
+
+        // op/d 类型不符（字符串 op、字符串或数组 d）：按参数错误拒绝而非 500
+        assertThatThrownBy(() -> protocol.envelope("{\"op\":\"x\",\"d\":{}}"))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> protocol.envelope("{\"op\":0,\"d\":\"x\"}"))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> protocol.envelope("{\"op\":0,\"d\":[1]}"))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

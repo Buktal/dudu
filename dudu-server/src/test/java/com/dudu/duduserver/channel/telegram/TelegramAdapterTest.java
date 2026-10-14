@@ -129,12 +129,16 @@ class TelegramAdapterTest {
 
     @Test
     void restrictionsDescribeMissingCredentialsHonestly() {
-        assertThat(adapter.sendRestriction(telegramAccount(Map.of("url", CALLBACK_URL))))
+        // 发送组只看 Bot API 基址 url，回调组只看 secretToken——两侧互不依赖（ADR-0013）
+        assertThat(adapter.sendRestriction(telegramAccount(Map.of("secretToken", SECRET_TOKEN))))
             .isEqualTo("渠道发送凭据未配置");
-        assertThat(adapter.mediaRestriction(telegramAccount(Map.of("url", CALLBACK_URL))))
+        assertThat(adapter.mediaRestriction(telegramAccount(Map.of("secretToken", SECRET_TOKEN))))
             .isEqualTo("渠道素材凭据未配置");
         assertThat(adapter.sendRestriction(telegramAccount(fullInfo()))).isNull();
         assertThat(adapter.mediaRestriction(telegramAccount(fullInfo()))).isNull();
+        // 只配 url 的账号发送/素材不受限（发送组凭据齐备，与回调能否验签无关）
+        assertThat(adapter.sendRestriction(telegramAccount(Map.of("url", CALLBACK_URL)))).isNull();
+        assertThat(adapter.mediaRestriction(telegramAccount(Map.of("url", CALLBACK_URL)))).isNull();
     }
 
     private ChannelInboundMessage capturedInbound() {

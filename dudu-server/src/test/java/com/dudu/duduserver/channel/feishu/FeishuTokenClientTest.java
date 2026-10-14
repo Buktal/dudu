@@ -113,9 +113,9 @@ class FeishuTokenClientTest {
         return new FeishuTokenClient(RestClient.builder().baseUrl(baseUrl).build());
     }
 
-    private FeishuCredentials credentials() {
-        return new FeishuCredentials("cli_9f5343c580712544", "dskLLdkasdjlasdKK",
-            "rvaYgkND1GOiu5MM0E1rncYC6PLtF7JV", null);
+    private FeishuSendCredentials credentials() {
+        // 发送组两参：换取 tenant_access_token 只需 appId/appSecret
+        return new FeishuSendCredentials("cli_9f5343c580712544", "dskLLdkasdjlasdKK");
     }
 
     private void handle(int status, String response) {

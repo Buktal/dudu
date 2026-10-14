@@ -742,6 +742,15 @@ print($decrypt);
 
 ---
 
+## 8. 实施记录（2026-10-14，#113）
+
+Server 侧按本事实库落地 `channel/feishu/` 适配器四件套（`FeishuAdapter`/`FeishuProtocol`/
+`FeishuTextSender`/`FeishuMediaReader`）。凭据分组（2026-10-14 review 拆分，对齐钉钉/WhatsApp
+先例）：回调组 `FeishuCredentials` = `appId`+`verificationToken`（`encryptKey` 选配，配置后启用
+§4.2 签名与 §4.3 解密链路），发送/素材组 `FeishuSendCredentials` = `appId`+`appSecret`
+（§6 换 `tenant_access_token`）——两组互不依赖，缺 `verificationToken` 的账号回调按不支持
+应答、缺 `appSecret` 的账号发送与素材如实受限（12200），不再互相牵连。
+
 ## 附：对 MockPulse 模拟的直接含义（速查）
 
 - 模拟"飞书推事件给回调"：`POST` JSON 信封 `{schema:"2.0", header:{event_id,event_type,create_time(毫秒字符串),token,app_id,tenant_key}, event:{...}}`，头 `X-Lark-Request-Timestamp`（字符串）、`X-Lark-Request-Nonce`、`X-Lark-Signature: hex(sha256(timestamp+nonce+encrypt_key+原始body))`、`Content-Type: application/json`。

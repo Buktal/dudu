@@ -105,7 +105,8 @@ class TelegramMediaReaderTest {
 
     @Test
     void failsWithoutChannelRequestWhenCredentialsMissing() {
-        ChannelMediaResult result = reader().read(account(Map.of("url", botBase)), "doc-1");
+        // 素材读取属发送组：只看 Bot API 基址 url，缺 url 即凭据未配置（secretToken 与此无关）
+        ChannelMediaResult result = reader().read(account(Map.of("secretToken", "dudu-secret-token")), "doc-1");
 
         assertThat(result.succeeded()).isFalse();
         assertThat(result.failureReason()).isEqualTo("渠道素材凭据未配置");

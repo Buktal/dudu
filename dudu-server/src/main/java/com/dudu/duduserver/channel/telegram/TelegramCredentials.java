@@ -5,21 +5,21 @@ import com.dudu.duduserver.entity.CompanyChannelDO;
 import java.util.Map;
 
 /**
- * Telegram 渠道凭据：webhook 接收地址与恒等头比对用的 secret_token（事实见
- * docs/research/channels/telegram.md §4.1），键名与 mock-pulse config.rs Telegram 变体
- * 的 serde 键一致（`url`/`secretToken`，camelCase，两字段均无缺省）——缺一按该账号未
- * 配置返回 null；凭据不写入日志也不返回给 Desk。
+ * Telegram 回调凭据：webhook 推送恒等头比对用的 secret_token（事实见
+ * docs/research/channels/telegram.md §4.1，POST Update 的
+ * {@code X-Telegram-Bot-Api-Secret-Token} 头与配置值常量时间比对）。键名与 mock-pulse
+ * config.rs Telegram 变体的 serde 键一致（`secretToken`，camelCase）——缺失按该账号未
+ * 配置返回 null；发送侧完整凭据见 {@link TelegramSendCredentials}。凭据不写入日志也
+ * 不返回给 Desk。
  */
-public record TelegramCredentials(String url, String secretToken) {
+public record TelegramCredentials(String secretToken) {
 
-    private static final String INFO_URL = "url";
     private static final String INFO_SECRET_TOKEN = "secretToken";
 
     public static TelegramCredentials of(CompanyChannelDO account) {
         Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        String url = text(info, INFO_URL);
         String secretToken = text(info, INFO_SECRET_TOKEN);
-        return url == null || secretToken == null ? null : new TelegramCredentials(url, secretToken);
+        return secretToken == null ? null : new TelegramCredentials(secretToken);
     }
 
     private static String text(Map<String, Object> info, String key) {

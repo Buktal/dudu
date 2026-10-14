@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
@@ -70,6 +71,18 @@ class WecomProtocolTest {
 
         assertThat(decrypted.xml()).isEqualTo(GOLDEN_PLAINTEXT);
         assertThat(decrypted.receiveid()).isEqualTo(GOLDEN_CORP_ID);
+    }
+
+    @Test
+    void decryptRejectsNegativeMsgLengthInsteadOfSlicingWithNegativeLength() {
+        // msg_len 最高位置 1 在 int 中为负：与越界一并按参数错误拒绝，不按负长度截取报文
+        ByteBuffer plain = ByteBuffer.allocate(16 + 4 + 9);
+        plain.put(new byte[16]).put(new byte[]{(byte) 0x80, 0, 0, 0})
+            .put("malformed".getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> protocol.decrypt(GOLDEN_ENCODING_AES_KEY, encryptRaw(plain.array())))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("msg_len");
     }
 
     @Test
@@ -197,6 +210,21 @@ class WecomProtocolTest {
             return Arrays.copyOf(cipher.doFinal(Base64.getDecoder().decode(GOLDEN_ENCRYPT)), 16);
         } catch (Exception e) {
             throw new IllegalStateException("黄金密文随机数取回失败", e);
+        }
+    }
+
+    // 测试侧按官方 §4.3 构造密文（AES 参数同 goldenRandom16），供组装 msg_len 异常的明文
+    private String encryptRaw(byte[] plain) {
+        try {
+            byte[] key = Base64.getDecoder().decode(GOLDEN_ENCODING_AES_KEY + "=");
+            int pad = 32 - plain.length % 32;
+            byte[] padded = Arrays.copyOf(plain, plain.length + pad);
+            Arrays.fill(padded, plain.length, padded.length, (byte) pad);
+            Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(key, 0, 16));
+            return Base64.getEncoder().encodeToString(cipher.doFinal(padded));
+        } catch (Exception e) {
+            throw new IllegalStateException("测试密文构造失败", e);
         }
     }
 }

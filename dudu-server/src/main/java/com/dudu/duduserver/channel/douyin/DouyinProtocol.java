@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.douyin;
 
 import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONException;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
@@ -234,7 +235,13 @@ public class DouyinProtocol {
         if (!EVENT_VERIFY_WEBHOOK.equals(json.getStr(KEY_EVENT, null))) {
             return null;
         }
-        JSONObject content = json.getJSONObject(KEY_CONTENT);
+        JSONObject content;
+        try {
+            // content 官方为 object；无法转为对象时与缺失同样按参数错误拒绝
+            content = json.getJSONObject(KEY_CONTENT);
+        } catch (JSONException | ClassCastException e) {
+            throw new IllegalArgumentException("抖音握手报文 content 类型不符", e);
+        }
         Object challenge = content == null ? null : content.get(KEY_CHALLENGE);
         if (!(challenge instanceof Number number)) {
             throw new IllegalArgumentException("抖音握手报文缺少数字 challenge");

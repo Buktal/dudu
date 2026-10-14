@@ -56,12 +56,22 @@ class FeishuAdapterTest {
 
     @Test
     void receiveWithoutRequiredCredentialsAnswersUnsupported() {
-        // 必填键 appSecret 缺失即凭据未配置，不模拟成功
+        // 回调组必填键 verificationToken 缺失即凭据未配置（发送侧 appSecret 不属回调组），
+        // 不模拟成功
         CompanyChannelDO incomplete = new CompanyChannelDO();
         incomplete.setCompanyChannelId(CHANNEL_ID);
         incomplete.setChannel(ChannelEnum.FEISHU);
-        incomplete.setChannelInfo(Map.of("appId", "cli_9f5343c580712544", "verificationToken", TOKEN));
+        incomplete.setChannelInfo(Map.of("appId", "cli_9f5343c580712544"));
         assertThat(adapter.receive(incomplete, Map.of(), headers, "{}").response().status()).isEqualTo(501);
+
+        // 只配回调组（无 appSecret）的账号仍可正常完成回调验签与解析
+        CompanyChannelDO callbackOnly = new CompanyChannelDO();
+        callbackOnly.setCompanyChannelId(CHANNEL_ID);
+        callbackOnly.setChannel(ChannelEnum.FEISHU);
+        callbackOnly.setChannelInfo(Map.of("appId", "cli_9f5343c580712544", "verificationToken", TOKEN));
+        String handshake = "{\"challenge\":\"" + CHALLENGE + "\",\"token\":\"" + TOKEN
+            + "\",\"type\":\"url_verification\"}";
+        assertThat(adapter.receive(callbackOnly, Map.of(), headers, handshake).response().status()).isEqualTo(200);
     }
 
     @Test

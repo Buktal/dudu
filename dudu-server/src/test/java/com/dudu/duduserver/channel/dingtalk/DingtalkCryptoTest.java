@@ -75,7 +75,8 @@ class DingtalkCryptoTest {
     void rejectsWrongShapeKeysAndMalformedCiphertext() {
         // 密钥形态错误（42/44 位、非 Base64 残位）与密文损坏均不得给出明文
         assertThatThrownBy(() -> DingtalkCrypto.decrypt(ENCRYPT_A, AES_KEY_A.substring(1), OWNER_A))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("43 位");
         assertThatThrownBy(() -> DingtalkCrypto.decrypt(ENCRYPT_A, AES_KEY_A + "=", OWNER_A))
             .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> DingtalkCrypto.decrypt("not-base64!!", AES_KEY_A, OWNER_A))

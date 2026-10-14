@@ -160,6 +160,15 @@ class AlipayAdapterTest {
     }
 
     @Test
+    void answersMalformedFormEncodingAsBadRequestInsteadOfError() {
+        // 畸形百分号编码（截断的 50%）无法解码：按参数错误拒绝，不外泄 500
+        ChannelReceiveResult result = adapter.receive(account(credentials), Map.of(), new HttpHeaders(),
+            "sign=x&biz_content=50%");
+
+        assertThat(result.response().status()).isEqualTo(400);
+    }
+
+    @Test
     void getVerificationIsUnsupportedSinceOfficialHandshakeIsPostOnly() {
         // 官方握手为 POST 表单（§3.2，示例工程 doGet 委托 doPost），无 GET 验证阶段
         ChannelCallbackResult result = adapter.verifyUrl(account(credentials),

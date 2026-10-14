@@ -49,7 +49,7 @@ class FeishuTokenClient {
     private record CachedToken(String token, long expiresAtMillis) {
     }
 
-    TokenResult fetch(FeishuCredentials credentials) {
+    TokenResult fetch(FeishuSendCredentials credentials) {
         long now = System.currentTimeMillis();
         CachedToken cached = cache.get(credentials.appId());
         if (cached != null && cached.expiresAtMillis() - now > REFRESH_AHEAD_MILLIS) {
@@ -60,7 +60,7 @@ class FeishuTokenClient {
     }
 
     // 请求渠道：body 携带 app_id/app_secret（官方 §5.11），成功带 expire 决定缓存窗口
-    private TokenResult request(FeishuCredentials credentials, long now) {
+    private TokenResult request(FeishuSendCredentials credentials, long now) {
         try {
             JSONObject response = JSONUtil.parseObj(restClient.post()
                 .uri(PATH_TOKEN)

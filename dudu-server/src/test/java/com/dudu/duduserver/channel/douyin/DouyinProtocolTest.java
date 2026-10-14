@@ -58,6 +58,9 @@ class DouyinProtocolTest {
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
             () -> protocol.challengeEcho("{\"event\":\"verify_webhook\","
                 + "\"content\":{\"challenge\":\"12345\"}}"));
+        // content 官方为 object，字符串值无法回显同样按参数错误拒绝
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+            () -> protocol.challengeEcho("{\"event\":\"verify_webhook\",\"content\":\"x\"}"));
     }
 
     @Test

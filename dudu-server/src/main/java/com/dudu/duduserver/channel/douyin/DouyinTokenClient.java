@@ -16,7 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 是用户授权类接口，access_token 只能由用户授权链路获得——以 channel_info 的
  * refreshToken POST /oauth/refresh_token/（form-urlencoded：client_key、client_secret、
  * refresh_token、grant_type=refresh_token）续期，15 天寿命、刷新不续 refresh_token
- * 自身；进程内按 clientKey 缓存复用，窗口取响应 expires_in，失败不缓存以便重试。
+ * 自身；access_token 与用户授权绑定，进程内按 clientKey+refreshToken 缓存复用（同一
+ * clientKey 换绑到另一授权用户后旧缓存自然失效），窗口取响应 expires_in，失败不缓存以便重试。
  * 渠道错误原样记录 code 与 description；用户取消授权后 access_token 即时失效。
  */
 class DouyinTokenClient {
@@ -45,8 +46,9 @@ class DouyinTokenClient {
 
     private final RestClient restClient;
 
-    // 按 clientKey 缓存：同一应用的授权用户唯一（一账号一授权链路）
-    private final Map<String, CachedToken> cache = new ConcurrentHashMap<>();
+    // 按 clientKey+refreshToken 缓存：access_token 是用户授权凭据，同 clientKey 换绑
+    // 授权后 refreshToken 变化，旧缓存不可复用
+    private final Map<CacheKey, CachedToken> cache = new ConcurrentHashMap<>();
 
     DouyinTokenClient(RestClient restClient) {
         this.restClient = restClient;
@@ -63,12 +65,16 @@ class DouyinTokenClient {
     private record CachedToken(String token, long expiresAtMillis) {
     }
 
+    // 缓存键：同一应用（clientKey）的不同授权用户以 refreshToken 区分
+    private record CacheKey(String clientKey, String refreshToken) {
+    }
+
     TokenResult fetch(DouyinCredentials credentials) {
         if (credentials.refreshToken() == null) {
             return new TokenResult(null, REFRESH_TOKEN_MISSING);
         }
         long now = System.currentTimeMillis();
-        CachedToken cached = cache.get(credentials.clientKey());
+        CachedToken cached = cache.get(new CacheKey(credentials.clientKey(), credentials.refreshToken()));
         if (cached != null && cached.expiresAtMillis() - now > REFRESH_AHEAD_MILLIS) {
             return new TokenResult(cached.token(), null);
         }
@@ -99,7 +105,8 @@ class DouyinTokenClient {
             if (accessToken == null || accessToken.isBlank()) {
                 return new TokenResult(null, "获取抖音接口凭据失败：响应缺少 access_token");
             }
-            cache.put(credentials.clientKey(), new CachedToken(accessToken, now + expireMillis(response)));
+            cache.put(new CacheKey(credentials.clientKey(), credentials.refreshToken()),
+                new CachedToken(accessToken, now + expireMillis(response)));
             return new TokenResult(accessToken, null);
         } catch (RuntimeException e) {
             return new TokenResult(null, "获取抖音接口凭据失败：" + e.getMessage());

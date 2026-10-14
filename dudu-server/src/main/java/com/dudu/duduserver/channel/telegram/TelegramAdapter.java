@@ -17,7 +17,9 @@ import java.util.Map;
  * 与发送/读取能力说明（事实见 docs/research/channels/telegram.md §3、§4.1、§5.2、§5.3、
  * §6）。官方无 GET 验证握手（§3.2，setWebhook 同步返回 True 即成功），verifyUrl 沿用
  * 接口 default 应答不支持；推送为明文 JSON Update，验签材料在恒等头
- * {@code X-Telegram-Bot-Api-Secret-Token}（无 HMAC 无签名）。
+ * {@code X-Telegram-Bot-Api-Secret-Token}（无 HMAC 无签名）。凭据住在包内两分组
+ * （回调 secretToken 与发送 Bot API 基址 {@code url}，{@link TelegramCredentials} 与
+ * {@link TelegramSendCredentials}），缺失按不支持或限制说明如实回答。
  */
 @Component
 public class TelegramAdapter implements ChannelAdapter {
@@ -76,11 +78,11 @@ public class TelegramAdapter implements ChannelAdapter {
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        return TelegramCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
+        return TelegramSendCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
-        return TelegramCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
+        return TelegramSendCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
     }
 }

@@ -162,6 +162,9 @@ class TelegramProtocolTest {
             .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> protocol.parse(4107L, "not-json"))
             .isInstanceOf(IllegalArgumentException.class);
+        // 字段值类型不符（message 为字符串）同样按参数错误拒绝，不作未知异常处理
+        assertThatThrownBy(() -> protocol.parse(4107L, "{\"update_id\":1,\"message\":\"x\"}"))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     // 造一条 message 型 Update（update_id 固定 10000），取其统一消息体

@@ -52,7 +52,7 @@ public class TelegramMediaReader {
         if (externalMediaId == null || externalMediaId.isBlank()) {
             return ChannelMediaResult.failed(MEDIA_ID_UNRECOGNIZED);
         }
-        TelegramCredentials credentials = TelegramCredentials.of(account);
+        TelegramSendCredentials credentials = TelegramSendCredentials.of(account);
         if (credentials == null) {
             return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
         }
@@ -77,7 +77,7 @@ public class TelegramMediaReader {
 
     // getFile 换 file_path：错误包络、无法识别的响应与缺 file_path 都按失败说明返回；
     // 渠道拒绝（HTTP 4xx/5xx，含下载超 20MB 的 file is too big）按包络如实描述
-    private FilePathResult requestFilePath(CompanyChannelDO account, TelegramCredentials credentials,
+    private FilePathResult requestFilePath(CompanyChannelDO account, TelegramSendCredentials credentials,
                                            String fileId) {
         String response;
         try {
@@ -109,7 +109,7 @@ public class TelegramMediaReader {
 
     // 下载：官方路径为 <源>/file/bot<token>/<file_path>（api#file），由基址在 bot 段前
     // 插 file 段派生；HTTP 非 2XY 按渠道错误如实失败，不伪装字节
-    private ChannelMediaResult download(CompanyChannelDO account, TelegramCredentials credentials,
+    private ChannelMediaResult download(CompanyChannelDO account, TelegramSendCredentials credentials,
                                         String filePath) {
         try {
             ResponseEntity<byte[]> response = restClient.get()

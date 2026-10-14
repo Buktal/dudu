@@ -20,8 +20,9 @@ import java.util.Optional;
  * 读取能力说明。飞书只有 POST url_verification 握手（官方 §3.2），走 POST 回调入口：
  * 明文三参或加密信封验签后回显 challenge；事件推送按 v2.0 信封验签解密后解析。
  * challenge 应答体是 JSON 而非 success 字面，按官方应答形态直构；
- * 凭据（channel_info 的 appId/appSecret/verificationToken/encryptKey）住在包内，
- * 缺失按不支持或限制说明如实回答。事实见 docs/research/channels/feishu.md。
+ * 凭据住在包内（回调 appId/verificationToken/encryptKey 与发送 appId/appSecret 两分组，
+ * {@link FeishuCredentials} 与 {@link FeishuSendCredentials}），缺失按不支持或限制说明
+ * 如实回答。事实见 docs/research/channels/feishu.md。
  */
 @Component
 public class FeishuAdapter implements ChannelAdapter {
@@ -99,11 +100,11 @@ public class FeishuAdapter implements ChannelAdapter {
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        return FeishuCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
+        return FeishuSendCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
-        return FeishuCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
+        return FeishuSendCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
     }
 }

@@ -230,8 +230,9 @@ public class WecomProtocol {
         }
         int msgLength = ((unpadded[16] & 0xFF) << 24) | ((unpadded[17] & 0xFF) << 16)
             | ((unpadded[18] & 0xFF) << 8) | (unpadded[19] & 0xFF);
-        if (16 + 4 + msgLength > unpadded.length) {
-            throw new IllegalArgumentException("msg_len 超出解密结果长度");
+        // msg_len 高位置 1 时 int 为负，与越界一并拒绝，避免按负长度截取报文
+        if (msgLength < 0 || 16 + 4 + msgLength > unpadded.length) {
+            throw new IllegalArgumentException("msg_len 非法（负值或超出解密结果长度）");
         }
         return new Decrypted(
             new String(unpadded, 20, msgLength, StandardCharsets.UTF_8),

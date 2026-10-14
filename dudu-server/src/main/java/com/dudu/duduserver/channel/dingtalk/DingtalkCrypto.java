@@ -147,6 +147,10 @@ public final class DingtalkCrypto {
         if (aesKeyB64 == null) {
             throw new IllegalArgumentException("EncodingAESKey 缺失");
         }
+        // 官方规格：EncodingAESKey 固定 43 位，补 "=" 解出 32 字节（与企微族四实现统一口径）
+        if (aesKeyB64.length() != 43) {
+            throw new IllegalArgumentException("EncodingAESKey 须为 43 位");
+        }
         byte[] key = Base64.getDecoder().decode(aesKeyB64 + "=");
         if (key.length != AES_KEY_BYTES) {
             throw new IllegalArgumentException("EncodingAESKey 形态错误：解码得 " + key.length + " 字节");
