@@ -72,7 +72,9 @@ class DeskDingtalkIntegrationTest extends DeskIntegrationSupport {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> System.getenv("DUDU_TEST_JDBC_URL"));
-        registry.add("spring.datasource.username", () -> "root");
+        // 共享评审库用户可由环境指定，缺省维持本地 root
+        registry.add("spring.datasource.username",
+            () -> System.getenv().getOrDefault("DUDU_TEST_DB_USER", "root"));
         registry.add("spring.datasource.password", () -> System.getenv("DUDU_TEST_DB_PASSWORD"));
         String stubUrl = "http://127.0.0.1:" + STUB.getAddress().getPort();
         registry.add("dudu.channel.dingtalk.api-base", () -> stubUrl);
