@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -27,10 +28,6 @@ public class DouyinAdapter implements ChannelAdapter {
 
     // 官方 §4.1 的签名头（无时间戳/随机数参与）
     private static final String HEADER_SIGNATURE = "X-Douyin-Signature";
-
-    // 凭据缺失的如实说明：不编造可发可读能力
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
 
     private final DouyinProtocol protocol;
 
@@ -95,7 +92,7 @@ public class DouyinAdapter implements ChannelAdapter {
     public String sendRestriction(CompanyChannelDO account) {
         DouyinCredentials credentials = DouyinCredentials.of(account);
         if (credentials == null) {
-            return SEND_CREDENTIALS_MISSING;
+            return ChannelRestrictions.SEND_CREDENTIALS_MISSING;
         }
         // 发送是用户授权类接口：refreshToken 缺失即未完成授权，如实指向授权缺口
         return credentials.refreshToken() == null ? DouyinTokenClient.REFRESH_TOKEN_MISSING : null;
@@ -104,6 +101,6 @@ public class DouyinAdapter implements ChannelAdapter {
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
         // 素材读取只依赖应用凭据（直链下载），不依赖用户授权
-        return DouyinCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
+        return DouyinCredentials.of(account) == null ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING : null;
     }
 }

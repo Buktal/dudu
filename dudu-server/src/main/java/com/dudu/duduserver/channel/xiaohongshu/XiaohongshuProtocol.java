@@ -3,14 +3,11 @@ package com.dudu.duduserver.channel.xiaohongshu;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +51,7 @@ public class XiaohongshuProtocol {
         }
         String[] parts = {token, timestamp, nonce};
         Arrays.sort(parts);
-        return signature.equalsIgnoreCase(sha1Hex(String.join("", parts)));
+        return signature.equalsIgnoreCase(Digests.sha1Hex(String.join("", parts)));
     }
 
     /**
@@ -68,7 +65,7 @@ public class XiaohongshuProtocol {
         }
         String[] parts = {token, timestamp, nonce, encrypt};
         Arrays.sort(parts);
-        return msgSignature.equalsIgnoreCase(sha1Hex(String.join("", parts)));
+        return msgSignature.equalsIgnoreCase(Digests.sha1Hex(String.join("", parts)));
     }
 
     /**
@@ -187,15 +184,6 @@ public class XiaohongshuProtocol {
     private boolean isKnownMsgType(String msgType) {
         return MSG_TYPE_TEXT.equals(msgType) || MSG_TYPE_IMAGE.equals(msgType) || MSG_TYPE_VIDEO.equals(msgType)
             || MSG_TYPE_ITEM.equals(msgType) || MSG_TYPE_ORDER.equals(msgType);
-    }
-
-    private String sha1Hex(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-1").digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("当前运行环境缺少 SHA-1 实现", e);
-        }
     }
 
     private boolean isBlank(String value) {

@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.douyin;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,8 +45,6 @@ public class DouyinTextSender {
     private static final String KEY_DATA = "data";
     private static final String KEY_ERROR_CODE = "error_code";
     private static final String KEY_DESCRIPTION = "description";
-
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
     private static final String REPLY_CONTEXT_MISSING =
         "抖音消息发送失败：缺少可回复的来信（抖音仅支持回复场景，需访客 24 小时内来信）";
 
@@ -67,7 +66,7 @@ public class DouyinTextSender {
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         DouyinCredentials credentials = DouyinCredentials.of(account);
         if (credentials == null) {
-            return ChannelSendResult.failed(SEND_CREDENTIALS_MISSING);
+            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
         }
         DouyinReplyContext.Reply reply = replyContext.lookup(account.getCompanyChannelId(), externalUserId);
         if (reply == null || isBlank(reply.msgId()) || isBlank(reply.conversationId())

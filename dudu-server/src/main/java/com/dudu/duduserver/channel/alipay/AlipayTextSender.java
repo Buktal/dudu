@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.alipay;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +42,8 @@ public class AlipayTextSender {
     private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     // 发送凭据缺失的如实说明：不编造可发能力
-    static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
+    // 字面值与全渠道限制说明同源（适配器测试引用本常量，故保留声明）
+    static final String SEND_CREDENTIALS_MISSING = ChannelRestrictions.SEND_CREDENTIALS_MISSING;
 
     private final RestClient restClient;
 

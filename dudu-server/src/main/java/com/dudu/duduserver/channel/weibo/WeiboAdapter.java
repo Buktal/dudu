@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -26,10 +27,6 @@ public class WeiboAdapter implements ChannelAdapter {
 
     // 验签密钥（APPKEY 对应的 App Secret）与接口凭据（粉服 access_token）都住在 channel_info
     private static final String INFO_APP_SECRET = "appSecret";
-
-    // 凭据缺失的如实说明：不编造可发可读能力
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
 
     // 微博应答语义：200 空串表示已收到且不重试（无 "success" 口径）
     private static final ChannelCallbackResult ACK = new ChannelCallbackResult(200, "");
@@ -100,12 +97,12 @@ public class WeiboAdapter implements ChannelAdapter {
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        return WeiboCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
+        return WeiboCredentials.of(account) == null ? ChannelRestrictions.SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
-        return WeiboCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
+        return WeiboCredentials.of(account) == null ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING : null;
     }
 
     // 只配置了 accessToken 的账号可发送与读取素材，但没有验签与回调接收的能力

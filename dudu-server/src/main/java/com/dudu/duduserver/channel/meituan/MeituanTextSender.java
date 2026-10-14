@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.meituan;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,9 +43,6 @@ public class MeituanTextSender {
     private static final String PARAM_APP_POI_CODE = "app_poi_code";
     private static final String PARAM_PUSH_CONTENT = "push_content";
 
-    // 凭据缺失的如实说明：不编造可发能力
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-
     private final MeituanProtocol protocol;
 
     private final RestClient restClient;
@@ -62,7 +60,7 @@ public class MeituanTextSender {
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         MeituanCredentials credentials = MeituanCredentials.of(account);
         if (credentials == null) {
-            return ChannelSendResult.failed(SEND_CREDENTIALS_MISSING);
+            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
         }
         LinkedMultiValueMap<String, String> form = form(credentials, externalUserId, text);
         try {

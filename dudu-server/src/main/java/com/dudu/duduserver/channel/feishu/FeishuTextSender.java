@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.feishu;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,9 +35,7 @@ public class FeishuTextSender {
     private static final String KEY_UUID = "uuid";
     private static final String KEY_DATA = "data";
     private static final String KEY_MESSAGE_ID = "message_id";
-    private static final String MSG_TYPE_TEXT = "text";
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-    private static final String BEARER_PREFIX = "Bearer ";
+    private static final String MSG_TYPE_TEXT = "text";    private static final String BEARER_PREFIX = "Bearer ";
 
     private final RestClient restClient;
 
@@ -52,7 +51,7 @@ public class FeishuTextSender {
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         FeishuSendCredentials credentials = FeishuSendCredentials.of(account);
         if (credentials == null) {
-            return ChannelSendResult.failed(SEND_CREDENTIALS_MISSING);
+            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
         }
         FeishuTokenClient.TokenResult token = tokenClient.fetch(credentials);
         if (!token.succeeded()) {

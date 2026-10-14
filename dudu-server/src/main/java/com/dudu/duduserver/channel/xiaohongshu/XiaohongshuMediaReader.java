@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.xiaohongshu;
 
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -20,9 +21,6 @@ import org.springframework.web.client.RestClient;
 public class XiaohongshuMediaReader {
 
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
-    // 回调凭据缺失的如实说明：不编造可读能力
-    static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
-
     // 素材链接是渠道给出的完整公开地址（CDN 域名与接口域名不同），用无 baseUrl 的客户端直取
     private final RestClient downloadClient;
 
@@ -39,7 +37,7 @@ public class XiaohongshuMediaReader {
      */
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
         if (XiaohongshuCredentials.of(account) == null) {
-            return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
+            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         }
         try {
             ResponseEntity<byte[]> download = downloadClient.get()

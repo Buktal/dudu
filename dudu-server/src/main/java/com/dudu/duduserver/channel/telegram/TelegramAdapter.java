@@ -5,6 +5,7 @@ import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -26,10 +27,6 @@ public class TelegramAdapter implements ChannelAdapter {
 
     // 恒等头名（§4.1 官方拼写逐字）
     private static final String HEADER_SECRET_TOKEN = "X-Telegram-Bot-Api-Secret-Token";
-
-    // 凭据缺失的如实说明：不编造可发可读能力
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
 
     private final TelegramProtocol protocol;
 
@@ -78,11 +75,11 @@ public class TelegramAdapter implements ChannelAdapter {
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        return TelegramSendCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
+        return TelegramSendCredentials.of(account) == null ? ChannelRestrictions.SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
-        return TelegramSendCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
+        return TelegramSendCredentials.of(account) == null ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING : null;
     }
 }

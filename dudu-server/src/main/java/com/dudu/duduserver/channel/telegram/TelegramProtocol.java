@@ -7,11 +7,11 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
+import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -73,7 +73,7 @@ public class TelegramProtocol {
         if (headerValue == null || secretToken == null) {
             return false;
         }
-        return MessageDigest.isEqual(headerValue.getBytes(StandardCharsets.UTF_8),
+        return Digests.constantTimeEquals(headerValue.getBytes(StandardCharsets.UTF_8),
             secretToken.getBytes(StandardCharsets.UTF_8));
     }
 

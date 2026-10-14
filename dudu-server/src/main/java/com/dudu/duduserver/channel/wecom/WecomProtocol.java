@@ -1,6 +1,8 @@
 package com.dudu.duduserver.channel.wecom;
 
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.support.AesEnvelopeCodec;
+import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -11,35 +13,24 @@ import org.xml.sax.InputSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * 企业微信回调协议的加解密原语（事实见 docs/research/channels/wecom.md §4）：
- * 签名为 token/timestamp/nonce/密文四值字典序拼接的 SHA-1 40 位小写 hex；AESKey =
- * Base64Decode(EncodingAESKey + "=")，AES-256-CBC、IV 取 key 前 16 字节、PKCS#7 按
- * 32 字节块补位（不是常见 AES 的 16）；密文结构 random(16B) + msg_len(4B 大端) + msg
- * + receiveid（企业应用回调即 corpId，解密后由调用方校验）。官方 §5.1 黄金向量为验收
- * 基准；encrypt 当前供测试按黄金向量构造对拍报文。
+ * 企业微信回调协议（事实见 docs/research/channels/wecom.md）：验签为 token/timestamp/
+ * nonce/密文四值字典序拼接的 SHA-1 40 位小写 hex；AES 信封（AESKey =
+ * Base64Decode(EncodingAESKey + "=")、AES-256-CBC、IV 取 key 前 16 字节、PKCS#7 按
+ * 32 字节块补位、密文结构 random(16B) + msg_len(4B 大端) + msg + receiveid）收敛到
+ * {@link AesEnvelopeCodec} 统一口径，receiveid（企业应用回调即 corpId）解密后由调用方
+ * 校验。官方 §5.1 黄金向量为验收基准；encrypt 当前供测试按黄金向量构造对拍报文。
  */
 @Component
 public class WecomProtocol {
-
-    // 企微补位块大小：RFC 2315 语义下的 32 字节（官方 §4.1，不是常见 AES 的 16）
-    private static final int PAD_BLOCK = 32;
 
     // 企微普通消息的六种 MsgType 与事件推送（官方 90239/90240）
     private static final String MSG_TYPE_TEXT = "text";
@@ -208,7 +199,7 @@ public class WecomProtocol {
         }
         String[] parts = {token, timestamp, nonce, msgEncrypt};
         Arrays.sort(parts);
-        return signature.equalsIgnoreCase(sha1Hex(String.join("", parts)));
+        return signature.equalsIgnoreCase(Digests.sha1Hex(String.join("", parts)));
     }
 
     /**
@@ -218,25 +209,16 @@ public class WecomProtocol {
     }
 
     /**
-     * 解密密文（官方 §4.3 逆过程）：Base64 解码 → AES-256-CBC 解密 → 去 PKCS#7 补位 →
-     * 跳过头部 16 随机字节 → 按 4 字节大端 msg_len 截取报文 → 余下为 receiveid。密文或
-     * EncodingAESKey 不合法时抛出 {@link IllegalArgumentException}，由调用方按参数错误拒绝。
+     * 解密密文（官方 §4.3 逆过程）：信封骨架（43 位 EncodingAESKey 解码、AES-256-CBC、
+     * IV 取 key 前 16 字节、32 字节块 PKCS#7、random+msg_len+msg+receiveid 结构）收敛到
+     * {@link AesEnvelopeCodec} 统一口径；receiveid（企业应用回调即 corpId）不在此校验，
+     * 原样交调用方比对。密文或 EncodingAESKey 不合法时抛出
+     * {@link IllegalArgumentException}，由调用方按参数错误拒绝。
      */
     public Decrypted decrypt(String encodingAesKey, String msgEncrypt) {
-        byte[] plain = aes(encodingAesKey, Cipher.DECRYPT_MODE, decodeBase64(msgEncrypt));
-        byte[] unpadded = unpad(plain);
-        if (unpadded.length < 16 + 4) {
-            throw new IllegalArgumentException("解密结果缺少 random(16B) 与 msg_len(4B) 结构");
-        }
-        int msgLength = ((unpadded[16] & 0xFF) << 24) | ((unpadded[17] & 0xFF) << 16)
-            | ((unpadded[18] & 0xFF) << 8) | (unpadded[19] & 0xFF);
-        // msg_len 高位置 1 时 int 为负，与越界一并拒绝，避免按负长度截取报文
-        if (msgLength < 0 || 16 + 4 + msgLength > unpadded.length) {
-            throw new IllegalArgumentException("msg_len 非法（负值或超出解密结果长度）");
-        }
-        return new Decrypted(
-            new String(unpadded, 20, msgLength, StandardCharsets.UTF_8),
-            new String(unpadded, 20 + msgLength, unpadded.length - 20 - msgLength, StandardCharsets.UTF_8));
+        AesEnvelopeCodec.Plain plain = AesEnvelopeCodec.decrypt(
+            AesEnvelopeCodec.decodeKey(encodingAesKey), msgEncrypt, null);
+        return new Decrypted(plain.message(), plain.receiveId());
     }
 
     /**
@@ -244,87 +226,7 @@ public class WecomProtocol {
      * receiveid 后 AES 加密再 Base64。当前仅测试按黄金向量构造对拍报文使用。
      */
     public String encrypt(String encodingAesKey, byte[] random16, byte[] xml, String receiveid) {
-        if (random16 == null || random16.length != 16) {
-            throw new IllegalArgumentException("随机数须为 16 字节");
-        }
-        byte[] msgLength = {(byte) (xml.length >>> 24), (byte) (xml.length >>> 16),
-            (byte) (xml.length >>> 8), (byte) xml.length};
-        byte[] receiveidBytes = receiveid.getBytes(StandardCharsets.UTF_8);
-        byte[] randMsg = new byte[16 + 4 + xml.length + receiveidBytes.length];
-        System.arraycopy(random16, 0, randMsg, 0, 16);
-        System.arraycopy(msgLength, 0, randMsg, 16, 4);
-        System.arraycopy(xml, 0, randMsg, 20, xml.length);
-        System.arraycopy(receiveidBytes, 0, randMsg, 20 + xml.length, receiveidBytes.length);
-        return Base64.getEncoder().encodeToString(aes(encodingAesKey, Cipher.ENCRYPT_MODE, pad(randMsg)));
-    }
-
-    // AES-256-CBC：key=Base64Decode(EncodingAESKey+"=")，IV=key 前 16 字节，补位由调用方按企微规则处理
-    private byte[] aes(String encodingAesKey, int mode, byte[] input) {
-        byte[] key = aesKey(encodingAesKey);
-        try {
-            Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
-            cipher.init(mode, new SecretKeySpec(key, "AES"), new IvParameterSpec(key, 0, 16));
-            return cipher.doFinal(input);
-        } catch (GeneralSecurityException e) {
-            // 密钥/补位外的失败只有输入形状不合法（如长度非块整数倍），统一按参数错误拒绝
-            throw new IllegalArgumentException("AES 运算失败", e);
-        }
-    }
-
-    // EncodingAESKey 官方固定 43 位（a-z A-Z 0-9），补一个 = 即 44 位标准 Base64，解出 32 字节
-    private byte[] aesKey(String encodingAesKey) {
-        if (encodingAesKey == null || encodingAesKey.length() != 43) {
-            throw new IllegalArgumentException("EncodingAESKey 须为 43 位");
-        }
-        byte[] key = Base64.getDecoder().decode(encodingAesKey + "=");
-        if (key.length != 32) {
-            throw new IllegalArgumentException("EncodingAESKey 无法解码为 32 字节 AESKey");
-        }
-        return key;
-    }
-
-    private byte[] decodeBase64(String msgEncrypt) {
-        if (msgEncrypt == null || msgEncrypt.isEmpty()) {
-            throw new IllegalArgumentException("密文为空");
-        }
-        try {
-            return Base64.getDecoder().decode(msgEncrypt);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("密文 Base64 解码失败", e);
-        }
-    }
-
-    // 企微 PKCS#7 补位：以 32 字节块为单位，补位值 1..=32，整段同值
-    private byte[] pad(byte[] data) {
-        int padLength = PAD_BLOCK - (data.length % PAD_BLOCK);
-        byte[] padded = Arrays.copyOf(data, data.length + padLength);
-        Arrays.fill(padded, data.length, padded.length, (byte) padLength);
-        return padded;
-    }
-
-    // 去补位：末字节为补位长度且整段同值，否则视为密文损坏
-    private byte[] unpad(byte[] data) {
-        if (data.length == 0) {
-            throw new IllegalArgumentException("解密结果为空");
-        }
-        int padLength = data[data.length - 1] & 0xFF;
-        if (padLength < 1 || padLength > PAD_BLOCK || padLength > data.length) {
-            throw new IllegalArgumentException("PKCS#7 补位非法");
-        }
-        for (int index = data.length - padLength; index < data.length; index++) {
-            if (data[index] != (byte) padLength) {
-                throw new IllegalArgumentException("PKCS#7 补位非法");
-            }
-        }
-        return Arrays.copyOf(data, data.length - padLength);
-    }
-
-    private String sha1Hex(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-1").digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("当前运行环境缺少 SHA-1 实现", e);
-        }
+        return AesEnvelopeCodec.encrypt(AesEnvelopeCodec.decodeKey(encodingAesKey), random16, xml,
+            receiveid.getBytes(StandardCharsets.UTF_8));
     }
 }

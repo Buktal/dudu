@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.douyin;
 
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -29,8 +30,6 @@ public class DouyinMediaReader {
 
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
-
     // §6.2：图片载荷不含素材标识、视频 item_id 无公开下载接口——官方下载通道不存在
     private static final String NO_DOWNLOAD_CHANNEL =
         "抖音素材读取失败：该素材无官方下载通道（图片载荷不含素材标识，视频分享无公开下载接口）";
@@ -44,7 +43,7 @@ public class DouyinMediaReader {
 
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
         if (DouyinCredentials.of(account) == null) {
-            return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
+            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         }
         if (externalMediaId == null
             || !(externalMediaId.startsWith(HTTP_PREFIX) || externalMediaId.startsWith(HTTPS_PREFIX))) {

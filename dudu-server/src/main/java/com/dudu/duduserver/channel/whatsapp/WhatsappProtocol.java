@@ -5,14 +5,11 @@ import cn.hutool.json.JSONException;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,7 +31,6 @@ public class WhatsappProtocol {
 
     // 签名头形态（官方 §4.2）：sha256= 前缀 + 64 位 hex 摘要
     private static final String SIGNATURE_PREFIX = "sha256=";
-    private static final String HMAC_SHA256 = "HmacSHA256";
 
     // 契约第 4 节统一消息体键名（与 wechat-mp/feishu 等适配器同键）
     private static final String KEY_TYPE = "type";
@@ -75,7 +71,7 @@ public class WhatsappProtocol {
         } catch (IllegalArgumentException e) {
             return false;
         }
-        return MessageDigest.isEqual(digest(appSecret, body), received);
+        return Digests.constantTimeEquals(digest(appSecret, body), received);
     }
 
     /**
@@ -238,15 +234,9 @@ public class WhatsappProtocol {
             : msgType);
     }
 
-    // HMAC-SHA256(appSecret, 原始 body 字节)；运行环境缺实现属配置错误
+    // HMAC-SHA256(appSecret, 原始 body 字节)
     private byte[] digest(String appSecret, String body) {
-        try {
-            Mac mac = Mac.getInstance(HMAC_SHA256);
-            mac.init(new SecretKeySpec(appSecret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256));
-            return mac.doFinal(body.getBytes(StandardCharsets.UTF_8));
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("当前运行环境缺少 HMAC-SHA256 实现", e);
-        }
+        return Digests.hmacSha256(appSecret.getBytes(StandardCharsets.UTF_8), body.getBytes(StandardCharsets.UTF_8));
     }
 
     private String text(String value) {

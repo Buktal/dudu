@@ -5,13 +5,13 @@ import cn.hutool.json.JSONException;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
-import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -95,7 +95,7 @@ public class QqProtocol {
         }
         byte[] expected = sign(appSecret,
             timestampHeader.getBytes(StandardCharsets.UTF_8), body.getBytes(StandardCharsets.UTF_8));
-        return MessageDigest.isEqual(expected, received);
+        return Digests.constantTimeEquals(expected, received);
     }
 
     /**

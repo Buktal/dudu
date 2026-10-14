@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -33,10 +34,6 @@ public class WhatsappAdapter implements ChannelAdapter {
 
     // POST 签名头（官方 §4.2；旧头 X-Hub-Signature 为 SHA-1 忽略，HttpHeaders 大小写不敏感）
     private static final String HEADER_SIGNATURE = "X-Hub-Signature-256";
-
-    // 未配置相应凭据时的如实说明：不编造可发可读能力
-    private static final String SEND_CREDENTIALS_MISSING = "渠道发送凭据未配置";
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
 
     private final WhatsappProtocol protocol;
 
@@ -100,7 +97,7 @@ public class WhatsappAdapter implements ChannelAdapter {
     @Override
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         if (WhatsappSendCredentials.of(account) == null) {
-            return ChannelSendResult.failed(SEND_CREDENTIALS_MISSING);
+            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
         }
         return textSender.send(account, externalUserId, text);
     }
@@ -108,19 +105,19 @@ public class WhatsappAdapter implements ChannelAdapter {
     @Override
     public ChannelMediaResult readMedia(CompanyChannelDO account, String externalMediaId) {
         if (WhatsappSendCredentials.of(account) == null) {
-            return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
+            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         }
         return mediaReader.read(account, externalMediaId);
     }
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        return WhatsappSendCredentials.of(account) == null ? SEND_CREDENTIALS_MISSING : null;
+        return WhatsappSendCredentials.of(account) == null ? ChannelRestrictions.SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
         // 媒体下载两步都要 Bearer accessToken（§5.6），与发送共用同一份接口凭据
-        return WhatsappSendCredentials.of(account) == null ? MEDIA_CREDENTIALS_MISSING : null;
+        return WhatsappSendCredentials.of(account) == null ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING : null;
     }
 }

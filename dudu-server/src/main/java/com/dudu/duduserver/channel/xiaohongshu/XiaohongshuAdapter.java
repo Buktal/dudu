@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -116,14 +117,14 @@ public class XiaohongshuAdapter implements ChannelAdapter {
     @Override
     public String sendRestriction(CompanyChannelDO account) {
         return XiaohongshuSendCredentials.of(account) == null
-            ? XiaohongshuTextSender.SEND_CREDENTIALS_MISSING
+            ? ChannelRestrictions.SEND_CREDENTIALS_MISSING
             : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
         return XiaohongshuCredentials.of(account) == null
-            ? XiaohongshuMediaReader.MEDIA_CREDENTIALS_MISSING
+            ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING
             : null;
     }
 }

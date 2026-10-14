@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.meituan;
 
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.stereotype.Component;
 
@@ -12,15 +13,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class MeituanMediaReader {
 
-    // 凭据缺失的如实说明：不编造可读能力
-    private static final String MEDIA_CREDENTIALS_MISSING = "渠道素材凭据未配置";
-
     // 官方素材接口未实锤的如实说明（票面渠道要点 4：按现状如实处理并注明边界）
     private static final String MEDIA_API_UNCONFIRMED = "美团渠道素材接口未实锤，暂无法读取素材";
 
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
         if (MeituanCredentials.of(account) == null) {
-            return ChannelMediaResult.failed(MEDIA_CREDENTIALS_MISSING);
+            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         }
         return ChannelMediaResult.failed(MEDIA_API_UNCONFIRMED);
     }
