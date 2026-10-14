@@ -1,12 +1,12 @@
 import { DeskApiError } from "@/lib/api-response";
 
-export type AgentAccessGroup = Readonly<{
+type AgentAccessGroup = Readonly<{
   groupId: string;
   groupName: string;
 }>;
 
 // 当前授权组内属于本企业的渠道账号；不包含渠道凭据与接入参数
-export type AgentAccessAccount = Readonly<{
+type AgentAccessAccount = Readonly<{
   companyChannelId: string;
   groupId: string;
   channel: string;

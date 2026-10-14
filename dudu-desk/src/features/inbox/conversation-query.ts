@@ -58,24 +58,6 @@ export function isQueueMember(
   return matchesConversationFilters(conversations[id], query);
 }
 
-export function matchesConversationText(
-  conversation: Conversation,
-  search: string,
-  additional: string[] = [],
-): boolean {
-  const term = search.trim().toLocaleLowerCase();
-  if (!term) return true;
-  const identity = conversation.identity;
-  return [
-    identity.name,
-    identity.externalUserId,
-    identity.accountName,
-    identity.channelName,
-    conversation.preview,
-    ...additional,
-  ].some((part) => part?.toLocaleLowerCase().includes(term));
-}
-
 export function compareConversations(order: ConversationQuery["order"]) {
   return (left: Conversation, right: Conversation): number => {
     if (order === "messages") {

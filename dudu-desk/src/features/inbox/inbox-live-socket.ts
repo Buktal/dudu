@@ -12,7 +12,7 @@ export type DeskSocket = Pick<
   "send" | "close" | "onopen" | "onmessage" | "onerror" | "onclose"
 >;
 
-export type DeskSocketInput = {
+type DeskSocketInput = {
   /** 解析后的 API 源地址；开发为空串表示同源（Vite 代理 /ws）。 */
   origin: string;
   token: string;

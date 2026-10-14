@@ -16,7 +16,7 @@ import { sendRestriction } from "./send-rules";
  * and stays independent of the store module, while callers pass store state
  * straight through.
  */
-export type ReplyFile = {
+type ReplyFile = {
   name: string;
   size: number;
   mimeType: string;
@@ -24,7 +24,7 @@ export type ReplyFile = {
   media?: unknown;
 };
 
-export type ReplySubmissionStart = {
+type ReplySubmissionStart = {
   submission: {
     request: SendSubmission;
     messageId: string;
@@ -39,7 +39,7 @@ export type ReplySubmissionStart = {
   message: InboxMessage;
 };
 
-export type ReplyReadiness =
+type ReplyReadiness =
   | { sendable: true; notice: null }
   | { sendable: false; notice: string | null };
 
@@ -104,7 +104,7 @@ export function replyReadiness(input: {
   return { sendable: true, notice: null };
 }
 
-export type ReplySubmissionInput = {
+type ReplySubmissionInput = {
   conversation: Conversation;
   text: string;
   draftRevision: number;

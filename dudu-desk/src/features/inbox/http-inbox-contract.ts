@@ -28,7 +28,7 @@ const CONVERSATION_STATUSES: ConversationStatus[] = [
 const CAPABILITY_STATES: ReplyCapability["state"][] = ["allowed", "restricted"];
 const SEND_KINDS: SendKind[] = ["text", "image", "file", "audio", "video"];
 
-export type ParsedConversationPage = {
+type ParsedConversationPage = {
   items: Conversation[];
   total: number;
   page: number;
@@ -62,7 +62,7 @@ function integer(value: unknown): number {
   return value;
 }
 
-export function parseIdentity(value: unknown): VisitorIdentity {
+function parseIdentity(value: unknown): VisitorIdentity {
   if (!isRecord(value)) throw new TypeError("访客身份格式不完整");
   return {
     id: nonEmptyText(value.id),

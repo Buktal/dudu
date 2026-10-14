@@ -17,7 +17,7 @@ import { SourceBadge } from "./identity";
 
 /** Resolved display data. Pure derivation from the store snapshot + the
  *  Reply pipeline answer; no hooks, no dispatches. */
-export type ComposerViewModel = {
+type ComposerViewModel = {
   id: string;
   conversationId: string;
   compact: boolean;
@@ -36,7 +36,7 @@ export type ComposerViewModel = {
 };
 
 /** Behavior callbacks owned by the store-connected container. */
-export type ComposerViewActions = {
+type ComposerViewActions = {
   inputRef: RefObject<HTMLTextAreaElement | null>;
   onFocus: () => void;
   onInsert: (text: string) => void;

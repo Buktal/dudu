@@ -88,9 +88,9 @@ export function InboxError({
 }
 
 /** The load-state shape a list phase reads: queue and history reads. */
-export type ListPhaseRead = Pick<LoadState, "hasLoaded" | "status">;
+type ListPhaseRead = Pick<LoadState, "hasLoaded" | "status">;
 
-export type ListPhaseCopy = { title: string; description: string };
+type ListPhaseCopy = { title: string; description: string };
 
 /**
  * The first-read rule behind every inbox list: only a read with nothing

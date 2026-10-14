@@ -15,11 +15,11 @@ import type { MediaReference, MessageBody, SendKind } from "./types";
  * this seam; `message-text` is a thin adapter above it.
  */
 
-export type MediaKind = Exclude<SendKind, "text">;
+type MediaKind = Exclude<SendKind, "text">;
 
-export type AssetPurpose = "image" | "audio" | "video" | "download";
+type AssetPurpose = "image" | "audio" | "video" | "download";
 
-export type MessageDescriptor = {
+type MessageDescriptor = {
   summary: string;
   media: MediaReference[];
   externalUrl: string | null;

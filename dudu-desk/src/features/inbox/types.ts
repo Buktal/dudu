@@ -1,7 +1,7 @@
 import type { ApiFailure } from "@/lib/api-response";
 
 export type WorkContext = { agentId: string; workspaceId: string };
-export type RequestState = "idle" | "loading" | "ready" | "error";
+type RequestState = "idle" | "loading" | "ready" | "error";
 export type ConversationStatus = "needs-reply" | "waiting" | "closed";
 export type SendKind = "text" | "image" | "file" | "audio" | "video";
 

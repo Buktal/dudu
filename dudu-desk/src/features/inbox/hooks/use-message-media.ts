@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { loadMessageMedia, mediaKey } from "../stores/media";
 import { useInboxDispatch, useInboxSelector } from "./use-inbox-store";
 
-export type MessageMediaState = {
+type MessageMediaState = {
   status: "idle" | "loading" | "ready" | "error";
   url: string | null;
 };
