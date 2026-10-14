@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
 
+import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
@@ -94,7 +95,7 @@ public class AlipayMediaReader {
         try {
             params.put(AlipaySignature.FIELD_SIGN,
                 AlipaySignature.sign(AlipaySignature.privateKeyOf(credentials.appPrivateKey()), params));
-        } catch (java.security.GeneralSecurityException e) {
+        } catch (GeneralSecurityException e) {
             throw new IllegalStateException("应用私钥无法用于请求加签", e);
         }
         return params;

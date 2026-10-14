@@ -12,6 +12,7 @@ import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -218,7 +219,7 @@ public class TelegramProtocol {
         if (fileId == null || fileId.isBlank()) {
             return null;
         }
-        Map<String, Object> media = new java.util.LinkedHashMap<>();
+        Map<String, Object> media = new LinkedHashMap<>();
         media.put("kind", kind);
         media.put("id", fileId);
         if (name != null) {

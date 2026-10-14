@@ -14,6 +14,7 @@ import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -238,8 +239,8 @@ public class FeishuProtocol {
             throw new IllegalArgumentException("飞书加密报文缺少 IV 段");
         }
         AES aes = new AES(Mode.CBC, Padding.PKCS5Padding, DigestUtil.sha256(encryptKey),
-            java.util.Arrays.copyOfRange(decoded, 0, 16));
-        byte[] plain = aes.decrypt(java.util.Arrays.copyOfRange(decoded, 16, decoded.length));
+            Arrays.copyOfRange(decoded, 0, 16));
+        byte[] plain = aes.decrypt(Arrays.copyOfRange(decoded, 16, decoded.length));
         return new String(plain, StandardCharsets.UTF_8);
     }
 
