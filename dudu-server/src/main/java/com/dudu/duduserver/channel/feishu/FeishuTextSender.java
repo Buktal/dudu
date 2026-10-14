@@ -36,7 +36,8 @@ public class FeishuTextSender {
     private static final String KEY_UUID = "uuid";
     private static final String KEY_DATA = "data";
     private static final String KEY_MESSAGE_ID = "message_id";
-    private static final String MSG_TYPE_TEXT = "text";    private static final String BEARER_PREFIX = "Bearer ";
+    private static final String MSG_TYPE_TEXT = "text";
+    private static final String BEARER_PREFIX = "Bearer ";
 
     private final RestClient restClient;
 
