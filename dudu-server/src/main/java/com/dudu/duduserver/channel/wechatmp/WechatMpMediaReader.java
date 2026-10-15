@@ -4,6 +4,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.support.Errcodes;
+import com.dudu.duduserver.channel.support.JsonBodies;
 import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +58,7 @@ public class WechatMpMediaReader {
                 .toEntity(byte[].class);
             byte[] body = response.getBody() == null ? new byte[0] : response.getBody();
             // 渠道对失败与视频素材返回 JSON，其余按二进制素材原样返回
-            if (isJson(body)) {
+            if (JsonBodies.isJson(body)) {
                 return fromJson(JSONUtil.parseObj(new String(body, StandardCharsets.UTF_8)));
             }
             return ChannelMediaResult.media(response);
@@ -83,16 +84,6 @@ public class WechatMpMediaReader {
             return ChannelMediaResult.failed("微信素材读取失败：" + Errcodes.describe(response));
         }
         return ChannelMediaResult.failed("微信素材读取失败：响应无法识别");
-    }
-
-    private boolean isJson(byte[] body) {
-        for (byte value : body) {
-            if (Character.isWhitespace(value)) {
-                continue;
-            }
-            return value == '{';
-        }
-        return false;
     }
 
 }

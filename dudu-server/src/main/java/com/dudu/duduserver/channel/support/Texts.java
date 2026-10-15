@@ -17,4 +17,14 @@ public final class Texts {
     public static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
+
+    // 依次取第一个非空白原值；全空白返回 null，与 blankToNull 同口径
+    public static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (!isBlank(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
 }

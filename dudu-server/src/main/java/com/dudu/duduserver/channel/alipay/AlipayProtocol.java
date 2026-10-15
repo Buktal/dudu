@@ -116,7 +116,7 @@ public class AlipayProtocol {
      */
     public String ackReply(AlipayCredentials credentials, String bizContent) {
         Map<String, String> fields = fields(bizContent);
-        return buildAck(firstNonBlank(fields.get(FIELD_FROM_USER_ID), fields.get(FIELD_FROM_ALIPAY_USER_ID)),
+        return buildAck(Texts.firstNonBlank(fields.get(FIELD_FROM_USER_ID), fields.get(FIELD_FROM_ALIPAY_USER_ID)),
             credentials.appId());
     }
 
@@ -139,7 +139,7 @@ public class AlipayProtocol {
             // 事件族与无法解析的报文只应答不保存
             return Optional.empty();
         }
-        String externalUserId = firstNonBlank(fields.get(FIELD_FROM_ALIPAY_USER_ID), fields.get(FIELD_FROM_USER_ID));
+        String externalUserId = Texts.firstNonBlank(fields.get(FIELD_FROM_ALIPAY_USER_ID), fields.get(FIELD_FROM_USER_ID));
         if (externalUserId == null) {
             // 可识别的访客消息缺发送方身份无法归属会话，按参数错误拒绝
             throw new IllegalArgumentException("渠道报文缺少发送方身份");
@@ -229,10 +229,6 @@ public class AlipayProtocol {
         } catch (RuntimeException e) {
             return null;
         }
-    }
-
-    private String firstNonBlank(String left, String right) {
-        return Texts.blankToNull(left) != null ? left : right;
     }
 
 }

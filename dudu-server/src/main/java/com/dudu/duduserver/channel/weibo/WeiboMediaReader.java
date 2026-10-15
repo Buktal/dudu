@@ -4,6 +4,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.JsonBodies;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,7 +47,7 @@ public class WeiboMediaReader {
                 .toEntity(byte[].class);
             byte[] body = response.getBody() == null ? new byte[0] : response.getBody();
             // 渠道对失败返回 JSON，其余按二进制素材原样返回
-            if (isJson(body)) {
+            if (JsonBodies.isJson(body)) {
                 return ChannelMediaResult.failed(
                     "微博素材读取失败：" + WeiboErrors.describe(JSONUtil.parseObj(new String(body, StandardCharsets.UTF_8))));
             }
@@ -57,16 +58,6 @@ public class WeiboMediaReader {
                 account.getCompanyChannelId(), e.getClass().getSimpleName());
             return ChannelMediaResult.failed("微博接口调用失败：" + e.getMessage());
         }
-    }
-
-    private boolean isJson(byte[] body) {
-        for (byte value : body) {
-            if (Character.isWhitespace(value)) {
-                continue;
-            }
-            return value == '{';
-        }
-        return false;
     }
 
 }

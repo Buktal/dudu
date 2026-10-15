@@ -173,7 +173,7 @@ public class DouyinProtocol {
             return MessageBodies.unknown(messageType);
         }
         String resourceUrl = Texts.blankToNull(content.getStr(KEY_RESOURCE_URL, null));
-        String identifier = firstNonBlank(content.getStr(KEY_ITEM_ID, null),
+        String identifier = Texts.firstNonBlank(content.getStr(KEY_ITEM_ID, null),
             content.getStr(KEY_MEDIA_ID, null), resourceUrl, serverMessageId + DERIVED_INDEX);
         return MessageBodies.media(kind, identifier, resourceUrl, null);
     }
@@ -188,15 +188,6 @@ public class DouyinProtocol {
             body.put("externalId", cardId);
         }
         return body;
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (!Texts.isBlank(value)) {
-                return value;
-            }
-        }
-        return null;
     }
 
     /**

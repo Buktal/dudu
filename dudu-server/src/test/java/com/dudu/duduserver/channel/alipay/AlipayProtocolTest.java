@@ -169,6 +169,17 @@ class AlipayProtocolTest {
     }
 
     @Test
+    void rejectsMessageWhenBothSenderFieldsAreBlank() {
+        // 两身份字段都下发但内容为空白：与缺失同口径按参数错误拒绝，不落空白身份访客
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> protocol.parse(7L, envelope(
+            "<MsgType><![CDATA[text]]></MsgType>"
+                + "<FromUserId><![CDATA[  ]]></FromUserId>"
+                + "<FromAlipayUserId><![CDATA[]]></FromAlipayUserId>"
+                + "<Text><Content><![CDATA[hi]]></Content></Text>")))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void extractsUserNameFromUserInfoWithoutBlockingOnMalformedJson() {
         // §2.3 UserInfo 为 JSON 字符串（logon_id/user_name）；损坏时名称为 null，不阻塞收信
         Optional<ChannelInboundMessage> named = protocol.parse(7L, envelope(
