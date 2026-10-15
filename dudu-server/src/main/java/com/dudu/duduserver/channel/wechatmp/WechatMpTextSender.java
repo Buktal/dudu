@@ -16,8 +16,8 @@ import java.util.Map;
 
 /**
  * 微信公众号纯文本发送（客服消息），事实见 docs/research/channels/wechat-mp.md：
- * 先用 channel_info 的 appId/appSecret 经 /cgi-bin/token 换取 access_token（每次发送
- * 都取一次，不做进程内缓存），再 POST /cgi-bin/message/custom/send 下发 text 报文；
+ * 先用 channel_info 的 appId/appSecret 经 /cgi-bin/token 换取 access_token（进程内按凭据
+ * 组缓存复用，口径见 WechatMpAccessTokenClient），再 POST /cgi-bin/message/custom/send 下发 text 报文；
  * 成功以 errcode=0 为准（客服消息接口不返回消息标识），失败原样记录 errcode 与 errmsg，
  * 网络与响应解析异常按调用失败如实返回。接口地址默认官方域名，可用
  * dudu.channel.wechat-mp.api-base 覆盖为受控替身。
