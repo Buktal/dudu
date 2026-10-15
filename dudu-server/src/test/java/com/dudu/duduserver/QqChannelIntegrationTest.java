@@ -296,6 +296,18 @@ class QqChannelIntegrationTest extends DeskIntegrationSupport {
     }
 
     @Test
+    void dispatchWithNonObjectAuthorAnswersBadRequestInsteadOfLeakingRWrapper() throws Exception {
+        // author 为字符串时 hutool getJSONObject 抛 JSONException（非协议显式转换的参数错误），
+        // 适配器 catch IllegalArgumentException 不中：service 兜底前异常外泄成 R 包装的 HTTP 200，
+        // 渠道视 200 为成功不再重推、该信静默丢失；兜底后按参数错误 400 应答且不落库
+        MvcResult result = push("{\"op\":0,\"t\":\"C2C_MESSAGE_CREATE\",\"d\":{\"id\":\"X1\","
+            + "\"author\":\"not-an-object\",\"content\":\"hi\",\"message_type\":0}}");
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(jdbc.queryForObject(
+            "SELECT COUNT(*) FROM message WHERE external_message_id = 'X1'", Integer.class)).isZero();
+    }
+
+    @Test
     void sendRoutesBySceneAndPersistsRealChannelOutcome() throws Exception {
         long visitorId = newVisitor("c2c:C2C_SEND_1", "想咨询发货时间");
 

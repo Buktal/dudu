@@ -39,7 +39,15 @@ public class ChannelCallbackServiceImpl implements ChannelCallbackService {
         if (adapter == null) {
             return ChannelCallbackResult.unsupported();
         }
-        return adapter.verifyUrl(account, query, headers);
+        try {
+            return adapter.verifyUrl(account, query, headers);
+        } catch (RuntimeException e) {
+            // 验证阶段的意外解析异常（适配器只显式转换参数错误，hutool 取值类型不符等
+            // RuntimeException 会漏出）：按参数错误应答 400，不外泄成 R 包装的 HTTP 200
+            log.warn("[channel-callback] URL 验证处理异常, companyChannelId={}, channel={}",
+                account.getCompanyChannelId(), account.getChannel(), e);
+            return ChannelCallbackResult.badRequest();
+        }
     }
 
     @Override
@@ -53,7 +61,17 @@ public class ChannelCallbackServiceImpl implements ChannelCallbackService {
         if (adapter == null) {
             return ChannelCallbackResult.unsupported();
         }
-        ChannelReceiveResult result = adapter.receive(account, query, headers, body);
+        ChannelReceiveResult result;
+        try {
+            result = adapter.receive(account, query, headers, body);
+        } catch (RuntimeException e) {
+            // 解析/验签阶段的意外异常（适配器只显式转换参数错误，hutool 取值类型不符的
+            // JSONException/ClassCastException 等会漏出）：报文内容所致、重推不可收敛，
+            // 按参数错误应答 400 终止重推，不外泄成 R 包装的 HTTP 200
+            log.warn("[channel-callback] 回调解析处理异常, companyChannelId={}, channel={}",
+                account.getCompanyChannelId(), account.getChannel(), e);
+            return ChannelCallbackResult.badRequest();
+        }
         if (result.message() != null) {
             try {
                 deskInboundService.accept(account, result.message());

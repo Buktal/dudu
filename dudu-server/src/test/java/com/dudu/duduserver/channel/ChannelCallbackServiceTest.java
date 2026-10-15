@@ -157,6 +157,22 @@ class ChannelCallbackServiceTest {
     }
 
     @Test
+    void receiveAndVerifyUrlAnswersBadRequestInsteadOfLeakingRWrapperWhenAdapterParsingFails() {
+        // 适配器只显式转换参数错误（IllegalArgumentException），hutool 取值类型不符的
+        // JSONException 等会漏出：按参数错误应答 400 终止重推，不外泄成 R 包装的 HTTP 200
+        doThrow(new cn.hutool.json.JSONException("expected a JSONObject"))
+            .when(wechatMpAdapter).receive(any(CompanyChannelDO.class), any(), any(), any());
+        assertThat(service.receive(String.valueOf(CHANNEL_ID), signedQuery(), REQUEST_HEADERS, "<xml/>"))
+            .isEqualTo(ChannelCallbackResult.badRequest());
+        verifyNoInteractions(deskInboundService);
+
+        doThrow(new IllegalStateException("boom"))
+            .when(wechatMpAdapter).verifyUrl(any(CompanyChannelDO.class), any(), any());
+        assertThat(service.verifyUrl(String.valueOf(CHANNEL_ID), signedQuery(), REQUEST_HEADERS))
+            .isEqualTo(ChannelCallbackResult.badRequest());
+    }
+
+    @Test
     void queryAndHeadersArePassedThroughToTheAdapterUntouched() {
         Map<String, String> query = signedQuery();
         query.put("echostr", "echo-pass");
