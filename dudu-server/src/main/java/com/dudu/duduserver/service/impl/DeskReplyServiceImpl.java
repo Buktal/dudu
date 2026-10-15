@@ -54,6 +54,8 @@ public class DeskReplyServiceImpl implements DeskReplyService {
     private static final int FAILURE_REASON_MAX_LENGTH = 500;
     private static final String CONTENT_TYPE_TEXT = "text";
     private static final String REASON_UNKNOWN = "渠道发送失败";
+    // 行锁片段：锁定读绕过可重复读快照，读到并发事务已提交的最新行（与 DeskInboundServiceImpl 同口径）
+    private static final String LOCK_ROW = "FOR UPDATE";
 
     private final DeskVisitorService deskVisitorService;
     private final VisitorService visitorService;
@@ -139,7 +141,12 @@ public class DeskReplyServiceImpl implements DeskReplyService {
             .setSql("version = version + 1")
             .set(MessageDO::getUpdateTime, now));
         MessageDO message = messageService.getById(messageId);
-        VisitorDO visitor = visitorService.getById(message.getVisitorId());
+        // 锁定读访客：并发来信与回复在此串行（来信锁序=访客行→消息插入，本路径=自有 outgoing 行
+        // →访客行→incoming 判定，两条路径在访客行锁上相遇，无死锁环）；来信在途则等它提交后再判定，
+        // 先提交则锁定读到它的 NEEDS_REPLY，WAITING 与 waiting_since 的清除不再覆盖更新的来信
+        VisitorDO visitor = visitorService.getOne(Wrappers.<VisitorDO>lambdaQuery()
+            .eq(VisitorDO::getVisitorId, message.getVisitorId())
+            .last(LOCK_ROW));
 
         if (succeeded && visitor.awaitingReply() && !hasNewerIncoming(message)) {
             visitorService.update(Wrappers.<VisitorDO>lambdaUpdate()
@@ -160,12 +167,14 @@ public class DeskReplyServiceImpl implements DeskReplyService {
             account == null ? null : account.getCompanyChannelId());
     }
 
-    // 直接查询本会话消息判断回复基线，不新增基线表：该 outgoing 之后还有更新的来信时保留当前状态
+    // 直接查询本会话消息判断回复基线，不新增基线表：该 outgoing 之后还有更新的来信时保留当前状态；
+    // 判定与访客行锁同事务，锁定读保证看到的来信集合与访客行最新已提交状态一致
     private boolean hasNewerIncoming(MessageDO message) {
         return messageService.count(Wrappers.<MessageDO>lambdaQuery()
             .eq(MessageDO::getVisitorId, message.getVisitorId())
             .eq(MessageDO::getDirection, MessageDirectionEnum.INCOMING)
-            .gt(MessageDO::getSequence, message.getSequence())) > 0;
+            .gt(MessageDO::getSequence, message.getSequence())
+            .last(LOCK_ROW)) > 0;
     }
 
     // 渠道边界负责翻译渠道协议；异常也按真实原因记录为失败，不猜测发送结果

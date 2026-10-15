@@ -33,12 +33,18 @@ import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -103,6 +109,7 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
     }
 
     @Autowired DeskInboundService deskInboundService;
+    @Autowired TransactionTemplate transactionTemplate;
     @Autowired RecordingSender sender;
 
     private long channelWechat;
@@ -303,6 +310,63 @@ class DeskReplyIntegrationTest extends DeskIntegrationSupport {
         assertThat(visitor.get("waiting_since")).isNotNull();
         assertThat(((LocalDateTime) visitor.get("waiting_since"))).isAfter(beforeSend);
         assertThat(visitor.get("message_count")).isEqualTo(3L);
+    }
+
+    @Test
+    void completeSendSerializesWithAnInFlightIncomingTransactionOnTheVisitorRow() throws Exception {
+        long visitorId = newVisitor(channelWechat, "reply-ext-11", "第一条来信");
+        LocalDateTime beforeSend = LocalDateTime.of(2026, 10, 12, 9, 0, 0);
+        jdbc.update("UPDATE visitor SET waiting_since = ? WHERE visitor_id = ?", beforeSend, visitorId);
+        CountDownLatch channelCallStarted = new CountDownLatch(1);
+        CountDownLatch visitorRowLocked = new CountDownLatch(1);
+        // 渠道调用期间另一路径的来信事务已持有访客行锁在途：completeSend 须在锁定读上等它提交，
+        // 按其落库的更新来信判定，而不是快照判定后用 WAITING 覆盖（上一用例的直接 SQL 注入
+        // 不经过行锁，覆盖不了该窗口）
+        sender.observer = text -> {
+            channelCallStarted.countDown();
+            try {
+                assertThat(visitorRowLocked.await(5, TimeUnit.SECONDS)).isTrue();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+        };
+
+        JSONObject response;
+        try (ExecutorService pool = Executors.newFixedThreadPool(1)) {
+            Future<JSONObject> reply = pool.submit(
+                () -> send(scopedToken, visitorId, body("cr-race-2", "收到，正在核实")));
+            assertThat(channelCallStarted.await(5, TimeUnit.SECONDS)).isTrue();
+            transactionTemplate.execute(status -> {
+                jdbc.queryForMap("SELECT visitor_id FROM visitor WHERE visitor_id = ? FOR UPDATE", visitorId);
+                visitorRowLocked.countDown();
+                // 等 completeSend 在访客行锁上排队（修复前排队点在覆盖 UPDATE，修复后在锁定读）
+                sleepQuietly(500);
+                deskInboundService.accept(channels.getById(channelWechat), new ChannelInboundMessage(
+                    channelWechat, "reply-ext-11", null, null, List.of(), "race-incoming-12",
+                    MessageDirectionEnum.INCOMING, Map.of("type", "text", "text", "在途来信后到")));
+                return null;
+            });
+            response = reply.get(10, TimeUnit.SECONDS);
+        }
+
+        assertThat(response.getInt("code")).isZero();
+        Map<String, Object> visitor = jdbc.queryForMap(
+            "SELECT status, waiting_since, message_count FROM visitor WHERE visitor_id = ?", visitorId);
+        assertThat(visitor.get("status")).isEqualTo("needs-reply");
+        // 来信落库时访客已处于待回复，按规则保留本轮计时；completeSend 未清 waiting_since 是
+        // 等到在途来信提交后按其结果判定的证明（修复前快照判定通过会把状态改成 waiting 并清计时）
+        assertThat(((LocalDateTime) visitor.get("waiting_since"))).isEqualTo(beforeSend);
+        assertThat(visitor.get("message_count")).isEqualTo(3L);
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            TimeUnit.MILLISECONDS.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test
