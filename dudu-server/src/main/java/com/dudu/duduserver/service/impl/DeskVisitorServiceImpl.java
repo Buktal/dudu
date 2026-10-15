@@ -364,13 +364,13 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         return term.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
-    // 账号名与渠道代码/显示名的包含匹配：授权账号已在本企业范围内，按数据库 ai_ci 语义近似处理
+    // 账号名与渠道名的包含匹配（契约第 3 节：账号名、渠道名，不含渠道代码）：
+    // 授权账号已在本企业范围内，按数据库 ai_ci 语义近似处理
     private boolean matchesAccountText(DeskAccessVO.Account account, String term) {
         String lower = term.toLowerCase(Locale.ROOT);
         ChannelEnum channel = account.channel();
         return account.accountName().toLowerCase(Locale.ROOT).contains(lower)
-            || channel != null && (channel.getCode().contains(lower)
-            || channel.getDisplayName().toLowerCase(Locale.ROOT).contains(lower));
+            || channel != null && channel.getDisplayName().toLowerCase(Locale.ROOT).contains(lower);
     }
 
     private String orderSql(DeskVisitorQueryDTO query) {

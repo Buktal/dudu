@@ -255,6 +255,8 @@ class DeskVisitorIntegrationTest {
         // 账号名与渠道显示名
         assertThat(ids(data(query(token("owner"), "{\"search\": \"抖音号\"}")))).containsExactly("784105", "784106");
         assertThat(ids(data(query(token("owner"), "{\"search\": \"微信\"}")))).containsExactly("784102", "784101", "784103");
+        // 渠道代码不在契约匹配范围：搜 douyin 不命中抖音渠道账号
+        assertThat(ids(data(query(token("owner"), "{\"search\": \"douyin\"}")))).isEmpty();
         // 最后摘要、共享标签与备注
         assertThat(ids(data(query(token("owner"), "{\"search\": \"发票\"}")))).containsExactly("784102");
         assertThat(ids(data(query(token("owner"), "{\"search\": \"VIP\"}")))).containsExactly("784103");
