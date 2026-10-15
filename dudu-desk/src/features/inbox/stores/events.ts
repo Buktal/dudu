@@ -70,10 +70,17 @@ function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {
               scheduler.noteSettled();
             }
           } else {
+            const previous = getState().inbox.connection;
             needsRecovery = true;
             abortRequest(runtime, requestKeys.recovery);
             recovery = undefined;
             dispatch(inboxActions.connectionChanged(connection));
+            // unavailable 仅来自订阅认证被拒与本地无凭据：经账户缝隙重查一次身份，
+            // 凭据确已失效时账户层清凭据回登录态；其余结果不改变连接状态，
+            // 交由手动重连与下次身份读取收敛
+            if (connection === "unavailable" && previous !== "unavailable") {
+              void runtime.refreshAccess?.().catch(() => {});
+            }
           }
         },
       });

@@ -434,4 +434,34 @@ describe("reconnect re-initialization", () => {
       "暂时无法连接服务，请稍后重试",
     );
   });
+
+  it("re-queries identity once when the socket reports auth rejection as unavailable", async () => {
+    let input!: Subscription;
+    let scopes = 0;
+    const store = testStore(
+      {
+        subscribe: (subscription) => {
+          input = subscription;
+          input.onConnection("unavailable");
+          return () => {};
+        },
+      },
+      true,
+      {
+        refreshAccess: async () => {
+          scopes += 1;
+          return null;
+        },
+      },
+    );
+    await Promise.resolve();
+
+    // 认证被拒上报 unavailable：经账户缝隙重查一次身份，凭据失效由账户层回登录态
+    expect(scopes).toBe(1);
+    expect(store.getState().inbox.connection).toBe("unavailable");
+    // 同状态重复上报不重复触发重查
+    input.onConnection("unavailable");
+    await Promise.resolve();
+    expect(scopes).toBe(1);
+  });
 });
