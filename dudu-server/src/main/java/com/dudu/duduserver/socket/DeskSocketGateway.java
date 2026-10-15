@@ -165,13 +165,17 @@ public class DeskSocketGateway {
         }
     }
 
-    // 权限按当前持久数据实时读取；员工停用或身份失效时该会话不再接收数据
+    // 权限按当前持久数据实时读取；员工停用或身份失效（BizException）时该会话不再接收数据；
+    // 读取故障（如 DB 抖动）同样按无权处理并记录，不中断其余会话的广播循环
     private boolean canAccess(JwtUser user, Long companyChannelId) {
         try {
             DeskAccessVO access = deskAuthService.requireAccess(user);
             return access.accounts().stream()
                 .anyMatch(account -> account.companyChannelId().equals(String.valueOf(companyChannelId)));
         } catch (BizException e) {
+            return false;
+        } catch (RuntimeException e) {
+            log.warn("[desk-socket] 推送权限读取失败, userId={}", user.userId(), e);
             return false;
         }
     }
