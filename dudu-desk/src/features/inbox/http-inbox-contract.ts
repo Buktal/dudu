@@ -4,6 +4,7 @@
  * 不把半成品对象放进界面状态。
  */
 import { DeskApiError } from "@/lib/api-response";
+import { isRecord } from "@/lib/is-record";
 import type {
   Conversation,
   ConversationPage,
@@ -36,10 +37,6 @@ type ParsedConversationPage = {
   counts: NonNullable<ConversationPage["counts"]>;
   channels: NonNullable<ConversationPage["channels"]>;
 };
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
 
 function text(value: unknown): string {
   if (typeof value !== "string") throw new TypeError("缺少必要的文本字段");

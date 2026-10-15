@@ -1,10 +1,10 @@
 import { DeskApiError } from "@/lib/api-response";
 import { requestDesk, requestDeskBlob } from "@/lib/desk-http";
 import { readDeskToken, resolveDeskOrigin } from "@/lib/desk-session";
+import { isRecord } from "@/lib/is-record";
 import { type InboxApi, unavailableInboxApi } from "./api";
 import {
   beforeSequence,
-  isRecord,
   pageNumber,
   parseConversation,
   parseConversationPage,

@@ -1,4 +1,4 @@
-import { uniq } from "lodash-es";
+import { parseTags } from "../tags";
 import { loadConversations } from "./queue";
 import { needsQueueReloadAfterProfileSave } from "./queue-membership";
 import { runConversationOperation } from "./requests";
@@ -52,12 +52,7 @@ export function saveVisitorProfile(
           runtime.api.saveProfile({
             ...io,
             conversationId,
-            tags: uniq(
-              edit.tagsText
-                .split(/[,，;；\r\n]+/)
-                .map((tag) => tag.trim())
-                .filter(Boolean),
-            ),
+            tags: parseTags(edit.tagsText),
             note: edit.note,
           }),
         validate: (result) =>

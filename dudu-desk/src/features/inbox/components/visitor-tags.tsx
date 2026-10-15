@@ -1,10 +1,10 @@
-import { uniq } from "lodash-es";
 import { Plus, Tag, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { parseTags } from "../tags";
 
 export function VisitorTags({
   id,
@@ -20,12 +20,7 @@ export function VisitorTags({
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
-  const tags = uniq(
-    value
-      .split(/[,，;；\r\n]+/)
-      .map((tag) => tag.trim())
-      .filter(Boolean),
-  );
+  const tags = parseTags(value);
 
   useEffect(() => {
     if (adding) input.current?.focus();

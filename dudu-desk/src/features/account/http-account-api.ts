@@ -6,6 +6,7 @@ import {
   resolveDeskOrigin,
   storeDeskToken,
 } from "@/lib/desk-session";
+import { isRecord } from "@/lib/is-record";
 import type {
   AccountApi,
   AgentAccess,
@@ -22,10 +23,6 @@ const ROLE_NAMES: Record<string, string> = {
   console: "企业管理员",
   user: "客服坐席",
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
 
 function requiredText(value: unknown): string {
   if (typeof value !== "string" || value.length === 0)

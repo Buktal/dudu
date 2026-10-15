@@ -3,15 +3,13 @@
  * 并与签发它的 API 源地址绑定；账户适配器负责写入与清除，访客/消息适配器按请求读取。
  * 源地址解析与存储形状只在此处定义，账户与 inbox 不再各写一份。
  */
+import { isRecord } from "@/lib/is-record";
+
 export const DESK_SESSION_KEY = "dudu-desk.session";
 
 const ONLINE_ORIGIN_FALLBACK = "https://api.dudu.example";
 
 type StoredCredentials = { origin: string; token: string };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
 
 // 只接受协议、主机与端口的构建注入地址，禁止携带路径、凭据与查询参数
 function parseOrigin(value: string): string {
