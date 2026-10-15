@@ -122,7 +122,7 @@ export function VisitorTags({
               ref={input}
               id={id}
               value={text}
-              maxLength={14}
+              maxLength={30}
               placeholder="输入标签，回车添加"
               aria-label="新标签名称"
               aria-invalid={!!error}
