@@ -258,4 +258,27 @@ class AdminApiTest extends NoDatasourceSpringTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(ApiEnum.PARAM_ERROR.code));
     }
+
+    @Test
+    void unmatchedPathReturnsReal404WithoutREnvelope() throws Exception {
+        mockMvc.perform(get("/no-such-path"))
+            .andExpect(status().isNotFound())
+            .andExpect(content().string(""));
+    }
+
+    @Test
+    void methodMismatchReturnsReal405() throws Exception {
+        mockMvc.perform(get("/api/desk/login"))
+            .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void unmatchedApiPathAuthenticatesBeforeRouting() throws Exception {
+        mockMvc.perform(get("/api/no-such-path"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(ApiEnum.TOKEN_EMPTY.code));
+
+        mockMvc.perform(get("/api/no-such-path").header("Authorization", bearer(UserRoleEnum.ADMIN)))
+            .andExpect(status().isNotFound());
+    }
 }

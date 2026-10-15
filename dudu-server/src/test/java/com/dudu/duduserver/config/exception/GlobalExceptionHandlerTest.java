@@ -8,16 +8,21 @@ import jakarta.validation.Validation;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.method.MethodValidationResult;
 import org.springframework.validation.method.ParameterValidationResult;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -133,5 +138,22 @@ class GlobalExceptionHandlerTest {
 
         assertThat(r.code()).isEqualTo(ApiEnum.UNKNOWN.code);
         assertThat(r.msg()).isEqualTo(ApiEnum.UNKNOWN.desc);
+    }
+
+    @Test
+    void noResourceFoundReturnsReal404WithoutEnvelope() {
+        ResponseEntity<Void> response = handler.onNoResourceFound(
+            new NoResourceFoundException(HttpMethod.GET, "/no-such-path"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).isNull();
+    }
+
+    @Test
+    void methodNotSupportedReturnsReal405() {
+        ResponseEntity<Void> response = handler.onMethodNotSupported(
+            new HttpRequestMethodNotSupportedException("GET", List.of("POST")));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
     }
 }
