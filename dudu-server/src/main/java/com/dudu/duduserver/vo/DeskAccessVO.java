@@ -17,4 +17,10 @@ public record DeskAccessVO(Boolean allGroups, List<Group> groups, List<Account> 
     // 当前授权组内的本企业渠道账号；channel 为平台代码，不代表已具备发送能力
     public record Account(String companyChannelId, String groupId, ChannelEnum channel, String accountName) {
     }
+
+    // 契约将渠道账号 ID 定为十进制字符串；此处收拢 String/Long 比较口径
+    public boolean containsAccount(Long companyChannelId) {
+        return accounts().stream()
+            .anyMatch(account -> account.companyChannelId().equals(String.valueOf(companyChannelId)));
+    }
 }

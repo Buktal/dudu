@@ -231,8 +231,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "访客不存在");
         }
         boolean authorized = visitor.getCompanyId().equals(me.companyId())
-            && access.accounts().stream()
-                .anyMatch(item -> item.companyChannelId().equals(String.valueOf(visitor.getCompanyChannelId())));
+            && access.containsAccount(visitor.getCompanyChannelId());
         if (!authorized) {
             throw new BizException(ApiEnum.FORBIDDEN);
         }

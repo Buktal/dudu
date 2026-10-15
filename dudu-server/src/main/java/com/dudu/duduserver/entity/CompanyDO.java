@@ -49,4 +49,9 @@ public class CompanyDO {
     // 最后修改时间
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+    // ADR-0011：初始企业管理员自动拥有本企业全部用户组权限
+    public boolean isInitialAdmin(Long userId) {
+        return userId != null && userId.equals(initUserId);
+    }
 }

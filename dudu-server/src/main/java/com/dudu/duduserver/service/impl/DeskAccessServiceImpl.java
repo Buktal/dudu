@@ -31,7 +31,7 @@ public class DeskAccessServiceImpl implements DeskAccessService {
     @Override
     public DeskAccessVO resolve(CompanyDO company, UserDO user) {
         Long companyId = company.getCompanyId();
-        boolean allGroups = user.getUserId().equals(company.getInitUserId());
+        boolean allGroups = company.isInitialAdmin(user.getUserId());
         List<UserGroupDO> companyGroups = userGroupService.listByCompany(companyId);
         Set<Long> allowedGroupIds = allowedGroupIds(companyId, user, allGroups, companyGroups);
 

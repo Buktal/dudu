@@ -66,7 +66,7 @@ public class UserGroupMemberServiceImpl extends ServiceImpl<UserGroupMemberMappe
         if (company == null) {
             return false;
         }
-        if (userId.equals(company.getInitUserId())) {
+        if (company.isInitialAdmin(userId)) {
             return true;
         }
         return lambdaQuery().eq(UserGroupMemberDO::getCompanyId, user.getCompanyId())

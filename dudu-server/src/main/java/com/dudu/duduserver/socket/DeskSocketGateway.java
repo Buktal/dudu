@@ -170,8 +170,7 @@ public class DeskSocketGateway {
     private boolean canAccess(JwtUser user, Long companyChannelId) {
         try {
             DeskAccessVO access = deskAuthService.requireAccess(user);
-            return access.accounts().stream()
-                .anyMatch(account -> account.companyChannelId().equals(String.valueOf(companyChannelId)));
+            return access.containsAccount(companyChannelId);
         } catch (BizException e) {
             return false;
         } catch (RuntimeException e) {
