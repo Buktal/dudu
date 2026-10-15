@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.dingtalk;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.AccessTokenCache.FetchedToken;
 import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.web.client.RestClient;
 
@@ -28,18 +29,13 @@ class DingtalkAccessTokenClient {
         this.restClient = restClient;
     }
 
-    /**
-     * 取调用凭证：缓存命中且未到期直接复用；否则换取并缓存。整体互斥，避免并发
-     * 重复获取触发官方频调拦截。
-     *
-     * @param credentials 发送侧凭据
-     * @return 凭证或失败说明
-     */
-    synchronized TokenResult fetch(DingtalkSendCredentials credentials) {
-        String cached = cache.get(credentials.appKey()).orElse(null);
-        if (cached != null) {
-            return new TokenResult(cached, null);
-        }
+    // 取调用凭证：缓存命中直接复用，未命中单飞换取并写缓存（同键并发只发一次 HTTP）
+    TokenResult fetch(DingtalkSendCredentials credentials) {
+        return cache.getOrLoad(credentials.appKey(), () -> request(credentials));
+    }
+
+    // 请求渠道：appKey/appSecret 换 accessToken，失败带已成型的原因说明（不写缓存以便重试）
+    private FetchedToken request(DingtalkSendCredentials credentials) {
         JSONObject response = JSONUtil.parseObj(restClient.post()
             .uri(PATH_ACCESS_TOKEN)
             .body(Map.of("appKey", credentials.appKey(), "appSecret", credentials.appSecret()))
@@ -47,11 +43,10 @@ class DingtalkAccessTokenClient {
             .body(String.class));
         String accessToken = response.getStr("accessToken");
         if (accessToken == null || accessToken.isEmpty()) {
-            return new TokenResult(null, "钉钉凭证获取失败：" + DingtalkErrors.describeNew(response));
+            return FetchedToken.failed("钉钉凭证获取失败：" + DingtalkErrors.describeNew(response));
         }
         // expireIn 为秒；缺失时按官方默认 7200s 收敛
         long expireInMillis = response.getLong("expireIn", 7200L) * 1000;
-        cache.put(credentials.appKey(), accessToken, expireInMillis);
-        return new TokenResult(accessToken, null);
+        return FetchedToken.fetched(accessToken, expireInMillis);
     }
 }

@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.wecom;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.AccessTokenCache.FetchedToken;
 import com.dudu.duduserver.channel.support.Errcodes;
 import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.web.client.RestClient;
@@ -35,30 +36,25 @@ class WecomAccessTokenClient {
     }
 
     TokenResult fetch(WecomCredentials credentials) {
-        String cached = cache.get(credentials).orElse(null);
-        if (cached != null) {
-            return new TokenResult(cached, null);
-        }
-        // 请求成功由 request 写缓存（窗口取响应 expires_in），失败不缓存以便下次重试
-        return request(credentials);
+        // 缓存单飞：同键并发未命中只发一次 HTTP（频调会被频率拦截），失败不缓存以便重试
+        return cache.getOrLoad(credentials, () -> request(credentials));
     }
 
-    // 请求渠道：成功带 expires_in 决定缓存窗口
-    private TokenResult request(WecomCredentials credentials) {
+    // 请求渠道：成功带 expires_in 决定缓存窗口，失败带已成型的原因说明（不写缓存以便重试）
+    private FetchedToken request(WecomCredentials credentials) {
         JSONObject response = JSONUtil.parseObj(restClient.get()
             .uri(PATH_GETTOKEN + "?corpid={corpid}&corpsecret={corpsecret}",
                 credentials.corpId(), credentials.corpSecret())
             .retrieve()
             .body(String.class));
         if (Errcodes.code(response) != 0) {
-            return new TokenResult(null, "获取企业微信接口凭据失败：" + Errcodes.describe(response));
+            return FetchedToken.failed("获取企业微信接口凭据失败：" + Errcodes.describe(response));
         }
         String accessToken = response.getStr(KEY_ACCESS_TOKEN);
         if (accessToken == null || accessToken.isEmpty()) {
-            return new TokenResult(null, "获取企业微信接口凭据失败：响应缺少 access_token");
+            return FetchedToken.failed("获取企业微信接口凭据失败：响应缺少 access_token");
         }
-        cache.put(credentials, accessToken, lifetimeMillis(response));
-        return new TokenResult(accessToken, null);
+        return FetchedToken.fetched(accessToken, lifetimeMillis(response));
     }
 
     // expires_in 为秒（官方样例 7200）；缺失或非法按官方有效期

@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.douyin;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.AccessTokenCache.FetchedToken;
 import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
@@ -60,16 +61,13 @@ class DouyinTokenClient {
         if (credentials.refreshToken() == null) {
             return new TokenResult(null, REFRESH_TOKEN_MISSING);
         }
-        String cached = cache.get(new CacheKey(credentials.clientKey(), credentials.refreshToken())).orElse(null);
-        if (cached != null) {
-            return new TokenResult(cached, null);
-        }
-        // 请求成功由 request 写缓存（窗口取响应 expires_in），失败不缓存以便下次重试
-        return request(credentials);
+        // 缓存单飞：同键并发未命中只发一次 HTTP，失败不缓存以便重试，网络异常按失败返回
+        return cache.getOrLoad(new CacheKey(credentials.clientKey(), credentials.refreshToken()),
+            () -> request(credentials));
     }
 
     // 请求渠道：form 四参（§6），access_token 出现即成功并按 expires_in 决定缓存窗口
-    private TokenResult request(DouyinCredentials credentials) {
+    private FetchedToken request(DouyinCredentials credentials) {
         try {
             MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
             form.add(KEY_CLIENT_KEY, credentials.clientKey());
@@ -84,18 +82,16 @@ class DouyinTokenClient {
                 .body(String.class));
             String failure = describeFailure(response);
             if (failure != null) {
-                return new TokenResult(null, failure);
+                return FetchedToken.failed(failure);
             }
             JSONObject data = response.getJSONObject(KEY_DATA);
             String accessToken = data == null ? null : data.getStr(KEY_ACCESS_TOKEN, null);
             if (accessToken == null || accessToken.isBlank()) {
-                return new TokenResult(null, "获取抖音接口凭据失败：响应缺少 access_token");
+                return FetchedToken.failed("获取抖音接口凭据失败：响应缺少 access_token");
             }
-            cache.put(new CacheKey(credentials.clientKey(), credentials.refreshToken()),
-                accessToken, expireMillis(response));
-            return new TokenResult(accessToken, null);
+            return FetchedToken.fetched(accessToken, expireMillis(response));
         } catch (RuntimeException e) {
-            return new TokenResult(null, "获取抖音接口凭据失败：" + e.getMessage());
+            return FetchedToken.failed("获取抖音接口凭据失败：" + e.getMessage());
         }
     }
 

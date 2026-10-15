@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.feishu;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.AccessTokenCache.FetchedToken;
 import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.web.client.RestClient;
 
@@ -36,16 +37,12 @@ class FeishuTokenClient {
     }
 
     TokenResult fetch(FeishuSendCredentials credentials) {
-        String cached = cache.get(credentials.appId()).orElse(null);
-        if (cached != null) {
-            return new TokenResult(cached, null);
-        }
-        // 请求成功由 request 写缓存（窗口取响应 expire），失败不缓存以便下次重试
-        return request(credentials);
+        // 缓存单飞：同键并发未命中只发一次 HTTP，失败不缓存以便重试，网络异常按失败返回
+        return cache.getOrLoad(credentials.appId(), () -> request(credentials));
     }
 
     // 请求渠道：body 携带 app_id/app_secret（官方 §5.11），成功带 expire 决定缓存窗口
-    private TokenResult request(FeishuSendCredentials credentials) {
+    private FetchedToken request(FeishuSendCredentials credentials) {
         try {
             JSONObject response = JSONUtil.parseObj(restClient.post()
                 .uri(PATH_TOKEN)
@@ -55,16 +52,15 @@ class FeishuTokenClient {
                 .retrieve()
                 .body(String.class));
             if (FeishuErrors.code(response) != 0) {
-                return new TokenResult(null, "获取飞书接口凭据失败：" + FeishuErrors.describe(response));
+                return FetchedToken.failed("获取飞书接口凭据失败：" + FeishuErrors.describe(response));
             }
             String accessToken = response.getStr(KEY_TOKEN);
             if (accessToken == null || accessToken.isEmpty()) {
-                return new TokenResult(null, "获取飞书接口凭据失败：响应缺少 tenant_access_token");
+                return FetchedToken.failed("获取飞书接口凭据失败：响应缺少 tenant_access_token");
             }
-            cache.put(credentials.appId(), accessToken, expireMillis(response));
-            return new TokenResult(accessToken, null);
+            return FetchedToken.fetched(accessToken, expireMillis(response));
         } catch (RuntimeException e) {
-            return new TokenResult(null, "获取飞书接口凭据失败：" + e.getMessage());
+            return FetchedToken.failed("获取飞书接口凭据失败：" + e.getMessage());
         }
     }
 

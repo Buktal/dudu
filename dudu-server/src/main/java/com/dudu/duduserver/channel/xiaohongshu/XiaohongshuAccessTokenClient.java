@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.xiaohongshu;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.AccessTokenCache.FetchedToken;
 import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.web.client.RestClient;
 
@@ -43,31 +44,26 @@ class XiaohongshuAccessTokenClient {
         if (credentials == null) {
             return new TokenResult(null, "获取小红书接口凭据失败：发送凭据未配置");
         }
-        String cached = cache.get(credentials).orElse(null);
-        if (cached != null) {
-            return new TokenResult(cached, null);
-        }
-        // 请求成功由 request 写缓存（窗口取响应 expire_in），失败不缓存以便下次重试
-        return request(credentials);
+        // 缓存单飞：同键并发未命中只发一次 HTTP（重复获取会使上次凭证失效），网络异常原样上抛
+        return cache.getOrLoad(credentials, () -> request(credentials));
     }
 
-    // 请求渠道：成功带 expire_in 决定缓存窗口
-    private TokenResult request(XiaohongshuSendCredentials credentials) {
+    // 请求渠道：成功带 expire_in 决定缓存窗口，失败带已成型的原因说明（不写缓存以便重试）
+    private FetchedToken request(XiaohongshuSendCredentials credentials) {
         JSONObject response = JSONUtil.parseObj(restClient.post()
             .uri(PATH_TOKEN)
             .body(tokenPayload(credentials))
             .retrieve()
             .body(String.class));
         if (!XiaohongshuErrors.succeeded(response)) {
-            return new TokenResult(null, "获取小红书接口凭据失败：" + XiaohongshuErrors.describe(response));
+            return FetchedToken.failed("获取小红书接口凭据失败：" + XiaohongshuErrors.describe(response));
         }
         JSONObject data = response.getJSONObject(KEY_DATA);
         String accessToken = data == null ? null : data.getStr(KEY_ACCESS_TOKEN);
         if (accessToken == null || accessToken.isEmpty()) {
-            return new TokenResult(null, "获取小红书接口凭据失败：响应缺少 access_token");
+            return FetchedToken.failed("获取小红书接口凭据失败：响应缺少 access_token");
         }
-        cache.put(credentials, accessToken, lifetimeMillis(data));
-        return new TokenResult(accessToken, null);
+        return FetchedToken.fetched(accessToken, lifetimeMillis(data));
     }
 
     // DC010382 请求示例：{appid, secret}，JSON body（DC853803 通用约定 content-type JSON）

@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.qq;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.support.AccessTokenCache;
+import com.dudu.duduserver.channel.support.AccessTokenCache.FetchedToken;
 import com.dudu.duduserver.channel.support.TokenResult;
 import org.springframework.web.client.RestClient;
 
@@ -39,16 +40,12 @@ class QqAccessTokenClient {
     }
 
     TokenResult fetch(QqCredentials credentials) {
-        String cached = cache.get(credentials).orElse(null);
-        if (cached != null) {
-            return new TokenResult(cached, null);
-        }
-        // 请求成功由 request 写缓存（窗口取响应 expires_in），失败不缓存以便下次重试
-        return request(credentials);
+        // 缓存单飞：同键并发未命中只发一次 HTTP，失败不缓存以便重试，网络异常原样上抛
+        return cache.getOrLoad(credentials, () -> request(credentials));
     }
 
-    // 请求渠道：成功带 expires_in 决定缓存窗口
-    private TokenResult request(QqCredentials credentials) {
+    // 请求渠道：成功带 expires_in 决定缓存窗口，失败带已成型的原因说明（不写缓存以便重试）
+    private FetchedToken request(QqCredentials credentials) {
         JSONObject response = JSONUtil.parseObj(restClient.post()
             .uri(PATH_TOKEN)
             .body(Map.of("appId", credentials.appId(), "clientSecret", credentials.appSecret()))
@@ -57,14 +54,13 @@ class QqAccessTokenClient {
         // 官方口径：业务失败通过 code 判断（不要通过 HTTP 状态码，也不要通过 message）
         String code = response.getStr(KEY_CODE);
         if (code != null && !code.isEmpty() && !SUCCESS_CODE.equals(code)) {
-            return new TokenResult(null, "获取QQ接口凭据失败：" + code + " " + response.getStr(KEY_MESSAGE, ""));
+            return FetchedToken.failed("获取QQ接口凭据失败：" + code + " " + response.getStr(KEY_MESSAGE, ""));
         }
         String accessToken = response.getStr(KEY_ACCESS_TOKEN);
         if (accessToken == null || accessToken.isEmpty()) {
-            return new TokenResult(null, "获取QQ接口凭据失败：响应缺少 access_token");
+            return FetchedToken.failed("获取QQ接口凭据失败：响应缺少 access_token");
         }
-        cache.put(credentials, accessToken, lifetimeMillis(response));
-        return new TokenResult(accessToken, null);
+        return FetchedToken.fetched(accessToken, lifetimeMillis(response));
     }
 
     // expires_in 表格口径 number、示例为字符串，hutool 两者均可转秒；缺失按官方有效期
