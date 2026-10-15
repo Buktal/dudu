@@ -39,6 +39,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -52,6 +53,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -64,7 +68,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 结束 / 继续接待在独立 MySQL、真实 HTTP 与真实 WebSocket 边界验收：只改接待状态与等待计时、
  * HTTP 返回与 conversation 报文一致（有权员工含操作者本人都收到）、结束后来信重新待回复、
- * 来信后结束保持已结束、两种后端提交顺序、非法输入与越权错误码、名单与计数随状态变化。
+ * 来信后结束保持已结束、两种后端提交顺序、在途来信与继续接待在访客行锁上串行、
+ * 非法输入与越权错误码、名单与计数随状态变化。
  * 通过环境变量显式启用，运行前需重建 dudu_review。
  */
 @SpringBootTest(properties = {"dudu.auth.jwt-secret=integration-test-secret"},
@@ -95,6 +100,7 @@ class DeskReceptionIntegrationTest {
     @Autowired DeskInboundService deskInboundService;
     @Autowired JwtManager jwtManager;
     @Autowired JdbcTemplate jdbc;
+    @Autowired TransactionTemplate transactionTemplate;
 
     private long channelWechat;
     private String ownerToken;
@@ -260,6 +266,54 @@ class DeskReceptionIntegrationTest {
         assertThat(closed.get("status")).isEqualTo("closed");
         assertThat(closed.get("waiting_since")).isNull();
         assertThat(closed.get("last_message_preview")).isEqualTo("结束前来信");
+    }
+
+    @Test
+    void updateStatusSerializesWithAnInFlightIncomingTransactionOnTheVisitorRow() throws Exception {
+        long visitorId = newVisitor("reception-ext-11", "第一条来信");
+        // 坐席看到等待中点继续接待时，另一路径的来信事务已持有访客行锁在途：直接 SQL 置 waiting
+        // 并清计时（不动 version）；继续接待须在锁定读上等来信提交，按其落库的待回复判定，而不是
+        // 按锁前快照判定后把 waiting_since 重置、version 再跳一次
+        jdbc.update("UPDATE visitor SET status = 'waiting', waiting_since = NULL WHERE visitor_id = ?", visitorId);
+        CountDownLatch visitorRowLocked = new CountDownLatch(1);
+        JSONObject response;
+        try (ExecutorService pool = Executors.newFixedThreadPool(1)) {
+            Future<JSONObject> resume = pool.submit(() -> {
+                assertThat(visitorRowLocked.await(5, TimeUnit.SECONDS)).isTrue();
+                return putStatus(scopedToken, visitorId, "needs-reply");
+            });
+            transactionTemplate.execute(status -> {
+                jdbc.queryForMap("SELECT visitor_id FROM visitor WHERE visitor_id = ? FOR UPDATE", visitorId);
+                visitorRowLocked.countDown();
+                // 等 HTTP 继续接待在访客行锁上排队（修复前排队点在覆盖 UPDATE，修复后在锁定读）
+                sleepQuietly(500);
+                // 同一事务内真实来信（REQUIRED 传播加入）：提交后访客为 needs-reply 并重新计时，version 2→3
+                receive("reception-ext-11", "在途来信", "reception-m11");
+                return null;
+            });
+            response = resume.get(10, TimeUnit.SECONDS);
+        }
+
+        // 继续接待读到来信提交后的最新值：已待回复 → 不写库、不重复推送，version 与等待计时保持来信的落库结果
+        JSONObject conversation = data(response);
+        assertThat(conversation.getStr("status")).isEqualTo("needs-reply");
+        assertThat(conversation.getInt("version")).isEqualTo(3);
+        assertThat(conversation.getStr("waitingSince")).isNotBlank();
+        Map<String, Object> visitor = jdbc.queryForMap(
+            "SELECT status, waiting_since, version FROM visitor WHERE visitor_id = ?", visitorId);
+        assertThat(visitor.get("status")).isEqualTo("needs-reply");
+        assertThat(visitor.get("waiting_since")).isNotNull();
+        // 修复前：HTTP 按锁前快照的 waiting 判定 changed，覆盖 UPDATE 排到来信之后提交，version 跳到 4 且计时被重置
+        assertThat(visitor.get("version")).isEqualTo(3L);
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            TimeUnit.MILLISECONDS.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test

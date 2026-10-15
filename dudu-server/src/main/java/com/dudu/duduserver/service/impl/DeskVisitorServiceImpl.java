@@ -34,6 +34,7 @@ import com.dudu.duduserver.vo.DeskVisitorPageVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -49,7 +50,8 @@ import java.util.stream.Collectors;
  * 企业 + 授权账号集合过滤；排序与计数按契约固定规则表达，名片保存不影响消息排序。
  * 排序里的布尔表达式与空值回落无法用 Lambda 构造器表达，作为受支持的固定 SQL 片段追加。
  * 按需历史复用同一授权读取，按会话内 sequence 分页投影为契约第 4 节的消息对象。
- * 结束 / 继续只改接待状态与等待计时，HTTP 返回与 conversation 推送共用同一份会话对象。
+ * 结束 / 继续在单事务内锁定读访客行后只改接待状态与等待计时（与来信 / 回复在同一把行锁上
+ * 串行），HTTP 返回与 conversation 推送共用同一份会话对象，推送在事务提交后发出。
  */
 @Slf4j
 @Service
@@ -69,6 +71,8 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     // 搜索词的通配符转义子句：转义字符显式指定为 !，字面匹配语义固定，不随连接的默认转义字符、
     // sql_mode 变化（片段见 applySearch）
     private static final String LIKE_ESCAPE = " ESCAPE '!'";
+    // 行锁片段：锁定读绕过可重复读快照，读到并发事务已提交的最新行（与 DeskReplyServiceImpl 同口径）
+    private static final String LOCK_ROW = "FOR UPDATE";
 
     private final DeskAuthService deskAuthService;
     private final VisitorService visitorService;
@@ -77,6 +81,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     private final CompanyChannelService companyChannelService;
     private final DeskSocketGateway deskSocketGateway;
     private final DeskConversationViews deskConversationViews;
+    private final TransactionTemplate transactionTemplate;
 
     @Override
     public DeskVisitorPageVO query(JwtUser me, DeskVisitorQueryDTO query) {
@@ -146,8 +151,27 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     @Override
     public DeskConversationVO updateStatus(JwtUser me, String visitorId, DeskStatusDTO request) {
         VisitorStatusEnum target = requireStatus(request.status());
-        VisitorDO visitor = requireAuthorizedVisitor(me, visitorId);
+        VisitorDO guarded = requireAuthorizedVisitor(me, visitorId);
+        // 判定与写库在单事务内锁定读访客行后进行；推送移到事务提交后（只含已提交数据）
+        StatusOutcome outcome = transactionTemplate.execute(
+            status -> saveStatus(guarded.getVisitorId(), target));
+        if (outcome.changed()) {
+            pushStatusChange(outcome.account(), outcome.conversation());
+        }
+        return outcome.conversation();
+    }
+
+    // 状态落库单事务：锁定读访客行后按最新已提交数据判定，changed 时写库并回读装配会话对象
+    private StatusOutcome saveStatus(Long visitorId, VisitorStatusEnum target) {
         LocalDateTime now = LocalDateTime.now();
+        // 锁定读访客：并发来信与结束 / 继续在此串行（锁序=只取访客行一把锁，取锁后不再申请
+        // 任何锁——UPDATE 命中同一行、回读与账号读取均不加锁；来信=访客行→消息插入、回复
+        // beginSend 同、completeSend=outgoing 行→访客行→incoming 判定，各路径只在访客行锁上
+        // 分先后，无死锁环）；来信在途则等它提交后再判定，锁定读到的已是待回复与来信写回的
+        // waiting_since，契约第 2 节「已待回复保留原 waiting_since」不被锁前快照覆盖
+        VisitorDO visitor = visitorService.getOne(Wrappers.<VisitorDO>lambdaQuery()
+            .eq(VisitorDO::getVisitorId, visitorId)
+            .last(LOCK_ROW));
         // 契约第 2 节：结束写 closed 并清空 waiting_since；继续在本轮计时未开始时重新计时，已待回复保留原值
         boolean awaiting = visitor.awaitingReply();
         boolean changed = target == VisitorStatusEnum.CLOSED
@@ -168,11 +192,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             visitor = visitorService.getById(visitor.getVisitorId());
         }
         CompanyChannelDO account = companyChannelService.getById(visitor.getCompanyChannelId());
-        DeskConversationVO conversation = toConversation(visitor, account);
-        if (changed) {
-            pushStatusChange(account, conversation);
-        }
-        return conversation;
+        return new StatusOutcome(toConversation(visitor, account), account, changed);
     }
 
     // 状态只接受 closed 与 needs-reply：缺失 11100，其他取值 11000，不写库
@@ -413,5 +433,9 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         } catch (NumberFormatException e) {
             throw new BizException(ApiEnum.PARAM_ERROR, "访客 ID 必须为十进制字符串");
         }
+    }
+
+    // 状态落库后的对外投影：HTTP 返回与事务外推送共用同一份会话对象
+    private record StatusOutcome(DeskConversationVO conversation, CompanyChannelDO account, boolean changed) {
     }
 }

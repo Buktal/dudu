@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 
 import java.time.LocalDateTime;
@@ -63,9 +64,11 @@ class DeskVisitorServiceTest {
     private final UserService userService = mock(UserService.class);
     private final CompanyChannelService companyChannelService = mock(CompanyChannelService.class);
     private final DeskSocketGateway deskSocketGateway = mock(DeskSocketGateway.class);
+    // updateStatus 的事务边界由集成测试验收；本类用例不触达，占位即可
+    private final TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
     private final DeskVisitorService deskVisitorService = new DeskVisitorServiceImpl(
         deskAuthService, visitorService, messageService, userService, companyChannelService, deskSocketGateway,
-        deskConversationViews());
+        deskConversationViews(), transactionTemplate);
     // 能力说明走真实注册表与公众号适配器；本类只用其限制说明，不发起渠道请求
     private static DeskConversationViews deskConversationViews() {
         WechatMpAdapter wechatMp = new WechatMpAdapter(new WechatMpProtocol(),
