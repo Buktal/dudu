@@ -140,10 +140,6 @@ public class WecomProtocol {
         return content;
     }
 
-    private String blankToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
-    }
-
     /**
      * 验签：token/timestamp/nonce/密文四值字典序排序拼接取 SHA-1 40 位小写 hex，与渠道
      * 签名比对（官方 §4.2；材料全在 URL query 与密文本体）。

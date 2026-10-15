@@ -167,8 +167,4 @@ public class DingtalkProtocol {
             default -> "file";
         };
     }
-
-    private String blankToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
-    }
 }

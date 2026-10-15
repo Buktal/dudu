@@ -136,8 +136,4 @@ public class WechatMpProtocol {
         }
         return content;
     }
-
-    private String blankToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
-    }
 }
