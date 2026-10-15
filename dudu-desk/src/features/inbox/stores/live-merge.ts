@@ -1,5 +1,6 @@
 import { matchesConversationFilters } from "../conversation-query";
 import type { Conversation, InboxMessage, VisitorProfile } from "../types";
+import { mediaMessageId } from "./media-reducers";
 import { receiptKeys, rememberReceipt } from "./receipts";
 import { type InboxState, onScreenId } from "./state";
 
@@ -195,11 +196,15 @@ export function detachConversation(state: InboxState, id: string): boolean {
   delete state.ending[id];
   delete state.sendingByConversation[id];
   delete state.events.incomingSequence[id];
+  const removedMessageIds = new Set<string>();
   for (const message of Object.values(state.messages)) {
     if (message.conversationId !== id) continue;
+    removedMessageIds.add(message.id);
     delete state.messages[message.id];
     delete state.submissions[message.id];
   }
+  for (const key of Object.keys(state.media))
+    if (removedMessageIds.has(mediaMessageId(key))) delete state.media[key];
   for (const attachment of Object.values(state.attachments))
     if (attachment.conversationId === id)
       delete state.attachments[attachment.id];

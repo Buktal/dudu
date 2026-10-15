@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { InboxApi } from "../api";
 import { defineProfile } from "../test-fixtures";
 import type { ConversationPage, InboxEvent } from "../types";
 import { startInboxUpdates } from "./events";
+import { loadMessageMedia } from "./media";
+import { mediaKey } from "./media-reducers";
 import { pinConversation } from "./parallel";
 import { loadConversations } from "./queue";
 import { destroyInbox, loadHistory, loadProfile } from "./reading";
@@ -29,6 +31,10 @@ async function flush() {
 }
 
 describe("access changes", () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("re-queries identity and list, drops unauthorized caches and keeps the rest", async () => {
     const subscriptions: Subscription[] = [];
     let allowed = new Set(["account-a", "account-b"]);
@@ -244,5 +250,56 @@ describe("access changes", () => {
     await flush();
     expect(refreshes).toBe(0);
     expect(store.getState().inbox.conversations).toEqual({});
+  });
+
+  it("releases detached conversations' media URLs and keeps authorized ones", async () => {
+    // 已读取的媒体持有对象 URL：收权拆除会话时按会话回收字节，有权会话的照常可用
+    let created = 0;
+    const revoke = vi.fn();
+    const NativeUrl = URL;
+    vi.stubGlobal(
+      "URL",
+      class extends NativeUrl {
+        static createObjectURL() {
+          return `blob:detach-${created++}`;
+        }
+        static revokeObjectURL = revoke;
+      },
+    );
+    const subscriptions: Subscription[] = [];
+    let allowed = new Set(["account-a", "account-b"]);
+    const store = testStore(
+      {
+        subscribe: (subscription) => {
+          subscriptions.push(subscription);
+          subscription.onConnection("connected");
+          return () => {};
+        },
+        listConversations: async () => {
+          const items = [firstConversation, secondConversation].filter(
+            (conversation) => allowed.has(conversation.identity.accountId),
+          );
+          return { items, nextCursor: null, total: items.length };
+        },
+        loadMessageMedia: async () => new Blob(["bytes"]),
+      },
+      true,
+      { refreshAccess: async () => allowed },
+    );
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
+    await store.dispatch(loadHistory("conversation-b"));
+    await store.dispatch(loadMessageMedia("conversation-a-message", 0));
+    await store.dispatch(loadMessageMedia("conversation-b-message", 0));
+
+    // 收权：身份重查后只剩账号 account-a
+    allowed = new Set(["account-a"]);
+    subscriptions[0].onEvent(accessChanged(subscriptions[0]));
+    await flush();
+
+    expect(revoke.mock.calls).toEqual([["blob:detach-1"]]);
+    expect(Object.keys(store.getState().inbox.media)).toEqual([
+      mediaKey("conversation-a-message", 0),
+    ]);
   });
 });

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { loadMessageMedia, mediaKey } from "../stores/media";
+import { loadMessageMedia } from "../stores/media";
+import { mediaKey } from "../stores/media-reducers";
 import { useInboxDispatch, useInboxSelector } from "./use-inbox-store";
 
 type MessageMediaState = {

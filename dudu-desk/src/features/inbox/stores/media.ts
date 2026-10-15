@@ -1,3 +1,4 @@
+import { mediaKey } from "./media-reducers";
 import { requestKeys, runOperation } from "./requests";
 import { inboxActions } from "./slice";
 import type { InboxCommand } from "./store";
@@ -7,10 +8,6 @@ import type { InboxCommand } from "./store";
  * Blob，成功后生成本地对象 URL 供展示/打开；公开链接由界面直连渠道，不经过存储层。
  * 每个「消息:下标」只请求一次，失败保留 error 由界面沿用现有失败提示。
  */
-export function mediaKey(messageId: string, index: number): string {
-  return `${messageId}:${index}`;
-}
-
 export function loadMessageMedia(
   messageId: string,
   index: number,

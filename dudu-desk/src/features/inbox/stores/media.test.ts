@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
-import { loadMessageMedia, mediaKey } from "./media";
+import { loadMessageMedia } from "./media";
+import { mediaKey } from "./media-reducers";
 import { resetContext } from "./reading";
 import { testStore } from "./test-support";
 

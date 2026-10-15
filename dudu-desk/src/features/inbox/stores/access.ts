@@ -1,4 +1,5 @@
 import { unauthorizedConversationIds } from "./access-reducers";
+import { mediaMessageId } from "./media-reducers";
 import { loadConversations } from "./queue";
 import {
   cancelScopeRequests,
@@ -37,7 +38,8 @@ export function applyAccessChanged(): InboxCommand<Promise<void>> {
   };
 }
 
-// 已无权对话的本地附件与预览随状态清理一并释放：请求已由 cancelScopeRequests 取消
+// 已无权对话的本地附件、媒体与预览随状态清理一并释放：请求已由 cancelScopeRequests
+// 取消；媒体对象 URL 在 dispatch 拆除前回收，state.media 条目随 detachConversation 删除
 function releaseUnauthorized(
   runtime: InboxRuntime,
   state: InboxState,
@@ -45,6 +47,17 @@ function releaseUnauthorized(
 ) {
   const pruned = new Set(unauthorizedConversationIds(state, allowed));
   if (!pruned.size) return;
+  const messageIds = new Set(
+    Object.values(state.messages)
+      .filter((message) => pruned.has(message.conversationId))
+      .map((message) => message.id),
+  );
+  for (const key of Object.keys(state.media)) {
+    if (!messageIds.has(mediaMessageId(key))) continue;
+    const url = runtime.previews.get(key);
+    if (url) URL.revokeObjectURL(url);
+    runtime.previews.delete(key);
+  }
   releaseAttachmentResources(
     runtime,
     Object.values(state.attachments)
