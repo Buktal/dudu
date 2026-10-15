@@ -1,20 +1,20 @@
 import { useSyncExternalStore } from "react";
-import { elapsedSeconds, fullTime, messageTime, nowIso } from "@/lib/time";
+import { elapsedSeconds, fullTime, messageTime, nowWallTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { conversationStatusLabels } from "../presentation";
 import type { Conversation } from "../types";
 
 const listeners = new Set<() => void>();
-let clock = nowIso();
+let clock = nowWallTime();
 let timer: ReturnType<typeof setInterval> | undefined;
 const snapshot = () => clock;
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
   if (!timer) {
-    clock = nowIso();
+    clock = nowWallTime();
     timer = setInterval(() => {
-      clock = nowIso();
+      clock = nowWallTime();
       for (const notify of listeners) notify();
     }, 15000);
   }

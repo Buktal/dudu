@@ -4,7 +4,7 @@ import {
   type UnknownAction,
 } from "@reduxjs/toolkit";
 import type { RequestScope } from "@/lib/request-scope";
-import { nowIso } from "@/lib/time";
+import { nowWallTime } from "@/lib/time";
 import type { InboxApi } from "../api";
 import type { WorkContext } from "../types";
 import { createSettledBus, type SettledBus } from "./live-refresh";
@@ -113,7 +113,7 @@ export function createInboxStore(options: {
 }) {
   const runtime: InboxRuntime = {
     api: options.api,
-    now: options.now ?? nowIso,
+    now: options.now ?? nowWallTime,
     id: options.id ?? (() => crypto.randomUUID()),
     requests: new Map(),
     refreshAccess: options.refreshAccess,
