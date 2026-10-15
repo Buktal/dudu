@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.Locale;
 
 /**
  * 渠道验签共用摘要小工具：digest → 小写 hex、HMAC 与常量时间比对。签名核对属验签
@@ -56,6 +57,14 @@ public final class Digests {
     // 常量时间比对（验签用）：等长时耗时与内容无关，不给时序侧信道留口子
     public static boolean constantTimeEquals(byte[] expected, byte[] received) {
         return MessageDigest.isEqual(expected, received);
+    }
+
+    // 摘要 hex 与验签 token 的字符串比对：先归一小写（渠道摘要统一小写 hex 口径，
+    // 大写推文不误拒）再常量时间比对；null 一律 false
+    public static boolean constantTimeEquals(String expected, String received) {
+        return expected != null && received != null
+            && MessageDigest.isEqual(expected.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8),
+                received.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8));
     }
 
     // 摘要统一转小写 hex

@@ -51,7 +51,7 @@ public final class DingtalkCrypto {
         if (signature == null || signature.isEmpty()) {
             return false;
         }
-        return signature.equalsIgnoreCase(buildSignature(token, timestamp, nonce, encrypt));
+        return Digests.constantTimeEquals(buildSignature(token, timestamp, nonce, encrypt), signature);
     }
 
     /**

@@ -248,10 +248,10 @@ public class FeishuProtocol {
             if (Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
                 return false;
             }
-            return signature.equals(signature(credentials.encryptKey(), timestamp, nonce, body));
+            return Digests.constantTimeEquals(signature(credentials.encryptKey(), timestamp, nonce, body), signature);
         }
         String token = tokenOf(body);
-        return token != null && token.equals(credentials.verificationToken());
+        return Digests.constantTimeEquals(credentials.verificationToken(), token);
     }
 
     // 报文 token：事件在 header.token，url_verification 明文三参在顶层 token

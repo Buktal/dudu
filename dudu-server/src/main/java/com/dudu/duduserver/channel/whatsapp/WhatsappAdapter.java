@@ -7,6 +7,7 @@ import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -61,7 +62,7 @@ public class WhatsappAdapter implements ChannelAdapter {
         }
         // hub.mode 恒为 subscribe，verify_token 与存量比对，任一不符回非 200（官方示例 403）
         if (!MODE_SUBSCRIBE.equals(query.get(PARAM_MODE))
-            || !credentials.verifyToken().equals(query.get(PARAM_VERIFY_TOKEN))) {
+            || !Digests.constantTimeEquals(credentials.verifyToken(), query.get(PARAM_VERIFY_TOKEN))) {
             return ChannelCallbackResult.rejected();
         }
         String challenge = query.get(PARAM_CHALLENGE);

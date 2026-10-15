@@ -67,7 +67,7 @@ public class MeituanProtocol {
         if (sig == null || sig.isEmpty()) {
             return false;
         }
-        return sig.equalsIgnoreCase(sign(url, params, appSecret));
+        return Digests.constantTimeEquals(sign(url, params, appSecret), sig);
     }
 
     /**

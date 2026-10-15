@@ -229,7 +229,7 @@ public class DouyinProtocol {
         if (credentials == null || signature == null || signature.isBlank()) {
             return false;
         }
-        return signature.equalsIgnoreCase(signature(credentials.clientSecret(), body));
+        return Digests.constantTimeEquals(signature(credentials.clientSecret(), body), signature);
     }
 
     // 官方 §4.1 签名算法：sha1(client_secret + 原始 body 字节) 小写 hex（Go 示例 %x）

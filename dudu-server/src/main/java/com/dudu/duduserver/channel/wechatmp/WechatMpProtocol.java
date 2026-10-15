@@ -42,7 +42,7 @@ public class WechatMpProtocol {
         }
         String[] parts = {token, timestamp, nonce};
         Arrays.sort(parts);
-        return signature.equalsIgnoreCase(Digests.sha1Hex(String.join("", parts)));
+        return Digests.constantTimeEquals(Digests.sha1Hex(String.join("", parts)), signature);
     }
 
     /**
