@@ -82,10 +82,10 @@ public final class AesEnvelopeCodec {
             throw new IllegalArgumentException("解密包过短：不足 16+4 字节头");
         }
         // msg_len 为 4 字节网络字节序（大端）；高位置 1 时 int 为负，与越界一并拒绝，
-        // 避免按负长度截取报文
+        // 避免按负长度截取报文；越界用减法比较，msg_len 接近 int 上限时加法会回绕为负绕过
         int messageLength = ((unpadded[RANDOM_BYTES] & 0xFF) << 24) | ((unpadded[RANDOM_BYTES + 1] & 0xFF) << 16)
             | ((unpadded[RANDOM_BYTES + 2] & 0xFF) << 8) | (unpadded[RANDOM_BYTES + 3] & 0xFF);
-        if (messageLength < 0 || MESSAGE_OFFSET + messageLength > unpadded.length) {
+        if (messageLength < 0 || messageLength > unpadded.length - MESSAGE_OFFSET) {
             throw new IllegalArgumentException("msg_len 非法（负值或超出解密结果长度）");
         }
         String receiveId = new String(unpadded, MESSAGE_OFFSET + messageLength,
