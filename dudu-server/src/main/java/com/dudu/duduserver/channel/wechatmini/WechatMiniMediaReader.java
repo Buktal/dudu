@@ -40,9 +40,10 @@ public class WechatMiniMediaReader {
 
     public WechatMiniMediaReader(RestClient.Builder builder,
                                  @Value("${dudu.channel.wechat-mini.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
+        // downloadClient 须在 builder 挂 baseUrl 前构建，与 restClient 共享自动配置的超时
+        this.downloadClient = builder.build();
         this.restClient = builder.baseUrl(apiBase).build();
         this.accessTokenClient = new WechatMiniAccessTokenClient(restClient);
-        this.downloadClient = RestClient.builder().build();
     }
 
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {

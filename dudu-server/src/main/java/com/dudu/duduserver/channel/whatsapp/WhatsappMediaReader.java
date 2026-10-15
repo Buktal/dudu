@@ -43,8 +43,9 @@ public class WhatsappMediaReader {
 
     public WhatsappMediaReader(RestClient.Builder builder,
                                @Value("${dudu.channel.whatsapp.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
+        // downloadClient 须在 builder 挂 baseUrl 前构建，与 restClient 共享自动配置的超时
+        this.downloadClient = builder.build();
         this.restClient = builder.baseUrl(apiBase).build();
-        this.downloadClient = RestClient.builder().build();
     }
 
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
