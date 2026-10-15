@@ -8,6 +8,11 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/dudu?sslMode=REQUIRED&connectionTimeZone=Asia/Shanghai&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
     username: dudu
     password: 123456
+  # 渠道出站调用的统一超时：卡死的渠道 API 不得无限挂起回复/读取线程（读超时放宽覆盖大媒体下载）
+  http:
+    client:
+      connect-timeout: 5s
+      read-timeout: 60s
 
 dudu:
   auth:

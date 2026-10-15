@@ -38,9 +38,10 @@ public class DingtalkMediaReader {
 
     DingtalkMediaReader(RestClient.Builder builder,
                         @Value("${dudu.channel.dingtalk.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
+        // downloadClient 须在 builder 挂 baseUrl 前构建，与 apiClient 共享自动配置的超时
+        this.downloadClient = builder.build();
         this.apiClient = builder.baseUrl(apiBase).build();
         this.accessTokenClient = new DingtalkAccessTokenClient(builder.clone().baseUrl(apiBase).build());
-        this.downloadClient = RestClient.builder().build();
     }
 
     /**
