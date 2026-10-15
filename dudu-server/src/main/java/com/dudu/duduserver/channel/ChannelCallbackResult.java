@@ -29,4 +29,9 @@ public record ChannelCallbackResult(int status, String body) {
     public static ChannelCallbackResult unsupported() {
         return new ChannelCallbackResult(501, "");
     }
+
+    // 落库未确认的暂时性故障：渠道按 at-least-once 重推，重推由入站幂等判定收敛
+    public static ChannelCallbackResult serverError() {
+        return new ChannelCallbackResult(500, "");
+    }
 }

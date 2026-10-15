@@ -44,8 +44,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DeskInboundServiceImpl implements DeskInboundService {
 
-    // 行锁片段：锁定读绕过可重复读快照，读到并发事务已提交的最新行（来信串行化与
-    // 并发首信撞唯一键后的回读共用）
+    // 行锁片段：锁定读绕过可重复读快照，读到并发事务已提交的最新行（来信串行化、并发
+    // 首信撞唯一键后的回读与重推判定共用）
     private static final String LOCK_ROW = "FOR UPDATE";
 
     private final VisitorService visitorService;
@@ -139,11 +139,15 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         return visitorService.getOne(sourceOf(account, externalUserId).last(LOCK_ROW));
     }
 
-    // 渠道消息标识（wamid/msgid 等）在本访客名下已落库即重推；未提供标识的信件不判重
+    // 渠道消息标识（wamid/msgid 等）在本访客名下已落库即重推；未提供标识的信件不判重。
+    // 判定必须是锁定读：可重复读下普通查询读事务开始时的旧快照，并发重推会在对方提交后
+    // 仍判未落库、继续插入撞 uk_message_external 整体回滚；锁定读读到访客行锁之后最新已
+    // 提交数据，与来信串行化同一口径
     private boolean redelivered(Long visitorId, ChannelInboundMessage inbound) {
-        return inbound.externalMessageId() != null && messageService.count(Wrappers.<MessageDO>lambdaQuery()
+        return inbound.externalMessageId() != null && messageService.getOne(Wrappers.<MessageDO>lambdaQuery()
             .eq(MessageDO::getVisitorId, visitorId)
-            .eq(MessageDO::getExternalMessageId, inbound.externalMessageId())) > 0;
+            .eq(MessageDO::getExternalMessageId, inbound.externalMessageId())
+            .last(LOCK_ROW)) != null;
     }
 
     // 首信并发：唯一键冲突说明另一事务已创建访客，锁定读回读该行继续本条消息

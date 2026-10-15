@@ -116,7 +116,7 @@ class DeskInboundServiceTest {
     @Test
     void skipsRedeliveredMessageWithoutCountingSavingOrPushing() {
         // 渠道重推（同访客同渠道消息标识已落库）：幂等跳过，不递增计数、不落消息、不推送
-        when(messageService.count(any(Wrapper.class))).thenReturn(1L);
+        when(messageService.getOne(any(Wrapper.class))).thenReturn(new MessageDO());
 
         deskInboundService.accept(account(), inbound(List.of()));
 
@@ -133,7 +133,7 @@ class DeskInboundServiceTest {
         when(visitorService.getOne(any(Wrapper.class)))
             .thenReturn(null, visitor(VisitorStatusEnum.NEEDS_REPLY, null));
         when(visitorService.save(any(VisitorDO.class))).thenThrow(new DuplicateKeyException("uk_visitor_source"));
-        when(messageService.count(any(Wrapper.class))).thenReturn(1L);
+        when(messageService.getOne(any(Wrapper.class))).thenReturn(new MessageDO());
 
         deskInboundService.accept(account(), inbound(List.of()));
 

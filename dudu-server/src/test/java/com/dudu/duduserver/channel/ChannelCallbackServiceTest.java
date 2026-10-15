@@ -15,6 +15,7 @@ import com.dudu.duduserver.service.impl.ChannelCallbackServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestClient;
 
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -139,6 +141,19 @@ class ChannelCallbackServiceTest {
         assertThat(service.receive(String.valueOf(CHANNEL_ID), signedQuery(), REQUEST_HEADERS, event))
             .isEqualTo(ChannelCallbackResult.success());
         verifyNoInteractions(deskInboundService);
+    }
+
+    @Test
+    void receiveAnswersServerErrorInsteadOfLeakingRWrapperWhenPersistenceFails() {
+        // 落库未确认：按渠道协议以 5xx 应答触发重推，不把数据库异常外泄成 R 包装的 HTTP 200
+        doThrow(new DuplicateKeyException("uk_message_external"))
+            .when(deskInboundService).accept(any(CompanyChannelDO.class), any(ChannelInboundMessage.class));
+
+        assertThat(service.receive(String.valueOf(CHANNEL_ID), signedQuery(), REQUEST_HEADERS, """
+            <xml><ToUserName><![CDATA[toUser]]></ToUserName><FromUserName><![CDATA[openid-1]]></FromUserName>
+            <CreateTime>1348831860</CreateTime><MsgType><![CDATA[text]]></MsgType>
+            <Content><![CDATA[你好]]></Content><MsgId>1234567890123456</MsgId></xml>
+            """)).isEqualTo(ChannelCallbackResult.serverError());
     }
 
     @Test
