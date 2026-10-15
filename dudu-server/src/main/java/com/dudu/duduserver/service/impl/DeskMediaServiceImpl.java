@@ -8,11 +8,11 @@ import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.MessageDO;
+import com.dudu.duduserver.entity.VisitorDO;
 import com.dudu.duduserver.service.CompanyChannelService;
 import com.dudu.duduserver.service.DeskMediaService;
 import com.dudu.duduserver.service.DeskVisitorService;
 import com.dudu.duduserver.service.MessageService;
-import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMediaVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -48,7 +48,7 @@ public class DeskMediaServiceImpl implements DeskMediaService {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "消息不存在");
         }
         // 消息 → 访客 → 授权账号：复用访客资源同一守卫，越权 10106、访客缺失 12100
-        DeskConversationVO conversation = deskVisitorService.get(me, String.valueOf(message.getVisitorId()));
+        VisitorDO visitor = deskVisitorService.requireAuthorizedVisitor(me, String.valueOf(message.getVisitorId()));
         Map<String, Object> reference = referenceOf(message.getContent(), position);
         if (reference == null) {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "该消息没有这个媒体");
@@ -62,7 +62,7 @@ public class DeskMediaServiceImpl implements DeskMediaService {
         if (channelMediaId == null) {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "该媒体没有可读取的渠道标识");
         }
-        CompanyChannelDO account = accountOf(conversation);
+        CompanyChannelDO account = companyChannelService.getById(visitor.getCompanyChannelId());
         String restriction = channelAdapters.mediaRestriction(account);
         if (restriction != null) {
             throw new BizException(ApiEnum.DATA_NOT_ALLOW, restriction);
@@ -96,15 +96,6 @@ public class DeskMediaServiceImpl implements DeskMediaService {
     @SuppressWarnings("unchecked")
     private Map<String, Object> mediaMap(Object value) {
         return value instanceof Map<?, ?> map ? (Map<String, Object>) map : null;
-    }
-
-    // 渠道账号按访客身份读取；身份缺失按账号不可用处理，不猜测渠道目标
-    private CompanyChannelDO accountOf(DeskConversationVO conversation) {
-        String accountId = conversation.identity().accountId();
-        if (!StringUtils.hasText(accountId)) {
-            return null;
-        }
-        return companyChannelService.getById(Long.valueOf(accountId));
     }
 
     // index 缺省 0；只接受非负整数，非法取值 11000，不猜测序号

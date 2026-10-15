@@ -11,7 +11,6 @@ import com.dudu.duduserver.service.DeskVisitorService;
 import com.dudu.duduserver.service.VisitorProfileService;
 import com.dudu.duduserver.service.VisitorService;
 import com.dudu.duduserver.socket.DeskSocketGateway;
-import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskVisitorProfileVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,28 +44,28 @@ public class DeskProfileServiceImpl implements DeskProfileService {
 
     @Override
     public DeskVisitorProfileVO profile(JwtUser me, String visitorId) {
-        DeskConversationVO conversation = deskVisitorService.get(me, visitorId);
-        return DeskVisitorProfileVO.of(requireProfile(Long.valueOf(conversation.id())));
+        VisitorDO visitor = deskVisitorService.requireAuthorizedVisitor(me, visitorId);
+        return DeskVisitorProfileVO.of(requireProfile(visitor.getVisitorId()));
     }
 
     @Override
     public DeskVisitorProfileVO save(JwtUser me, String visitorId, DeskProfileUpdateDTO request) {
         List<String> tags = requireTags(request.tags());
         String note = requireNote(request.note());
-        DeskConversationVO conversation = deskVisitorService.get(me, visitorId);
-        Long id = Long.valueOf(conversation.id());
-        VisitorProfileDO profile = requireProfile(id);
+        VisitorDO visitor = deskVisitorService.requireAuthorizedVisitor(me, visitorId);
+        VisitorProfileDO profile = requireProfile(visitor.getVisitorId());
 
         // JSON 列经实体类型处理器写入，与入站渠道资料同一规则；名片行独立递增版本
         VisitorProfileDO patch = new VisitorProfileDO();
-        patch.setVisitorId(id);
+        patch.setVisitorId(visitor.getVisitorId());
         patch.setTags(tags);
         patch.setNote(note);
         patch.setVersion(profile.getVersion() + 1);
         visitorProfileService.updateById(patch);
 
-        DeskVisitorProfileVO saved = DeskVisitorProfileVO.of(visitorProfileService.getById(id));
-        pushProfile(visitorService.getById(id), saved);
+        // 名片保存不触碰访客行，守卫读到的访客即为推送所需身份
+        DeskVisitorProfileVO saved = DeskVisitorProfileVO.of(visitorProfileService.getById(visitor.getVisitorId()));
+        pushProfile(visitor, saved);
         return saved;
     }
 

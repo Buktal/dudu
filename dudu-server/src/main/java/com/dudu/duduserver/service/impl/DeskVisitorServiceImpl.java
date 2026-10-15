@@ -113,17 +113,15 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
 
     @Override
     public DeskConversationVO get(JwtUser me, String visitorId) {
-        AuthorizedVisitor authorized = requireAuthorizedVisitor(me, parseVisitorId(visitorId));
-        return toConversation(authorized.visitor(),
-            companyChannelService.getById(authorized.visitor().getCompanyChannelId()));
+        VisitorDO visitor = requireAuthorizedVisitor(me, visitorId);
+        return toConversation(visitor, companyChannelService.getById(visitor.getCompanyChannelId()));
     }
 
     @Override
     public DeskMessagePageVO history(JwtUser me, String visitorId, DeskHistoryQueryDTO query) {
-        Long id = parseVisitorId(visitorId);
         Long beforeSequence = parseBeforeSequence(query.beforeSequence());
         int limit = parseLimit(query.limit());
-        requireAuthorizedVisitor(me, id);
+        Long id = requireAuthorizedVisitor(me, visitorId).getVisitorId();
 
         // 按 sequence 降序取 limit + 1 条；多出的一条只用于判断还有更早消息，不改变返回顺序
         LambdaQueryWrapper<MessageDO> wrapper = new LambdaQueryWrapper<>();
@@ -148,8 +146,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     @Override
     public DeskConversationVO updateStatus(JwtUser me, String visitorId, DeskStatusDTO request) {
         VisitorStatusEnum target = requireStatus(request.status());
-        AuthorizedVisitor authorized = requireAuthorizedVisitor(me, parseVisitorId(visitorId));
-        VisitorDO visitor = authorized.visitor();
+        VisitorDO visitor = requireAuthorizedVisitor(me, visitorId);
         LocalDateTime now = LocalDateTime.now();
         // 契约第 2 节：结束写 closed 并清空 waiting_since；继续在本轮计时未开始时重新计时，已待回复保留原值
         boolean awaiting = visitor.awaitingReply();
@@ -204,22 +201,22 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         }
     }
 
-    // 访客资源共用的授权读取：不存在 12100；在库但不属于当前企业或当前授权账号统一 10106，不泄漏他人数据
-    private AuthorizedVisitor requireAuthorizedVisitor(JwtUser me, Long visitorId) {
+    // 访客资源共用的授权读取（Reply / Profile / Media 同一守卫）：ID 非法 11000；不存在 12100；
+    // 在库但不属于当前企业或当前授权账号统一 10106，不泄漏他人数据
+    @Override
+    public VisitorDO requireAuthorizedVisitor(JwtUser me, String visitorId) {
         DeskAccessVO access = deskAuthService.requireAccess(me);
-        VisitorDO visitor = visitorService.getById(visitorId);
+        VisitorDO visitor = visitorService.getById(parseVisitorId(visitorId));
         if (visitor == null) {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "访客不存在");
         }
-        DeskAccessVO.Account account = visitor.getCompanyId().equals(me.companyId())
-            ? access.accounts().stream()
-                .filter(item -> item.companyChannelId().equals(String.valueOf(visitor.getCompanyChannelId())))
-                .findFirst().orElse(null)
-            : null;
-        if (account == null) {
+        boolean authorized = visitor.getCompanyId().equals(me.companyId())
+            && access.accounts().stream()
+                .anyMatch(item -> item.companyChannelId().equals(String.valueOf(visitor.getCompanyChannelId())));
+        if (!authorized) {
             throw new BizException(ApiEnum.FORBIDDEN);
         }
-        return new AuthorizedVisitor(visitor, account);
+        return visitor;
     }
 
     // 发送员工显示名按现有用户数据批量查询，不新增员工快照表；缺失时省略该字段
@@ -271,10 +268,6 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             throw new BizException(ApiEnum.PARAM_EXCEED, "每页数量不能超过 100");
         }
         return value;
-    }
-
-    // 已授权的访客与其授权账号，只在本服务内流转
-    private record AuthorizedVisitor(VisitorDO visitor, DeskAccessVO.Account account) {
     }
 
     // 输入范围校验：长度与分页上限用 11200 表达超限，非法取值用 11000

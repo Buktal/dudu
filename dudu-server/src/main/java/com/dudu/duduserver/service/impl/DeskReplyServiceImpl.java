@@ -67,22 +67,22 @@ public class DeskReplyServiceImpl implements DeskReplyService {
 
     @Override
     public DeskCapabilityVO capability(JwtUser me, String visitorId) {
-        return deskVisitorService.get(me, visitorId).capability();
+        VisitorDO visitor = deskVisitorService.requireAuthorizedVisitor(me, visitorId);
+        return deskConversationViews.capability(companyChannelService.getById(visitor.getCompanyChannelId()));
     }
 
     @Override
     public DeskMessageVO send(JwtUser me, String visitorId, DeskSendDTO request) {
         String clientRequestId = requireClientRequestId(request.clientRequestId());
         String text = requireText(request.text());
-        // 访客守卫同时给出授权范围与当前能力；能力不可发时不再落库、不调用渠道
-        DeskConversationVO conversation = deskVisitorService.get(me, visitorId);
-        DeskCapabilityVO capability = conversation.capability();
+        // 授权读取直接给出访客与渠道账号；能力不可发时不再落库、不调用渠道；
+        // 发送目标按访客归属读取，不信任客户端提交的渠道账号与外部身份
+        VisitorDO visitor = deskVisitorService.requireAuthorizedVisitor(me, visitorId);
+        CompanyChannelDO account = companyChannelService.getById(visitor.getCompanyChannelId());
+        DeskCapabilityVO capability = deskConversationViews.capability(account);
         if (!capability.allowed()) {
             throw new BizException(ApiEnum.DATA_NOT_ALLOW, capability.reason());
         }
-        // 发送目标按访客归属读取，不信任客户端提交的渠道账号与外部身份
-        VisitorDO visitor = visitorService.getById(Long.valueOf(conversation.id()));
-        CompanyChannelDO account = companyChannelService.getById(visitor.getCompanyChannelId());
 
         MessageDO message = transactionTemplate.execute(
             status -> beginSend(visitor, me, clientRequestId, text));
