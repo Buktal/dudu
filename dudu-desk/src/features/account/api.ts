@@ -26,7 +26,6 @@ export type AgentSession = Readonly<{
     name: string;
     username: string;
     roleName: string;
-    avatarUrl?: string;
   };
   workspace: { id: string; name: string };
   access: AgentAccess;

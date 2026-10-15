@@ -12,7 +12,7 @@ import type { MediaReference, MessageBody, SendKind } from "./types";
  * converge here behind three small functions, so a new body type or media
  * kind changes one table plus one descriptor branch instead of drifting
  * across callers. `attachment-utils` stays a kind-free URL primitive below
- * this seam; `message-text` is a thin adapter above it.
+ * this seam.
  */
 
 type MediaKind = Exclude<SendKind, "text">;
