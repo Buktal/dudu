@@ -50,8 +50,8 @@ public class DingtalkAdapter implements ChannelAdapter {
         if (credentials == null || !SYSTEM_HTTP_CRYPTO.equals(credentials.system())) {
             return ChannelReceiveResult.answer(ChannelCallbackResult.unsupported());
         }
-        String timestamp = query == null ? null : query.get("timestamp");
-        String nonce = query == null ? null : query.get("nonce");
+        String timestamp = query.get("timestamp");
+        String nonce = query.get("nonce");
         String encrypt = encryptOf(body);
         if (timestamp == null || timestamp.isEmpty() || nonce == null || nonce.isEmpty() || encrypt == null) {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
