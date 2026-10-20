@@ -127,7 +127,7 @@ export function AccountDetailPanel({
             if (!open) onClose();
           }}
         >
-          <SheetContent className="data-[side=right]:w-full overflow-y-auto data-[side=right]:sm:max-w-xl">
+          <SheetContent className="data-[side=right]:w-full! overflow-y-auto data-[side=right]:sm:max-w-xl!">
             <SheetHeader>
               <SheetTitle>{account?.accountName ?? "渠道账号详情"}</SheetTitle>
               <SheetDescription>参数配置情况与渠道侧准备</SheetDescription>

@@ -51,7 +51,7 @@ export function EmployeeDetail({
       }}
     >
       <SheetContent
-        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
+        className="data-[side=right]:w-full! data-[side=right]:sm:max-w-xl!"
         showCloseButton={!action}
       >
         <SheetHeader>
