@@ -58,7 +58,7 @@ export function AccountEditor({
     <Sheet open onOpenChange={shell.hold(onClose).onOpenChange}>
       <SheetContent
         showCloseButton={!shell.pending}
-        className="w-full overflow-y-auto sm:max-w-2xl"
+        className="data-[side=right]:w-full overflow-y-auto data-[side=right]:sm:max-w-2xl"
       >
         <SheetHeader>
           <SheetTitle>{detail ? "维护渠道账号" : "接入渠道账号"}</SheetTitle>
