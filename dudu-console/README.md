@@ -1,7 +1,13 @@
 # dudu-console
 
 > dudu-console 是**嘟嘟（DuDu）的控制台子项目**：纯 Web 前端（Vite + React 19 + shadcn，无桌面端）。
-> 基于 vite-react-app 模板起步，业务模块待规划。
+> 企业管理前端，连接真实 Server API。
+
+## 首版方案
+
+[实施规格与文档入口](../docs/design/dudu-console/README.md)、[数据与接口契约](../docs/design/dudu-console/data-contract.md)、[功能图谱](../docs/features/dudu-console.md)、[验收记录](../docs/design/dudu-console/acceptance.md)。覆盖企业管理员登录与个人改密、员工、用户组与成员、13种已有渠道账号的配置维护和换组。初始管理员管理全企业，普通管理员按当前成员关系管理所属组。
+
+开发时先启动 dudu-server（8080），Vite 将 `/api` 同源代理到该服务。使用已有企业的管理员身份登录；Console 不提供企业开通或模拟登录。生产构建部署时，网关须将 `/api` 转发到 Server。
 
 ## 快速开始
 
@@ -25,9 +31,11 @@ yarn check:all   # 类型 + lint + 测试
 ```text
 ├── src/             前端
 │   ├── components/  跨模块共享组件（ui/ 为 shadcn CLI 生成物）
+│   ├── api/         会话、请求与响应校验
+│   ├── features/    个人账号、员工、用户组与渠道账号
 │   ├── lib/         纯函数工具
 │   ├── test/        测试接线（setup + 冒烟）
-│   └── App.tsx      占位页：shadcn 主题就绪
+│   └── App.tsx      登录、导航与业务路由
 └── package.json     脚本与依赖声明
 ```
 

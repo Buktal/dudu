@@ -1,22 +1,83 @@
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { ConsoleClient } from "@/api/client";
+import { ConsoleContext, useSession } from "@/api/context";
+import { ConsoleLayout } from "@/components/console-layout";
+import { LoadingState } from "@/components/feedback";
+import { AccountPage } from "@/features/account/AccountPage";
+import { LoginPage } from "@/features/auth/LoginPage";
+import { ChannelAccountsPage } from "@/features/channel-accounts/ChannelAccountsPage";
+import { EmployeesPage } from "@/features/employees/EmployeesPage";
+import { UserGroupsPage } from "@/features/groups/user-groups-page";
+import { navigate, routes, useRoute } from "@/navigation";
 
-function App() {
+const selectEmployee = (id: string | null) => navigate(routes.employees(id));
+const createEmployee = (open: boolean) =>
+  navigate(open ? routes.employeeCreate() : routes.employees());
+const selectGroup = (id: string | null) => navigate(routes.userGroups(id));
+const createGroup = (open: boolean) =>
+  navigate(open ? routes.groupCreate() : routes.userGroups());
+
+function Workspace() {
+  const route = useRoute();
+  const session = useSession();
+  const initial = session.profile?.user.isInitialAdmin;
+  useEffect(() => {
+    if (route.view === "login" || (route.view === "employees" && !initial))
+      navigate(initial ? routes.employees() : routes.userGroups());
+  }, [route.view, initial]);
   return (
-    <main className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">dudu-console</h1>
-          <p className="text-muted-foreground">
-            shadcn 主题已就绪，业务界面待搭建。
-          </p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          （按 <kbd>d</kbd> 切换深浅色）
-        </div>
-      </div>
-    </main>
+    <ConsoleLayout view={route.view}>
+      {route.view === "account" ? (
+        <AccountPage />
+      ) : route.view === "employees" && initial ? (
+        <EmployeesPage
+          selectedId={route.selectedId}
+          creating={route.creating}
+          onSelect={selectEmployee}
+          onCreate={createEmployee}
+        />
+      ) : route.view === "user-groups" || route.view === "login" ? (
+        <UserGroupsPage
+          selectedId={route.selectedId}
+          creating={route.creating}
+          onSelect={selectGroup}
+          onCreate={createGroup}
+        />
+      ) : route.view === "channel-accounts" ? (
+        <ChannelAccountsPage
+          selectedId={route.selectedId}
+          creating={route.creating}
+          groupId={route.groupId}
+          onSelect={(id) => navigate(routes.channelAccounts(id, route.groupId))}
+          onCreate={(open) =>
+            navigate(
+              open
+                ? routes.channelCreate(route.groupId ?? undefined)
+                : routes.channelAccounts(null, route.groupId),
+            )
+          }
+        />
+      ) : null}
+    </ConsoleLayout>
   );
 }
-
-export default App;
+export default function App() {
+  const [client] = useState(() => new ConsoleClient());
+  const session = useSyncExternalStore(client.subscribe, client.getSnapshot);
+  useEffect(() => {
+    const controller = new AbortController();
+    void client.restore(controller.signal);
+    return () => controller.abort();
+  }, [client]);
+  return (
+    <ConsoleContext value={client}>
+      {session.restoring ? (
+        <LoadingState />
+      ) : session.profile ? (
+        <Workspace key={session.generation} />
+      ) : (
+        <LoginPage key={session.generation} />
+      )}
+    </ConsoleContext>
+  );
+}

@@ -4,6 +4,8 @@ Spring Boot 3.5 / Java 21 后端。基础能力（统一返回、业务异常、
 
 ## 开发入口
 
+Console 企业管理接口已按[Console 数据契约](../docs/design/dudu-console/data-contract.md)实现：企业管理员认证与个人改密、初始管理员员工维护、按管理范围的用户组/成员维护，以及现有13种渠道账号的安全配置与换组。写入在企业行锁后重验实时身份与范围；凭据只写不读回，权限变更在事务提交后复用 Desk `access-changed` 通知。联调与生产验证边界见[Console 验收记录](../docs/design/dudu-console/acceptance.md)。
+
 - [总体设计与阶段计划](../docs/design/dudu-server/README.md)：已确认模型、Admin 优先交付和待定问题。
 - [功能图谱](../docs/features/dudu-server.md)：模块入口、行为和验证范围。
 - [Admin 数据契约](../docs/design/dudu-admin/data-contract.md)：接口字段与错误码契约，首版后端按此实现。
