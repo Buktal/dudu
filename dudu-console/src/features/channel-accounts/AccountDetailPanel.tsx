@@ -205,7 +205,10 @@ export function AccountDetailPanel({
                     ))}
                     <div className="flex gap-2">
                       <Button
-                        disabled={!definition}
+                        disabled={
+                          !definition ||
+                          account.missingReceiveFields.includes("system")
+                        }
                         onClick={() => setEditing(true)}
                       >
                         维护名称与凭据
