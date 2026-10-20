@@ -107,6 +107,10 @@ export class ConsoleClient {
     const controller = new AbortController();
     const generation = this.state.generation;
     const token = options.anonymous ? null : this.token;
+    const writing =
+      options.method !== undefined &&
+      options.method !== "GET" &&
+      !path.endsWith("/query");
     const abort = () => controller.abort();
     options.signal?.addEventListener("abort", abort, { once: true });
     if (options.signal?.aborted) controller.abort();
@@ -171,7 +175,10 @@ export class ConsoleClient {
         )
           this.clearSession("登录已失效，请重新登录");
         if (token && envelope.code === 10106 && path !== PROFILE_PATH)
-          void this.refreshProfile();
+          void this.refreshProfile(writing);
+        // 失效写入后重查列表和详情；读取本身失败不触发重查，避免循环。
+        if (token && writing && envelope.code === 12100)
+          this.publish({ accessRevision: this.state.accessRevision + 1 });
         throw new ApiError(envelope.msg || "操作失败，请重试", envelope.code);
       }
       const data = options.paginated ? envelope : envelope.data;
@@ -239,14 +246,15 @@ export class ConsoleClient {
     }
   }
 
-  async refreshProfile() {
+  async refreshProfile(refreshQueries = false) {
     try {
       const profile = await this.request(PROFILE_PATH, { validate: isProfile });
       this.publish({
         profile,
         accessRevision:
           this.state.accessRevision +
-          (JSON.stringify(profile) === JSON.stringify(this.state.profile)
+          (!refreshQueries &&
+          JSON.stringify(profile) === JSON.stringify(this.state.profile)
             ? 0
             : 1),
       });

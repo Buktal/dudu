@@ -44,9 +44,33 @@ it("业务无权限保留身份并重取权限", async () => {
   const client = new ConsoleClient();
   await client.login("100001", "owner", "secret");
   await expect(
-    client.request("/console/employees", { validate: isEmpty }),
+    client.request("/console/employees/2/role", {
+      method: "PUT",
+      validate: isEmpty,
+    }),
   ).rejects.toBeInstanceOf(ApiError);
   expect(client.getSnapshot().profile).toEqual(profile);
+  await vi.waitFor(() => expect(client.getSnapshot().accessRevision).toBe(1));
+});
+it("不可见对象写入失败后重取当前查询，读取失败不会循环刷新", async () => {
+  vi.spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(
+      reply({ token: "token", expiresAt: 1900000000, profile }),
+    )
+    .mockImplementation(async () => reply(null, 12100));
+  const client = new ConsoleClient();
+  await client.login("100001", "owner", "secret");
+  await expect(
+    client.request("/console/employees/2", {
+      method: "PUT",
+      validate: isEmpty,
+    }),
+  ).rejects.toMatchObject({ code: 12100 });
+  expect(client.getSnapshot().accessRevision).toBe(1);
+  await expect(
+    client.request("/console/employees/2", { validate: isEmpty }),
+  ).rejects.toMatchObject({ code: 12100 });
+  expect(client.getSnapshot().accessRevision).toBe(1);
 });
 it("拒绝错误身份和非字符串ID", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(

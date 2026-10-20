@@ -5,6 +5,7 @@ import { ConsoleLayout } from "@/components/console-layout";
 import { LoadingState } from "@/components/feedback";
 import { AccountPage } from "@/features/account/AccountPage";
 import { LoginPage } from "@/features/auth/LoginPage";
+import { ChannelAccountsPage } from "@/features/channel-accounts/ChannelAccountsPage";
 import { EmployeesPage } from "@/features/employees/EmployeesPage";
 import { UserGroupsPage } from "@/features/groups/user-groups-page";
 import { navigate, routes, useRoute } from "@/navigation";
@@ -42,18 +43,21 @@ function Workspace() {
           onSelect={selectGroup}
           onCreate={createGroup}
         />
-      ) : (
-        <div className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold">
-            {route.view === "employees"
-              ? "员工"
-              : route.view === "user-groups"
-                ? "用户组"
-                : "渠道账号"}
-          </h2>
-          <p className="text-muted-foreground">正在准备管理页面。</p>
-        </div>
-      )}
+      ) : route.view === "channel-accounts" ? (
+        <ChannelAccountsPage
+          selectedId={route.selectedId}
+          creating={route.creating}
+          groupId={route.groupId}
+          onSelect={(id) => navigate(routes.channelAccounts(id, route.groupId))}
+          onCreate={(open) =>
+            navigate(
+              open
+                ? routes.channelCreate(route.groupId ?? undefined)
+                : routes.channelAccounts(null, route.groupId),
+            )
+          }
+        />
+      ) : null}
     </ConsoleLayout>
   );
 }
