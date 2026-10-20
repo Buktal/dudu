@@ -1,7 +1,11 @@
 # dudu-console
 
 > dudu-console 是**嘟嘟（DuDu）的控制台子项目**：纯 Web 前端（Vite + React 19 + shadcn，无桌面端）。
-> 基于 vite-react-app 模板起步，业务模块待规划。
+> 基于 vite-react-app 模板起步，首版方案已定，业务模块待实施。
+
+## 首版方案
+
+[实施规格与文档入口](../docs/design/dudu-console/README.md)、[数据与接口契约](../docs/design/dudu-console/data-contract.md)、[功能图谱](../docs/features/dudu-console.md)。规划覆盖企业管理员的登录与个人账号、员工、用户组与成员、渠道账号接入和换组；当前源码仍为占位页，未接入这些业务。
 
 ## 快速开始
 
