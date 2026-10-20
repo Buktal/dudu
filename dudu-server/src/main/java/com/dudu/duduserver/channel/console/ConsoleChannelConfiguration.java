@@ -22,6 +22,8 @@ public class ConsoleChannelConfiguration {
     private static final Pattern BOT_TOKEN = Pattern.compile("([0-9]+):[A-Za-z0-9_-]+");
     private static final Pattern BOT_URL = Pattern.compile("https://api\\.telegram\\.org/bot([0-9]+):[A-Za-z0-9_-]+");
     private static final String UNSUPPORTED_SYSTEM = "当前接入方式不受支持，请初始管理员新建账号";
+    private static final String SYSTEM_AGENT = "agent";
+    private static final String SYSTEM_HTTP_CRYPTO = "http_crypto";
 
     public Map<String, Object> merge(ChannelEnum channel, Map<String, Object> previous,
                                       Map<String, Object> set, List<String> clear, String callbackUrl) {
@@ -50,8 +52,8 @@ public class ConsoleChannelConfiguration {
         }
         if (channel == ChannelEnum.TELEGRAM) mergeTelegram(previous, set, clear, result);
         if (channel == ChannelEnum.WHATSAPP) result.put("url", callbackUrl);
-        if (channel == ChannelEnum.WECOM) result.put("system", "agent");
-        if (channel == ChannelEnum.DINGTALK) result.put("system", "http_crypto");
+        if (channel == ChannelEnum.WECOM) result.put("system", SYSTEM_AGENT);
+        if (channel == ChannelEnum.DINGTALK) result.put("system", SYSTEM_HTTP_CRYPTO);
         Status status = describe(channel, result);
         if (!status.receiveConfigured()) {
             throw new BizException(ApiEnum.DATA_NOT_ALLOW, "接收配置不完整：" + String.join("、", status.missingReceiveFields()));
@@ -134,8 +136,8 @@ public class ConsoleChannelConfiguration {
     private boolean supportedSystem(ChannelEnum channel, Map<String, Object> info) {
         String system = text(info, "system");
         return system == null || (channel != ChannelEnum.WECOM && channel != ChannelEnum.DINGTALK)
-            || (channel == ChannelEnum.WECOM && "agent".equals(system))
-            || (channel == ChannelEnum.DINGTALK && "http_crypto".equals(system));
+            || (channel == ChannelEnum.WECOM && SYSTEM_AGENT.equals(system))
+            || (channel == ChannelEnum.DINGTALK && SYSTEM_HTTP_CRYPTO.equals(system));
     }
 
     private static String text(Map<String, Object> info, String key) {
