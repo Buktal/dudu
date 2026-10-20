@@ -4,17 +4,17 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-**Bring messages from different channels into one customer support workspace.**
+**Open-source, self-hosted multichannel customer support.**
 
 DuDu is an open-source, self-hosted multichannel customer support system licensed under Apache-2.0. It receives channel messages, scopes access by organization and group, and gives support agents one place to read conversation history, reply, and maintain visitor profiles. This repository includes the server, agent workspace, platform and organization administration apps, and a local channel callback simulator.
 
-[Run locally](#run-locally) · [Channels and limitations](#channels-and-limitations) · [Development and contributions](#development-and-contributions) · [Documentation](docs/README.md)
+[Project website](https://buktal.github.io/dudu/en.html) · [Run locally](#run-locally) · [Channels and limitations](#channels-and-limitations) · [Development and contributions](#development-and-contributions) · [Documentation](docs/README.md)
 
 ![DuDu agent workspace with a conversation queue, chat history, and visitor profile](docs/design/dudu-console/qa-desk-live-1440.png)
 
 *An actual workspace connected to a local Server during acceptance testing. All content shown is test data. The current interface is in Chinese.*
 
-## Why DuDu
+## Project overview
 
 Multichannel support means dealing with scattered messages, inconsistent conversation states, and access rules for accounts and their history. DuDu brings these into one flow:
 
@@ -26,7 +26,7 @@ Incoming callback → Verify and parse → Persist conversation → Push updates
 
 It is intended for teams that need several official messaging integrations and want to host their own system and control organization data. It also serves developers working on messaging protocols, channel adapters, and support interfaces.
 
-## What works today
+## Core capabilities
 
 - **A unified inbox:** conversation queues, search and filters, history loaded on demand, live incoming messages, plain-text replies, and visible send failures.
 - **Three workspace layouts:** focused, side-by-side, and cards, sharing conversation data and drafts. Run in a browser or build the Tauri desktop app.

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DuDu 嘟嘟｜开源多渠道客服系统</title>
+<meta name="description" content="DuDu 是基于 Apache-2.0 的开源、自托管多渠道客服系统，提供统一坐席工作台、企业控制台、平台管理后台和渠道回调模拟工具。">
+<meta property="og:title" content="DuDu 嘟嘟｜开源多渠道客服系统">
+<meta property="og:description" content="DuDu 是基于 Apache-2.0 的开源、自托管多渠道客服系统，提供统一坐席工作台、企业控制台、平台管理后台和渠道回调模拟工具。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://buktal.github.io/dudu/">
+<meta property="og:image" content="https://buktal.github.io/dudu/assets/desk.png">
+<link rel="canonical" href="https://buktal.github.io/dudu/">
+<link rel="alternate" hreflang="zh-CN" href="https://buktal.github.io/dudu/">
+<link rel="alternate" hreflang="en" href="https://buktal.github.io/dudu/en.html">
+<meta name="theme-color" content="#f6fafb">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">跳至正文</a>
+<header>
+<a class="brand" href="./">DuDu<span> · 嘟嘟</span>
+</a>
+<nav aria-label="主导航">
+<a href="#products">产品</a>
+<a href="#channels">渠道</a>
+<a href="#start">开始使用</a>
+<a href="en.html" lang="en">English</a>
+<a href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav>
+</header>
+<main id="main">
+<div class="hero">
+<div class="eyebrow">Self-hosted · Apache-2.0</div>
+<h1>开源多渠道客服系统</h1>
+<p class="lead">DuDu 是基于 Apache-2.0 的开源、自托管多渠道客服系统，提供统一坐席工作台、企业控制台、平台管理后台和渠道回调模拟工具。</p>
+<div class="actions">
+<a class="button primary" href="#start">部署与开发指南</a>
+<a class="button" href="https://github.com/Buktal/dudu">查看源码 · GitHub</a>
+</div>
+</div>
+<div class="flow">
+<span>渠道消息</span>
+<b>→</b>
+<span>验签与持久化</span>
+<b>→</b>
+<span>实时推送</span>
+<b>→</b>
+<span>统一接待</span>
+</div>
+<figure>
+<a href="assets/desk.png">
+<img src="assets/desk.png" alt="DuDu 坐席工作台：会话、消息与来访资料" loading="lazy">
+</a>
+<figcaption>Desk · 实际工作台连接本地服务端的验收截图，内容为测试数据。点击图片可查看原图。</figcaption>
+</figure>
+<section>
+<div class="section-head">
+<div class="eyebrow">Capabilities</div>
+<h2>统一消息接待，明确管理边界</h2>
+</div>
+<div class="grid">
+<article class="feature">
+<h3>统一接待</h3>
+<p>集中查看渠道会话与历史消息，接收实时来信，发送纯文本回复，维护共享标签和内部备注。</p>
+</article>
+<article class="feature">
+<h3>企业与用户组权限</h3>
+<p>按企业隔离数据，通过用户组分配员工和渠道账号，按当前授权范围访问会话。</p>
+</article>
+<article class="feature">
+<h3>自主部署与扩展</h3>
+<p>服务端与客户端源码完整公开；基于现有渠道适配结构扩展接入，使用 MockPulse 开展本地协议联调。</p>
+</article>
+</div>
+</section>
+<section id="products">
+<div class="section-head">
+<div class="eyebrow">Product suite</div>
+<h2>四个应用，覆盖接待、管理与联调</h2>
+<p>Java 服务端提供认证、权限、消息持久化、渠道适配和 HTTP / WebSocket 接口，各应用围绕不同使用者划分职责。</p>
+</div>
+<article class="product">
+<div class="tag">Desk</div>
+<div class="product-heading">
+<h3>坐席工作台</h3>
+<p>专注、并排与卡片三种接待模式，支持浏览器运行和 Tauri 桌面构建。 <a href="https://github.com/Buktal/dudu/blob/main/dudu-desk/README.md">使用文档 ↗</a>
+</p>
+</div>
+<figure>
+<a href="assets/desk-parallel.png">
+<img src="assets/desk-parallel.png" alt="Desk 并排接待模式" loading="lazy">
+</a>
+<figcaption>2026-09-18 前端布局验收，使用示例数据；历史界面仅用于说明布局，当前能力以功能文档为准。</figcaption>
+</figure>
+</article>
+<article class="product">
+<div class="tag">Console</div>
+<div class="product-heading">
+<h3>企业控制台</h3>
+<p>管理员工、用户组与渠道账号；渠道凭据只写入，不回传秘密值。 <a href="https://github.com/Buktal/dudu/blob/main/dudu-console/README.md">使用文档 ↗</a>
+</p>
+</div>
+<figure>
+<a href="assets/console.png">
+<img src="assets/console.png" alt="Console 渠道账号管理" loading="lazy">
+</a>
+<figcaption>实际 Console 连接本地服务端的验收截图，内容为测试数据。</figcaption>
+</figure>
+</article>
+<article class="product">
+<div class="tag">Admin</div>
+<div class="product-heading">
+<h3>平台管理后台</h3>
+<p>开通企业、管理企业资源，查看运营概览与操作记录。 <a href="https://github.com/Buktal/dudu/blob/main/dudu-admin/README.md">使用文档 ↗</a>
+</p>
+</div>
+<figure>
+<a href="assets/admin.jpg">
+<img src="assets/admin.jpg" alt="Admin 运营概览" loading="lazy">
+</a>
+<figcaption>2026-09-30 前端布局验收，使用示例企业与统计数据；非线上运营数据。</figcaption>
+</figure>
+</article>
+<article class="product mock">
+<img src="assets/mockpulse.svg" alt="MockPulse" loading="lazy">
+<div>
+<div class="tag">MockPulse</div>
+<h3>渠道回调模拟工具</h3>
+<p>面向开发者的本地桌面工具，用于构造事件、签名与加密回调，组织剧本、编排计划并查看运行结果。运行客服系统无需启动此工具。</p>
+<a href="https://github.com/Buktal/dudu/blob/main/mock-pulse/README.md">MockPulse 使用文档 ↗</a>
+</div>
+</article>
+</section>
+<section id="channels">
+<div class="eyebrow">Channel adapters</div>
+<h2>13 种渠道适配器</h2>
+<p>覆盖以下平台的指定消息体系；各渠道的授权、事件和收发边界不同。</p>
+<div class="channels">
+<span>微信公众号</span>
+<span>微信小程序</span>
+<span>企业微信</span>
+<span>钉钉</span>
+<span>飞书</span>
+<span>QQ</span>
+<span>微博</span>
+<span>抖音</span>
+<span>小红书</span>
+<span>支付宝</span>
+<span>美团</span>
+<span>Telegram</span>
+<span>WhatsApp</span>
+</div>
+<p class="note">当前工作台仅支持出站纯文本；非文本入站展示按渠道能力处理。生产接入需要部署方完成平台申请、授权和公网验证。项目持续开发中，暂无正式发布包或托管演示。</p>
+<a href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">查阅渠道配置与接入边界 ↗</a>
+</section>
+<section id="start">
+<div class="eyebrow">Get started</div>
+<h2>从本地运行开始</h2>
+<div class="steps">
+<article class="step">
+<h3>准备开发环境</h3>
+<p>Java 21、Maven 3.9、Docker Compose、Node.js 22.12+ 和 Yarn 4。</p>
+<a href="https://github.com/Buktal/dudu/blob/main/README.md">查看指南 ↗</a>
+</article>
+<article class="step">
+<h3>启动服务端</h3>
+<p>启动 MySQL 和 Server，由迁移初始化数据库。公开部署前更换开发凭据和 JWT 密钥。</p>
+<a href="https://github.com/Buktal/dudu/blob/main/dudu-server/README.md">查看指南 ↗</a>
+</article>
+<article class="step">
+<h3>配置企业与渠道</h3>
+<p>通过 Admin 开通企业，在 Console 配置用户组与渠道，然后使用 Desk 接待消息。</p>
+<a href="https://github.com/Buktal/dudu/blob/main/dudu-console/README.md">查看指南 ↗</a>
+</article>
+</div>
+</section>
+<section>
+<div class="eyebrow">Open development</div>
+<h2>参与 DuDu 开源建设</h2>
+<p>项目采用 Apache License 2.0，允许商业使用、修改与分发，并遵循相应许可条件。欢迎通过 Issue 报告问题、提出建议，或提交代码与文档改进。</p>
+<div class="actions">
+<a class="button primary" href="https://github.com/Buktal/dudu">在 GitHub 关注与 Star</a>
+<a class="button" href="https://github.com/Buktal/dudu/issues">反馈问题</a>
+<a class="button" href="https://github.com/Buktal/dudu/blob/main/docs/README.md">项目文档</a>
+</div>
+</section>
+</main>
+<footer>
+<span>DuDu · 开源多渠道客服系统</span>
+<span>
+<a href="https://github.com/Buktal/dudu/blob/main/LICENSE">Apache-2.0</a> · <a href="https://github.com/Buktal/dudu">GitHub</a>
+</span>
+</footer>
+</body>
+</html>

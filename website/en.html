@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DuDu | Open-source multichannel customer support</title>
+<meta name="description" content="Self-hosted multichannel customer support with a unified inbox, organization console, platform administration and local callback testing. Apache-2.0 licensed.">
+<meta property="og:title" content="DuDu | Open-source multichannel customer support">
+<meta property="og:description" content="Self-hosted multichannel customer support with a unified inbox, organization console, platform administration and local callback testing. Apache-2.0 licensed.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://buktal.github.io/dudu/en.html">
+<meta property="og:image" content="https://buktal.github.io/dudu/assets/desk.png">
+<link rel="canonical" href="https://buktal.github.io/dudu/en.html">
+<link rel="alternate" hreflang="zh-CN" href="https://buktal.github.io/dudu/">
+<link rel="alternate" hreflang="en" href="https://buktal.github.io/dudu/en.html">
+<meta name="theme-color" content="#f6fafb">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header>
+<a class="brand" href="en.html">DuDu<span> · 嘟嘟</span>
+</a>
+<nav aria-label="Main navigation">
+<a href="#products">Products</a>
+<a href="#channels">Channels</a>
+<a href="#start">Get started</a>
+<a href="./" lang="zh-CN">简体中文</a>
+<a href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav>
+</header>
+<main id="main">
+<div class="hero">
+<div class="eyebrow">Self-hosted · Apache-2.0</div>
+<h1>Open-source multichannel<br>customer support</h1>
+<p class="lead">Self-hosted multichannel customer support with a unified inbox, organization console, platform administration and local callback testing. Apache-2.0 licensed.</p>
+<div class="actions">
+<a class="button primary" href="#start">Deployment & development</a>
+<a class="button" href="https://github.com/Buktal/dudu">Explore source · GitHub</a>
+</div>
+</div>
+<div class="flow">
+<span>Channel messages</span>
+<b>→</b>
+<span>Verification & persistence</span>
+<b>→</b>
+<span>Real-time updates</span>
+<b>→</b>
+<span>Unified workspace</span>
+</div>
+<figure>
+<a href="assets/desk.png">
+<img src="assets/desk.png" alt="DuDu workspace: conversations, messages and visitor profiles" loading="lazy">
+</a>
+<figcaption>Desk · Acceptance capture connected to a local server, using test data. Select an image to view it at full size.</figcaption>
+</figure>
+<section>
+<div class="section-head">
+<div class="eyebrow">Capabilities</div>
+<h2>Unified conversations. Defined access boundaries.</h2>
+</div>
+<div class="grid">
+<article class="feature">
+<h3>Unified inbox</h3>
+<p>Read channel conversations and history, receive real-time messages, send text replies and maintain shared tags and internal notes.</p>
+</article>
+<article class="feature">
+<h3>Organization & group access</h3>
+<p>Isolate organizations and assign employees and channel accounts through groups. Conversation access follows current authorization.</p>
+</article>
+<article class="feature">
+<h3>Self-hosting & extensibility</h3>
+<p>Host the server and clients yourself, extend the channel adapter structure and validate callbacks locally with MockPulse.</p>
+</article>
+</div>
+</section>
+<section id="products">
+<div class="section-head">
+<div class="eyebrow">Product suite</div>
+<h2>Four applications, from operations to integration</h2>
+<p>The Java server provides authentication, authorization, persistence, channel adapters and HTTP / WebSocket APIs. Each application serves a distinct role.</p>
+</div>
+<article class="product">
+<div class="tag">Desk</div>
+<div class="product-heading">
+<h3>Agent workspace</h3>
+<p>Focus, parallel and card layouts, with browser access and Tauri desktop builds. <a href="https://github.com/Buktal/dudu/blob/main/dudu-desk/README.md">Documentation ↗</a>
+</p>
+</div>
+<figure>
+<a href="assets/desk-parallel.png">
+<img src="assets/desk-parallel.png" alt="Desk parallel layout" loading="lazy">
+</a>
+<figcaption>Frontend layout capture dated 2026-09-18 with sample data. Historical UI illustrates the layout; consult the feature documentation for current behavior.</figcaption>
+</figure>
+</article>
+<article class="product">
+<div class="tag">Console</div>
+<div class="product-heading">
+<h3>Organization console</h3>
+<p>Manage employees, groups and channel accounts. Secret credentials are write-only. <a href="https://github.com/Buktal/dudu/blob/main/dudu-console/README.md">Documentation ↗</a>
+</p>
+</div>
+<figure>
+<a href="assets/console.png">
+<img src="assets/console.png" alt="Console channel account management" loading="lazy">
+</a>
+<figcaption>Acceptance capture connected to a local server with test data.</figcaption>
+</figure>
+</article>
+<article class="product">
+<div class="tag">Admin</div>
+<div class="product-heading">
+<h3>Platform administration</h3>
+<p>Provision organizations, manage their resources and review operational summaries and activity logs. <a href="https://github.com/Buktal/dudu/blob/main/dudu-admin/README.md">Documentation ↗</a>
+</p>
+</div>
+<figure>
+<a href="assets/admin.jpg">
+<img src="assets/admin.jpg" alt="Admin operations overview" loading="lazy">
+</a>
+<figcaption>Frontend layout capture dated 2026-09-30, showing sample organizations and metrics, not live operational data.</figcaption>
+</figure>
+</article>
+<article class="product mock">
+<img src="assets/mockpulse.svg" alt="MockPulse" loading="lazy">
+<div>
+<div class="tag">MockPulse</div>
+<h3>Channel callback simulator</h3>
+<p>A local desktop tool for developers to construct events, signed and encrypted callbacks, organize scenarios and plans, and inspect run results. It is optional when running the support system.</p>
+<a href="https://github.com/Buktal/dudu/blob/main/mock-pulse/README.md">MockPulse documentation ↗</a>
+</div>
+</article>
+</section>
+<section id="channels">
+<div class="eyebrow">Channel adapters</div>
+<h2>13 channel adapters</h2>
+<p>Adapters cover specific messaging products on these platforms. Authorization, events and sending capabilities vary by channel.</p>
+<div class="channels">
+<span>WeChat Official Accounts</span>
+<span>WeChat Mini Programs</span>
+<span>WeCom</span>
+<span>DingTalk</span>
+<span>Feishu</span>
+<span>QQ</span>
+<span>Weibo</span>
+<span>Douyin</span>
+<span>Xiaohongshu</span>
+<span>Alipay</span>
+<span>Meituan</span>
+<span>Telegram</span>
+<span>WhatsApp</span>
+</div>
+<p class="note">Outbound workspace messages currently support text only. Incoming non-text content depends on the channel. Production integration requires platform approval, authorization and public endpoint verification. The project is under active development; there are no release packages or hosted demos yet.</p>
+<a href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">Read channel configuration and limitations ↗</a>
+</section>
+<section id="start">
+<div class="eyebrow">Get started</div>
+<h2>Start with a local deployment</h2>
+<div class="steps">
+<article class="step">
+<h3>Prepare the environment</h3>
+<p>Java 21, Maven 3.9, Docker Compose, Node.js 22.12+ and Yarn 4.</p>
+<a href="https://github.com/Buktal/dudu/blob/main/README.en.md">Read guide ↗</a>
+</article>
+<article class="step">
+<h3>Start the server</h3>
+<p>Start MySQL and Server; migrations initialize the database. Replace development credentials and the JWT secret before public deployment.</p>
+<a href="https://github.com/Buktal/dudu/blob/main/dudu-server/README.md">Read guide ↗</a>
+</article>
+<article class="step">
+<h3>Configure the organization</h3>
+<p>Provision an organization in Admin, configure groups and channels in Console, then handle conversations in Desk.</p>
+<a href="https://github.com/Buktal/dudu/blob/main/dudu-console/README.md">Read guide ↗</a>
+</article>
+</div>
+</section>
+<section>
+<div class="eyebrow">Open development</div>
+<h2>Contribute to DuDu</h2>
+<p>DuDu is licensed under Apache License 2.0, allowing commercial use, modification and distribution subject to its terms. Contributions through issues, code and documentation are welcome.</p>
+<div class="actions">
+<a class="button primary" href="https://github.com/Buktal/dudu">Star DuDu on GitHub</a>
+<a class="button" href="https://github.com/Buktal/dudu/issues">Report an issue</a>
+<a class="button" href="https://github.com/Buktal/dudu/blob/main/docs/README.md">Project documentation</a>
+</div>
+</section>
+</main>
+<footer>
+<span>DuDu · Open-source multichannel customer support</span>
+<span>
+<a href="https://github.com/Buktal/dudu/blob/main/LICENSE">Apache-2.0</a> · <a href="https://github.com/Buktal/dudu">GitHub</a>
+</span>
+</footer>
+</body>
+</html>
