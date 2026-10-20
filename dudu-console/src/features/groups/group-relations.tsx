@@ -16,6 +16,14 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { navigate, routes } from "@/navigation";
 import {
   type Candidate,
@@ -55,51 +63,49 @@ export function GroupMembers({
     changed();
   };
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <Button onClick={() => setAdding(true)}>添加成员</Button>
       <QueryView query={query} empty={empty}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="p-3">成员</th>
-                <th className="p-3">角色 / 状态</th>
-                <th className="p-3">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {query.list.map((member) => (
-                <tr key={member.userId} className="border-b">
-                  <td className="p-3">
-                    {member.name}
-                    <p className="text-xs text-muted-foreground">
-                      {member.username} · ID {member.userId}
-                    </p>
-                  </td>
-                  <td className="p-3 whitespace-nowrap">
-                    {member.role === "console" ? "管理员" : "普通员工"} /{" "}
-                    {member.status === 1 ? "启用" : "停用"}
-                  </td>
-                  <td className="p-3">
-                    {profile?.user.isInitialAdmin || member.role === "user" ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setRemoving(member)}
-                      >
-                        移除
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        仅初始管理员可维护
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>成员</TableHead>
+              <TableHead>角色 / 状态</TableHead>
+              <TableHead>操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {query.list.map((member) => (
+              <TableRow key={member.userId}>
+                <TableCell>
+                  {member.name}
+                  <p className="text-xs text-muted-foreground">
+                    {member.username} · ID {member.userId}
+                  </p>
+                </TableCell>
+                <TableCell>
+                  {member.role === "console" ? "管理员" : "普通员工"} /{" "}
+                  {member.status === 1 ? "启用" : "停用"}
+                </TableCell>
+                <TableCell>
+                  {profile?.user.isInitialAdmin || member.role === "user" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRemoving(member)}
+                    >
+                      移除
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      仅初始管理员可维护
+                    </span>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </QueryView>
       {adding && (
         <AddMembers
@@ -275,7 +281,7 @@ export function GroupAccounts({ groupId }: { groupId: string }) {
     initial,
   );
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <Button onClick={() => navigate(routes.channelCreate(groupId))}>
         添加渠道账号
       </Button>

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConsoleClient } from "@/api/client";
 import { ConsoleContext } from "@/api/context";
@@ -12,8 +18,47 @@ const group = {
   createTime: "2026-10-20 10:00:00",
   updateTime: "2026-10-20 10:00:00",
 };
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 describe("用户组页面操作", () => {
+  it("组详情提供可识别的页签并切换到渠道账号", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (url) =>
+        new Response(
+          JSON.stringify(
+            String(url).endsWith("/user_groups/8")
+              ? { code: 0, msg: "ok", data: group }
+              : {
+                  code: 0,
+                  msg: "ok",
+                  list: [],
+                  total: 0,
+                  page: 1,
+                  pageSize: 20,
+                },
+          ),
+        ),
+    );
+    render(
+      <ConsoleContext value={new ConsoleClient()}>
+        <UserGroupsPage
+          selectedId="8"
+          creating={false}
+          onSelect={vi.fn()}
+          onCreate={vi.fn()}
+        />
+      </ConsoleContext>,
+    );
+    const members = await screen.findByRole("tab", { name: "成员" });
+    expect(members).toHaveAttribute("aria-selected", "true");
+    const accounts = screen.getByRole("tab", { name: "渠道账号" });
+    fireEvent.click(accounts);
+    expect(accounts).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel", { name: "渠道账号" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "添加渠道账号" })).toBeVisible();
+  });
   it("搜索提交前保留草稿，打开组通过页面选择接口", async () => {
     const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(
       async () =>

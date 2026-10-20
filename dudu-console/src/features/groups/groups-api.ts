@@ -1,6 +1,6 @@
 import type { ConsoleClient } from "@/api/client";
 import { isRecord } from "@/api/client";
-import type { Page } from "@/api/types";
+import { pageOf, validId } from "@/api/validators";
 export interface Group {
   groupId: string;
   groupName: string;
@@ -35,12 +35,10 @@ export interface Filters {
   pageSize: number;
   keyword?: string;
 }
-const id = (v: unknown): v is string =>
-  typeof v === "string" && /^\d+$/.test(v);
 const count = (v: unknown) => Number.isSafeInteger(v) && Number(v) >= 0;
 const group = (v: unknown): v is Group =>
   isRecord(v) &&
-  id(v.groupId) &&
+  validId(v.groupId) &&
   typeof v.groupName === "string" &&
   count(v.memberCount) &&
   count(v.channelAccountCount) &&
@@ -48,7 +46,7 @@ const group = (v: unknown): v is Group =>
   typeof v.updateTime === "string";
 const candidate = (v: unknown): v is Candidate =>
   isRecord(v) &&
-  id(v.userId) &&
+  validId(v.userId) &&
   typeof v.username === "string" &&
   typeof v.name === "string" &&
   (v.role === "user" || v.role === "console");
@@ -56,23 +54,12 @@ const member = (v: unknown): v is Member =>
   isRecord(v) && (v.status === 0 || v.status === 1) && candidate(v);
 const account = (v: unknown): v is GroupAccount =>
   isRecord(v) &&
-  id(v.companyChannelId) &&
-  id(v.groupId) &&
+  validId(v.companyChannelId) &&
+  validId(v.groupId) &&
   typeof v.accountName === "string" &&
   typeof v.channel === "string" &&
   typeof v.receiveConfigured === "boolean" &&
   typeof v.sendConfigured === "boolean";
-const page =
-  <T>(check: (v: unknown) => v is T) =>
-  (v: unknown): v is Page<T> =>
-    isRecord(v) &&
-    Array.isArray(v.list) &&
-    v.list.every(check) &&
-    count(v.total) &&
-    Number.isInteger(v.page) &&
-    Number(v.page) > 0 &&
-    Number.isInteger(v.pageSize) &&
-    Number(v.pageSize) > 0;
 const base = "/console/user_groups";
 const params = (filters: Filters) =>
   new URLSearchParams(
@@ -94,7 +81,7 @@ export const groupsApi = {
       body: filters,
       signal,
       paginated: true,
-      validate: page(group),
+      validate: pageOf(group),
     }),
   detail: (client: ConsoleClient, groupId: string, signal?: AbortSignal) =>
     client.request(`${base}/${groupId}`, {
@@ -123,7 +110,7 @@ export const groupsApi = {
     client.request(`${base}/${groupId}/members?${params(filters)}`, {
       signal,
       paginated: true,
-      validate: page(member),
+      validate: pageOf(member),
     }),
   candidates: (
     client: ConsoleClient,
@@ -134,7 +121,7 @@ export const groupsApi = {
     client.request(`${base}/${groupId}/member_candidates?${params(filters)}`, {
       signal,
       paginated: true,
-      validate: page(candidate),
+      validate: pageOf(candidate),
     }),
   add: (
     client: ConsoleClient,
@@ -169,6 +156,6 @@ export const groupsApi = {
       body: { ...filters, groupId },
       signal,
       paginated: true,
-      validate: page(account),
+      validate: pageOf(account),
     }),
 };

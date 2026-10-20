@@ -1,3 +1,4 @@
+import { Tabs } from "@base-ui/react/tabs";
 import { useEffect, useState } from "react";
 import { ApiError } from "@/api/client";
 import { useConsoleQuery } from "@/api/console-query";
@@ -19,6 +20,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FieldGroup } from "@/components/ui/field";
 import {
   Sheet,
   SheetContent,
@@ -26,6 +28,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { GroupAccounts, GroupMembers } from "./group-relations";
 import { type Group, groupsApi } from "./groups-api";
 
@@ -47,7 +57,7 @@ export function UserGroupsPage({
   );
   const { profile } = useSession();
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <header className="flex flex-wrap justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">用户组</h1>
@@ -84,36 +94,34 @@ export function UserGroupsPage({
           },
         }}
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="p-4">用户组</th>
-                <th className="p-4">成员</th>
-                <th className="p-4">渠道账号</th>
-              </tr>
-            </thead>
-            <tbody>
-              {query.list.map((group) => (
-                <tr className="border-b" key={group.groupId}>
-                  <td className="p-4">
-                    <Button
-                      variant="link"
-                      onClick={() => onSelect(group.groupId)}
-                    >
-                      {group.groupName}
-                    </Button>
-                    <p className="text-xs text-muted-foreground">
-                      ID {group.groupId}
-                    </p>
-                  </td>
-                  <td className="p-4">{group.memberCount}</td>
-                  <td className="p-4">{group.channelAccountCount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>用户组</TableHead>
+              <TableHead>成员</TableHead>
+              <TableHead>渠道账号</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {query.list.map((group) => (
+              <TableRow key={group.groupId}>
+                <TableCell>
+                  <Button
+                    variant="link"
+                    onClick={() => onSelect(group.groupId)}
+                  >
+                    {group.groupName}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    ID {group.groupId}
+                  </p>
+                </TableCell>
+                <TableCell>{group.memberCount}</TableCell>
+                <TableCell>{group.channelAccountCount}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </QueryView>
       {creating && profile?.user.isInitialAdmin && (
         <CreateGroup
@@ -154,7 +162,7 @@ function CreateGroup({
           用户组平级，可以同名；创建后添加成员和渠道账号。
         </DialogDescription>
         <form
-          className="space-y-4"
+          className="flex flex-col gap-4"
           onSubmit={(event) =>
             shell.submit(
               event,
@@ -164,13 +172,15 @@ function CreateGroup({
             )
           }
         >
-          <TextField
-            label="组名"
-            value={name}
-            maxLength={100}
-            disabled={shell.pending}
-            onChange={(event) => setName(event.target.value)}
-          />
+          <FieldGroup>
+            <TextField
+              label="组名"
+              value={name}
+              maxLength={100}
+              disabled={shell.pending}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </FieldGroup>
           <SubmitMessage error={shell.error} />
           <SubmitButton
             shell={shell}
@@ -192,7 +202,6 @@ function GroupDetail({
   close: () => void;
 }) {
   const shell = useSubmit();
-  const [tab, setTab] = useState("members");
 
   const query = useConsoleQuery(loadGroup, [groupId]);
   useEffect(() => {
@@ -215,7 +224,7 @@ function GroupDetail({
           <SheetTitle>{query.data?.groupName ?? "用户组详情"}</SheetTitle>
           <SheetDescription>组 ID {groupId}</SheetDescription>
         </SheetHeader>
-        <div className="space-y-5 px-6 pb-6">
+        <div className="flex flex-col gap-5 px-6 pb-6">
           {query.loading ? (
             <LoadingState />
           ) : query.error ? (
@@ -232,25 +241,41 @@ function GroupDetail({
                 <Message>
                   初始管理员自动拥有权限，不计入实际成员，也无需添加。成员操作仅影响当前组，保留员工的其他组关系。
                 </Message>
-                <div className="flex gap-2">
-                  <Button
-                    variant={tab === "members" ? "secondary" : "ghost"}
-                    onClick={() => setTab("members")}
-                  >
-                    成员
-                  </Button>
-                  <Button
-                    variant={tab === "accounts" ? "secondary" : "ghost"}
-                    onClick={() => setTab("accounts")}
-                  >
-                    渠道账号
-                  </Button>
-                </div>
-                {tab === "members" ? (
-                  <GroupMembers groupId={groupId} changed={refresh} />
-                ) : (
-                  <GroupAccounts groupId={groupId} />
-                )}
+                <Tabs.Root
+                  defaultValue="members"
+                  className="flex flex-col gap-4"
+                >
+                  <Tabs.List aria-label="用户组内容" className="flex gap-2">
+                    <Tabs.Tab
+                      value="members"
+                      render={(props, state) => (
+                        <Button
+                          {...props}
+                          variant={state.active ? "secondary" : "ghost"}
+                        />
+                      )}
+                    >
+                      成员
+                    </Tabs.Tab>
+                    <Tabs.Tab
+                      value="accounts"
+                      render={(props, state) => (
+                        <Button
+                          {...props}
+                          variant={state.active ? "secondary" : "ghost"}
+                        />
+                      )}
+                    >
+                      渠道账号
+                    </Tabs.Tab>
+                  </Tabs.List>
+                  <Tabs.Panel value="members">
+                    <GroupMembers groupId={groupId} changed={refresh} />
+                  </Tabs.Panel>
+                  <Tabs.Panel value="accounts">
+                    <GroupAccounts groupId={groupId} />
+                  </Tabs.Panel>
+                </Tabs.Root>
               </>
             )
           )}
@@ -272,7 +297,7 @@ function RenameGroup({
   const [name, setName] = useState(group.groupName);
   return (
     <form
-      className="space-y-3"
+      className="flex flex-col gap-3"
       onSubmit={(event) =>
         shell.submit(
           event,
@@ -282,13 +307,15 @@ function RenameGroup({
         )
       }
     >
-      <TextField
-        label="组名"
-        maxLength={100}
-        value={name}
-        disabled={shell.pending}
-        onChange={(event) => setName(event.target.value)}
-      />
+      <FieldGroup>
+        <TextField
+          label="组名"
+          maxLength={100}
+          value={name}
+          disabled={shell.pending}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </FieldGroup>
       <SubmitMessage error={shell.error} />
       <SubmitButton
         shell={shell}
