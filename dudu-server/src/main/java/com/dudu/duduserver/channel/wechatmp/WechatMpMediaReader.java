@@ -1,90 +1,34 @@
 package com.dudu.duduserver.channel.wechatmp;
 
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
-import com.dudu.duduserver.channel.support.Errcodes;
-import com.dudu.duduserver.channel.support.JsonBodies;
-import com.dudu.duduserver.channel.support.TokenResult;
+import com.dudu.duduserver.channel.support.WechatMediaReader;
 import com.dudu.duduserver.entity.CompanyChannelDO;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.nio.charset.StandardCharsets;
-
 /**
- * 微信公众号素材读取（临时/永久素材 media_id），事实见 docs/research/channels/wechat-mp.md §2.1、§6：
- * 先用 channel_info 的 appId/appSecret 经 /cgi-bin/token 换取 access_token，再
- * GET /cgi-bin/media/get?access_token=&media_id=；成功按二进制返回并带渠道内容类型，
- * 视频素材按官方行为返回 JSON video_url（短时下载地址），需再取一次字节；
- * 失败原样记录 errcode 与 errmsg，接口地址默认官方域名，可用
+ * 微信公众号素材读取装配薄层，与小程序复用协议实现
+ * （docs/research/channels/wechat-mp.md §2.1、§6），协议逻辑（换取凭据、素材读取、
+ * video_url 二次直取与 downloadClient 先于 baseUrl 构建的超时纪律）住在微信族共享骨架
+ * WechatMediaReader；本类只绑定公众号的 api-base 覆盖键、日志标签与凭据读取，独立实例化
+ * 骨架以维持「发送与素材各建各的客户端」的令牌缓存隔离。接口地址默认官方域名，可用
  * dudu.channel.wechat-mp.api-base 覆盖为受控替身。
  */
-@Slf4j
 @Component
 public class WechatMpMediaReader {
 
     private static final String DEFAULT_API_BASE = "https://api.weixin.qq.com";
-    private static final String PATH_MEDIA_GET = "/cgi-bin/media/get";
-    private static final String KEY_VIDEO_URL = "video_url";
 
-    private final RestClient restClient;
-
-    private final WechatMpAccessTokenClient accessTokenClient;
-
-    // 视频素材的 video_url 是渠道给出的完整下载地址，用无 baseUrl 的客户端直取
-    private final RestClient downloadClient;
+    private final WechatMediaReader<WechatMpCredentials> delegate;
 
     public WechatMpMediaReader(RestClient.Builder builder,
-                               @Value("${dudu.channel.wechat-mp.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
-        // downloadClient 须在 builder 挂 baseUrl 前构建，与 restClient 共享自动配置的超时
-        this.downloadClient = builder.build();
-        this.restClient = builder.baseUrl(apiBase).build();
-        this.accessTokenClient = new WechatMpAccessTokenClient(restClient);
+                                 @Value("${dudu.channel.wechat-mp.api-base:" + DEFAULT_API_BASE + "}") String apiBase) {
+        this.delegate = new WechatMediaReader<>(builder, apiBase, "wechat-mp",
+            WechatMpCredentials::appId, WechatMpCredentials::appSecret);
     }
 
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
-        WechatMpCredentials credentials = WechatMpCredentials.of(account);
-        try {
-            TokenResult token = accessTokenClient.fetch(credentials);
-            if (!token.succeeded()) {
-                return ChannelMediaResult.failed(token.failureReason());
-            }
-            ResponseEntity<byte[]> response = restClient.get()
-                .uri(PATH_MEDIA_GET + "?access_token={token}&media_id={mediaId}", token.accessToken(), externalMediaId)
-                .retrieve()
-                .toEntity(byte[].class);
-            byte[] body = response.getBody() == null ? new byte[0] : response.getBody();
-            // 渠道对失败与视频素材返回 JSON，其余按二进制素材原样返回
-            if (JsonBodies.isJson(body)) {
-                return fromJson(JSONUtil.parseObj(new String(body, StandardCharsets.UTF_8)));
-            }
-            return ChannelMediaResult.media(response);
-        } catch (RuntimeException e) {
-            // 网络、HTTP 状态与响应解析异常都按调用失败记录，不猜测素材内容
-            log.warn("[wechat-mp] 素材读取失败, companyChannelId={}, exception={}",
-                account.getCompanyChannelId(), e.getClass().getSimpleName());
-            return ChannelMediaResult.failed("微信接口调用失败：" + e.getMessage());
-        }
+        return delegate.read(WechatMpCredentials.of(account), account.getCompanyChannelId(), externalMediaId);
     }
-
-    // 视频素材响应：{"video_url": 下载地址}，再取一次字节；errcode 非 0 时原样记录渠道错误
-    private ChannelMediaResult fromJson(JSONObject response) {
-        String videoUrl = response.getStr(KEY_VIDEO_URL);
-        if (videoUrl != null && !videoUrl.isBlank()) {
-            ResponseEntity<byte[]> download = downloadClient.get()
-                .uri(videoUrl)
-                .retrieve()
-                .toEntity(byte[].class);
-            return ChannelMediaResult.media(download);
-        }
-        if (Errcodes.code(response) != 0) {
-            return ChannelMediaResult.failed("微信素材读取失败：" + Errcodes.describe(response));
-        }
-        return ChannelMediaResult.failed("微信素材读取失败：响应无法识别");
-    }
-
 }

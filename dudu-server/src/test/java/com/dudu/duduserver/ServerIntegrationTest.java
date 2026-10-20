@@ -142,6 +142,32 @@ class ServerIntegrationTest {
     }
 
     @Test
+    void companyKeywordSearchTreatsLikeWildcardsAsLiterals() throws Exception {
+        // 通配符字面量企业名：% 与 _ 各配一个只差通配符的对照，锁定搜索词不被当成通配符放大
+        companies.createCompany(new CompanyCreateDTO("783001", "100%折扣", null, null, null,
+            new CompanyAdminInitDTO("admin", "password123", null)), 1L);
+        companies.createCompany(new CompanyCreateDTO("783002", "100分折扣", null, null, null,
+            new CompanyAdminInitDTO("admin", "password123", null)), 1L);
+        companies.createCompany(new CompanyCreateDTO("783003", "要_底线", null, null, null,
+            new CompanyAdminInitDTO("admin", "password123", null)), 1L);
+        companies.createCompany(new CompanyCreateDTO("783004", "要底线", null, null, null,
+            new CompanyAdminInitDTO("admin", "password123", null)), 1L);
+        String token = login();
+        // % 按字面匹配：只命中名称真含 % 的 783001；未转义时 '%100%%' 会放大命中「100分折扣」
+        mvc.perform(post("/api/admin/companies/query").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"keyword\":\"100%\"}").header("Authorization", "Bearer " + token))
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.list.length()").value(1))
+            .andExpect(jsonPath("$.list[0].companyId").value(783001));
+        // _ 按字面匹配：只命中 783003；未转义时 '%要_%' 会放大命中「要底线」
+        mvc.perform(post("/api/admin/companies/query").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"keyword\":\"要_\"}").header("Authorization", "Bearer " + token))
+            .andExpect(jsonPath("$.code").value(0))
+            .andExpect(jsonPath("$.list.length()").value(1))
+            .andExpect(jsonPath("$.list[0].companyId").value(783003));
+    }
+
+    @Test
     void v1UpgradePreservesExistingRowsAndMovesExternalIdToJson() {
         // 升级库名从门闩 URL 解析派生（任意 dudu_review_* 形态均可），同实例另建独立库；
         // 先清残留保证可重复执行
