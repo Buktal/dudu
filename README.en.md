@@ -2,9 +2,11 @@
 
 [简体中文](README.md) | **English**
 
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 **Bring messages from different channels into one customer support workspace.**
 
-DuDu is a self-hosted multichannel customer support system. It receives channel messages, scopes access by organization and group, and gives support agents one place to read conversation history, reply, and maintain visitor profiles. This repository includes the server, agent workspace, platform and organization administration apps, and a local channel callback simulator.
+DuDu is an open-source, self-hosted multichannel customer support system licensed under Apache-2.0. It receives channel messages, scopes access by organization and group, and gives support agents one place to read conversation history, reply, and maintain visitor profiles. This repository includes the server, agent workspace, platform and organization administration apps, and a local channel callback simulator.
 
 [Run locally](#run-locally) · [Channels and limitations](#channels-and-limitations) · [Development and contributions](#development-and-contributions) · [Documentation](docs/README.md)
 
@@ -148,6 +150,8 @@ Run `mvn test` in `dudu-server/`. Database integration tests are skipped by defa
 
 Further reading: [feature maps](docs/features/README.md) · [architecture decisions](docs/adr/) · [domain glossary](GLOSSARY.md) · [channel protocol research](docs/research/channels/README.md). Most detailed project documentation is currently in Chinese.
 
-## License status
+## Open-source license
 
-**An open-source license has not been selected, and this repository currently grants no open-source license.** A future root-level `LICENSE` will define the terms. Until then, source visibility should not be interpreted as permission to use the code under an open-source license.
+DuDu is licensed under the [Apache License 2.0](LICENSE). It permits use, modification, distribution, and commercial use, including proprietary modified products, subject to its terms. Distributions must retain applicable copyright and license notices and identify modifications as required. The license does not grant trademark rights and provides no warranty.
+
+Third-party dependencies and assets remain subject to their respective licenses; this project's license does not replace those terms.
