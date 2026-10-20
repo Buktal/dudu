@@ -39,15 +39,22 @@ public final class ConsoleIdentityRequests {
      * 新员工不接受角色、状态或企业归属覆盖。
      */
     public record CreateEmployee(
-        @NotBlank String username,
-        @NotBlank String name,
+        @NotBlank @Size(min = 2, max = 64) String username,
+        @NotBlank @Size(max = 100) String name,
         @NotBlank @Size(min = 8, max = 72) String password) implements ConsoleRequest {
+        public CreateEmployee {
+            username = username == null ? null : username.trim();
+            name = name == null ? null : name.trim();
+        }
     }
 
     /**
      * 唯一可直接编辑的员工资料字段。
      */
-    public record Name(@NotBlank String name) implements ConsoleRequest {
+    public record Name(@NotBlank @Size(max = 100) String name) implements ConsoleRequest {
+        public Name {
+            name = name == null ? null : name.trim();
+        }
     }
 
     /**

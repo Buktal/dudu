@@ -67,8 +67,8 @@ public class ConsoleEmployeeService {
     public ConsoleEmployeeVO create(JwtUser me, ConsoleIdentityRequests.CreateEmployee request) {
         ConsoleAccess access = accessService.lock(me);
         access.requireInitialAdmin();
-        String username = text(request.username(), 2, 64);
-        String name = text(request.name(), 1, 100);
+        String username = request.username();
+        String name = request.name();
         if (users.findCompanyUser(access.companyId(), username) != null) {
             throw new BizException(ApiEnum.DATA_EXIST, "登录名已存在");
         }
@@ -94,7 +94,7 @@ public class ConsoleEmployeeService {
         UserDO user = accessService.requireUser(access, ConsoleIds.parse(userId));
         UserDO patch = new UserDO();
         patch.setUserId(user.getUserId());
-        patch.setName(text(request.name(), 1, 100));
+        patch.setName(request.name());
         users.updateById(patch);
         return view(access, users.getById(user.getUserId()));
     }
@@ -155,10 +155,4 @@ public class ConsoleEmployeeService {
                 .filter(companyGroups::contains).map(String::valueOf).toList());
     }
 
-    private String text(String value, int min, int max) {
-        if (value == null || value.trim().length() < min || value.trim().length() > max) {
-            throw new BizException(ApiEnum.PARAM_ERROR, "名称长度超出允许范围");
-        }
-        return value.trim();
-    }
 }
