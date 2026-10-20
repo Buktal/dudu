@@ -147,7 +147,8 @@ public class ConsoleGroupService {
         // 关联无外键，统计必须排除指向其他企业员工的脏关系。
         long memberCount = members.lambdaQuery().eq(UserGroupMemberDO::getCompanyId, group.getCompanyId())
             .eq(UserGroupMemberDO::getGroupId, group.getGroupId()).inSql(UserGroupMemberDO::getUserId,
-                "SELECT user_id FROM `user` WHERE company_id=" + group.getCompanyId() + " AND role IN ('user','console')").count();
+                "SELECT user_id FROM `user` WHERE company_id=" + group.getCompanyId() + " AND role IN ('"
+                    + UserRoleEnum.USER.getCode() + "','" + UserRoleEnum.CONSOLE.getCode() + "')").count();
         long channelCount = channels.lambdaQuery().eq(CompanyChannelDO::getCompanyId, group.getCompanyId())
             .eq(CompanyChannelDO::getGroupId, group.getGroupId()).count();
         return new ConsoleGroupVO(group.getGroupId().toString(), group.getGroupName(), memberCount,
