@@ -3,6 +3,8 @@ import { ApiError } from "@/api/client";
 import { useConsoleQuery } from "@/api/console-query";
 import { useConsole, useSession } from "@/api/context";
 import { ErrorState, LoadingState } from "@/components/feedback";
+import { SelectField } from "@/components/form-field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   SubmitButton,
   SubmitMessage,
@@ -83,7 +85,11 @@ export function AccountDetailPanel({
     try {
       return await channelApi.detail(client, accountId, signal);
     } catch (error) {
-      if (error instanceof ApiError && error.code === 12100) onClose();
+      if (error instanceof ApiError && error.code === 12100) {
+        setEditing(false);
+        setMoving(false);
+        onClose();
+      }
       throw error;
     }
   };
@@ -108,7 +114,11 @@ export function AccountDetailPanel({
           initialGroup={null}
           onClose={() => setEditing(false)}
           onSaved={saved}
-          onUnavailable={onClose}
+          onUnavailable={() => {
+            setEditing(false);
+            query.refresh();
+            onClose();
+          }}
         />
       ) : (
         <Sheet
@@ -288,27 +298,16 @@ function MoveAccount({
           }
         >
           <SubmitMessage error={shell.error} />
-          <label className="grid gap-2 text-sm">
-            目标用户组
-            <select
-              value={target}
-              disabled={shell.pending}
-              onChange={(e) => setTarget(e.target.value)}
-              className="h-10 rounded-lg border bg-background px-3"
-            >
-              <option value="">请选择目标组</option>
-              {groups
-                .filter(
-                  (g) => g.groupId !== account.groupId && manages(g.groupId),
-                )
-                .map((g) => (
-                  <option key={g.groupId} value={g.groupId}>
-                    {g.groupName} · {g.groupId}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="flex gap-2 text-sm">
+          <FieldGroup>
+          <SelectField
+            label="目标用户组"
+            value={target}
+            disabled={shell.pending}
+            onChange={setTarget}
+            options={[{ value: "", label: "请选择目标组" }, ...groups.filter((g) => g.groupId !== account.groupId && manages(g.groupId)).map((g) => ({ value: g.groupId, label: `${g.groupName} · ${g.groupId}` }))]}
+          />
+          <Field orientation="horizontal">
+          <FieldLabel>
             <input
               type="checkbox"
               checked={confirmed}
@@ -316,7 +315,9 @@ function MoveAccount({
               onChange={(e) => setConfirmed(e.target.checked)}
             />
             我已确认历史可见性将随所属组变化
-          </label>
+          </FieldLabel>
+          </Field>
+          </FieldGroup>
           <div className="flex justify-end gap-2">
             <Button
               type="button"

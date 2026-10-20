@@ -119,3 +119,67 @@ it("不可见账号关闭失效详情", async () => {
   );
   await waitFor(() => expect(closed).toHaveBeenCalled());
 });
+
+it("保存时账号不可见会卸载凭据编辑器并重新读取详情", async () => {
+  let invalidated = false;
+  const fetcher = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === "PUT") invalidated = true;
+    return new Response(
+      JSON.stringify(
+        invalidated
+          ? { code: 12100, msg: "账号不可见", data: null }
+          : { code: 0, msg: "", data: account },
+      ),
+    );
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const closed = vi.fn();
+  render(
+    <ConsoleContext value={new ConsoleClient()}>
+      <AccountDetailPanel
+        id="1"
+        definitions={[
+          {
+            channel: "telegram",
+            name: "Telegram",
+            available: true,
+            restriction: "",
+            notes: [],
+            fields: [
+              {
+                key: "secretToken",
+                label: "回调秘密",
+                secret: true,
+                control: "password",
+                requiredForReceive: true,
+                requiredForSend: false,
+                immutableOnceConfigured: false,
+              },
+            ],
+          },
+        ]}
+        groups={[]}
+        onClose={closed}
+        onChanged={vi.fn()}
+      />
+    </ConsoleContext>,
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "维护名称与凭据" }),
+  );
+  fireEvent.change(screen.getByLabelText("回调秘密 · 接收必需"), {
+    target: { value: "replacement-secret" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "保存参数" }));
+  await waitFor(() => expect(closed).toHaveBeenCalled());
+  expect(
+    screen.queryByLabelText("回调秘密 · 接收必需"),
+  ).not.toBeInTheDocument();
+  await waitFor(() =>
+    expect(
+      fetcher.mock.calls.filter(
+        ([, init]) => !init?.method || init.method === "GET",
+      ),
+    ).toHaveLength(2),
+  );
+});

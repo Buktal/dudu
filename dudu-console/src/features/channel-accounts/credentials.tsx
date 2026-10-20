@@ -1,7 +1,14 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { TextField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
-import { FieldGroup } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type { AccountDetail, ChannelDefinition } from "./api";
 export function CredentialFields({
   definition,
@@ -21,6 +28,9 @@ export function CredentialFields({
   disabled: boolean;
 }) {
   const [revealed, setRevealed] = useState<string[]>([]);
+  const inputPrefix = useId();
+  const supportsMask =
+    typeof CSS !== "undefined" && CSS.supports("-webkit-text-security", "disc");
   return (
     <>
       {[false, true].map((send) => (
@@ -38,52 +48,105 @@ export function CredentialFields({
                 !!detail && field.immutableOnceConfigured && configured;
               return (
                 <div key={field.key} className="flex flex-col gap-2">
-                  <TextField
-                    label={`${field.label}${field.requiredForReceive ? " · 接收必需" : field.requiredForSend ? " · 发送所需" : " · 可选"}`}
-                    type={
-                      field.secret && !revealed.includes(field.key)
-                        ? "password"
-                        : "text"
-                    }
-                    multiline={
-                      field.control === "textarea" &&
-                      (!field.secret || revealed.includes(field.key))
-                    }
-                    value={values[field.key] ?? ""}
-                    maxLength={field.control === "textarea" ? 16384 : 4096}
-                    disabled={
-                      disabled || immutable || clear.includes(field.key)
-                    }
-                    readOnly={immutable}
-                    autoComplete="off"
-                    onChange={(event) =>
-                      setValues({ ...values, [field.key]: event.target.value })
-                    }
-                    description={
-                      immutable
-                        ? "身份已固定，换账号请新建记录"
-                        : detail && field.secret
-                          ? `${configured ? "已配置" : "未配置"}；留空保持不变`
-                          : undefined
-                    }
-                  />
-                  {field.secret && field.control === "textarea" && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={disabled}
-                      onClick={() =>
-                        setRevealed(
-                          revealed.includes(field.key)
-                            ? revealed.filter((k) => k !== field.key)
-                            : [...revealed, field.key],
-                        )
+                  {field.secret && field.control === "textarea" ? (
+                    <Field
+                      data-disabled={
+                        disabled || immutable || clear.includes(field.key)
                       }
                     >
-                      {revealed.includes(field.key) ? "遮盖私钥" : "展开私钥"}
-                    </Button>
+                      <FieldLabel htmlFor={`${inputPrefix}-${field.key}`}>
+                        {field.label}
+                        {field.requiredForReceive
+                          ? " · 接收必需"
+                          : field.requiredForSend
+                            ? " · 发送所需"
+                            : " · 可选"}
+                      </FieldLabel>
+                      <Textarea
+                        id={`${inputPrefix}-${field.key}`}
+                        aria-describedby={`${inputPrefix}-${field.key}-help`}
+                        value={values[field.key] ?? ""}
+                        onChange={(event) =>
+                          setValues({
+                            ...values,
+                            [field.key]: event.target.value,
+                          })
+                        }
+                        maxLength={16384}
+                        disabled={
+                          disabled || immutable || clear.includes(field.key)
+                        }
+                        readOnly={!!immutable}
+                        autoComplete="off"
+                        spellCheck={false}
+                        rows={4}
+                        className={cn(
+                          supportsMask &&
+                            !revealed.includes(field.key) &&
+                            "[-webkit-text-security:disc]",
+                        )}
+                      />
+                      <FieldDescription id={`${inputPrefix}-${field.key}-help`}>
+                        {detail
+                          ? `${configured ? "已配置" : "未配置"}；留空保持不变。`
+                          : "粘贴完整多行 PEM 私钥。"}
+                        {!supportsMask &&
+                          "当前浏览器不支持多行文本遮盖，私钥将以明文显示。"}
+                      </FieldDescription>
+                    </Field>
+                  ) : (
+                    <TextField
+                      label={`${field.label}${field.requiredForReceive ? " · 接收必需" : field.requiredForSend ? " · 发送所需" : " · 可选"}`}
+                      type={
+                        field.secret && !revealed.includes(field.key)
+                          ? "password"
+                          : "text"
+                      }
+                      multiline={
+                        field.control === "textarea" &&
+                        (!field.secret || revealed.includes(field.key))
+                      }
+                      value={values[field.key] ?? ""}
+                      maxLength={field.control === "textarea" ? 16384 : 4096}
+                      disabled={
+                        disabled || immutable || clear.includes(field.key)
+                      }
+                      readOnly={immutable}
+                      autoComplete="off"
+                      onChange={(event) =>
+                        setValues({
+                          ...values,
+                          [field.key]: event.target.value,
+                        })
+                      }
+                      description={
+                        immutable
+                          ? "身份已固定，换账号请新建记录"
+                          : detail && field.secret
+                            ? `${configured ? "已配置" : "未配置"}；留空保持不变`
+                            : undefined
+                      }
+                    />
                   )}
+                  {field.secret &&
+                    field.control === "textarea" &&
+                    supportsMask && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={disabled}
+                        onClick={() =>
+                          setRevealed(
+                            revealed.includes(field.key)
+                              ? revealed.filter((k) => k !== field.key)
+                              : [...revealed, field.key],
+                          )
+                        }
+                      >
+                        {revealed.includes(field.key) ? "遮盖私钥" : "展开私钥"}
+                      </Button>
+                    )}
                   {detail && configured && !immutable && (
                     <Button
                       type="button"
