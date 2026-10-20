@@ -5,7 +5,16 @@ import { ConsoleLayout } from "@/components/console-layout";
 import { LoadingState } from "@/components/feedback";
 import { AccountPage } from "@/features/account/AccountPage";
 import { LoginPage } from "@/features/auth/LoginPage";
+import { EmployeesPage } from "@/features/employees/EmployeesPage";
+import { UserGroupsPage } from "@/features/groups/user-groups-page";
 import { navigate, routes, useRoute } from "@/navigation";
+
+const selectEmployee = (id: string | null) => navigate(routes.employees(id));
+const createEmployee = (open: boolean) =>
+  navigate(open ? routes.employeeCreate() : routes.employees());
+const selectGroup = (id: string | null) => navigate(routes.userGroups(id));
+const createGroup = (open: boolean) =>
+  navigate(open ? routes.groupCreate() : routes.userGroups());
 
 function Workspace() {
   const route = useRoute();
@@ -19,6 +28,20 @@ function Workspace() {
     <ConsoleLayout view={route.view}>
       {route.view === "account" ? (
         <AccountPage />
+      ) : route.view === "employees" && initial ? (
+        <EmployeesPage
+          selectedId={route.selectedId}
+          creating={route.creating}
+          onSelect={selectEmployee}
+          onCreate={createEmployee}
+        />
+      ) : route.view === "user-groups" || route.view === "login" ? (
+        <UserGroupsPage
+          selectedId={route.selectedId}
+          creating={route.creating}
+          onSelect={selectGroup}
+          onCreate={createGroup}
+        />
       ) : (
         <div className="flex flex-col gap-3">
           <h2 className="text-xl font-semibold">
