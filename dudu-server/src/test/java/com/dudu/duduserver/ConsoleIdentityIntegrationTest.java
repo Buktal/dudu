@@ -286,4 +286,3 @@ class ConsoleIdentityIntegrationTest {
             .andReturn().getResponse().getContentAsString());
     }
 }
-
