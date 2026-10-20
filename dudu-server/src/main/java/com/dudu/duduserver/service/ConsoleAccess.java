@@ -30,4 +30,3 @@ public record ConsoleAccess(CompanyDO company, UserDO user, Set<Long> groupIds) 
         }
     }
 }
-

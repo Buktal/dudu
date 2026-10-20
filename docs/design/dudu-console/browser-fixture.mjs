@@ -162,4 +162,3 @@ createServer(async (req, res) => {
   res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(result));
 }).listen(5181, '127.0.0.1', () => console.log('QA fixture ONLY: http://127.0.0.1:5181 → Vite :5180. Login admin / manager / unassigned; disposable test data.'));
-
