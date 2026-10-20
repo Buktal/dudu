@@ -30,7 +30,7 @@ const definitions = [
   ['whatsapp', 'WhatsApp', ['appSecret', 'verifyToken'], ['accessToken', 'phoneNumberId'], ['appSecret', 'verifyToken', 'accessToken'], ['phoneNumberId']],
   ['telegram', 'Telegram', ['secretToken'], ['botToken'], ['secretToken', 'botToken'], []],
 ].map(([channel, name, receive, send, secret, immutable]) => ({
-  channel, name, available: true, restriction: null,
+  channel, name, available: true, restriction: "",
   fields: [...new Set([...receive, ...send, ...secret])].map(key => ({
     key, label: key, secret: secret.includes(key), requiredForReceive: receive.includes(key),
     requiredForSend: send.includes(key), immutableOnceConfigured: immutable.includes(key),
@@ -162,3 +162,4 @@ createServer(async (req, res) => {
   res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(result));
 }).listen(5181, '127.0.0.1', () => console.log('QA fixture ONLY: http://127.0.0.1:5181 → Vite :5180. Login admin / manager / unassigned; disposable test data.'));
+
