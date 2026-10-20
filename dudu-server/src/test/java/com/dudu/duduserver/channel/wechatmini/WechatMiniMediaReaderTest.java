@@ -19,15 +19,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 小程序素材读取验证：用本地 HTTP 替身按官方事实构造 access_token 与获取临时素材接口的
- * 成功/失败响应（docs/research/channels/wechat-mini.md §6.4），验证换取凭据、按 media_id
- * 读取字节、视频素材经 video_url 再取一次、失败说明如实透传渠道错误码；不模拟成功。
+ * 小程序素材读取薄层装配冒烟：协议行为由微信族骨架 WechatMediaReader 的合并用例验收
+ * （channel/support/WechatMediaReaderTest），此处保留 video_url 二次直取一例（8a64097 纪律
+ * 的渠道侧回归），验证薄层把小程序的 api-base 覆盖、channel_info 凭据读取与委托接线
+ * （含 downloadClient 直取）配对正确（docs/research/channels/wechat-mini.md §6.4）。
  */
 class WechatMiniMediaReaderTest {
 
     // 官方返回示例原文形状：成功 {"access_token":"ACCESS_TOKEN","expires_in":7200}
     private static final String TOKEN_OK = "{\"access_token\":\"ACCESS_TOKEN\",\"expires_in\":7200}";
-    private static final byte[] IMAGE_BYTES = "fake-jpeg-bytes".getBytes(StandardCharsets.UTF_8);
     private static final byte[] VIDEO_BYTES = "fake-mp4-bytes".getBytes(StandardCharsets.UTF_8);
 
     private final List<String> requestLines = new CopyOnWriteArrayList<>();
@@ -47,35 +47,13 @@ class WechatMiniMediaReaderTest {
     }
 
     @Test
-    void readsBinaryMediaByChannelIdentifierWithDocumentedCredentials() {
-        handleJson("/cgi-bin/token", 200, TOKEN_OK);
-        handleBytes("/cgi-bin/media/get", 200, "image/jpeg", IMAGE_BYTES);
-        WechatMiniMediaReader reader = reader();
-
-        ChannelMediaResult result = reader.read(wechatAccount(
-            Map.of("appId", "wx_test_appid", "appSecret", "test-app-secret")), "MEDIA_ID");
-
-        assertThat(result.succeeded()).isTrue();
-        assertThat(result.bytes()).isEqualTo(IMAGE_BYTES);
-        assertThat(result.contentType()).isEqualTo("image/jpeg");
-        assertThat(requestLines.get(0))
-            .startsWith("GET /cgi-bin/token?")
-            .contains("grant_type=client_credential")
-            .contains("appid=wx_test_appid");
-        assertThat(requestLines.get(1))
-            .startsWith("GET /cgi-bin/media/get?")
-            .contains("access_token=ACCESS_TOKEN")
-            .contains("media_id=MEDIA_ID");
-    }
-
-    @Test
     void fetchVideoBytesThroughTheChannelSuppliedDownloadUrl() {
-        // 官方对视频素材返回 JSON：{"video_url": "下载地址"}，需再取一次字节
+        // 官方对视频素材返回 JSON：{"video_url": 下载地址}，需再取一次字节
         handleJson("/cgi-bin/token", 200, TOKEN_OK);
         handleJson("/cgi-bin/media/get", 200,
             "{\"video_url\":\"" + baseUrl + "/mpvideo/demo\"}");
         handleBytes("/mpvideo/demo", 200, "video/mp4", VIDEO_BYTES);
-        WechatMiniMediaReader reader = reader();
+        WechatMiniMediaReader reader = new WechatMiniMediaReader(RestClient.builder(), baseUrl);
 
         ChannelMediaResult result = reader.read(wechatAccount(
             Map.of("appId", "wx_test_appid", "appSecret", "test-app-secret")), "VIDEO_MEDIA_ID");
@@ -83,58 +61,19 @@ class WechatMiniMediaReaderTest {
         assertThat(result.succeeded()).isTrue();
         assertThat(result.bytes()).isEqualTo(VIDEO_BYTES);
         assertThat(result.contentType()).isEqualTo("video/mp4");
+        // 凭据读取经小程序 Credentials 原样进入换取请求，二次直取走完整下载地址
+        assertThat(requestLines.get(0))
+            .startsWith("GET /cgi-bin/token?")
+            .contains("appid=wx_test_appid")
+            .contains("secret=test-app-secret");
+        assertThat(requestLines.get(1))
+            .startsWith("GET /cgi-bin/media/get?")
+            .contains("access_token=ACCESS_TOKEN")
+            .contains("media_id=VIDEO_MEDIA_ID");
         assertThat(requestLines.get(2)).startsWith("GET /mpvideo/demo");
     }
 
-    @Test
-    void reportsChannelRejectionWithTheOriginalErrorCodeAndMessage() {
-        handleJson("/cgi-bin/token", 200, TOKEN_OK);
-        handleJson("/cgi-bin/media/get", 200, "{\"errcode\":40007,\"errmsg\":\"invalid media_id\"}");
-        WechatMiniMediaReader reader = reader();
-
-        ChannelMediaResult result = reader.read(wechatAccount(
-            Map.of("appId", "wx_test_appid", "appSecret", "test-app-secret")), "EXPIRED_ID");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).contains("40007").contains("invalid media_id");
-        assertThat(requestLines).hasSize(2);
-    }
-
-    @Test
-    void reportsTokenFailureWithoutCallingTheMediaEndpoint() {
-        handleJson("/cgi-bin/token", 200,
-            "{\"errcode\":40164,\"errmsg\":\"invalid ip 1.2.3.4, not in whitelist\"}");
-        handleBytes("/cgi-bin/media/get", 200, "image/jpeg", IMAGE_BYTES);
-        WechatMiniMediaReader reader = reader();
-
-        ChannelMediaResult result = reader.read(wechatAccount(
-            Map.of("appId", "wx_test_appid", "appSecret", "test-app-secret")), "MEDIA_ID");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).contains("40164").contains("not in whitelist");
-        assertThat(requestLines).hasSize(1);
-    }
-
-    @Test
-    void reportsTransportFailureInsteadOfPretendingSuccess() {
-        // 替身未注册该路径（HTTP 404）：如实记录调用失败，不冒成功
-        ChannelMediaResult unbound = reader().read(wechatAccount(
-            Map.of("appId", "wx_test_appid", "appSecret", "test-app-secret")), "MEDIA_ID");
-        assertThat(unbound.succeeded()).isFalse();
-        assertThat(unbound.failureReason()).isNotBlank();
-
-        // 接口返回无法识别的 JSON（既无字节也无 video_url 与 errcode）同样按失败处理
-        handleJson("/cgi-bin/token", 200, TOKEN_OK);
-        handleJson("/cgi-bin/media/get", 200, "{\"unexpected\":true}");
-        ChannelMediaResult unreadable = reader().read(wechatAccount(
-            Map.of("appId", "wx_test_appid", "appSecret", "test-app-secret")), "MEDIA_ID");
-        assertThat(unreadable.succeeded()).isFalse();
-        assertThat(unreadable.failureReason()).isNotBlank();
-    }
-
-    private WechatMiniMediaReader reader() {
-        return new WechatMiniMediaReader(RestClient.builder(), baseUrl);
-    }
+    // ---- 夹具 ----
 
     private CompanyChannelDO wechatAccount(Map<String, Object> channelInfo) {
         CompanyChannelDO account = new CompanyChannelDO();

@@ -44,6 +44,9 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
     // 企业 ID 被占用的统一提示：预检命中与主键冲突并发抢占共用
     private static final String MSG_COMPANY_ID_OCCUPIED = "企业 ID 已被占用，请重新选择";
 
+    // 企业名 LIKE 的显式转义字符片段（口径同 Desk 访客搜索的 DeskVisitorServiceImpl）
+    private static final String LIKE_ESCAPE = " ESCAPE '!'";
+
     private final UserService userService;
     private final OperationLogService operationLogService;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -101,8 +104,11 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
         if (StringUtils.hasText(query.getKeyword())) {
             String keyword = query.getKeyword().trim();
             Long keywordId = CompanyIdPolicy.isValid(keyword) ? Long.valueOf(keyword) : null;
+            String pattern = "%" + escapeLike(keyword) + "%";
             wrapper.and(w -> {
-                w.like(CompanyDO::getCompanyName, keyword);
+                // Lambda 的 like 无法表达 ESCAPE，用受支持的固定 SQL 片段追加，转义字符显式指定为 !、
+                // 不随连接默认值变化，词条仍走占位符参数绑定（口径同 DeskVisitorServiceImpl）
+                w.apply("company_name LIKE {0}" + LIKE_ESCAPE, pattern);
                 if (keywordId != null) {
                     w.or().eq(CompanyDO::getCompanyId, keywordId);
                 }
@@ -228,6 +234,12 @@ public class CompanyServiceImpl extends ServiceImpl<CompanyMapper, CompanyDO> im
     public CompanyIdAvailabilityVO checkIdAvailability(String companyId) {
         Long id = CompanyIdPolicy.parseCompanyId(companyId);
         return new CompanyIdAvailabilityVO(String.valueOf(id), getById(id) == null);
+    }
+
+    // 通配符转义：! 自身先转义（后两步替换会引入 !），% 与 _ 变为字面量；与 SQL 中显式
+    // ESCAPE '!' 一致，字面匹配不随连接默认转义字符、sql_mode 变化（口径同 DeskVisitorServiceImpl）
+    private String escapeLike(String term) {
+        return term.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     // 解析并校验企业 ID，不存在时报数据不存在
