@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>使用 MockPulse 联调渠道回调 | DuDu</title>
+<meta name="description" content="使用可复现的事件素材、场景、计划和运行记录，验证 DuDu 本地回调与坐席工作流。">
+<meta property="og:title" content="使用 MockPulse 联调渠道回调 | DuDu">
+<meta property="og:description" content="使用可复现的事件素材、场景、计划和运行记录，验证 DuDu 本地回调与坐席工作流。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://buktal.github.io/dudu/guides/mockpulse.html">
+<meta property="og:image" content="https://buktal.github.io/dudu/assets/desk.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://buktal.github.io/dudu/guides/mockpulse.html">
+<link rel="alternate" hreflang="zh-CN" href="https://buktal.github.io/dudu/guides/mockpulse.html">
+<link rel="alternate" hreflang="en" href="https://buktal.github.io/dudu/guides/mockpulse.en.html">
+<link rel="alternate" hreflang="x-default" href="https://buktal.github.io/dudu/guides/mockpulse.html">
+<meta name="theme-color" content="#0b151e">
+<script src="../theme.js"></script>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+<link rel="icon" type="image/svg+xml" href="../assets/dudu.svg">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "使用 MockPulse 联调渠道回调", "description": "使用可复现的事件素材、场景、计划和运行记录，验证 DuDu 本地回调与坐席工作流。", "inLanguage": "zh-CN", "url": "https://buktal.github.io/dudu/guides/mockpulse.html", "isPartOf": {"@type": "WebSite", "name": "DuDu", "url": "https://buktal.github.io/dudu/"}}</script>
+</head>
+<body class="guide-page">
+<a class="skip" href="#main">跳至正文</a>
+<header class="site-header shell">
+<a class="brand" href="../"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="主导航">
+<a href="index.html">使用指南</a>
+<a href="mockpulse.en.html" lang="en">EN</a>
+<button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
+<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav>
+</header>
+<main id="main" class="shell guide-layout">
+<aside class="guide-nav" aria-label="指南导航"><a href="index.html">指南概览</a><a href="deployment.html">部署与本地运行</a><a href="workflow.html">从企业开通到坐席接待</a><a href="wechat.html">微信公众号接入指南</a><a href="telegram.html">Telegram Bot 接入指南</a><a href="whatsapp.html">WhatsApp Cloud API 接入指南</a><a href="mockpulse.html" aria-current="page">使用 MockPulse 联调渠道回调</a></aside>
+<article class="guide-article"><div class="kicker">开源 / 自托管</div><h1>使用 MockPulse 联调渠道回调</h1><p class="guide-intro">使用可复现的事件素材、场景、计划和运行记录，验证 DuDu 本地回调与坐席工作流。</p><div class="guide-toc">本页内容<a href="#section-1">定位与运行方式</a><a href="#section-2">建立可复现用例</a><a href="#section-3">验证边界</a><a href="#section-4">下一步</a></div><section id="section-1"><h2>定位与运行方式</h2><p>MockPulse 是仓库内可选的渠道回调模拟工具，不是客服生产服务。它由 React 前端与 Tauri / Rust 桌面能力组成；Web 预览不等于具备全部原生执行能力。</p><pre><code>cd mock-pulse
+yarn install
+yarn tauri:dev</code></pre><p>运行桌面应用前，按 <a href="https://github.com/Buktal/dudu/blob/main/mock-pulse/README.md">MockPulse README ↗</a> 准备 Rust 与当前系统的 Tauri 构建环境。yarn dev 仅用于 Web 预览。</p></section><section id="section-2"><h2>建立可复现用例</h2><ol><li>先运行 DuDu Server、Console 和 Desk，创建企业、员工、用户组及目标渠道账号。</li><li>按目标适配器准备事件素材和场景，使用与测试账号一致的签名、加密和回调配置；不要将任意 JSON 当作通用渠道请求。</li><li>将场景组织为测试计划并执行，结合运行记录与 Server 响应定位失败。</li><li>核对 Desk 中的来信、顺序、历史和当前访问范围；需要发送验证时另行准备真实发送凭据及可用的官方接口。</li></ol></section><section id="section-3"><h2>验证边界</h2><p>本地受控回调可验证协议处理与接待链路，但不能证明真实平台已授权、公网回调可达或平台生产审核通过。模拟来信不会自动模拟官方出站 API。真实平台接入需独立记录验收结果。</p></section><section id="section-4"><h2>下一步</h2><p>按<a href="wechat.html">微信公众号</a>、<a href="telegram.html">Telegram</a>或<a href="whatsapp.html">WhatsApp</a>指南完成对应平台准备。实现范围与运行限制以 <a href="https://github.com/Buktal/dudu/blob/main/mock-pulse/README.md">MockPulse 源项目说明 ↗</a> 为准。</p></section>
+<div class="guide-end"><a href="index.html">全部指南 ↗</a><a href="https://github.com/Buktal/dudu">源码与贡献 ↗</a></div></article>
+</main>
+<footer class="shell"><span>DuDu · Apache-2.0</span><a href="https://github.com/Buktal/dudu/blob/main/LICENSE">开源许可证 ↗</a></footer>
+</body>
+</html>

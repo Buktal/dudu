@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WeChat Official Account integration | DuDu</title>
+<meta name="description" content="Configure plaintext WeChat Official Account callbacks, receiving tokens and text sending credentials for the DuDu unified inbox.">
+<meta property="og:title" content="WeChat Official Account integration | DuDu">
+<meta property="og:description" content="Configure plaintext WeChat Official Account callbacks, receiving tokens and text sending credentials for the DuDu unified inbox.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://buktal.github.io/dudu/guides/wechat.en.html">
+<meta property="og:image" content="https://buktal.github.io/dudu/assets/desk.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://buktal.github.io/dudu/guides/wechat.en.html">
+<link rel="alternate" hreflang="zh-CN" href="https://buktal.github.io/dudu/guides/wechat.html">
+<link rel="alternate" hreflang="en" href="https://buktal.github.io/dudu/guides/wechat.en.html">
+<link rel="alternate" hreflang="x-default" href="https://buktal.github.io/dudu/guides/wechat.html">
+<meta name="theme-color" content="#0b151e">
+<script src="../theme.js"></script>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+<link rel="icon" type="image/svg+xml" href="../assets/dudu.svg">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "WeChat Official Account integration", "description": "Configure plaintext WeChat Official Account callbacks, receiving tokens and text sending credentials for the DuDu unified inbox.", "inLanguage": "en", "url": "https://buktal.github.io/dudu/guides/wechat.en.html", "isPartOf": {"@type": "WebSite", "name": "DuDu", "url": "https://buktal.github.io/dudu/"}}</script>
+</head>
+<body class="guide-page">
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header shell">
+<a class="brand" href="../en.html"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="Main navigation">
+<a href="index.en.html">Guides</a>
+<a href="wechat.html" lang="zh-CN">中文</a>
+<button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
+<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav>
+</header>
+<main id="main" class="shell guide-layout">
+<aside class="guide-nav" aria-label="Guide navigation"><a href="index.en.html">Overview</a><a href="deployment.en.html">Deployment and local setup</a><a href="workflow.en.html">From organization setup to agent support</a><a href="wechat.en.html" aria-current="page">WeChat Official Account integration</a><a href="telegram.en.html">Telegram Bot integration</a><a href="whatsapp.en.html">WhatsApp Cloud API integration</a><a href="mockpulse.en.html">Test channel callbacks with MockPulse</a></aside>
+<article class="guide-article"><div class="kicker">OPEN SOURCE / SELF-HOSTED</div><h1>WeChat Official Account integration</h1><p class="guide-intro">Configure plaintext WeChat Official Account callbacks, receiving tokens and text sending credentials for the DuDu unified inbox.</p><div class="guide-toc">On this page<a href="#section-1">Scope</a><a href="#section-2">Configuration and validation</a><a href="#section-3">Troubleshooting and limits</a><a href="#section-4">References</a></div><section id="section-1"><h2>Scope</h2><p>This guide covers the wechat-mp adapter for WeChat Official Accounts. It currently supports plaintext callbacks only. WeChat Mini Programs and WeCom use separate adapters and fields. Official Account AES-encrypted callbacks are outside the current scope.</p></section><section id="section-2"><h2>Configuration and validation</h2><ol><li>Prepare an Official Account with the required messaging API permissions. Configure a public callback origin reachable by the platform.</li><li>Create a WeChat Official Account channel in Console and assign a group. Set the receiving token; add appId and appSecret for replies.</li><li>Copy the callback URL from Console into the Official Account server configuration. Match the token and select plaintext messages. Complete GET verification before enabling callbacks.</li><li>Send a message from a real Official Account user. Check the inbox and history in an authorized employee’s Desk, then send a text reply and inspect the actual platform response.</li></ol></section><section id="section-3"><h2>Troubleshooting and limits</h2><p>If server verification fails, check public reachability, the complete callback path, token and plaintext mode. If receiving works but replies fail, check appId, appSecret, API permissions and platform reply rules. DuDu does not apply for permissions or platform review, and account types may have different sending capabilities.</p></section><section id="section-4"><h2>References</h2><p><a href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">Current channel field contract ↗</a> · <a href="https://developers.weixin.qq.com/doc/offiaccount/Basic_Information/Access_Overview.html">Official WeChat integration documentation ↗</a>. See <a href="mockpulse.en.html">MockPulse callback testing</a> for local tests; simulation does not replace real-account validation.</p></section>
+<div class="guide-end"><a href="index.en.html">All guides ↗</a><a href="https://github.com/Buktal/dudu">Source & contributions ↗</a></div></article>
+</main>
+<footer class="shell"><span>DuDu · Apache-2.0</span><a href="https://github.com/Buktal/dudu/blob/main/LICENSE">Open-source license ↗</a></footer>
+</body>
+</html>

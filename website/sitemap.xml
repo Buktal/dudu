@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://buktal.github.io/dudu/</loc></url>
-  <url><loc>https://buktal.github.io/dudu/en.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/</loc></url>
+<url><loc>https://buktal.github.io/dudu/en.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/index.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/index.en.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/deployment.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/deployment.en.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/workflow.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/workflow.en.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/wechat.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/wechat.en.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/telegram.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/telegram.en.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/whatsapp.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/whatsapp.en.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/mockpulse.html</loc></url>
+<url><loc>https://buktal.github.io/dudu/guides/mockpulse.en.html</loc></url>
 </urlset>

@@ -3,6 +3,8 @@
 官网源码位于仓库根目录 `website/`，不是 Git 子模块，不依赖服务端或构建工具。
 
 - 中文首页：`index.html`；英文页面：`en.html`。
+- 使用指南：`guides/index.html`、`guides/index.en.html`；部署、接待流程、微信公众号、Telegram、WhatsApp 与 MockPulse 各有中英文独立页面。
+- 指南复用官网主题与字体，布局样式为 `guides/guide.css`，仅加载 `theme.js`，不加载首页场景脚本。
 - 公共样式：`style.css`；消息流场景样式：`scene.css`；展示素材：`assets/`。
 - 原生交互：`site.js`（消息示例、页签、图片预览）；`scene.js`（Canvas 投影、线路与消息动画）。
 - 主题：`theme.js` 在首次绘制前应用外观，`theme.css` 提供明亮主题及公共表面色；Canvas 同步切换配色。
@@ -41,3 +43,11 @@
 产品页签支持左右方向键及 Home / End；图片预览使用原生 dialog，支持 Escape 关闭。JavaScript 不可用时保留完整产品内容、静态消息流说明及原图链接。
 
 页面为静态 HTML/CSS/JavaScript，无构建依赖。校验包括脚本语法、相对资源链接、双语导航、移动布局、消息选择与暂停、页签键盘操作、图片预览和实际 Pages 发布结果；无需运行业务子项目测试。
+
+## 搜索与内容维护
+
+每个公开页面具有独立标题、描述、canonical 与中英文 hreflang 配对；首页使用 SoftwareSourceCode 结构化数据，指南使用 CollectionPage / TechArticle。`sitemap.xml` 列出全部 16 个页面，`robots.txt` 声明其公开地址。增加页面时同步站内导航、语言对应关系和 sitemap，不填写虚构的评分、下载量或发布时间。
+
+README 和官网描述统一围绕开源、自托管、多渠道客服及统一接待；渠道名称仅覆盖当前实现。指南说明具体任务并链接源码契约，字段、权限或部署行为变化时同步核对。本文路径均相对仓库根 `website/`。
+
+Google Search Console 与 Bing Webmaster 的站点所有权验证和 sitemap 提交需在对应站长账号中完成；提供 sitemap 不等于已提交或已被索引，也不保证排名或 GitHub 推荐。

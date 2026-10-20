@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Telegram Bot 接入指南 | DuDu</title>
+<meta name="description" content="区分 Telegram botToken 与 Webhook secretToken，配置 DuDu 回调并验证 Bot 文本消息接待。">
+<meta property="og:title" content="Telegram Bot 接入指南 | DuDu">
+<meta property="og:description" content="区分 Telegram botToken 与 Webhook secretToken，配置 DuDu 回调并验证 Bot 文本消息接待。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://buktal.github.io/dudu/guides/telegram.html">
+<meta property="og:image" content="https://buktal.github.io/dudu/assets/desk.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://buktal.github.io/dudu/guides/telegram.html">
+<link rel="alternate" hreflang="zh-CN" href="https://buktal.github.io/dudu/guides/telegram.html">
+<link rel="alternate" hreflang="en" href="https://buktal.github.io/dudu/guides/telegram.en.html">
+<link rel="alternate" hreflang="x-default" href="https://buktal.github.io/dudu/guides/telegram.html">
+<meta name="theme-color" content="#0b151e">
+<script src="../theme.js"></script>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+<link rel="icon" type="image/svg+xml" href="../assets/dudu.svg">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Telegram Bot 接入指南", "description": "区分 Telegram botToken 与 Webhook secretToken，配置 DuDu 回调并验证 Bot 文本消息接待。", "inLanguage": "zh-CN", "url": "https://buktal.github.io/dudu/guides/telegram.html", "isPartOf": {"@type": "WebSite", "name": "DuDu", "url": "https://buktal.github.io/dudu/"}}</script>
+</head>
+<body class="guide-page">
+<a class="skip" href="#main">跳至正文</a>
+<header class="site-header shell">
+<a class="brand" href="../"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="主导航">
+<a href="index.html">使用指南</a>
+<a href="telegram.en.html" lang="en">EN</a>
+<button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
+<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav>
+</header>
+<main id="main" class="shell guide-layout">
+<aside class="guide-nav" aria-label="指南导航"><a href="index.html">指南概览</a><a href="deployment.html">部署与本地运行</a><a href="workflow.html">从企业开通到坐席接待</a><a href="wechat.html">微信公众号接入指南</a><a href="telegram.html" aria-current="page">Telegram Bot 接入指南</a><a href="whatsapp.html">WhatsApp Cloud API 接入指南</a><a href="mockpulse.html">使用 MockPulse 联调渠道回调</a></aside>
+<article class="guide-article"><div class="kicker">开源 / 自托管</div><h1>Telegram Bot 接入指南</h1><p class="guide-intro">区分 Telegram botToken 与 Webhook secretToken，配置 DuDu 回调并验证 Bot 文本消息接待。</p><div class="guide-toc">本页内容<a href="#section-1">两类凭据</a><a href="#section-2">配置与验收</a><a href="#section-3">轮换与故障定位</a><a href="#section-4">参考</a></div><section id="section-1"><h2>两类凭据</h2><p>botToken 用于访问 Telegram Bot API；secretToken 用于校验来信请求头 X-Telegram-Bot-Api-Secret-Token。两者用途不同。Console 接收 botToken 并由后端构造固定 Telegram API 地址，不支持自定义发送 URL。</p></section><section id="section-2"><h2>配置与验收</h2><ol><li>准备 Telegram Bot 及其 token，部署具有公开 HTTPS 回调地址的 Server。</li><li>在 Console 创建 Telegram 账号、绑定用户组，填写 secretToken；需要发送回复时填写 botToken。</li><li>在 Telegram Bot API 的 setWebhook 中，将 url 设为 Console 提供的回调地址，将 secret_token 设为同一个 secretToken。完整调用参数与限制以官方 API 文档为准。</li><li>通过 getWebhookInfo 检查注册结果，再向 Bot 发送消息。确认有权坐席可以收到消息并发送文本回复。Telegram 回调不使用 GET challenge 握手。</li></ol></section><section id="section-3"><h2>轮换与故障定位</h2><p>Webhook 配置错误时检查 HTTPS、回调路径和 secretToken 请求头是否被网关保留。发送失败时检查 botToken、Bot 是否有权向该 chat 发送消息，以及平台频控结果。相同 Bot ID 可以轮换 token；切换到其他 Bot 必须新建渠道账号，不能通过清空 token 绕过身份绑定。</p></section><section id="section-4"><h2>参考</h2><p><a href="https://core.telegram.org/bots/api#setwebhook">Telegram setWebhook ↗</a> · <a href="https://core.telegram.org/bots/api#getwebhookinfo">getWebhookInfo ↗</a> · <a href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">DuDu 字段与身份约束 ↗</a>。不要将真实 Bot token 写入仓库、截图或可公开访问的日志。</p></section>
+<div class="guide-end"><a href="index.html">全部指南 ↗</a><a href="https://github.com/Buktal/dudu">源码与贡献 ↗</a></div></article>
+</main>
+<footer class="shell"><span>DuDu · Apache-2.0</span><a href="https://github.com/Buktal/dudu/blob/main/LICENSE">开源许可证 ↗</a></footer>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DuDu 使用指南 | DuDu</title>
+<meta name="description" content="开源多渠道客服系统的部署、渠道接入、坐席接待与回调联调指南。">
+<meta property="og:title" content="DuDu 使用指南 | DuDu">
+<meta property="og:description" content="开源多渠道客服系统的部署、渠道接入、坐席接待与回调联调指南。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://buktal.github.io/dudu/guides/index.html">
+<meta property="og:image" content="https://buktal.github.io/dudu/assets/desk.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://buktal.github.io/dudu/guides/index.html">
+<link rel="alternate" hreflang="zh-CN" href="https://buktal.github.io/dudu/guides/index.html">
+<link rel="alternate" hreflang="en" href="https://buktal.github.io/dudu/guides/index.en.html">
+<link rel="alternate" hreflang="x-default" href="https://buktal.github.io/dudu/guides/index.html">
+<meta name="theme-color" content="#0b151e">
+<script src="../theme.js"></script>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="guide.css">
+<link rel="icon" type="image/svg+xml" href="../assets/dudu.svg">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "CollectionPage", "headline": "DuDu 使用指南", "description": "开源多渠道客服系统的部署、渠道接入、坐席接待与回调联调指南。", "inLanguage": "zh-CN", "url": "https://buktal.github.io/dudu/guides/index.html", "isPartOf": {"@type": "WebSite", "name": "DuDu", "url": "https://buktal.github.io/dudu/"}}</script>
+</head>
+<body class="guide-page">
+<a class="skip" href="#main">跳至正文</a>
+<header class="site-header shell">
+<a class="brand" href="../"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="主导航">
+<a href="index.html">使用指南</a>
+<a href="index.en.html" lang="en">EN</a>
+<button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
+<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav>
+</header>
+<main id="main" class="shell guide-layout">
+<aside class="guide-nav" aria-label="指南导航"><a href="index.html">指南概览</a><a href="deployment.html">部署与本地运行</a><a href="workflow.html">从企业开通到坐席接待</a><a href="wechat.html">微信公众号接入指南</a><a href="telegram.html">Telegram Bot 接入指南</a><a href="whatsapp.html">WhatsApp Cloud API 接入指南</a><a href="mockpulse.html">使用 MockPulse 联调渠道回调</a></aside>
+<article class="guide-article"><div class="kicker">开源 / 自托管</div><h1>DuDu 使用指南</h1><p class="guide-intro">开源多渠道客服系统的部署、渠道接入、坐席接待与回调联调指南。</p><div class="guide-cards"><a class="guide-card" href="deployment.html"><h2>部署与本地运行 ↗</h2><p>从本地 MySQL、Java Server 和三个前端开始运行 DuDu，并了解自托管部署的配置边界。</p></a><a class="guide-card" href="workflow.html"><h2>从企业开通到坐席接待 ↗</h2><p>了解 Admin、Console 与 Desk 的职责，以及企业、用户组和渠道账号如何组成统一客服工作流。</p></a><a class="guide-card" href="wechat.html"><h2>微信公众号接入指南 ↗</h2><p>为 DuDu 配置微信公众号明文回调、接收 token 与文本发送凭据，并验证统一工作台接待。</p></a><a class="guide-card" href="telegram.html"><h2>Telegram Bot 接入指南 ↗</h2><p>区分 Telegram botToken 与 Webhook secretToken，配置 DuDu 回调并验证 Bot 文本消息接待。</p></a><a class="guide-card" href="whatsapp.html"><h2>WhatsApp Cloud API 接入指南 ↗</h2><p>了解 WhatsApp Webhook 验证、消息签名与发送凭据如何分别配置到 DuDu 企业控制台。</p></a><a class="guide-card" href="mockpulse.html"><h2>使用 MockPulse 联调渠道回调 ↗</h2><p>使用可复现的事件素材、场景、计划和运行记录，验证 DuDu 本地回调与坐席工作流。</p></a></div><p>指南依据当前实现整理。建议先完成部署与接待流程，再选择渠道接入；各页链接的源码契约保留完整字段与行为说明。</p>
+<div class="guide-end"><a href="index.html">全部指南 ↗</a><a href="https://github.com/Buktal/dudu">源码与贡献 ↗</a></div></article>
+</main>
+<footer class="shell"><span>DuDu · Apache-2.0</span><a href="https://github.com/Buktal/dudu/blob/main/LICENSE">开源许可证 ↗</a></footer>
+</body>
+</html>

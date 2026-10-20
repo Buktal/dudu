@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DuDu 嘟嘟｜开源多渠道客服系统</title>
-<meta name="description" content="DuDu 是基于 Apache-2.0 的开源、自托管多渠道客服系统，提供统一坐席工作台、企业控制台、平台管理后台和渠道回调模拟工具。">
+<meta name="description" content="DuDu 是 Apache-2.0 开源、自托管的多渠道客服系统，提供微信公众号、Telegram、WhatsApp 等渠道的统一接待、企业权限管理与本地回调联调工具。">
 <meta property="og:title" content="DuDu 嘟嘟｜开源多渠道客服系统">
-<meta property="og:description" content="DuDu 是基于 Apache-2.0 的开源、自托管多渠道客服系统，提供统一坐席工作台、企业控制台、平台管理后台和渠道回调模拟工具。">
+<meta property="og:description" content="DuDu 是 Apache-2.0 开源、自托管的多渠道客服系统，提供微信公众号、Telegram、WhatsApp 等渠道的统一接待、企业权限管理与本地回调联调工具。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://buktal.github.io/dudu/">
 <meta property="og:image" content="https://buktal.github.io/dudu/assets/desk.png">
@@ -19,6 +19,8 @@
 <link rel="icon" type="image/svg+xml" href="assets/dudu.svg">
 <script type="module" src="site.js">
 </script>
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareSourceCode", "name": "DuDu", "description": "DuDu 是 Apache-2.0 开源、自托管的多渠道客服系统，提供微信公众号、Telegram、WhatsApp 等渠道的统一接待、企业权限管理与本地回调联调工具。", "codeRepository": "https://github.com/Buktal/dudu", "license": "https://www.apache.org/licenses/LICENSE-2.0", "programmingLanguage": ["Java", "TypeScript", "Rust"], "url": "https://buktal.github.io/dudu/", "inLanguage": "zh-CN"}</script>
 </head>
 <body>
 <a class="skip" href="#main">跳至正文</a>
@@ -31,7 +33,7 @@
 <nav aria-label="主导航">
 <a href="#products">产品</a>
 <a href="#channels">渠道</a>
-<a href="#start">文档</a>
+<a href="guides/index.html">文档</a>
 <a href="en.html" lang="en">EN / 中</a>
 <button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
 <a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
@@ -263,6 +265,7 @@
 </section>
 <section id="start" class="start-layout">
 <div>
+<p class="guide-entry"><a href="guides/index.html">部署、渠道接入与联调指南 ↗</a></p>
 
 <h2>从源码开始，<br>在自己的环境运行。</h2>
 <p class="muted">开发环境需要 Java 21、Maven 3.9、Docker Compose、Node.js 22.12+ 和 Yarn 4。桌面构建另需 Rust 与 Tauri 环境。</p>

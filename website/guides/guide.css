@@ -1,0 +1,35 @@
+.guide-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 64px; padding-block: 64px 90px; }
+.guide-nav { align-self: start; position: sticky; top: 28px; display: grid; gap: 6px; }
+.guide-nav a { padding: 10px 12px; color: var(--muted); font-size: 14px; line-height: 1.6; border-radius: 5px; }
+.guide-nav a:hover, .guide-nav a[aria-current] { color: var(--ice); background: var(--inset); }
+.guide-article { min-width: 0; max-width: 840px; }
+.guide-article h1, html[lang="en"] .guide-article h1 { font-size: clamp(32px, 3.7vw, 48px); line-height: 1.25; margin-block: 20px 22px; overflow-wrap: anywhere; }
+.guide-intro { color: var(--muted); font-size: 18px; line-height: 1.9; }
+.guide-article section { padding: 28px 0 8px; scroll-margin-top: 25px; }
+.guide-article h2 { font-size: 25px; margin: 0 0 20px; line-height: 1.5; }
+.guide-article p, .guide-article li { line-height: 1.95; font-size: 16px; overflow-wrap: anywhere; }
+.guide-article li { padding: 4px 0 8px 8px; }
+.guide-article ol { padding-left: 24px; }
+.guide-article p a, .guide-article li a, .guide-end a, .guide-entry a { color: var(--ice); text-decoration: underline; text-underline-offset: 4px; }
+.guide-article pre { max-width: 100%; overflow-x: auto; padding: 24px; background: var(--inset); border-radius: 8px; font: 13px/1.9 var(--mono); }
+.guide-toc { display: flex; flex-wrap: wrap; gap: 12px 22px; color: var(--muted); margin: 32px 0 16px; font-size: 14px; line-height: 1.8; }
+.guide-toc a { color: var(--ice); }
+.guide-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-block: 36px; }
+.guide-card { display: block; padding: 26px; border-radius: 8px; background: var(--inset); transition: background .2s; }
+.guide-card h2 { font-size: 21px; color: var(--ice); }
+.guide-card p { color: var(--muted); margin-bottom: 0; }
+.guide-end { display: flex; flex-wrap: wrap; gap: 24px; padding-top: 48px; font-size: 14px; }
+@media (max-width: 950px) {
+  .guide-layout { grid-template-columns: 1fr; gap: 32px; padding-top: 32px; }
+  .guide-nav { position: static; display: flex; flex-wrap: wrap; gap: 4px; }
+  .guide-nav a { padding: 7px 10px; }
+}
+@media (max-width: 760px) {
+  .guide-page nav a:nth-child(2) { display: inline; }
+  .guide-nav { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; }
+  .guide-nav a { flex: 0 0 auto; }
+  .guide-cards { grid-template-columns: 1fr; }
+  .guide-card { padding: 22px; }
+  .guide-intro { font-size: 16px; }
+  .guide-article pre { padding: 18px; font-size: 12px; }
+}

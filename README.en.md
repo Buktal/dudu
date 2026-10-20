@@ -1,4 +1,4 @@
-# DuDu · 嘟嘟
+# DuDu | Open-source multichannel customer support
 
 [简体中文](README.md) | **English**
 
@@ -6,9 +6,9 @@
 
 **Open-source, self-hosted multichannel customer support.**
 
-DuDu is an open-source, self-hosted multichannel customer support system licensed under Apache-2.0. It receives channel messages, scopes access by organization and group, and gives support agents one place to read conversation history, reply, and maintain visitor profiles. This repository includes the server, agent workspace, platform and organization administration apps, and a local channel callback simulator.
+DuDu is an open-source, self-hosted multichannel customer support system licensed under Apache-2.0. It brings WeChat, Telegram, WhatsApp and other channel messages into a unified inbox, scopes access by organization and group, and gives support agents one place to read conversation history, reply, and maintain visitor profiles. This repository includes the server, agent workspace, platform and organization administration apps, and a local channel callback simulator.
 
-[Project website](https://buktal.github.io/dudu/en.html) · [Run locally](#run-locally) · [Channels and limitations](#channels-and-limitations) · [Development and contributions](#development-and-contributions) · [Documentation](docs/README.md)
+[Project website](https://buktal.github.io/dudu/en.html) · [Setup and integration guides](https://buktal.github.io/dudu/guides/index.en.html) · [Run locally](#run-locally) · [Channels and limitations](#channels-and-limitations) · [Development and contributions](#development-and-contributions) · [Documentation](docs/README.md)
 
 ![DuDu agent workspace with a conversation queue, chat history, and visitor profile](docs/design/dudu-console/qa-desk-live-1440.png)
 
