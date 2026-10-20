@@ -53,7 +53,7 @@ mock-pulse/
 
 ## 相关文档
 
-- 平台研究：`../docs/research/channels/`
-- 架构决策记录：`../docs/adr/`
-- 界面原型：`../docs/prototype/console.html`
-- 工程规范：仓库根 `CLAUDE.md`
+- [平台研究](../docs/research/channels/README.md)
+- [架构决策记录](../docs/adr/)
+- [界面原型](../docs/prototype/mock-pulse/README.md)
+- [工程规范](../AGENTS.md)

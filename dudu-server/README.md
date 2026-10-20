@@ -9,7 +9,7 @@ Console 企业管理接口已按[Console 数据契约](../docs/design/dudu-conso
 - [总体设计与阶段计划](../docs/design/dudu-server/README.md)：已确认模型、Admin 优先交付和待定问题。
 - [功能图谱](../docs/features/dudu-server.md)：模块入口、行为和验证范围。
 - [Admin 数据契约](../docs/design/dudu-admin/data-contract.md)：接口字段与错误码契约，首版后端按此实现。
-- [Desk 最小对接契约](../docs/design/dudu-desk/implementation-contract.md)：三表、HTTP、Socket 与前端映射已定稿；企业认证字段见[认证子契约](../docs/design/dudu-desk/ticket-01-login.md)，业务尚待按实施票接通。
+- [Desk 最小对接契约](../docs/design/dudu-desk/implementation-contract.md)：已实现的三表、HTTP、Socket 与前端映射；企业认证字段见[认证子契约](../docs/design/dudu-desk/ticket-01-login.md)。
 - [统一返回决策](../docs/adr/0006-always-200-segmented-error-codes.md)。
 - [认证决策](../docs/adr/0007-jwt-auth-chain.md)。
 
@@ -19,7 +19,7 @@ Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `c
 
 - 使用 Java 21 和 Maven，在本目录运行 `mvn clean test`。
 - 密钥与数据源明文写在 `application.yaml`（本地开发默认值，开箱即跑）。生产在 jar 同目录 `.env` 用同名键覆盖（`dudu.auth.jwt-secret` 至少 32 字节随机值）；空白密钥仍启动失败，但漏写 `.env` 时应用会以开发密钥静默启动，部署时须人工核对。
-- 首个平台管理员在启动时初始化：库中无平台账号时以 `AdminInitializer` 内置凭据 `Admin`/`admin` 创建（与前端登录表单预填约定一致，不是生产凭据，首登后经改密接口更换）。改密接口要求新密码 8–72 字符；初始化凭据不做该长度校验，如需改回短密码须重建初始化账号。
+- 首个平台管理员在启动时初始化：库中无平台账号时以 `AdminInitializer` 内置凭据 `admin`/`admin` 创建（不是生产凭据，首登后经改密接口更换）。改密接口要求新密码 8–72 字符；初始化凭据不做该长度校验。
 - 数据源为 `application.yaml` 明文默认值（`127.0.0.1:3306`、`dudu`/`123456`），无 `.env`、无环境变量直接跑；生产覆盖方式见「线上部署边界」。
 - 公众号接口地址配置键已随 V5 渠道码值迁移更名为 `dudu.channel.wechat-mp.api-base`（旧键 `dudu.channel.wechat.api-base` 不再读取）：从旧版本升级的存量部署须同步改名 `.env` 中的覆盖键，否则覆盖静默失效、回落官方域名。
 - `/api/**` 默认需要 `Authorization: Bearer <token>`；放行路径为 `POST /api/admin/login`、`POST /api/desk/login` 与渠道回调 `/api/channels/*/callback`，`/api/admin/**` 叠加 admin 角色校验，`/api/desk/**` 叠加企业员工身份校验。
@@ -54,3 +54,11 @@ dudu.auth.jwt-secret=<openssl rand -hex 32 生成>
 ```
 
 在 `.env` 所在目录 `java -jar` 启动。注意：漏写 `dudu.auth.jwt-secret` 时应用会以开发密钥静默启动（不再 fail-fast），上线清单必须核对这一行。换服务器只需迁移 jar 与 `.env` 两个文件。服务端不做 CORS：前端开发走 Vite 同源代理，生产同源部署或由网关（如 Nginx）加 CORS 头。数据库尽量与开发使用相同的 8.4 补丁版本，配置私网访问、备份及恢复验证，并按实际负载确定资源和连接池。业务表仍由 Flyway 版本化迁移维护。
+
+Console 展示的公网回调地址通过 `dudu.channel.callback-base-url=https://callbacks.example.com` 配置，只接受协议、主机和可选端口，不带路径或尾部斜杠。未配置时仅使用服务端请求的 origin，不代表公网可达；美团要求显式配置 HTTP 且端口为80或8080的实际入口，HTTPS-only部署不开放该渠道。
+
+## 数据库集成测试
+
+`mvn test` 默认跳过门闩集成用例。显式执行需设置 `DUDU_INTEGRATION_TEST=true`、`DUDU_TEST_JDBC_URL`、`DUDU_TEST_DB_USER` 和 `DUDU_TEST_DB_PASSWORD`；连接本地常驻 MySQL 的独立 `dudu_review_*` 库，评审用户的创建与授权语句见 [compose.yaml](compose.yaml)。禁止使用开发库 `dudu` 或生产业务库。
+
+各用例的库名与清理约定以测试类及[Server 功能图谱](../docs/features/dudu-server.md)为准；部分渠道要求固定独立库，不能用同一个 URL 无差别执行全部集成用例。Console 的实际命令边界与结果见[验收记录](../docs/design/dudu-console/acceptance.md)。
