@@ -3,7 +3,8 @@
 官网源码位于仓库根目录 `website/`，不是 Git 子模块，不依赖服务端或构建工具。
 
 - 中文首页：`index.html`；英文页面：`en.html`。
-- 公共样式：`style.css`；展示素材：`assets/`。
+- 公共样式：`style.css`；消息流场景样式：`scene.css`；展示素材：`assets/`。
+- 原生交互：`site.js`（消息示例、页签、图片预览）；`scene.js`（Canvas 投影、线路与消息动画）。
 - 发布工作流：仓库根 `.github/workflows/pages.yml`。
 - 发布地址：<https://buktal.github.io/dudu/>。
 
@@ -26,5 +27,14 @@
 | `assets/admin.jpg` | `docs/design/dudu-admin/ui-after-overview.jpg` | 2026-09-30 历史布局验收，示例数据 |
 | `assets/desk-parallel.png` | `docs/design/dudu-desk/workspace-polish/parallel.png` | 2026-09-18 历史布局验收，示例数据 |
 | `assets/mockpulse.svg` | `mock-pulse/public/logo.svg` | MockPulse 项目标识；未使用原型截图代表当前应用 |
+| `assets/dudu.svg` | `dudu-desk/public/logo.svg` | DuDu 项目标识与站点图标 |
 
-页面为纯静态 HTML/CSS。校验项目包括相对资源链接、双语导航、移动布局、键盘焦点以及实际 Pages 发布结果；无需运行业务子项目测试。
+## 消息流演示与可访问性
+
+首屏是浏览器内的消息流示意，不连接业务 API，也不执行真实验签、持久化或渠道发送。所有示例固定可复现；选择渠道后停止自动轮换，以用户选择为准。Canvas 只负责视觉呈现，渠道按钮、示例内容与阶段说明均使用 DOM，支持键盘操作。
+
+动效可暂停，并遵循系统 `prefers-reduced-motion` 设置；暂停时仍可选择渠道，立即展示该示例的结果。指针视差仅用于非触摸指针，页面隐藏或场景离开视口时停止渲染。Canvas 按设备像素比绘制，上限为 2。
+
+产品页签支持左右方向键及 Home / End；图片预览使用原生 dialog，支持 Escape 关闭。JavaScript 不可用时保留完整产品内容、静态消息流说明及原图链接。
+
+页面为静态 HTML/CSS/JavaScript，无构建依赖。校验包括脚本语法、相对资源链接、双语导航、移动布局、消息选择与暂停、页签键盘操作、图片预览和实际 Pages 发布结果；无需运行业务子项目测试。
