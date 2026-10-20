@@ -79,7 +79,7 @@ export function ChannelAccountsPage({
         }}
         filters={
           <form
-            className="flex flex-wrap items-end gap-3"
+            className="flex w-full min-w-0 flex-wrap items-end gap-3 lg:flex-1"
             onSubmit={(e) => {
               e.preventDefault();
               query.setFilter({
