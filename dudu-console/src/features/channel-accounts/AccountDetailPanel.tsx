@@ -4,7 +4,6 @@ import { useConsoleQuery } from "@/api/console-query";
 import { useConsole, useSession } from "@/api/context";
 import { ErrorState, LoadingState } from "@/components/feedback";
 import { SelectField } from "@/components/form-field";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   SubmitButton,
   SubmitMessage,
@@ -18,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Sheet,
   SheetContent,
@@ -299,24 +299,34 @@ function MoveAccount({
         >
           <SubmitMessage error={shell.error} />
           <FieldGroup>
-          <SelectField
-            label="目标用户组"
-            value={target}
-            disabled={shell.pending}
-            onChange={setTarget}
-            options={[{ value: "", label: "请选择目标组" }, ...groups.filter((g) => g.groupId !== account.groupId && manages(g.groupId)).map((g) => ({ value: g.groupId, label: `${g.groupName} · ${g.groupId}` }))]}
-          />
-          <Field orientation="horizontal">
-          <FieldLabel>
-            <input
-              type="checkbox"
-              checked={confirmed}
+            <SelectField
+              label="目标用户组"
+              value={target}
               disabled={shell.pending}
-              onChange={(e) => setConfirmed(e.target.checked)}
+              onChange={setTarget}
+              options={[
+                { value: "", label: "请选择目标组" },
+                ...groups
+                  .filter(
+                    (g) => g.groupId !== account.groupId && manages(g.groupId),
+                  )
+                  .map((g) => ({
+                    value: g.groupId,
+                    label: `${g.groupName} · ${g.groupId}`,
+                  })),
+              ]}
             />
-            我已确认历史可见性将随所属组变化
-          </FieldLabel>
-          </Field>
+            <Field orientation="horizontal">
+              <FieldLabel>
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  disabled={shell.pending}
+                  onChange={(e) => setConfirmed(e.target.checked)}
+                />
+                我已确认历史可见性将随所属组变化
+              </FieldLabel>
+            </Field>
           </FieldGroup>
           <div className="flex justify-end gap-2">
             <Button

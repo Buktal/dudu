@@ -110,8 +110,12 @@ describe("渠道账号操作", () => {
     );
     vi.stubGlobal("fetch", fetcher);
     const saved = renderEditor();
-    fireEvent.change(screen.getByLabelText("渠道"), {
-      target: { value: "wechat-mp" },
+    fireEvent.click(screen.getByRole("combobox", { name: "渠道" }));
+    fireEvent.pointerDown(
+      await screen.findByRole("option", { name: "微信公众号" }),
+    );
+    fireEvent.click(screen.getByRole("option", { name: "微信公众号" }), {
+      detail: 1,
     });
     fireEvent.change(screen.getByLabelText("账号名称"), {
       target: { value: " 接待号 " },
@@ -155,8 +159,12 @@ it("多行公钥保留 PEM 原文，不裁剪首尾换行", async () => {
       ],
     },
   ]);
-  fireEvent.change(screen.getByLabelText("渠道"), {
-    target: { value: "wechat-mp" },
+  fireEvent.click(screen.getByRole("combobox", { name: "渠道" }));
+  fireEvent.pointerDown(
+    await screen.findByRole("option", { name: "微信公众号" }),
+  );
+  fireEvent.click(screen.getByRole("option", { name: "微信公众号" }), {
+    detail: 1,
   });
   fireEvent.change(screen.getByLabelText("账号名称"), {
     target: { value: "生活号" },
@@ -169,4 +177,49 @@ it("多行公钥保留 PEM 原文，不裁剪首尾换行", async () => {
   expect(JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string).fields).toEqual(
     { alipayPublicKey: pem },
   );
+});
+
+it("默认私钥输入保留粘贴的多行 PEM，提交不丢失换行", async () => {
+  const pem =
+    "-----BEGIN PRIVATE KEY-----\nPRIVATE\n-----END PRIVATE KEY-----\n";
+  const fetcher = vi.fn(
+    async (_url: RequestInfo | URL, _init?: RequestInit) =>
+      new Response(JSON.stringify({ code: 0, msg: "", data: detail })),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  renderEditor(undefined, [
+    {
+      ...definition,
+      fields: [
+        {
+          key: "appPrivateKey",
+          label: "应用私钥",
+          secret: true,
+          requiredForReceive: true,
+          requiredForSend: true,
+          immutableOnceConfigured: false,
+          control: "textarea",
+        },
+      ],
+    },
+  ]);
+  fireEvent.click(screen.getByRole("combobox", { name: "渠道" }));
+  fireEvent.pointerDown(
+    await screen.findByRole("option", { name: "微信公众号" }),
+  );
+  fireEvent.click(screen.getByRole("option", { name: "微信公众号" }), {
+    detail: 1,
+  });
+  fireEvent.change(screen.getByLabelText("账号名称"), {
+    target: { value: "生活号" },
+  });
+  const input = screen.getByLabelText("应用私钥 · 接收必需");
+  fireEvent.paste(input, { clipboardData: { getData: () => pem } });
+  fireEvent.change(input, { target: { value: pem } });
+  expect(input).toHaveValue(pem);
+  fireEvent.click(screen.getByRole("button", { name: "保存参数" }));
+  await waitFor(() => expect(fetcher).toHaveBeenCalled());
+  expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body)).fields).toEqual({
+    appPrivateKey: pem,
+  });
 });

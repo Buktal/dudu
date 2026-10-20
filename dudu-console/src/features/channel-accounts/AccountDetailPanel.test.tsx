@@ -77,8 +77,12 @@ it("换组先确认历史可见性，候选只包含可管理目标组，提交�
   expect(
     screen.queryByRole("option", { name: /不可管理组/ }),
   ).not.toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("目标用户组"), {
-    target: { value: "3" },
+  fireEvent.click(screen.getByRole("combobox", { name: "目标用户组" }));
+  fireEvent.pointerDown(
+    await screen.findByRole("option", { name: "目标组 · 3" }),
+  );
+  fireEvent.click(screen.getByRole("option", { name: "目标组 · 3" }), {
+    detail: 1,
   });
   fireEvent.click(screen.getByRole("button", { name: "确认换组" }));
   expect(await screen.findByText("请确认历史可见性变化")).toBeInTheDocument();

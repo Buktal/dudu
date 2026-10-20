@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useConsoleQuery } from "@/api/console-query";
 import { usePagedQuery } from "@/api/paged-query";
 import { ErrorState, LoadingState, Message } from "@/components/feedback";
-import { TextField } from "@/components/form-field";
+import { SelectField, TextField } from "@/components/form-field";
 import { QueryView } from "@/components/query-view";
 import { Button } from "@/components/ui/button";
+import { FieldGroup } from "@/components/ui/field";
 import {
   Table,
   TableBody,
@@ -88,42 +89,38 @@ export function ChannelAccountsPage({
               });
             }}
           >
-            <TextField
-              label="账号名称"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="搜索账号名称"
-            />
-            <label className="grid gap-2 text-sm">
-              渠道
-              <select
-                className="h-9 rounded-lg border bg-background px-3"
+            <FieldGroup className="grid gap-3 sm:grid-cols-3">
+              <TextField
+                label="账号名称"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="搜索账号名称"
+              />
+              <SelectField
+                label="渠道"
                 value={channel}
-                onChange={(e) => setChannel(e.target.value)}
-              >
-                <option value="">全部渠道</option>
-                {definitions.map((d) => (
-                  <option key={d.channel} value={d.channel}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm">
-              用户组
-              <select
-                className="h-9 max-w-60 rounded-lg border bg-background px-3"
+                onChange={setChannel}
+                options={[
+                  { value: "", label: "全部渠道" },
+                  ...definitions.map((d) => ({
+                    value: d.channel,
+                    label: d.name,
+                  })),
+                ]}
+              />
+              <SelectField
+                label="用户组"
                 value={group}
-                onChange={(e) => setGroup(e.target.value)}
-              >
-                <option value="">全部可管理组</option>
-                {options.map((g) => (
-                  <option key={g.groupId} value={g.groupId}>
-                    {g.groupName} · {g.groupId}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={setGroup}
+                options={[
+                  { value: "", label: "全部可管理组" },
+                  ...options.map((g) => ({
+                    value: g.groupId,
+                    label: `${g.groupName} · ${g.groupId}`,
+                  })),
+                ]}
+              />
+            </FieldGroup>
             <Button type="submit" variant="outline">
               筛选
             </Button>

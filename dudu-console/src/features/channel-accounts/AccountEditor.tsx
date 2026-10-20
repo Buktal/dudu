@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ApiError } from "@/api/client";
 import { useConsole } from "@/api/context";
-import { TextField } from "@/components/form-field";
+import { SelectField, TextField } from "@/components/form-field";
 import {
   SubmitButton,
   SubmitMessage,
@@ -133,49 +133,41 @@ export function AccountEditor({
               />
               {!detail && (
                 <>
-                  <label className="grid gap-2 text-sm">
-                    所属用户组
-                    <select
-                      className="h-10 rounded-lg border bg-background px-3"
-                      value={groupId}
-                      onChange={(e) => setGroupId(e.target.value)}
-                      required
-                    >
-                      <option value="">请选择用户组</option>
-                      {groups.map((g) => (
-                        <option key={g.groupId} value={g.groupId}>
-                          {g.groupName} · {g.groupId}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-2 text-sm">
-                    渠道
-                    <select
-                      className="h-10 rounded-lg border bg-background px-3"
-                      value={channel}
-                      onChange={(e) => {
-                        setChannel(e.target.value);
-                        setValues({});
-                        setClear([]);
-                      }}
-                      required
-                    >
-                      <option value="">请选择渠道</option>
-                      {definitions.map((d) => (
-                        <option
-                          key={d.channel}
-                          value={d.channel}
-                          disabled={!d.available}
-                        >
-                          {d.name}
-                          {!d.available
-                            ? ` · ${d.restriction || "当前部署不支持"}`
-                            : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <SelectField
+                    label="所属用户组"
+                    value={groupId}
+                    onChange={setGroupId}
+                    disabled={shell.pending}
+                    required
+                    options={[
+                      { value: "", label: "请选择用户组" },
+                      ...groups.map((g) => ({
+                        value: g.groupId,
+                        label: `${g.groupName} · ${g.groupId}`,
+                      })),
+                    ]}
+                  />
+                  <SelectField
+                    label="渠道"
+                    value={channel}
+                    disabled={shell.pending}
+                    required
+                    onChange={(value) => {
+                      setChannel(value);
+                      setValues({});
+                      setClear([]);
+                    }}
+                    options={[
+                      { value: "", label: "请选择渠道" },
+                      ...definitions.map((d) => ({
+                        value: d.channel,
+                        label: d.available
+                          ? d.name
+                          : `${d.name} · ${d.restriction || "当前部署不支持"}`,
+                        disabled: !d.available,
+                      })),
+                    ]}
+                  />
                   {definitions
                     .filter((d) => !d.available)
                     .map((d) => (
