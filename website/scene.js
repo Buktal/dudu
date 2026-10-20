@@ -2,6 +2,21 @@
 export function createSignalScene(canvas, onProgress) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
+  let light = document.documentElement.dataset.theme === "light";
+  const lightColors = {
+    "#9acbd1": "#286b7e", "#ed927a": "#b84f35", "#375361": "#8ba8b8",
+    "#45606f": "#7799ab", "#142632": "#b8cdd8", "#1a3240": "#c8dbe4",
+    "#7795a5": "#496a7a", "#10212b75": "#d9e6ee66", "#749fae": "#467c92",
+    "#314c5c": "#96b2c1", "#264451": "#a3c6d5", "#142a36": "#d6e5ec",
+    "#3a5361": "#89a8ba", "#65899c": "#587d91", "#d2e6ed": "#224e62",
+    "#7f9dab": "#4d7083", "#7b9eac": "#658da2", "#203946": "#cbdee7",
+    "#547684": "#7297ab", "#658999": "#587e94", "#213b49": "#bed3de",
+    "#254655b0": "#c3dce8d9", "#547887": "#83a8ba", "#244452b0": "#d1e4ecdb",
+    "#668d9b": "#7099ae", "#557985": "#e5f2f7", "#2d5261": "#bed9e6",
+    "#1b3645": "#a9cbdc", "#e1f0f2": "#2b667d", "#e4edf1": "#244d61",
+    "#47697655": "#7d9daf66", "#b6e1e7": "#2b718e", "#f1fafb": "#18536c",
+  };
+  const tone = color => light && typeof color === "string" ? lightColors[color] ?? color : color;
   const ice = "#9acbd1";
   const coral = "#ed927a";
   let width = 0;
@@ -31,14 +46,14 @@ export function createSignalScene(canvas, onProgress) {
     ctx.beginPath();
     points.map(project).forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
     ctx.closePath();
-    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = .8; ctx.stroke(); }
+    if (fill) { ctx.fillStyle = tone(fill); ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = tone(stroke); ctx.lineWidth = .8; ctx.stroke(); }
   }
 
   function line(points, color, lineWidth = 1) {
     ctx.beginPath();
     points.map(project).forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = tone(color);
     ctx.lineWidth = lineWidth;
     ctx.lineJoin = "round";
     ctx.stroke();
@@ -56,7 +71,7 @@ export function createSignalScene(canvas, onProgress) {
     const [x, y] = project(pos);
     ctx.font = `${size}px "Cascadia Code", Consolas, monospace`;
     ctx.textAlign = align;
-    ctx.fillStyle = color;
+    ctx.fillStyle = tone(color);
     ctx.fillText(text, x, y);
   }
 
@@ -107,14 +122,14 @@ export function createSignalScene(canvas, onProgress) {
     box(-27, -64, 124, 128, 31, 4, "#254655b0", "#547887");
     box(-20, -57, 110, 114, 61, 4, "#244452b0", "#668d9b");
     const glow = packet < 1 ? .3 + Math.sin(time / 260) * .1 : .08;
-    ctx.shadowColor = `rgba(154,203,209,${glow})`;
+    ctx.shadowColor = `rgba(${light ? "43,108,130" : "154,203,209"},${glow})`;
     ctx.shadowBlur = 30 * scale;
     const upper = project([-12, -50, 107]);
     const lower = project([84, 50, 107]);
     const glass = ctx.createLinearGradient(upper[0], upper[1], lower[0], lower[1]);
-    glass.addColorStop(0, "#557985");
-    glass.addColorStop(.5, "#2d5261");
-    glass.addColorStop(1, "#1b3645");
+    glass.addColorStop(0, tone("#557985"));
+    glass.addColorStop(.5, tone("#2d5261"));
+    glass.addColorStop(1, tone("#1b3645"));
     box(-12, -50, 96, 100, 95, 12, glass, ice);
     ctx.shadowBlur = 0;
     line([[-3, 49, 108], [75, 49, 108]], coral, 2);
@@ -123,7 +138,7 @@ export function createSignalScene(canvas, onProgress) {
       const radius = 85 + expansion * 100;
       const alpha = (1 - expansion) * .45;
       polygon([[35 - radius, -radius, 16], [35 + radius, -radius, 16],
-        [35 + radius, radius, 16], [35 - radius, radius, 16]], null, `rgba(154,203,209,${alpha})`);
+        [35 + radius, radius, 16], [35 - radius, radius, 16]], null, `rgba(${light ? "43,108,130" : "154,203,209"},${alpha})`);
     }
     // Face drawn in the same projection as the circuit, using the DuDu U-eye motif.
     for (const x of [8, 44]) {
@@ -135,7 +150,7 @@ export function createSignalScene(canvas, onProgress) {
       line(points, "#e1f0f2", 3 * scale);
     }
     const [lx, ly] = project([35, 0, 149]);
-    ctx.fillStyle = "#e4edf1";
+    ctx.fillStyle = tone("#e4edf1");
     ctx.font = `500 ${Math.max(15, 22 * scale)}px "Bahnschrift", sans-serif`;
     ctx.textAlign = "center";
     ctx.fillText("DuDu", lx, ly);
@@ -149,11 +164,11 @@ export function createSignalScene(canvas, onProgress) {
     const points = pathFor(selected);
     const end = sample(points, packet);
     const trail = Array.from({length: 22}, (_, i) => sample(points, Math.max(0, packet - .1 + i / 21 * .1)));
-    ctx.shadowColor = ice;
+    ctx.shadowColor = tone(ice);
     ctx.shadowBlur = 15;
     line(trail, "#b6e1e7", 2.3);
     const p = project(end);
-    ctx.fillStyle = "#f1fafb";
+    ctx.fillStyle = tone("#f1fafb");
     ctx.beginPath();
     ctx.arc(p[0], p[1], 2.5, 0, Math.PI * 2);
     ctx.fill();
@@ -213,6 +228,10 @@ export function createSignalScene(canvas, onProgress) {
   resize();
 
   return {
+    setTheme(theme) {
+      light = theme === "light";
+      requestDraw();
+    },
     send(index) {
       selected = index;
       packet = paused ? 1 : 0;

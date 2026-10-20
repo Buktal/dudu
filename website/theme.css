@@ -1,0 +1,40 @@
+:root {
+  --frame: #1b2b36;
+  --edge: #41535f;
+  --inset: #142732;
+  --hover: #1a333f;
+  --receipt: #142732ed;
+  --shadow: #020c1355;
+  --track: #2a4756;
+  --code-bg: #0d1c27;
+  --code-text: #c7d8df;
+  --code-muted: #7f9cab;
+  --scene-glow: #1a3f4d55;
+}
+html[data-theme="light"] {
+  color-scheme: light;
+  --base: #f3f6f8;
+  --panel: #e7eef2;
+  --text: #183543;
+  --muted: #526c79;
+  --line: #cedbe2;
+  --ice: #286b7e;
+  --coral: #b84f35;
+  --frame: #e3ecf1;
+  --edge: #a6bcc8;
+  --inset: #e5edf2;
+  --hover: #d4e4ec;
+  --receipt: #f7fafcf2;
+  --shadow: #264b621c;
+  --track: #b9ced8;
+  --code-bg: #e8eff3;
+  --code-text: #234756;
+  --code-muted: #536f7e;
+  --scene-glow: #9dc5d54a;
+}
+.theme-toggle { display: grid; place-items: center; width: 34px; height: 34px; padding: 7px; border: 0; background: transparent; border-radius: 5px; color: var(--muted); }
+.theme-toggle:hover { color: var(--text); background: var(--inset); }
+.theme-toggle svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.theme-toggle .moon { display: none; }
+html[data-theme="light"] .theme-toggle .sun { display: none; }
+html[data-theme="light"] .theme-toggle .moon { display: block; }

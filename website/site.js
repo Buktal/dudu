@@ -87,6 +87,7 @@ const scene = createSignalScene(document.getElementById("signal-canvas"), progre
 });
 
 if (scene) {
+  window.addEventListener("dudu-theme-change", () => scene.setTheme(document.documentElement.dataset.theme));
   document.body.classList.add("scene-ready");
   motionButton.hidden = false;
   function send(index, fromUser = false) {
