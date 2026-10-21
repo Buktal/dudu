@@ -21,22 +21,23 @@
 <link rel="stylesheet" href="guide.css">
 <link rel="icon" type="image/svg+xml" href="../assets/dudu.svg">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "微信公众号接入指南", "description": "为 DuDu 配置微信公众号明文回调、接收 token 与文本发送凭据，并验证统一工作台接待。", "inLanguage": "zh-CN", "url": "https://buktal.github.io/dudu/guides/wechat.html", "isPartOf": {"@type": "WebSite", "name": "DuDu", "url": "https://buktal.github.io/dudu/"}}</script>
+<link rel="stylesheet" href="../navigation.css">
+<script defer src="../navigation.js"></script>
 </head>
 <body class="guide-page">
 <a class="skip" href="#main">跳至正文</a>
 <header class="site-header shell">
-<a class="brand" href="../"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
-<nav aria-label="主导航">
-<a href="index.html">使用指南</a>
-<a href="wechat.en.html" lang="en">EN</a>
-<button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
-<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
-</nav>
-</header>
+<a class="brand" href="../index.html" aria-label="DuDu 首页"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="主导航"><details class="product-menu"><summary>产品</summary><div class="product-menu-links"><a href="../products/desk.html">DuduDesk · 坐席工作台</a><a href="../products/console.html">DuduConsole · 企业控制台</a><a href="../products/admin.html">DuduAdmin · 平台管理后台</a><a href="../products/mockpulse.html">MockPulse · 开发联调工具</a><a href="../products/server.html">DUDU Server · 服务端</a><a href="../index.html#channels">支持渠道 ↗</a><a href="../guides/index.html">部署与使用指南 ↗</a></div></details>
+<a href="../demo.html">演示</a>
+<a href="../guides/index.html" aria-current="true">文档</a>
+<a href="wechat.en.html" lang="en" aria-label="切换到英文">EN</a>
+<button type="button" id="theme-toggle" class="theme-toggle" hidden aria-label="切换外观"><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button><a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav></header>
 <main id="main" class="shell guide-layout">
 <aside class="guide-nav" aria-label="指南导航"><a href="index.html">指南概览</a><a href="deployment.html">部署与本地运行</a><a href="workflow.html">从企业开通到坐席接待</a><a href="wechat.html" aria-current="page">微信公众号接入指南</a><a href="telegram.html">Telegram Bot 接入指南</a><a href="whatsapp.html">WhatsApp Cloud API 接入指南</a><a href="mockpulse.html">使用 MockPulse 联调渠道回调</a></aside>
 <article class="guide-article"><div class="kicker">开源 / 自托管</div><h1>微信公众号接入指南</h1><p class="guide-intro">为 DuDu 配置微信公众号明文回调、接收 token 与文本发送凭据，并验证统一工作台接待。</p><div class="guide-toc">本页内容<a href="#section-1">适用范围</a><a href="#section-2">配置与验收</a><a href="#section-3">排查与限制</a><a href="#section-4">配置依据</a></div><section id="section-1"><h2>适用范围</h2><p>本页针对微信公众号 wechat-mp 适配器，当前仅支持明文回调。微信小程序与企业微信使用不同适配器和配置，不能套用本页字段；公众号 AES 密文模式不在当前支持范围。</p></section><section id="section-2"><h2>配置与验收</h2><ol><li>在官方平台准备具有所需消息接口权限的公众号；将 Server 回调 origin 配置为平台可达的公开地址。</li><li>在 Console 新建微信公众号渠道账号并绑定用户组。填写接收 token；需要回复时补齐 appId 与 appSecret。</li><li>复制 Console 返回的回调地址到公众号服务器配置，token 必须一致，并选择明文消息模式。GET 校验通过后再启用消息回调。</li><li>从公众号用户端发送测试消息，在有权员工的 Desk 中检查来信与历史；再发送纯文本回复，核对官方平台返回的实际结果。</li></ol></section><section id="section-3"><h2>排查与限制</h2><p>服务器配置验证失败时，检查公网可达性、完整回调路径、token 和明文模式。能收不能发时，检查 appId、appSecret、公众号接口权限及平台回复规则。DuDu 不代替平台申请权限或完成审核，不承诺所有公众号类型都具备相同发送能力。</p></section><section id="section-4"><h2>配置依据</h2><p><a href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">当前渠道字段契约 ↗</a> · <a href="https://developers.weixin.qq.com/doc/offiaccount/Basic_Information/Access_Overview.html">微信公众平台接入文档 ↗</a>。本地测试可参考<a href="mockpulse.html">MockPulse 回调联调</a>；模拟成功不能替代真实账号验收。</p></section>
-<div class="guide-end"><a href="index.html">全部指南 ↗</a><a href="https://github.com/Buktal/dudu">源码与贡献 ↗</a></div></article>
+<div class="guide-end"><a href="../demo.html">接待导览</a><a href="index.html">全部指南 ↗</a><a href="https://github.com/Buktal/dudu">源码与贡献 ↗</a></div></article>
 </main>
 <footer class="shell"><span>DuDu · Apache-2.0</span><a href="https://github.com/Buktal/dudu/blob/main/LICENSE">开源许可证 ↗</a></footer>
 </body>

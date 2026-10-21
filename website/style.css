@@ -1,5 +1,5 @@
 @import url("scene.css");
-@import url("theme.css");
+@import url("theme.css?v=3");
 :root {
   color-scheme: dark;
   --base: #0b151e;
@@ -14,7 +14,7 @@
   background: var(--base);
   color: var(--text);
   font-synthesis: none;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 * { box-sizing: border-box; }
 body { margin: 0; }
@@ -33,7 +33,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .brand span { color: var(--muted); font-size: 12px; padding-left: 7px; }
 nav { display: flex; gap: 28px; align-items: center; font-size: 13px; }
 .nav-source { border: 1px solid var(--edge); padding: 9px 15px; border-radius: 5px; }
-.hero { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr); gap: 32px; position: relative; padding: 86px 0 40px; min-height: 650px; }
+.hero { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.35fr); gap: 32px; position: relative; padding: 86px 0 40px; min-height: 530px; }
 .hero-copy { min-width: 0; width: 100%; position: relative; z-index: 2; pointer-events: none; }
 .hero-copy a { pointer-events: auto; }
 .kicker { color: var(--ice); font-size: 13px; line-height: 1.6; letter-spacing: .02em; }
@@ -70,13 +70,6 @@ p { font-size: 14px; line-height: 1.9; }
 .shot-frame img { width: 100%; height: auto; display: block; border-radius: 3px; }
 figcaption { font-size: 12px; color: var(--muted); line-height: 1.8; margin-top: 13px; }
 figcaption details { border: 0; padding: 0; margin: 0; }
-.mock-preview { padding: 58px; border: 1px solid var(--line); background: var(--panel); }
-.mock-preview > img { width: 54px; margin-bottom: 24px; }
-.mock-flow { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 35px; border: 1px solid var(--edge); }
-.mock-flow div { padding: 26px 20px; border-right: 1px solid var(--edge); }
-.mock-flow div:last-child { border: 0; }
-.mock-flow small { display: block; color: var(--ice); font: 11px var(--mono); margin-bottom: 15px; }
-.mock-flow strong { font-size: 16px; font-weight: 500; }
 .capabilities { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 55px; margin-top: 60px; }
 .capabilities article { padding-top: 12px; }
 .capabilities p { color: var(--muted); margin-bottom: 0; }
@@ -84,7 +77,6 @@ figcaption details { border: 0; padding: 0; margin: 0; }
 .channel-layout h2 { margin-bottom: 25px; }
 .channel-matrix { display: grid; grid-template-columns: repeat(3, 1fr); padding-top: 10px; }
 .channel-matrix span { display: flex; min-height: 72px; gap: 10px; align-items: center; padding: 16px; font-size: 14px; }
-.channel-matrix i { width: 4px; height: 4px; background: var(--ice); flex-shrink: 0; }
 details { margin-top: 25px; border-block: 1px solid var(--line); padding: 15px 0; }
 summary { cursor: pointer; font-size: 12px; color: var(--muted); }
 details p { font-size: 12px; color: var(--muted); }
@@ -126,7 +118,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 @media (max-width: 760px) {
   .shell { width: calc(100% - 40px); }
   .site-header { height: 78px; }
-  .brand span, nav a:nth-child(2), nav a:nth-child(3) { display: none; }
+  .brand span, nav > a[href="#channels"] { display: none; }
   .brand strong { font-size: 23px; }
   .brand img { width: 28px; height: 28px; }
   nav { gap: 10px; font-size: 11px; }
@@ -152,11 +144,6 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
   .channel-matrix span { min-height: 64px; padding: 13px 10px; font-size: 11px; }
   .terminal pre { padding: 20px 16px; font-size: 10px; }
   .open-section h2 { font-size: 38px; }
-  .mock-preview { padding: 26px; }
-  .mock-flow { grid-template-columns: repeat(2, 1fr); }
-  .mock-flow div { padding: 22px 14px; border-bottom: 1px solid var(--edge); }
-  .mock-flow div:nth-child(2) { border-right: 0; }
-  .mock-flow div:nth-child(3) { border-bottom: 0; }
   footer { align-items: flex-start; flex-direction: column; padding-block: 28px; gap: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {

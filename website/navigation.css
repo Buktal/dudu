@@ -1,0 +1,29 @@
+.product-menu { position: relative; margin: 0; padding: 0; border: 0; }
+.product-menu > summary { color: inherit; font-size: inherit; padding: 8px 0; white-space: nowrap; }
+.product-menu[open] > summary { color: var(--ice); }
+.product-menu-links { position: absolute; z-index: 20; top: 100%; right: -16px; width: 250px; padding: 10px; background: var(--base); border: 1px solid var(--edge); border-radius: 8px; box-shadow: 0 12px 32px var(--shadow); }
+.product-menu-links a { display: block !important; padding: 11px 12px; font-size: 13px; border-radius: 4px; }
+.product-menu-links a:hover, .product-menu-links a[aria-current] { background: var(--panel); color: var(--ice); }
+@media (max-width: 760px) {
+  .product-menu-links { position: fixed; top: 66px; left: 20px; right: 20px; width: auto; max-width: 360px; margin-inline: auto; }
+}
+
+@media (max-width: 480px) {
+  .site-header .nav-source { display: none; }
+  .site-header .brand { gap: 8px; }
+  .site-header .brand img { width: 26px; height: 26px; }
+  .site-header .brand strong { font-size: 22px; }
+  .site-header nav { gap: 8px; font-size: 11px; }
+  .site-header .theme-toggle { width: 28px; height: 28px; padding: 5px; }
+}
+.site-header { position: sticky; top: 0; z-index: 50; background: var(--base); }
+.site-header nav > a[aria-current], .product-menu > summary[aria-current] { color: var(--ice); background: var(--panel); border-radius: 6px; }
+main section, #main { scroll-margin-top: 118px; }
+.module-nav, .guide-nav { scroll-margin-top: 118px; }
+@media (min-width: 951px) {
+  .module-layout .module-nav, .guide-layout .guide-nav { top: 118px; }
+}
+
+.site-header { border-bottom: 0; }
+.site-header nav > a:not(.nav-source) { padding: 8px 9px; }
+@media(max-width:480px) { .site-header nav > a:not(.nav-source) { padding: 8px 3px; } }

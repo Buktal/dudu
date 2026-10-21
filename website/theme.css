@@ -13,24 +13,24 @@
 }
 html[data-theme="light"] {
   color-scheme: light;
-  --base: #f3f6f8;
-  --panel: #e7eef2;
-  --text: #183543;
-  --muted: #526c79;
-  --line: #cedbe2;
-  --ice: #286b7e;
-  --coral: #b84f35;
-  --frame: #e3ecf1;
-  --edge: #a6bcc8;
-  --inset: #e5edf2;
-  --hover: #d4e4ec;
-  --receipt: #f7fafcf2;
-  --shadow: #264b621c;
-  --track: #b9ced8;
-  --code-bg: #e8eff3;
-  --code-text: #234756;
-  --code-muted: #536f7e;
-  --scene-glow: #9dc5d54a;
+  --base: #ffffff;
+  --panel: #f5f6f7;
+  --text: #25272b;
+  --muted: #62666d;
+  --line: #e8eaed;
+  --ice: #464a52;
+  --coral: #b95638;
+  --frame: #f4f5f6;
+  --edge: #d9dde2;
+  --inset: #f3f4f5;
+  --hover: #fceee8;
+  --receipt: #fffffff2;
+  --shadow: #20242a12;
+  --track: #e1e3e6;
+  --code-bg: #f5f6f7;
+  --code-text: #353941;
+  --code-muted: #666b73;
+  --scene-glow: #e7e8ea30;
 }
 .theme-toggle { display: grid; place-items: center; width: 34px; height: 34px; padding: 7px; border: 0; background: transparent; border-radius: 5px; color: var(--muted); }
 .theme-toggle:hover { color: var(--text); background: var(--inset); }
@@ -38,3 +38,6 @@ html[data-theme="light"] {
 .theme-toggle .moon { display: none; }
 html[data-theme="light"] .theme-toggle .sun { display: none; }
 html[data-theme="light"] .theme-toggle .moon { display: block; }
+
+html[data-theme="light"] .button.primary { background: #b95638; border-color: #b95638; color: #ffffff; }
+html[data-theme="light"] .button.primary:hover { background: #a44c30; border-color: #a44c30; }

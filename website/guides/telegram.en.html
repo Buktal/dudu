@@ -21,22 +21,23 @@
 <link rel="stylesheet" href="guide.css">
 <link rel="icon" type="image/svg+xml" href="../assets/dudu.svg">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Telegram Bot integration", "description": "Configure Telegram botToken and Webhook secretToken separately, register a DuDu callback and validate bot text conversations.", "inLanguage": "en", "url": "https://buktal.github.io/dudu/guides/telegram.en.html", "isPartOf": {"@type": "WebSite", "name": "DuDu", "url": "https://buktal.github.io/dudu/"}}</script>
+<link rel="stylesheet" href="../navigation.css">
+<script defer src="../navigation.js"></script>
 </head>
 <body class="guide-page">
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-header shell">
-<a class="brand" href="../en.html"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
-<nav aria-label="Main navigation">
-<a href="index.en.html">Guides</a>
-<a href="telegram.html" lang="zh-CN">中文</a>
-<button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
-<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
-</nav>
-</header>
+<a class="brand" href="../en.html" aria-label="DuDu home"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="Main navigation"><details class="product-menu"><summary>Products</summary><div class="product-menu-links"><a href="../products/desk.en.html">DuduDesk · Agent workspace</a><a href="../products/console.en.html">DuduConsole · Organization console</a><a href="../products/admin.en.html">DuduAdmin · Platform administration</a><a href="../products/mockpulse.en.html">MockPulse · Development tool</a><a href="../products/server.en.html">DUDU Server · Server</a><a href="../en.html#channels">Supported channels ↗</a><a href="../guides/index.en.html">All usage guides ↗</a></div></details>
+<a href="../demo.en.html">Demo</a>
+<a href="../guides/index.en.html" aria-current="true">Docs</a>
+<a href="telegram.html" lang="zh-CN" aria-label="Switch to Chinese">中</a>
+<button type="button" id="theme-toggle" class="theme-toggle" hidden aria-label="Switch appearance"><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button><a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav></header>
 <main id="main" class="shell guide-layout">
 <aside class="guide-nav" aria-label="Guide navigation"><a href="index.en.html">Overview</a><a href="deployment.en.html">Deployment and local setup</a><a href="workflow.en.html">From organization setup to agent support</a><a href="wechat.en.html">WeChat Official Account integration</a><a href="telegram.en.html" aria-current="page">Telegram Bot integration</a><a href="whatsapp.en.html">WhatsApp Cloud API integration</a><a href="mockpulse.en.html">Test channel callbacks with MockPulse</a></aside>
 <article class="guide-article"><div class="kicker">OPEN SOURCE / SELF-HOSTED</div><h1>Telegram Bot integration</h1><p class="guide-intro">Configure Telegram botToken and Webhook secretToken separately, register a DuDu callback and validate bot text conversations.</p><div class="guide-toc">On this page<a href="#section-1">Two different credentials</a><a href="#section-2">Configuration and validation</a><a href="#section-3">Rotation and troubleshooting</a><a href="#section-4">References</a></div><section id="section-1"><h2>Two different credentials</h2><p>botToken authenticates calls to the Telegram Bot API. secretToken validates the incoming X-Telegram-Bot-Api-Secret-Token header. Console accepts botToken and the server constructs the fixed Telegram API address; arbitrary sending URLs are not supported.</p></section><section id="section-2"><h2>Configuration and validation</h2><ol><li>Prepare a Telegram bot and its token. Deploy the server with a public HTTPS callback endpoint.</li><li>Create a Telegram account in Console, assign its group and set secretToken. Add botToken to enable replies.</li><li>Call Telegram Bot API setWebhook with url set to the callback URL from Console and secret_token set to the same secretToken. Consult the official API for complete parameters and restrictions.</li><li>Check registration with getWebhookInfo, then send a message to the bot. Confirm an authorized agent receives it and can send a text reply. Telegram callbacks do not use a GET challenge handshake.</li></ol></section><section id="section-3"><h2>Rotation and troubleshooting</h2><p>For callback failures, check HTTPS, the callback path and whether the gateway preserves the secret token header. For sending failures, check botToken, the bot’s permission to message that chat and platform rate limits. Tokens may be rotated for the same Bot ID. Create a new channel account to switch bots; clearing the token does not remove identity binding.</p></section><section id="section-4"><h2>References</h2><p><a href="https://core.telegram.org/bots/api#setwebhook">Telegram setWebhook ↗</a> · <a href="https://core.telegram.org/bots/api#getwebhookinfo">getWebhookInfo ↗</a> · <a href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">DuDu fields and identity constraints ↗</a>. Keep real bot tokens out of repositories, screenshots and public logs.</p></section>
-<div class="guide-end"><a href="index.en.html">All guides ↗</a><a href="https://github.com/Buktal/dudu">Source & contributions ↗</a></div></article>
+<div class="guide-end"><a href="../demo.en.html">Product tour</a><a href="index.en.html">All guides ↗</a><a href="https://github.com/Buktal/dudu">Source & contributions ↗</a></div></article>
 </main>
 <footer class="shell"><span>DuDu · Apache-2.0</span><a href="https://github.com/Buktal/dudu/blob/main/LICENSE">Open-source license ↗</a></footer>
 </body>

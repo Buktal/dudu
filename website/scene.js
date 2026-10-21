@@ -4,17 +4,17 @@ export function createSignalScene(canvas, onProgress) {
   if (!ctx) return null;
   let light = document.documentElement.dataset.theme === "light";
   const lightColors = {
-    "#9acbd1": "#286b7e", "#ed927a": "#b84f35", "#375361": "#8ba8b8",
-    "#45606f": "#7799ab", "#142632": "#b8cdd8", "#1a3240": "#c8dbe4",
-    "#7795a5": "#496a7a", "#10212b75": "#d9e6ee66", "#749fae": "#467c92",
-    "#314c5c": "#96b2c1", "#264451": "#a3c6d5", "#142a36": "#d6e5ec",
-    "#3a5361": "#89a8ba", "#65899c": "#587d91", "#d2e6ed": "#224e62",
-    "#7f9dab": "#4d7083", "#7b9eac": "#658da2", "#203946": "#cbdee7",
-    "#547684": "#7297ab", "#658999": "#587e94", "#213b49": "#bed3de",
-    "#254655b0": "#c3dce8d9", "#547887": "#83a8ba", "#244452b0": "#d1e4ecdb",
-    "#668d9b": "#7099ae", "#557985": "#e5f2f7", "#2d5261": "#bed9e6",
-    "#1b3645": "#a9cbdc", "#e1f0f2": "#2b667d", "#e4edf1": "#244d61",
-    "#47697655": "#7d9daf66", "#b6e1e7": "#2b718e", "#f1fafb": "#18536c",
+    "#9acbd1": "#a35337", "#ed927a": "#b95b3b", "#375361": "#aeb4bd",
+    "#45606f": "#9ca4ae", "#142632": "#e3e6eb", "#1a3240": "#edf0f3",
+    "#7795a5": "#69717c", "#10212b75": "#eff1f466", "#749fae": "#767e89",
+    "#314c5c": "#c2c8d0", "#264451": "#d4d9e0", "#142a36": "#f0f2f5",
+    "#3a5361": "#b9c1cb", "#65899c": "#87919e", "#d2e6ed": "#555d68",
+    "#7f9dab": "#77818e", "#7b9eac": "#a3adba", "#203946": "#e9edf1",
+    "#547684": "#aeb8c4", "#658999": "#8b96a4", "#213b49": "#dce2e9",
+    "#254655b0": "#e7ecf1d9", "#547887": "#bcc6d2", "#244452b0": "#edf1f5db",
+    "#668d9b": "#adb9c6", "#557985": "#ffffff", "#2d5261": "#e5ebf1",
+    "#1b3645": "#d4dee8", "#e1f0f2": "#a26342", "#e4edf1": "#5a626c",
+    "#47697655": "#b8c3d066", "#b6e1e7": "#b26643", "#f1fafb": "#6d7785",
   };
   const tone = color => light && typeof color === "string" ? lightColors[color] ?? color : color;
   const ice = "#9acbd1";
@@ -122,7 +122,7 @@ export function createSignalScene(canvas, onProgress) {
     box(-27, -64, 124, 128, 31, 4, "#254655b0", "#547887");
     box(-20, -57, 110, 114, 61, 4, "#244452b0", "#668d9b");
     const glow = packet < 1 ? .3 + Math.sin(time / 260) * .1 : .08;
-    ctx.shadowColor = `rgba(${light ? "43,108,130" : "154,203,209"},${glow})`;
+    ctx.shadowColor = `rgba(${light ? "163,83,55" : "154,203,209"},${glow})`;
     ctx.shadowBlur = 30 * scale;
     const upper = project([-12, -50, 107]);
     const lower = project([84, 50, 107]);
@@ -138,7 +138,7 @@ export function createSignalScene(canvas, onProgress) {
       const radius = 85 + expansion * 100;
       const alpha = (1 - expansion) * .45;
       polygon([[35 - radius, -radius, 16], [35 + radius, -radius, 16],
-        [35 + radius, radius, 16], [35 - radius, radius, 16]], null, `rgba(${light ? "43,108,130" : "154,203,209"},${alpha})`);
+        [35 + radius, radius, 16], [35 - radius, radius, 16]], null, `rgba(${light ? "163,83,55" : "154,203,209"},${alpha})`);
     }
     // Face drawn in the same projection as the circuit, using the DuDu U-eye motif.
     for (const x of [8, 44]) {

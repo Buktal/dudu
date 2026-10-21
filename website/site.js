@@ -5,7 +5,8 @@ const text = (zh, english) => en ? english : zh;
 document.body.classList.add("enhanced");
 
 // Native buttons with roving focus and the standard horizontal tab keys.
-const tabs = [...document.querySelectorAll(".suite-tab")];
+document.querySelectorAll('[role="tablist"]').forEach(tablist => {
+const tabs = [...tablist.querySelectorAll('[role="tab"]')];
 function selectTab(index, focus = false) {
   tabs.forEach((tab, i) => {
     const selected = i === index;
@@ -26,6 +27,8 @@ tabs.forEach((tab, i) => {
   });
 });
 selectTab(0);
+
+});
 
 const dialog = document.querySelector(".lightbox");
 const enlargedImage = dialog.querySelector("img");

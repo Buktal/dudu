@@ -1,0 +1,44 @@
+[
+  {
+    "role": "body",
+    "foreground": "#25272b",
+    "background": "#ffffff",
+    "contrast": 14.96
+  },
+  {
+    "role": "secondary",
+    "foreground": "#62666d",
+    "background": "#ffffff",
+    "contrast": 5.768
+  },
+  {
+    "role": "link",
+    "foreground": "#464a52",
+    "background": "#ffffff",
+    "contrast": 8.892
+  },
+  {
+    "role": "button",
+    "foreground": "#ffffff",
+    "background": "#b95638",
+    "contrast": 4.718
+  },
+  {
+    "role": "secondary-panel",
+    "foreground": "#62666d",
+    "background": "#f5f6f7",
+    "contrast": 5.331
+  },
+  {
+    "role": "link-panel",
+    "foreground": "#464a52",
+    "background": "#f5f6f7",
+    "contrast": 8.218
+  },
+  {
+    "role": "button-hover",
+    "foreground": "#ffffff",
+    "background": "#a44c30",
+    "contrast": 5.746
+  }
+]

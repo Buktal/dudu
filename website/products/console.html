@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DuduConsole · 企业控制台 | DuDu</title>
+<meta name="description" content="面向企业管理员，集中维护员工、用户组和渠道账号。通过用户组组织接待范围，日常回复由坐席工作台完成。">
+<meta property="og:title" content="DuduConsole · 企业控制台 | DuDu"><meta property="og:description" content="面向企业管理员，集中维护员工、用户组和渠道账号。通过用户组组织接待范围，日常回复由坐席工作台完成。">
+<meta property="og:type" content="website"><meta property="og:url" content="https://buktal.github.io/dudu/products/console.html">
+<meta property="og:image" content="https://buktal.github.io/dudu/assets/console-showcase.webp"><meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b151e">
+<link rel="canonical" href="https://buktal.github.io/dudu/products/console.html"><link rel="alternate" hreflang="zh-CN" href="https://buktal.github.io/dudu/products/console.html"><link rel="alternate" hreflang="en" href="https://buktal.github.io/dudu/products/console.en.html">
+<script src="../theme.js"></script><script defer src="../navigation.js"></script>
+<link rel="stylesheet" href="../style.css"><link rel="stylesheet" href="../navigation.css"><link rel="stylesheet" href="product.css"><link rel="icon" type="image/svg+xml" href="../assets/dudu.svg">
+</head>
+<body>
+<a class="skip" href="#main">跳至正文</a>
+<header class="site-header shell">
+<a class="brand" href="../index.html" aria-label="DuDu 首页"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="主导航"><details class="product-menu"><summary aria-current="true">产品</summary><div class="product-menu-links"><a href="../products/desk.html">DuduDesk · 坐席工作台</a><a href="../products/console.html" aria-current="page">DuduConsole · 企业控制台</a><a href="../products/admin.html">DuduAdmin · 平台管理后台</a><a href="../products/mockpulse.html">MockPulse · 开发联调工具</a><a href="../products/server.html">DUDU Server · 服务端</a><a href="../index.html#channels">支持渠道 ↗</a><a href="../guides/index.html">部署与使用指南 ↗</a></div></details>
+<a href="../demo.html">演示</a>
+<a href="../guides/index.html">文档</a>
+<a href="console.en.html" lang="en" aria-label="切换到英文">EN</a>
+<button type="button" id="theme-toggle" class="theme-toggle" hidden aria-label="切换外观"><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button><a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav></header>
+<main id="main" class="shell module-layout"><aside class="module-nav" aria-label="子项目导航"><a href="desk.html">DuduDesk<br>坐席工作台</a><a href="console.html" aria-current="page">DuduConsole<br>企业控制台</a><a href="admin.html">DuduAdmin<br>平台管理后台</a><a href="mockpulse.html">MockPulse<br>开发联调工具</a><a href="server.html">DUDU Server<br>服务端</a></aside>
+<article class="module-content"><div class="kicker">DuduConsole / 企业控制台</div><h1><span class="module-title-part">配置团队与渠道，</span><span class="module-title-part">明确接待范围。</span></h1><p class="module-lead">面向企业管理员，集中维护员工、用户组和渠道账号。通过用户组组织接待范围，日常回复由坐席工作台完成。</p>
+<div class="actions"><a class="button primary" href="https://github.com/Buktal/dudu/blob/main/dudu-console/README.md">使用与部署文档 ↗</a><a class="text-link" href="../demo.html">体验接待导览 ↗</a></div>
+<figure><a href="../assets/console-showcase.webp"><img src="../assets/console-showcase.webp" width="1280" height="720" alt="DuduConsole · 企业控制台" fetchpriority="high"></a><figcaption>界面示例，内容为演示数据。点击图片查看原图。</figcaption></figure>
+<section><h2>主要功能</h2><div class="module-cards"><article><h3>员工管理</h3><p>创建和维护员工账号、状态及相应权限，按管理员职责控制操作范围。</p></article><article><h3>用户组</h3><p>按团队组织成员，将渠道账号关联到对应接待组。</p></article><article><h3>渠道账号</h3><p>按渠道要求配置接收与发送凭据，查看回调地址及配置缺项。</p></article><article><h3>凭据保护</h3><p>敏感凭据只写入，不在读取响应中返回秘密值。</p></article></div></section>
+<section><h2>使用流程</h2><ol><li>使用企业 ID 和管理员账号登录。</li><li>配置员工与用户组，再为渠道账号分配接待组。</li><li>按平台要求完成授权、回调配置和真实收发验证。</li></ol></section>
+<section class="module-scope"><h2>使用条件与范围</h2><p>初始企业管理员与普通管理员的管理范围不同。配置完整不代表平台授权有效；当前不提供内置 OAuth 授权向导、自动连通检测或渠道健康监控。</p><p>各模块配合使用：Admin 开通企业，Console 配置团队与渠道，Desk 负责接待，Server 提供共用服务。MockPulse 为可选的开发联调工具。</p></section>
+<div class="actions"><a class="text-link" href="../index.html#products">返回产品总览 ↗</a><a class="text-link" href="../guides/index.html">查看使用指南 ↗</a></div>
+</article></main><footer class="shell"><span>DuDu · Apache-2.0</span><a href="https://github.com/Buktal/dudu">GitHub ↗</a></footer>
+</body></html>

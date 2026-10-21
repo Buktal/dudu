@@ -16,41 +16,37 @@
 <meta name="theme-color" content="#0b151e">
 <script src="theme.js"></script>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="demo.css">
 <link rel="icon" type="image/svg+xml" href="assets/dudu.svg">
 <script type="module" src="site.js">
 </script>
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareSourceCode", "name": "DuDu", "description": "DuDu is open-source, self-hosted multichannel customer support with a unified inbox for WeChat, Telegram, WhatsApp and more. Organization permissions and local callback testing. Apache-2.0.", "codeRepository": "https://github.com/Buktal/dudu", "license": "https://www.apache.org/licenses/LICENSE-2.0", "programmingLanguage": ["Java", "TypeScript", "Rust"], "url": "https://buktal.github.io/dudu/en.html", "inLanguage": "en"}</script>
+<link rel="stylesheet" href="navigation.css">
+<script defer src="navigation.js"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-header shell">
-<a class="brand" href="en.html" aria-label="DuDu home">
-<img src="assets/dudu.svg" width="32" height="32" alt="">
-<strong>DuDu</strong>
-<span>Open source</span>
-</a>
-<nav aria-label="Main navigation">
-<a href="#products">Products</a>
-<a href="#channels">Channels</a>
+<a class="brand" href="en.html" aria-label="DuDu home"><img src="assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="Main navigation"><details class="product-menu"><summary>Products</summary><div class="product-menu-links"><a href="products/desk.en.html">DuduDesk · Agent workspace</a><a href="products/console.en.html">DuduConsole · Organization console</a><a href="products/admin.en.html">DuduAdmin · Platform administration</a><a href="products/mockpulse.en.html">MockPulse · Development tool</a><a href="products/server.en.html">DUDU Server · Server</a><a href="en.html#channels">Supported channels ↗</a><a href="guides/index.en.html">All usage guides ↗</a></div></details>
+<a href="demo.en.html">Demo</a>
 <a href="guides/index.en.html">Docs</a>
-<a href="./" lang="zh-CN">中 / EN</a>
-<button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch to light theme" title="Switch to light theme" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
-<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
-</nav>
-</header>
+<a href="index.html" lang="zh-CN" aria-label="Switch to Chinese">中</a>
+<button type="button" id="theme-toggle" class="theme-toggle" hidden aria-label="Switch appearance"><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button><a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav></header>
 <main id="main" class="shell">
 <div class="hero">
 <div class="hero-copy">
 <div class="kicker">Open-source · Apache-2.0</div>
-<h1>Many channels.<br>
+<h1>Multichannel support.<br>
 <em>One workspace.</em>
 </h1>
-<p class="lead">DuDu is an open-source, self-hosted customer support system. Connect channel messages, organization access and agent workflows in one shared context.</p>
+<p class="lead">Receive channel messages, review history, reply and maintain visitor profiles in one workspace. DuDu is open source and self-hosted, for teams managing support across channels.</p>
 <div class="actions">
-<a class="button primary" href="#start">Get started<span aria-hidden="true">↗</span>
+<a class="button primary" href="demo.en.html">Explore the workspace<span aria-hidden="true">↗</span>
 </a>
-<a class="text-link" href="https://github.com/Buktal/dudu">Explore the source ↗</a>
+<a class="text-link" href="guides/index.en.html">Setup and integration guides ↗</a>
 </div>
 </div>
 <div class="signal-stage" aria-label="Interactive channel message flow illustration">
@@ -94,26 +90,27 @@
 </div>
 
 </div>
+<section id="demo" class="tour-entry"><div><div class="kicker">Interactive product tour</div><h2>Explore a complete support conversation.</h2><p class="muted">Open a conversation, send a sample reply and review visitor details. No sign-in required; no connection to real channels.</p></div><a class="button primary" href="demo.en.html">Start the tour ↗</a></section>
 <section id="products">
 <div class="section-top">
 <div>
 
-<h2>Distinct roles.<br>A connected system.</h2>
+<h2>Support and administration,<br>with clear responsibilities.</h2>
 </div>
-<p>Dedicated applications for agent conversations, organization configuration, platform operations and protocol testing, connected through one server.</p>
+<p>Use Desk for daily support, Console for staff and channel setup, and Admin to provision organizations. MockPulse is optional and used only for development testing.</p>
 </div>
 <div class="suite-tabs" role="tablist" aria-label="Product tour">
 <button type="button" class="suite-tab" role="tab" id="tab-desk" aria-controls="panel-desk" aria-selected="true" tabindex="0">
 <b>Desk</b>
-<span>Agent workspace</span>
+<span>Handle conversations</span>
 </button>
 <button type="button" class="suite-tab" role="tab" id="tab-console" aria-controls="panel-console" aria-selected="false" tabindex="-1">
 <b>Console</b>
-<span>Organization console</span>
+<span>Set up staff and channels</span>
 </button>
 <button type="button" class="suite-tab" role="tab" id="tab-admin" aria-controls="panel-admin" aria-selected="false" tabindex="-1">
 <b>Admin</b>
-<span>Platform admin</span>
+<span>Manage organizations</span>
 </button>
 <button type="button" class="suite-tab" role="tab" id="tab-mockpulse" aria-controls="panel-mockpulse" aria-selected="false" tabindex="-1">
 <b>MockPulse</b>
@@ -123,77 +120,47 @@
 <article class="product-panel" id="panel-desk" role="tabpanel" aria-labelledby="tab-desk">
 <div class="panel-summary">
 <p>Focus, parallel and card layouts. Shared conversation history, drafts, visitor tags and internal notes. Browser access and desktop builds.</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/dudu-desk/README.md">Documentation ↗</a>
+<a class="text-link" href="products/desk.en.html">Explore DuduDesk ↗</a>
 </div>
 
-<figure class="product-shot">
-<div class="shot-frame">
-<a href="assets/desk-parallel.png" data-lightbox>
-<img src="assets/desk-parallel.png" alt="Desk · Parallel layout" width="1280" height="720" loading="lazy">
-</a>
-</div>
-<figcaption><details><summary>Image source & context</summary><p>Layout acceptance capture from 2026-09-18 with sample data. Historical layout illustration; current behavior is documented in the feature map.</p></details></figcaption>
-</figure>
+<figure class="product-shot"><div class="shot-frame"><a href="assets/desk-daylight-calm.webp" data-lightbox><img src="assets/desk-daylight-calm.webp" width="1280" height="720" loading="lazy" alt="Agent workspace: conversations, replies and visitor details"></a></div><figcaption>Interface preview with sample data.</figcaption></figure>
 </article>
 <article class="product-panel" id="panel-console" role="tabpanel" aria-labelledby="tab-console">
 <div class="panel-summary">
 <p>Manage employees, groups and channel accounts. Assign conversation access through groups; channel secrets are write-only.</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/dudu-console/README.md">Documentation ↗</a>
+<a class="text-link" href="products/console.en.html">Explore DuduConsole ↗</a>
 </div>
 
 <figure class="product-shot">
 <div class="shot-frame">
-<a href="assets/console.png" data-lightbox>
-<img src="assets/console.png" alt="Console · Channel accounts" width="1440" height="900" loading="lazy">
+<a href="assets/console-showcase.webp" data-lightbox>
+<img src="assets/console-showcase.webp" alt="Organization console: staff and access management" width="1280" height="720" loading="lazy">
 </a>
 </div>
-<figcaption><details><summary>Image source & context</summary><p>Actual Console connected to a local server during acceptance testing, using test data.</p></details></figcaption>
+<figcaption>Interface preview with sample data.</figcaption>
 </figure>
 </article>
 <article class="product-panel" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin">
 <div class="panel-summary">
 <p>Provision organizations, manage their resources and review operational summaries and activity logs, independently of day-to-day support.</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/dudu-admin/README.md">Documentation ↗</a>
+<a class="text-link" href="products/admin.en.html">Explore DuduAdmin ↗</a>
 </div>
 
 <figure class="product-shot">
 <div class="shot-frame">
-<a href="assets/admin.jpg" data-lightbox>
-<img src="assets/admin.jpg" alt="Admin · Organization overview" width="1440" height="960" loading="lazy">
+<a href="assets/admin.webp" data-lightbox>
+<img src="assets/admin.webp" alt="Admin · Organization overview" width="1440" height="960" loading="lazy">
 </a>
 </div>
-<figcaption><details><summary>Image source & context</summary><p>Frontend layout capture from 2026-09-30 with sample organizations and metrics, not live operational data.</p></details></figcaption>
+<figcaption>Interface preview with sample data.</figcaption>
 </figure>
 </article>
 <article class="product-panel" id="panel-mockpulse" role="tabpanel" aria-labelledby="tab-mockpulse">
 <div class="panel-summary">
 <p>MockPulse is a local channel callback simulator for validating event payloads, signatures and encryption. It is optional when running the support system.</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/mock-pulse/README.md">Documentation ↗</a>
+<a class="text-link" href="products/mockpulse.en.html">Explore MockPulse ↗</a>
 </div>
-<div class="mock-preview">
-<img src="assets/mockpulse.svg" alt="" width="54" height="54">
-<div class="kicker">MockPulse / React · Tauri · Rust</div>
-<h2>Validate the protocol.<br>Before the integration.</h2>
-<div class="mock-flow">
-<div>
-<small>EVENTS</small>
-<strong>Event fixtures</strong>
-</div>
-<div>
-<small>SCENARIOS</small>
-<strong>Scenarios</strong>
-</div>
-<div>
-<small>PLANS</small>
-<strong>Plans</strong>
-</div>
-<div>
-<small>RUNS</small>
-<strong>Run results</strong>
-</div>
-</div>
-<p class="muted">Tool capability overview, not an application screenshot.</p>
-</div>
+<figure class="product-shot"><div class="shot-frame"><a href="assets/mockpulse-editor.webp" data-lightbox><img src="assets/mockpulse-editor.webp" width="1080" height="562" loading="lazy" alt="Current MockPulse event editor: built-in templates, field descriptions and payload editing"></a></div><figcaption>Interface preview with sample data.</figcaption></figure>
 </article>
 <div class="capabilities">
 <article>
@@ -210,65 +177,21 @@
 </article>
 </div>
 </section>
-<section id="channels" class="channel-layout">
-<div>
-
-<h2>Connect channels.<br>Respect their boundaries.</h2>
-<p class="muted">13 implemented adapters cover specific messaging products. Account authorization, incoming events and sending capabilities follow each platform’s rules.</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">Channel configuration & limitations ↗</a>
-<details>
-<summary>Development status & current scope</summary>
-<p>The project is under active development, without release packages or a hosted demo. Incoming non-text content depends on the channel; outbound replies support text only. Production use requires platform approval, credentials, authorization and public end-to-end verification. Configuration alone does not establish working authorization.</p>
-</details>
-</div>
-<div class="channel-matrix">
-<span>
-<i aria-hidden="true">
-</i>WeChat Official Accounts</span>
-<span>
-<i aria-hidden="true">
-</i>WeChat Mini Programs</span>
-<span>
-<i aria-hidden="true">
-</i>WeCom</span>
-<span>
-<i aria-hidden="true">
-</i>DingTalk</span>
-<span>
-<i aria-hidden="true">
-</i>Feishu</span>
-<span>
-<i aria-hidden="true">
-</i>QQ</span>
-<span>
-<i aria-hidden="true">
-</i>Weibo</span>
-<span>
-<i aria-hidden="true">
-</i>Douyin</span>
-<span>
-<i aria-hidden="true">
-</i>Xiaohongshu</span>
-<span>
-<i aria-hidden="true">
-</i>Alipay</span>
-<span>
-<i aria-hidden="true">
-</i>Meituan</span>
-<span>
-<i aria-hidden="true">
-</i>Telegram</span>
-<span>
-<i aria-hidden="true">
-</i>WhatsApp</span>
-</div>
+<section id="channels" class="channel-section">
+<div class="section-top"><div><div class="kicker">Channel integrations</div><h2>Connect your channels. Bring conversations together.</h2></div><p>13 implemented integrations cover specific messaging interfaces. Configure the accounts your team needs and handle conversations in one workspace.</p></div>
+<div class="channel-groups"><div class="channel-group"><h3>WeChat ecosystem</h3><div class="channel-matrix"><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/wechat.svg" width="23" height="23" alt="" loading="lazy"></span>WeChat Official Accounts</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/wechat.svg" width="23" height="23" alt="" loading="lazy"></span>WeChat Mini Programs</span><span><span class="channel-mark" aria-hidden="true"><b style="color:#2474d4">企微</b></span>WeCom</span></div></div><div class="channel-group"><h3>Domestic platforms</h3><div class="channel-matrix"><span><span class="channel-mark" aria-hidden="true"><b style="color:#1677cc">钉</b></span>DingTalk</span><span><span class="channel-mark" aria-hidden="true"><b style="color:#3370cc">飞</b></span>Feishu</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/qq.svg" width="23" height="23" alt="" loading="lazy"></span>QQ</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/sinaweibo.svg" width="23" height="23" alt="" loading="lazy"></span>Weibo</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/tiktok.svg" width="23" height="23" alt="" loading="lazy"></span>Douyin</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/xiaohongshu.svg" width="23" height="23" alt="" loading="lazy"></span>Xiaohongshu</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/alipay.svg" width="23" height="23" alt="" loading="lazy"></span>Alipay</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/meituan.svg" width="23" height="23" alt="" loading="lazy"></span>Meituan</span></div></div><div class="channel-group"><h3>International platforms</h3><div class="channel-matrix"><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/telegram.svg" width="23" height="23" alt="" loading="lazy"></span>Telegram</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/whatsapp.svg" width="23" height="23" alt="" loading="lazy"></span>WhatsApp</span></div></div></div>
+<div class="channel-boundaries">
+<article><h3>Messaging capabilities</h3><p>Plain-text replies are supported; attachment sending is unavailable. Incoming non-text messages and media depend on the channel.</p></article>
+<article><h3>Integration requirements</h3><p>Obtain channel accounts, complete platform authorization and credential setup, then validate real messaging. Each platform retains its own permissions and rules.</p></article>
+<article><h3>Availability</h3><p>DuDu is under active development and currently requires building from source and self-hosting. The website tour is simulated, not a live trial.</p></article>
+</div><a class="text-link" href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">Channel configuration and integration guide ↗</a>
 </section>
 <section id="start" class="start-layout">
 <div>
 <p class="guide-entry"><a href="guides/index.en.html">Deployment, channel integration & testing guides ↗</a></p>
 
-<h2>Start from source.<br>Run on your terms.</h2>
-<p class="muted">Development requires Java 21, Maven 3.9, Docker Compose, Node.js 22.12+ and Yarn 4. Desktop builds additionally require Rust and Tauri prerequisites.</p>
+<h2>How do you get started?</h2>
+<p class="muted">DuDu currently requires building from source and self-hosting, with development and operations knowledge. Run the server, configure your organization and channels, then sign in as an agent. Browser access does not require a desktop build.</p>
 <a class="text-link" href="https://github.com/Buktal/dudu/blob/main/README.en.md">Complete setup guide ↗</a>
 </div>
 <div>
@@ -302,7 +225,7 @@
 <div>
 <p>Use, modify, distribute and build commercially under Apache-2.0. Issues, code contributions and documentation improvements are welcome.</p>
 <div class="actions">
-<a class="button primary" href="https://github.com/Buktal/dudu">Star on GitHub<span aria-hidden="true">↗</span>
+<a class="button primary" href="https://github.com/Buktal/dudu">View repository<span aria-hidden="true">↗</span>
 </a>
 <a class="text-link" href="https://github.com/Buktal/dudu/issues">Issues & ideas ↗</a>
 </div>

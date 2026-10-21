@@ -21,22 +21,23 @@
 <link rel="stylesheet" href="guide.css">
 <link rel="icon" type="image/svg+xml" href="../assets/dudu.svg">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "WhatsApp Cloud API 接入指南", "description": "了解 WhatsApp Webhook 验证、消息签名与发送凭据如何分别配置到 DuDu 企业控制台。", "inLanguage": "zh-CN", "url": "https://buktal.github.io/dudu/guides/whatsapp.html", "isPartOf": {"@type": "WebSite", "name": "DuDu", "url": "https://buktal.github.io/dudu/"}}</script>
+<link rel="stylesheet" href="../navigation.css">
+<script defer src="../navigation.js"></script>
 </head>
 <body class="guide-page">
 <a class="skip" href="#main">跳至正文</a>
 <header class="site-header shell">
-<a class="brand" href="../"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
-<nav aria-label="主导航">
-<a href="index.html">使用指南</a>
-<a href="whatsapp.en.html" lang="en">EN</a>
-<button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
-<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
-</nav>
-</header>
+<a class="brand" href="../index.html" aria-label="DuDu 首页"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="主导航"><details class="product-menu"><summary>产品</summary><div class="product-menu-links"><a href="../products/desk.html">DuduDesk · 坐席工作台</a><a href="../products/console.html">DuduConsole · 企业控制台</a><a href="../products/admin.html">DuduAdmin · 平台管理后台</a><a href="../products/mockpulse.html">MockPulse · 开发联调工具</a><a href="../products/server.html">DUDU Server · 服务端</a><a href="../index.html#channels">支持渠道 ↗</a><a href="../guides/index.html">部署与使用指南 ↗</a></div></details>
+<a href="../demo.html">演示</a>
+<a href="../guides/index.html" aria-current="true">文档</a>
+<a href="whatsapp.en.html" lang="en" aria-label="切换到英文">EN</a>
+<button type="button" id="theme-toggle" class="theme-toggle" hidden aria-label="切换外观"><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button><a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav></header>
 <main id="main" class="shell guide-layout">
 <aside class="guide-nav" aria-label="指南导航"><a href="index.html">指南概览</a><a href="deployment.html">部署与本地运行</a><a href="workflow.html">从企业开通到坐席接待</a><a href="wechat.html">微信公众号接入指南</a><a href="telegram.html">Telegram Bot 接入指南</a><a href="whatsapp.html" aria-current="page">WhatsApp Cloud API 接入指南</a><a href="mockpulse.html">使用 MockPulse 联调渠道回调</a></aside>
 <article class="guide-article"><div class="kicker">开源 / 自托管</div><h1>WhatsApp Cloud API 接入指南</h1><p class="guide-intro">了解 WhatsApp Webhook 验证、消息签名与发送凭据如何分别配置到 DuDu 企业控制台。</p><div class="guide-toc">本页内容<a href="#section-1">凭据职责</a><a href="#section-2">配置与验收</a><a href="#section-3">常见边界</a><a href="#section-4">参考</a></div><section id="section-1"><h2>凭据职责</h2><p>接收需要 appSecret 与 verifyToken：verifyToken 用于 GET hub.challenge 握手，appSecret 用于 POST 请求的 X-Hub-Signature-256 签名校验。发送需要 accessToken 与 phoneNumberId。回调 URL 由 Server 派生，在 Console 中只读展示，不是发送 API 地址。</p></section><section id="section-2"><h2>配置与验收</h2><ol><li>在 Meta 平台准备 WhatsApp 应用、业务电话号码及相应权限，部署公开可达的回调服务。</li><li>在 Console 新建 WhatsApp 账号并绑定用户组，填写 appSecret 和 verifyToken；需要回复时填写 accessToken 和 phoneNumberId。</li><li>在 Meta 的 Webhook 配置中填写 Console 提供的回调 URL 和相同的 verifyToken，完成验证并订阅所需 WhatsApp 消息事件。</li><li>从真实用户发送测试消息，核对 Desk 来信，再按平台会话规则验证纯文本回复。API 版本与基址属于 Server 部署配置，不由渠道账号 URL 控制。</li></ol></section><section id="section-3"><h2>常见边界</h2><p>GET 验证成功不代表 POST 签名一定正确，应分别检查 verifyToken 和 appSecret。接收成功不代表 accessToken 拥有所需发送权限，也不代表消息符合 Meta 的会话窗口与账号政策。phoneNumberId 保存后不可换绑；切换电话号码应新建渠道账号。</p></section><section id="section-4"><h2>参考</h2><p><a href="https://developers.facebook.com/docs/whatsapp/cloud-api/">Meta WhatsApp Cloud API 文档 ↗</a> · <a href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">DuDu 配置字段 ↗</a>。Console 不提供 OAuth 向导，也不代替 Meta 的授权、审核或账号开通。</p></section>
-<div class="guide-end"><a href="index.html">全部指南 ↗</a><a href="https://github.com/Buktal/dudu">源码与贡献 ↗</a></div></article>
+<div class="guide-end"><a href="../demo.html">接待导览</a><a href="index.html">全部指南 ↗</a><a href="https://github.com/Buktal/dudu">源码与贡献 ↗</a></div></article>
 </main>
 <footer class="shell"><span>DuDu · Apache-2.0</span><a href="https://github.com/Buktal/dudu/blob/main/LICENSE">开源许可证 ↗</a></footer>
 </body>

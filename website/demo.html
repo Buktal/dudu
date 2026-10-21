@@ -1,0 +1,44 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>接待导览 | DuDu</title><meta name="description" content="通过选择来信、查看会话、模拟回复和来访资料，了解 DuDu 接待流程。"><meta name="theme-color" content="#0b151e"><link rel="canonical" href="https://buktal.github.io/dudu/demo.html"><link rel="alternate" hreflang="zh-CN" href="https://buktal.github.io/dudu/demo.html"><link rel="alternate" hreflang="en" href="https://buktal.github.io/dudu/demo.en.html"><link rel="icon" type="image/svg+xml" href="assets/dudu.svg"><script src="theme.js"></script><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="demo.css"><link rel="stylesheet" href="navigation.css"><script defer src="navigation.js"></script><script type="module" src="demo.js"></script></head><body><a class="skip" href="#main">跳至正文</a><header class="site-header shell">
+<a class="brand" href="index.html" aria-label="DuDu 首页"><img src="assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="主导航"><details class="product-menu"><summary>产品</summary><div class="product-menu-links"><a href="products/desk.html">DuduDesk · 坐席工作台</a><a href="products/console.html">DuduConsole · 企业控制台</a><a href="products/admin.html">DuduAdmin · 平台管理后台</a><a href="products/mockpulse.html">MockPulse · 开发联调工具</a><a href="products/server.html">DUDU Server · 服务端</a><a href="index.html#channels">支持渠道 ↗</a><a href="guides/index.html">部署与使用指南 ↗</a></div></details>
+<a href="demo.html" aria-current="page">演示</a>
+<a href="guides/index.html">文档</a>
+<a href="demo.en.html" lang="en" aria-label="切换到英文">EN</a>
+<button type="button" id="theme-toggle" class="theme-toggle" hidden aria-label="切换外观"><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button><a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav></header><main id="main" class="shell demo-page"><section id="demo" aria-labelledby="demo-title">
+<div class="demo-intro"><div class="kicker">产品导览 · 无需登录</div>
+<h1 id="demo-title">从一条来信，了解一次接待。</h1>
+<p>选择示例渠道，打开会话、发送预设回复，再查看来访资料。先了解坐席如何使用 DuDu，再决定是否部署。</p></div>
+<p class="demo-disclosure">交互式演示使用预设数据，不连接真实渠道。完整功能请参阅产品介绍与使用指南。</p>
+<noscript><p>交互式导览需要 JavaScript。可继续查看下方产品截图与使用指南。</p></noscript>
+<div id="demo-interactive" hidden>
+<ol class="demo-steps" aria-label="接待流程">
+<li><button type="button" data-demo-step="0" aria-controls="demo-workspace">选择来信</button></li><li><button type="button" data-demo-step="1" aria-controls="demo-workspace">查看会话</button></li><li><button type="button" data-demo-step="2" aria-controls="demo-workspace">模拟回复</button></li><li><button type="button" data-demo-step="3" aria-controls="demo-workspace">来访资料</button></li>
+</ol>
+<div class="demo-toolbar"><div class="demo-channels" role="group" aria-label="示例渠道">
+<button type="button" data-demo-channel="0" aria-pressed="true">微信公众号</button><button type="button" data-demo-channel="1" aria-pressed="false">Telegram</button><button type="button" data-demo-channel="2" aria-pressed="false">WhatsApp</button>
+</div><button type="button" class="demo-reset" id="demo-reset">重新开始</button></div>
+<div class="demo-guidance"><p id="demo-caption" class="demo-caption"></p><div class="demo-navigation"><button type="button" id="demo-back">上一步</button><button type="button" id="demo-next">下一步：查看会话</button></div></div>
+<div class="demo-workspace" id="demo-workspace"><aside class="demo-queue" aria-label="示例会话列表">
+<h3>待接待 <span>1</span></h3>
+<button type="button" id="demo-open" class="demo-conversation-button" aria-pressed="false" aria-controls="demo-conversation"><span id="demo-avatar" class="demo-avatar"></span><span><strong id="demo-visitor"></strong><small id="demo-channel-label"></small><span id="demo-preview" class="demo-preview"></span></span></button>
+</aside><div class="demo-main">
+<div id="demo-empty" class="demo-empty"><img src="assets/dudu.svg" alt="" width="48" height="48"><strong>选择会话，开始接待</strong><p>点击示例会话，查看消息内容。</p></div>
+<div id="demo-conversation" hidden>
+<div class="demo-conversation-header"><h3 id="demo-subject"></h3><button type="button" id="demo-profile-toggle" class="demo-profile-toggle" aria-expanded="false" aria-controls="demo-profile" disabled>查看来访资料</button></div>
+<div id="demo-profile" class="demo-profile" hidden><h4>来访资料 · 示例</h4><dl><dt>标签</dt><dd id="demo-tag"></dd><dt>内部备注</dt><dd id="demo-note"></dd></dl></div>
+<div class="demo-thread"><div class="demo-message-label">来访用户 · 09:41 · 示例</div><p id="demo-incoming" class="demo-message"></p>
+<div id="demo-reply-row" class="demo-outgoing" hidden><div class="demo-message-label">坐席 · 09:42 · 模拟发送</div><p id="demo-reply" class="demo-message"></p></div></div>
+
+<div class="demo-composer"><div class="demo-message-label">预设回复 · 纯文本</div><p id="demo-draft"></p><button type="button" id="demo-send">模拟发送回复</button></div>
+</div></div></div><p id="demo-status" class="sr-only" role="status" aria-live="polite"></p>
+</div>
+</section>
+</main><footer class="shell">
+<span>DuDu · 开源多渠道客服系统</span>
+<div class="footer-links">
+<a href="https://github.com/Buktal/dudu/blob/main/docs/README.md">文档</a>
+<a href="https://github.com/Buktal/dudu/blob/main/LICENSE">Apache-2.0</a>
+<a href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</div>
+</footer></body></html>

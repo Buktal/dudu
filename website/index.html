@@ -16,41 +16,37 @@
 <meta name="theme-color" content="#0b151e">
 <script src="theme.js"></script>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="demo.css">
 <link rel="icon" type="image/svg+xml" href="assets/dudu.svg">
 <script type="module" src="site.js">
 </script>
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareSourceCode", "name": "DuDu", "description": "DuDu 是 Apache-2.0 开源、自托管的多渠道客服系统，提供微信公众号、Telegram、WhatsApp 等渠道的统一接待、企业权限管理与本地回调联调工具。", "codeRepository": "https://github.com/Buktal/dudu", "license": "https://www.apache.org/licenses/LICENSE-2.0", "programmingLanguage": ["Java", "TypeScript", "Rust"], "url": "https://buktal.github.io/dudu/", "inLanguage": "zh-CN"}</script>
+<link rel="stylesheet" href="navigation.css">
+<script defer src="navigation.js"></script>
 </head>
 <body>
 <a class="skip" href="#main">跳至正文</a>
 <header class="site-header shell">
-<a class="brand" href="./" aria-label="DuDu 首页">
-<img src="assets/dudu.svg" width="32" height="32" alt="">
-<strong>DuDu</strong>
-<span>嘟嘟</span>
-</a>
-<nav aria-label="主导航">
-<a href="#products">产品</a>
-<a href="#channels">渠道</a>
+<a class="brand" href="index.html" aria-label="DuDu 首页"><img src="assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="主导航"><details class="product-menu"><summary>产品</summary><div class="product-menu-links"><a href="products/desk.html">DuduDesk · 坐席工作台</a><a href="products/console.html">DuduConsole · 企业控制台</a><a href="products/admin.html">DuduAdmin · 平台管理后台</a><a href="products/mockpulse.html">MockPulse · 开发联调工具</a><a href="products/server.html">DUDU Server · 服务端</a><a href="index.html#channels">支持渠道 ↗</a><a href="guides/index.html">部署与使用指南 ↗</a></div></details>
+<a href="demo.html">演示</a>
 <a href="guides/index.html">文档</a>
-<a href="en.html" lang="en">EN / 中</a>
-<button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
-<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
-</nav>
-</header>
+<a href="en.html" lang="en" aria-label="切换到英文">EN</a>
+<button type="button" id="theme-toggle" class="theme-toggle" hidden aria-label="切换外观"><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button><a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav></header>
 <main id="main" class="shell">
 <div class="hero">
 <div class="hero-copy">
 <div class="kicker">开源多渠道客服系统 · Apache-2.0</div>
-<h1>多渠道消息，<br>
+<h1>多渠道客服，<br>
 <em>统一接待。</em>
 </h1>
-<p class="lead">DuDu 是开源、自托管的多渠道客服系统。连接渠道消息、企业权限与坐席工作台，让每一次接待都有完整上下文。</p>
+<p class="lead">在同一工作台接收渠道来信、查看历史、回复消息并维护来访资料。DuDu 开源且支持自行部署，适合需要统一多渠道接待的团队。</p>
 <div class="actions">
-<a class="button primary" href="#start">开始部署<span aria-hidden="true">↗</span>
+<a class="button primary" href="demo.html">体验接待导览<span aria-hidden="true">↗</span>
 </a>
-<a class="text-link" href="https://github.com/Buktal/dudu">查看源码 ↗</a>
+<a class="text-link" href="guides/index.html">部署与接入指南 ↗</a>
 </div>
 </div>
 <div class="signal-stage" aria-label="多渠道消息流交互示意">
@@ -94,26 +90,27 @@
 </div>
 
 </div>
+<section id="demo" class="tour-entry"><div><div class="kicker">交互式产品导览</div><h2>先体验一次接待，再了解如何部署。</h2><p class="muted">查看渠道来信、模拟回复并了解来访资料。无需登录，使用预设数据，不连接真实渠道。</p></div><a class="button primary" href="demo.html">开始接待导览 ↗</a></section>
 <section id="products">
 <div class="section-top">
 <div>
 
-<h2>不同职责，同一套系统。</h2>
+<h2>接待与管理，职责清晰。</h2>
 </div>
-<p>坐席接待、企业配置、平台管理和协议联调各有专属应用，通过同一服务端组织权限与消息。</p>
+<p>日常接待使用 Desk；配置员工与渠道使用 Console；开通企业使用 Admin。MockPulse 仅用于开发联调，运行客服系统无需启动。</p>
 </div>
 <div class="suite-tabs" role="tablist" aria-label="产品展示">
 <button type="button" class="suite-tab" role="tab" id="tab-desk" aria-controls="panel-desk" aria-selected="true" tabindex="0">
 <b>Desk</b>
-<span>坐席工作台</span>
+<span>接待会话</span>
 </button>
 <button type="button" class="suite-tab" role="tab" id="tab-console" aria-controls="panel-console" aria-selected="false" tabindex="-1">
 <b>Console</b>
-<span>企业控制台</span>
+<span>配置团队与渠道</span>
 </button>
 <button type="button" class="suite-tab" role="tab" id="tab-admin" aria-controls="panel-admin" aria-selected="false" tabindex="-1">
 <b>Admin</b>
-<span>平台管理</span>
+<span>管理企业</span>
 </button>
 <button type="button" class="suite-tab" role="tab" id="tab-mockpulse" aria-controls="panel-mockpulse" aria-selected="false" tabindex="-1">
 <b>MockPulse</b>
@@ -123,77 +120,47 @@
 <article class="product-panel" id="panel-desk" role="tabpanel" aria-labelledby="tab-desk">
 <div class="panel-summary">
 <p>专注、并排、卡片三种接待模式。共享会话历史、草稿、来访标签与内部备注，支持浏览器和桌面构建。</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/dudu-desk/README.md">使用文档 ↗</a>
+<a class="text-link" href="products/desk.html">了解 DuduDesk ↗</a>
 </div>
 
-<figure class="product-shot">
-<div class="shot-frame">
-<a href="assets/desk-parallel.png" data-lightbox>
-<img src="assets/desk-parallel.png" alt="Desk · 并排接待模式" width="1280" height="720" loading="lazy">
-</a>
-</div>
-<figcaption><details><summary>界面来源与说明</summary><p>2026-09-18 布局验收，使用示例数据。历史布局仅供展示，当前能力以功能文档为准。</p></details></figcaption>
-</figure>
+<figure class="product-shot"><div class="shot-frame"><a href="assets/desk-daylight-calm.webp" data-lightbox><img src="assets/desk-daylight-calm.webp" width="1280" height="720" loading="lazy" alt="坐席工作台：会话列表、消息回复与来访资料"></a></div><figcaption>界面示例，内容为演示数据。</figcaption></figure>
 </article>
 <article class="product-panel" id="panel-console" role="tabpanel" aria-labelledby="tab-console">
 <div class="panel-summary">
 <p>统一维护员工、用户组和渠道账号。通过用户组分配接待范围，敏感渠道凭据只写入、不回传。</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/dudu-console/README.md">使用文档 ↗</a>
+<a class="text-link" href="products/console.html">了解 DuduConsole ↗</a>
 </div>
 
 <figure class="product-shot">
 <div class="shot-frame">
-<a href="assets/console.png" data-lightbox>
-<img src="assets/console.png" alt="Console · 渠道账号管理" width="1440" height="900" loading="lazy">
+<a href="assets/console-showcase.webp" data-lightbox>
+<img src="assets/console-showcase.webp" alt="企业控制台：员工与权限管理" width="1280" height="720" loading="lazy">
 </a>
 </div>
-<figcaption><details><summary>界面来源与说明</summary><p>实际 Console 连接本地服务端的验收截图，内容为测试数据。</p></details></figcaption>
+<figcaption>界面示例，内容为演示数据。</figcaption>
 </figure>
 </article>
 <article class="product-panel" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin">
 <div class="panel-summary">
 <p>开通企业并管理企业资源，查看运营概览与操作记录，独立于企业内部的日常接待管理。</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/dudu-admin/README.md">使用文档 ↗</a>
+<a class="text-link" href="products/admin.html">了解 DuduAdmin ↗</a>
 </div>
 
 <figure class="product-shot">
 <div class="shot-frame">
-<a href="assets/admin.jpg" data-lightbox>
-<img src="assets/admin.jpg" alt="Admin · 企业运营概览" width="1440" height="960" loading="lazy">
+<a href="assets/admin.webp" data-lightbox>
+<img src="assets/admin.webp" alt="Admin · 企业运营概览" width="1440" height="960" loading="lazy">
 </a>
 </div>
-<figcaption><details><summary>界面来源与说明</summary><p>2026-09-30 前端布局验收，使用示例企业与统计数据，非线上运营数据。</p></details></figcaption>
+<figcaption>界面示例，内容为演示数据。</figcaption>
 </figure>
 </article>
 <article class="product-panel" id="panel-mockpulse" role="tabpanel" aria-labelledby="tab-mockpulse">
 <div class="panel-summary">
 <p>MockPulse 是本地渠道回调模拟工具，用于验证事件载荷、签名与加密流程。运行客服系统无需启动此工具。</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/mock-pulse/README.md">使用文档 ↗</a>
+<a class="text-link" href="products/mockpulse.html">了解 MockPulse ↗</a>
 </div>
-<div class="mock-preview">
-<img src="assets/mockpulse.svg" alt="" width="54" height="54">
-<div class="kicker">MockPulse / React · Tauri · Rust</div>
-<h2>在接入之前，验证协议。</h2>
-<div class="mock-flow">
-<div>
-<small>EVENTS</small>
-<strong>事件素材</strong>
-</div>
-<div>
-<small>SCENARIOS</small>
-<strong>测试剧本</strong>
-</div>
-<div>
-<small>PLANS</small>
-<strong>编排计划</strong>
-</div>
-<div>
-<small>RUNS</small>
-<strong>运行结果</strong>
-</div>
-</div>
-<p class="muted">工具能力示意，非应用截图。</p>
-</div>
+<figure class="product-shot"><div class="shot-frame"><a href="assets/mockpulse-editor.webp" data-lightbox><img src="assets/mockpulse-editor.webp" width="1080" height="562" loading="lazy" alt="MockPulse 当前事件编辑界面：内置模板、字段说明与报文编辑"></a></div><figcaption>界面示例，内容为演示数据。</figcaption></figure>
 </article>
 <div class="capabilities">
 <article>
@@ -210,65 +177,21 @@
 </article>
 </div>
 </section>
-<section id="channels" class="channel-layout">
-<div>
-
-<h2>连接渠道，<br>保留各自的边界。</h2>
-<p class="muted">已实现 13 种渠道适配器，覆盖各平台指定的消息体系。账号授权、可接收事件与发送能力，遵循渠道本身的规则。</p>
-<a class="text-link" href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">渠道配置与接入说明 ↗</a>
-<details>
-<summary>开发状态与使用范围</summary>
-<p>项目持续开发中，暂无正式发布包或托管演示。入站非文本展示按渠道能力处理，出站仅接通纯文本。生产接入需部署方完成平台申请、凭据配置、授权及公网端到端验证；配置存在不代表授权有效。</p>
-</details>
-</div>
-<div class="channel-matrix">
-<span>
-<i aria-hidden="true">
-</i>微信公众号</span>
-<span>
-<i aria-hidden="true">
-</i>微信小程序</span>
-<span>
-<i aria-hidden="true">
-</i>企业微信</span>
-<span>
-<i aria-hidden="true">
-</i>钉钉</span>
-<span>
-<i aria-hidden="true">
-</i>飞书</span>
-<span>
-<i aria-hidden="true">
-</i>QQ</span>
-<span>
-<i aria-hidden="true">
-</i>微博</span>
-<span>
-<i aria-hidden="true">
-</i>抖音</span>
-<span>
-<i aria-hidden="true">
-</i>小红书</span>
-<span>
-<i aria-hidden="true">
-</i>支付宝</span>
-<span>
-<i aria-hidden="true">
-</i>美团</span>
-<span>
-<i aria-hidden="true">
-</i>Telegram</span>
-<span>
-<i aria-hidden="true">
-</i>WhatsApp</span>
-</div>
+<section id="channels" class="channel-section">
+<div class="section-top"><div><div class="kicker">渠道接入</div><h2>连接常用渠道，统一处理咨询。</h2></div><p>已实现 13 种渠道接入，覆盖各平台指定的消息体系。按业务需要配置渠道账号，在同一工作台接待。</p></div>
+<div class="channel-groups"><div class="channel-group"><h3>微信生态</h3><div class="channel-matrix"><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/wechat.svg" width="23" height="23" alt="" loading="lazy"></span>微信公众号</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/wechat.svg" width="23" height="23" alt="" loading="lazy"></span>微信小程序</span><span><span class="channel-mark" aria-hidden="true"><b style="color:#2474d4">企微</b></span>企业微信</span></div></div><div class="channel-group"><h3>国内平台</h3><div class="channel-matrix"><span><span class="channel-mark" aria-hidden="true"><b style="color:#1677cc">钉</b></span>钉钉</span><span><span class="channel-mark" aria-hidden="true"><b style="color:#3370cc">飞</b></span>飞书</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/qq.svg" width="23" height="23" alt="" loading="lazy"></span>QQ</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/sinaweibo.svg" width="23" height="23" alt="" loading="lazy"></span>微博</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/tiktok.svg" width="23" height="23" alt="" loading="lazy"></span>抖音</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/xiaohongshu.svg" width="23" height="23" alt="" loading="lazy"></span>小红书</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/alipay.svg" width="23" height="23" alt="" loading="lazy"></span>支付宝</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/meituan.svg" width="23" height="23" alt="" loading="lazy"></span>美团</span></div></div><div class="channel-group"><h3>国际平台</h3><div class="channel-matrix"><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/telegram.svg" width="23" height="23" alt="" loading="lazy"></span>Telegram</span><span><span class="channel-mark" aria-hidden="true"><img src="assets/channels/whatsapp.svg" width="23" height="23" alt="" loading="lazy"></span>WhatsApp</span></div></div></div>
+<div class="channel-boundaries">
+<article><h3>消息能力</h3><p>当前支持纯文本回复，暂不支持发送附件。接收非文本消息与读取媒体取决于对应渠道。</p></article>
+<article><h3>接入条件</h3><p>需自行申请渠道账号并完成平台授权、凭据配置与真实收发验证。各平台的权限和使用规则独立生效。</p></article>
+<article><h3>使用方式</h3><p>项目持续开发中，目前需通过源码构建和自行部署使用。官网导览为模拟演示，非真实在线试用。</p></article>
+</div><a class="text-link" href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">查看渠道配置与接入说明 ↗</a>
 </section>
 <section id="start" class="start-layout">
 <div>
 <p class="guide-entry"><a href="guides/index.html">部署、渠道接入与联调指南 ↗</a></p>
 
-<h2>从源码开始，<br>在自己的环境运行。</h2>
-<p class="muted">开发环境需要 Java 21、Maven 3.9、Docker Compose、Node.js 22.12+ 和 Yarn 4。桌面构建另需 Rust 与 Tauri 环境。</p>
+<h2>如何开始使用？</h2>
+<p class="muted">DuDu 目前通过源码构建和自行部署使用，需要具备基本开发与运维能力。先运行服务端，再配置企业和渠道，最后由坐席登录接待。浏览器使用工作台无需构建桌面端。</p>
 <a class="text-link" href="https://github.com/Buktal/dudu/blob/main/README.md">完整运行指南 ↗</a>
 </div>
 <div>
@@ -302,7 +225,7 @@
 <div>
 <p>允许使用、修改、分发与商业使用，遵循 Apache-2.0 许可条件。欢迎报告问题、贡献代码与完善文档。</p>
 <div class="actions">
-<a class="button primary" href="https://github.com/Buktal/dudu">Star on GitHub<span aria-hidden="true">↗</span>
+<a class="button primary" href="https://github.com/Buktal/dudu">查看开源仓库<span aria-hidden="true">↗</span>
 </a>
 <a class="text-link" href="https://github.com/Buktal/dudu/issues">反馈与建议 ↗</a>
 </div>

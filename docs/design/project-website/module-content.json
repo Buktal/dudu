@@ -1,0 +1,312 @@
+[
+  {
+    "id": "desk",
+    "name": "DuduDesk",
+    "repo": "dudu-desk",
+    "role": [
+      "坐席工作台",
+      "Agent workspace"
+    ],
+    "title": [
+      "集中处理渠道来信，保留每次接待的上下文。",
+      "Handle channel messages with the conversation context in view."
+    ],
+    "lead": [
+      "面向日常接待的坐席，在同一工作区查看会话历史、发送回复并维护来访资料。支持浏览器访问，也可构建桌面端。",
+      "For support agents handling daily conversations: review history, reply and maintain visitor details in one workspace. Use a browser or build the desktop app."
+    ],
+    "image": "desk-daylight-calm.webp",
+    "features": [
+      [
+        "统一会话",
+        "Unified conversations",
+        "在授权范围内查看渠道会话，使用搜索与筛选定位需要处理的来信。",
+        "Review channel conversations within your scope and use search and filters to find messages."
+      ],
+      [
+        "三种接待布局",
+        "Three workspace layouts",
+        "专注、并排和卡片布局共享会话数据与草稿，按接待方式选择视图。",
+        "Focused, side-by-side and card layouts share conversation data and drafts."
+      ],
+      [
+        "消息与回复",
+        "Messages and replies",
+        "查看历史和实时来信，发送纯文本回复，并查看发送结果。",
+        "Read history and incoming messages, send plain-text replies and review send results."
+      ],
+      [
+        "共享来访资料",
+        "Shared visitor details",
+        "维护有权限员工之间共享的来访标签和内部备注。",
+        "Maintain visitor tags and internal notes shared with authorized staff."
+      ]
+    ],
+    "steps": [
+      [
+        "使用企业员工身份登录，读取当前用户组授权的会话范围。",
+        "Sign in as an organization employee to access conversations allowed by your groups."
+      ],
+      [
+        "选择会话、阅读历史并回复来信。",
+        "Choose a conversation, review its history and send a reply."
+      ],
+      [
+        "维护标签和内部备注，根据需要结束或继续接待。",
+        "Maintain tags and internal notes, then close or continue the conversation."
+      ]
+    ],
+    "scope": [
+      "当前仅支持发送纯文本，暂不支持发送附件。接收非文本消息和读取媒体取决于渠道能力与凭据。",
+      "Outbound replies currently support plain text only. Incoming non-text messages and media retrieval depend on channel capabilities and credentials."
+    ]
+  },
+  {
+    "id": "console",
+    "name": "DuduConsole",
+    "repo": "dudu-console",
+    "role": [
+      "企业控制台",
+      "Organization console"
+    ],
+    "title": [
+      "配置团队与渠道，明确接待范围。",
+      "Configure staff, channels and conversation access."
+    ],
+    "lead": [
+      "面向企业管理员，集中维护员工、用户组和渠道账号。通过用户组组织接待范围，日常回复由坐席工作台完成。",
+      "For organization administrators managing staff, user groups and channel accounts. Groups define conversation access; agents reply in Desk."
+    ],
+    "image": "console-showcase.webp",
+    "features": [
+      [
+        "员工管理",
+        "Staff management",
+        "创建和维护员工账号、状态及相应权限，按管理员职责控制操作范围。",
+        "Create and maintain staff accounts, status and permissions within the administrator’s scope."
+      ],
+      [
+        "用户组",
+        "User groups",
+        "按团队组织成员，将渠道账号关联到对应接待组。",
+        "Organize team membership and associate channel accounts with the appropriate groups."
+      ],
+      [
+        "渠道账号",
+        "Channel accounts",
+        "按渠道要求配置接收与发送凭据，查看回调地址及配置缺项。",
+        "Configure receiving and sending credentials, review callback URLs and missing settings."
+      ],
+      [
+        "凭据保护",
+        "Credential protection",
+        "敏感凭据只写入，不在读取响应中返回秘密值。",
+        "Secret credentials are write-only and are not returned in read responses."
+      ]
+    ],
+    "steps": [
+      [
+        "使用企业 ID 和管理员账号登录。",
+        "Sign in with your organization ID and administrator account."
+      ],
+      [
+        "配置员工与用户组，再为渠道账号分配接待组。",
+        "Set up staff and groups, then assign channel accounts to their support groups."
+      ],
+      [
+        "按平台要求完成授权、回调配置和真实收发验证。",
+        "Complete platform authorization, callback setup and real messaging validation."
+      ]
+    ],
+    "scope": [
+      "初始企业管理员与普通管理员的管理范围不同。配置完整不代表平台授权有效；当前不提供内置 OAuth 授权向导、自动连通检测或渠道健康监控。",
+      "Initial and regular administrators have different management scopes. Complete settings do not establish valid platform authorization. A built-in OAuth wizard, automatic connectivity checks and channel health monitoring are not available."
+    ]
+  },
+  {
+    "id": "admin",
+    "name": "DuduAdmin",
+    "repo": "dudu-admin",
+    "role": [
+      "平台管理后台",
+      "Platform administration"
+    ],
+    "title": [
+      "管理企业开通与平台运营。",
+      "Manage organization provisioning and platform operations."
+    ],
+    "lead": [
+      "面向平台管理员，维护企业及其资源，查看运营概览和操作记录。企业内部员工与渠道配置由企业控制台负责。",
+      "For platform administrators provisioning organizations, managing resources and reviewing operational summaries and activity logs. Organization staff and channels are managed in Console."
+    ],
+    "image": "admin.webp",
+    "features": [
+      [
+        "企业开通",
+        "Organization provisioning",
+        "开通企业并设置初始企业管理员，为企业建立使用入口。",
+        "Provision organizations and their initial administrators."
+      ],
+      [
+        "企业管理",
+        "Organization management",
+        "查询企业资料，维护企业状态并查看企业详情。",
+        "Find organization records, manage status and inspect organization details."
+      ],
+      [
+        "资源概览",
+        "Resource overview",
+        "查看企业资源汇总与运营概览。",
+        "Review organization resource summaries and operational overviews."
+      ],
+      [
+        "操作记录",
+        "Activity records",
+        "查询管理操作记录，辅助日常核查。",
+        "Review administrative activity records for routine checks."
+      ]
+    ],
+    "steps": [
+      [
+        "平台管理员登录管理后台。",
+        "Sign in as a platform administrator."
+      ],
+      [
+        "开通企业并设置初始企业管理员。",
+        "Provision an organization and set its initial administrator."
+      ],
+      [
+        "企业管理员进入 Console 配置团队，坐席进入 Desk 接待。",
+        "Organization administrators configure the team in Console; agents handle conversations in Desk."
+      ]
+    ],
+    "scope": [
+      "平台管理与企业内部管理职责分离。Admin 不承担坐席接待，也不替代渠道平台的账号申请和授权流程。",
+      "Platform administration is separate from organization management. Admin does not handle agent conversations or replace channel account applications and authorization."
+    ]
+  },
+  {
+    "id": "mockpulse",
+    "name": "MockPulse",
+    "repo": "mock-pulse",
+    "role": [
+      "开发联调工具",
+      "Development tool"
+    ],
+    "title": [
+      "在本地构造渠道回调，验证接入流程。",
+      "Construct channel callbacks and test integrations locally."
+    ],
+    "lead": [
+      "面向开发者的本地回调模拟工具。通过内置模板、事件素材和剧本组织协议联调；运行 DuDu 客服系统无需启动此工具。",
+      "A local callback simulator for developers. Built-in templates, saved events and scripts support protocol testing. Running the DuDu support system does not require this tool."
+    ],
+    "image": "mockpulse-editor.webp",
+    "features": [
+      [
+        "事件编辑",
+        "Event editing",
+        "从内置渠道模板创建事件素材，按字段说明编辑回调内容。",
+        "Create event fixtures from built-in templates and edit callback fields with descriptions."
+      ],
+      [
+        "签名与加密",
+        "Signing and encryption",
+        "按已支持渠道的协议构造签名与加密报文。",
+        "Construct signatures and encrypted payloads for supported channel protocols."
+      ],
+      [
+        "剧本与编排",
+        "Scripts and orchestration",
+        "组织多个事件的执行顺序，复现接入场景。",
+        "Arrange event execution to reproduce integration scenarios."
+      ],
+      [
+        "运行记录",
+        "Run records",
+        "查看运行结果和回执，定位协议联调问题。",
+        "Review run results and receipts to investigate protocol integration issues."
+      ]
+    ],
+    "steps": [
+      [
+        "配置本地接收服务的目标地址与测试参数。",
+        "Configure the target URL and test settings for your local receiving service."
+      ],
+      [
+        "选择内置模板或事件素材，编辑字段并组织剧本。",
+        "Choose a built-in template or saved event, edit fields and arrange scripts."
+      ],
+      [
+        "在桌面端执行并核对回执、签名和接收服务的处理结果。",
+        "Run in the desktop app and inspect receipts, signatures and receiving-service results."
+      ]
+    ],
+    "scope": [
+      "完整本地存储、签名与发送能力依赖桌面环境。模拟通过不代表已完成真实平台授权或生产收发验证。",
+      "Full local storage, signing and sending require the desktop environment. Successful simulation does not establish platform authorization or production messaging."
+    ]
+  },
+  {
+    "id": "server",
+    "name": "DUDU Server",
+    "repo": "dudu-server",
+    "role": [
+      "服务端",
+      "Server"
+    ],
+    "title": [
+      "连接渠道接入、权限与坐席接待。",
+      "Connect channel integrations, access control and agent workflows."
+    ],
+    "lead": [
+      "DuDu 各应用共用的服务端，负责认证、企业与用户组权限、渠道消息处理、会话存储和实时更新。",
+      "The shared server for DuDu applications, handling authentication, organization and group access, channel messages, conversation storage and real-time updates."
+    ],
+    "image": null,
+    "features": [
+      [
+        "认证与权限",
+        "Authentication and access",
+        "校验用户身份，按企业和用户组控制数据访问范围。",
+        "Verify user identity and scope data access by organization and group."
+      ],
+      [
+        "渠道接入",
+        "Channel integrations",
+        "处理已支持渠道的回调验证、消息解析与指定收发能力。",
+        "Handle callback verification, message parsing and supported messaging for implemented channels."
+      ],
+      [
+        "会话与资料",
+        "Conversations and profiles",
+        "持久化来访资料、会话和消息，为各客户端提供一致数据。",
+        "Store visitor details, conversations and messages for consistent client access."
+      ],
+      [
+        "实时更新",
+        "Real-time updates",
+        "通过实时通知向工作台提供来信和接待范围变化。",
+        "Notify workspaces of incoming messages and conversation-access changes."
+      ]
+    ],
+    "steps": [
+      [
+        "部署数据库与服务端，完成环境配置。",
+        "Deploy the database and server, then configure the environment."
+      ],
+      [
+        "运行管理端与工作台，建立企业、团队和渠道账号。",
+        "Run the administration apps and workspace, then create organizations, teams and channel accounts."
+      ],
+      [
+        "配置公开回调地址，在平台授权后验证实际收发。",
+        "Configure public callback URLs and validate messaging after platform authorization."
+      ]
+    ],
+    "scope": [
+      "服务端不是独立的客服界面，需要配合管理端与工作台使用。生产部署须替换开发凭据、配置公开地址并完成渠道验证。",
+      "The server is not an independent support interface; use it with the administration apps and workspace. Production deployment requires replacing development credentials, configuring public URLs and validating channels."
+    ]
+  }
+]

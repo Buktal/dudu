@@ -1,0 +1,32 @@
+.module-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 64px; padding: 60px 0 90px; }
+.module-nav { position: sticky; top: 24px; align-self: start; display: grid; gap: 7px; }
+.module-nav a { padding: 12px; color: var(--muted); border-radius: 6px; font-size: 13px; }
+.module-nav a:hover, .module-nav [aria-current] { color: var(--ice); background: var(--panel); }
+.module-content { min-width: 0; }
+.module-content h1, html[lang="en"] .module-content h1 { margin-top: 15px; font-size: clamp(32px, 3.4vw, 44px); line-height: 1.35; text-wrap: balance; max-width: 780px; }
+.module-lead { color: var(--muted); font-size: 17px; max-width: 760px; }
+.module-title-part { display: block; }
+.module-content section { padding: 40px 0 0; }
+.module-content h2 { margin: 0 0 22px; font-size: 28px; }
+.module-content figure { margin: 36px 0 0; }
+.module-content figure a { display: block; aspect-ratio: 16 / 9; background: #f5f6f9; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.module-content figure img { width: 100%; height: 100%; object-fit: contain; }
+.module-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.module-cards article { padding: 24px; background: var(--panel); border-radius: 8px; }
+.module-cards h3 { font-size: 17px; }
+.module-cards p, .module-scope p, .module-content li { color: var(--muted); }
+.module-content ol { padding-left: 24px; line-height: 1.9; }
+.module-content li { padding: 7px 0; font-size: 14px; }
+.module-scope { margin-top: 20px; }
+.server-flow { display: grid; gap: 14px; padding: 28px; background: var(--panel); margin-top: 36px; border-radius: 8px; }
+.server-flow div { padding: 18px; border: 1px solid var(--edge); border-radius: 6px; font-size: 14px; }
+.server-flow span { color: var(--ice); text-align: center; }
+@media (max-width: 950px) {
+  .module-layout { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-top: 32px; }
+  .module-nav { position: static; display: flex; flex-wrap: wrap; gap: 4px; }
+  .module-nav a { padding: 8px 10px; }
+}
+@media (max-width: 600px) {
+  .module-cards { grid-template-columns: minmax(0, 1fr); }
+  .module-lead { font-size: 15px; }
+}

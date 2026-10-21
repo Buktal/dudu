@@ -4,42 +4,52 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-**Open-source, self-hosted multichannel customer support.**
+**Bring messages from multiple channels into one agent workspace, hosted on your own infrastructure.**
 
-DuDu is an open-source, self-hosted multichannel customer support system licensed under Apache-2.0. It brings WeChat, Telegram, WhatsApp and other channel messages into a unified inbox, scopes access by organization and group, and gives support agents one place to read conversation history, reply, and maintain visitor profiles. This repository includes the server, agent workspace, platform and organization administration apps, and a local channel callback simulator.
+DuDu helps support teams receive channel messages, review conversation history, send replies and maintain visitor profiles in one place. It integrates specific messaging interfaces from WeChat, Telegram, WhatsApp and other platforms, with access scoped by organization and user group.
 
-[Project website](https://buktal.github.io/dudu/en.html) · [Setup and integration guides](https://buktal.github.io/dudu/guides/index.en.html) · [Run locally](#run-locally) · [Channels and limitations](#channels-and-limitations) · [Development and contributions](#development-and-contributions) · [Documentation](docs/README.md)
+[**Explore the interactive tour**](https://buktal.github.io/dudu/demo.en.html) · [Project website](https://buktal.github.io/dudu/en.html) · [Setup and integration guides](https://buktal.github.io/dudu/guides/index.en.html)
 
-![DuDu agent workspace with a conversation queue, chat history, and visitor profile](docs/design/dudu-console/qa-desk-live-1440.png)
+![DuDu agent workspace: conversation list, messages and visitor details](docs/design/dudu-console/qa-desk-live-1440.png)
 
-*An actual workspace connected to a local Server during acceptance testing. All content shown is test data. The current interface is in Chinese.*
+*Workspace preview with sample data. The application interface is currently in Chinese.*
 
-## Project overview
+## Start here
 
-Multichannel support means dealing with scattered messages, inconsistent conversation states, and access rules for accounts and their history. DuDu brings these into one flow:
+| Your goal | Where to begin |
+| --- | --- |
+| Evaluate the product | [Interactive workspace tour](https://buktal.github.io/dudu/demo.en.html): select a channel, open a conversation, send a sample reply and view visitor details |
+| Deploy and use DuDu | [Run locally](#run-locally), then follow the [setup and channel guides](https://buktal.github.io/dudu/guides/index.en.html) |
+| Understand the code or contribute | [Repository layout](#repository-layout), [development and contributions](#development-and-contributions), and [technical documentation](docs/README.md) |
 
-```text
-Incoming callback → Verify and parse → Persist conversation → Push updates → Agent workspace
-                                                                                 ↓
-                                                                  Reply through the channel
-```
+The tour uses fixed sample data and does not connect to a server or real channels. It is a simplified introduction, not a live trial. DuDu is under active development and currently requires building from source and self-hosting; there are no official release packages.
 
-It is intended for teams that need several official messaging integrations and want to host their own system and control organization data. It also serves developers working on messaging protocols, channel adapters, and support interfaces.
+## How teams use DuDu
 
-## Core capabilities
+1. **Configure the team and channels.** A platform administrator provisions an organization. An organization administrator then configures staff, user groups and channel accounts.
+2. **Receive and reply to messages.** Agents sign in to the workspace and handle conversations within their authorized scope, reviewing history and sending plain-text replies.
+3. **Preserve context.** Authorized staff share visitor tags and internal notes so future conversations retain the relevant information.
 
-- **A unified inbox:** conversation queues, search and filters, history loaded on demand, live incoming messages, plain-text replies, and visible send failures.
-- **Three workspace layouts:** focused, side-by-side, and cards, sharing conversation data and drafts. Run in a browser or build the Tauri desktop app.
-- **Shared visitor profiles:** view information provided by the channel and maintain tags and internal notes shared by authorized staff.
-- **Organization and group boundaries:** assign staff and channel accounts to groups. Permission changes make the workspace reload its scope; access to history follows current authorization.
-- **Separate administrative roles:** platform administrators provision organizations; organization administrators manage staff, groups, and channel accounts. Secret credentials can be written but are never returned in read responses.
-- **Local protocol testing:** MockPulse constructs channel callbacks, signatures, and encrypted payloads, with saved event fixtures, scripts, and orchestrated runs.
+The workspace offers focused, side-by-side and card layouts with shared data and drafts. It runs in a browser and supports Tauri desktop builds. **MockPulse is an optional development tool; it is not required to run the support system.**
 
-DuDu is under active development. Building from source and local integration testing are the main ways to use it today; there are no official release packages or hosted demo yet. See the [feature maps](docs/features/README.md) and [Console full-stack acceptance record](docs/design/dudu-console/acceptance.md) for implementation and validation scope.
+Explore each application: [Desk](https://buktal.github.io/dudu/products/desk.en.html) · [Console](https://buktal.github.io/dudu/products/console.en.html) · [Admin](https://buktal.github.io/dudu/products/admin.en.html) · [MockPulse](https://buktal.github.io/dudu/products/mockpulse.en.html) · [Server](https://buktal.github.io/dudu/products/server.en.html).
+
+## Is DuDu a fit?
+
+DuDu is intended for teams that need several official messaging integrations, can manage their own deployment and want control over organization data. Technical setup and ongoing maintenance are required.
+
+- **Current capabilities:** unified conversations, search and filters, history, real-time incoming messages, plain-text replies, visitor tags and internal notes, staff and channel management, and organization and group access boundaries.
+- **Current limits:** attachment sending is unavailable. Incoming non-text display and media retrieval depend on the channel. There is no built-in OAuth authorization wizard, automatic connectivity check or channel health monitoring.
+- **Production preparation:** deployers must obtain channel accounts, platform approval and credentials, then validate real message receipt and delivery. Complete configuration does not establish valid authorization or working production messaging.
+
+Implementation status and verification scope are recorded in the [feature maps](docs/features/README.md).
 
 ## Channels and limitations
 
-Server and Console currently cover **13 implemented channel adapters**. Each integration supports the specific interface below; it does not imply support for every product, event, or messaging capability offered by that platform.
+DuDu currently implements **13 channel integrations**. Each supports the specific interface below; this does not imply support for every product or messaging capability offered by the platform.
+
+<details>
+<summary>View channel interfaces and limitations</summary>
 
 | Channel | Supported interface / main boundary |
 | --- | --- |
@@ -57,9 +67,9 @@ Server and Console currently cover **13 implemented channel adapters**. Each int
 | Telegram | Bot API Webhook; token rotation must retain the same Bot ID |
 | WhatsApp | Cloud API Webhook; sending is subject to platform permissions and conversation rules |
 
-See the [channel configuration reference](docs/design/dudu-console/channel-fields.md) for fields and prerequisites, and the [channel research](docs/research/channels/README.md) for protocol sources. The research covers more platforms than the implemented adapters; research alone does not mean an integration is available.
+</details>
 
-**Current boundaries:** the agent workspace sends plain text only; attachment sending is disabled. Incoming non-text display and media retrieval depend on the channel. Console does not provide an OAuth authorization wizard, automatic connectivity checks, or channel health monitoring. Complete configuration only indicates that parameters are present, not that authorization is valid or production messaging works. Deployers must obtain platform approval and production credentials and validate the public end-to-end connection.
+See the [channel configuration reference](docs/design/dudu-console/channel-fields.md) for fields and prerequisites. The [channel research](docs/research/channels/README.md) covers more platforms than the implemented integrations; research alone does not mean an integration is available.
 
 ## Repository layout
 

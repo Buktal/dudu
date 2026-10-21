@@ -1,5 +1,7 @@
 # 文档与产物索引
 
+首次了解产品可先查看[接待导览](https://buktal.github.io/dudu/#demo)；部署与使用请从[使用指南](https://buktal.github.io/dudu/guides/index.html)开始。下表面向需要查阅实现、设计与验证依据的开发者。
+
 | 目录 | 内容 |
 | --- | --- |
 | [adr/](adr/) | 架构决策记录：背景、选择及取舍 |

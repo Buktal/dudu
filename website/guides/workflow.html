@@ -21,22 +21,23 @@
 <link rel="stylesheet" href="guide.css">
 <link rel="icon" type="image/svg+xml" href="../assets/dudu.svg">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "从企业开通到坐席接待", "description": "了解 Admin、Console 与 Desk 的职责，以及企业、用户组和渠道账号如何组成统一客服工作流。", "inLanguage": "zh-CN", "url": "https://buktal.github.io/dudu/guides/workflow.html", "isPartOf": {"@type": "WebSite", "name": "DuDu", "url": "https://buktal.github.io/dudu/"}}</script>
+<link rel="stylesheet" href="../navigation.css">
+<script defer src="../navigation.js"></script>
 </head>
 <body class="guide-page">
 <a class="skip" href="#main">跳至正文</a>
 <header class="site-header shell">
-<a class="brand" href="../"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
-<nav aria-label="主导航">
-<a href="index.html">使用指南</a>
-<a href="workflow.en.html" lang="en">EN</a>
-<button type="button" id="theme-toggle" class="theme-toggle" aria-label="切换到明亮主题" title="切换到明亮主题" hidden><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>
-<a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
-</nav>
-</header>
+<a class="brand" href="../index.html" aria-label="DuDu 首页"><img src="../assets/dudu.svg" width="32" height="32" alt=""><strong>DuDu</strong></a>
+<nav aria-label="主导航"><details class="product-menu"><summary>产品</summary><div class="product-menu-links"><a href="../products/desk.html">DuduDesk · 坐席工作台</a><a href="../products/console.html">DuduConsole · 企业控制台</a><a href="../products/admin.html">DuduAdmin · 平台管理后台</a><a href="../products/mockpulse.html">MockPulse · 开发联调工具</a><a href="../products/server.html">DUDU Server · 服务端</a><a href="../index.html#channels">支持渠道 ↗</a><a href="../guides/index.html">部署与使用指南 ↗</a></div></details>
+<a href="../demo.html">演示</a>
+<a href="../guides/index.html" aria-current="true">文档</a>
+<a href="workflow.en.html" lang="en" aria-label="切换到英文">EN</a>
+<button type="button" id="theme-toggle" class="theme-toggle" hidden aria-label="切换外观"><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button><a class="nav-source" href="https://github.com/Buktal/dudu">GitHub ↗</a>
+</nav></header>
 <main id="main" class="shell guide-layout">
 <aside class="guide-nav" aria-label="指南导航"><a href="index.html">指南概览</a><a href="deployment.html">部署与本地运行</a><a href="workflow.html" aria-current="page">从企业开通到坐席接待</a><a href="wechat.html">微信公众号接入指南</a><a href="telegram.html">Telegram Bot 接入指南</a><a href="whatsapp.html">WhatsApp Cloud API 接入指南</a><a href="mockpulse.html">使用 MockPulse 联调渠道回调</a></aside>
 <article class="guide-article"><div class="kicker">开源 / 自托管</div><h1>从企业开通到坐席接待</h1><p class="guide-intro">了解 Admin、Console 与 Desk 的职责，以及企业、用户组和渠道账号如何组成统一客服工作流。</p><div class="guide-toc">本页内容<a href="#section-1">建立接待范围</a><a href="#section-2">完成一次真实接待</a><a href="#section-3">空列表与权限变化</a><a href="#section-4">进一步阅读</a></div><section id="section-1"><h2>建立接待范围</h2><ol><li>在 Admin 开通企业并设置初始企业管理员，记录六位公司编号。</li><li>使用公司编号与企业管理员账号登录 Console，创建员工与用户组，并维护用户组成员。</li><li>在 Console 创建渠道账号，绑定接待用户组；按对应渠道填写接收凭据，再补齐发送凭据。</li><li>坐席使用企业员工身份登录 Desk。当前授权用户组决定可见渠道和历史记录的范围。</li></ol></section><section id="section-2"><h2>完成一次真实接待</h2><p>将 Console 提供的回调地址配置到官方平台，完成该平台要求的验签、事件订阅与账号授权后，从真实渠道发送测试消息。Desk 在来信持久化后通过 WebSocket 获取更新；坐席可查询历史、发送纯文本回复、维护标签和内部备注，结束或继续接待。</p><p>附件发送当前不可用；来信媒体读取取决于渠道能力和凭据。接收配置齐全不等于发送配置齐全，也不等于平台授权成功。</p></section><section id="section-3"><h2>空列表与权限变化</h2><p>新账号尚未收到有效回调时，Desk 的空列表属于正常状态。先核对公司编号、员工所属用户组、渠道账号绑定组，再检查渠道回调、签名及发送配置。权限调整后工作台会重新查询范围；历史记录按当前授权显示，而不是永久归属于某位坐席。</p></section><section id="section-4"><h2>进一步阅读</h2><p><a href="https://github.com/Buktal/dudu/blob/main/docs/features/dudu-desk.md">Desk 功能范围 ↗</a> · <a href="https://github.com/Buktal/dudu/blob/main/docs/design/dudu-console/channel-fields.md">渠道字段与限制 ↗</a>。可先用<a href="mockpulse.html">MockPulse</a>验证本地回调流程，再单独完成真实平台验收。</p></section>
-<div class="guide-end"><a href="index.html">全部指南 ↗</a><a href="https://github.com/Buktal/dudu">源码与贡献 ↗</a></div></article>
+<div class="guide-end"><a href="../demo.html">接待导览</a><a href="index.html">全部指南 ↗</a><a href="https://github.com/Buktal/dudu">源码与贡献 ↗</a></div></article>
 </main>
 <footer class="shell"><span>DuDu · Apache-2.0</span><a href="https://github.com/Buktal/dudu/blob/main/LICENSE">开源许可证 ↗</a></footer>
 </body>
