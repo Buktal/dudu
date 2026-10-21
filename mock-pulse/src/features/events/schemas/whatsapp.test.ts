@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
 import { WA_DEFINITIONS, WA_SCHEMAS } from "./whatsapp";
 
 /** 官方验证样本的公共值（事实库 whatsapp.md §5.1/§5.2/§5.3/§5.4/§5.5 逐字） */
@@ -47,20 +46,6 @@ describe("WhatsApp 事件 schema 聚合（Cloud API Webhook；验签与 GET 握�
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of WA_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：HTTP 200 即成功（正文无口径；非 200 或不可达递减重试最长 7 天）", () => {
     for (const schema of WA_SCHEMAS) {
       // 事实库 §3.3 逐字：「端点回 HTTP 200 即成功；其他状态码或不可达即失败，
@@ -70,15 +55,6 @@ describe("WhatsApp 事件 schema 聚合（Cloud API Webhook；验签与 GET 握�
         body: "",
         bodyMode: "contains",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上 JSON ↔ 载荷解析往返一致", () => {
-    for (const schema of WA_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

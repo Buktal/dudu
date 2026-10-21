@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
 import { TB_DEFINITIONS, TB_SCHEMAS } from "./taobao";
 
 /** 官方验证样本的公共值（事实库 taobao.md §5.3/§5.4/§5.6/§5.8 逐字） */
@@ -35,20 +34,6 @@ describe("淘宝事件 schema 聚合（全球栈 HTTPS 回调；HMAC-SHA256 验�
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of TB_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：HTTP 200 即确认签收（正文无语义，超 500ms 失败半小时后重试最多 12 次）", () => {
     for (const schema of TB_SCHEMAS) {
       // 事实库 §3.2：「收到消息后请返回 HTTP 200 状态码，确认签收消息」——
@@ -58,15 +43,6 @@ describe("淘宝事件 schema 聚合（全球栈 HTTPS 回调；HMAC-SHA256 验�
         body: "",
         bodyMode: "contains",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上 JSON ↔ 载荷解析往返一致", () => {
-    for (const schema of TB_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

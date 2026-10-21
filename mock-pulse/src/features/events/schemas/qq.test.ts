@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { generateQqOpenId, generateQqRobotMsgId } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
 import { QQ_DEFINITIONS, QQ_SCHEMAS } from "./qq";
 
 describe("QQ 事件 schema 聚合（Webhook 子形态，Ed25519 验签/op13 回包校验在 Rust 适配器）", () => {
@@ -27,20 +26,6 @@ describe("QQ 事件 schema 聚合（Webhook 子形态，Ed25519 验签/op13 回�
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of QQ_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：普通事件只看 HTTP 200（op12 ACK 无回包体口径）；op13 验签回包", () => {
     for (const schema of QQ_SCHEMAS) {
       if (schema.id === "qq-op13-verify") {
@@ -59,15 +44,6 @@ describe("QQ 事件 schema 聚合（Webhook 子形态，Ed25519 验签/op13 回�
         body: "",
         bodyMode: "contains",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上 JSON ↔ 载荷解析往返一致", () => {
-    for (const schema of QQ_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

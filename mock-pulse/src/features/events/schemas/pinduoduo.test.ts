@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
+import { wireBodyText } from "../payload";
 import { PDD_DEFINITIONS, PDD_SCHEMAS } from "./pinduoduo";
 
 /** 官方照录状态词汇（事实库 pinduoduo.md §2.1 逐字） */
@@ -30,20 +30,6 @@ describe("拼多多事件 schema 聚合（PMC 订阅推送；UPPER(MD5) 签名�
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of PDD_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：推送应答口径待核验，取最中性 HTTP 200 + 不校验正文", () => {
     for (const schema of PDD_SCHEMAS) {
       // 事实库 §3：推送应答与签收无官方原文（待核验 09-27）——期望回执取
@@ -65,15 +51,6 @@ describe("拼多多事件 schema 聚合（PMC 订阅推送；UPPER(MD5) 签名�
     expect(
       PDD_SCHEMAS.map((schema) => wireBodyText(schema, schema.payload)),
     ).toEqual(expectedBodies);
-  });
-
-  it("模板载荷逐字节自反：线上 JSON ↔ 载荷解析往返一致", () => {
-    for (const schema of PDD_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
-    }
   });
 
   it("订单三态推送：eventName 全目录穷尽官方照录状态词汇（§2.1 逐字），骨架只收实锤两字段", () => {

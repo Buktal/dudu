@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { parseWireDraft, wireBodyText } from "../payload";
 import { WECOM_DEFINITIONS, WECOM_EVENT_SCHEMAS } from "./wecom";
 
 describe("企业微信事件 schema 聚合（XML + 机器人 JSON 两条通道）", () => {
@@ -49,17 +48,8 @@ describe("企业微信事件 schema 聚合（XML + 机器人 JSON 两条通道�
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释，且聊天回调不伪造昵称/头像（通讯录域除外）", () => {
+  it("聊天回调不伪造昵称/头像（通讯录域除外）", () => {
     for (const schema of WECOM_EVENT_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
       if (schema.id === "wc-change-contact") continue; // 官方 §5.4 通讯录事件携带 Avatar
       const joined = schema.fields.map((field) => field.path).join(" ");
       expect(joined, `${schema.id} 不得伪造昵称/头像`).not.toMatch(
@@ -227,15 +217,6 @@ describe("企业微信事件 schema 聚合（XML + 机器人 JSON 两条通道�
         body: "",
         bodyMode: "wecomReply",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上明文 ↔ 载荷解析往返一致（嵌套结构体按原文透传）", () => {
-    for (const schema of WECOM_EVENT_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 });

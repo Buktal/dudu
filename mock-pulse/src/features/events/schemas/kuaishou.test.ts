@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
 import { KS_DEFINITIONS, KS_SCHEMAS } from "./kuaishou";
 
 /** 官方验证示例的公共值（事实库 kuaishou.md §4.1 逐字） */
@@ -37,20 +36,6 @@ describe("快手事件 schema 聚合（开放域 event 判型 + 支付族 biz_ty
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of KS_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：HTTP 200 + result=1（jsonField 子集，message_id 回传为额外字段）", () => {
     for (const schema of KS_SCHEMAS) {
       // 事实库 §3.2：result=1 代表成功、其他代表失败并重试；
@@ -60,15 +45,6 @@ describe("快手事件 schema 聚合（开放域 event 判型 + 支付族 biz_ty
         body: '{"result":1}',
         bodyMode: "jsonField",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上 JSON ↔ 载荷解析往返一致", () => {
-    for (const schema of KS_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
 import { JD_DEFINITIONS, JD_SCHEMAS } from "./jingdong";
 
 /** 官方实锤样本/枚举的公共值（事实库 jingdong.md §2.1/§2.4/§5.3 逐字） */
@@ -40,20 +39,6 @@ describe("京东事件 schema 聚合（JOS 消息推送；MD5 签名在 Rust 适
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of JD_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：推送应答口径待核验，取最中性 HTTP 200 + 不校验正文", () => {
     for (const schema of JD_SCHEMAS) {
       // 事实库 §3.1/§5.5：推送应答与回调签收无官方原文（待核验 09-27）——
@@ -63,15 +48,6 @@ describe("京东事件 schema 聚合（JOS 消息推送；MD5 签名在 Rust 适
         body: "",
         bodyMode: "contains",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上 JSON ↔ 载荷解析往返一致", () => {
-    for (const schema of JD_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

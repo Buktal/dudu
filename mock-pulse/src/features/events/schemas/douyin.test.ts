@@ -101,18 +101,7 @@ describe("抖音事件 schema 描述符", () => {
     );
   });
 
-  it("每个字段都有标题/类型/分组/解释，且 dop/IM 信封发送用户 ID 必填", () => {
-    for (const schema of DOUYIN_EVENT_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
+  it("dop/IM 信封发送用户 ID 必填", () => {
     for (const id of ["dy-text", "dy-image", "dy-create-video", "dy-recall"]) {
       const sender = schemaById(id).fields.find(
         (field) => field.path === "from_user_id",

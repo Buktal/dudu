@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { parseWireDraft, wireBodyText } from "../payload";
 import { MP_DEFINITIONS, WECHAT_MP_EVENT_SCHEMAS } from "./wechat-mp";
 
 describe("公众号事件 schema 聚合（仅 XML，三模式加密在 Rust 适配器）", () => {
@@ -35,20 +34,6 @@ describe("公众号事件 schema 聚合（仅 XML，三模式加密在 Rust 适�
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of WECHAT_MP_EVENT_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：HTTP 200 + 官方推荐逐字 success（空串/加密被动回复可在编辑器切换）", () => {
     for (const schema of WECHAT_MP_EVENT_SCHEMAS) {
       expect(schema.expected, `${schema.id} expected`).toEqual({
@@ -56,15 +41,6 @@ describe("公众号事件 schema 聚合（仅 XML，三模式加密在 Rust 适�
         body: "success",
         bodyMode: "wecomReply",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上明文 ↔ 载荷解析往返一致（嵌套结构体按原文透传）", () => {
-    for (const schema of WECHAT_MP_EVENT_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

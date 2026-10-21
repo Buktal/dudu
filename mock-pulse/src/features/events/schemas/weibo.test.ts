@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds, generateWeiboUid } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
 import { WB_DEFINITIONS, WB_SCHEMAS } from "./weibo";
 
 /** 官方黄金样本的骨架（事实库 §5 逐字：UID 对与时刻字符串照录） */
@@ -35,20 +34,6 @@ describe("微博事件 schema 聚合（粉服 Webhook，JSON 默认格式；握�
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of WB_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：5 秒内 HTTP 200 即成功（回空串官方不处理不重试）", () => {
     for (const schema of WB_SCHEMAS) {
       // 事实库 §3.3：回执正文无口径（空串/被动回复均合法）→ 只看状态码
@@ -57,15 +42,6 @@ describe("微博事件 schema 聚合（粉服 Webhook，JSON 默认格式；握�
         body: "",
         bodyMode: "contains",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上 JSON ↔ 载荷解析往返一致", () => {
-    for (const schema of WB_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

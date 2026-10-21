@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds, generateXhsMsgId } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
 import { XHS_DEFINITIONS, XHS_SCHEMAS } from "./xiaohongshu";
 
 /** 官方客服消息样本骨架（事实库 §10.3 逐字：占位值与秒级时刻照录） */
@@ -53,20 +52,6 @@ describe("小红书事件 schema 聚合（双体系；握手/加密/数组直发
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of XHS_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：小程序回 success（逐字）、ark 回 success/error_code JSON 字段", () => {
     for (const schema of XHS_SCHEMAS) {
       if (schema.id.startsWith("xhs-ark-")) {
@@ -85,15 +70,6 @@ describe("小红书事件 schema 聚合（双体系；握手/加密/数组直发
           bodyMode: "equals",
         });
       }
-    }
-  });
-
-  it("模板载荷逐字节自反：线上 JSON ↔ 载荷解析往返一致", () => {
-    for (const schema of XHS_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

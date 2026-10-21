@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
+import { wireBodyText } from "../payload";
 import { ALI_DEFINITIONS, ALI_SCHEMAS } from "./alipay";
 
 /** 官方 §5.1 公共参数表 + 业务参数表逐字值拼出的核验样本（form 线上字节，
@@ -45,20 +45,6 @@ describe("支付宝事件 schema 聚合（异步通知三地址；RSA2 验签在
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of ALI_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 官方成功应答：HTTP 200 + 纯文本 success（§3.3/§5.3 逐字）", () => {
     for (const schema of ALI_SCHEMAS) {
       expect(schema.expected, `${schema.id} expected`).toEqual({
@@ -76,15 +62,6 @@ describe("支付宝事件 schema 聚合（异步通知三地址；RSA2 验签在
     expect(bodies[0]).toBe(GOLDEN_NOTIFY_BODY);
     expect(bodies[1]).toBe(GOLDEN_APPAUTH_BODY);
     expect(bodies[2]).toBe(GOLDEN_FUND_BODY);
-  });
-
-  it("模板载荷逐字节自反：线上报文 ↔ 载荷解析往返一致", () => {
-    for (const schema of ALI_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
-    }
   });
 
   it("支付认定口径（§2.1 逐字）：TRADE_SUCCESS 认付款，支付成功不含 out_biz_no/退款字段", () => {

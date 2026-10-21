@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseWireDraft, wireBodyText } from "../payload";
+import { wireBodyText } from "../payload";
 import { MINI_DEFINITIONS, WECHAT_MINI_EVENT_SCHEMAS } from "./wechat-mini";
 
 describe("小程序事件 schema 聚合（XML 为主，三模式加密在 Rust 适配器）", () => {
@@ -34,20 +34,6 @@ describe("小程序事件 schema 聚合（XML 为主，三模式加密在 Rust �
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of WECHAT_MINI_EVENT_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：HTTP 200 + 官方推荐逐字 success（空串/加密回包可在编辑器切换）", () => {
     for (const schema of WECHAT_MINI_EVENT_SCHEMAS) {
       expect(schema.expected, `${schema.id} expected`).toEqual({
@@ -55,15 +41,6 @@ describe("小程序事件 schema 聚合（XML 为主，三模式加密在 Rust �
         body: "success",
         bodyMode: "wecomReply",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上明文 ↔ 载荷解析往返一致（空串元素同样往返）", () => {
-    for (const schema of WECHAT_MINI_EVENT_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

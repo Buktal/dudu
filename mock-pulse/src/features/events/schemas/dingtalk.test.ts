@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { parseWireDraft, wireBodyText } from "../payload";
 import { DINGTALK_DEFINITIONS, DINGTALK_SCHEMAS } from "./dingtalk";
 
 describe("钉钉事件 schema 聚合（新 HTTP 密文信封 + 机器人明文通道，验签/加密在 Rust 适配器）", () => {
@@ -31,20 +30,6 @@ describe("钉钉事件 schema 聚合（新 HTTP 密文信封 + 机器人明文�
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of DINGTALK_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it("默认期望回执 = 渠道真实应答：密文事件回加密 success 包（1500ms）；机器人仅校验 HTTP 200", () => {
     for (const schema of DINGTALK_SCHEMAS) {
       if (schema.id.startsWith("dt-bot-")) {
@@ -62,15 +47,6 @@ describe("钉钉事件 schema 聚合（新 HTTP 密文信封 + 机器人明文�
         body: "success",
         bodyMode: "dingtalkReply",
       });
-    }
-  });
-
-  it("模板载荷逐字节自反：线上 JSON ↔ 载荷解析往返一致", () => {
-    for (const schema of DINGTALK_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
     }
   });
 

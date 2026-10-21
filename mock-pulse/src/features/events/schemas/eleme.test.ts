@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
+import { wireBodyText } from "../payload";
 import { ELE_DEFINITIONS, ELE_SCHEMAS } from "./eleme";
 
 /** 官方 §5.2 核验样本逐字（order-signal 全文：键序/number/string 形态照录） */
@@ -50,20 +50,6 @@ describe("饿了么事件 schema 聚合（用户线推送；SHA1 五步签名在
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of ELE_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it('默认期望回执 = 官方成功应答：HTTP 200 + {"message":"ok"}（§5.1 逐字，JSON 字段子集比对）', () => {
     for (const schema of ELE_SCHEMAS) {
       expect(schema.expected, `${schema.id} expected`).toEqual({
@@ -84,15 +70,6 @@ describe("饿了么事件 schema 聚合（用户线推送；SHA1 五步签名在
     expect(bodies[3]).toBe(GOLDEN_COMPENSATE_BODY);
     expect(bodies[4]).toBe(GOLDEN_H5_CREATE_BODY);
     expect(bodies[5]).toBe(GOLDEN_H5_UPDATE_BODY);
-  });
-
-  it("模板载荷逐字节自反：线上报文 ↔ 载荷解析往返一致", () => {
-    for (const schema of ELE_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
-    }
   });
 
   it("v2 订单四推送穷尽官方目录（§2.1：状态/配送/退单/赔偿），赔偿模板注明暂不开放", () => {

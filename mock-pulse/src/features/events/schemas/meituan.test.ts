@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { applyGeneratedIds } from "../ids";
-import { parseWireDraft, wireBodyText } from "../payload";
+import { wireBodyText } from "../payload";
 import { MT_DEFINITIONS, MT_SCHEMAS } from "./meituan";
 
 /** 官方 §5.3 核验样本逐字（docDetail/177/180 关键字段） */
@@ -35,20 +35,6 @@ describe("美团事件 schema 聚合（合作中心表单回调；MD5(url?字母
     }
   });
 
-  it("每个字段都有标题/类型/分组/解释", () => {
-    for (const schema of MT_SCHEMAS) {
-      for (const field of schema.fields) {
-        expect(field.title, `${schema.id}.${field.path} title`).toBeTruthy();
-        expect(field.type, `${schema.id}.${field.path} type`).toBeTruthy();
-        expect(field.group, `${schema.id}.${field.path} group`).toBeTruthy();
-        expect(
-          field.description,
-          `${schema.id}.${field.path} description`,
-        ).toBeTruthy();
-      }
-    }
-  });
-
   it('默认期望回执 = 渠道真实应答：订单类 {"data":"ok"} 小写、IM 类 {"data":"OK"} 大写（§5.2 逐字，JSON 字段子集比对）', () => {
     for (const schema of MT_SCHEMAS) {
       const expected =
@@ -67,15 +53,6 @@ describe("美团事件 schema 聚合（合作中心表单回调；MD5(url?字母
     expect(bodies[1]).toBe(GOLDEN_ORDER_BODY);
     expect(bodies[2]).toBe(GOLDEN_ORDER_BODY);
     expect(bodies[3]).toBe(GOLDEN_IM_BODY);
-  });
-
-  it("模板载荷逐字节自反：线上表单 ↔ 载荷解析往返一致", () => {
-    for (const schema of MT_SCHEMAS) {
-      const text = wireBodyText(schema, schema.payload);
-      const parsed = parseWireDraft(schema, text);
-      expect(parsed, `${schema.id} 往返载荷`).toEqual(schema.payload);
-      expect(wireBodyText(schema, parsed), `${schema.id} 往返明文`).toBe(text);
-    }
   });
 
   it("订单三态推送：eventName 全目录穷尽官方接口名（§2.1 逐字），推送类型由回调 URL 区分", () => {

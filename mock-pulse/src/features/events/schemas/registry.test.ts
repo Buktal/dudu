@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ChannelId } from "@/lib/channels";
+import { parseWireDraft, wireBodyText } from "../payload";
 
 import { ALI_DEFINITIONS } from "./alipay";
 import { BILI_DEFINITIONS } from "./bilibili";
@@ -25,10 +26,11 @@ import { WA_DEFINITIONS } from "./whatsapp";
 import { XHS_DEFINITIONS } from "./xiaohongshu";
 
 /**
- * 事件模板聚合注册表的不变量单测（总数/唯一性/渠道一致性/描述同源/期望回执
- * 形态/schemaById/defineSchema）。自旧单文件按主题拆分（单文件 ≤ 500 行，
- * code-review 退件）：各渠道模板 id 清单在
- * ./registry-listing.test.ts 与 ./registry-listing-trade.test.ts。
+ * 事件模板聚合注册表的不变量单测（总数/唯一性/渠道一致性/描述同源/字段描述
+ * 完整性/载荷逐字节自反/期望回执形态/schemaById/defineSchema）。自旧单文件按
+ * 主题拆分（单文件 ≤ 500 行，code-review 退件）：各渠道模板 id 清单在
+ * ./registry-listing.test.ts 与 ./registry-listing-trade.test.ts，渠道文件的
+ * 两类通用不变量（字段描述完整性/载荷自反）单点上收到本文件全表循环。
  */
 
 const DEFINITIONS_BY_CHANNEL = {
@@ -103,6 +105,28 @@ describe("事件模板聚合注册表", () => {
       expect(schema.version).toBe(entry?.version);
       expect(schema.source).toBe(entry?.source);
       expect(schema.fields).toEqual(entry?.fields);
+    }
+  });
+
+  it("每个模板每个字段都有标题/类型/分组/解释（全渠道循环）", () => {
+    for (const schema of EVENT_SCHEMAS) {
+      for (const field of schema.fields) {
+        const where = `${schema.channelId} ${schema.id}.${field.path}`;
+        expect(field.title, `${where} title`).toBeTruthy();
+        expect(field.type, `${where} type`).toBeTruthy();
+        expect(field.group, `${where} group`).toBeTruthy();
+        expect(field.description, `${where} description`).toBeTruthy();
+      }
+    }
+  });
+
+  it("每个模板载荷逐字节自反：线上报文 ↔ 载荷解析往返一致（全渠道循环）", () => {
+    for (const schema of EVENT_SCHEMAS) {
+      const where = `${schema.channelId} ${schema.id}`;
+      const text = wireBodyText(schema, schema.payload);
+      const parsed = parseWireDraft(schema, text);
+      expect(parsed, `${where} 往返载荷`).toEqual(schema.payload);
+      expect(wireBodyText(schema, parsed), `${where} 往返明文`).toBe(text);
     }
   });
 
