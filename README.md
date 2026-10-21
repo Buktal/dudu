@@ -155,3 +155,5 @@ Server 在 `dudu-server/` 运行 `mvn test`。普通测试默认跳过数据库�
 DuDu 采用 [Apache License 2.0](LICENSE) 开源。允许使用、修改、分发和商业使用，包括在遵守许可证的前提下将修改版用于闭源产品。分发时须保留适用的版权与许可声明，并按条款标明修改；许可证不授予项目商标使用权，也不提供担保。
 
 第三方依赖和素材仍遵循各自许可证；本项目许可证不替代它们的授权条件。
+
+[![LINUX DO](https://img.shields.io/badge/LINUX%20DO-Recognized%20Community-blue?style=flat-square&logo=linux)](https://linux.do)
