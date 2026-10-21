@@ -1,8 +1,8 @@
 # 美团开放平台 消息推送 事实库
 
-> 研究日期：2026-09-10。方法：WebFetch 直抓（open.meituan.com / developer.meituan.com / developer.waimai.meituan.com 均为 JS 渲染站，WebFetch 仅回壳）+ WebSearch 官方站内摘录（以下 `[摘录]` 均为搜索返回的官方页面原文摘录，未取全文）。
-> 标注约定：`[摘录]` = WebSearch 返回的官方页面原文摘录；无标注 = 门户级公开事实（多源互证）；`待核验(09-27)` = 未能取得官方原文全文，需复核。
-> 平台说明：美团有两个并存的开放体系，本库以 **技术服务合作中心**（developer.meituan.com / developer.waimai.meituan.com，外卖·闪购·医药·到店秒提的消息推送主体）为主，**生态开放平台**（open.meituan.com / openapi.meituan.com，OAuth2 用户体系）为辅，二者签名/token/网关均不同，见 §4/§6。
+> 研究日期：2026-09-10。方法：WebFetch 直抓（open.meituan.com / developer.meituan.com / developer.waimai.meituan.com 均为 JS 渲染站，WebFetch 仅回壳）+ WebSearch 官方站内摘录（以下 `[摘录]` 均为搜索返回的官方页面原文摘录，未取全文）
+> 标注约定：`[摘录]` = WebSearch 返回的官方页面原文摘录；无标注 = 门户级公开事实（多源互证）；`待核验(09-27)` = 未能取得官方原文全文，需复核
+> 平台说明：美团有两个并存的开放体系，本库以 **技术服务合作中心**（developer.meituan.com / developer.waimai.meituan.com，外卖·闪购·医药·到店秒提的消息推送主体）为主，**生态开放平台**（open.meituan.com / openapi.meituan.com，OAuth2 用户体系）为辅，二者签名/token/网关均不同，见 §4/§6
 
 ## 1. 官方文档入口与关键页面地址
 
@@ -22,7 +22,7 @@
 - 外卖业务能力页：https://developer.meituan.com/isv/waimai（外卖通用解决方案/IM在线咨询/粉丝群）
 - 签名问答（官方问答原文，最完整签名算法来源）：https://tscc.meituan.com/home/questionDetail/5730（`[摘录]` 全步骤）
 
-本次实际抓到并核实的页面清单：
+本次实际抓到并核实的页面清单
 
 | 主题 | URL | 核验方式 |
 |---|---|---|
@@ -52,7 +52,7 @@
 
 ## 2. 消息/事件推送全清单
 
-推送方式统一为 **APP方URL（HTTP POST 回调，平台调商家）**，无长连接通道。以下接口名均为官方文档目录原文（`APP方URL` = 商家实现回调接口）。
+推送方式统一为 **APP方URL（HTTP POST 回调，平台调商家）**，无长连接通道。以下接口名均为官方文档目录原文（`APP方URL` = 商家实现回调接口）
 
 ### 2.1 订单类（外卖/闪购/医药共用目录，`[摘录]` market/17 + food/7）
 
@@ -82,8 +82,8 @@
 | 推送非接口操作订单换货信息 | 换货（非接口操作） | — | market/17 目录行 |
 | 7.5.1 接收订单数据接口【必须】 | 用户下单后推新订单（服务商版目录） | 必须 | developer.meituan.com 新版目录 `[摘录]` |
 
-- 订单状态码（`[摘录]` docDetail/180）：`1-用户已提交订单；2-向商家推送订单；4-商家已确认；8-订单已完成；9-订单已取消`。
-- 订单订阅字段（`[摘录]` market/17 + docDetail/180）：部分字段默认不推，需在开发者中心 **订单字段订阅** 开启，已订阅字段在已支付/已确认/已完成三种推送中同时生效；编号字段示例：`19 商家应收款详情 / 22 配送方式 / 28 取餐类型 / 29 打包袋 / 38 应收款详情(元)` 等 → 完整编号表待核验(09-27)。
+- 订单状态码（`[摘录]` docDetail/180）：`1-用户已提交订单；2-向商家推送订单；4-商家已确认；8-订单已完成；9-订单已取消`
+- 订单订阅字段（`[摘录]` market/17 + docDetail/180）：部分字段默认不推，需在开发者中心 **订单字段订阅** 开启，已订阅字段在已支付/已确认/已完成三种推送中同时生效；编号字段示例：`19 商家应收款详情 / 22 配送方式 / 28 取餐类型 / 29 打包袋 / 38 应收款详情(元)` 等 → 完整编号表待核验(09-27)
 
 ### 2.2 售后类（退款/取消）
 
@@ -96,21 +96,21 @@
 
 ### 2.3 门店/商品类
 
-- 门店（`[摘录]` docDetail/439 + guide/4）：`推送门店状态变更`、`推送门店绑定和解绑消息`（op_type 1-绑定/2-解绑，字段 poi_info/op_time/op_source/token_info）、`门店审核结果推送`。门店同步操作面：poi/save、poi/mget、poi/online 等（guide/4）。
-- 商品：**未发现独立的"商品变更推送"回调**（商品同步走 `foodCat/update`、`food/batchinitdata`、`food/batchbulksave`、`food/sku/sellStatus` 等主动接口，guide/4 `[摘录]`）。唯一商品维度的推送是闪购 `APP方URL 推送门店商品管家质量信息变更`（open-shangou docDetail/10097，见闪购建品宣导页引用）→ 全文待核验(09-27)。商品类写入记 §7。
-- 评价：评价类API为轮询查询（目录仅见查询/回复能力），未见评价推送 → 待核验(09-27)。
+- 门店（`[摘录]` docDetail/439 + guide/4）：`推送门店状态变更`、`推送门店绑定和解绑消息`（op_type 1-绑定/2-解绑，字段 poi_info/op_time/op_source/token_info）、`门店审核结果推送`。门店同步操作面：poi/save、poi/mget、poi/online 等（guide/4）
+- 商品：**未发现独立的"商品变更推送"回调**（商品同步走 `foodCat/update`、`food/batchinitdata`、`food/batchbulksave`、`food/sku/sellStatus` 等主动接口，guide/4 `[摘录]`）。唯一商品维度的推送是闪购 `APP方URL 推送门店商品管家质量信息变更`（open-shangou docDetail/10097，见闪购建品宣导页引用）→ 全文待核验(09-27)。商品类写入记 §7
+- 评价：评价类API为轮询查询（目录仅见查询/回复能力），未见评价推送 → 待核验(09-27)
 
 ### 2.4 IM/客服类
 
-- 外卖在线联系 IM（`[摘录]` docDetail/842）：`消息回调-单聊消息：接收用户商家 1 对 1 聊天消息回调`——用户或商家发会话消息时推给服务商；**服务商自己经接口发出的消息不回推**。字段：`biz_type`（固定 1）、`app_poi_code`、`push_content`（详情见 developer.meituan.com 对应文章 §3.1，URL 已知、正文待核验(09-27)）、`extended_field`（可选）。
-- 发送面（`[摘录]` docDetail/845）：`msg/send 发送IM消息（接单）`，当前仅支持 `biz_type=1 两方会话` 与 `biz_type=4 评价匿名群聊`。
-- 风控/群聊（`[摘录]` docDetail/842 目录 + tscc/460 目录）：`接收IM发送消息被风控拦截的信息`、`接收匿名评价聊天群消息`；闪购矩阵另有 `IM消息推送（必接）`、`用户撤回消息推送（必接）`、`IM消息风控推送（必接）`、`已读状态消息推送`、`wm/IM/msgRead`、`ecommerce/IM/msgSend`（必接）、`ecommerce/IM/msgRevoke`、`ecommerce/IM/historyMsg/list` → 各推送体全文待核验(09-27)。
-- 配套管理面（目录行）：在线联系开关、已读状态、会话已读时间、回复率权益、自动回复、屏蔽/解屏、机器人开关、欢迎语/常见问题配置。
+- 外卖在线联系 IM（`[摘录]` docDetail/842）：`消息回调-单聊消息：接收用户商家 1 对 1 聊天消息回调`——用户或商家发会话消息时推给服务商；**服务商自己经接口发出的消息不回推**。字段：`biz_type`（固定 1）、`app_poi_code`、`push_content`（详情见 developer.meituan.com 对应文章 §3.1，URL 已知、正文待核验(09-27)）、`extended_field`（可选）
+- 发送面（`[摘录]` docDetail/845）：`msg/send 发送IM消息（接单）`，当前仅支持 `biz_type=1 两方会话` 与 `biz_type=4 评价匿名群聊`
+- 风控/群聊（`[摘录]` docDetail/842 目录 + tscc/460 目录）：`接收IM发送消息被风控拦截的信息`、`接收匿名评价聊天群消息`；闪购矩阵另有 `IM消息推送（必接）`、`用户撤回消息推送（必接）`、`IM消息风控推送（必接）`、`已读状态消息推送`、`wm/IM/msgRead`、`ecommerce/IM/msgSend`（必接）、`ecommerce/IM/msgRevoke`、`ecommerce/IM/historyMsg/list` → 各推送体全文待核验(09-27)
+- 配套管理面（目录行）：在线联系开关、已读状态、会话已读时间、回复率权益、自动回复、屏蔽/解屏、机器人开关、欢迎语/常见问题配置
 
 ### 2.5 到店类（区分"到店餐饮能力"与"到店秒提"）
 
-- 到店餐饮（developer.meituan.com 能力页 `[摘录]`）：`团购核销`（套餐/代金券/秒杀/拼团收银核销）、`餐饮排队`、`餐饮预订`、`代金券一键买单`、`联名会员卡`——推送形态正文未抓到 → 待核验(09-27)。
-- 到店秒提即"到店在线核销"（**非外卖**，走 waimai 网关 `/gw/mop/*`，`[摘录]` docDetail/880）：`/gw/mop/order/query 到店在线核销订单信息查询`、`到店核销-确认订单（必接）`、`品牌订单状态变更通知（必接）` → 推送体全文待核验(09-27)。
+- 到店餐饮（developer.meituan.com 能力页 `[摘录]`）：`团购核销`（套餐/代金券/秒杀/拼团收银核销）、`餐饮排队`、`餐饮预订`、`代金券一键买单`、`联名会员卡`——推送形态正文未抓到 → 待核验(09-27)
+- 到店秒提即"到店在线核销"（**非外卖**，走 waimai 网关 `/gw/mop/*`，`[摘录]` docDetail/880）：`/gw/mop/order/query 到店在线核销订单信息查询`、`到店核销-确认订单（必接）`、`品牌订单状态变更通知（必接）` → 推送体全文待核验(09-27)
 
 ---
 
@@ -118,26 +118,26 @@
 
 ### 3.1 接入位置与传输约束（`[摘录]`）
 
-- 配置位置：开发者中心 → **基础设置 → 回调接口设置**（正式地址），按推送项逐项填"xx推送回调URL"并开启回调（docDetail/177/179/180/439）。
-- 新版位置：developer.meituan.com 开发者中心（消息回调接入/回调说明，目录见 §1；正文待核验(09-27)）。
-- 端口：**仅支持 80 或 8080**，其他端口导致推送失败；回调端口修改后推单与 URL 监控 10 分钟内生效（guide/6）。
-- 方法与编码：回调需支持 **POST**；**所有参数均为普通 POST 表单参数而非 JSON**（旧文称 Content-Type: text；新版推送页如 docDetail/835、521 明确为 Content-Type: application/x-www-form-urlencoded; charset=UTF-8，对象/数组先转 JSON 字符串再作 form 字段）；推送参数**尚未排序**，验签前需自行排序（market/17、food/7）。
-- 验签解码：回调验签时**需解码 2 次**（先 utf8 解码、再对中文解码；无值参数也参与拼接）（docDetail/177/180、guide/31）。
-- 防循环：收到"取消订单"回调后，**APP 方需避免再回调美团取消接口**，以免循环调用（market/18）。
+- 配置位置：开发者中心 → **基础设置 → 回调接口设置**（正式地址），按推送项逐项填"xx推送回调URL"并开启回调（docDetail/177/179/180/439）
+- 新版位置：developer.meituan.com 开发者中心（消息回调接入/回调说明，目录见 §1；正文待核验(09-27)）
+- 端口：**仅支持 80 或 8080**，其他端口导致推送失败；回调端口修改后推单与 URL 监控 10 分钟内生效（guide/6）
+- 方法与编码：回调需支持 **POST**；**所有参数均为普通 POST 表单参数而非 JSON**（旧文称 Content-Type: text；新版推送页如 docDetail/835、521 明确为 Content-Type: application/x-www-form-urlencoded; charset=UTF-8，对象/数组先转 JSON 字符串再作 form 字段）；推送参数**尚未排序**，验签前需自行排序（market/17、food/7）
+- 验签解码：回调验签时**需解码 2 次**（先 utf8 解码、再对中文解码；无值参数也参与拼接）（docDetail/177/180、guide/31）
+- 防循环：收到"取消订单"回调后，**APP 方需避免再回调美团取消接口**，以免循环调用（market/18）
 
 ### 3.2 成功应答
 
-- 订单/取消/门店类：`{"data":"ok"}`（小写 ok；docDetail/177/180/439）。门店绑定页示例为 `{"data":"ok"}`，失败推送重试 3 次（docDetail/439）。
-- IM 单聊回调：`{"data":"OK"}`（大写 OK；docDetail/842，本轮仅目录级证实，逐字待核验(09-27)）——与订单类大小写不同，照录。
-- 响应时限：订单类 **2 秒内**（docDetail/177/180）；IM 类 **4 秒内**，超时或格式错误→重推**并触发短信报警**（docDetail/842，本轮仅目录级证实，逐字待核验(09-27)）。
+- 订单/取消/门店类：`{"data":"ok"}`（小写 ok；docDetail/177/180/439）。门店绑定页示例为 `{"data":"ok"}`，失败推送重试 3 次（docDetail/439）
+- IM 单聊回调：`{"data":"OK"}`（大写 OK；docDetail/842，本轮仅目录级证实，逐字待核验(09-27)）——与订单类大小写不同，照录
+- 响应时限：订单类 **2 秒内**（docDetail/177/180）；IM 类 **4 秒内**，超时或格式错误→重推**并触发短信报警**（docDetail/842，本轮仅目录级证实，逐字待核验(09-27)）
 
 ### 3.3 重试、幂等、有序
 
-- 订单三态推送（已支付/已确认/已完成）：失败→**每隔 1 分钟重试，共 3 次**（docDetail/177/180）。重试期间订单状态若变为已确认/已取消则**停止**对新订单消息的重试（docDetail/180）。
-- 推单流程（guide/4 `[摘录]`）：推送失败 1 分钟后再次推单、最多重试 3 次；重试期间商家经手机/PC 接单致状态变化则不再继续重试；**建议对接所有推送订单状态以防漏单**。
-- 新订单接收（新版 7.5.1 `[摘录]`）：接收失败→每隔 1 分钟重推（以订单未被确认 为条件）；**5 分钟未接单订单自动取消**。
-- 幂等键：官方无"幂等键"命名；消费方应按 `order_id` + 状态机去重（status 1/2/4/8/9），同一订单多态推送天然重复——为模拟器侧推论，官方原文仅"对接所有推送状态"，幂等语义标待核验(09-27)。
-- 有序性：官方未声明有序投递 → 待核验(09-27)。
+- 订单三态推送（已支付/已确认/已完成）：失败→**每隔 1 分钟重试，共 3 次**（docDetail/177/180）。重试期间订单状态若变为已确认/已取消则**停止**对新订单消息的重试（docDetail/180）
+- 推单流程（guide/4 `[摘录]`）：推送失败 1 分钟后再次推单、最多重试 3 次；重试期间商家经手机/PC 接单致状态变化则不再继续重试；**建议对接所有推送订单状态以防漏单**
+- 新订单接收（新版 7.5.1 `[摘录]`）：接收失败→每隔 1 分钟重推（以订单未被确认 为条件）；**5 分钟未接单订单自动取消**
+- 幂等键：官方无"幂等键"命名；消费方应按 `order_id` + 状态机去重（status 1/2/4/8/9），同一订单多态推送天然重复——为模拟器侧推论，官方原文仅"对接所有推送状态"，幂等语义标待核验(09-27)
+- 有序性：官方未声明有序投递 → 待核验(09-27)
 
 ---
 
@@ -145,31 +145,31 @@
 
 ### 4.1 技术服务合作中心签名（外卖/闪购/医药/到店秒提通用，`[摘录]` guide/31 + questionDetail/5730）
 
-算法（品牌商示例，原文字段名大小写照录）：
+算法（品牌商示例，原文字段名大小写照录）
 
-1. 将**所有参数（sig 除外）按参数名字母顺序排序**，`&` 连接：`app_id=1235123121&app_poi_code=31&timestamp=1389751221`（json 类型参数内的字段不参与排序）。
-2. 按 `请求url + ? + 排序后参数 + consumer_secret（即 app secret）` 连接得待签字符串；中文保持原文、不单独转码。
-3. **MD5** 加密得 32 位签名，**字母小写**。
-4. 赋给 `sig` 作请求参数；发送请求时中文用 utf-8 编码。POST/GET 均同。
-5. 系统级参数必含 `app_id`、`timestamp`（调用时时间戳）、`sig`；应用级参数为业务字段。
+1. 将**所有参数（sig 除外）按参数名字母顺序排序**，`&` 连接：`app_id=1235123121&app_poi_code=31&timestamp=1389751221`（json 类型参数内的字段不参与排序）
+2. 按 `请求url + ? + 排序后参数 + consumer_secret（即 app secret）` 连接得待签字符串；中文保持原文、不单独转码
+3. **MD5** 加密得 32 位签名，**字母小写**
+4. 赋给 `sig` 作请求参数；发送请求时中文用 utf-8 编码。POST/GET 均同
+5. 系统级参数必含 `app_id`、`timestamp`（调用时时间戳）、`sig`；应用级参数为业务字段
 
-示例（官方原文数值照录）：待签 `http://waimaiopen.meituan.com/api/v1/poi/mget?app_id=1235123121&app_poi_codes=31&timestamp=1389751221d31ba58fd73c71db697ab5e4946d52d` → 签名 `00934d00d0aea6f12161edfb6456143d`（guide/31）。
+示例（官方原文数值照录）：待签 `http://waimaiopen.meituan.com/api/v1/poi/mget?app_id=1235123121&app_poi_codes=31&timestamp=1389751221d31ba58fd73c71db697ab5e4946d52d` → 签名 `00934d00d0aea6f12161edfb6456143d`（guide/31）
 
-推送验签要点（照录）：
+推送验签要点（照录）
 
-- 推送签名构造与 APP 访问美团 API **方式相同**；强烈建议为回调接口设签名验证（market/17、food/7）。
-- **不要将签名参数列表写死**，取 URL 全字段（sig 除外）参与验签（questionDetail/5730、market/17）。
-- 推送参数中文需**解码 2 次**后再算签名；没有值的参数也需拼接（guide/31、docDetail/177）。
-- ISV 应用：所操作门店的 `access_token` **必须参与签名计算并在请求中上传**；品牌商（自研）应用不涉及 access_token（questionDetail/5730）。
-- 开发者中心提供签名工具（按 appid 自动取 secret）与 API 测试工具（核对签名前字符串）。
+- 推送签名构造与 APP 访问美团 API **方式相同**；强烈建议为回调接口设签名验证（market/17、food/7）
+- **不要将签名参数列表写死**，取 URL 全字段（sig 除外）参与验签（questionDetail/5730、market/17）
+- 推送参数中文需**解码 2 次**后再算签名；没有值的参数也需拼接（guide/31、docDetail/177）
+- ISV 应用：所操作门店的 `access_token` **必须参与签名计算并在请求中上传**；品牌商（自研）应用不涉及 access_token（questionDetail/5730）
+- 开发者中心提供签名工具（按 appid 自动取 secret）与 API 测试工具（核对签名前字符串）
 
 ### 4.2 生态开放平台签名（open.meituan.com，`[摘录]`，后缀待核验(09-27)）
 
-`[摘录]` 步骤：1）除 sign 外键值对按**字典序**排序，按 `key1value1key2value2…` 拼串；2）将 `client_secret` 拼在排序串**前面**得待签串（后续哈希步骤原文截断，MD5/SHA 取值与大小写均待核验(09-27)）。OAuth 相关接口除外，均需携带签名。
+`[摘录]` 步骤：1）除 sign 外键值对按**字典序**排序，按 `key1value1key2value2…` 拼串；2）将 `client_secret` 拼在排序串**前面**得待签串（后续哈希步骤原文截断，MD5/SHA 取值与大小写均待核验(09-27)）。OAuth 相关接口除外，均需携带签名
 
 ### 4.3 加密
 
-- 回调/接口参数无 AES/RSA 加密机制（均为明文 POST + MD5 签名）；隐私号场景由平台侧做号码脱敏/隐私号替换（recipient_phone 兼容真实号与 `13812345678_1236` 隐私号格式，docDetail/177）→"无回调加密"为本次未见反例的结论，标待核验(09-27)。
+- 回调/接口参数无 AES/RSA 加密机制（均为明文 POST + MD5 签名）；隐私号场景由平台侧做号码脱敏/隐私号替换（recipient_phone 兼容真实号与 `13812345678_1236` 隐私号格式，docDetail/177）→"无回调加密"为本次未见反例的结论，标待核验(09-27)
 
 ---
 
@@ -193,7 +193,7 @@
 {"data": "OK"}
 ```
 
-订单类用小写 `ok`；IM 单聊回调用大写 `OK`。
+订单类用小写 `ok`；IM 单聊回调用大写 `OK`
 
 ### 5.3 已确认/已完成推送关键字段（docDetail/177/180 `[摘录]`，节选非全量）
 
@@ -289,25 +289,25 @@ POST https://waimaiopen.meituan.com/gw/mop/order/query（到店秒提查询，�
 
 ## 8. 实施补证（2026-10-14，#109 动工前置）
 
-方法：WebSearch 官方站内摘录（docDetail/455、456、842、844、845 标题与请求示例片段）+ mock-pulse meituan 适配器源码对拍（行为基线，只读）+ cnblogs 美团回调生产代码互证。仍未取得官方原文的部分维持 §7 待核验，不编造。
+方法：WebSearch 官方站内摘录（docDetail/455、456、842、844、845 标题与请求示例片段）+ mock-pulse meituan 适配器源码对拍（行为基线，只读）+ cnblogs 美团回调生产代码互证。仍未取得官方原文的部分维持 §7 待核验，不编造
 
-1. **推送验签待签串含完整回调 URL**（§4.1 的 URL 语义补实）：mock-pulse `meituan/tests/chain.rs` 接收侧重签用 `url = format!("http://{host}{}", request_path)`，cnblogs 生产代码用 `"https://" + serverName + requestURI + "?" + TreeMap 排序串 + secret` → MD5 小写——两源一致证明待签串中的「请求 url」= `scheme://host/path` 全路径，排序串以 `?` 与 URL 相接。Server 侧落地：回调路径由统一路由确定性派生（`/api/channels/{id}/callback`），host 取请求 Host 头重建；scheme 恒 `http`（官方端口仅 80/8080 明文，guide/6），反代 https 场景未加 X-Forwarded-Proto 防御（边界注明，不为假想场景加逻辑）。
-2. **「解码 2 次」的工程语义**：Spring `@RequestParam` 表单值已被容器解码一次，适配器对每个值再 `URLDecoder.decode` 一次即官方口径；解码失败（畸形 `%` 序列）保留一次解码值。cnblogs 生产代码对整个待签串再 decode 一次，与逐值 decode 等价（中文值一次解码后不再含 `%`/`+`）。
-3. **IM 接口族路径前缀实锤**：`https://waimaiopen.meituan.com/api/v1/wm/IM/setPoiIMStatus`（docDetail/456 摘录）、`getPoiIMStatus`（docDetail/455）——IM 管理/发送接口在 `/api/v1/wm/IM/` 族下；但 `msg/send`（docDetail/845 标题实锤的官方 API 名）的完整 URL 未取得官方原文。落地：发送地址 = `dudu.channel.meituan.api-base`（默认 `https://waimaiopen.meituan.com/api/v1`）+ `/msg/send`，生产接入时按 docDetail/845 原文核对路径段。
-4. **docDetail/842 字段表与请求示例**：搜索摘录显示请求示例含 `"extended_field": "example"`，字段 `biz_type/app_poi_code/push_content/extended_field` 与 §5.4 一致；`push_content` 内部结构（图片/语音/订单卡片）仍未取得官方原文（§7 第 5 条维持待核验）。guide/40（IM WebSocket SDK）摘录露出字段族 `msg_source`（1 商家/2 用户）、`msg_type`（1 文字/2 图片/3 其他）、`open_user_id`、`order_id`——佐证顾客级标识存在，但 HTTP 回调内的承载形态未实锤。
-5. **msg/send 应用级参数与响应形状**：未取得官方原文（§7 第 6 条相关）。落地按以下实现选择（生产接入须核对）：会话目标与内容沿用回调字段同名词法 `biz_type=1`（两方会话，§2.4 实锤支持值）+ `app_poi_code` + `push_content`；响应按「合作中心 API 家族错误形状缺席即成功」解析——已实锤的错误形状为 `{"data":"ng","error":{"code":808,"msg":…}}`（§5.6）与 `{"code":803,"msg":"不存在此门店"}`（context7 官方文档镜像摘录）、`code 703 签名错/700 系统错`（§6），三类任一出现如实失败，否则成功（接口不返回消息标识）。
-6. **访客身份粒度**：IM 单聊回调已实锤字段中无顾客级标识（见第 4 条），`app_poi_code` 是唯一实锤的会话归属标识 → 落地选择 externalUserId = `app_poi_code`（会话粒度=门店），`push_content` 结构实锤后再细化到顾客级。发送侧 `app_poi_code` 即该会话目标，往返自洽。
-7. **入站媒体**：官方素材下载接口未实锤（§7 第 5/6 条）→ 媒体读取按现状如实处理：未配置凭据按受限说明；凭据齐备时也如实返回「接口未实锤」失败，不编造下载链路（票面渠道要点第 4 条口径）。
-8. **未知表单形态**：验签通过的推送若不含 `biz_type`/`order_id`/`op_type` 任一判型键（美团推送族以事件为主体），按事件只应答 `{"data":"ok"}`，不落访客数据、不拒绝（拒绝会触发渠道 1 分钟×3 重推+短信报警）。
-9. **body 直发表单的参数合并**（2026-10-14 review 修正）：§3/§5 载荷显示历史网关以 `Content-Type: text` 直发表单——容器不解析 body，此前仅取 query 会因参数不全验签失败。落地：`paramsOf(query, body)` 双源合并，query 值补第二次解码、body 原始串按 x-www-form-urlencoded 拆对后两次解码（与 query 路径同一基准），query 同名键优先；畸形 `%` 序列保留已解码值不拒绝整单推送（第 2 条口径不变）。
+1. **推送验签待签串含完整回调 URL**（§4.1 的 URL 语义补实）：mock-pulse `meituan/tests/chain.rs` 接收侧重签用 `url = format!("http://{host}{}", request_path)`，cnblogs 生产代码用 `"https://" + serverName + requestURI + "?" + TreeMap 排序串 + secret` → MD5 小写——两源一致证明待签串中的「请求 url」= `scheme://host/path` 全路径，排序串以 `?` 与 URL 相接。Server 侧落地：回调路径由统一路由确定性派生（`/api/channels/{id}/callback`），host 取请求 Host 头重建；scheme 恒 `http`（官方端口仅 80/8080 明文，guide/6），反代 https 场景未加 X-Forwarded-Proto 防御（边界注明，不为假想场景加逻辑）
+2. **「解码 2 次」的工程语义**：Spring `@RequestParam` 表单值已被容器解码一次，适配器对每个值再 `URLDecoder.decode` 一次即官方口径；解码失败（畸形 `%` 序列）保留一次解码值。cnblogs 生产代码对整个待签串再 decode 一次，与逐值 decode 等价（中文值一次解码后不再含 `%`/`+`）
+3. **IM 接口族路径前缀实锤**：`https://waimaiopen.meituan.com/api/v1/wm/IM/setPoiIMStatus`（docDetail/456 摘录）、`getPoiIMStatus`（docDetail/455）——IM 管理/发送接口在 `/api/v1/wm/IM/` 族下；但 `msg/send`（docDetail/845 标题实锤的官方 API 名）的完整 URL 未取得官方原文。落地：发送地址 = `dudu.channel.meituan.api-base`（默认 `https://waimaiopen.meituan.com/api/v1`）+ `/msg/send`，生产接入时按 docDetail/845 原文核对路径段
+4. **docDetail/842 字段表与请求示例**：搜索摘录显示请求示例含 `"extended_field": "example"`，字段 `biz_type/app_poi_code/push_content/extended_field` 与 §5.4 一致；`push_content` 内部结构（图片/语音/订单卡片）仍未取得官方原文（§7 第 5 条维持待核验）。guide/40（IM WebSocket SDK）摘录露出字段族 `msg_source`（1 商家/2 用户）、`msg_type`（1 文字/2 图片/3 其他）、`open_user_id`、`order_id`——佐证顾客级标识存在，但 HTTP 回调内的承载形态未实锤
+5. **msg/send 应用级参数与响应形状**：未取得官方原文（§7 第 6 条相关）。落地按以下实现选择（生产接入须核对）：会话目标与内容沿用回调字段同名词法 `biz_type=1`（两方会话，§2.4 实锤支持值）+ `app_poi_code` + `push_content`；响应按「合作中心 API 家族错误形状缺席即成功」解析——已实锤的错误形状为 `{"data":"ng","error":{"code":808,"msg":…}}`（§5.6）与 `{"code":803,"msg":"不存在此门店"}`（context7 官方文档镜像摘录）、`code 703 签名错/700 系统错`（§6），三类任一出现如实失败，否则成功（接口不返回消息标识）
+6. **访客身份粒度**：IM 单聊回调已实锤字段中无顾客级标识（见第 4 条），`app_poi_code` 是唯一实锤的会话归属标识 → 落地选择 externalUserId = `app_poi_code`（会话粒度=门店），`push_content` 结构实锤后再细化到顾客级。发送侧 `app_poi_code` 即该会话目标，往返自洽
+7. **入站媒体**：官方素材下载接口未实锤（§7 第 5/6 条）→ 媒体读取按现状如实处理：未配置凭据按受限说明；凭据齐备时也如实返回「接口未实锤」失败，不编造下载链路（票面渠道要点第 4 条口径）
+8. **未知表单形态**：验签通过的推送若不含 `biz_type`/`order_id`/`op_type` 任一判型键（美团推送族以事件为主体），按事件只应答 `{"data":"ok"}`，不落访客数据、不拒绝（拒绝会触发渠道 1 分钟×3 重推+短信报警）
+9. **body 直发表单的参数合并**（2026-10-14 review 修正）：§3/§5 载荷显示历史网关以 `Content-Type: text` 直发表单——容器不解析 body，此前仅取 query 会因参数不全验签失败。落地：`paramsOf(query, body)` 双源合并，query 值补第二次解码、body 原始串按 x-www-form-urlencoded 拆对后两次解码（与 query 路径同一基准），query 同名键优先；畸形 `%` 序列保留已解码值不拒绝整单推送（第 2 条口径不变）
 
 ---
 
 ## 附：对 MockPulse 模拟的直接含义（速查）
 
-- 模拟"美团推单给回调"：`POST` 普通表单参数（**非 JSON，Content-Type: text**，参数未排序），至少含 `app_id/timestamp/sig/order_id/app_poi_code`，签名= `MD5(回调URL全路径 + ? + 全字段除sig字母序&连接 + app_secret)` 小写；中文先 utf8、再中文二次解码后验签；端口仅 80/8080。
-- 成功应答：订单/门店类 `{"data":"ok"}`（2s 内），IM 类 `{"data":"OK"}`（4s 内，大写）；超时/格式错即判失败。
-- 重试语义：订单三态 1 分钟×3 次；新订单 1 分钟重推（未确认前提）、5 分钟未接单自动取消；IM 超时重推+短信报警；门店绑定失败重试 3 次；重试中状态流转（已确认/已取消/已接单）则停推。
-- 状态机：`1已提交/2已推送/4已确认/8已完成/9已取消`；消费方按 `order_id` + 状态去重（官方无幂等键命名）。
-- 必接项：已支付订单、催单、隐私号降级、7.5.1 新订单接收、到店秒提确认/状态变更、闪购 IM 四推送。
-- 准入分支：合作中心（app_id/secret；ISV 加 access_token 参签）vs 生态开放平台（OAuth2 code→`POST openapi.meituan.com/oauth/token`，refresh 30 天一次有效）；外卖/闪购/医药/到店秒提共用合作中心签名，IM 需工单按 appid 单独开通。
+- 模拟"美团推单给回调"：`POST` 普通表单参数（**非 JSON，Content-Type: text**，参数未排序），至少含 `app_id/timestamp/sig/order_id/app_poi_code`，签名= `MD5(回调URL全路径 + ? + 全字段除sig字母序&连接 + app_secret)` 小写；中文先 utf8、再中文二次解码后验签；端口仅 80/8080
+- 成功应答：订单/门店类 `{"data":"ok"}`（2s 内），IM 类 `{"data":"OK"}`（4s 内，大写）；超时/格式错即判失败
+- 重试语义：订单三态 1 分钟×3 次；新订单 1 分钟重推（未确认前提）、5 分钟未接单自动取消；IM 超时重推+短信报警；门店绑定失败重试 3 次；重试中状态流转（已确认/已取消/已接单）则停推
+- 状态机：`1已提交/2已推送/4已确认/8已完成/9已取消`；消费方按 `order_id` + 状态去重（官方无幂等键命名）
+- 必接项：已支付订单、催单、隐私号降级、7.5.1 新订单接收、到店秒提确认/状态变更、闪购 IM 四推送
+- 准入分支：合作中心（app_id/secret；ISV 加 access_token 参签）vs 生态开放平台（OAuth2 code→`POST openapi.meituan.com/oauth/token`，refresh 30 天一次有效）；外卖/闪购/医药/到店秒提共用合作中心签名，IM 需工单按 appid 单独开通

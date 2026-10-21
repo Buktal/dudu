@@ -1,9 +1,9 @@
 # 京东开放平台（宙斯/JOS，含咚咚客服）消息推送 事实库
 
-> 研究日期：2026-09-10。方法：WebSearch `jos.jd.com` / `open.jd.com` 官方页面原文摘录（标注 `[摘录]`）+ WebFetch 抽查（`jos.jd.com`、`open.jd.com` 均为 JS-SPA，只回壳、无正文，已如实标注，未作全文核验）+ 第三方 API 目录 `apis.io` 仅作官方文档 URL 指针（标注 `[指针]`，非 primary）。
-> 标注约定：`[摘录]` = WebSearch 返回的官方页面原文摘录（未取全文）；`[指针]` = 第三方目录指向官方文档地址的线索；`待核验(09-27)` = 未能取得官方原文，需复核（open.jd.com 新文档中心需 JS 渲染 + 登录态）。
-> 所有示例载荷均为官方文档原文逐字拷贝（含官方占位符原文，如 `yourappkey` / `yourtoken`）。
-> 方法学注记：`jos.jd.com/commondoc?listId=N` 与 `open.jd.com/home/home#/doc/common?listId=N` 为同一文档体系的新老入口（宙斯→零售开放平台迁移中）；`open.jd.com` 门户、`jos.jd.com/apilist` 均为 SPA，WebFetch 仅回 `You need to enable JavaScript to run this app.`。
+> 研究日期：2026-09-10。方法：WebSearch `jos.jd.com` / `open.jd.com` 官方页面原文摘录（标注 `[摘录]`）+ WebFetch 抽查（`jos.jd.com`、`open.jd.com` 均为 JS-SPA，只回壳、无正文，已如实标注，未作全文核验）+ 第三方 API 目录 `apis.io` 仅作官方文档 URL 指针（标注 `[指针]`，非 primary）
+> 标注约定：`[摘录]` = WebSearch 返回的官方页面原文摘录（未取全文）；`[指针]` = 第三方目录指向官方文档地址的线索；`待核验(09-27)` = 未能取得官方原文，需复核（open.jd.com 新文档中心需 JS 渲染 + 登录态）
+> 所有示例载荷均为官方文档原文逐字拷贝（含官方占位符原文，如 `yourappkey` / `yourtoken`）
+> 方法学注记：`jos.jd.com/commondoc?listId=N` 与 `open.jd.com/home/home#/doc/common?listId=N` 为同一文档体系的新老入口（宙斯→零售开放平台迁移中）；`open.jd.com` 门户、`jos.jd.com/apilist` 均为 SPA，WebFetch 仅回 `You need to enable JavaScript to run this app.`
 
 ## 1. 官方文档入口与关键页面地址
 
@@ -13,24 +13,24 @@
 - API 网关：正式 `https://api.jd.com/routerjson` ／ 预发 `https://api-dev.jd.com/routerjson`（`[摘录]` https://jos.jd.com/commondoc?listId=33 《API调用方法详解》，更新 2020-10-17）
 - 消息通道文档（官方地址，第三方指针）：https://open.jd.com/home/home#/doc/common?listId=520（`[指针]` https://apis.io/apis/jd-com/jos-jdmessage ，描述"pushes near-real-time events for orders, products, after-sale, inventory, and finance"，该描述为第三方撰写，仅地址可采信）
 - OAuth 文档（官方地址，第三方指针）：https://open.jd.com/home/home#/doc/common?listId=510（`[指针]` https://apis.io/providers/jd-com ，OAuth 条目 humanURL）
-- JOS 常用文档 listId（`[摘录]` 各页导航互证，均出自 jos.jd.com 官方页眉/正文）：
+- JOS 常用文档 listId（`[摘录]` 各页导航互证，均出自 jos.jd.com 官方页眉/正文）
   - `listId=32` 授权获取 accesstoken；`listId=33` API调用方法详解；`listId=167` SDK使用；`listId=169` API调用示例；`listId=170` 接口权限包申请；`listId=184` 开放平台收费规则；`listId=186` APPKEY流量自助调整；`listId=194` API调用场景
   - `listId=298` 新手接入指南（含 ISV 注册 `open.jd.com…listId=1952/1594`、商家入驻 `zhaoshang.jd.com`、个人注册 `reg.jd.com`）
   - `listId=530` 签名工具使用说明（签名算法支持 md5、hmacmd5、hmacsha256）；签名工具：https://jos.jd.com/commontools?id=2
-- 业务场景文档（`[摘录]` API 页正文引用，地址可采信、正文待核验(09-27)）：
+- 业务场景文档（`[摘录]` API 页正文引用，地址可采信、正文待核验(09-27)）
   - 订单状态列表：https://open.jd.com/home/home#/doc/common?listId=1867（`jingdong.pop.order.enGet` orderStatusItem 参数引用）
   - POP-SOP 对接方案：https://open.jd.com/v2/#/doc/guide?listId=2431 ；SOP 发货方案：https://open.jd.com/home/home/#/doc/common?listId=2266
   - 自主售后：https://open.jd.com/home/home/#/doc/common?listId=2186 ；售后场景：https://open.jd.com/home/home/#/doc/common?listId=2290 ；取消订单退款判责：https://open.jd.com/home/home/#/doc/common?listId=2296
   - 商品场景：https://open.jd.com/home/home/#/doc/common?listId=2197（`jingdong.ware.read.searchWare4Valid` 引用）
 - 咚咚相关官方入口：咚咚商家版工作台 https://im.jd.com/seller/download（`[摘录]`，版本号 10.4.6.0，2025-09-22；能力：消息撤回/已读未读/正在输入中/快捷短语/专享客服/用户运营群聊）；在线客服 https://chat.jd.com/jdchat/custom.action（SPA 壳）；咚咚消息协议文档：https://jos.jd.com/platformdetail?itemId=2222&listId=0 《咚咚消息协议chat_message4.2聊天消息格式》（标题实锤 `[摘录]`，正文待核验(09-27)）
-- 平台公告（`[摘录]` https://open.jd.com/doc 与 https://opendj.jd.com/ ）：
+- 平台公告（`[摘录]` https://open.jd.com/doc 与 https://opendj.jd.com/ ）
   - 《关于平台加速SP-API切换及1.0接口下线的通知》（重要，POP/自营，2026-08-13）
   - 《开放生态用户标识升级安全改造公告》（重要，POP/自营，2026-08-11）
   - 秒送平台迁移：`opendj.jd.com` 2026年Q4下线，应用创建/API/商家授权迁 `open.jd.com`，存量 ISV 须 2026-07-30 前完成服务商身份注册+保证金（`[摘录]` https://opendj.jd.com/api/notice.htm ；入驻指南 https://open.jd.com/v2/#/doc/begin-guide?listId=1101558）
 - 关联平台：京东云鼎 https://yd.jdcloud.com/（应用部署/云鼎内调用/云鼎IP查询）；京东联盟 https://union.jd.com/openplatform（联盟 appkey 可在宙斯调用联盟接口，`[摘录]` https://jos.jd.com/jdunion）；京东物流开放平台；招商站 `zhaoshang.jd.com`
-- 易混淆排除（同名"消息推送"，非 JOS 业务消息）：`opendoc.jd.com/base/emop/SPD/push/push-bps.html`《消息推送白皮书》是 EMOP 移动端 APP 触达推送（Android/iOS/厂商通道/百亿级/重发机制），与 JOS 订单/售后/咚咚业务消息无关，模拟器不得混用（WebFetch 全文已核验，属 primary 但不适用本库）。
+- 易混淆排除（同名"消息推送"，非 JOS 业务消息）：`opendoc.jd.com/base/emop/SPD/push/push-bps.html`《消息推送白皮书》是 EMOP 移动端 APP 触达推送（Android/iOS/厂商通道/百亿级/重发机制），与 JOS 订单/售后/咚咚业务消息无关，模拟器不得混用（WebFetch 全文已核验，属 primary 但不适用本库）
 
-本次实际抓到并核实的页面清单：
+本次实际抓到并核实的页面清单
 
 | 主题 | URL | 核验方式 |
 |---|---|---|
@@ -58,11 +58,11 @@
 
 ## 2. 消息/事件推送全清单
 
-推送模型总述：JOS 自述能力含"API、消息推送服务"（`[摘录]` jdunion 页："宙斯（JOS）是京东各类零售业务提供外部合作伙伴工具和服务的开放平台，例如API、消息推送服务"）。另有"数据同步服务"独立文档（与消息并列，`[摘录]` listId=33 页导航）。**推送通道的投递形态（HTTP 回调 / JMQ 长连接 / API 拉取）、订阅配置入口、重试与幂等口径 → 全部待核验(09-27)**（listId=520 正文未取得）。
+推送模型总述：JOS 自述能力含"API、消息推送服务"（`[摘录]` jdunion 页："宙斯（JOS）是京东各类零售业务提供外部合作伙伴工具和服务的开放平台，例如API、消息推送服务"）。另有"数据同步服务"独立文档（与消息并列，`[摘录]` listId=33 页导航）。**推送通道的投递形态（HTTP 回调 / JMQ 长连接 / API 拉取）、订阅配置入口、重试与幂等口径 → 全部待核验(09-27)**（listId=520 正文未取得）
 
 ### 2.1 订单类
 
-订单状态枚举（`[摘录]` `jingdong.pop.order.enGet` orderStatusItem，`apiGroupId=55` 页；枚举值即订单消息可能携带的状态语义，消息类型名本身待核验）：
+订单状态枚举（`[摘录]` `jingdong.pop.order.enGet` orderStatusItem，`apiGroupId=55` 页；枚举值即订单消息可能携带的状态语义，消息类型名本身待核验）
 
 | 状态码 | 含义（官方描述） | 出处 |
 |---|---|---|
@@ -76,7 +76,7 @@
 | `POP_ORDER_PAUSE` | pop业务暂停（3c号卡/履约/黄金） | 同上 |
 | `NOT_PAY` | 未付款 | 同上 |
 
-兜底查询 API（`[摘录]` `apiGroupId=55` 页）：`jingdong.pop.order.search`（现行主推；`enSearch/enGet/updateEntityStore` 均注"将于2024年12月31日下线…请使用 jingdong.pop.order.search"）、`jingdong.pop.order.get`、`jingdong.pop.order.fbp.search`（FBP）、`jingdong.pop.order.fbp.get`、`jingdong.pop.order.print.data.get`（面单打印）、`jingdong.pop.oto.locorderinfos.get`（SOP出库发货）、`jingdong.order.venderRemark.queryByOrderId`。分页约束（`[摘录]` enSearch 页）："时间段内最多拉取300页，每页最多100条…建议通过时间滚动的方式拉取订单"。订单消息类型精确名 → 待核验(09-27)。
+兜底查询 API（`[摘录]` `apiGroupId=55` 页）：`jingdong.pop.order.search`（现行主推；`enSearch/enGet/updateEntityStore` 均注"将于2024年12月31日下线…请使用 jingdong.pop.order.search"）、`jingdong.pop.order.get`、`jingdong.pop.order.fbp.search`（FBP）、`jingdong.pop.order.fbp.get`、`jingdong.pop.order.print.data.get`（面单打印）、`jingdong.pop.oto.locorderinfos.get`（SOP出库发货）、`jingdong.order.venderRemark.queryByOrderId`。分页约束（`[摘录]` enSearch 页）："时间段内最多拉取300页，每页最多100条…建议通过时间滚动的方式拉取订单"。订单消息类型精确名 → 待核验(09-27)
 
 ### 2.2 售后/退款类
 
@@ -88,15 +88,15 @@
 | `jingdong.afsservice.{receivetask,alltask,serviceinfo}.get` | 待收货/全部服务单列表、POP退款明细（最大可退/成功退款） | `[摘录]` afsservice 页 |
 | 秒送"新建售后单申请消息""售后单状态消息" | 待审核时返查售后单详情（totalMoney=cashMealBox+运费+包装+积分+自提服务费口径） | `[摘录]` opendj `getApiDetail/170/…` 页 |
 
-`AFS_StepResult_JOS` 的载荷字段、订阅方式 → 待核验(09-27)（仅消息名实锤）。
+`AFS_StepResult_JOS` 的载荷字段、订阅方式 → 待核验(09-27)（仅消息名实锤）
 
 ### 2.3 商品类
 
-兜底查询 API（`[摘录]`）：`jingdong.ware.read.searchWare4Valid`（POP有效商品检索，"最多查询10万条"，商品场景 https://open.jd.com/home/home#/doc/common?listId=2197）、`jingdong.sku.read.searchSkuList`、`jingdong.pop.getCommentSummarys`（SPU/SKU好评率，每次100个sku）、`jingdong.retail.ware.text.material.query`（商品卖点）。商品消息类型精确名 → 待核验(09-27)。
+兜底查询 API（`[摘录]`）：`jingdong.ware.read.searchWare4Valid`（POP有效商品检索，"最多查询10万条"，商品场景 https://open.jd.com/home/home#/doc/common?listId=2197）、`jingdong.sku.read.searchSkuList`、`jingdong.pop.getCommentSummarys`（SPU/SKU好评率，每次100个sku）、`jingdong.retail.ware.text.material.query`（商品卖点）。商品消息类型精确名 → 待核验(09-27)
 
 ### 2.4 咚咚客服/IM 类
 
-协议与发送（`[摘录]` API 页原文）：
+协议与发送（`[摘录]` API 页原文）
 
 | 接口/协议 | 功能（官方描述） | 出处 |
 |---|---|---|
@@ -105,7 +105,7 @@
 | 消息发送结果查询 | "当前只支持查询咚咚消息发送的结果查询" | `[摘录]` `apiGroupId=88&apiId=19706` 页 |
 | `jingdong.com.jd.dd.open.gw.api.DataService` | "第三方系统调用数据服务，获取咚咚业务数据，咚咚对外开放了数十项数据服务，如获取历史聊天记录/用户状态等等" | `[摘录]` `apiGroupId=1696` 页 |
 
-会话/聊天记录查询（`[摘录]` `apiGroupId=1696` 页；注意评价类"不是实时的"，聊天记录经 jmq 异步）：
+会话/聊天记录查询（`[摘录]` `apiGroupId=1696` 页；注意评价类"不是实时的"，聊天记录经 jmq 异步）
 
 - `jingdong.im.out.merchant.chatsession.openapi.get`（指定App指定时间段会话列表，仅pop商家）→ `jingdong.im.out.merchant.chatmessage.openapi.get`（指定会话聊天记录，凭咨询记录中的 sid）
 - `jingdong.im.pop.sessionlist.get`（在线咨询记录含留言；起止≤7天、距今≤3个月）、`jingdong.im.pop.unreplystat.get`（未回复会话量）、`jingdong.im.pop.chatlog.fuzzy.query`（关键字查会话，范围≤7天、开始≤3个月内）、`jingdong.im.pop.chatlog.get`
@@ -113,7 +113,7 @@
 - `jingdong.im.pop.evaluationstat.get` / `evaluationlist.get`（客服评价；官方原话："评价目前没有消息推送支持，评价接口获取到的评价数据不是实时的"）；机器人满意度 `IsvImChatLogService.queryEvaluationsStat/queryEvaluationsDetailList`
 - `jingdong.im.pop.groupinfo.get`（客服列表，限 im.waiter 即 pop/品牌客服）、`jingdong.im.pop.waiterpresence.openapi.get`（客服登录/暂离/忙碌/离开/登出）、`jingdong.user.getUserInfoByXId`（按XId取昵称等）
 
-咚咚 inbound 消息（顾客→客服）是否有推送通道 → 待核验(09-27)（只实锤了外发 push2 与轮询查询系）。
+咚咚 inbound 消息（顾客→客服）是否有推送通道 → 待核验(09-27)（只实锤了外发 push2 与轮询查询系）
 
 ### 2.5 物流/履约/其他域（`[摘录]` API 页原文）
 
@@ -127,36 +127,36 @@
 
 ### 3.1 推送通道（均待核验(09-27)，现状只列线索）
 
-- 官方确认存在"消息推送服务"（JOS 能力之一）与"数据同步服务"（独立文档），但投递形态未取得：HTTP 回调 URL 配置、JMQ 长连接、API 拉取三种可能性均不能排除。`[指针]` 第三方目录称 Webhook 推送至 partner-registered endpoints 并要求 ack+验签——为第三方撰写，不可采信，仅作复核线索（listId=520）。
-- 已实锤的相邻机制（`[摘录]`，可作类比参考，不可当推送口径）：
-  - 物流全程跟踪为"订阅+查询"制（先 Subscribe 后查，非推送）。
-  - 咚咚聊天记录经 **jmq 异步**处理（秒级误差，99%口径）。
-  - 售后明确引导"优先使用消息"，轮询接口 2026-09 下线——说明消息通道是售后推荐链路。
-  - 秒送"通知消息"按商家推送（opendj 文档类目实锤存在推送语义）。
+- 官方确认存在"消息推送服务"（JOS 能力之一）与"数据同步服务"（独立文档），但投递形态未取得：HTTP 回调 URL 配置、JMQ 长连接、API 拉取三种可能性均不能排除。`[指针]` 第三方目录称 Webhook 推送至 partner-registered endpoints 并要求 ack+验签——为第三方撰写，不可采信，仅作复核线索（listId=520）
+- 已实锤的相邻机制（`[摘录]`，可作类比参考，不可当推送口径）
+  - 物流全程跟踪为"订阅+查询"制（先 Subscribe 后查，非推送）
+  - 咚咚聊天记录经 **jmq 异步**处理（秒级误差，99%口径）
+  - 售后明确引导"优先使用消息"，轮询接口 2026-09 下线——说明消息通道是售后推荐链路
+  - 秒送"通知消息"按商家推送（opendj 文档类目实锤存在推送语义）
 
 ### 3.2 首次验证握手
 
-→ 待核验(09-27)（未取得任何官方 challenge/verify 口径）。
+→ 待核验(09-27)（未取得任何官方 challenge/verify 口径）
 
 ### 3.3 重试、幂等、有序
 
-→ 待核验(09-27)（未取得官方重试间隔/次数、幂等键、保序口径）。唯一相邻实锤：EMOP 移动推送"对发送失败的用户配置重发机制"（`opendoc.jd.com` 白皮书，全文已核验但属 APP 触达域，不可套用）。
+→ 待核验(09-27)（未取得官方重试间隔/次数、幂等键、保序口径）。唯一相邻实锤：EMOP 移动推送"对发送失败的用户配置重发机制"（`opendoc.jd.com` 白皮书，全文已核验但属 APP 触达域，不可套用）
 
 ---
 
 ## 4. 验签与加密算法
 
-来源：`[摘录]` https://jos.jd.com/commondoc?listId=33 §5签名算法 ＋ `[摘录]` listId=530/签名工具页。注意：以下均为 **API 请求签名**（ISV→京东），**推送回调验签口径 → 待核验(09-27)**。
+来源：`[摘录]` https://jos.jd.com/commondoc?listId=33 §5签名算法 ＋ `[摘录]` listId=530/签名工具页。注意：以下均为 **API 请求签名**（ISV→京东），**推送回调验签口径 → 待核验(09-27)**
 
 ### 4.1 MD5 签名（主算法，逐字摘录）
 
-官方步骤原文（listId=33）："将所有请求参数按照字母先后顺序排列…把所有参数名和参数值进行拼接…把appSecret夹在字符串（上一步拼接串）的两端…使用MD5进行加密，再转化成大写"。
+官方步骤原文（listId=33）："将所有请求参数按照字母先后顺序排列…把所有参数名和参数值进行拼接…把appSecret夹在字符串（上一步拼接串）的两端…使用MD5进行加密，再转化成大写"
 
-即：`sign = UPPER(MD5(appSecret + k1+v1+k2+v2+… + appSecret))`，key 按字母序（如 `360buy_param_json,access_token,app_key,method,timestamp,v`）。
+即：`sign = UPPER(MD5(appSecret + k1+v1+k2+v2+… + appSecret))`，key 按字母序（如 `360buy_param_json,access_token,app_key,method,timestamp,v`）
 
-- `timestamp` 格式 `yyyy-MM-dd HH:mm:ss`（如 `2019-05-01 00:00:00`），"京东API服务端允许客户端请求时间误差为10分钟"；另有实践注"时间戳最好填写当前时间的前几分钟（必须在6分钟之内）"（同页 `[摘录]`）。
-- `360buy_param_json`：应用级参数整体 JSON 字符串参与签名。
-- 签名工具另支持 `hmacmd5`、`hmacsha256`（`[摘录]` listId=530 + commontools?id=2 工具页三签页签 `md5 hmacmd5 hmacsha256`；按 URL 输入示例含 `sign_method=hmacsha256`）。各 hmac 算法的拼接规则 → 待核验(09-27)。
+- `timestamp` 格式 `yyyy-MM-dd HH:mm:ss`（如 `2019-05-01 00:00:00`），"京东API服务端允许客户端请求时间误差为10分钟"；另有实践注"时间戳最好填写当前时间的前几分钟（必须在6分钟之内）"（同页 `[摘录]`）
+- `360buy_param_json`：应用级参数整体 JSON 字符串参与签名
+- 签名工具另支持 `hmacmd5`、`hmacsha256`（`[摘录]` listId=530 + commontools?id=2 工具页三签页签 `md5 hmacmd5 hmacsha256`；按 URL 输入示例含 `sign_method=hmacsha256`）。各 hmac 算法的拼接规则 → 待核验(09-27)
 
 ### 4.2 系统参数表（`[摘录]` listId=33 + apilist 公共参数互证）
 
@@ -173,7 +173,7 @@
 
 ### 4.3 推送回调验签/加密
 
-→ 待核验(09-27)（未取得官方口径；不得套用 §4.1 请求签名）。
+→ 待核验(09-27)（未取得官方口径；不得套用 §4.1 请求签名）
 
 ---
 
@@ -200,7 +200,7 @@ order_end_time,consignee_info,item_info_list",
 }
 ```
 
-排序后拼接→两端加 appSecret→MD5 大写，官方给出结果："D70825340F4084360B9362B60DFD7930（授权接口），30902CFAF98AC0A3C4D0F5178F26F671（非授权接口）"。授权 URL 拼装"将所有的参数转化为UTF-8编码…通过浏览器访问该地址即可"（同页 `[摘录]`）。
+排序后拼接→两端加 appSecret→MD5 大写，官方给出结果："D70825340F4084360B9362B60DFD7930（授权接口），30902CFAF98AC0A3C4D0F5178F26F671（非授权接口）"。授权 URL 拼装"将所有的参数转化为UTF-8编码…通过浏览器访问该地址即可"（同页 `[摘录]`）
 
 ### 5.2 Java SDK 调用示例（`[摘录]` listId=169，`PopOrderSearchRequest`）
 
@@ -232,19 +232,19 @@ System.out.println(response.getSearchorderinfoResult());
 }
 ```
 
-SDK 语言：官方 SDK 支持"JAVA/PHP/.NET/Python"（`[摘录]` jdunion 页；.NET/PHP 示例见 listId=169 `[摘录]`；"官方SDK包含了API的请求封装、参数签名、响应解析"，`JdClient` 构造均为 `(serverUrl, accessToken, appKey, appSecret)`）。
+SDK 语言：官方 SDK 支持"JAVA/PHP/.NET/Python"（`[摘录]` jdunion 页；.NET/PHP 示例见 listId=169 `[摘录]`；"官方SDK包含了API的请求封装、参数签名、响应解析"，`JdClient` 构造均为 `(serverUrl, accessToken, appKey, appSecret)`）
 
 ### 5.3 咚咚发送参数（`[摘录]` push2 页应用级参数表头）
 
-`buId`（商家ID，POP-京东商家id/厂直-供应商简码）/ `operatePin`（操作人账号，如 `testPin`）/ `operateNick`（操作人姓名）/ `serviceId`（服务单号，售后业务主单据号）/ `orderId`（京东订单号）。完整请求/响应体 → 待核验(09-27)。
+`buId`（商家ID，POP-京东商家id/厂直-供应商简码）/ `operatePin`（操作人账号，如 `testPin`）/ `operateNick`（操作人姓名）/ `serviceId`（服务单号，售后业务主单据号）/ `orderId`（京东订单号）。完整请求/响应体 → 待核验(09-27)
 
 ### 5.4 价格查询公共参数（`[摘录]` `jingdong.jdprices.get` 页，v2.0 免费/必须用户授权）
 
-请求参数：`area`（如 `1-1-1-1` 四级地址串）/ `skuId`（String[]，最多30个）/ `channel`=1 / `priceFieldSet`=102 / `source`=jingdong / `priceInfoSet`=1。响应 envelope：`{"jingdong_jdprices_get_responce": {"returnType": {…}}}`（注意官方拼写 `responce`，逐字保留）。
+请求参数：`area`（如 `1-1-1-1` 四级地址串）/ `skuId`（String[]，最多30个）/ `channel`=1 / `priceFieldSet`=102 / `source`=jingdong / `priceInfoSet`=1。响应 envelope：`{"jingdong_jdprices_get_responce": {"returnType": {…}}}`（注意官方拼写 `responce`，逐字保留）
 
 ### 5.5 回调/推送载荷示例
 
-→ 待核验(09-27)（无官方原文；`chat_message4.2` 仅一片段 voice 字段，见 §2.4）。
+→ 待核验(09-27)（无官方原文；`chat_message4.2` 仅一片段 voice 字段，见 §2.4）
 
 ---
 
@@ -266,7 +266,7 @@ SDK 语言：官方 SDK 支持"JAVA/PHP/.NET/Python"（`[摘录]` jdunion 页；
 ## 7. 待核验清单（统一标待核验(09-27)）
 
 1. **消息推送服务全文**：https://open.jd.com/home/home#/doc/common?listId=520（投递形态 HTTP/JMQ/拉取、订阅配置、重试、幂等键、保序）。→ 待核验(09-27)
-1b. **JOS 关闭迁移（2026-09-10 复核新发现）**：JOS 2026-07-01 融合至 `https://open.jd.com`、2026-08-30 前关闭；新增仅企业账号、需软著/保证金、敏感接口须部署云鼎（`[摘录]` https://jos.jd.com/ 首页公告《关于JOS系统关闭及迁移至JDO平台的公告》）。影响 09-27 复核入口。
+1b. **JOS 关闭迁移（2026-09-10 复核新发现）**：JOS 2026-07-01 融合至 `https://open.jd.com`、2026-08-30 前关闭；新增仅企业账号、需软著/保证金、敏感接口须部署云鼎（`[摘录]` https://jos.jd.com/ 首页公告《关于JOS系统关闭及迁移至JDO平台的公告》）。影响 09-27 复核入口
 2. **订单/商品/库存/财务消息精确类型名与载荷**（仅状态枚举与查询 API 实锤，类型名无）。→ 待核验(09-27)
 3. **`AFS_StepResult_JOS` 载荷字段与订阅方式**（仅消息名实锤；`asc.sync.list` 2026-09 下线为旁证）。→ 待核验(09-27)
 4. **咚咚 `chat_message4.2` 协议全文**（platformdetail itemId=2222；目前仅标题+voice 一片段；text/image/order 等类型未知）。→ 待核验(09-27)
@@ -283,9 +283,9 @@ SDK 语言：官方 SDK 支持"JAVA/PHP/.NET/Python"（`[摘录]` jdunion 页；
 
 ## 附：对 MockPulse 模拟的直接含义（速查）
 
-- 网关模拟：`POST/GET https://api.jd.com/routerjson`，系统参数 `{method, access_token(授权接口), app_key, sign, timestamp(yyyy-MM-dd HH:mm:ss), 360buy_param_json, v=2.0}`，验签 `UPPER(MD5(appSecret+按字母序k+v拼接+appSecret))`；回归向量：§5.1 参数→`D70825340F4084360B9362B60DFD7930`（授权）/`30902CFAF98AC0A3C4D0F5178F26F671`（非授权）。
-- 响应 envelope 注意官方拼写 `jingdong_<method>_responce`（§5.4 实锤）；错误三元组 `{code, errorMessage, errorSolution}`；token 错配 `10500001`。
-- 咚咚外发模拟：`jingdong.dongdong.packet.josChatMessage.push2` 参数 `{buId, operatePin, operateNick, serviceId, orderId}`；chat_message 含 voice `{type:" voice", url:"京东CDN地址"}` 一例。
-- 售后推荐链路：`AFS_StepResult_JOS` 消息名可用作 topic 占位，载荷不得编造（待核验）。
-- 推送回调（HTTP URL/challenge/重试/幂等键）**不得编造**，模拟器中以"未建模/透传"处理，直至 09-27 复核 listId=520。
-- 勘误（相对起点线索）：EMOP《消息推送白皮书》是 APP 触达推送，与 JOS 业务消息无关；`apis.io` 的 JOS Message Channel 描述为第三方撰写，仅文档地址指针可用。
+- 网关模拟：`POST/GET https://api.jd.com/routerjson`，系统参数 `{method, access_token(授权接口), app_key, sign, timestamp(yyyy-MM-dd HH:mm:ss), 360buy_param_json, v=2.0}`，验签 `UPPER(MD5(appSecret+按字母序k+v拼接+appSecret))`；回归向量：§5.1 参数→`D70825340F4084360B9362B60DFD7930`（授权）/`30902CFAF98AC0A3C4D0F5178F26F671`（非授权）
+- 响应 envelope 注意官方拼写 `jingdong_<method>_responce`（§5.4 实锤）；错误三元组 `{code, errorMessage, errorSolution}`；token 错配 `10500001`
+- 咚咚外发模拟：`jingdong.dongdong.packet.josChatMessage.push2` 参数 `{buId, operatePin, operateNick, serviceId, orderId}`；chat_message 含 voice `{type:" voice", url:"京东CDN地址"}` 一例
+- 售后推荐链路：`AFS_StepResult_JOS` 消息名可用作 topic 占位，载荷不得编造（待核验）
+- 推送回调（HTTP URL/challenge/重试/幂等键）**不得编造**，模拟器中以"未建模/透传"处理，直至 09-27 复核 listId=520
+- 勘误（相对起点线索）：EMOP《消息推送白皮书》是 APP 触达推送，与 JOS 业务消息无关；`apis.io` 的 JOS Message Channel 描述为第三方撰写，仅文档地址指针可用

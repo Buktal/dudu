@@ -1,3 +1,3 @@
 # 收发分离：收回调与发消息是两条路
 
-收（平台 → 我）：主体是 HTTP webhook POST + 验签，三类例外进设计——Telegram 可长轮询、腾讯系走 XML + AES（WXBizMsgCrypt 同源）、飞书另有 WebSocket 长连接。发（我 → 平台）：九家全是另一条路，REST API + token（寿命分档，须缓存）。统一模型必须自带幂等键归一（各家去重键五花八门）。结论源：#2 核验（旧九平台盘点已过时，以三渠道深研为准）。
+收（平台 → 我）：主体是 HTTP webhook POST + 验签，三类例外进设计——Telegram 可长轮询、腾讯系走 XML + AES（WXBizMsgCrypt 同源）、飞书另有 WebSocket 长连接。发（我 → 平台）：九家全是另一条路，REST API + token（寿命分档，须缓存）。统一模型必须自带幂等键归一（各家去重键五花八门）。结论源：#2 核验（旧九平台盘点已过时，以三渠道深研为准）

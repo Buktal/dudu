@@ -1,20 +1,13 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# DuduAdmin 运营后台原型
 
-# Run and deploy your AI Studio app
+AI Studio 生成的可交互原型，用于探索运营方管理后台：企业开通与维护、六位企业 ID 查重检测、运营概览、资源汇总与操作审计日志，支持开发与生产接口环境切换。原型仅验证交互方向，正式实现见 [Admin 设计资料](../../design/dudu-admin/README.md)与仓库根 `dudu-admin/` 子项目
 
-This contains everything you need to run your app locally.
+## 运行
 
-View your app in AI Studio: https://ai.studio/apps/f2aea119-d86e-4d31-b52b-c0b552cc528a
+原型为 Vite + React 19 + Tailwind 4 项目，生成式能力依赖 Gemini API
 
-## Run Locally
+1. 安装依赖：`npm install`
+2. 在 `.env.local` 配置 `GEMINI_API_KEY`
+3. 启动开发服务：`npm run dev`，访问 http://127.0.0.1:3000/
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+原型任务期间业务代码只读，迭代仅修改本目录

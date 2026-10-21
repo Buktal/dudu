@@ -1,9 +1,9 @@
 # 二十渠道事实库索引（国内外全量）
 
-> 摄取日期：2026-09-10；新增四渠道（飞书/微博/公众号/小程序）2026-09-10（4 路 research 并行＋4 路核验并行）；第二批十一渠道（钉钉/QQ/淘宝/京东/拼多多/美团/饿了么/B站/快手/知乎/支付宝）2026-09-10（逐个 research＋分批核验）。
-> 核验结论：抖音 23 URL 全 200 无伪造；企微 28 页中 23 页逐字验过；小红书 miniapp 逐字复现、ark 侧维持 `[多源]`；飞书 18 页全文已验；微博 18/18 通过；公众号 16/16 通过；小程序 9 页通过；钉钉 18 页直抓通过（通讯录 15 类、转交 redirect 落定）；淘宝 30 点位 24 通过（OffMsgPush 销项、token.create/refresh 拆分）；支付宝三地址/25h8次/notify_id/app_auth_token 旁证通过；京东网关/签名/OAuth 方向通过（JOS 关闭迁移新发现）；拼多多网关/MD5向量/OAuth链路通过（permit 方法名降级）；美团双体系/三态回调/签名通过（IM 体降级）；饿了么用户线 15/15 通过（商户线维持摘录）；B站六域/签名/OAuth302/直播报备通过（事件页降级）；快手 17 页全文通过（§4.2 截断已修复）；知乎无推送结论成立（官方 29 key 无推送类目）；QQ 30 点位基本全过（op13/Ed25519/双口径照录）。
-> 各文档 §1 均有完整页面地址清单；标注「待核验(09-27)」的条目等配额恢复后补——补摄计划见 issue #14。
-> 注：朴朴超市无开放平台（无公开文档入口），未建事实库。海外 WhatsApp/Telegram 2026-09-10 已入库（逐个 research＋并行核验）：WhatsApp 官方摘录交叉全过（3MB 上限落定、v23 快照注、无加密软化）；Telegram 7 页 WebFetch 全文全过（测试根地址落定、challenge 缺席收紧）。
+> 摄取日期：2026-09-10；新增四渠道（飞书/微博/公众号/小程序）2026-09-10（4 路 research 并行＋4 路核验并行）；第二批十一渠道（钉钉/QQ/淘宝/京东/拼多多/美团/饿了么/B站/快手/知乎/支付宝）2026-09-10（逐个 research＋分批核验）
+> 核验结论：抖音 23 URL 全 200 无伪造；企微 28 页中 23 页逐字验过；小红书 miniapp 逐字复现、ark 侧维持 `[多源]`；飞书 18 页全文已验；微博 18/18 通过；公众号 16/16 通过；小程序 9 页通过；钉钉 18 页直抓通过（通讯录 15 类、转交 redirect 落定）；淘宝 30 点位 24 通过（OffMsgPush 销项、token.create/refresh 拆分）；支付宝三地址/25h8次/notify_id/app_auth_token 旁证通过；京东网关/签名/OAuth 方向通过（JOS 关闭迁移新发现）；拼多多网关/MD5向量/OAuth链路通过（permit 方法名降级）；美团双体系/三态回调/签名通过（IM 体降级）；饿了么用户线 15/15 通过（商户线维持摘录）；B站六域/签名/OAuth302/直播报备通过（事件页降级）；快手 17 页全文通过（§4.2 截断已修复）；知乎无推送结论成立（官方 29 key 无推送类目）；QQ 30 点位基本全过（op13/Ed25519/双口径照录）
+> 各文档 §1 均有完整页面地址清单；标注「待核验(09-27)」的条目等配额恢复后补——补摄计划见 issue #14
+> 注：朴朴超市无开放平台（无公开文档入口），未建事实库。海外 WhatsApp/Telegram 2026-09-10 已入库（逐个 research＋并行核验）：WhatsApp 官方摘录交叉全过（3MB 上限落定、v23 快照注、无加密软化）；Telegram 7 页 WebFetch 全文全过（测试根地址落定、challenge 缺席收紧）
 
 | 渠道 | 形态 | 官方文档门户 | 事实库 | 文档数 |
 |---|---|---|---|---|
@@ -30,26 +30,26 @@
 
 ## 七家速记
 
-- **抖音**：四套并行推送体系（dop/小游戏/服务商/生活服务），v0 主做 dop；验签头 `X-Douyin-Signature = sha1hex(client_secret + body)`。
-- **小红书**：官方消息型推送＝小程序客服消息（URL＋Token＋EncodingAESKey，GET echostr 握手，`sha1(字典序排序)` 验签，JSON 载荷，回 success，5s×3 重试）；推送信封 `{Nonce, Timestamp, Encrypt, MsgSignature}`（body 内），加解密＝微信同族（官方 MsgDecrypt.zip 源码实锤，见 xiaohongshu.md §11）；电商 ark 网关另有订单事件推送。
-- **企业微信**：`POST ?msg_signature=&timestamp=&nonce=`＋XML 信封；AES-256-CBC（Base64(EncodingAESKey+"=") 32B、IV=前 16B、PKCS#7 补 32B 倍数）；官方黄金自测样本在 wecom.md §5.1（`477715d11cdb4164915debcba66cb864d751f3e6` 已独立复算命中）。
-- **飞书**：双通道二选一（Webhook `application/json;charset=utf-8` / 长连接 WSS 仅自建、50 连接、集群随机其一）；握手 POST challenge（现行 1s，历史卡片 3s/1s 矛盾）；验签 `hex(sha256(timestamp+nonce+encrypt_key+body))`→`X-Lark-Signature`；AES-256-CBC（key=`sha256(encrypt_key)`、IV 前 16B）；重试 15s/5m/1h/6h×4；幂等 `event_id`（消息用 `message_id`）。
-- **微博**：现役可新接入＝粉服 Webhook（JSON 默认，`set_format` 切 XML）；握手 GET `signature/timestamp/nonce/echostr`，`sha1(排序(appsecret,timestamp,nonce))`（黄金算例 xyz123xyz→90e4c22c）；载荷 `type/receiver_id/sender_id/created_at/text/data`；事件 `follow/unfollow/subscribe/unsubscribe/scan/scan_follow/click/view`（mention 暂停）；客服 `reply.json`（48h/99 条）；5s×3；排重 `sender_id+created_at`。
-- **公众号**：服务器配置四项、推送仅 XML；GET 三参 sha1＋原样回 echostr；安全模式收包仅 `ToUserName+Encrypt`，四参 `msg_signature`（数值例 899cf89e/046e02f8/1b933996）；AES 同企微但尾部为 AppId 须校验；7 种消息（含 MediaId16K）+ 6 基础事件 + 9 菜单扩展 + 模板/群发/订阅通知回执；被动 7＋转客服 1；客服 11 msgtype；token 双轨（普通 GET/stable POST）。
-- **小程序**：配置五项、数据格式 XML/JSON 可选；GET 握手同公众号（算例 f464b24）；客服接收仅 `text/image/miniprogrampage`＋事件 `user_enter_tempsession`（证伪 `user_enter_session`）；加密回包 Nonce 复用请求值；云函数仅客服且二元组抢占、云托管内网免签（`x-wx-sources` vs `x-wx-source` 官方不一致）；客服发送 11 体＋窗口（发消息 5/48h、进会话 2/1min）；token 双轨 7200s 隔离。
-- **钉钉**：三体系（Stream 明文 WebSocket 50 连接/SUCCESS-LATER / 新 HTTP 大写密文信封 / 旧 oapi encrypt）；旧回调 sha1 四参＋AES（调试向量）；机器人 HmacSHA256；审批双信封＋按 Code 订阅；token 7200s（第三方重复获取返新）；asyncsend_v2 频控。
-- **QQ 机器人**：WS 网关（Hello/Identify/Ready/心跳/Resume/分片）或 Webhook（op13 `plain_token/event_ts`）；Ed25519 签名、无 AES（两组向量）；事件 `C2C/GROUP_AT/GROUP/AT频道/DIRECT/FRIEND_ADD/GROUP_ADD_ROBOT`；`access_token` 7200s＋60s 轮换；发送单聊/群 API；`msg_seq` 去重；准入企业/个人＋沙箱 20 人＋IP 白名单。
-- **淘宝**：国内 TOP 无 HTTP 回调——消息走 TMC 长连接（`ws://mc.api.taobao.com/`）/轮询 consume-confirm/ MQ；交易 27/退款 15/商品 14；OpenIM 仅 `OffMsgPush`；签名 md5/hmac 三算法；OAuth code 30min＋安全等级＋refresh 60/天；未 confirm 6min 重发；全球栈另有 HTTPS 回调。
-- **京东**：JOS 消息推送（listId=520，SPA 正文待复核；JOS 2026-07-01 融合至 open.jd.com）；订单 9 枚举；AFS 售后消息名；咚咚 `chat_message4.2`/`push2`；签名 MD5(secret+字母序+secret)＋timestamp 10min；OAuth token 商家绑定；测试 500/日→上线 30 万/日。
-- **拼多多**：订阅后主动推（`permit/cancel` 方法名待核验）；网关 `gw-api`；签名 `UPPER(MD5(secret+排序kv+secret))`（向量 E4DE3E 已重算）；token 经 `token.create` 放 body 或 OAuth 链路；订单 1-待发货/2-已发货/3-已签收；客服无开放 API 证据。
-- **美团**：双体系（合作中心回调 vs 生态 OAuth）；签名 MD5(url?字母序+secret)；POST 表单（form-urlencoded）限 80/8080；订单三态 4/8＋5 分钟未接单自动取消退款；IM `biz_type=1`（体待核验）；2s ok＋1 分钟×3；ISV/品牌商/个人三分。
-- **饿了么**：两代两线（用户线 SHA1 五步＋4 订单推送＋H5，无 token 无加密，200+ok；商户线 SPA 待核验）；频控 1009；账户 token 与推送无关。
-- **B站**：SPA 仅回壳；开放六域；Webhooks HTTPS POST（镜像）；封闭 4 事件（`authorize/deauthorize/video_open/video_fail`）；私信/客服无公开推送（禁令原文）；服务端 HMAC-SHA256＋OAuth302；直播双体系＋报备邮箱。
-- **快手**：开放域仅 3 事件（`TEST/AUTHORIZE/UN_AUTHORIZE`，上下篇链闭合）；私信无公开推送；小程序支付回调族（`PAYMENT/REFUND/SETTLE/WITHHOLD/CONTRACT`，16 次重试表）；`kwaisign=MD5(body+secret)` 无 AES；token 48h/refresh 180 天/code 2 分钟；企业资质认证。
-- **知乎**：无公开消息/私信推送（官方 29 key 无推送类目，枚举消极证据）；拉取式只读 REST＋任务轮询；Bearer＋秒级时间戳；OAuth 仅登录用途；只做请求-响应桩。
-- **支付宝**：三地址（接口 `notify_url` / 应用网关 / From 蚂蚁订阅）；支付通知仅 SUCCESS/FINISHED 认付款；success+200/fail 重推 25h 8 次；`notify_id` 幂等＋RSA2 验签（`rsaCheckV1`）；`app_auth_token` 代调用；生活号网关验证；小程序客服为前端组件非推送。
-- **WhatsApp**：单 URL＋`messages` 订阅；GET 三参握手＋200 裸回 challenge；信封 `object→entry→messages/statuses/contacts`；`wamid` 三处同源；`X-Hub-Signature-256=HMAC-SHA256(AppSecret,body)`；仅 HTTPS＋签名、无加密字段；mTLS 可选；发送 `POST graph.facebook.com/{v}/…/messages`＋Bearer；重试递减 7 天；阶梯 250→Unlimited＋80mps→1000mps；10-01 计费矛盾做开关。
-- **Telegram**：长轮询与 Webhook 互斥（24h 暂存）；端口 443/80/88/8443；IPv4 only；源段双段；TLS1.2+；无官方记述的 challenge；27 类 Update（默认排除 3 类）；`update_id` 去重；恒等头 1–256 无 HMAC；发送 `bot<token>/METHOD`；sendMessage 1–4096；失败包络＋`retry_after/migrate`；免费三档＋429；付费广播 1000/s；文件 50MB/20MB；BotFather 零门槛。
+- **抖音**：四套并行推送体系（dop/小游戏/服务商/生活服务），v0 主做 dop；验签头 `X-Douyin-Signature = sha1hex(client_secret + body)`
+- **小红书**：官方消息型推送＝小程序客服消息（URL＋Token＋EncodingAESKey，GET echostr 握手，`sha1(字典序排序)` 验签，JSON 载荷，回 success，5s×3 重试）；推送信封 `{Nonce, Timestamp, Encrypt, MsgSignature}`（body 内），加解密＝微信同族（官方 MsgDecrypt.zip 源码实锤，见 xiaohongshu.md §11）；电商 ark 网关另有订单事件推送
+- **企业微信**：`POST ?msg_signature=&timestamp=&nonce=`＋XML 信封；AES-256-CBC（Base64(EncodingAESKey+"=") 32B、IV=前 16B、PKCS#7 补 32B 倍数）；官方黄金自测样本在 wecom.md §5.1（`477715d11cdb4164915debcba66cb864d751f3e6` 已独立复算命中）
+- **飞书**：双通道二选一（Webhook `application/json;charset=utf-8` / 长连接 WSS 仅自建、50 连接、集群随机其一）；握手 POST challenge（现行 1s，历史卡片 3s/1s 矛盾）；验签 `hex(sha256(timestamp+nonce+encrypt_key+body))`→`X-Lark-Signature`；AES-256-CBC（key=`sha256(encrypt_key)`、IV 前 16B）；重试 15s/5m/1h/6h×4；幂等 `event_id`（消息用 `message_id`）
+- **微博**：现役可新接入＝粉服 Webhook（JSON 默认，`set_format` 切 XML）；握手 GET `signature/timestamp/nonce/echostr`，`sha1(排序(appsecret,timestamp,nonce))`（黄金算例 xyz123xyz→90e4c22c）；载荷 `type/receiver_id/sender_id/created_at/text/data`；事件 `follow/unfollow/subscribe/unsubscribe/scan/scan_follow/click/view`（mention 暂停）；客服 `reply.json`（48h/99 条）；5s×3；排重 `sender_id+created_at`
+- **公众号**：服务器配置四项、推送仅 XML；GET 三参 sha1＋原样回 echostr；安全模式收包仅 `ToUserName+Encrypt`，四参 `msg_signature`（数值例 899cf89e/046e02f8/1b933996）；AES 同企微但尾部为 AppId 须校验；7 种消息（含 MediaId16K）+ 6 基础事件 + 9 菜单扩展 + 模板/群发/订阅通知回执；被动 7＋转客服 1；客服 11 msgtype；token 双轨（普通 GET/stable POST）
+- **小程序**：配置五项、数据格式 XML/JSON 可选；GET 握手同公众号（算例 f464b24）；客服接收仅 `text/image/miniprogrampage`＋事件 `user_enter_tempsession`（证伪 `user_enter_session`）；加密回包 Nonce 复用请求值；云函数仅客服且二元组抢占、云托管内网免签（`x-wx-sources` vs `x-wx-source` 官方不一致）；客服发送 11 体＋窗口（发消息 5/48h、进会话 2/1min）；token 双轨 7200s 隔离
+- **钉钉**：三体系（Stream 明文 WebSocket 50 连接/SUCCESS-LATER / 新 HTTP 大写密文信封 / 旧 oapi encrypt）；旧回调 sha1 四参＋AES（调试向量）；机器人 HmacSHA256；审批双信封＋按 Code 订阅；token 7200s（第三方重复获取返新）；asyncsend_v2 频控
+- **QQ 机器人**：WS 网关（Hello/Identify/Ready/心跳/Resume/分片）或 Webhook（op13 `plain_token/event_ts`）；Ed25519 签名、无 AES（两组向量）；事件 `C2C/GROUP_AT/GROUP/AT频道/DIRECT/FRIEND_ADD/GROUP_ADD_ROBOT`；`access_token` 7200s＋60s 轮换；发送单聊/群 API；`msg_seq` 去重；准入企业/个人＋沙箱 20 人＋IP 白名单
+- **淘宝**：国内 TOP 无 HTTP 回调——消息走 TMC 长连接（`ws://mc.api.taobao.com/`）/轮询 consume-confirm/ MQ；交易 27/退款 15/商品 14；OpenIM 仅 `OffMsgPush`；签名 md5/hmac 三算法；OAuth code 30min＋安全等级＋refresh 60/天；未 confirm 6min 重发；全球栈另有 HTTPS 回调
+- **京东**：JOS 消息推送（listId=520，SPA 正文待复核；JOS 2026-07-01 融合至 open.jd.com）；订单 9 枚举；AFS 售后消息名；咚咚 `chat_message4.2`/`push2`；签名 MD5(secret+字母序+secret)＋timestamp 10min；OAuth token 商家绑定；测试 500/日→上线 30 万/日
+- **拼多多**：订阅后主动推（`permit/cancel` 方法名待核验）；网关 `gw-api`；签名 `UPPER(MD5(secret+排序kv+secret))`（向量 E4DE3E 已重算）；token 经 `token.create` 放 body 或 OAuth 链路；订单 1-待发货/2-已发货/3-已签收；客服无开放 API 证据
+- **美团**：双体系（合作中心回调 vs 生态 OAuth）；签名 MD5(url?字母序+secret)；POST 表单（form-urlencoded）限 80/8080；订单三态 4/8＋5 分钟未接单自动取消退款；IM `biz_type=1`（体待核验）；2s ok＋1 分钟×3；ISV/品牌商/个人三分
+- **饿了么**：两代两线（用户线 SHA1 五步＋4 订单推送＋H5，无 token 无加密，200+ok；商户线 SPA 待核验）；频控 1009；账户 token 与推送无关
+- **B站**：SPA 仅回壳；开放六域；Webhooks HTTPS POST（镜像）；封闭 4 事件（`authorize/deauthorize/video_open/video_fail`）；私信/客服无公开推送（禁令原文）；服务端 HMAC-SHA256＋OAuth302；直播双体系＋报备邮箱
+- **快手**：开放域仅 3 事件（`TEST/AUTHORIZE/UN_AUTHORIZE`，上下篇链闭合）；私信无公开推送；小程序支付回调族（`PAYMENT/REFUND/SETTLE/WITHHOLD/CONTRACT`，16 次重试表）；`kwaisign=MD5(body+secret)` 无 AES；token 48h/refresh 180 天/code 2 分钟；企业资质认证
+- **知乎**：无公开消息/私信推送（官方 29 key 无推送类目，枚举消极证据）；拉取式只读 REST＋任务轮询；Bearer＋秒级时间戳；OAuth 仅登录用途；只做请求-响应桩
+- **支付宝**：三地址（接口 `notify_url` / 应用网关 / From 蚂蚁订阅）；支付通知仅 SUCCESS/FINISHED 认付款；success+200/fail 重推 25h 8 次；`notify_id` 幂等＋RSA2 验签（`rsaCheckV1`）；`app_auth_token` 代调用；生活号网关验证；小程序客服为前端组件非推送
+- **WhatsApp**：单 URL＋`messages` 订阅；GET 三参握手＋200 裸回 challenge；信封 `object→entry→messages/statuses/contacts`；`wamid` 三处同源；`X-Hub-Signature-256=HMAC-SHA256(AppSecret,body)`；仅 HTTPS＋签名、无加密字段；mTLS 可选；发送 `POST graph.facebook.com/{v}/…/messages`＋Bearer；重试递减 7 天；阶梯 250→Unlimited＋80mps→1000mps；10-01 计费矛盾做开关
+- **Telegram**：长轮询与 Webhook 互斥（24h 暂存）；端口 443/80/88/8443；IPv4 only；源段双段；TLS1.2+；无官方记述的 challenge；27 类 Update（默认排除 3 类）；`update_id` 去重；恒等头 1–256 无 HMAC；发送 `bot<token>/METHOD`；sendMessage 1–4096；失败包络＋`retry_after/migrate`；免费三档＋429；付费广播 1000/s；文件 50MB/20MB；BotFather 零门槛
 
 ---
 

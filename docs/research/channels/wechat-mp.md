@@ -1,9 +1,9 @@
 # 微信公众号（订阅号/服务号）事件推送事实库（官方文档摄取）
 
-> 调研日期：2026-09-10。方法：WebFetch 直抓 `developers.weixin.qq.com` 服务号/公众号文档站 SSR 正文（逐字提取）。
-> 用途：mock-pulse 高保真模拟「微信服务器 → 开发者 URL」的推送（GET 明文 echostr 握手、XML 明文/密文包、三模式、被动回复、客服窗口）。
-> 约定：每个 claim 后标来源 URL；凡未抓到正文的一律标「待核验(09-27)」。示例载荷均为官方文档原文逐字拷贝（含原文占位符如 `toUser`/`FromUser` 大小写不一致，原样保留）。
-> 文档站现状备注：原公众号文档（订阅号+服务号合一）已拆分为「公众号（订阅号）」与「服务号」两个独立文档区（来源：https://developers.weixin.qq.com/doc/subscription/guide/ 首段原文，本次实抓）。本次逐字核验的是 **服务号树**（`/doc/service/`）；订阅号树（`/doc/subscription/`）仅实抓指南首页确认目录同构，各消息/事件正文页未逐页抓 → 订阅号树正文复用结论标待核验(09-27)。
+> 调研日期：2026-09-10。方法：WebFetch 直抓 `developers.weixin.qq.com` 服务号/公众号文档站 SSR 正文（逐字提取）
+> 用途：mock-pulse 高保真模拟「微信服务器 → 开发者 URL」的推送（GET 明文 echostr 握手、XML 明文/密文包、三模式、被动回复、客服窗口）
+> 约定：每个 claim 后标来源 URL；凡未抓到正文的一律标「待核验(09-27)」。示例载荷均为官方文档原文逐字拷贝（含原文占位符如 `toUser`/`FromUser` 大小写不一致，原样保留）
+> 文档站现状备注：原公众号文档（订阅号+服务号合一）已拆分为「公众号（订阅号）」与「服务号」两个独立文档区（来源：https://developers.weixin.qq.com/doc/subscription/guide/ 首段原文，本次实抓）。本次逐字核验的是 **服务号树**（`/doc/service/`）；订阅号树（`/doc/subscription/`）仅实抓指南首页确认目录同构，各消息/事件正文页未逐页抓 → 订阅号树正文复用结论标待核验(09-27)
 
 ## 1. 官方文档入口与关键页面地址
 
@@ -15,7 +15,7 @@
 - 加解密示例代码包（官方）：https://wximg.gtimg.com/shake_tv/mpwiki/cryptoDemo.zip（C++/PHP/Java/Python/C#，来源：encryption.html；包内源码本次未下载 → 待核验(09-27)）
 - 在线调试工具：http://mp.weixin.qq.com/debug/（start.html 原文为 http，https 可达，照录原文 scheme；另有消息推送专用调试工具 https://developers.weixin.qq.com/apiExplorer?type=messagePush，来源：start.html / encryption.html / push/）
 
-本次实际抓到并逐字核验的页面清单（§2–§6 的每种消息/事件均可回查到本表中的某一行）：
+本次实际抓到并逐字核验的页面清单（§2–§6 的每种消息/事件均可回查到本表中的某一行）
 
 | # | 标题 | URL | 覆盖事件/消息 |
 |---|---|---|---|
@@ -38,11 +38,11 @@
 
 ## 2. 消息/事件推送全清单
 
-公共推送约束（多页重复原文）：推送方法 POST 到服务器配置 URL，编码 UTF-8，**数据格式仅 XML**（来源：push/ 页「数据格式：消息体的格式，仅支持 XML」；注意 encryption.html 另有用 JSON 演示加解密流程的示例包，属算法演示而非推送格式选项——推送格式以 push/ 页为准）。
+公共推送约束（多页重复原文）：推送方法 POST 到服务器配置 URL，编码 UTF-8，**数据格式仅 XML**（来源：push/ 页「数据格式：消息体的格式，仅支持 XML」；注意 encryption.html 另有用 JSON 演示加解密流程的示例包，属算法演示而非推送格式选项——推送格式以 push/ 页为准）
 
 ### 2.1 普通消息（7 种）［Receiving_standard_messages］
 
-公共字段：`ToUserName`（开发者微信号）、`FromUserName`（发送方 OpenID）、`CreateTime`（整型）、`MsgType`、`MsgId`（64 位整型）、`MsgDataId` + `Idx`（仅消息来自文章时）。
+公共字段：`ToUserName`（开发者微信号）、`FromUserName`（发送方 OpenID）、`CreateTime`（整型）、`MsgType`、`MsgId`（64 位整型）、`MsgDataId` + `Idx`（仅消息来自文章时）
 
 | MsgType | 专有字段 | 来源页备注 |
 |---|---|---|
@@ -67,7 +67,7 @@
 
 ### 2.3 自定义菜单扩展事件（9 种）［Custom_Menu_Push_Events］
 
-第 3–8 个事件官方注明客户端版本门槛：「仅支持微信 iPhone 5.4.1 以上、Android 5.4 以上，旧版本无回应且收不到推送」。
+第 3–8 个事件官方注明客户端版本门槛：「仅支持微信 iPhone 5.4.1 以上、Android 5.4 以上，旧版本无回应且收不到推送」
 
 | Event | 专有字段 | 备注 |
 |---|---|---|
@@ -98,49 +98,49 @@
 
 ### 2.6 被动响应 8 种［被动回复 7（Passive 页目录）+ 转客服 1（forwarding 页）］
 
-回复方向与接收相反：`ToUserName`=用户 OpenID、`FromUserName`=开发者微信号。支持 text（Content，`\n` 换行）/ image（`Image>MediaId`，不支持 gif 动图）/ voice（`Voice>MediaId`）/ video（`Video>MediaId/Title/Description`）/ music（`Music>Title/Description/MusicUrl/HQMusicUrl/ThumbMediaId`）/ news（`ArticleCount+Articles>item(Title/Description/PicUrl/Url)`；用户发文本/图片/语音/视频/图文/地理位置六种消息时只能回 1 条图文，其余场景最多 8 条；超限只发限内条数）/ `transfer_customer_service`（转客服，可带 `TransInfo>KfAccount` 指定客服；30 分钟未关会话自动停转回推 URL；排队期消息仍推 URL；**仅用户消息可转接**，菜单点击/地理上报等事件不应转接）/ `transfer_biz_ai_ivr`（转公众号内置 AI 回复，需已开启 AI 回复且学习完历史文章；灰度中）。
+回复方向与接收相反：`ToUserName`=用户 OpenID、`FromUserName`=开发者微信号。支持 text（Content，`\n` 换行）/ image（`Image>MediaId`，不支持 gif 动图）/ voice（`Voice>MediaId`）/ video（`Video>MediaId/Title/Description`）/ music（`Music>Title/Description/MusicUrl/HQMusicUrl/ThumbMediaId`）/ news（`ArticleCount+Articles>item(Title/Description/PicUrl/Url)`；用户发文本/图片/语音/视频/图文/地理位置六种消息时只能回 1 条图文，其余场景最多 8 条；超限只发限内条数）/ `transfer_customer_service`（转客服，可带 `TransInfo>KfAccount` 指定客服；30 分钟未关会话自动停转回推 URL；排队期消息仍推 URL；**仅用户消息可转接**，菜单点击/地理上报等事件不应转接）/ `transfer_biz_ai_ivr`（转公众号内置 AI 回复，需已开启 AI 回复且学习完历史文章；灰度中）
 
 ### 2.7 客服消息（主动 API 类型，11 种）［api_sendcustommessage］
 
-`POST https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=ACCESS_TOKEN`，JSON `{touser(OpenID), msgtype, …}`。msgtype：text（content，支持小程序文字链 `data-miniprogram-appid/path`，小程序须与公众号绑定）/ image / voice / video（+thumb_media_id/title/description）/ music / news（外链图文，articles 限 1 条）/ mpnews（废弃，超 1 条报 45008）/ mpnewsarticle（`article_id`，经「发布」系列接口得到）/ msgmenu（`head_content/list[{id,content}]/tail_content`）/ wxcard（`card_id`）/ miniprogrampage（`title/appid/pagepath/thumb_media_id` 520*416）。可选 `customservice.kf_account`（指定客服身份发送）、`aimsgcontext.is_ai_msg`（1=下方灰字「内容由第三方AI生成」）、`businessid`（子商户）。
+`POST https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token=ACCESS_TOKEN`，JSON `{touser(OpenID), msgtype, …}`。msgtype：text（content，支持小程序文字链 `data-miniprogram-appid/path`，小程序须与公众号绑定）/ image / voice / video（+thumb_media_id/title/description）/ music / news（外链图文，articles 限 1 条）/ mpnews（废弃，超 1 条报 45008）/ mpnewsarticle（`article_id`，经「发布」系列接口得到）/ msgmenu（`head_content/list[{id,content}]/tail_content`）/ wxcard（`card_id`）/ miniprogrampage（`title/appid/pagepath/thumb_media_id` 520*416）。可选 `customservice.kf_account`（指定客服身份发送）、`aimsgcontext.is_ai_msg`（1=下方灰字「内容由第三方AI生成」）、`businessid`（子商户）
 
-客服窗口（intro + sendcustommessage 两页同表，官方原文）：用户发送消息→**5 条/48 小时**；点击自定义菜单→3 条/1 分钟；关注→3 条/1 分钟；扫码→3 条/1 分钟。特别说明：点击菜单触发的是点击菜单事件，走场景 2 规则，不产生「用户发送消息」场景额度；仅点击推事件/扫码推事件/扫码推且弹提示框 3 种菜单类型可触发客服接口。可发 media_id 均可用永久素材。会话 API：`/customservice/kfsession/create|close|getsession|getsessionlist|getwaitcase`；输入状态 `/cgi-bin/message/custom/typing`；聊天记录 `/customservice/msgrecord/getmsglist`；客服账号管理 7 接口（add/del/update/inviteworker/getkflist/getonlinekflist/uploadheadimg，每个账号最多 100 个客服）。
+客服窗口（intro + sendcustommessage 两页同表，官方原文）：用户发送消息→**5 条/48 小时**；点击自定义菜单→3 条/1 分钟；关注→3 条/1 分钟；扫码→3 条/1 分钟。特别说明：点击菜单触发的是点击菜单事件，走场景 2 规则，不产生「用户发送消息」场景额度；仅点击推事件/扫码推事件/扫码推且弹提示框 3 种菜单类型可触发客服接口。可发 media_id 均可用永久素材。会话 API：`/customservice/kfsession/create|close|getsession|getsessionlist|getwaitcase`；输入状态 `/cgi-bin/message/custom/typing`；聊天记录 `/customservice/msgrecord/getmsglist`；客服账号管理 7 接口（add/del/update/inviteworker/getkflist/getonlinekflist/uploadheadimg，每个账号最多 100 个客服）
 
 ## 3. 回调机制（URL 配置、GET 握手、重试）
 
 ### 3.1 服务器配置（push/ 页逐字）
 
-- 配置入口：「微信开发者平台 - 我的业务 - 服务号 - 消息与事件推送」（来源：push/；start.html 旧表述为「微信开发者平台-我的业务与服务-服务号-开发信息」——新旧入口表述并存，原文照录）。
-- 四项：URL（接收消息和事件的接口，`http://` 80 或 `https://` 443 开头）、Token（任意填写，用于生成签名比对）、EncodingAESKey（手动填写或随机生成，消息体加解密密钥）、消息加解密方式（明文/兼容/安全）+ 数据格式（仅 XML）。
-- 生效：模式选择与服务器配置提交后立即生效；启用后用户消息转推该地址，网站自动回复与自定义菜单失效（来源：push/ 注意事项）。
+- 配置入口：「微信开发者平台 - 我的业务 - 服务号 - 消息与事件推送」（来源：push/；start.html 旧表述为「微信开发者平台-我的业务与服务-服务号-开发信息」——新旧入口表述并存，原文照录）
+- 四项：URL（接收消息和事件的接口，`http://` 80 或 `https://` 443 开头）、Token（任意填写，用于生成签名比对）、EncodingAESKey（手动填写或随机生成，消息体加解密密钥）、消息加解密方式（明文/兼容/安全）+ 数据格式（仅 XML）
+- 生效：模式选择与服务器配置提交后立即生效；启用后用户消息转推该地址，网站自动回复与自定义菜单失效（来源：push/ 注意事项）
 
 ### 3.2 GET 首次校验握手（明文 echostr）
 
-微信发 GET 到 URL，携带 `signature/timestamp/nonce/echostr`（来源：push/ 参数表；start.html 同）。
+微信发 GET 到 URL，携带 `signature/timestamp/nonce/echostr`（来源：push/ 参数表；start.html 同）
 
-校验流程（push/ 三步 + start.html Python 代码互证，原文要点合并）：
+校验流程（push/ 三步 + start.html Python 代码互证，原文要点合并）
 
-1. `token/timestamp/nonce` 字典序排序 → 拼接 → sha1（start.html：`list=[token,timestamp,nonce]; list.sort(); map(sha1.update,list); hexdigest`；push/ PHP 版：`sort($tmpArr,SORT_STRING); implode; sha1`）。
-2. 与 `signature` 比对，一致则确认来自微信。
-3. **原样返回 `echostr`**（不加引号）；失败返回空串。start.html 另述：验证成功后回基本配置页点「启动」按钮生效；并提供 URL 验证工具 `apiExplorer?type=messagePush`（填 AccessToken+URL+Token 发起验证 GET）。
+1. `token/timestamp/nonce` 字典序排序 → 拼接 → sha1（start.html：`list=[token,timestamp,nonce]; list.sort(); map(sha1.update,list); hexdigest`；push/ PHP 版：`sort($tmpArr,SORT_STRING); implode; sha1`）
+2. 与 `signature` 比对，一致则确认来自微信
+3. **原样返回 `echostr`**（不加引号）；失败返回空串。start.html 另述：验证成功后回基本配置页点「启动」按钮生效；并提供 URL 验证工具 `apiExplorer?type=messagePush`（填 AccessToken+URL+Token 发起验证 GET）
 
 ### 3.3 POST 业务推送与响应
 
-- 安全模式 URL 额外参数：`openid`、`encrypt_type=aes`（兼容/安全）、`msg_signature`（来源：encryption.html）。
-- 安全模式收包体仅两字段：`ToUserName`（`gh_xxx`）+ `Encrypt`（XML/JSON 同名字段，来源：encryption.html 安全模式示例包）。
-- 响应：5 秒内必须响应；无法保证 5 秒处理时必须回 `success`（推荐）或空串（字节长度 0，非 content 为空），微信不作处理且不重试，之后可用客服接口异步回复（来源：Passive_user_reply_message）。图片等多媒体被动回复需先经素材管理接口上传拿 MediaId（临时或永久均可，来源同页）。
+- 安全模式 URL 额外参数：`openid`、`encrypt_type=aes`（兼容/安全）、`msg_signature`（来源：encryption.html）
+- 安全模式收包体仅两字段：`ToUserName`（`gh_xxx`）+ `Encrypt`（XML/JSON 同名字段，来源：encryption.html 安全模式示例包）
+- 响应：5 秒内必须响应；无法保证 5 秒处理时必须回 `success`（推荐）或空串（字节长度 0，非 content 为空），微信不作处理且不重试，之后可用客服接口异步回复（来源：Passive_user_reply_message）。图片等多媒体被动回复需先经素材管理接口上传拿 MediaId（临时或永久均可，来源同页）
 
 ### 3.4 重试与排重（官方原文，多页重复）
 
-- 「微信服务器在五秒内收不到响应会断掉连接，并且重新发起请求，总共重试三次」（来源：Receiving_standard_messages / Receiving_event_pushes / Passive_user_reply_message 三页同句）。
-- 以下情况用户端提示「该服务号暂时无法提供服务，请稍后再试」：5 秒内未回任何内容；回复异常数据（如 JSON）（来源：Passive_user_reply_message）。
-- 排重官方建议原文：「有 msgid 的消息推荐使用 msgid 排重。事件类型消息推荐使用 FromUserName + CreateTime 排重。」（来源：Passive_user_reply_message；Receiving_standard_messages 页为「推荐使用 msgid 排重」；Receiving_event_pushes 页为「推荐使用 FromUserName + CreateTime 排重」）。
-- 群发排重另有 `clientmsgid`（24h 检查，冲突 errcode 45065 带已存在 msg_id；重试过快 45066；超长 45067；缺省以后台摘要值充当。来源：Batch_Sends）。
+- 「微信服务器在五秒内收不到响应会断掉连接，并且重新发起请求，总共重试三次」（来源：Receiving_standard_messages / Receiving_event_pushes / Passive_user_reply_message 三页同句）
+- 以下情况用户端提示「该服务号暂时无法提供服务，请稍后再试」：5 秒内未回任何内容；回复异常数据（如 JSON）（来源：Passive_user_reply_message）
+- 排重官方建议原文：「有 msgid 的消息推荐使用 msgid 排重。事件类型消息推荐使用 FromUserName + CreateTime 排重。」（来源：Passive_user_reply_message；Receiving_standard_messages 页为「推荐使用 msgid 排重」；Receiving_event_pushes 页为「推荐使用 FromUserName + CreateTime 排重」）
+- 群发排重另有 `clientmsgid`（24h 检查，冲突 errcode 45065 带已存在 msg_id；重试过快 45066；超长 45067；缺省以后台摘要值充当。来源：Batch_Sends）
 
 ### 3.5 回调出口 IP［api_getcallbackip］
 
-- 动态接口：`GET https://api.weixin.qq.com/cgi-bin/getcallbackip?access_token=ACCESS_TOKEN` → `{ip_list:[…]}`（示例 `106.55.206.146/211`）。
-- 官方建议每天请求 1 次更新 IP 列表，勿长期使用旧表作访问入口（来源同页注意事项）。
+- 动态接口：`GET https://api.weixin.qq.com/cgi-bin/getcallbackip?access_token=ACCESS_TOKEN` → `{ip_list:[…]}`（示例 `106.55.206.146/211`）
+- 官方建议每天请求 1 次更新 IP 列表，勿长期使用旧表作访问入口（来源同页注意事项）
 
 ## 4. 验签与加密算法［encryption.html 原文］
 
@@ -154,24 +154,24 @@
 
 ### 4.2 signature（明文/GET 握手）
 
-`sha1(字典序排序(token, timestamp, nonce)后拼接)`。官方数值例（明文模式）：token=`AAAAA`、timestamp=`1714037059`、nonce=`486452656` → 排序 `["1714037059","486452656","AAAAA"]` → 拼接 `1714037059486452656AAAAA` → sha1=`899cf89e464efb63f54ddac96b0a0a235f53aa78`，与 URL 中 signature 比对。
+`sha1(字典序排序(token, timestamp, nonce)后拼接)`。官方数值例（明文模式）：token=`AAAAA`、timestamp=`1714037059`、nonce=`486452656` → 排序 `["1714037059","486452656","AAAAA"]` → 拼接 `1714037059486452656AAAAA` → sha1=`899cf89e464efb63f54ddac96b0a0a235f53aa78`，与 URL 中 signature 比对
 
 ### 4.3 msg_signature（兼容/安全）
 
-`sha1(字典序排序(token, timestamp, nonce, Encrypt)后拼接)`，Encrypt 取包体内字段。官方数值例（安全模式）：token=`AAAAA`、timestamp=`1714112445`、nonce=`415670741`、Encrypt=`+qdx1OKCy…Gj04=`（224 字节 Base64，见 §5.4）→ sha1=`046e02f8204d34f8ba5fa3b1db94908f3df2e9b3`。加密回包签名同理：对（token、回包 TimeStamp、回包 Nonce、回包 Encrypt）四参排序 sha1；官方回包例签名=`1b9339964ed2e271e7c7b6ff2b0ef902fc94dea1`（TimeStamp=`1713424427`、Nonce=`415670741`、Encrypt=`ELGduP2Y…tmxSQ==`）。
+`sha1(字典序排序(token, timestamp, nonce, Encrypt)后拼接)`，Encrypt 取包体内字段。官方数值例（安全模式）：token=`AAAAA`、timestamp=`1714112445`、nonce=`415670741`、Encrypt=`+qdx1OKCy…Gj04=`（224 字节 Base64，见 §5.4）→ sha1=`046e02f8204d34f8ba5fa3b1db94908f3df2e9b3`。加密回包签名同理：对（token、回包 TimeStamp、回包 Nonce、回包 Encrypt）四参排序 sha1；官方回包例签名=`1b9339964ed2e271e7c7b6ff2b0ef902fc94dea1`（TimeStamp=`1713424427`、Nonce=`415670741`、Encrypt=`ELGduP2Y…tmxSQ==`）
 
 ### 4.4 AES（逐字流程）
 
-1. `AESKey = Base64_Decode(EncodingAESKey + "=")`（尾部补一个 `=` 解码得 32 字节）。
-2. `Encrypt` Base64 解码得 TmpMsg；AES-256-CBC 解密（密钥 32 字节/256 位，PKCS#7 填充，K=32：尾部补 `(K−N%K)` 个同值字节）；官方提示尽量用官方示例代码。
-3. 明文结构：`FullStr = random(16B) + msg_len(4B网络字节序) + msg + appid`；**appid 须校验与自身服务号相符**（与企微尾部 receiveid 对应，公众号尾部为 AppId）。官方数值例：random=`a8eedb185eb2fecf`、msg_len=`167`、appid=`wxba5fad812f8e6fb9`（解密例）；加密例 random=`707722b803182950`、msg_len=`25`、FullStr 63B → 加密后 64B → Encrypt=`ELGduP2Y…tmxSQ==`。
-4. 加密回包信封四字段：`Encrypt/MsgSignature/TimeStamp/Nonce`（JSON 或 XML，Nonce 回填 URL 参数 nonce 即可，TimeStamp 用当前时间戳）。
+1. `AESKey = Base64_Decode(EncodingAESKey + "=")`（尾部补一个 `=` 解码得 32 字节）
+2. `Encrypt` Base64 解码得 TmpMsg；AES-256-CBC 解密（密钥 32 字节/256 位，PKCS#7 填充，K=32：尾部补 `(K−N%K)` 个同值字节）；官方提示尽量用官方示例代码
+3. 明文结构：`FullStr = random(16B) + msg_len(4B网络字节序) + msg + appid`；**appid 须校验与自身服务号相符**（与企微尾部 receiveid 对应，公众号尾部为 AppId）。官方数值例：random=`a8eedb185eb2fecf`、msg_len=`167`、appid=`wxba5fad812f8e6fb9`（解密例）；加密例 random=`707722b803182950`、msg_len=`25`、FullStr 63B → 加密后 64B → Encrypt=`ELGduP2Y…tmxSQ==`
+4. 加密回包信封四字段：`Encrypt/MsgSignature/TimeStamp/Nonce`（JSON 或 XML，Nonce 回填 URL 参数 nonce 即可，TimeStamp 用当前时间戳）
 
 ### 4.5 mock 实现要点（从上述事实推导，非官方原文）
 
-- 签名均为「字典序排序→直接拼接→sha1 小写 hex」；GET 握手三参、业务四参（含密文）。
-- AES-256-CBC：key=Base64Decode(EncodingAESKey+"=")（32B），IV=key 前 16B（encryption.html 未明写 IV 取值，沿 WXBizMsgCrypt 同源实现；IV 断言标待核验(09-27)，见 §7）。
-- 安全模式收包仅 `ToUserName+Encrypt`；回 `success`/空串无需加密。
+- 签名均为「字典序排序→直接拼接→sha1 小写 hex」；GET 握手三参、业务四参（含密文）
+- AES-256-CBC：key=Base64Decode(EncodingAESKey+"=")（32B），IV=key 前 16B（encryption.html 未明写 IV 取值，沿 WXBizMsgCrypt 同源实现；IV 断言标待核验(09-27)，见 §7）
+- 安全模式收包仅 `ToUserName+Encrypt`；回 `success`/空串无需加密
 
 ## 5. 示例载荷原文（逐字）
 
@@ -225,7 +225,7 @@
 
 ### 5.4 视频 / 小视频 / 位置 / 链接（原文骨架，字段见 §2.1）
 
-视频：`MsgType=video`，`MediaId` + `ThumbMediaId`；小视频：`MsgType=shortvideo` 同构。位置：`Location_X=23.134521 / Location_Y=113.358803 / Scale=20 / Label`（CDATA）。链接：`Title/Description/Url`。公共尾 `MsgId/MsgDataId/Idx` 同 5.1。
+视频：`MsgType=video`，`MediaId` + `ThumbMediaId`；小视频：`MsgType=shortvideo` 同构。位置：`Location_X=23.134521 / Location_Y=113.358803 / Scale=20 / Label`（CDATA）。链接：`Title/Description/Url`。公共尾 `MsgId/MsgDataId/Idx` 同 5.1
 
 ### 5.5 subscribe / unsubscribe（Receiving_event_pushes 原文；注意 FromUser 大小写原文如此）
 
@@ -239,7 +239,7 @@
 </xml>
 ```
 
-带参关注：加 `EventKey=qrscene_123123` + `Ticket=TICKET`；已关注扫码：`Event=SCAN` + `EventKey=SCENE_VALUE` + `Ticket`。
+带参关注：加 `EventKey=qrscene_123123` + `Ticket=TICKET`；已关注扫码：`Event=SCAN` + `EventKey=SCENE_VALUE` + `Ticket`
 
 ### 5.6 LOCATION（原文）
 
@@ -258,7 +258,7 @@
 
 ### 5.7 CLICK / VIEW（原文）
 
-CLICK：`Event=CLICK` + `EventKey=EVENTKEY`。VIEW：`Event=VIEW` + `EventKey=www.qq.com`（Receiving 页无 MenuId；Custom_Menu 页 VIEW 另带 `MenuId=MENUID`）。
+CLICK：`Event=CLICK` + `EventKey=EVENTKEY`。VIEW：`Event=VIEW` + `EventKey=www.qq.com`（Receiving 页无 MenuId；Custom_Menu 页 VIEW 另带 `MenuId=MENUID`）
 
 ### 5.8 scancode_push / scancode_waitmsg（Custom_Menu_Push_Events 原文）
 
@@ -296,7 +296,7 @@ CLICK：`Event=CLICK` + `EventKey=EVENTKEY`。VIEW：`Event=VIEW` + `EventKey=ww
 
 ### 5.10 location_select / view_miniprogram（原文要点）
 
-location_select：`SendLocationInfo>Location_X(23)/Location_Y(113)/Scale(15)/Label(␣广州市海珠区客村艺苑路␣106号，首尾空格逐字，原文 <Label><![CDATA[ 广州市海珠区客村艺苑路 106号]]>)/Poiname(空)` 全套 CDATA。view_miniprogram：`Event=view_miniprogram` + `EventKey=pages/index/index` + `MenuId=MENUID`。
+location_select：`SendLocationInfo>Location_X(23)/Location_Y(113)/Scale(15)/Label(␣广州市海珠区客村艺苑路␣106号，首尾空格逐字，原文 <Label><![CDATA[ 广州市海珠区客村艺苑路 106号]]>)/Poiname(空)` 全套 CDATA。view_miniprogram：`Event=view_miniprogram` + `EventKey=pages/index/index` + `MenuId=MENUID`
 
 ### 5.11 TEMPLATESENDJOBFINISH（原文，成功态）
 
@@ -316,15 +316,15 @@ location_select：`SendLocationInfo>Location_X(23)/Location_Y(113)/Scale(15)/Lab
 
 ### 5.12 订阅通知三事件（原文节选，完整包见 push.html）
 
-popup：`Event=subscribe_msg_popup_event` + `SubscribeMsgPopupEvent>List[](TemplateId/SubscribeStatusString=accept|reject/PopupScene=2)`；change：`Event=subscribe_msg_change_event` + `SubscribeMsgChangeEvent>List[](TemplateId/reject)`；sent：`Event=subscribe_msg_sent_event` + `SubscribeMsgSentEvent>List[](TemplateId/MsgID=1700827132819554304/ErrorCode=0/ErrorStatus=success)`。ToUserName=`gh_123456789abc`，FromUserName=`otFpruAK8D-E6EfStSYonYSBZ8_4`（原文）。
+popup：`Event=subscribe_msg_popup_event` + `SubscribeMsgPopupEvent>List[](TemplateId/SubscribeStatusString=accept|reject/PopupScene=2)`；change：`Event=subscribe_msg_change_event` + `SubscribeMsgChangeEvent>List[](TemplateId/reject)`；sent：`Event=subscribe_msg_sent_event` + `SubscribeMsgSentEvent>List[](TemplateId/MsgID=1700827132819554304/ErrorCode=0/ErrorStatus=success)`。ToUserName=`gh_123456789abc`，FromUserName=`otFpruAK8D-E6EfStSYonYSBZ8_4`（原文）
 
 ### 5.13 被动回复文本 / 转客服（原文）
 
-文本回复：`ToUserName=粉丝号 / FromUserName=服务号 / CreateTime=1460541339 / MsgType=text / Content=test`（start.html）。转客服：`MsgType=transfer_customer_service`；指定客服时加 `TransInfo>KfAccount=test1@test`（forwarding.html）。
+文本回复：`ToUserName=粉丝号 / FromUserName=服务号 / CreateTime=1460541339 / MsgType=text / Content=test`（start.html）。转客服：`MsgType=transfer_customer_service`；指定客服时加 `TransInfo>KfAccount=test1@test`（forwarding.html）
 
 ### 5.14 安全模式收包 + 加密回包（encryption.html 数值例，JSON 演示）
 
-收：`{"ToUserName":"gh_97417a04a28d","Encrypt":"+qdx1OKCy…Gj04="}`（URL 带 `signature/timestamp=1714112445/nonce=415670741/openid/encrypt_type=aes/msg_signature=046e02f8…`）。回：`{"Encrypt":"ELGduP2Y…tmxSQ==","MsgSignature":"1b9339964ed2e271e7c7b6ff2b0ef902fc94dea1","TimeStamp":1713424427,"Nonce":"415670741"}`。XML 版回包四字段同名（`Encrypt/MsgSignature/TimeStamp/Nonce`）。
+收：`{"ToUserName":"gh_97417a04a28d","Encrypt":"+qdx1OKCy…Gj04="}`（URL 带 `signature/timestamp=1714112445/nonce=415670741/openid/encrypt_type=aes/msg_signature=046e02f8…`）。回：`{"Encrypt":"ELGduP2Y…tmxSQ==","MsgSignature":"1b9339964ed2e271e7c7b6ff2b0ef902fc94dea1","TimeStamp":1713424427,"Nonce":"415670741"}`。XML 版回包四字段同名（`Encrypt/MsgSignature/TimeStamp/Nonce`）
 
 ### 5.15 客服文本发送（api_sendcustommessage 原文）
 
@@ -354,23 +354,23 @@ popup：`Event=subscribe_msg_popup_event` + `SubscribeMsgPopupEvent>List[](Templ
 | clientmsgid | 开发者群发时自填（≤32 字节） | 24h 内重复拒绝（45065）；重试过快 45066；超长 45067 | Batch_Sends |
 | IP 白名单 | 公众平台配置 | 调 token 需白名单，否则 40164 | api_getaccesstoken §6 |
 
-access_token 返回示例（两版同形，原文）：`{"access_token":"ACCESS_TOKEN","expires_in":7200}`。
+access_token 返回示例（两版同形，原文）：`{"access_token":"ACCESS_TOKEN","expires_in":7200}`
 
 ## 7. 待核验清单（均标：待核验(09-27)）
 
-1. **POST 回调的 Content-Type**：官方推送页未明示（2026-09-10 复核直抓 Receiving_standard_messages 全文：首句仅"微信服务器将POST消息的XML数据包到开发者填写的URL上"，无 Content-Type 头口径；wireshark 常识为 `text/xml`）→ 待核验(09-27)。
-2. **AES IV 取值**：encryption.html 只写 CBC+PKCS#7，未明写 IV=key 前 16B（同源 WXBizMsgCrypt 实现如此，但本页无原文）→ 待核验(09-27)。加解密示例包 `cryptoDemo.zip` 未下载核验 → 待核验(09-27)。
-3. **准入主体**：订阅号个人可注册、服务号仅企业主体——本次 primary 仅见旁证（subscription/guide「为媒体和个人提供信息传播方式」；sendcustommessage 适用范围「公众号/服务号仅认证」；模板消息「只有认证后的服务号才可申请」；start.html 含服务号注册入口链接；同系旁证：小程序 `api_sendcustommessage` 适用范围表小程序/小游戏可用、公众号·服务号仅认证，2026-09-10 直抓 `wechat-mini.md` §6.3），`mp.weixin.qq.com` 注册页原文未抓 → 待核验(09-27)。微信认证费 300 元/次（本地档案说法，本次官方页未见）→ 待核验(09-27)。
-4. **测试号**：`mp.weixin.qq.com/debug/cgi-bin/sandbox` 扫码即得、IP 白名单要求——start.html 本次抓取未见测试号段落（2026-09-10 复核直抓 start.html 全文：§1.1–1.4 为申请服务器/搭建服务/注册服务号/开发者基本配置，无测试号小节；配置入口作「微信开发者平台-我的业务与服务-服务号-开发信息」；5 秒×3 重试有实证日志段落）→ 待核验(09-27)。
-5. **订阅号树正文**：`/doc/subscription/guide/product/message/*`、`/.../kf/*`、`/.../menu/*` 与服务号树是否字字相同——仅确认目录同构，未逐页抓 → 待核验(09-27)。旧 `doc/offiaccount/*` 重定向行为 → 待核验(09-27)。
-6. **卡券/门店/发票等运营类事件**（`Coupons_Vouchers_and_Cards_Event_Push_Messages`、认证事件 `Accreditation`、一次性订阅消息、自动回复规则）：存在性已由服务号导航树复核确认（2026-09-10 直抓 Receiving_standard_messages 左侧导航：卡券事件推送/微信认证事件推送/一次性订阅消息/微信门店均在列），正文未抓 → 待核验(09-27)（残：正文；与消息总水管无关，如需再补）。
-7. **群发额度细节**：服务号「每月 4 条」按自然月、认证服务号高级群发日调用上限、API 群发保护 30 分钟确认——Batch_Sends 页原文已录，但 MP 后台实际配额数字以线上为准 → 口径性待核验(09-27)。
-8. **客服「48 小时」窗口起算口径**（最后一次互动起算 vs 自然时间）与 mpnewsarticle 草稿灰度状态：官方页未明示 → 待核验(09-27)。
-9. **获取临时素材接口正文**（2026-10-12 新增）：DuduDesk 媒体读取票按 `GET https://api.weixin.qq.com/cgi-bin/media/get?access_token=&media_id=`、成功返回二进制（带 `Content-Type`/`Content-disposition`）、失败返回 `{"errcode":40007,"errmsg":"invalid media_id"}`、视频素材返回 JSON `video_url` 再取一次字节实现（官方文档 `material/temporary/api_getmedia`）；本次未能直抓官方正文，路径与响应形状来自 2026-10-12 检索摘要与既有实现经验 → 待核验(10-12)。
+1. **POST 回调的 Content-Type**：官方推送页未明示（2026-09-10 复核直抓 Receiving_standard_messages 全文：首句仅"微信服务器将POST消息的XML数据包到开发者填写的URL上"，无 Content-Type 头口径；wireshark 常识为 `text/xml`）→ 待核验(09-27)
+2. **AES IV 取值**：encryption.html 只写 CBC+PKCS#7，未明写 IV=key 前 16B（同源 WXBizMsgCrypt 实现如此，但本页无原文）→ 待核验(09-27)。加解密示例包 `cryptoDemo.zip` 未下载核验 → 待核验(09-27)
+3. **准入主体**：订阅号个人可注册、服务号仅企业主体——本次 primary 仅见旁证（subscription/guide「为媒体和个人提供信息传播方式」；sendcustommessage 适用范围「公众号/服务号仅认证」；模板消息「只有认证后的服务号才可申请」；start.html 含服务号注册入口链接；同系旁证：小程序 `api_sendcustommessage` 适用范围表小程序/小游戏可用、公众号·服务号仅认证，2026-09-10 直抓 `wechat-mini.md` §6.3），`mp.weixin.qq.com` 注册页原文未抓 → 待核验(09-27)。微信认证费 300 元/次（本地档案说法，本次官方页未见）→ 待核验(09-27)
+4. **测试号**：`mp.weixin.qq.com/debug/cgi-bin/sandbox` 扫码即得、IP 白名单要求——start.html 本次抓取未见测试号段落（2026-09-10 复核直抓 start.html 全文：§1.1–1.4 为申请服务器/搭建服务/注册服务号/开发者基本配置，无测试号小节；配置入口作「微信开发者平台-我的业务与服务-服务号-开发信息」；5 秒×3 重试有实证日志段落）→ 待核验(09-27)
+5. **订阅号树正文**：`/doc/subscription/guide/product/message/*`、`/.../kf/*`、`/.../menu/*` 与服务号树是否字字相同——仅确认目录同构，未逐页抓 → 待核验(09-27)。旧 `doc/offiaccount/*` 重定向行为 → 待核验(09-27)
+6. **卡券/门店/发票等运营类事件**（`Coupons_Vouchers_and_Cards_Event_Push_Messages`、认证事件 `Accreditation`、一次性订阅消息、自动回复规则）：存在性已由服务号导航树复核确认（2026-09-10 直抓 Receiving_standard_messages 左侧导航：卡券事件推送/微信认证事件推送/一次性订阅消息/微信门店均在列），正文未抓 → 待核验(09-27)（残：正文；与消息总水管无关，如需再补）
+7. **群发额度细节**：服务号「每月 4 条」按自然月、认证服务号高级群发日调用上限、API 群发保护 30 分钟确认——Batch_Sends 页原文已录，但 MP 后台实际配额数字以线上为准 → 口径性待核验(09-27)
+8. **客服「48 小时」窗口起算口径**（最后一次互动起算 vs 自然时间）与 mpnewsarticle 草稿灰度状态：官方页未明示 → 待核验(09-27)
+9. **获取临时素材接口正文**（2026-10-12 新增）：DuduDesk 媒体读取票按 `GET https://api.weixin.qq.com/cgi-bin/media/get?access_token=&media_id=`、成功返回二进制（带 `Content-Type`/`Content-disposition`）、失败返回 `{"errcode":40007,"errmsg":"invalid media_id"}`、视频素材返回 JSON `video_url` 再取一次字节实现（官方文档 `material/temporary/api_getmedia`）；本次未能直抓官方正文，路径与响应形状来自 2026-10-12 检索摘要与既有实现经验 → 待核验(10-12)
 
 ## 附：对 MockPulse 模拟的直接含义（速查，非官方原文）
 
-- 握手模拟：`GET ?signature=&timestamp=&nonce=&echostr=`，`sha1(字典序[token,timestamp,nonce])`，通过则原样回 echostr。
-- 推送模拟：`POST` XML（明文 7 种 / 事件 2.2–2.5）；安全模式只发 `{ToUserName, Encrypt}`（XML 版 `<ToUserName><Encrypt>`），query 带 `encrypt_type=aes&msg_signature=&openid=`。
-- 响应判定：5s 超时×3 次重试；回 `success`/空串即停；事件排重 `FromUserName+CreateTime`、消息排重 `MsgId`。
-- 出网模拟：`GET /cgi-bin/token` 与 `POST /cgi-bin/stable_token` 双签发方（7200s、隔离）；`POST /cgi-bin/message/custom/send` 客服下发（窗口 5条/48h、3条/1min×3）。
+- 握手模拟：`GET ?signature=&timestamp=&nonce=&echostr=`，`sha1(字典序[token,timestamp,nonce])`，通过则原样回 echostr
+- 推送模拟：`POST` XML（明文 7 种 / 事件 2.2–2.5）；安全模式只发 `{ToUserName, Encrypt}`（XML 版 `<ToUserName><Encrypt>`），query 带 `encrypt_type=aes&msg_signature=&openid=`
+- 响应判定：5s 超时×3 次重试；回 `success`/空串即停；事件排重 `FromUserName+CreateTime`、消息排重 `MsgId`
+- 出网模拟：`GET /cgi-bin/token` 与 `POST /cgi-bin/stable_token` 双签发方（7200s、隔离）；`POST /cgi-bin/message/custom/send` 客服下发（窗口 5条/48h、3条/1min×3）

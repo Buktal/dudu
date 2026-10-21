@@ -1,9 +1,9 @@
 # 飞书开放平台 事件推送 事实库
 
-> 研究日期：2026-09-10。方法：WebFetch 直抓 open.feishu.cn 官方文档英文版正文（全部成功，逐字）+ WebSearch 官方站内摘录（标注 `[摘录]`）+ 本地档案 `.scratch/open-platforms-survey/` 只读引用（标注 `[本地]`，为 2026-09-03 官方文档站逐页抓取物）。
-> 标注约定：无标注 = 本次 WebFetch 官方正文已核验；`[摘录]` = WebSearch 返回的官方页面原文摘录（未取全文）；`[本地]` = 本地档案抓取物（官方文档原文存档）；`待核验(09-27)` = 未能取得官方原文，需复核。
-> 事实分级参照 `xiaohongshu.md`：本库 §2–§6 均为官方来源；`[本地]` 引用均给出档案路径以便复查。
-> 所有示例载荷均为官方文档原文逐字拷贝（含官方占位符原文）。
+> 研究日期：2026-09-10。方法：WebFetch 直抓 open.feishu.cn 官方文档英文版正文（全部成功，逐字）+ WebSearch 官方站内摘录（标注 `[摘录]`）+ 本地档案 `.scratch/open-platforms-survey/` 只读引用（标注 `[本地]`，为 2026-09-03 官方文档站逐页抓取物）
+> 标注约定：无标注 = 本次 WebFetch 官方正文已核验；`[摘录]` = WebSearch 返回的官方页面原文摘录（未取全文）；`[本地]` = 本地档案抓取物（官方文档原文存档）；`待核验(09-27)` = 未能取得官方原文，需复核
+> 事实分级参照 `xiaohongshu.md`：本库 §2–§6 均为官方来源；`[本地]` 引用均给出档案路径以便复查
+> 所有示例载荷均为官方文档原文逐字拷贝（含官方占位符原文）
 
 ## 1. 官方文档入口与关键页面地址
 
@@ -12,7 +12,7 @@
 - 事件列表（动态目录，`<md-event-list>` JS 组件渲染，无静态正文）：https://open.feishu.cn/document/server-docs/event-subscription-guide/event-list
 - 官方 SDK（四语言，包名出自官方文档正文示例）：Go `github.com/larksuite/oapi-sdk-go/v3`、Python `lark-oapi`（`pip install lark-oapi -U`）、Java `com.larksuite.oapi:oapi-sdk`、Node `@larksuiteoapi/node-sdk`（>=1.24.0）
 
-本次实际抓到并核实的页面清单：
+本次实际抓到并核实的页面清单
 
 | 主题 | URL | 核验方式 |
 |---|---|---|
@@ -44,7 +44,7 @@
 
 ## 2. 消息/事件推送全清单
 
-推送方式统一为 **Webhook**（下表 `推送方式` 均为各事件页原文 `Push Mode: Webhook`；长连接为传输通道，事件语义相同）。
+推送方式统一为 **Webhook**（下表 `推送方式` 均为各事件页原文 `Push Mode: Webhook`；长连接为传输通道，事件语义相同）
 
 ### 2.1 消息类（Messenger）
 
@@ -54,8 +54,8 @@
 | `im.message.message_read_v1` | 用户已读机器人发的单聊消息 | `im:message` / `im:message:readonly` | message_read 页全文（**注意：官方真名为 `message_read`，`im.message.read_v1` 不存在**） |
 | `im.message.recalled_v1` | 机器人所在会话（单聊/群）有消息被撤回 | `im:message` / `im:message:readonly`；仅自己会话内 | recalled 页全文（**注意：官方真名为 `recalled`，`recall_v1` 不存在**） |
 
-- 字段级权限：`user_id` 需 `contact:user.employee_id:readonly`；`user_agent` 需 `im:user_agent:read`（receive 页原文）。
-- 幂等（receive 页原文）："In special scenarios, repeated pushes may be received. If you have idempotent needs, please use ==message_id== to deduplicate, do not rely on event_id."——**消息类用 `message_id` 去重，不要用 `event_id`**。
+- 字段级权限：`user_id` 需 `contact:user.employee_id:readonly`；`user_agent` 需 `im:user_agent:read`（receive 页原文）
+- 幂等（receive 页原文）："In special scenarios, repeated pushes may be received. If you have idempotent needs, please use ==message_id== to deduplicate, do not rely on event_id."——**消息类用 `message_id` 去重，不要用 `event_id`**
 
 ### 2.2 群组类
 
@@ -69,23 +69,23 @@
 
 ### 2.3 通讯录类（contact-v3）
 
-`contact.user.deleted_v3` 已全文核验（事件体见 §5.7；`department_ids` 注明不返回值、以 `old_object.department_ids` 为准）。
+`contact.user.deleted_v3` 已全文核验（事件体见 §5.7；`department_ids` 注明不返回值、以 `old_object.department_ids` 为准）
 
-其余以 `[本地]` 为下限（`data/scrape-v1/feishu/event_pages.json`，官方路径存活探测）：
+其余以 `[本地]` 为下限（`data/scrape-v1/feishu/event_pages.json`，官方路径存活探测）
 
 - 用户：`contact-v3/user/events/created`、`updated`、`deleted`
 - 部门：`contact-v3/department/events/created`、`updated`、`deleted`
 - 员工类型枚举：`employee_type_enum/events/{actived,created,deactivated,deleted,updated}`
 - 授权范围：`contact-v3/scope/events/updated`；自定义字段：`custom_attr/events/updated`
-- 通讯录事件字段权限粒度极细（deleted_v3 页列 14 类字段 scope，见 §5.7 表头）→ 全文待核验(09-27)。
+- 通讯录事件字段权限粒度极细（deleted_v3 页列 14 类字段 scope，见 §5.7 表头）→ 全文待核验(09-27)
 
 ### 2.4 审批类（approval-v4，特殊订阅机制）
 
-- 已核验 `approval.approval.updated_v4`（审批定义更新，`[摘录]` 含完整事件体示例，见 §5.8）。
-- 审批实例/任务/抄送状态变更：`[摘录]` function-introduction + reference 概述确认存在"实例状态变更、任务状态变更、抄送状态变更、定义更新"四公用事件 + 请假/加班/出差/换班/外出等特殊事件；实例状态取值 `PENDING/APPROVED/REJECTED/CANCELED/DELETED`（instance/get `[摘录]`）。
-- **关键机制差异**（`[摘录]` subscribe 页）：订阅审批事件后，还必须调用 `POST /open-apis/approval/v4/approvals/:approval_code/subscribe` 按审批定义 Code 开启订阅（100 次/分钟；同一应用调一次即可；多应用可同时订阅同一 Code）。取消用对应 unsubscribe 接口。
-- 审批事件 3s/幂等（`[摘录]` function-introduction）："服务端收到事件需 3 秒内响应，否则超时重推；事件可能重复，按 `event_id` 或 `uuid` 做幂等（不同事件类型幂等 key 不同）"。
-- 各 v4 事件精确 type 名与事件体 → 待核验(09-27)（仅 `approval.approval.updated_v4` 有 type 名实锤）。
+- 已核验 `approval.approval.updated_v4`（审批定义更新，`[摘录]` 含完整事件体示例，见 §5.8）
+- 审批实例/任务/抄送状态变更：`[摘录]` function-introduction + reference 概述确认存在"实例状态变更、任务状态变更、抄送状态变更、定义更新"四公用事件 + 请假/加班/出差/换班/外出等特殊事件；实例状态取值 `PENDING/APPROVED/REJECTED/CANCELED/DELETED`（instance/get `[摘录]`）
+- **关键机制差异**（`[摘录]` subscribe 页）：订阅审批事件后，还必须调用 `POST /open-apis/approval/v4/approvals/:approval_code/subscribe` 按审批定义 Code 开启订阅（100 次/分钟；同一应用调一次即可；多应用可同时订阅同一 Code）。取消用对应 unsubscribe 接口
+- 审批事件 3s/幂等（`[摘录]` function-introduction）："服务端收到事件需 3 秒内响应，否则超时重推；事件可能重复，按 `event_id` 或 `uuid` 做幂等（不同事件类型幂等 key 不同）"
+- 各 v4 事件精确 type 名与事件体 → 待核验(09-27)（仅 `approval.approval.updated_v4` 有 type 名实锤）
 
 ### 2.5 其他域（`[本地]` 下限，全文待核验(09-27)）
 
@@ -95,7 +95,7 @@
 - 服务台：`helpdesk-v1/{ticket/events/{created,updated},ticket-message/events/created,notification/events/approve}`
 - 招聘：`hire-v1/.../offer/events/status_changed`、`onboard/events/{import-ehr,imported}`、`talent/events/deleted`、`eco_{account,background_check,exam}/events/*`
 - 门禁：`acs-v1/{access_record/events/created,user/events/updated}`
-- 总量口径：官方事件列表为动态目录；`[本地]` 11-feishu.md 实测 server-docs 树内 57 个事件文档页存活为**保守下限**，非全量。
+- 总量口径：官方事件列表为动态目录；`[本地]` 11-feishu.md 实测 server-docs 树内 57 个事件文档页存活为**保守下限**，非全量
 
 ---
 
@@ -103,7 +103,7 @@
 
 ### 3.1 两种订阅通道（二选一）
 
-来源：overview 页全文 + 长连接页全文。
+来源：overview 页全文 + 长连接页全文
 
 | | 长连接（Receive events through persistent connection） | Webhook（Send notifications to developer's server） |
 |---|---|---|
@@ -116,11 +116,11 @@
 | 集群语义 | **集群模式，不广播**：同一应用多 client 只随机投递其中一个 | — |
 | 连接上限 | 每应用最多 **50 个连接**（每次初始化 client 计一个） | — |
 
-SDK 接入（长连接页原文）：Go `go get -u github.com/larksuite/oapi-sdk-go/v3`；Python `pip install lark-oapi -U`；Java `com.larksuite.oapi:oapi-sdk`（最新版见 mvnrepository）；Node `yarn add @larksuiteoapi/node-sdk`（>=1.24.0）。事件分发器两参必须空字符串（`NewEventDispatcher("", "")`）；v2.0 用 `OnP2XxxV1`/`register_p2_*`，v1.0 用 `OnCustomizedEvent`/`register_p1_customized_event`。
+SDK 接入（长连接页原文）：Go `go get -u github.com/larksuite/oapi-sdk-go/v3`；Python `pip install lark-oapi -U`；Java `com.larksuite.oapi:oapi-sdk`（最新版见 mvnrepository）；Node `yarn add @larksuiteoapi/node-sdk`（>=1.24.0）。事件分发器两参必须空字符串（`NewEventDispatcher("", "")`）；v2.0 用 `OnP2XxxV1`/`register_p2_*`，v1.0 用 `OnCustomizedEvent`/`register_p1_customized_event`
 
 ### 3.2 首次验证握手（url_verification challenge）
 
-- 未配置 Encrypt Key，明文 POST（`[摘录]` send-notifications 页）：
+- 未配置 Encrypt Key，明文 POST（`[摘录]` send-notifications 页）
 ```json
 {
   "challenge": "ajls384kdjxxxx",
@@ -128,49 +128,49 @@ SDK 接入（长连接页原文）：Go `go get -u github.com/larksuite/oapi-sdk
   "type": "url_verification"
 }
 ```
-- 已配置 Encrypt Key：body 只有一个字段（`[摘录]` 同页）：
+- 已配置 Encrypt Key：body 只有一个字段（`[摘录]` 同页）
 ```json
 { "encrypt": "ds3da3sj32421lkkld4xxxx" }
 ```
-解密后即上式（含 challenge/token/type），再回显 challenge。
-- 应答（逐字）："当请求地址收到开放平台推送的 POST 验证请求时，需要解析出 `challenge` 值，并在 **1 秒内**原样返回该值作为响应"（现行事件页口径）：
+解密后即上式（含 challenge/token/type），再回显 challenge
+- 应答（逐字）："当请求地址收到开放平台推送的 POST 验证请求时，需要解析出 `challenge` 值，并在 **1 秒内**原样返回该值作为响应"（现行事件页口径）
 ```json
 { "challenge": "ajls384kdjxxxx" }
 ```
-- **口径差异（已核验，照录）**：历史卡片回调教程页为 **3 秒内**原样返回（`[摘录]` historical-version 页 + `[本地]` `data/scrape-v1/feishu/md/a8017ce9ef6c.md` 卡片回调配置原文，三参数为 `challenge/type/url_verification/token=qjSwzC****4T1uhJ`）。另同一历史卡片安全校验页作 1s（与本 3s 页矛盾，均非现行事件口径；模拟器仍按现行事件页 1s 为准）。模拟器实现按现行事件页 1s 为准，兼容 3s 旧口径。
-- 自测命令（`[摘录]` FAQ 页，Encrypt Key 未配置时）：
+- **口径差异（已核验，照录）**：历史卡片回调教程页为 **3 秒内**原样返回（`[摘录]` historical-version 页 + `[本地]` `data/scrape-v1/feishu/md/a8017ce9ef6c.md` 卡片回调配置原文，三参数为 `challenge/type/url_verification/token=qjSwzC****4T1uhJ`）。另同一历史卡片安全校验页作 1s（与本 3s 页矛盾，均非现行事件口径；模拟器仍按现行事件页 1s 为准）。模拟器实现按现行事件页 1s 为准，兼容 3s 旧口径
+- 自测命令（`[摘录]` FAQ 页，Encrypt Key 未配置时）
 ```bash
 curl -v --location '{YOUR_CALLBACK_URL}' \
 --header 'Content-Type: application/json' \
 --data '{"challenge": "<test code>", "type": "url_verification", "token": "<your verification token>"}'
 ```
-- 卡片交互回调走「回调配置」页签的独立请求地址，验证机制相同（`[摘录]` historical-version 卡片回调页 + 上述本地档案）。
+- 卡片交互回调走「回调配置」页签的独立请求地址，验证机制相同（`[摘录]` historical-version 卡片回调页 + 上述本地档案）
 
 ### 3.3 重试、幂等、有序（overview 页逐字）
 
 - 失败重推："it must respond … with an HTTP 200 status code **within 3 seconds** … Otherwise … will retry the event push at intervals of **15 seconds, 5 minutes, 1 hour, and 6 hours, with a maximum of 4 retries**."
-- 成功也可能重推："the messaging strategy … adopts **at least one-time delivery** … will result in receiving duplicate messages even when the event is successfully received."——必须做幂等。
-- 幂等键：v1.0 用 `uuid`，v2.0 用 `header.event_id`；**消息类用 `message_id`**（§2.1）。
-- 有序事件：部分事件为 ordered（"the next event is pushed only after the previous event has been successfully received"）；消费必须保证前后事件正常消费以防阻塞；是否为有序看各事件页说明。
-- 事件不保证不丢：`[本地]` 11-feishu.md §2.15（官方指南页口径，建议配合主动查询兜底）。
+- 成功也可能重推："the messaging strategy … adopts **at least one-time delivery** … will result in receiving duplicate messages even when the event is successfully received."——必须做幂等
+- 幂等键：v1.0 用 `uuid`，v2.0 用 `header.event_id`；**消息类用 `message_id`**（§2.1）
+- 有序事件：部分事件为 ordered（"the next event is pushed only after the previous event has been successfully received"）；消费必须保证前后事件正常消费以防阻塞；是否为有序看各事件页说明
+- 事件不保证不丢：`[本地]` 11-feishu.md §2.15（官方指南页口径，建议配合主动查询兜底）
 
 ---
 
 ## 4. 验签与加密算法
 
-来源：接收事件页全文（"Step 3: Receive events"）。密钥位置：应用管理平台 **事件与回调 > 加密策略**（`encrypt_key` 可查看；Verification Token 可查看/重置）。
+来源：接收事件页全文（"Step 3: Receive events"）。密钥位置：应用管理平台 **事件与回调 > 加密策略**（`encrypt_key` 可查看；Verification Token 可查看/重置）
 
 ### 4.1 Verification Token 校验（默认，低安全）
 
-从请求 body 取 Verification Token 值与应用内的值比对；一致即来源合法。原文："This verification method is simple but has lower security. Without the Encrypt Key encryption strategy, the Verification Token will be transmitted in plain text, posing a data leakage risk." 配置了 Encrypt Key 后如仍需取 Token，必须**先解密事件**才能拿到。
+从请求 body 取 Verification Token 值与应用内的值比对；一致即来源合法。原文："This verification method is simple but has lower security. Without the Encrypt Key encryption strategy, the Verification Token will be transmitted in plain text, posing a data leakage risk." 配置了 Encrypt Key 后如仍需取 Token，必须**先解密事件**才能拿到
 
 ### 4.2 签名校验（配置 Encrypt Key 后必须用）
 
 算法（逐字）："Concatenate the request headers `X-Lark-Request-Timestamp`, `X-Lark-Request-Nonce` with `encrypt_key`, encode … `encode('utf-8')` to get `byte[] b1`, and then concatenate with the **original request body** …, resulting in `byte[] b`. Use the **sha256** algorithm to hash `b` … Verify whether `s` matches the request header **`X-Lark-Signature``."
 
-即：`signature = hex(sha256( timestamp + nonce + encrypt_key + 原始body字节 ))`，body 用原始字节，**不要反序列化后再算**（Go 示例原注）。
+即：`signature = hex(sha256( timestamp + nonce + encrypt_key + 原始body字节 ))`，body 用原始字节，**不要反序列化后再算**（Go 示例原注）
 
-官方示例（逐字，Python 3 / Node.js / PHP；Java/Go/C# 见来源页，全同构）：
+官方示例（逐字，Python 3 / Node.js / PHP；Java/Go/C# 见来源页，全同构）
 
 ```python
 import hashlib
@@ -202,9 +202,9 @@ $signature = hash("sha256", $timestamp . $nonce . $encrypt_key . $body);
 
 ### 4.3 事件解密（AES-256-CBC）
 
-算法（6 语言示例同构，逐字要点）：`key = sha256(encrypt_key)`（32 字节）；base64 decode 后**前 16 字节为 IV**，剩余为密文；`AES-256-CBC` 解密去填充。
+算法（6 语言示例同构，逐字要点）：`key = sha256(encrypt_key)`（32 字节）；base64 decode 后**前 16 字节为 IV**，剩余为密文；`AES-256-CBC` 解密去填充
 
-- Python（需 `pip install pycryptodome`，逐字）：
+- Python（需 `pip install pycryptodome`，逐字）
 ```python
 import hashlib
 import base64
@@ -233,8 +233,8 @@ encrypt = "P37w+VZImNgPEO1RBhJ6RtKl7n6zymIbEG1pReEzghk="
 cipher = AESCipher("test key")
 print("明文:\n{}".format(cipher.decrypt_string(encrypt)))
 ```
-官方断言该样例解密得 `hello world`（Java/Go 版行内注释原文 `//hello world`）。
-- PHP（逐字）：
+官方断言该样例解密得 `hello world`（Java/Go 版行内注释原文 `//hello world`）
+- PHP（逐字）
 ```php
 <?php
 $encrypt_data = ""; // The information to be decrypted
@@ -246,11 +246,11 @@ $decrypt = openssl_decrypt($encrypted_event, 'AES-256-CBC', hash('sha256', $encr
 print($decrypt);
 // get the real event
 ```
-- 加密信封：body 仅 `{"encrypt": "<base64>"}`（`[摘录]` configure-web-hook-url 页；url_verification 请求同样可能加密，§3.2）。
+- 加密信封：body 仅 `{"encrypt": "<base64>"}`（`[摘录]` configure-web-hook-url 页；url_verification 请求同样可能加密，§3.2）
 
 ### 4.4 历史口径差异（照录，不采用）
 
-`[摘录]` 历史卡片文档 `message-card-security-verification`（自声明不再维护）给出另一套 Token 验签：按 `timestamp、nonce、Verification Token、body` 顺序拼接 → `encode('utf-8')` → **SHA-1** → hex 记为 sig。现行事件页（§4.2）为 sha256 + Encrypt Key。**以现行页为准**，历史口径仅作兼容参考 → 待核验(09-27)（现行卡片回调是否仍可用该算法）。
+`[摘录]` 历史卡片文档 `message-card-security-verification`（自声明不再维护）给出另一套 Token 验签：按 `timestamp、nonce、Verification Token、body` 顺序拼接 → `encode('utf-8')` → **SHA-1** → hex 记为 sig。现行事件页（§4.2）为 sha256 + Encrypt Key。**以现行页为准**，历史口径仅作兼容参考 → 待核验(09-27)（现行卡片回调是否仍可用该算法）
 
 ---
 
@@ -270,7 +270,7 @@ print($decrypt);
 { "challenge": "ajls384kdjxxxx" }
 ```
 
-卡片页版（三参数全，`[本地]` `data/scrape-v1/feishu/md/a8017ce9ef6c.md` + `[摘录]` historical-version 页一致）：
+卡片页版（三参数全，`[本地]` `data/scrape-v1/feishu/md/a8017ce9ef6c.md` + `[摘录]` historical-version 页一致）
 
 ```json
 {
@@ -381,7 +381,7 @@ print($decrypt);
 }
 ```
 
-要点：`content` 是 JSON 序列化字符串；`chat_type: p2p/group`；`sender_type: user/bot`；`message_type` 全表与各类型 `content` JSON 结构见 §5.12（官方原文已核验）。
+要点：`content` 是 JSON 序列化字符串；`chat_type: p2p/group`；`sender_type: user/bot`；`message_type` 全表与各类型 `content` JSON 结构见 §5.12（官方原文已核验）
 
 ### 5.5 im.message.message_read_v1（message_read 页逐字）
 
@@ -435,7 +435,7 @@ print($decrypt);
 }
 ```
 
-`recall_type`：`message_owner`（本人）/`group_owner`（群主）/`group_manager`（管理员）/`enterprise_manager`（企业管理员）。
+`recall_type`：`message_owner`（本人）/`group_owner`（群主）/`group_manager`（管理员）/`enterprise_manager`（企业管理员）
 
 ### 5.7 contact.user.deleted_v3（deleted 页逐字，事件体节选结构）
 
@@ -593,7 +593,7 @@ print($decrypt);
 
 ### 5.10 发送消息请求/响应（create 页逐字）
 
-请求：`POST https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id|user_id|union_id|email|chat_id`，头 `Authorization: Bearer <tenant_access_token|user_access_token>` + `Content-Type: application/json; charset=utf-8`。
+请求：`POST https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id|user_id|union_id|email|chat_id`，头 `Authorization: Bearer <tenant_access_token|user_access_token>` + `Content-Type: application/json; charset=utf-8`
 
 ```json
 {
@@ -604,9 +604,9 @@ print($decrypt);
 }
 ```
 
-`msg_type`：`text/post/image/file/audio/media/sticker/interactive/share_chat/share_user/system`。`content` 为 JSON 序列化字符串（文本 ≤150KB，卡片/富文本 ≤30KB）。`uuid` 为发送去重键（相同 uuid 1 小时内最多成功发送一条）。
+`msg_type`：`text/post/image/file/audio/media/sticker/interactive/share_chat/share_user/system`。`content` 为 JSON 序列化字符串（文本 ≤150KB，卡片/富文本 ≤30KB）。`uuid` 为发送去重键（相同 uuid 1 小时内最多成功发送一条）
 
-响应（逐字节选，`message_id` 为后续管理操作键）：
+响应（逐字节选，`message_id` 为后续管理操作键）
 
 ```json
 {
@@ -648,7 +648,7 @@ print($decrypt);
 
 ### 5.11 tenant_access_token 请求/响应（tenant_access_token_internal 页逐字）
 
-请求：`POST https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal`，`Content-Type: application/json; charset=utf-8`。
+请求：`POST https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal`，`Content-Type: application/json; charset=utf-8`
 
 ```json
 {
@@ -657,7 +657,7 @@ print($decrypt);
 }
 ```
 
-响应：
+响应
 
 ```json
 {
@@ -670,7 +670,7 @@ print($decrypt);
 
 ### 5.12 接收消息内容结构 message_content 全表（message_content 页官方原文，2026-10-14 webReader 补证）
 
-`content` 字段的 JSON 结构由 `message_type` 决定。下表为页面收录的全部消息类型；字段名与结构为官方原文，示例值取自官方页（省略号为原文截断）。
+`content` 字段的 JSON 结构由 `message_type` 决定。下表为页面收录的全部消息类型；字段名与结构为官方原文，示例值取自官方页（省略号为原文截断）
 
 | message_type | content JSON 结构（官方） | 备注（页面原文要点） |
 |---|---|---|
@@ -694,18 +694,18 @@ print($decrypt);
 | `vote` | `{"topic":"...","options":[...]}` | — |
 | `merge_forward` | `{"content":"Merged and Forwarded Message"}` | 合并转发 |
 
-- 下载入口：`image` 可走「获取消息中的资源文件」（§5.13）；`file`/`audio`/`media` 同接口 `type=file`；`sticker`/`folder` 明确不可下载。
+- 下载入口：`image` 可走「获取消息中的资源文件」（§5.13）；`file`/`audio`/`media` 同接口 `type=file`；`sticker`/`folder` 明确不可下载
 
 ### 5.13 获取消息中的资源文件（get-2 页官方原文，2026-10-14 webReader 补证；页面别名 message-resource/get）
 
-请求：`GET https://open.feishu.cn/open-apis/im/v1/messages/:message_id/resources/:file_key?type=image|file`，`Authorization: Bearer <tenant_access_token>`。
+请求：`GET https://open.feishu.cn/open-apis/im/v1/messages/:message_id/resources/:file_key?type=image|file`，`Authorization: Bearer <tenant_access_token>`
 
-- 语义：获取指定消息内包含的资源文件（音频、视频、图片、文件），**成功返回二进制文件流**。
-- 前提：应用需开启机器人能力。
-- 约束：资源大小不超过 100MB；不支持下载表情包；`type=image` 取图片与富文本消息内的图片，`type=file` 取文件/音频/视频；`file_key` 必须取自该 `message_id` 消息内容中的 `image_key`/`file_key`，二者需匹配。
-- 限流：约 1000 次/分钟、50 次/秒。
-- 错误码：230110 族、234001–234043。
-- 出自 §5.4 事件的资源下载路径：`message_id`（事件内）+ `image_key`/`file_key`（`content` 内）拼出该接口地址。
+- 语义：获取指定消息内包含的资源文件（音频、视频、图片、文件），**成功返回二进制文件流**
+- 前提：应用需开启机器人能力
+- 约束：资源大小不超过 100MB；不支持下载表情包；`type=image` 取图片与富文本消息内的图片，`type=file` 取文件/音频/视频；`file_key` 必须取自该 `message_id` 消息内容中的 `image_key`/`file_key`，二者需匹配
+- 限流：约 1000 次/分钟、50 次/秒
+- 错误码：230110 族、234001–234043
+- 出自 §5.4 事件的资源下载路径：`message_id`（事件内）+ `image_key`/`file_key`（`content` 内）拼出该接口地址
 
 ---
 
@@ -735,7 +735,7 @@ print($decrypt);
 6. **频控表全文直抓**：`server-docs/api-call-guide/frequency-control`（等级表/不可提频原文）。→ 待核验(09-27)
 7. **challenge 时限口径**：现行事件页 1s vs 历史卡片页 3s（§3.2 已照录双口径；模拟器按 1s 实现、兼容 3s）。→ 待核验(09-27)
 8. **历史卡片 sha1(Token) 验签现行有效性**（§4.4，历史文档自声明不再维护）。→ 待核验(09-27)
-9. ~~**`message_type`（message_content）全表**~~：已核验（2026-10-14 webReader 官方原文），全表见 §5.12；媒体下载接口专章见 §5.13。
+9. ~~**`message_type`（message_content）全表**~~：已核验（2026-10-14 webReader 官方原文），全表见 §5.12；媒体下载接口专章见 §5.13
 10. **事件全量**：动态目录无静态枚举，57 页为 `[本地]` 保守下限。→ 待核验(09-27)
 11. **准入链路**：个人注册→免费建团队（租户）→建企业自建应用→管理员自审批跑通收发（`[本地]` cn-others.md §一.8 + 11-feishu.md §3；控制台流程页未直抓，ISV 商店应用需企业资质为官方原文已核验）。→ 待核验(09-27)
 12. **官方 SDK 仓库直验**：`larksuite/oapi-sdk-*` GitHub 本体（包名出自官方文档，仓库内容未取）。→ 待核验(09-27)
@@ -749,14 +749,14 @@ Server 侧按本事实库落地 `channel/feishu/` 适配器四件套（`FeishuAd
 先例）：回调组 `FeishuCredentials` = `appId`+`verificationToken`（`encryptKey` 选配，配置后启用
 §4.2 签名与 §4.3 解密链路），发送/素材组 `FeishuSendCredentials` = `appId`+`appSecret`
 （§6 换 `tenant_access_token`）——两组互不依赖，缺 `verificationToken` 的账号回调按不支持
-应答、缺 `appSecret` 的账号发送与素材如实受限（12200），不再互相牵连。
+应答、缺 `appSecret` 的账号发送与素材如实受限（12200），不再互相牵连
 
 ## 附：对 MockPulse 模拟的直接含义（速查）
 
-- 模拟"飞书推事件给回调"：`POST` JSON 信封 `{schema:"2.0", header:{event_id,event_type,create_time(毫秒字符串),token,app_id,tenant_key}, event:{...}}`，头 `X-Lark-Request-Timestamp`（字符串）、`X-Lark-Request-Nonce`、`X-Lark-Signature: hex(sha256(timestamp+nonce+encrypt_key+原始body))`、`Content-Type: application/json`。
-- 模拟加密事件：body 仅 `{"encrypt": base64(AES-256-CBC(key=sha256(encrypt_key), iv=前16B, 明文))}`；样例 `P37w+VZImNgPEO1RBhJ6RtKl7n6zymIbEG1pReEzghk=`（key=`test key`）→ `hello world`，可作加解密回归向量。
-- 模拟首次配置校验：`POST {"challenge":"<同值>","token":"<token>","type":"url_verification"}`（加密时为 `{"encrypt":...}`），期望 1s 内响应 `{"challenge":"<同值>"}`。
-- ID 形态：`app_id: cli_*`；`open_id: ou_*`；`user_id` 短串；`union_id: on_*`；`message_id: om_*`；`chat_id: oc_*`（单聊/群）；`tenant_key` 十六进制短串；`create_time` 毫秒字符串（如 `1608725989000`）。
-- 重试语义：3s 内无 HTTP 200 即按 15s/5m/1h/6h 重推，最多 4 次；至少一次投递，消费方按 `header.event_id`（消息按 `message_id`）幂等；部分事件有序（阻塞排队）。
-- 长连接模拟：`wss` 全双工，明文推送、零验签；约束：仅自建应用、≤50 连接、集群随机投递其一、成功打印 `connected to wss://...`。
-- 勘误（相对起点线索）：已读事件真名 `im.message.message_read_v1`；撤回事件真名 `im.message.recalled_v1`；challenge 现行口径为 1s（卡片旧页 3s）。
+- 模拟"飞书推事件给回调"：`POST` JSON 信封 `{schema:"2.0", header:{event_id,event_type,create_time(毫秒字符串),token,app_id,tenant_key}, event:{...}}`，头 `X-Lark-Request-Timestamp`（字符串）、`X-Lark-Request-Nonce`、`X-Lark-Signature: hex(sha256(timestamp+nonce+encrypt_key+原始body))`、`Content-Type: application/json`
+- 模拟加密事件：body 仅 `{"encrypt": base64(AES-256-CBC(key=sha256(encrypt_key), iv=前16B, 明文))}`；样例 `P37w+VZImNgPEO1RBhJ6RtKl7n6zymIbEG1pReEzghk=`（key=`test key`）→ `hello world`，可作加解密回归向量
+- 模拟首次配置校验：`POST {"challenge":"<同值>","token":"<token>","type":"url_verification"}`（加密时为 `{"encrypt":...}`），期望 1s 内响应 `{"challenge":"<同值>"}`
+- ID 形态：`app_id: cli_*`；`open_id: ou_*`；`user_id` 短串；`union_id: on_*`；`message_id: om_*`；`chat_id: oc_*`（单聊/群）；`tenant_key` 十六进制短串；`create_time` 毫秒字符串（如 `1608725989000`）
+- 重试语义：3s 内无 HTTP 200 即按 15s/5m/1h/6h 重推，最多 4 次；至少一次投递，消费方按 `header.event_id`（消息按 `message_id`）幂等；部分事件有序（阻塞排队）
+- 长连接模拟：`wss` 全双工，明文推送、零验签；约束：仅自建应用、≤50 连接、集群随机投递其一、成功打印 `connected to wss://...`
+- 勘误（相对起点线索）：已读事件真名 `im.message.message_read_v1`；撤回事件真名 `im.message.recalled_v1`；challenge 现行口径为 1s（卡片旧页 3s）

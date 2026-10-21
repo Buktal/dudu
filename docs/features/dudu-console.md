@@ -1,6 +1,6 @@
 # DuduConsole 功能图谱
 
-2026-10-21，首版业务页面与 Server 接口已实施；检查结果与实际联调范围见[验收记录](../design/dudu-console/acceptance.md)，行为依据见[规格](../design/dudu-console/README.md)。
+2026-10-21，首版业务页面与 Server 接口已实施；检查结果与实际联调范围见[验收记录](../design/dudu-console/acceptance.md)，行为依据见[规格](../design/dudu-console/README.md)
 
 | 模块 | 功能与流程 | 当前状态 |
 | --- | --- | --- |
@@ -12,4 +12,4 @@
 | 渠道账号 | 实际渠道字段、密钥只写、配置存在提示、回调地址、同账号维护与换组 | 已实施，13种适配器字段目录 |
 | Desk联动 | 管理写入提交后通知，按当前组重查接待与历史范围 | 已实施，复用 access-changed |
 
-限制：不包含企业运营、额外概览/操作记录页面、组/账号启停删除、OAuth向导或自动健康检测。实际渠道能力与配置限制见[字段表](../design/dudu-console/channel-fields.md)。
+限制：不包含企业运营、额外概览/操作记录页面、组/账号启停删除、OAuth向导或自动健康检测。实际渠道能力与配置限制见[字段表](../design/dudu-console/channel-fields.md)

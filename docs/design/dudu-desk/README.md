@@ -14,7 +14,11 @@
 | [卡片最后消息摘要](card-summary/README.md) | 卡片和星标调整验收 |
 | [主题设计](themes/README.md) | 十二主题与截图 |
 | [工作台交互调整](workspace-polish/README.md) | 布局、资料面板及滚动验证记录 |
+| [滚动兼容验证](scroll-compatibility/README.md) | 2026-10-09 消息滚动反弹诊断与基线重放脚本 |
+| [生产迁移规格](migration-spec.md) | 2026-09-15 定稿的前端迁移轮规格（#50），九张实施票已交付，真实对接由对接 Spec 承接 |
+| [生产迁移拆票](migration-breakdown.md) | 前端迁移轮九张实施票的拆分原则与依赖 |
+| [原型对照差异](prototype-parity.md) | 2026-09-16 最终原型与正式实现的差异验收清单 |
 
-[功能图谱](../../features/dudu-desk.md)描述当前已实现功能，[DuduDesk README](../../../dudu-desk/README.md)是前端入口。[品牌资料](../brand/README.md)集中 Logo 与字标。
+[功能图谱](../../features/dudu-desk.md)描述当前已实现功能，[DuduDesk README](../../../dudu-desk/README.md)是前端入口。[品牌资料](../brand/README.md)集中 Logo 与字标
 
-返回[设计资料索引](../README.md)。
+返回[设计资料索引](../README.md)

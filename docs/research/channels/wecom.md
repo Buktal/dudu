@@ -1,14 +1,14 @@
 # 企业微信回调事件事实库（官方文档摄取）
 
-> 调研日期：2026-09-10。来源：企业微信开发者中心官方文档（页面均为服务端渲染 HTML，curl 直抓 + 结构化提取）。
-> 用途：mock-pulse 高保真模拟「企业微信 → 第三方回调地址」的推送（XML + AES 加密载荷、msg_signature 验签头）。
-> 所有示例载荷均为官方文档原文逐字拷贝；官方原文的笔误（如 `![CDATA[`、`deparmtment`）原样保留并标注。
+> 调研日期：2026-09-10。来源：企业微信开发者中心官方文档（页面均为服务端渲染 HTML，curl 直抓 + 结构化提取）
+> 用途：mock-pulse 高保真模拟「企业微信 → 第三方回调地址」的推送（XML + AES 加密载荷、msg_signature 验签头）
+> 所有示例载荷均为官方文档原文逐字拷贝；官方原文的笔误（如 `![CDATA[`、`deparmtment`）原样保留并标注
 
 ## 1. 官方文档入口与关键页面地址
 
 - 入口：https://developer.work.weixin.qq.com/document/ （首页为 JS 空壳；内容页 `/document/path/<id>` 为 SSR，可直接抓取。注意：部分页面首访返回空壳，重试即可拿到 SSR；2026-09-10 复验确认连续高频抓取会触发 `企业微信-验证码` 空壳（HTTP 200/1353B），属站方反爬而非页面下线）
 
-本次实际抓取并完整摄取的页面（均验证过正文内容）：
+本次实际抓取并完整摄取的页面（均验证过正文内容）
 
 | 文档 ID | 标题 | URL | 最后更新 |
 | --- | --- | --- | --- |
@@ -57,7 +57,7 @@
 | location | Location_X/Y、Scale、Label、AppType（wxwork 绑定见于 90240 LOCATION 示例，90239 页内未独立断言，2026-09-10 弱验证注） | 发位置 |
 | link | Title、Description、Url、PicUrl | 发链接 |
 
-公共字段：ToUserName（企业 CorpID）、FromUserName（成员 UserID）、CreateTime（整型秒级时间戳）、MsgId（64 位整型）、AgentID（整型应用 id）。MediaId 仅三天内有效。
+公共字段：ToUserName（企业 CorpID）、FromUserName（成员 UserID）、CreateTime（整型秒级时间戳）、MsgId（64 位整型）、AgentID（整型应用 id）。MediaId 仅三天内有效
 
 ### 2.2 自建应用：事件推送（MsgType=event）［90240］
 
@@ -96,13 +96,13 @@
 | delete_party | 删除部门 | 仅 Id |
 | update_tag | 标签成员变更 | TagId、AddUserItems、DelUserItems、AddPartyItems、DelPartyItems（逗号分隔列表） |
 
-关键保真细节（官方原文）：
-- FromUserName 固定为 `sys`（系统生成）。
-- 「对于2022年8月15号后通讯录助手新配置或修改的回调url，成员属性只回调UserID/Department两个字段」（create_user）；update_user 只在部门相关变更或 UserId 变更时触发，且只回调 UserID/Department/NewUserId 三字段。
-- Status 取值：1=已激活 2=已禁用 4=未激活 5=成员退出。
-- Gender：0 未定义 / 1 男 / 2 女。Avatar 小图把结尾 `/0` 改 `/100`。
-- ExtAttr.Item：Type 0-文本（Text.Value）1-网页（Web.Title/Url）。
-- 通讯录同步助手自己通过 API 触发的变更不回调给自己。
+关键保真细节（官方原文）
+- FromUserName 固定为 `sys`（系统生成）
+- 「对于2022年8月15号后通讯录助手新配置或修改的回调url，成员属性只回调UserID/Department两个字段」（create_user）；update_user 只在部门相关变更或 UserId 变更时触发，且只回调 UserID/Department/NewUserId 三字段
+- Status 取值：1=已激活 2=已禁用 4=未激活 5=成员退出
+- Gender：0 未定义 / 1 男 / 2 女。Avatar 小图把结尾 `/0` 改 `/100`
+- ExtAttr.Item：Type 0-文本（Text.Value）1-网页（Web.Title/Url）
+- 通讯录同步助手自己通过 API 触发的变更不回调给自己
 
 ### 2.4 家校通讯录（Event=change_school_contact）［92032/92052］
 
@@ -113,7 +113,7 @@
 | subscribe / unsubscribe | 家长关注/取消关注（学生关联变化） |
 | create_deparmtment / update_deparmtment / delete_deparmtment | 新增/编辑/删除部门（注意：官方原文拼写就是 `deparmtment`，非 department，保真时必须照抄） |
 
-载荷极简：ToUserName/FromUserName(sys)/CreateTime/MsgType=event/Event/ChangeType/Id（家校通讯录 userid 或部门 id）。
+载荷极简：ToUserName/FromUserName(sys)/CreateTime/MsgType=event/Event/ChangeType/Id（家校通讯录 userid 或部门 id）
 
 ### 2.5 客户联系（外部联系人）［92130］
 
@@ -128,37 +128,37 @@
 | change_external_chat | create / update / dismiss | 客户群创建/变更/解散 |
 | change_external_tag | create / update / delete / shuffle | 企业客户标签创建/变更/删除/重排 |
 
-FromUserName 固定 `sys`。add_external_contact 载荷含 UserID（服务人员）、ExternalUserID（wo 开头）、State、WelcomeCode。
+FromUserName 固定 `sys`。add_external_contact 载荷含 UserID（服务人员）、ExternalUserID（wo 开头）、State、WelcomeCode
 
 ### 2.6 微信客服［94670］（两段式：回调只通知，拉取拿内容）
 
-- 回调 XML：Event 固定 `kf_msg_or_event`，载荷含 ToUserName、CreateTime、MsgType=event、Token（拉取用临时凭证，10 分钟有效）、OpenKfId（wk 开头客服账号）。注意：该 XML 没有 FromUserName 字段。
-- 真实消息通过 `POST https://qyapi.weixin.qq.com/cgi-bin/kf/sync_msg` 拉取（最近 3 天），msgtype：text、image、voice、video、file、location、link、名片、小程序、菜单、视频号商品、视频号订单、聊天记录、视频号、会议、日程、笔记、event。
-- event_type：enter_session（含 welcome_code）、msg_send_fail、servicer_status_change、session_status_change（change_type 1-接入 2-转接 3-结束 4-重新接入）、user_recall_msg、servicer_recall_msg、reject_customer_msg_switch_change。
-- origin：3-微信客户发送 4-系统事件 5-接待人员发送。
+- 回调 XML：Event 固定 `kf_msg_or_event`，载荷含 ToUserName、CreateTime、MsgType=event、Token（拉取用临时凭证，10 分钟有效）、OpenKfId（wk 开头客服账号）。注意：该 XML 没有 FromUserName 字段
+- 真实消息通过 `POST https://qyapi.weixin.qq.com/cgi-bin/kf/sync_msg` 拉取（最近 3 天），msgtype：text、image、voice、video、file、location、link、名片、小程序、菜单、视频号商品、视频号订单、聊天记录、视频号、会议、日程、笔记、event
+- event_type：enter_session（含 welcome_code）、msg_send_fail、servicer_status_change、session_status_change（change_type 1-接入 2-转接 3-结束 4-重新接入）、user_recall_msg、servicer_recall_msg、reject_customer_msg_switch_change
+- origin：3-微信客户发送 4-系统事件 5-接待人员发送
 
 ### 2.7 审批［91815］
 
-- Event=`sys_approval_change`（OA 审批应用；区别于流程引擎的 open_approval_change）。
-- 状态变化包括：催办、撤销、同意、驳回、转审、添加备注等。
-- 载荷：SpNo/SpNoStr、SpName、SpStatus（1-审批中 2-已通过 3-已驳回 4-已撤销 6-通过后撤销 7-已删除 10-已支付）、SpRecord、SpComment、StatuChangeEvent、NotificationMap 等结构体。
+- Event=`sys_approval_change`（OA 审批应用；区别于流程引擎的 open_approval_change）
+- 状态变化包括：催办、撤销、同意、驳回、转审、添加备注等
+- 载荷：SpNo/SpNoStr、SpName、SpStatus（1-审批中 2-已通过 3-已驳回 4-已撤销 6-通过后撤销 7-已删除 10-已支付）、SpRecord、SpComment、StatuChangeEvent、NotificationMap 等结构体
 
 ### 2.8 上下游（Event=change_chain）［95796］
 
-ChangeType：corp_join（企业加入）、create_chain / update_chain / delete_chain（创建/变更/删除上下游空间）、create_group / update_group / delete_group（企业分组）、remove_corp（移除企业）、update_corp（变更企业分组）。FromUserName=sys。
+ChangeType：corp_join（企业加入）、create_chain / update_chain / delete_chain（创建/变更/删除上下游空间）、create_group / update_group / delete_group（企业分组）、remove_corp（移除企业）、update_corp（变更企业分组）。FromUserName=sys
 
 ### 2.9 获客助手（Event=customer_acquisition）［97299］
 
-ChangeType：balance_increased / balance_low / balance_exhausted（余额变化）、customer_start_chat（首次收消息）、delete_link、del_follow_user、friend_request（好友申请，带 LinkId+State）、link_unavailable、message_from_customer、open_profile、quota_expire_soon。FromUserName=sys。
+ChangeType：balance_increased / balance_low / balance_exhausted（余额变化）、customer_start_chat（首次收消息）、delete_link、del_follow_user、friend_request（好友申请，带 LinkId+State）、link_unavailable、message_from_customer、open_profile、quota_expire_soon。FromUserName=sys
 
 ### 2.10 智能机器人（JSON 载荷，XML 体系外的独立协议）［100719/101027/101033/101463］
 
-- 回调格式为 JSON：`{"encrypt": "msg_encrypt"}`，加解密算法与经典方案相同但 receiveid 传空字符串。
-- msgtype：text、mixed（图文混排）、image、voice（转文本）、file、video（后四类仅单聊）+ quote（引用结构）。
-- 事件通用格式 msgtype=event，event.eventtype：enter_chat（当天首次进入会话）、template_card_event（button_interaction/vote_interaction/multiple_interaction 三种卡片子事件）、template_card_menu_event、用户反馈事件。
-- 公共字段：msgid（排重，可能重复回调）、aibotid、chatid（群聊）、chattype（single/group）、from.userid（超管创建的机器人是明文 userid，否则是加密 userid）、response_url（主动回复的临时 url）。
-- 模板卡片事件「只会发起一次请求，五秒内收不到响应会断掉连接，丢弃该回调事件」（无重试）。
-- 长连接模式（对照）：`wss://openws.work.weixin.qq.com`，订阅 `aibot_subscribe`{bot_id, secret}，回调 cmd：aibot_msg_callback / aibot_event_callback；明文 JSON、无加解密；心跳建议 30 秒；同一机器人只允许一条连接（新连接踢旧连接）。Webhook vs 长连接官方对比：长连接无需公网 IP、无需加解密。
+- 回调格式为 JSON：`{"encrypt": "msg_encrypt"}`，加解密算法与经典方案相同但 receiveid 传空字符串
+- msgtype：text、mixed（图文混排）、image、voice（转文本）、file、video（后四类仅单聊）+ quote（引用结构）
+- 事件通用格式 msgtype=event，event.eventtype：enter_chat（当天首次进入会话）、template_card_event（button_interaction/vote_interaction/multiple_interaction 三种卡片子事件）、template_card_menu_event、用户反馈事件
+- 公共字段：msgid（排重，可能重复回调）、aibotid、chatid（群聊）、chattype（single/group）、from.userid（超管创建的机器人是明文 userid，否则是加密 userid）、response_url（主动回复的临时 url）
+- 模板卡片事件「只会发起一次请求，五秒内收不到响应会断掉连接，丢弃该回调事件」（无重试）
+- 长连接模式（对照）：`wss://openws.work.weixin.qq.com`，订阅 `aibot_subscribe`{bot_id, secret}，回调 cmd：aibot_msg_callback / aibot_event_callback；明文 JSON、无加解密；心跳建议 30 秒；同一机器人只允许一条连接（新连接踢旧连接）。Webhook vs 长连接官方对比：长连接无需公网 IP、无需加解密
 
 ### 2.11 其他回调域（盘点级）
 
@@ -169,7 +169,7 @@ ChangeType：balance_increased / balance_low / balance_exhausted（余额变化�
 | book_meeting_room / cancel_meeting_room | 会议室预定/取消 | MeetingRoomId、BookingId | 95333 |
 | 微盘/文档/日历/会议/知识集等 | 各自域 | 变更事件众多（见导航树） | 97833+、97728+、98333+ 等 |
 
-域名/IP 变更事件示例［100080 原文］：
+域名/IP 变更事件示例［100080 原文］
 
 ```xml
 <xml>
@@ -182,9 +182,9 @@ ChangeType：balance_increased / balance_low / balance_exhausted（余额变化�
 </xml>
 ```
 
-参数：ToUserName=企业 CorpID；FromUserName 固定 sys（系统生成）；CreateTime 整型；MsgType 固定 event；Event 固定 security；ChangeType 固定 change_domain_ip。上/下一篇为 100079 获取企业微信域名IP信息 / 101680 概述。
+参数：ToUserName=企业 CorpID；FromUserName 固定 sys（系统生成）；CreateTime 整型；MsgType 固定 event；Event 固定 security；ChangeType 固定 change_domain_ip。上/下一篇为 100079 获取企业微信域名IP信息 / 101680 概述
 
-公共邮箱接收邮件事件示例［100180 原文］：
+公共邮箱接收邮件事件示例［100180 原文］
 
 ```xml
 <xml>
@@ -199,35 +199,35 @@ ChangeType：balance_increased / balance_low / balance_exhausted（余额变化�
 </xml>
 ```
 
-参数：ToUserName=企业 CorpID；FromUserName 固定 sys；CreateTime 为 unix 时间戳；MsgType/Event/ChangeType 分别固定 event/public_email_change/receive_email；Id=公共邮箱 id；Amount=公共邮箱当前新邮件数。页内注「接收并解析事件的方法见接收事件」（指向旧锚点 12977，其内容现由 90930 覆盖）。上/下一篇为 98003 模糊搜索公共邮箱 / 100183 获取客户端专用密码列表。
+参数：ToUserName=企业 CorpID；FromUserName 固定 sys；CreateTime 为 unix 时间戳；MsgType/Event/ChangeType 分别固定 event/public_email_change/receive_email；Id=公共邮箱 id；Amount=公共邮箱当前新邮件数。页内注「接收并解析事件的方法见接收事件」（指向旧锚点 12977，其内容现由 90930 覆盖）。上/下一篇为 98003 模糊搜索公共邮箱 / 100183 获取客户端专用密码列表
 
-出站/配置页补证（非回调事件，2026-09-10 冷 IP 复验通过，备查）：
+出站/配置页补证（非回调事件，2026-09-10 冷 IP 复验通过，备查）
 
-- 91770 消息推送配置说明（2025/08/07）：webhook 为 `POST https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=KEY`，`Content-Type: application/json`；8 种消息类型 text / markdown / markdown_v2 / image / news / file / voice / template_card；text 最长 2048 字节、markdown（含 v2）最长 4096 字节（utf8）；text/markdown 支持 `<@userid>` @群成员（markdown_v2 不支持）；image 传 base64+md5（原图 ≤2M，仅 JPG/PNG）；file/voice 传 media_id；voice 仅 AMR、≤2M、≤60s；发送限 20 条/分钟；文件上传 `POST https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=KEY&type=TYPE`（multipart，字段名 media），media_id 仅三天内有效且仅对应上传的消息推送可用。
-- 90236 发送应用消息（2025/09/24）：`POST https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=ACCESS_TOKEN`；寻址 touser/toparty/totag（touser 支持 @all、最多 1000 个，以 `|` 分隔）+ agentid；频率限制每应用 ≤ 账号上限数×200 人次/天、同成员 ≤30 次/分钟且 ≤1000 次/小时（超限丢弃）；支持 enable_duplicate_check（默认去重窗 1800 秒）与 id 转译（8 种消息类型部分字段）；返回 invaliduser/invalidparty/invalidtag/unlicenseduser（全部无权限时 errcode=81013），msgid 用于撤回（94867），response_code（按钮/投票/多选型与带 action_menu 卡片）72 小时内有效且仅一次（用于更新模版卡片 94888）。
-- 90238 接收消息与事件概述（2024/07/22）：与 §3.1–§3.4 同源（GET echostr 握手、POST XML、5 秒超时重试三次、msgid / FromUserName+CreateTime 排重、空串 200 兜底）；含 `GET https://qyapi.weixin.qq.com/cgi-bin/getcallbackip?access_token=ACCESS_TOKEN` 返回 ip_list（示例 `["101.226.103.*", "101.226.62.*"]`，权限无限定）。
-- 90254 获取临时素材（2026/01/09，2026-10-14 冷 IP 复验通过，dudu-server 素材读取实现依据）：`GET https://qyapi.weixin.qq.com/cgi-bin/media/get?access_token=ACCESS_TOKEN&media_id=MEDIA_ID`；「正确时返回（和普通的http下载相同，请根据http头做相应的处理）」，示例响应头含 `Content-Type: image/jpeg` 与 `Content-disposition: attachment; filename="MEDIA_ID.jpg"`；「错误时返回（这里省略了HTTP首部）：`{ "errcode": 40007, "errmsg": "invalid media_id" }`」；「完全公开，media_id在同一企业内所有应用之间可以共享」「media_id有效期只有3天」；大文件「需使用 Range 分块下载，建议分块大小不超过 20M，否则返回错误码 830002」（206 Partial Content，分片长度须为 16 字节倍数以配合后台分片解密）。与公众号临时素材不同，该接口没有 `video_url` JSON 分支——视频素材同样走二进制流（页面通篇只有二进制与 JSON 错误两种返回形态）。
+- 91770 消息推送配置说明（2025/08/07）：webhook 为 `POST https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=KEY`，`Content-Type: application/json`；8 种消息类型 text / markdown / markdown_v2 / image / news / file / voice / template_card；text 最长 2048 字节、markdown（含 v2）最长 4096 字节（utf8）；text/markdown 支持 `<@userid>` @群成员（markdown_v2 不支持）；image 传 base64+md5（原图 ≤2M，仅 JPG/PNG）；file/voice 传 media_id；voice 仅 AMR、≤2M、≤60s；发送限 20 条/分钟；文件上传 `POST https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key=KEY&type=TYPE`（multipart，字段名 media），media_id 仅三天内有效且仅对应上传的消息推送可用
+- 90236 发送应用消息（2025/09/24）：`POST https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=ACCESS_TOKEN`；寻址 touser/toparty/totag（touser 支持 @all、最多 1000 个，以 `|` 分隔）+ agentid；频率限制每应用 ≤ 账号上限数×200 人次/天、同成员 ≤30 次/分钟且 ≤1000 次/小时（超限丢弃）；支持 enable_duplicate_check（默认去重窗 1800 秒）与 id 转译（8 种消息类型部分字段）；返回 invaliduser/invalidparty/invalidtag/unlicenseduser（全部无权限时 errcode=81013），msgid 用于撤回（94867），response_code（按钮/投票/多选型与带 action_menu 卡片）72 小时内有效且仅一次（用于更新模版卡片 94888）
+- 90238 接收消息与事件概述（2024/07/22）：与 §3.1–§3.4 同源（GET echostr 握手、POST XML、5 秒超时重试三次、msgid / FromUserName+CreateTime 排重、空串 200 兜底）；含 `GET https://qyapi.weixin.qq.com/cgi-bin/getcallbackip?access_token=ACCESS_TOKEN` 返回 ip_list（示例 `["101.226.103.*", "101.226.62.*"]`，权限无限定）
+- 90254 获取临时素材（2026/01/09，2026-10-14 冷 IP 复验通过，dudu-server 素材读取实现依据）：`GET https://qyapi.weixin.qq.com/cgi-bin/media/get?access_token=ACCESS_TOKEN&media_id=MEDIA_ID`；「正确时返回（和普通的http下载相同，请根据http头做相应的处理）」，示例响应头含 `Content-Type: image/jpeg` 与 `Content-disposition: attachment; filename="MEDIA_ID.jpg"`；「错误时返回（这里省略了HTTP首部）：`{ "errcode": 40007, "errmsg": "invalid media_id" }`」；「完全公开，media_id在同一企业内所有应用之间可以共享」「media_id有效期只有3天」；大文件「需使用 Range 分块下载，建议分块大小不超过 20M，否则返回错误码 830002」（206 Partial Content，分片长度须为 16 字节倍数以配合后台分片解密）。与公众号临时素材不同，该接口没有 `video_url` JSON 分支——视频素材同样走二进制流（页面通篇只有二进制与 JSON 错误两种返回形态）
 
 ## 3. 回调机制（URL 配置、echostr 握手、重试、官方库）［90930/90307/101033/101463］
 
 ### 3.1 三要素配置
 
-- URL：开发者服务地址，需同时支持 GET（验证）与 POST（业务）。
-- Token：英文或数字、长度不超过 32 位，用于签名计算。
-- EncodingAESKey：长度固定 43 位字符（a-z, A-Z, 0-9 共 62 字符中选取），是 AESKey 的 Base64 编码。
+- URL：开发者服务地址，需同时支持 GET（验证）与 POST（业务）
+- Token：英文或数字、长度不超过 32 位，用于签名计算
+- EncodingAESKey：长度固定 43 位字符（a-z, A-Z, 0-9 共 62 字符中选取），是 AESKey 的 Base64 编码
 
 ### 3.2 GET 首次校验握手（echostr）
 
-保存配置时企微发 GET：
+保存配置时企微发 GET
 
 ```
 GET https://api.3dept.com/?msg_signature=ASDFQWEXZCVAQFASDFASDFSS&timestamp=13500001234&nonce=123412323&echostr=ENCRYPT_STR
 ```
 
-- msg_signature：签名（计算含 token、timestamp、nonce、加密消息体）。
-- echostr：加密串，解密后有 random、msg_len、msg、receiveid 四字段，msg 即明文。
-- 服务端四步：① 参数值 urldecode；② 用 token+timestamp+nonce+echostr 重算签名比对；③ 解密 echostr 取 msg；④ 1 秒内响应 GET，响应体为解密得到的明文「不能加引号，不能带bom头，不能带换行符」。
-- 智能机器人（101033）：流程相同，且「nonce 随机数，两个小时内保证不重复」；企业内部智能机器人场景 ReceiveId 为空字符串。
+- msg_signature：签名（计算含 token、timestamp、nonce、加密消息体）
+- echostr：加密串，解密后有 random、msg_len、msg、receiveid 四字段，msg 即明文
+- 服务端四步：① 参数值 urldecode；② 用 token+timestamp+nonce+echostr 重算签名比对；③ 解密 echostr 取 msg；④ 1 秒内响应 GET，响应体为解密得到的明文「不能加引号，不能带bom头，不能带换行符」
+- 智能机器人（101033）：流程相同，且「nonce 随机数，两个小时内保证不重复」；企业内部智能机器人场景 ReceiveId 为空字符串
 
 ### 3.3 POST 业务推送
 
@@ -242,10 +242,10 @@ Content-Type: 文档未单列（body 为 XML）
 </xml>
 ```
 
-- ToUserName：企业 CorpID；第三方应用回调时为 suiteid。
-- AgentID：仅应用相关回调带。
-- 处理：验签 → 解密 Encrypt → （可选）构造被动回复 → 响应。
-- 响应要求按业务不同：空串、`success` 或加密被动回复包。
+- ToUserName：企业 CorpID；第三方应用回调时为 suiteid
+- AgentID：仅应用相关回调带
+- 处理：验签 → 解密 Encrypt → （可选）构造被动回复 → 响应
+- 响应要求按业务不同：空串、`success` 或加密被动回复包
 
 ### 3.4 重试策略（官方原文）
 
@@ -262,12 +262,12 @@ Content-Type: 文档未单列（body 为 XML）
 </xml>
 ```
 
-智能机器人 JSON 版（101033）：`{"encrypt": "...", "msgsignature": "...", "timestamp": 1641002400, "nonce": "nonce"}`，其中 nonce「需要用回调url中的nonce」（复用请求 nonce）。
+智能机器人 JSON 版（101033）：`{"encrypt": "...", "msgsignature": "...", "timestamp": 1641002400, "nonce": "nonce"}`，其中 nonce「需要用回调url中的nonce」（复用请求 nonce）
 
 ### 3.6 回调出口 IP［92521］
 
-- 动态：`GET https://qyapi.weixin.qq.com/cgi-bin/getcallbackip?access_token=ACCESS_TOKEN`。
-- 页面静态列表（2026/04/07 更新，官方注明仅供参考）：159.75.144.151、112.53.2.93、106.55.227.187、183.47.98.227、183.47.98.168、113.108.92.100、14.116.241.251、183.47.117.101、106.55.202.215、106.55.201.217、119.147.179.37。
+- 动态：`GET https://qyapi.weixin.qq.com/cgi-bin/getcallbackip?access_token=ACCESS_TOKEN`
+- 页面静态列表（2026/04/07 更新，官方注明仅供参考）：159.75.144.151、112.53.2.93、106.55.227.187、183.47.98.227、183.47.98.168、113.108.92.100、14.116.241.251、183.47.117.101、106.55.202.215、106.55.201.217、119.147.179.37
 
 ### 3.7 官方加解密库（下载地址与版本，出自 90307，2025/10/10 更新）
 
@@ -284,32 +284,32 @@ Content-Type: 文档未单列（body 为 XML）
 | golang (json) | 2020-09-01 | https://codeload.github.com/workweixin/weworkapi_golang/zip/master |
 | node | npm | https://www.npmjs.com/package/@wecom/crypto（`yarn add @wecom/crypto`） |
 
-库统一三接口：VerifyURL / DecryptMsg / EncryptMsg。类名 WXBizMsgCrypt（xml）/ WXBizJsonMsgCrypt（json）。
+库统一三接口：VerifyURL / DecryptMsg / EncryptMsg。类名 WXBizMsgCrypt（xml）/ WXBizJsonMsgCrypt（json）
 
-库返回码：-40001 签名验证错误、-40002 xml/json 解析失败、-40003 sha 加密生成签名失败、-40004 AESKey 非法、-40005 ReceiveId 校验错误、-40006 AES 加密失败、-40007 AES 解密失败、-40008 解密后 buffer 非法、-40009/-40010 base64 编/解码失败、-40011 生成 xml/json 失败。
+库返回码：-40001 签名验证错误、-40002 xml/json 解析失败、-40003 sha 加密生成签名失败、-40004 AESKey 非法、-40005 ReceiveId 校验错误、-40006 AES 加密失败、-40007 AES 解密失败、-40008 解密后 buffer 非法、-40009/-40010 base64 编/解码失败、-40011 生成 xml/json 失败
 
 ## 4. 验签与加密算法［90968 原文］
 
 ### 4.1 术语（逐字）
 
-- msg_signature：消息签名，用于验证请求是否来自企业微信（防止攻击者伪造）。
+- msg_signature：消息签名，用于验证请求是否来自企业微信（防止攻击者伪造）
 - EncodingAESKey：用于消息体的加密，长度固定为 43 个字符，从 a-z, A-Z, 0-9 共 62 个字符中选取，是 AESKey 的 Base64 编码。解码后即为 32 字节长的 AESKey。`AESKey=Base64_Decode(EncodingAESKey + "=")`
-- AESKey：AES 算法的密钥，长度为 32 字节。AES 采用 CBC 模式，数据采用 PKCS#7 填充至 32 字节的倍数；IV 初始向量大小为 16 字节，取 AESKey 前 16 字节（RFC 2315）。
-- msg：消息体明文，格式为 XML（机器人场景为 JSON）。
-- msg_encrypt：明文消息 msg 加密处理后的 Base64 编码。
+- AESKey：AES 算法的密钥，长度为 32 字节。AES 采用 CBC 模式，数据采用 PKCS#7 填充至 32 字节的倍数；IV 初始向量大小为 16 字节，取 AESKey 前 16 字节（RFC 2315）
+- msg：消息体明文，格式为 XML（机器人场景为 JSON）
+- msg_encrypt：明文消息 msg 加密处理后的 Base64 编码
 
 ### 4.2 消息体签名校验（官方步骤逐字）
 
-1. 计算签名：`dev_msg_signature = sha1(sort(token、timestamp、nonce、msg_encrypt))`。sort 的含义是将参数值按照字母字典排序，然后从小到大拼接成一个字符串；sha1 处理结果要编码为可见字符，把每字节散列值打印为 %02x（16 进制，C printf 语法）格式，全部小写（即 40 位小写 hex）。
-2. 比较 dev_msg_signature 和 msg_signature 是否相等。
-3. 被动响应消息时同样用此方法生成签名传给企业微信。
+1. 计算签名：`dev_msg_signature = sha1(sort(token、timestamp、nonce、msg_encrypt))`。sort 的含义是将参数值按照字母字典排序，然后从小到大拼接成一个字符串；sha1 处理结果要编码为可见字符，把每字节散列值打印为 %02x（16 进制，C printf 语法）格式，全部小写（即 40 位小写 hex）
+2. 比较 dev_msg_signature 和 msg_signature 是否相等
+3. 被动响应消息时同样用此方法生成签名传给企业微信
 
 ### 4.3 加密过程（官方步骤逐字）
 
-1. 拼接明文字符串：`rand_msg = random(16B) + msg_len(4B) + msg + receiveid`。msg_len 为 msg 的字节数，网络字节序（大端）。
-2. `msg_encrypt = Base64_Encode(AES_Encrypt(rand_msg))`。
+1. 拼接明文字符串：`rand_msg = random(16B) + msg_len(4B) + msg + receiveid`。msg_len 为 msg 的字节数，网络字节序（大端）
+2. `msg_encrypt = Base64_Encode(AES_Encrypt(rand_msg))`
 
-解密为其逆：Base64_Decode → AES-256-CBC 解密（用 AESKey，不是 EncodingAESKey）→ 去掉头部 16 随机字节 → 读 4 字节 msg_len → 截取 msg_len 长度为 msg → 剩余为 receiveid 并校验。
+解密为其逆：Base64_Decode → AES-256-CBC 解密（用 AESKey，不是 EncodingAESKey）→ 去掉头部 16 随机字节 → 读 4 字节 msg_len → 截取 msg_len 长度为 msg → 剩余为 receiveid 并校验
 
 ### 4.4 ReceiveId 含义（逐字）
 
@@ -320,15 +320,15 @@ Content-Type: 文档未单列（body 为 XML）
 
 ### 4.5 mock 实现要点（从上述事实推导）
 
-- AES-256-CBC：key=Base64Decode(EncodingAESKey+"=")（32B），iv=key 前 16B，PKCS#7 以 32 字节为块单位补位（不是常见 AES 的 16）。
-- 签名参与方：token、timestamp、nonce、密文 Base64 字符串（echostr 验证时用 echostr 的密文本身），四值字典序拼接后 SHA-1 小写 hex。
-- 官方库 python 版（weworkapi_python）可直接作为 mock 的加解密参考实现（同算法）。
+- AES-256-CBC：key=Base64Decode(EncodingAESKey+"=")（32B），iv=key 前 16B，PKCS#7 以 32 字节为块单位补位（不是常见 AES 的 16）
+- 签名参与方：token、timestamp、nonce、密文 Base64 字符串（echostr 验证时用 echostr 的密文本身），四值字典序拼接后 SHA-1 小写 hex
+- 官方库 python 版（weworkapi_python）可直接作为 mock 的加解密参考实现（同算法）
 
 ## 5. 示例载荷原文（逐字）
 
 ### 5.1 加解密官方完整示例［90968］（参数真实可复算，mock 黄金样本）
 
-参数：
+参数
 
 ```
 corpId = "wx5823bf96d3bd56c7"
@@ -336,7 +336,7 @@ token = "QDG6eK"
 encodingAesKey = "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C"
 ```
 
-收到的回调（xml 请求示例，原文）：
+收到的回调（xml 请求示例，原文）
 
 ```
 POST /cgi-bin/wxpush?msg_signature=477715d11cdb4164915debcba66cb864d751f3e6&timestamp=1409659813&nonce=1372623149 HTTP/1.1
@@ -349,7 +349,7 @@ Content-Length: 603
 </xml>
 ```
 
-json 请求示例（原文）：
+json 请求示例（原文）
 
 ```
 POST /cgi-bin/wxpush?msg_signature=477715d11cdb4164915debcba66cb864d751f3e6&timestamp=1409659813&nonce=1372623149 HTTP/1.1
@@ -362,14 +362,14 @@ Content-Length: 603
 }
 ```
 
-签名计算过程（原文）：排序后拼接串与结果签名：
+签名计算过程（原文）：排序后拼接串与结果签名
 
 ```
 sort_str = "13726231491409659813QDG6eKRypEvHKD8QQKFhvQ6QleEB4J58tiPdvo+rtK1I9qca6aM/wvqnLSV5zEPeusUiX5L5X/0lWfrf0QADHHhGd3QczcdCUpj911L3vg3W/sYYvuJTs3TUUkSUXxaccAS0qhxchrRYt66wiSpGLYL42aM6A8dTT+6k4aSknmPj48kzJs8qLjvd4Xgpue06DOdnLxAUHzM6+kDZ+HMZfJYuR+LtwGc2hgf5gsijff0ekUNXZiqATP7PF5mZxZ3Izoun1s4zG4LUMnvw2r+KqCKIw+3IQH03v+BCA9nMELNqbSf6tiWSrXJB3LAVGUcallcrw8V2t9EL4EhzJWrQUax5wLVMNS0+rUPA3k22Ncx4XXZS9o0MBH27Bo6BpNelZpS+/uh9KsNlY6bHCmJU9p8g7m3fVKn28H3KDYA5Pl/T8Z1ptDAVe0lXdQ2YoyyH2uyPIGHBZZIs2pDBS8R07+qN+E7Q=="
 signature = sha1(sort_str) = "477715d11cdb4164915debcba66cb864d751f3e6"
 ```
 
-该密文解密后的明文（原文）：
+该密文解密后的明文（原文）
 
 ```
 <xml>
@@ -456,7 +456,7 @@ signature = sha1(sort_str) = "477715d11cdb4164915debcba66cb864d751f3e6"
 </xml>
 ```
 
-注意：ChangeType/Mobile/Gender/Status 等在官方示例中是裸文本（非 CDATA），而 update_tag、92130 等页面用 CDATA——各页原文如此，mock 模板按各域照抄。
+注意：ChangeType/Mobile/Gender/Status 等在官方示例中是裸文本（非 CDATA），而 update_tag、92130 等页面用 CDATA——各页原文如此，mock 模板按各域照抄
 
 ### 5.5 add_external_contact（92130 原文）
 
@@ -515,7 +515,7 @@ signature = sha1(sort_str) = "477715d11cdb4164915debcba66cb864d751f3e6"
 
 ### 5.8 其他保真样本（原文照录）
 
-上下游 corp_join（95796 原文——注意 `![CDATA[` 缺 `<` 是官方原文笔误，mock 高保真可保留或修正，建议按真实线上行为修正为标准 CDATA）：
+上下游 corp_join（95796 原文——注意 `![CDATA[` 缺 `<` 是官方原文笔误，mock 高保真可保留或修正，建议按真实线上行为修正为标准 CDATA）
 
 ```
 	<ChangeType><![CDATA[corp_join]]></ChangeType>
@@ -527,7 +527,7 @@ signature = sha1(sort_str) = "477715d11cdb4164915debcba66cb864d751f3e6"
 </xml>
 ```
 
-会议室预定（95333 原文）：
+会议室预定（95333 原文）
 
 ```
 <xml>
@@ -541,7 +541,7 @@ signature = sha1(sort_str) = "477715d11cdb4164915debcba66cb864d751f3e6"
 </xml>
 ```
 
-被动回复文本（90241 原文，注意方向反转：ToUserName=成员 UserID，FromUserName=CorpID）：
+被动回复文本（90241 原文，注意方向反转：ToUserName=成员 UserID，FromUserName=CorpID）
 
 ```
 <xml>
@@ -569,7 +569,7 @@ signature = sha1(sort_str) = "477715d11cdb4164915debcba66cb864d751f3e6"
 | 群机器人 webhook key | 群配置页（消息推送详情页取专属 webhookurl，需保密防泄漏） | 发送限 20 条/分钟；media_id 仅三天内有效且仅对应 webhook 可用；POST 为 application/json | 91770（2026-09-10 冷 IP 复验通过，未迁移/未下线） |
 | 应用消息发送配额 | access_token 调用 message/send | 每应用≤账号上限×200 人次/天；同成员≤30 次/分、1000 次/时（超限丢弃）；可选 enable_duplicate_check（默认 1800 秒窗） | 90236 |
 
-access_token 返回示例（91039 原文）：
+access_token 返回示例（91039 原文）
 
 ```
 {
@@ -587,7 +587,7 @@ access_token 返回示例（91039 原文）：
 3. 第三方应用（服务商）回调协议：suite_ticket 推送、suite_access_token、ticket 换取流程（ReceiveId=suiteid 已确认，但推送样例与频率未取）。→ 待核验(09-27)
 4. 会话内容存档回调（95039 产生会话回调事件、99994 产生会话回调通知、92005 客户同意存档）未细抓。→ 待核验(09-27)
 5. 微盘/文档/日历/日程/会议/知识集专区等新域回调（97833+、97728+、98333+、99963/99996 等）仅盘到导航，未抓正文。→ 待核验(09-27)
-6. 回调 POST 的 Content-Type 头（官方文档页面未显式标注，真实请求一般为 `text/xml`）→ 待核验(09-27)；其中 webhook 机器人侧已消项：91770 curl 示例明示 `Content-Type: application/json`（2026-09-10 冷 IP 复验通过）。
+6. 回调 POST 的 Content-Type 头（官方文档页面未显式标注，真实请求一般为 `text/xml`）→ 待核验(09-27)；其中 webhook 机器人侧已消项：91770 curl 示例明示 `Content-Type: application/json`（2026-09-10 冷 IP 复验通过）
 7. 官方加解密库源码内部实现（下载 zip 中的 Sample 与 PKCS7 pad 32 常量）未下载核验；如需可取 weworkapi_python-master.zip 比对。→ 待核验(09-27)
-8. B 类冷 IP 补证（2026-09-10，5 页单发串行、页间 ≥5 秒，一次通过、无验证码反爬）：100080（security/change_domain_ip）、100180（public_email_change/receive_email）、91770（webhook，迁移猜测已证伪）、90236（message/send）、90238（接收概述 + 导航树实证）均已入 §1/§2.11/§6，本轮消项完毕。
-9. 素材读取补证（2026-10-14，dudu-server #115 实施依据）：90254 获取临时素材已核验入 §1/§2.11/§6——成功为二进制流按 HTTP 头处理、错误为 JSON errcode（40007 无效 media_id）、media_id 3 天有效且企业内共享、>20M 需 Range 分块（830002）；确认无 `video_url` JSON 分支（区别于公众号临时素材）。90236 发送响应补证：成功返回 `errcode=0` 且带 `msgid`（撤回用，94867）、全部接收人无效时 `errcode=81013`，已作为 WecomTextSender 成功/失败响应的构造依据。
+8. B 类冷 IP 补证（2026-09-10，5 页单发串行、页间 ≥5 秒，一次通过、无验证码反爬）：100080（security/change_domain_ip）、100180（public_email_change/receive_email）、91770（webhook，迁移猜测已证伪）、90236（message/send）、90238（接收概述 + 导航树实证）均已入 §1/§2.11/§6，本轮消项完毕
+9. 素材读取补证（2026-10-14，dudu-server #115 实施依据）：90254 获取临时素材已核验入 §1/§2.11/§6——成功为二进制流按 HTTP 头处理、错误为 JSON errcode（40007 无效 media_id）、media_id 3 天有效且企业内共享、>20M 需 Range 分块（830002）；确认无 `video_url` JSON 分支（区别于公众号临时素材）。90236 发送响应补证：成功返回 `errcode=0` 且带 `msgid`（撤回用，94867）、全部接收人无效时 `errcode=81013`，已作为 WecomTextSender 成功/失败响应的构造依据

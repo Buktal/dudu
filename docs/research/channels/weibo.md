@@ -1,16 +1,16 @@
 # 微博开放平台 事件推送 事实库（粉丝服务平台）
 
-> 研究日期：2026-09-10。方法：WebFetch 直抓 open.weibo.com wiki 官方文档正文（SSR，直接可抓，无反爬）。
-> 只认 primary sources：open.weibo.com wiki 粉丝服务平台域 + API 本体。不用二手博客。
-> 所有示例载荷均为官方文档原文逐字拷贝；官方原文笔误/转义符（`receiver\_id`、`MASSSENDJOBFINISH`、`san事件`）原样保留并标注。
-> 范围声明：本次核验范围内仍可新接入的推送通道 = 粉丝服务平台（Eps）Webhook（“唯一”系推论：粉服推送体系有原文 + dm 系标“高级接口”且申请页停收旧版申请）；旧版 `2/direct_messages` 系冻结高级接口，不可新接入。
+> 研究日期：2026-09-10。方法：WebFetch 直抓 open.weibo.com wiki 官方文档正文（SSR，直接可抓，无反爬）
+> 只认 primary sources：open.weibo.com wiki 粉丝服务平台域 + API 本体。不用二手博客
+> 所有示例载荷均为官方文档原文逐字拷贝；官方原文笔误/转义符（`receiver\_id`、`MASSSENDJOBFINISH`、`san事件`）原样保留并标注
+> 范围声明：本次核验范围内仍可新接入的推送通道 = 粉丝服务平台（Eps）Webhook（“唯一”系推论：粉服推送体系有原文 + dm 系标“高级接口”且申请页停收旧版申请）；旧版 `2/direct_messages` 系冻结高级接口，不可新接入
 
 ## 1. 官方文档入口与关键页面地址
 
 - 门户：https://open.weibo.com/ ；wiki 根：https://open.weibo.com/wiki/
-- 粉丝服务平台域导航（左侧“粉丝服务平台”分类）：粉丝服务平台 / 新手接入指南 / 微信开发者迁移指南 / 接收消息 / 发送消息 / 自定义菜单 / 用户管理 / 生成带参数的二维码 / Fans Service Platform。
+- 粉丝服务平台域导航（左侧“粉丝服务平台”分类）：粉丝服务平台 / 新手接入指南 / 微信开发者迁移指南 / 接收消息 / 发送消息 / 自定义菜单 / 用户管理 / 生成带参数的二维码 / Fans Service Platform
 
-本次实际抓取并完整摄取的页面（均验证过正文内容，文档更新时间取自各页页脚）：
+本次实际抓取并完整摄取的页面（均验证过正文内容，文档更新时间取自各页页脚）
 
 | # | 标题 | URL | 文档更新时间 | 覆盖内容 |
 |---|---|---|---|---|
@@ -35,7 +35,7 @@
 
 ## 2. 消息/事件推送全清单
 
-通道结论：可新接入的推送体系为粉丝服务平台 Webhook（HTTP POST 到认证账号在粉服后台绑定的接收 URL；“只有一套”系推论，见 §1 范围声明）。旧 `2/direct_messages` 等 dm 系为高级接口且官方停收旧版新申请，等效冻结，不可新接入。
+通道结论：可新接入的推送体系为粉丝服务平台 Webhook（HTTP POST 到认证账号在粉服后台绑定的接收 URL；“只有一套”系推论，见 §1 范围声明）。旧 `2/direct_messages` 等 dm 系为高级接口且官方停收旧版新申请，等效冻结，不可新接入
 
 ### 2.1 普通消息（`type` 直接判型）［接收普通消息页］
 
@@ -46,7 +46,7 @@
 | voice | 语音私信 | `data:{vfid, tovfid}`（vfid 发送者用，tovfid 接收者用），`text` 默认“发了一个语音消息” | 用户发语音 |
 | image | 图片私信 | `data:{vfid, tovfid}` 同上，`text` 默认“发了一张图片” | 用户发图片 |
 
-公共字段：`type`、`receiver_id`（int64，认证账号侧）、`sender_id`（int64，用户侧）、`created_at`（string，如 `Mon Jul 16 18:09:20 +0800 2012`）、`text`、`data`。媒体下载：`GET https://upload.api.weibo.com/2/mss/msget?access_token=<接收者OAuth2 token>&fid=<tovfid>`（语音另有 Basic Auth 法：`curl -u "USERNAME:PASSWORD" "...?source=APPKEY&fid=TOVFID"`，账号为 recipient_id 的微博登录账号且 APPKEY 属主为该账号）。
+公共字段：`type`、`receiver_id`（int64，认证账号侧）、`sender_id`（int64，用户侧）、`created_at`（string，如 `Mon Jul 16 18:09:20 +0800 2012`）、`text`、`data`。媒体下载：`GET https://upload.api.weibo.com/2/mss/msget?access_token=<接收者OAuth2 token>&fid=<tovfid>`（语音另有 Basic Auth 法：`curl -u "USERNAME:PASSWORD" "...?source=APPKEY&fid=TOVFID"`，账号为 recipient_id 的微博登录账号且 APPKEY 属主为该账号）
 
 官方兼容性要求（逐字，括号内含“注意：”前缀）：“（注意：需要对接收到的消息体type或subtype做兼容，当出现未知类型时可忽略此消息。）”
 
@@ -63,52 +63,52 @@
 
 ### 2.3 群发结果事件（`MASSSENDJOBFINISH`，XML only）［高级群发接口页］
 
-群发任务提交成功≠发送完成；完成时向开发者 URL（callback URL）推送事件，XML 结构含 `Event=MASSSENDJOBFINISH`、`MsgID`（群发消息 ID）、`Status`（sendsuccess/sendfail）、`TotalCount`/`FilterCount`（官方等式主语仅 `FilterCount`：`FilterCount = SentCount + ErrorCount`）/`SentCount`/`ErrorCount`。注意该页示例 `ToUserName` 为 `gh_3e8adccde292`、`FromUserName` 为 `oR5Gjjl_eiZoUpGozMo7dbBJ362A` 系微信侧占位串，原文如此（照抄，勿当微博 UID 用）。
+群发任务提交成功≠发送完成；完成时向开发者 URL（callback URL）推送事件，XML 结构含 `Event=MASSSENDJOBFINISH`、`MsgID`（群发消息 ID）、`Status`（sendsuccess/sendfail）、`TotalCount`/`FilterCount`（官方等式主语仅 `FilterCount`：`FilterCount = SentCount + ErrorCount`）/`SentCount`/`ErrorCount`。注意该页示例 `ToUserName` 为 `gh_3e8adccde292`、`FromUserName` 为 `oR5Gjjl_eiZoUpGozMo7dbBJ362A` 系微信侧占位串，原文如此（照抄，勿当微博 UID 用）
 
 ### 2.4 格式双轨（JSON ↔ 微信兼容 XML）［接收消息页 + Eps/push/set_format + 微信XML格式兼容页］
 
-- 默认 JSON（原生）；可调 `POST https://api.weibo.com/2/eps/push/set_format.json`（需登录态/OAuth，参数 `access_token` + `format`=`xml|json` 小写）切换为微信 XML。
-- “微博粉丝服务平台完全兼容微信XML格式”（官方原文）。XML 字段对照（官方表）：`ToUserName↔receiver_id`、`FromUserName↔sender_id`、`CreateTime↔created_at`、`MsgType↔type`、`Content↔text`、`Event↔data:subtype`、`EventKey↔data:key`、`Ticket↔data:ticket`、`MediaId↔data:tovfid`。
-- XML 特有空字段（官方明示“该字段内容为空/该字段为空/会自动忽略”）：text/image/voice/position 的 `MsgId`；image 的 `PicUrl`；voice 的 `PicUrl`、`Format`；position 的 `Scale`、`Label`；被动回复图文的 `ArticleCount`。
-- XML 命名差异（mock 必须照抄）：position 消息的 `MsgType` 是 `location`（JSON 侧 `type` 是 `position`）；`Location_X`=纬度（↔`data:latitude`）、`Location_Y`=经度（↔`data:longitude`）；scan 已关注的 `Event` 是全大写 `SCAN`，未关注是小写 `subscribe` + `EventKey=qrscene_123123`；菜单点击 `Event` 为全大写 `CLICK`；被动回复图文 `MsgType` 是 `news`（JSON 侧 `type` 是 `articles`）。
+- 默认 JSON（原生）；可调 `POST https://api.weibo.com/2/eps/push/set_format.json`（需登录态/OAuth，参数 `access_token` + `format`=`xml|json` 小写）切换为微信 XML
+- “微博粉丝服务平台完全兼容微信XML格式”（官方原文）。XML 字段对照（官方表）：`ToUserName↔receiver_id`、`FromUserName↔sender_id`、`CreateTime↔created_at`、`MsgType↔type`、`Content↔text`、`Event↔data:subtype`、`EventKey↔data:key`、`Ticket↔data:ticket`、`MediaId↔data:tovfid`
+- XML 特有空字段（官方明示“该字段内容为空/该字段为空/会自动忽略”）：text/image/voice/position 的 `MsgId`；image 的 `PicUrl`；voice 的 `PicUrl`、`Format`；position 的 `Scale`、`Label`；被动回复图文的 `ArticleCount`
+- XML 命名差异（mock 必须照抄）：position 消息的 `MsgType` 是 `location`（JSON 侧 `type` 是 `position`）；`Location_X`=纬度（↔`data:latitude`）、`Location_Y`=经度（↔`data:longitude`）；scan 已关注的 `Event` 是全大写 `SCAN`，未关注是小写 `subscribe` + `EventKey=qrscene_123123`；菜单点击 `Event` 为全大写 `CLICK`；被动回复图文 `MsgType` 是 `news`（JSON 侧 `type` 是 `articles`）
 
 ## 3. 回调机制
 
-来源：除单独标注外均为接收普通消息页 + 接收事件推送页 + 新手接入指南页原文。
+来源：除单独标注外均为接收普通消息页 + 接收事件推送页 + 新手接入指南页原文
 
 ### 3.1 URL 配置与首次校验握手
 
-- 配置路径：认证账号 Profile 页 → 管理中心 → 粉丝服务 → 高级功能 → 开启“开发模式”（与“编辑模式”二选一）→ 填写 URL + APPKEY（被授权代开发的第三方应用 KEY）。
-- 提交后微博服务器发 **GET** 到该 URL，带四 query 参数：`signature` / `timestamp` / `nonce` / `echostr`。
-- 校验通过后**原样返回 echostr 参数内容**即绑定成功，否则失败。之后每次推送也带 `signature/timestamp/nonce`（同样验签）。
-- 官方黄金算例（新手接入指南页，逐字）：
+- 配置路径：认证账号 Profile 页 → 管理中心 → 粉丝服务 → 高级功能 → 开启“开发模式”（与“编辑模式”二选一）→ 填写 URL + APPKEY（被授权代开发的第三方应用 KEY）
+- 提交后微博服务器发 **GET** 到该 URL，带四 query 参数：`signature` / `timestamp` / `nonce` / `echostr`
+- 校验通过后**原样返回 echostr 参数内容**即绑定成功，否则失败。之后每次推送也带 `signature/timestamp/nonce`（同样验签）
+- 官方黄金算例（新手接入指南页，逐字）
   - 校验参数：`appsercret=xyz123xyz`（原文如此，多一 `r`，照抄）、`timestamp=1397022061823`、`nonce=57155157`
   - 拼接后字符串：`139702206182357155157xyz123xyz`
   - sha1 结果：`90e4c22c90a58f26526c2dd5b6c56c8822edeaa1`
-  - 验证请求样例：`http://yoururl?nonce=57155157&timestamp=1397022061823&echostr=dnPdpTZz85&signature=90e4c22c90a58f26526c2dd5b6c56c8822edeaa1`，此时返回 `dnPdpTZz85` 即通过。
+  - 验证请求样例：`http://yoururl?nonce=57155157&timestamp=1397022061823&echostr=dnPdpTZz85&signature=90e4c22c90a58f26526c2dd5b6c56c8822edeaa1`，此时返回 `dnPdpTZz85` 即通过
 - 端口约束（新手接入指南页逐字，含句首状语；“接口”疑为“端口”笔误照抄）：“此外请注意，粉服平台开发接口只支持80接口。”
 
 ### 3.2 业务推送
 
-- 建立连接后，有新消息/事件即 **POST 消息数据包**到该 URL（JSON 或 XML，取决于 set_format）。
-- 被动回复：在该 POST 的**响应包中返回特定 JSON/XML**（支持文本、图文；另含 position，见 §5）。
-- 备选通道：长连接模式（第三方主动建连、有新消息实时返回，功能完全一样；详见“粉服开发接口长连接接入指南”，本次未抓全文，见 §7）。
+- 建立连接后，有新消息/事件即 **POST 消息数据包**到该 URL（JSON 或 XML，取决于 set_format）
+- 被动回复：在该 POST 的**响应包中返回特定 JSON/XML**（支持文本、图文；另含 position，见 §5）
+- 备选通道：长连接模式（第三方主动建连、有新消息实时返回，功能完全一样；详见“粉服开发接口长连接接入指南”，本次未抓全文，见 §7）
 
 ### 3.3 重试与响应判定（官方原文，三页一致）
 
-- “微博服务器在五秒内收不到响应会断掉连接，并且重新发起请求，总共重试三次”（接收普通消息页；接收事件推送页为“粉丝服务平台服务器在 5 秒内如收不到响应消息则会断掉连接，并且重新发起请求，总共重试 3 次”）。
+- “微博服务器在五秒内收不到响应会断掉连接，并且重新发起请求，总共重试三次”（接收普通消息页；接收事件推送页为“粉丝服务平台服务器在 5 秒内如收不到响应消息则会断掉连接，并且重新发起请求，总共重试 3 次”）
 - 空串短路：“假如开发者无法保证在五秒内处理并回复，可以直接回复空串，微博服务器不会对此作任何处理，并且不会发起重试。这种情况下，可以使用客服消息接口进行异步回复。”（被动响应页补“并且不会发起重试”后半句同义。）
-- 排重：“关于重试的消息排重，目前微博消息暂时不支持消息ID，推荐使用FromUserName + CreateTime 排重”（即 `sender_id + created_at`；XML 侧 `MsgId` 字段官方明示为空，不可用）。
+- 排重：“关于重试的消息排重，目前微博消息暂时不支持消息ID，推荐使用FromUserName + CreateTime 排重”（即 `sender_id + created_at`；XML 侧 `MsgId` 字段官方明示为空，不可用）
 
 ## 4. 验签与加密算法
 
 ### 4.1 签名算法（官方三页一致，逐字）
 
-“将appsecret参数，timestamp参数，nonce参数进行字典排序后，将三个参数字符串拼接成一个字符串进行sha1加密”。
+“将appsecret参数，timestamp参数，nonce参数进行字典排序后，将三个参数字符串拼接成一个字符串进行sha1加密”
 
-- 入参：开发者的 **appsecret**（APPKEY 对应的 App Secret，不是自定义 Token——与微信差异点，官方在新手接入指南第一步明示“该APPKEY所对应的APP Secret，将用作生成签名”）+ 请求中的 `timestamp` + `nonce`。
-- 与微信/企微同族但只有三参（无 msg_encrypt/echostr 入签）。
-- 官方 PHP 参考实现（新手接入指南页，逐字，含 `$appsecret= appsecret;` 占位写法）：
+- 入参：开发者的 **appsecret**（APPKEY 对应的 App Secret，不是自定义 Token——与微信差异点，官方在新手接入指南第一步明示“该APPKEY所对应的APP Secret，将用作生成签名”）+ 请求中的 `timestamp` + `nonce`
+- 与微信/企微同族但只有三参（无 msg_encrypt/echostr 入签）
+- 官方 PHP 参考实现（新手接入指南页，逐字，含 `$appsecret= appsecret;` 占位写法）
 
 ```php
 function checkSignature() {
@@ -130,15 +130,15 @@ function checkSignature() {
 }
 ```
 
-- demo 包：`http://www.sinaimg.cn/blog/developer/wiki/xiaoxituisong_php_demo.rar`、`http://www.sinaimg.cn/blog/developer/wiki/xiaoxituisong_java_demo.rar`（被动响应页另有 `Messages/dev_demo` PHP 示例入口，未抓，见 §7）。
+- demo 包：`http://www.sinaimg.cn/blog/developer/wiki/xiaoxituisong_php_demo.rar`、`http://www.sinaimg.cn/blog/developer/wiki/xiaoxituisong_java_demo.rar`（被动响应页另有 `Messages/dev_demo` PHP 示例入口，未抓，见 §7）
 
 ### 4.2 加密：无
 
-官方文档**未见任何消息体加密机制**（无 AES/EncodingAESKey/MsgDecrypt）。推送为明文 JSON/XML；安全依赖 HTTPS URL + 上述 sha1 签名。mock 实现时不做解密层。
+官方文档**未见任何消息体加密机制**（无 AES/EncodingAESKey/MsgDecrypt）。推送为明文 JSON/XML；安全依赖 HTTPS URL + 上述 sha1 签名。mock 实现时不做解密层
 
 ## 5. 示例载荷原文（逐字）
 
-> 注：官方 wiki HTML 转义下划线为 `\_`；以下已还原为正常 JSON（`receiver_id` 等），字符串内容一字未改。`/** // */` 注释为官方原文所有。
+> 注：官方 wiki HTML 转义下划线为 `\_`；以下已还原为正常 JSON（`receiver_id` 等），字符串内容一字未改。`/** // */` 注释为官方原文所有
 
 ### 5.1 纯文本私信（接收普通消息页逐字）
 
@@ -303,7 +303,7 @@ function checkSignature() {
 
 ### 5.11 被动回复文本（发送被动响应消息页逐字，两段式）
 
-模板：
+模板
 
 ```json
 {
@@ -317,7 +317,7 @@ function checkSignature() {
 }
 ```
 
-返回样例：
+返回样例
 
 ```json
 {
@@ -353,7 +353,7 @@ function checkSignature() {
 }
 ```
 
-返回样例（data 为 URLEncode 串，官方原文含 `%8B%22` 截断换行，逐字）：
+返回样例（data 为 URLEncode 串，官方原文含 `%8B%22` 截断换行，逐字）
 
 ```json
 {
@@ -380,7 +380,7 @@ function checkSignature() {
 }
 ```
 
-返回样例：
+返回样例
 
 ```json
 {
@@ -400,13 +400,13 @@ function checkSignature() {
 }
 ```
 
-调用（逐字）：
+调用（逐字）
 
 ```
 curl "https://m.api.weibo.com/2/messages/reply.json?access_token=ACCESS_TOKEN" -d 'receiver_id=RECEIVER_ID&type=text&data=%7B%22text%22%3A%22%E7%BA%AF%E6%96%87%E6%9C%AC%E5%9B%9E%E5%A4%8D%22%7D' -k
 ```
 
-成功返回（逐字，注意官方 `type` 行缺逗号）：
+成功返回（逐字，注意官方 `type` 行缺逗号）
 
 ```json
 {
@@ -442,7 +442,7 @@ curl "https://m.api.weibo.com/2/messages/reply.json?access_token=ACCESS_TOKEN" -
 
 ### 5.16 群发（高级群发接口页逐字）
 
-按分组-文本：
+按分组-文本
 
 ```json
 {
@@ -456,7 +456,7 @@ curl "https://m.api.weibo.com/2/messages/reply.json?access_token=ACCESS_TOKEN" -
 }
 ```
 
-按 UID-文本：
+按 UID-文本
 
 ```json
 {
@@ -471,9 +471,9 @@ curl "https://m.api.weibo.com/2/messages/reply.json?access_token=ACCESS_TOKEN" -
 }
 ```
 
-成功返回：`{"result": true, "msg_id": "xxxxx"}`（原文 `msg_id` 为小写占位 `xxxxx`）。
+成功返回：`{"result": true, "msg_id": "xxxxx"}`（原文 `msg_id` 为小写占位 `xxxxx`）
 
-群发结果推送 XML（逐字）：
+群发结果推送 XML（逐字）
 
 ```xml
 <xml>
@@ -493,7 +493,7 @@ curl "https://m.api.weibo.com/2/messages/reply.json?access_token=ACCESS_TOKEN" -
 
 ### 5.17 微信兼容 XML（微信XML格式兼容页逐字，每类一例）
 
-text：
+text
 
 ```xml
 <xml>
@@ -506,7 +506,7 @@ text：
 </xml>
 ```
 
-image：
+image
 
 ```xml
 <xml>
@@ -520,7 +520,7 @@ image：
  </xml>
 ```
 
-voice：
+voice
 
 ```xml
 <xml>
@@ -534,7 +534,7 @@ voice：
 </xml>
 ```
 
-position（注意 MsgType=location）：
+position（注意 MsgType=location）
 
 ```xml
 <xml>
@@ -550,7 +550,7 @@ position（注意 MsgType=location）：
 </xml>
 ```
 
-关注/订阅：
+关注/订阅
 
 ```xml
 <xml>
@@ -562,7 +562,7 @@ position（注意 MsgType=location）：
 </xml>
 ```
 
-扫码（未关注→scan_follow / 已关注→SCAN，全大写差异逐字）：
+扫码（未关注→scan_follow / 已关注→SCAN，全大写差异逐字）
 
 ```xml
 <xml>
@@ -588,7 +588,7 @@ position（注意 MsgType=location）：
 </xml>
 ```
 
-菜单点击：
+菜单点击
 
 ```xml
 <xml>
@@ -601,7 +601,7 @@ position（注意 MsgType=location）：
 </xml>
 ```
 
-被动回复 text：
+被动回复 text
 
 ```xml
 <xml>
@@ -613,7 +613,7 @@ position（注意 MsgType=location）：
 </xml>
 ```
 
-被动回复图文（注意 MsgType=news，逐字，原文缺外层 `<xml>` 包裹）：
+被动回复图文（注意 MsgType=news，逐字，原文缺外层 `<xml>` 包裹）
 
 ```xml
 <ToUserName><![CDATA[toUser]]></ToUserName>
@@ -658,9 +658,9 @@ position（注意 MsgType=location）：
 | Messages_api/access_token（oldid=13360，2014-06-12） | 途径二 OAuth2 scope 包至今仍标注「（开发中，暂未上线）」，页面自 2014 年未更新——**直配 accessToken（途径一粉服后台开发者模式页直取）为现行唯一官方途径**；原文证实粉服权限「绑定在微博认证帐户上的，而不像之前微博开放平台的 OPEN API 那样是绑定在第三方开发者的 APPKEY 上的」 |
 | 接收消息（oldid=14640，2015-08-24） | 索引页证实四类普通消息（文本/位置/语音/图片）与事件清单与 §2 一致；微信 XML 兼容经 `Eps/push/set_format` 可选，mock 基准取 JSON 不涉及 |
 
-发送客服消息页同页口径并存（官方原文固有）：开头「用户发送消息，关注/订阅事件，点击自定义菜单，扫描二维码事件后，目前修改为开发者在48小时内不限制发送次数」，注意事项第 2 条仍保留「一般来说……主动配额99条」；另原文「用户取消关注后，开发者无法回复消息」「用户@事件，目前暂不开放，已有权限的开发者在48小时内可以回复一次」。access_token 参数说明原文：「在粉丝服务平台 - 高级功能 - 开发者模式页面中获取，或者OAuth2.0授权后获得」。
+发送客服消息页同页口径并存（官方原文固有）：开头「用户发送消息，关注/订阅事件，点击自定义菜单，扫描二维码事件后，目前修改为开发者在48小时内不限制发送次数」，注意事项第 2 条仍保留「一般来说……主动配额99条」；另原文「用户取消关注后，开发者无法回复消息」「用户@事件，目前暂不开放，已有权限的开发者在48小时内可以回复一次」。access_token 参数说明原文：「在粉丝服务平台 - 高级功能 - 开发者模式页面中获取，或者OAuth2.0授权后获得」
 
-发送接口一览：
+发送接口一览
 
 | 用途 | 方法与地址 | Content-Type/参数 |
 |---|---|---|
@@ -684,8 +684,8 @@ position（注意 MsgType=location）：
 
 ## 附：对 MockPulse 模拟的直接含义（速查）
 
-- 模拟“微博推私信给回调”：`POST` JSON `{type, receiver_id:int64, sender_id:int64, created_at:"Mon Jul 16 18:09:20 +0800 2012"格式, text, data}`；事件用 `type:"event"` + `data.subtype`（follow/unfollow/subscribe/unsubscribe/scan/scan_follow/click/view），mention 例外 `type:"mention"`。
-- 模拟握手：`GET ?signature=&timestamp=&nonce=&echostr=`，`signature=sha1hex(字典序排序(appsecret,timestamp,nonce)直接拼接)`；黄金算例 `xyz123xyz/1397022061823/57155157→90e4c22c90a58f26526c2dd5b6c56c8822edeaa1`；通过则原样回 `echostr`。
-- 模拟重试：5s 无响应断开，共 3 次；回空串=跳过不重试；幂等键 `sender_id + created_at`（无消息 ID；XML `MsgId` 为空不可用）。
-- 模拟回复：被动=响应包回 `{result:true, sender_id, receiver_id, type, data(URLEncode)}`；异步= `POST m.api.weibo.com/2/messages/reply.json` form（48h/99 条）。
-- ID 形态：`receiver_id/sender_id` 为 int64 数字 UID（如 1902538057/2489518277）；`created_at` 为 `Mon Jul 16 18:09:20 +0800 2012` 字符串；`key` 为 `action_name_scene_id`；`ticket` 为 `TICKET` 占位。
+- 模拟“微博推私信给回调”：`POST` JSON `{type, receiver_id:int64, sender_id:int64, created_at:"Mon Jul 16 18:09:20 +0800 2012"格式, text, data}`；事件用 `type:"event"` + `data.subtype`（follow/unfollow/subscribe/unsubscribe/scan/scan_follow/click/view），mention 例外 `type:"mention"`
+- 模拟握手：`GET ?signature=&timestamp=&nonce=&echostr=`，`signature=sha1hex(字典序排序(appsecret,timestamp,nonce)直接拼接)`；黄金算例 `xyz123xyz/1397022061823/57155157→90e4c22c90a58f26526c2dd5b6c56c8822edeaa1`；通过则原样回 `echostr`
+- 模拟重试：5s 无响应断开，共 3 次；回空串=跳过不重试；幂等键 `sender_id + created_at`（无消息 ID；XML `MsgId` 为空不可用）
+- 模拟回复：被动=响应包回 `{result:true, sender_id, receiver_id, type, data(URLEncode)}`；异步= `POST m.api.weibo.com/2/messages/reply.json` form（48h/99 条）
+- ID 形态：`receiver_id/sender_id` 为 int64 数字 UID（如 1902538057/2489518277）；`created_at` 为 `Mon Jul 16 18:09:20 +0800 2012` 字符串；`key` 为 `action_name_scene_id`；`ticket` 为 `TICKET` 占位

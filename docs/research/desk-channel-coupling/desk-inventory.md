@@ -3,13 +3,13 @@
 - 来源票：[Buktal/dudu#98](https://github.com/Buktal/dudu/issues/98)（父地图 #96）
 - 基线：main @ `a2f17d4`（2026-10-13，已含「移除 Mock 模式与模拟数据」重构）
 - 范围：DuduDesk（`dudu-desk/`）产品链路 + 全仓 Mock 扫描；测试文件中的 vi.mock/fixture 与 mock-pulse 子项目按票定义排除
-- 结论速览：**Desk 非测试源码与打包配置 Mock 零残留**（仅 1 个未使用依赖 + 若干文档表述）；**渠道耦合只有视觉层一处**（图标 + 配色），其余渠道维度全部由 Server 接口下发，新渠道接入 Desk 可零改动上线、可选增强视觉。
+- 结论速览：**Desk 非测试源码与打包配置 Mock 零残留**（仅 1 个未使用依赖 + 若干文档表述）；**渠道耦合只有视觉层一处**（图标 + 配色），其余渠道维度全部由 Server 接口下发，新渠道接入 Desk 可零改动上线、可选增强视觉
 
 ---
 
 ## 第一部分：Mock 残留清单
 
-判定口径：产品链路（非测试）中会伪装数据、伪造成功或提供假实现的代码、配置与当前性文档；测试工具（夹具、FakeSocket、vi.mock）与 mock-pulse 不算。
+判定口径：产品链路（非测试）中会伪装数据、伪造成功或提供假实现的代码、配置与当前性文档；测试工具（夹具、FakeSocket、vi.mock）与 mock-pulse 不算
 
 ### 残留（建议清理）
 
@@ -31,22 +31,22 @@
 
 ### 已核实为零残留的扫描面
 
-- `dudu-desk/src` 非测试源码：`mock|fake|stub|dummy|fixture|simulat` 零命中（命中文件全部为 `*.test.*`）。`a2f17d4` 已删 `src/features/inbox/development/`（api/conversations/media/mocks/portraits/scenarios 及测试）、`src/features/account/mocks.ts`、`.env.example` 中的 `VITE_DESK_MOCK` / `VITE_DESK_SCENARIO` 两项。
-- 打包配置：`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`、`src-tauri/src/{lib,main}.rs`、`src-tauri/capabilities/`、`vite.config.ts`、`index.html` 均无渠道/Mock 内容；`.env.example` 仅存 `VITE_API_ORIGIN`（打包 API 源，正当配置）。
-- `dudu-desk/README.md`：无 Mock 残留；「`unavailableInboxApi` 仍不会假装收发成功」为正当表述。
-- `dudu-server` 产品链路（`src/main`）：零 Mock；`ChannelEnum` 注释提及 MockPulse 仅说明「枚举不含其回调子类型」，正当。
-- 根 `GLOSSARY.md` 其余 mock 命中全部属于 mock-pulse 词条（正当测试替身项目）。
-- 正当测试工具（非残留，列出备查）：`dudu-desk/src/features/inbox/test-fixtures.ts`（`a2f17d4` 由 `development/fixtures.ts` 转正的共享夹具）、`http-inbox-test-support.ts`、`inbox-live-test-support.ts`（FakeSocket）、`stores/test-support.ts`。
-- 失败兜底而非假实现（非残留）：`dudu-desk/src/features/inbox/api.ts` 的 `unavailableInboxApi` 与 `src/features/account/api.ts` 的 `unavailableAccountApi`——全部方法抛 `unavailable`，不伪装成功。仅其中一处注释过时：`api.ts` unavailableInboxApi 上方「A real adapter is injected here later」与现状不符（`runtime.ts` 已恒注入真实适配器），可在下次触达该文件时就地更正。
+- `dudu-desk/src` 非测试源码：`mock|fake|stub|dummy|fixture|simulat` 零命中（命中文件全部为 `*.test.*`）。`a2f17d4` 已删 `src/features/inbox/development/`（api/conversations/media/mocks/portraits/scenarios 及测试）、`src/features/account/mocks.ts`、`.env.example` 中的 `VITE_DESK_MOCK` / `VITE_DESK_SCENARIO` 两项
+- 打包配置：`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`、`src-tauri/src/{lib,main}.rs`、`src-tauri/capabilities/`、`vite.config.ts`、`index.html` 均无渠道/Mock 内容；`.env.example` 仅存 `VITE_API_ORIGIN`（打包 API 源，正当配置）
+- `dudu-desk/README.md`：无 Mock 残留；「`unavailableInboxApi` 仍不会假装收发成功」为正当表述
+- `dudu-server` 产品链路（`src/main`）：零 Mock；`ChannelEnum` 注释提及 MockPulse 仅说明「枚举不含其回调子类型」，正当
+- 根 `GLOSSARY.md` 其余 mock 命中全部属于 mock-pulse 词条（正当测试替身项目）
+- 正当测试工具（非残留，列出备查）：`dudu-desk/src/features/inbox/test-fixtures.ts`（`a2f17d4` 由 `development/fixtures.ts` 转正的共享夹具）、`http-inbox-test-support.ts`、`inbox-live-test-support.ts`（FakeSocket）、`stores/test-support.ts`
+- 失败兜底而非假实现（非残留）：`dudu-desk/src/features/inbox/api.ts` 的 `unavailableInboxApi` 与 `src/features/account/api.ts` 的 `unavailableAccountApi`——全部方法抛 `unavailable`，不伪装成功。仅其中一处注释过时：`api.ts` unavailableInboxApi 上方「A real adapter is injected here later」与现状不符（`runtime.ts` 已恒注入真实适配器），可在下次触达该文件时就地更正
 
 ### 「Mock 附件链路」工程选择的落点（票点名项）
 
-#84 汇总评论保留的 4 项工程选择之一「Mock 附件链路」，其实质是：实施期 Mock 世界里附件准备/发送由开发适配器合成承载（原 `development/attachments.ts`、`development/media.ts` 合成静音 WAV 与占位字节）。核验结论：**该链路的代码落点已随 `a2f17d4` 整体删除，产品链路无残留**；当前附件能力的「未接入」语义由真实适配器如实承载：
+#84 汇总评论保留的 4 项工程选择之一「Mock 附件链路」，其实质是：实施期 Mock 世界里附件准备/发送由开发适配器合成承载（原 `development/attachments.ts`、`development/media.ts` 合成静音 WAV 与占位字节）。核验结论：**该链路的代码落点已随 `a2f17d4` 整体删除，产品链路无残留**；当前附件能力的「未接入」语义由真实适配器如实承载
 
-- `dudu-desk/src/features/inbox/http-inbox-api.ts` 137–143 行：`send` 对非空 `attachments` 抛 `DeskApiError("unavailable", "当前仅支持文字回复，附件发送尚未接入")`（拒绝而非静默丢弃）；
-- `dudu-desk/src/features/inbox/api.ts`：`prepareAttachment` 未被真实适配器覆盖，继承 `unavailableInboxApi` 的不可用语义；
-- `dudu-desk/src/features/inbox/components/attachment-picker.tsx`：入口按 `attachmentEntryRestriction`（来自接口下发 capability）停用；
-- 现存痕迹只在文档：#84 汇总评论原文与 `docs/features/dudu-desk.md` 第 15 行对 Mock 媒体合成的历史描述（见 R7）。
+- `dudu-desk/src/features/inbox/http-inbox-api.ts` 137–143 行：`send` 对非空 `attachments` 抛 `DeskApiError("unavailable", "当前仅支持文字回复，附件发送尚未接入")`（拒绝而非静默丢弃）
+- `dudu-desk/src/features/inbox/api.ts`：`prepareAttachment` 未被真实适配器覆盖，继承 `unavailableInboxApi` 的不可用语义
+- `dudu-desk/src/features/inbox/components/attachment-picker.tsx`：入口按 `attachmentEntryRestriction`（来自接口下发 capability）停用
+- 现存痕迹只在文档：#84 汇总评论原文与 `docs/features/dudu-desk.md` 第 15 行对 Mock 媒体合成的历史描述（见 R7）
 
 ---
 
@@ -77,12 +77,12 @@ Server 侧事实：`dudu-server/src/main/java/com/dudu/duduserver/constant/Chann
 
 ### 汇总判断
 
-Server 新增渠道（小程序、企微、抖音、WhatsApp 等）时，Desk 的最小跟随改动为 **0**：筛选、显示名、资料、能力、媒体、消息类型、打包全部由接口/契约驱动，未知渠道 ID 有 neutral + Globe 兜底。可选增强集中在 C1–C3 的视觉层（tone 映射、SVG 图标、配色变量），建议在每张渠道实施票的验收项里作为可选项标注，不作为 Desk 阻塞条件。
+Server 新增渠道（小程序、企微、抖音、WhatsApp 等）时，Desk 的最小跟随改动为 **0**：筛选、显示名、资料、能力、媒体、消息类型、打包全部由接口/契约驱动，未知渠道 ID 有 neutral + Globe 兜底。可选增强集中在 C1–C3 的视觉层（tone 映射、SVG 图标、配色变量），建议在每张渠道实施票的验收项里作为可选项标注，不作为 Desk 阻塞条件
 
 ---
 
 ## 附：核验方法
 
-- 全文扫描：`dudu-desk/src`、`src-tauri`、打包配置对 `mock|Mock|MOCK|fake|stub|dummy|fixture|simulat` 及 `VITE_DESK_MOCK|VITE_DESK_SCENARIO` 的命中逐条定性；`dudu-server/src/main`、`docs/features/`、根 `GLOSSARY.md`、`dudu-desk/README.md`、`docs/design/dudu-desk/`、`docs/adr/` 的 mock 命中逐条定性。
-- 渠道维度：`dudu-desk/src` 非测试源码对 `channel` 及 9 个渠道 ID（wechat/wechat-kf/wechat-mp/wecom/telegram/douyin/whatsapp/xiaohongshu/alipay/bilibili）的命中逐条定性；Server 侧核对 `ChannelEnum`、`DeskConversationViews`、`ChannelSendCapabilities` 的下发链路。
-- 关键调用点人工读码：`queue-tools.tsx`、`identity.tsx`、`message-body.tsx`、`http-inbox-contract.ts`、`http-inbox-api.ts`、`attachment-rules.ts`、`message-content.ts`、`visitor-info.tsx`、`attachment-utils.ts`、`tauri.conf.json`。
+- 全文扫描：`dudu-desk/src`、`src-tauri`、打包配置对 `mock|Mock|MOCK|fake|stub|dummy|fixture|simulat` 及 `VITE_DESK_MOCK|VITE_DESK_SCENARIO` 的命中逐条定性；`dudu-server/src/main`、`docs/features/`、根 `GLOSSARY.md`、`dudu-desk/README.md`、`docs/design/dudu-desk/`、`docs/adr/` 的 mock 命中逐条定性
+- 渠道维度：`dudu-desk/src` 非测试源码对 `channel` 及 9 个渠道 ID（wechat/wechat-kf/wechat-mp/wecom/telegram/douyin/whatsapp/xiaohongshu/alipay/bilibili）的命中逐条定性；Server 侧核对 `ChannelEnum`、`DeskConversationViews`、`ChannelSendCapabilities` 的下发链路
+- 关键调用点人工读码：`queue-tools.tsx`、`identity.tsx`、`message-body.tsx`、`http-inbox-contract.ts`、`http-inbox-api.ts`、`attachment-rules.ts`、`message-content.ts`、`visitor-info.tsx`、`attachment-utils.ts`、`tauri.conf.json`

@@ -1,21 +1,21 @@
 # 京东收侧补证：顾客→商家 IM 推送通道与报文（wayfinder #104）
 
-> 研究日期：2026-10-14。任务来源：Buktal/dudu#104（父票 #97 渠道 IM 能力核验，结论「发侧实锤、收侧缺证」）。
-> 事实基准：[docs/research/channels/jingdong.md](../channels/jingdong.md)（2026-09-10）。本文件只补证其 §7 待核验清单中收侧相关项（1 消息推送服务全文、4 chat_message4.2 全文、5 咚咚 inbound 实时通道、6 推送回调验签），不重复已实锤内容。
-> 标注约定：`[官方·直抓]` = 直接抓取取得正文；`[官方·摘录]` = 官方页面原文经搜索引擎摘要呈现（京东零售开放平台 jos.jd.com / open.jd.com 为 JS-SPA，直抓仅回壳，此形态弱于直抓，如实降级标注）；`[对照]` = 京东系其他业务线（京东健康 / 京东秒送），仅作形态参考、不可外推到京东零售；`[线索]` = 第三方内容，仅用于发现官方 URL 与关键词，不作证据正文。
-> 所有引号内文字为来源页原文逐字摘录，未作改写。
+> 研究日期：2026-10-14。任务来源：Buktal/dudu#104（父票 #97 渠道 IM 能力核验，结论「发侧实锤、收侧缺证」）
+> 事实基准：[docs/research/channels/jingdong.md](../channels/jingdong.md)（2026-09-10）。本文件只补证其 §7 待核验清单中收侧相关项（1 消息推送服务全文、4 chat_message4.2 全文、5 咚咚 inbound 实时通道、6 推送回调验签），不重复已实锤内容
+> 标注约定：`[官方·直抓]` = 直接抓取取得正文；`[官方·摘录]` = 官方页面原文经搜索引擎摘要呈现（京东零售开放平台 jos.jd.com / open.jd.com 为 JS-SPA，直抓仅回壳，此形态弱于直抓，如实降级标注）；`[对照]` = 京东系其他业务线（京东健康 / 京东秒送），仅作形态参考、不可外推到京东零售；`[线索]` = 第三方内容，仅用于发现官方 URL 与关键词，不作证据正文
+> 所有引号内文字为来源页原文逐字摘录，未作改写
 
 ## 1. 结论
 
 **三选一判定：仍不可判定。**
 
-- 公开一手证据中不存在「顾客→商家 IM 实时推送」的实锤；公开可见的全部事实指向「无推送、仅轮询」。
-- 京东官方确有「消息推送服务」产品，但公开可见的推送主题全部为订单/商品/退款类（`pop_order_*`、`order_order_*` 等命名体系），消费形态是 JMQ/JCQ 主题订阅（云鼎内网 SDK 或公有云 HTTP 拉取），**不是 HTTP 回调**。
-- 咚咚/客服域公开可见的接口只有发送侧（`jingdong.dongdong.packet.josChatMessage.push2`）与轮询侧（`jingdong.im.pop.chatlog` 等）；官方对客服域评价数据明文写「目前没有消息推送支持，评价接口获取到的评价数据不是实时的」。
-- 含「Push/PushService」字样的咚咚接口经核对语境均为发送方向或客户端通知（见 §3.4），不是外部系统收消息的通道。
-- **不可判定的直接原因**：权威的「消息主题总目录」（是否含 IM/聊天主题）在开放平台登录态后台（open.jd.com/v2 消息文档页 / 消费方接入文档 listId=1903），公开网页无法闭合此问题。
+- 公开一手证据中不存在「顾客→商家 IM 实时推送」的实锤；公开可见的全部事实指向「无推送、仅轮询」
+- 京东官方确有「消息推送服务」产品，但公开可见的推送主题全部为订单/商品/退款类（`pop_order_*`、`order_order_*` 等命名体系），消费形态是 JMQ/JCQ 主题订阅（云鼎内网 SDK 或公有云 HTTP 拉取），**不是 HTTP 回调**
+- 咚咚/客服域公开可见的接口只有发送侧（`jingdong.dongdong.packet.josChatMessage.push2`）与轮询侧（`jingdong.im.pop.chatlog` 等）；官方对客服域评价数据明文写「目前没有消息推送支持，评价接口获取到的评价数据不是实时的」
+- 含「Push/PushService」字样的咚咚接口经核对语境均为发送方向或客户端通知（见 §3.4），不是外部系统收消息的通道
+- **不可判定的直接原因**：权威的「消息主题总目录」（是否含 IM/聊天主题）在开放平台登录态后台（open.jd.com/v2 消息文档页 / 消费方接入文档 listId=1903），公开网页无法闭合此问题
 
-对建票决策的含义：若京东渠道立项，公开可核验的收侧唯一路径是**轮询**（`jingdong.im.out.merchant.chatmessage.openapi.get` / `jingdong.im.pop.chatlog`，后者单次时间范围 ≤7 天）；「是否存在推送通道」需注册开发者后登录后台核验主题列表（见 §6），或接受轮询形态后再开实施票。
+对建票决策的含义：若京东渠道立项，公开可核验的收侧唯一路径是**轮询**（`jingdong.im.out.merchant.chatmessage.openapi.get` / `jingdong.im.pop.chatlog`，后者单次时间范围 ≤7 天）；「是否存在推送通道」需注册开发者后登录后台核验主题列表（见 §6），或接受轮询形态后再开实施票
 
 ## 2. 证据
 
@@ -42,20 +42,20 @@
 
 ### 2.3 仅回壳/不可核验记录
 
-直接抓取仅返回导航框架、无正文（2026-10-14，多形式多次尝试）：[jos.jd.com/commondoc?listId=520](https://jos.jd.com/commondoc?listId=520)、[open.jd.com/home/home#/doc/common?listId=520](https://open.jd.com/home/home#/doc/common?listId=520)、[open.jd.com/v2/#/doc/msgApi](https://open.jd.com/v2/#/doc/msgApi?apiCateId=81&apiId=276)、[open.jd.com/v2/doc/detail?listId=1903](https://open.jd.com/v2/doc/detail?listId=1903)、[jos.jd.com/platformdetail?itemId=2222&listId=0](https://jos.jd.com/platformdetail?itemId=2222&listId=0)、各客服 apilist 正文（apiGroupId=21/667/952/1696 等）。
+直接抓取仅返回导航框架、无正文（2026-10-14，多形式多次尝试）：[jos.jd.com/commondoc?listId=520](https://jos.jd.com/commondoc?listId=520)、[open.jd.com/home/home#/doc/common?listId=520](https://open.jd.com/home/home#/doc/common?listId=520)、[open.jd.com/v2/#/doc/msgApi](https://open.jd.com/v2/#/doc/msgApi?apiCateId=81&apiId=276)、[open.jd.com/v2/doc/detail?listId=1903](https://open.jd.com/v2/doc/detail?listId=1903)、[jos.jd.com/platformdetail?itemId=2222&listId=0](https://jos.jd.com/platformdetail?itemId=2222&listId=0)、各客服 apilist 正文（apiGroupId=21/667/952/1696 等）
 
 ### 2.4 反向佐证
 
-2026-10-14 共 10+ 轮定向检索（`im_push` / `chat_message` / `咚咚` / `客服消息` / `买家咨询` × `topic` / `订阅` / `推送` 等组合，中英文）：**未发现任何公开页面出现 IM/聊天类推送主题名或咚咚消息回调配置文档**；公开可见的推送主题命名体系全部为订单/商品/退款域。
+2026-10-14 共 10+ 轮定向检索（`im_push` / `chat_message` / `咚咚` / `客服消息` / `买家咨询` × `topic` / `订阅` / `推送` 等组合，中英文）：**未发现任何公开页面出现 IM/聊天类推送主题名或咚咚消息回调配置文档**；公开可见的推送主题命名体系全部为订单/商品/退款域
 
 ## 3. 通道形态与鉴权/报文
 
 ### 3.1 京东零售公开可见的推送形态：JMQ/JCQ 主题订阅，非 HTTP 回调
 
-- 订阅消费两条路径（`[线索]` #7 转述官方「消费方接入文档」，官方正文需登录）：① 云鼎（京东云 ISV/商家专属环境）内网用 SDK 消费；② 公有云集群走 HTTP 拉取（非 Java 语言只能 HTTP 拉取）。HTTP 拉取端点形态与京东云 JCQ 一致：`{接入点}/v2/messages`（#11 直抓互证）。
-- 鉴权（`[线索]` #7 转述，未获官方正文核验）：京东云 AccessKey ID/Secret，加商家 Pin 对应用 appkey 授权，平台为该商家生成专属 topic；订阅配置后约 30 分钟生效。
-- 公开可见的主题均为订单/商品/退款类（#7 清单），**无任何 IM/聊天/客服主题**。
-- 未发现任何官方文档描述京东零售侧「回调 URL 配置、首次握手/挑战、回调验签算法」——公开形态下零售域的推送不是 webhook，无回调可配置。
+- 订阅消费两条路径（`[线索]` #7 转述官方「消费方接入文档」，官方正文需登录）：① 云鼎（京东云 ISV/商家专属环境）内网用 SDK 消费；② 公有云集群走 HTTP 拉取（非 Java 语言只能 HTTP 拉取）。HTTP 拉取端点形态与京东云 JCQ 一致：`{接入点}/v2/messages`（#11 直抓互证）
+- 鉴权（`[线索]` #7 转述，未获官方正文核验）：京东云 AccessKey ID/Secret，加商家 Pin 对应用 appkey 授权，平台为该商家生成专属 topic；订阅配置后约 30 分钟生效
+- 公开可见的主题均为订单/商品/退款类（#7 清单），**无任何 IM/聊天/客服主题**
+- 未发现任何官方文档描述京东零售侧「回调 URL 配置、首次握手/挑战、回调验签算法」——公开形态下零售域的推送不是 webhook，无回调可配置
 
 ### 3.2 IM 消息体协议（chat_message4.2）——仅得发送侧片段
 
@@ -68,13 +68,13 @@
 }
 ```
 
-`app` 为消息发送者 appid（必填）、`pin` 为消息发送者 pin（必填）（#6 搜索摘要）。注意：该协议文档出现在「发送咚咚消息」（`josChatMessage.push2`）语境下，是 ISV→咚咚的发消息报文，**不是收侧推送报文**；完整正文仍未取得（JS-SPA）。
+`app` 为消息发送者 appid（必填）、`pin` 为消息发送者 pin（必填）（#6 搜索摘要）。注意：该协议文档出现在「发送咚咚消息」（`josChatMessage.push2`）语境下，是 ISV→咚咚的发消息报文，**不是收侧推送报文**；完整正文仍未取得（JS-SPA）
 
 ### 3.3 京东系其他业务线的回调形态（仅对照）
 
-- 京东健康（#8）：HTTP 回调 + 同步多次重试 + 合作方幂等 + 固定错误码 `1021` 表示「已处理成功、停止重试」。
-- 京东秒送/到家（#9、#10）：HTTP POST 实时推送至商家公网接收接口；token 授权码以 POST 表单回调，接收方返回 `{"code":"0","msg":"成功"}`。
-- 说明 HTTP webhook 形态在京东体系部分业务线存在，但**不能外推**到京东零售咚咚。
+- 京东健康（#8）：HTTP 回调 + 同步多次重试 + 合作方幂等 + 固定错误码 `1021` 表示「已处理成功、停止重试」
+- 京东秒送/到家（#9、#10）：HTTP POST 实时推送至商家公网接收接口；token 授权码以 POST 表单回调，接收方返回 `{"code":"0","msg":"成功"}`
+- 说明 HTTP webhook 形态在京东体系部分业务线存在，但**不能外推**到京东零售咚咚
 
 ### 3.4 易误读接口澄清（官方 API 名含 Push 但非收侧）
 
@@ -84,16 +84,16 @@
 | `jingdong.dd.notice.NoticeDispatcher` | 「商家向所属客服咚咚客户端发送通知」（#5） | 发送/客户端通知 |
 | `jingdong.miniapp.dd.push` | 京东小程序侧接入咚咚消息推送 | 客户端通知 |
 
-以上均不能作为商家收消息的通道。
+以上均不能作为商家收消息的通道
 
 ## 4. 四件套（ChannelAdapter，ADR 0014）HTTP 回调形态判断
 
-按 `channel()` / `verifyUrl` / `receive` / `send` 口径：
+按 `channel()` / `verifyUrl` / `receive` / `send` 口径
 
-- `send`（发侧）：实锤，`jingdong.dongdong.packet.josChatMessage.push2`（2026-09-10 基准已核，本次 #3/#4 复证）。
-- `verifyUrl`（GET 验证握手）：**无公开证据**。京东零售推送不是 HTTP 回调，不存在回调 URL 验证环节。
-- `receive`（验签 + 解析事件推送）：**无公开证据**。公开形态为 JMQ/JCQ 主题订阅（拉取/云鼎 SDK），非 HTTP POST 事件推送；回调验签口径无从取得（基准 §4.1 的 MD5 签名是 API 请求签名，不可套用）。
-- 若强行做四件套 HTTP 回调形态：公开证据不支持；需先取得登录态确认是否存在 IM 推送主题及其投递形态，否则该形态不成立。
+- `send`（发侧）：实锤，`jingdong.dongdong.packet.josChatMessage.push2`（2026-09-10 基准已核，本次 #3/#4 复证）
+- `verifyUrl`（GET 验证握手）：**无公开证据**。京东零售推送不是 HTTP 回调，不存在回调 URL 验证环节
+- `receive`（验签 + 解析事件推送）：**无公开证据**。公开形态为 JMQ/JCQ 主题订阅（拉取/云鼎 SDK），非 HTTP POST 事件推送；回调验签口径无从取得（基准 §4.1 的 MD5 签名是 API 请求签名，不可套用）
+- 若强行做四件套 HTTP 回调形态：公开证据不支持；需先取得登录态确认是否存在 IM 推送主题及其投递形态，否则该形态不成立
 
 ## 5. 未取得项清单（不可公开核验）
 
@@ -110,7 +110,7 @@
 
 ## 6. 后续核验路径（若需闭合「不可判定」）
 
-1. 注册京东开放平台开发者（企业账号，2026-07-01 后 JOS 迁移至 open.jd.com/JDO，新增强约束见基准 §7-1b）。
-2. 登录 [open.jd.com/v2](https://open.jd.com/v2/) 查看「消费方接入文档」（listId=1903）与消息主题列表，确认咚咚/客服域是否存在推送主题。
-3. 或经开放平台对接渠道（云鼎文档提及的 JOS 对接群）直接向京东确认咚咚/客服域推送主题存在性与投递形态。
-4. 若确认无推送主题：京东渠道收侧按轮询建模（`jingdong.im.out.merchant.chatmessage.openapi.get` 凭 sid 拉会话记录 / `jingdong.im.pop.chatlog`，单次窗口 ≤7 天），实施票以轮询形态立项并注明轮询与授权约束。
+1. 注册京东开放平台开发者（企业账号，2026-07-01 后 JOS 迁移至 open.jd.com/JDO，新增强约束见基准 §7-1b）
+2. 登录 [open.jd.com/v2](https://open.jd.com/v2/) 查看「消费方接入文档」（listId=1903）与消息主题列表，确认咚咚/客服域是否存在推送主题
+3. 或经开放平台对接渠道（云鼎文档提及的 JOS 对接群）直接向京东确认咚咚/客服域推送主题存在性与投递形态
+4. 若确认无推送主题：京东渠道收侧按轮询建模（`jingdong.im.out.merchant.chatmessage.openapi.get` 凭 sid 拉会话记录 / `jingdong.im.pop.chatlog`，单次窗口 ≤7 天），实施票以轮询形态立项并注明轮询与授权约束

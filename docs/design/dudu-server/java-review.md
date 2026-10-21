@@ -1,15 +1,15 @@
 # Server Java 审查与改造记录
 
-2026-10-07。对应用户 28 项审查意见与后续已确认决定。实施基线：c194513e7f7dbfd613c69c151b122e85a7f96619。范围含 Server、Admin 调用及相关文档；不新增依赖，不发布或推送。
+2026-10-07。对应用户 28 项审查意见与后续已确认决定。实施基线：c194513e7f7dbfd613c69c151b122e85a7f96619。范围含 Server、Admin 调用及相关文档；不新增依赖，不发布或推送
 
 ## 已确认的行为
 
-- HTTP 应用层响应固定 200，业务码表达结果；ID 类型本轮不改，数据库 Long/BIGINT、HTTP 字符串。
-- 用户组名 UserGroup、表 user_group；企业具体渠道账号 CompanyChannel、表 company_channel；多对多成员表 user_group_member。
-- 仅 initUserId 指向且属于本企业的初始管理员自动拥有全部组（含未来组），其他用户含普通管理员按成员关系授权；无成员关系则无组权限。管理接口和权限等级后续实施。
-- 渠道信息用 channelInfo JSON，移除 externalAccountId 字段；迁移保留旧非空值到 JSON。
-- 删除操作记录 result 字段及前端结果列、结果筛选，只记录共同提交的已完成操作。
-- 用户最新反馈取消数据库撤销方案：不建 token 表、不增加 jti，保留 /login、/logout；退出仅清理客户端 token，不承诺旧 token 立即失效。默认有效期 7 天。
+- HTTP 应用层响应固定 200，业务码表达结果；ID 类型本轮不改，数据库 Long/BIGINT、HTTP 字符串
+- 用户组名 UserGroup、表 user_group；企业具体渠道账号 CompanyChannel、表 company_channel；多对多成员表 user_group_member
+- 仅 initUserId 指向且属于本企业的初始管理员自动拥有全部组（含未来组），其他用户含普通管理员按成员关系授权；无成员关系则无组权限。管理接口和权限等级后续实施
+- 渠道信息用 channelInfo JSON，移除 externalAccountId 字段；迁移保留旧非空值到 JSON
+- 删除操作记录 result 字段及前端结果列、结果筛选，只记录共同提交的已完成操作
+- 用户最新反馈取消数据库撤销方案：不建 token 表、不增加 jti，保留 /login、/logout；退出仅清理客户端 token，不承诺旧 token 立即失效。默认有效期 7 天
 
 ## 逐项处理
 
@@ -46,13 +46,13 @@
 
 ## 审查发现的相关修复
 
-- CompanyDO/UserDO/原 ReceptionGroupDO/ChannelAccountDO 时间填充注解被并入注释，已恢复，验证真实插入。
-- 并发启停按原状态条件更新并检查影响行数，失败不重复记日志。
-- 前端旧 platform_admin、enabled/disabled、嵌套分页与后端契约不一致；已改 admin、0/1、平铺分页。企业 ID 冲突码统一 12300。
-- JwtManager 恢复直接 JSONUtil.parseObj(user) 签发；UserRoleEnum.toString 返回业务 code，避免签发方法手动补角色字段。
+- CompanyDO/UserDO/原 ReceptionGroupDO/ChannelAccountDO 时间填充注解被并入注释，已恢复，验证真实插入
+- 并发启停按原状态条件更新并检查影响行数，失败不重复记日志
+- 前端旧 platform_admin、enabled/disabled、嵌套分页与后端契约不一致；已改 admin、0/1、平铺分页。企业 ID 冲突码统一 12300
+- JwtManager 恢复直接 JSONUtil.parseObj(user) 签发；UserRoleEnum.toString 返回业务 code，避免签发方法手动补角色字段
 
 ## 验证与运行边界
 
-最终 Server clean test package 通过：124 项测试、0 失败、0 跳过，包含 MySQL 空库与 V1 升级、旧数据迁移、时间填充、枚举及 JSON、企业隔离、并发停用、登录和无状态退出。Admin check:all 与 build 通过：34 项测试、类型检查和 lint。真实页面完成登录、企业状态筛选、概览、资源统计、操作记录与退出验证。Standards / Spec 两路审查及最终命名增量补审通过。
+最终 Server clean test package 通过：124 项测试、0 失败、0 跳过，包含 MySQL 空库与 V1 升级、旧数据迁移、时间填充、枚举及 JSON、企业隔离、并发停用、登录和无状态退出。Admin check:all 与 build 通过：34 项测试、类型检查和 lint。真实页面完成登录、企业状态筛选、概览、资源统计、操作记录与退出验证。Standards / Spec 两路审查及最终命名增量补审通过
 
-原有开发 MySQL unhealthy，现有凭据无法登录，本轮使用同版本独立临时容器，不修改原库与密码。V2 不改已提交 V1，原库尚未应用本次迁移。默认 7 天仅影响未显式配置 TTL 的新 token；改密和停用不会自动撤销其他 token。没有新增 Console 管理界面或角色等级。
+原有开发 MySQL unhealthy，现有凭据无法登录，本轮使用同版本独立临时容器，不修改原库与密码。V2 不改已提交 V1，原库尚未应用本次迁移。默认 7 天仅影响未显式配置 TTL 的新 token；改密和停用不会自动撤销其他 token。没有新增 Console 管理界面或角色等级

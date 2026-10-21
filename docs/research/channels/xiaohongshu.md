@@ -1,8 +1,8 @@
 # 小红书开放平台 / 专业号 事件事实库
 
-> 研究日期：2026-09-10。方法：WebSearch 配额耗尽（09-27 恢复），全程未用搜索；采用 WebFetch 直抓 + Wayback CDX 归档枚举 + `gh` GitHub 代码搜索三条通道。
-> **事实分级**：`[官方]` = 官方域名/API 直接返回；`[多源]` = ≥2 个独立第三方实现交叉一致；`[单源]` = 仅一处出现，真实性存疑；`[逆向]` = 非官方协议逆向。
-> **勘误（2026-09-10 补摄）**：本文件首轮遗漏了 **miniapp.xiaohongshu.com（小红书小程序开放平台）** 域——小红书**有**官方公开推送通道：小程序「客服消息」体系（微信小程序客服消息同款模式），详见 §10。§2.4「专业号私信无官方 webhook」的结论就专业号 DM 而言仍成立，但「小红书侧无官方消息型推送基准」的整体印象作废。
+> 研究日期：2026-09-10。方法：WebSearch 配额耗尽（09-27 恢复），全程未用搜索；采用 WebFetch 直抓 + Wayback CDX 归档枚举 + `gh` GitHub 代码搜索三条通道
+> **事实分级**：`[官方]` = 官方域名/API 直接返回；`[多源]` = ≥2 个独立第三方实现交叉一致；`[单源]` = 仅一处出现，真实性存疑；`[逆向]` = 非官方协议逆向
+> **勘误（2026-09-10 补摄）**：本文件首轮遗漏了 **miniapp.xiaohongshu.com（小红书小程序开放平台）** 域——小红书**有**官方公开推送通道：小程序「客服消息」体系（微信小程序客服消息同款模式），详见 §10。§2.4「专业号私信无官方 webhook」的结论就专业号 DM 而言仍成立，但「小红书侧无官方消息型推送基准」的整体印象作废
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### 1.2 文档中心的真实数据通道（绕过 SPA 空壳的抓法）
 
-文档中心是 SPA，正文走 XHR。**GET 型可直抓**（本次全部实际抓通）：
+文档中心是 SPA，正文走 XHR。**GET 型可直抓**（本次全部实际抓通）
 
 | 接口 | 作用 | 实抓 URL |
 |---|---|---|
@@ -28,25 +28,25 @@
 | `/api/doc/common/paramNew?gatewayId=103&gatewayVersionId=1661` | **公共参数官方定义**（appId/sign/timestamp/version/accessToken） | https://open.xiaohongshu.com/api/doc/common/paramNew?gatewayId=103&gatewayVersionId=1661 |
 | `/api/doc/errorcodeNew?apiNavigationDetailId={id}` | 接口错误码 | https://open.xiaohongshu.com/api/doc/errorcodeNew?apiNavigationDetailId=35 |
 
-**POST 型（GET 直接 405，本次未能取正文）**：`/api/developer/doc/getDocNavigationNew`、`/api/developer/doc/getDocNavigationSecondListNew`、`/api/developer/doc/getDocDetailNew`。Wayback 有 2 批捕获，回放（`id_` 原始模式）得到部分导航：
+**POST 型（GET 直接 405，本次未能取正文）**：`/api/developer/doc/getDocNavigationNew`、`/api/developer/doc/getDocNavigationSecondListNew`、`/api/developer/doc/getDocDetailNew`。Wayback 有 2 批捕获，回放（`id_` 原始模式）得到部分导航
 
-- 文档中心五大板块（getDocNavigationNew，Wayback 20250925022221）：
+- 文档中心五大板块（getDocNavigationNew，Wayback 20250925022221）
   开发文档(docId=9)、API调用场景(10)、**数据加解密(11)**、电子面单(12)、规则中心(13)
 - 数据加解密子树（getDocNavigationSecondListNew，Wayback 20250925022223）：docDetailId **50=「数据加密对接方案」、51=「加密算法介绍」**
 - 电子面单子树（Wayback 20260112045128）：docDetailId 294/295/296/297/301/318
 - 开发文档(docId=9) 子树与正文 **无归档、POST 墙** → 待核验(09-27)
 
-开发者文档正文页路由（SPA）：`https://open.xiaohongshu.com/document/developer/file/{docDetailId}`。
+开发者文档正文页路由（SPA）：`https://open.xiaohongshu.com/document/developer/file/{docDetailId}`
 
 ### 1.3 Wayback CDX 枚举结果（open.xiaohongshu.com 域全部 200 捕获）
 
-关键命中：`/api/developer/doc/*`（3 个 POST 接口）、`/api/doc/*`（list/info/second/errorcode/common-param 的新旧版本）、`/document/api?apiNavigationId=...&gatewayId=103&gatewayVersionId=1661&apiId=...`、`/develop/book`、`/authorization?appId=...&redirectUri=...`（OAuth 授权页）、`/service-market/applicationDetail?appid=...`。
+关键命中：`/api/developer/doc/*`（3 个 POST 接口）、`/api/doc/*`（list/info/second/errorcode/common-param 的新旧版本）、`/document/api?apiNavigationId=...&gatewayId=103&gatewayVersionId=1661&apiId=...`、`/develop/book`、`/authorization?appId=...&redirectUri=...`（OAuth 授权页）、`/service-market/applicationDetail?appid=...`
 
 ---
 
 ## 2. 消息/事件推送全清单（电商开放平台 ark 网关）
 
-来源：zsmhub/xhs-sdk `message/` 目录（Go 结构体逐字转录，msgTag 与字段名均为平台原样）；`cxjava/xhs-sdk`（分叉，注释佐证）。
+来源：zsmhub/xhs-sdk `message/` 目录（Go 结构体逐字转录，msgTag 与字段名均为平台原样）；`cxjava/xhs-sdk`（分叉，注释佐证）
 
 ### 2.1 推送信封（外层结构）
 
@@ -58,9 +58,9 @@
 }
 ```
 
-- 平台 POST 到回调地址的 body 是 **该结构的 JSON 数组**（批量推送）。
-- `data` 是 **JSON 字符串**，需二次反序列化。
-- 应答体：`{"success": true, "error_code": 0, "error_msg": ""}`。
+- 平台 POST 到回调地址的 body 是 **该结构的 JSON 数组**（批量推送）
+- `data` 是 **JSON 字符串**，需二次反序列化
+- 应答体：`{"success": true, "error_code": 0, "error_msg": ""}`
 
 ### 2.2 事件类型清单（msgTag → data 字段）
 
@@ -77,36 +77,36 @@
 | `msg_sku_delete` | 商品-商品删除 | skuId(string), updateTime(int64) |
 | `msg_item_audit_reject` | 商品-商品审核驳回 | itemId(string), updateTime(int64) |
 
-注意字段命名不统一（`request_from` 下划线 vs 其余驼峰；`openAddressId` 在两事件中类型不同），mock 时应保留原样。
+注意字段命名不统一（`request_from` 下划线 vs 其余驼峰；`openAddressId` 在两事件中类型不同），mock 时应保留原样
 
 ### 2.3 事件携带的枚举值（constant.go，逐字）
 
-订单状态 orderStatus：1 已下单待付款 / 2 已支付处理中 / 3 清关中 / 4 待发货 / 5 部分发货 / 6 待收货 / 7 已完成 / 8 已关闭 / 9 已取消 / 10 换货申请中。
+订单状态 orderStatus：1 已下单待付款 / 2 已支付处理中 / 3 清关中 / 4 待发货 / 5 部分发货 / 6 待收货 / 7 已完成 / 8 已关闭 / 9 已取消 / 10 换货申请中
 
-售后退货类型 returnType：1 退货退款 / 2 换货 / 3 仅退款(old) / 4 仅退款(new) / 5 未发货仅退款。
+售后退货类型 returnType：1 退货退款 / 2 换货 / 3 仅退款(old) / 4 仅退款(new) / 5 未发货仅退款
 
-售后单状态（查询接口用，推送引用）：1 待审核 / 2 待用户寄回 / 3 待收货 / 4 完成 / 5 取消 / 6 关闭 / 9 拒绝 / 11 换货转退款 / 12 待商家发货 / 13 商家已发货 / 14 平台介入中 / 9001 商家收货拒绝。
+售后单状态（查询接口用，推送引用）：1 待审核 / 2 待用户寄回 / 3 待收货 / 4 完成 / 5 取消 / 6 关闭 / 9 拒绝 / 11 换货转退款 / 12 待商家发货 / 13 商家已发货 / 14 平台介入中 / 9001 商家收货拒绝
 
 ### 2.4 私信（专业号 DM）事件
 
-**未找到任何官方公开 webhook 规范。** GitHub 全网代码检索 `sxt.xiaohongshu.com` / `私信通` / `sixin_message` / `专业号+token`，官方通道实现为零。存在的只有：
+**未找到任何官方公开 webhook 规范。** GitHub 全网代码检索 `sxt.xiaohongshu.com` / `私信通` / `sixin_message` / `专业号+token`，官方通道实现为零。存在的只有
 
-- `[逆向]` 商家工作台 cookie 通道 + WebSocket（见 §8）。
-- `[单源·存疑]` `zhilin1719-hue/--` 项目自述接入小红书私信回调（`im.message.receive` 事件、`x-xiaohongshu-signature` 头、`verify_webhook`+challenge 握手），但该 repo 为 AI 脚手架风格，事件命名模仿飞书（`im.message.receive` 是飞书事件名），文档仅引用官网首页 URL，无官方规格佐证。**不得作为事实采用**，详见 §7 待核验。
+- `[逆向]` 商家工作台 cookie 通道 + WebSocket（见 §8）
+- `[单源·存疑]` `zhilin1719-hue/--` 项目自述接入小红书私信回调（`im.message.receive` 事件、`x-xiaohongshu-signature` 头、`verify_webhook`+challenge 握手），但该 repo 为 AI 脚手架风格，事件命名模仿飞书（`im.message.receive` 是飞书事件名），文档仅引用官网首页 URL，无官方规格佐证。**不得作为事实采用**，详见 §7 待核验
 
 ---
 
 ## 3. 回调机制
 
-来源：zsmhub/xhs-sdk README + demo/message.go；cxjava/xhs-sdk examples/paid_order_flow/main.go 注释。
+来源：zsmhub/xhs-sdk README + demo/message.go；cxjava/xhs-sdk examples/paid_order_flow/main.go 注释
 
-1. **URL 配置**：在开放平台控制台为应用配置「消息推送」回调 URL（HTTPS）。`[多源]` cxjava 注释原话：「生产环境更推荐：在开放平台配置『消息推送』，支付完成后平台 POST 到你的 HTTPS，在回调里解析订单号再调 order.getOrderDetail」。
-2. **推送方式**：平台 POST，Content-Type JSON，body 为 `[{msgTag, sellerId, data}, ...]` 数组。
-3. **应答**：HTTP 200 + `{"success": true, "error_code": 0, "error_msg": ""}`。
-4. **首次校验握手**：**未发现** echo/challenge 类握手机制（电商推送侧）。SDK demo 直接上线收 POST。→ 官方「开发文档-消息推送」章节未取得，待核验(09-27)。
-5. **OAuth 授权回调**（与推送回调是两个不同 URL 配置项）：平台 GET 回调地址，带 `code`、`state` 参数；用 code 调 `oauth.getAccessToken` 换 token。
-6. **重试策略**：官方文档未取得 → 待核验(09-27)。
-7. **推送验签**：cxjava 注释称「验签方式与 API 调用一致（文档『消息推送』章节）。本仓库未内置验签」；zsmhub demo 完全不验签。两 SDK 均未展示推送侧签名头 → 待核验(09-27)。
+1. **URL 配置**：在开放平台控制台为应用配置「消息推送」回调 URL（HTTPS）。`[多源]` cxjava 注释原话：「生产环境更推荐：在开放平台配置『消息推送』，支付完成后平台 POST 到你的 HTTPS，在回调里解析订单号再调 order.getOrderDetail」
+2. **推送方式**：平台 POST，Content-Type JSON，body 为 `[{msgTag, sellerId, data}, ...]` 数组
+3. **应答**：HTTP 200 + `{"success": true, "error_code": 0, "error_msg": ""}`
+4. **首次校验握手**：**未发现** echo/challenge 类握手机制（电商推送侧）。SDK demo 直接上线收 POST。→ 官方「开发文档-消息推送」章节未取得，待核验(09-27)
+5. **OAuth 授权回调**（与推送回调是两个不同 URL 配置项）：平台 GET 回调地址，带 `code`、`state` 参数；用 code 调 `oauth.getAccessToken` 换 token
+6. **重试策略**：官方文档未取得 → 待核验(09-27)
+7. **推送验签**：cxjava 注释称「验签方式与 API 调用一致（文档『消息推送』章节）。本仓库未内置验签」；zsmhub demo 完全不验签。两 SDK 均未展示推送侧签名头 → 待核验(09-27)
 
 ---
 
@@ -114,28 +114,28 @@
 
 ### 4.1 调用方签名（请求平台 API 时）`[官方公共参数定义 + 多源组装公式]`
 
-官方公共参数文档（paramNew 直抓，见 §5.3）定义请求体必填 `["appId","method","sign","timestamp","version"]`，并注明：**「accessToken：通过code获取的accessToken(授权接口等部分接口不需要此参数，该字段不参与sign签名运算)」**。官方 paramNew 仅写“签名算法参考开发者文档”，md5 组装公式来自 zsmhub Go 与 qihang Java 两 SDK 交叉（2026-09-10 复核注），未见官方原文。
+官方公共参数文档（paramNew 直抓，见 §5.3）定义请求体必填 `["appId","method","sign","timestamp","version"]`，并注明：**「accessToken：通过code获取的accessToken(授权接口等部分接口不需要此参数，该字段不参与sign签名运算)」**。官方 paramNew 仅写“签名算法参考开发者文档”，md5 组装公式来自 zsmhub Go 与 qihang Java 两 SDK 交叉（2026-09-10 复核注），未见官方原文
 
-签名算法（zsmhub Go 与 qihang Java 两源逐字一致）：
+签名算法（zsmhub Go 与 qihang Java 两源逐字一致）
 
 ```
 signString = method + "?appId=" + appId + "&timestamp=" + timestamp + "&version=" + version + appSecret
 sign = md5_hex_lowercase(signString)
 ```
 
-- qihang-erp-open `xhsTokenApiHelper.java` 原文：
+- qihang-erp-open `xhsTokenApiHelper.java` 原文
   `String signString = method+"?appId="+appId+"&timestamp="+time.toString()+"&version="+"2.0"+appSecret;`
   `String sign = MD5Utils.MD5Encode(signString);`
-- `method` 形如 `oauth.getAccessToken`、`common.getCategories`；`version` 固定 `2.0`；`timestamp` 为 **秒级** UNIX 时间戳（官方 paramNew example: `1612518379`）。
+- `method` 形如 `oauth.getAccessToken`、`common.getCategories`；`version` 固定 `2.0`；`timestamp` 为 **秒级** UNIX 时间戳（官方 paramNew example: `1612518379`）
 
 ### 4.2 推送方验签（平台 → 回调）
 
-无公开证据存在独立签名头（见 §3.7）。注意：`[单源·存疑]` 的 `x-xiaohongshu-signature`（HMAC-SHA256(body, appSecret) hex）未被任何其他源证实。
+无公开证据存在独立签名头（见 §3.7）。注意：`[单源·存疑]` 的 `x-xiaohongshu-signature`（HMAC-SHA256(body, appSecret) hex）未被任何其他源证实
 
 ### 4.3 数据加解密 `[官方·目录级]`
 
-- 文档中心有独立板块「数据加解密」：docDetailId 50「数据加密对接方案」、51「加密算法介绍」——正文 POST 墙，**算法细节待核验(09-27)**。
-- 业务事实：订单收件人等敏感信息以 `encryptedData` 密文返回，需调接口解密 `[多源]`：
+- 文档中心有独立板块「数据加解密」：docDetailId 50「数据加密对接方案」、51「加密算法介绍」——正文 POST 墙，**算法细节待核验(09-27)**
+- 业务事实：订单收件人等敏感信息以 `encryptedData` 密文返回，需调接口解密 `[多源]`
   - 方法：`data.batchDecrypt`
   - 请求：`{baseInfos: [{dataTag: "订单场景为orderId", encryptedData}], actionType, appUserId}`
   - `actionType`：`1` 单个查看订单明文 / `2` 批量解密打单 / `3` 批量解密后面向三方的数据下发 / `4` 其他场景
@@ -170,7 +170,7 @@ sign = md5_hex_lowercase(signString)
 {"code":0,"success":true,"data":{"id":5576,"path":"/ark/open_api/v3/common_controller","summary":"","method":"post","specJson":{"summary":"公共参数","servers":[],"requestBody":{"content":{"application/json":{"schema":{"required":["appId","method","sign","timestamp","version"],"type":"object","properties":{"method":{"type":"string","description":"API接口名称","example":"package.getPackageList"},"appId":{"type":"string","description":"创建应用的appId","example":"21d***de0"},"sign":{"type":"string","description":"API输入参数签名结果，签名算法参考开发者文档","example":"532***089"},"timestamp":{"type":"string","description":"UNIX时间戳，单位秒","example":"1612518379"},"version":{"type":"string","description":"API协议版本号，目前使用2.0","example":"2.0"},"accessToken":{"type":"string","description":"通过code获取的accessToken(授权接口等部分接口不需要此参数，该字段不参与sign签名运算)","example":"token-67***aa-43***c4"}}}}}},"responses":{"200":{"description":"success","content":{"application/json":{"schema":{"type":"object"}}}}}},"gatewayVersionName":"feature/logan","updateTime":"2025-12-08T13:35:51.000Z"}}
 ```
 
-要点：`timestamp` 官方 example 为字符串型秒级时间戳；`path` 官方登记为 `/ark/open_api/v3/common_controller`；schema 内部还带 `x-schema` 元数据（已省略，含网关 schemaId 等，与 mock 无关）。
+要点：`timestamp` 官方 example 为字符串型秒级时间戳；`path` 官方登记为 `/ark/open_api/v3/common_controller`；schema 内部还带 `x-schema` 元数据（已省略，含网关 schemaId 等，与 mock 无关）
 
 ### 5.4 消息推送回调 body（按 `[多源]` SDK 结构体构造的最小示例，非官方原文快照）
 
@@ -189,13 +189,13 @@ sign = md5_hex_lowercase(signString)
 ]
 ```
 
-应答（HTTP 200）：
+应答（HTTP 200）
 
 ```json
 {"success":true,"error_code":0,"error_msg":""}
 ```
 
-> 说明：信封字段名（msgTag/sellerId/data、success/error_code/error_msg）逐字来自 SDK 结构体 tag；数值占位由本研究的示例值填充（SDK 中官方样例值未含完整推送报文，官方「消息推送」文档正文未取得）。
+> 说明：信封字段名（msgTag/sellerId/data、success/error_code/error_msg）逐字来自 SDK 结构体 tag；数值占位由本研究的示例值填充（SDK 中官方样例值未含完整推送报文，官方「消息推送」文档正文未取得）
 
 ### 5.5 oauth.getAccessToken 响应结构（token 字段名逐字，值为占位）`[多源]`
 
@@ -245,13 +245,13 @@ sign = md5_hex_lowercase(signString)
 
 ## 8. 附录：私信通非官方通道事实（`[逆向]`，仅供了解，勿作 mock 基准）
 
-来源：jtrhb/sxt（pysxt「小红书私信通机器人开发框架」）、vikiboss/redote。
+来源：jtrhb/sxt（pysxt「小红书私信通机器人开发框架」）、vikiboss/redote
 
-- sxt.xiaohongshu.com 是**商家客服工作台**（多客服 `im/multiCustomerService` 页面），认证靠商家登录 cookie：关键 cookie `x-user-id-sxt.xiaohongshu.com`、`access-token-sxt.xiaohongshu.com`（形如 `customer.sxt.AT-...`）；请求头 `x-subsystem: sxt`。
-- 私信实时通道为 **WebSocket** `wss://zelda.xiaohongshu.com/websocketV2`，客户端标识 appId=`647e8f23d15d890d5cc02700`、token=`7f54749ef19aaf9966ed7a616982c016bda5dfba`、appName=`walle-ad`（工作台前端内置常量）。
-- WS 协议帧：`{type:1, token, appId}` 鉴权 → 服务端 `{type:129, secureKey}` → 客户端 `{type:10, topic: AES-ECB(secureKey, userId), encrypt:true}`（topic 用 secureKey 作 AES-ECB 密钥加密 userId，base64-urlsafe）→ 服务端 `{type:2, data:{type:"PUSH_SIXINTONG_MSG", payload:{sixin_message:{message_type,...}}}}` 推私信 → 客户端回 `{type:130, ack:seq}`；心跳 type 4/132，附加信息应答 type 138→12。
-- 私信 message_type 枚举：`TEXT / EMOTICON / IMAGE / VIDEO / VOICE / CARD`。
-- 明确结论：**这是「商家客户端 ↔ 平台」的内部协议，不是「平台 → 第三方回调」的开放通道**；mock-pulse 若要模拟官方回调，不应以此为蓝本；若要模拟「商家侧收私信」，可参考其 WS 帧结构（标注非官方）。
+- sxt.xiaohongshu.com 是**商家客服工作台**（多客服 `im/multiCustomerService` 页面），认证靠商家登录 cookie：关键 cookie `x-user-id-sxt.xiaohongshu.com`、`access-token-sxt.xiaohongshu.com`（形如 `customer.sxt.AT-...`）；请求头 `x-subsystem: sxt`
+- 私信实时通道为 **WebSocket** `wss://zelda.xiaohongshu.com/websocketV2`，客户端标识 appId=`647e8f23d15d890d5cc02700`、token=`7f54749ef19aaf9966ed7a616982c016bda5dfba`、appName=`walle-ad`（工作台前端内置常量）
+- WS 协议帧：`{type:1, token, appId}` 鉴权 → 服务端 `{type:129, secureKey}` → 客户端 `{type:10, topic: AES-ECB(secureKey, userId), encrypt:true}`（topic 用 secureKey 作 AES-ECB 密钥加密 userId，base64-urlsafe）→ 服务端 `{type:2, data:{type:"PUSH_SIXINTONG_MSG", payload:{sixin_message:{message_type,...}}}}` 推私信 → 客户端回 `{type:130, ack:seq}`；心跳 type 4/132，附加信息应答 type 138→12
+- 私信 message_type 枚举：`TEXT / EMOTICON / IMAGE / VIDEO / VOICE / CARD`
+- 明确结论：**这是「商家客户端 ↔ 平台」的内部协议，不是「平台 → 第三方回调」的开放通道**；mock-pulse 若要模拟官方回调，不应以此为蓝本；若要模拟「商家侧收私信」，可参考其 WS 帧结构（标注非官方）
 
 ---
 
@@ -300,11 +300,11 @@ sign = md5_hex_lowercase(signString)
 
 ## 10. 补摄：小程序客服消息体系（miniapp.xiaohongshu.com）`[官方]`
 
-> 背景：用户提供 miniapp 域两页文档后补摄。这是小红书**官方公开的消息型推送通道**——用户在小程序客服会话向商家发消息/触发事件，小红书服务器推送到开发者配置的 URL。整体为**微信小程序客服消息的同款模式**（Token＋EncodingAESKey＋echostr 握手＋sha1 验签＋success 应答＋5s×3 重试），载荷为 JSON（微信系为 XML）。
+> 背景：用户提供 miniapp 域两页文档后补摄。这是小红书**官方公开的消息型推送通道**——用户在小程序客服会话向商家发消息/触发事件，小红书服务器推送到开发者配置的 URL。整体为**微信小程序客服消息的同款模式**（Token＋EncodingAESKey＋echostr 握手＋sha1 验签＋success 应答＋5s×3 重试），载荷为 JSON（微信系为 XML）
 
 ### 10.1 域的定位与「平台通讯两形态」
 
-各大平台的通讯开放能力走两条路：**直连私信**（平台 IM 能力直接开放，如抖音 IM、企微）或**小程序客服消息**（平台给小程序生态，用客服会话实现通讯，如微信小程序、小红书小程序）。小红书走的是第二条——专业号私信没有官方 ISV 推送（§2.4），但小程序客服消息有完整官方规范。对 mock-pulse：小红书侧的官方模拟基准＝本体系。
+各大平台的通讯开放能力走两条路：**直连私信**（平台 IM 能力直接开放，如抖音 IM、企微）或**小程序客服消息**（平台给小程序生态，用客服会话实现通讯，如微信小程序、小红书小程序）。小红书走的是第二条——专业号私信没有官方 ISV 推送（§2.4），但小程序客服消息有完整官方规范。对 mock-pulse：小红书侧的官方模拟基准＝本体系
 
 ### 10.2 服务器配置（开放平台控制台填写）
 
@@ -316,7 +316,7 @@ sign = md5_hex_lowercase(signString)
 
 ### 10.3 消息格式（客服消息）
 
-POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
+POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段
 
 | MsgType | 专属字段 | 说明 |
 |---|---|---|
@@ -326,31 +326,31 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 | `item` | `OutProductId` | 外部商品 id |
 | `order` | `OutOrderId` | 外部订单 id |
 
-通用字段：`MsgId`（字符串）、`FromOpenId`（发送者 openid）、`ToAppId`（小程序 appid）、`MsgType`、`CreateTime`（秒级）。
+通用字段：`MsgId`（字符串）、`FromOpenId`（发送者 openid）、`ToAppId`（小程序 appid）、`MsgType`、`CreateTime`（秒级）
 
-文本消息载荷形如：
+文本消息载荷形如
 
 ```json
 {"MsgId": "MSG_ID", "FromOpenId": "USER_OPEN_ID", "ToAppId": "SELLER_APP_ID", "MsgType": "text", "CreateTime": 1648714429, "Content": "..."}
 ```
 
-收到消息后 **48h 内**可用「发送客服消息」接口（DC234367）回复。
+收到消息后 **48h 内**可用「发送客服消息」接口（DC234367）回复
 
 ### 10.4 首次握手（URL 校验）与验签
 
-- 提交配置后，小红书服务器向所填 URL 发 **GET**，携 4 个 **query 参数**（非请求头）：`signature`、`timestamp`、`nonce`、`echostr`。
-- 校验通过后**原样返回 echostr 参数内容**，接入生效。
-- 验签算法：`signature = sha1( sort(token, timestamp, nonce) 三值字典序排序后拼接 )`——与微信/企微同族（企微版多第四个参数 msg_encrypt）。
+- 提交配置后，小红书服务器向所填 URL 发 **GET**，携 4 个 **query 参数**（非请求头）：`signature`、`timestamp`、`nonce`、`echostr`
+- 校验通过后**原样返回 echostr 参数内容**，接入生效
+- 验签算法：`signature = sha1( sort(token, timestamp, nonce) 三值字典序排序后拼接 )`——与微信/企微同族（企微版多第四个参数 msg_encrypt）
 
 ### 10.5 应答与重试
 
-- 收到推送必须应答：**直接回复 `success`（官方推荐）**，或按对应接口文档返回指定内容，否则报错。
-- 5 秒内收不到响应断开连接并重发，**总共重试 3 次**。
+- 收到推送必须应答：**直接回复 `success`（官方推荐）**，或按对应接口文档返回指定内容，否则报错
+- 5 秒内收不到响应断开连接并重发，**总共重试 3 次**
 
 ### 10.6 消息体加解密（细节未取得，官方错链）
 
-- DC577113 明示消息体走加密、密钥即配置的 EncodingAESKey，但引用的「消息加解密」文档（DC591932）实际返回的是「开放数据校验与解密」（session_key/AES-128-CBC/PKCS#7，属用户开放数据体系，非消息推送体系）——**官方文档挂错链**。
-- **强假设（推断非事实）**：算法为微信系 WXBizMsgCrypt 同款——AES-CBC、密钥=Base64_decode(EncodingAESKey+"=") 32 字节、IV=密钥前 16 字节、PKCS#7 补位、明文结构 random(16B)+msg_len(4B 大端)+msg+receiveid。依据：配置项同名、握手/验签/应答/重试全同款（企微侧同款算法已完整入库，见 `wecom.md` §4）。→ **待核验(09-27)**（或下载官方 Java 示例包核验）。
+- DC577113 明示消息体走加密、密钥即配置的 EncodingAESKey，但引用的「消息加解密」文档（DC591932）实际返回的是「开放数据校验与解密」（session_key/AES-128-CBC/PKCS#7，属用户开放数据体系，非消息推送体系）——**官方文档挂错链**
+- **强假设（推断非事实）**：算法为微信系 WXBizMsgCrypt 同款——AES-CBC、密钥=Base64_decode(EncodingAESKey+"=") 32 字节、IV=密钥前 16 字节、PKCS#7 补位、明文结构 random(16B)+msg_len(4B 大端)+msg+receiveid。依据：配置项同名、握手/验签/应答/重试全同款（企微侧同款算法已完整入库，见 `wecom.md` §4）。→ **待核验(09-27)**（或下载官方 Java 示例包核验）
 
 ### 10.7 事件回调族（目录级，正文未抓）
 
@@ -358,65 +358,65 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 
 ### 10.8 对 mock-pulse 的意义
 
-1. 小红书侧模拟基准成立：按「小程序客服消息」体系造模板（5 种 MsgType＋事件回调族），协议家族与企微同源——验签/加密伪造代码可大部分复用企微那套（差 JSON vs XML 与 receiveid 规则）。
-2. 「渠道」的领域模型应容纳两种形态：直连私信（抖音 IM/企微）与小程序客服消息（小红书/微信系）。
-3. 网传 `x-xiaohongshu-signature`/`im.message.receive`（§2.4）维持不可信判定——官方真名是 query 参数 `signature`＋`echostr`。
+1. 小红书侧模拟基准成立：按「小程序客服消息」体系造模板（5 种 MsgType＋事件回调族），协议家族与企微同源——验签/加密伪造代码可大部分复用企微那套（差 JSON vs XML 与 receiveid 规则）
+2. 「渠道」的领域模型应容纳两种形态：直连私信（抖音 IM/企微）与小程序客服消息（小红书/微信系）
+3. 网传 `x-xiaohongshu-signature`/`im.message.receive`（§2.4）维持不可信判定——官方真名是 query 参数 `signature`＋`echostr`
 
 ---
 
 ## 11. 二次补摄：支付结果回调正文 + 消息加解密官方源码（2026-09-10 晚，用户指路 DC753163）
 
-> 本节关闭两个缺口：§10.6 的「AES 算法强假设」升级为官方实锤；§10.7 的「支付结果回调正文未抓」关闭。
+> 本节关闭两个缺口：§10.6 的「AES 算法强假设」升级为官方实锤；§10.7 的「支付结果回调正文未抓」关闭
 
 ### 11.1 支付结果回调（DC753163，`[官方]`）
 
 来源：https://miniapp.xiaohongshu.com/doc/DC753163?path=/third/api-3rd-doc/msgCrypt （裸 DC753163 亦回全文，path 参数非必需，2026-09-10 注；更新 2024-11-25）
 
-- 担保支付场景下支付结果主动推送（原文面向服务商推送，主单与预约单共用同一 Event，`OrderType` 区分）；「推送请求需解密，解密后参数为……」——业务字段在 Encrypt 密文内，解密细节链接 → DC519884。
-- **OrderType=1（预售券/团购券主订单通知）字段表**：`Event`（固定 `PAY_RESULT`）、`OrderId`、`OutOrderId`、`Status`（2=支付成功，998=支付取消）、`PayChannel`（1=微信，2=支付宝，99=其它，仅成功时返回）、`TotalAmount`（单位：分）、`VoucherInfos` 列表（含 `VoucherCode` 券码）、`ProductType`（1=团购券，2=酒旅预售券）、`PayTime`（秒级时间戳）。
-- **OrderType=2（预约单通知）差异**：`OutBookOrderId` 替代 `OutOrderId`；`ProductType` 取 2（酒旅预售券补差价）或 3（日历商品）。
+- 担保支付场景下支付结果主动推送（原文面向服务商推送，主单与预约单共用同一 Event，`OrderType` 区分）；「推送请求需解密，解密后参数为……」——业务字段在 Encrypt 密文内，解密细节链接 → DC519884
+- **OrderType=1（预售券/团购券主订单通知）字段表**：`Event`（固定 `PAY_RESULT`）、`OrderId`、`OutOrderId`、`Status`（2=支付成功，998=支付取消）、`PayChannel`（1=微信，2=支付宝，99=其它，仅成功时返回）、`TotalAmount`（单位：分）、`VoucherInfos` 列表（含 `VoucherCode` 券码）、`ProductType`（1=团购券，2=酒旅预售券）、`PayTime`（秒级时间戳）
+- **OrderType=2（预约单通知）差异**：`OutBookOrderId` 替代 `OutOrderId`；`ProductType` 取 2（酒旅预售券补差价）或 3（日历商品）
 
 ### 11.2 消息加解密文档（DC519884，`[官方]`）——DC577113 错链的真正目标
 
 来源：https://miniapp.xiaohongshu.com/doc/DC519884?path=/third/api-3rd-doc/msgCrypt （「第三方平台 → 操作指南 → 消息加解密」，更新 2024-11-28；裸 DC519884 只回骨架无正文，必须带此 path 参数，2026-09-10 实抓注）
 
-- POST 推送 body（JSON）字段表：`Nonce`（string）、`Timestamp`（i32，时间戳；原文未注单位，秒级为推断——支付页 PayTime 明确秒级）、`Encrypt`（string）、`MsgSignature`（string）——**签名与随机数在 body 内**（企微自建应用是 query 参数，此处不同）。
-- 创建服务商时的 URL 验证消息为 GET（参数在 query，第三方平台语境；小程序语境见 DC577113，机制相同）；服务器须返回字符串 `success`，否则重试，重试过多触发熔断。
-- 验签 = 用「消息验证 TOKEN」+ Nonce + Timestamp + Encrypt 计算签名与 MsgSignature 比对（指引示例代码 `MsgSignature.getSignature`）；解密 = `MsgDecrypt.decrypt`（指引示例代码）。
+- POST 推送 body（JSON）字段表：`Nonce`（string）、`Timestamp`（i32，时间戳；原文未注单位，秒级为推断——支付页 PayTime 明确秒级）、`Encrypt`（string）、`MsgSignature`（string）——**签名与随机数在 body 内**（企微自建应用是 query 参数，此处不同）
+- 创建服务商时的 URL 验证消息为 GET（参数在 query，第三方平台语境；小程序语境见 DC577113，机制相同）；服务器须返回字符串 `success`，否则重试，重试过多触发熔断
+- 验签 = 用「消息验证 TOKEN」+ Nonce + Timestamp + Encrypt 计算签名与 MsgSignature 比对（指引示例代码 `MsgSignature.getSignature`）；解密 = `MsgDecrypt.decrypt`（指引示例代码）
 - 官方 Java 示例包（本次已下载并解析）：https://fe-video-qc.xhscdn.com/fe-platform/87989404f48299d3ab814cef6ce4013d85fb827b.zip?attname=MsgDecrypt.zip （包名 `com.xiaohongshu.mp.security.util`，含 MsgDecrypt.java / MsgSignature.java / PKCS7Decoder.java）
 
 ### 11.3 官方源码实锤（三个类逐字要点，`[官方]`）
 
-- `MsgDecrypt.decrypt`：`aesKey = Base64Decode(encodingAesKey + "=")`；`AES/CBC/NoPadding`（补位手工处理）；`IV = aesKey[0:16]`；解密后去 PKCS#7 补位 → 明文结构 = `random(16B) + msg_len(4B 网络字节序大端) + msg + appId`（截去真实消息后末尾即 appId）。
-- `PKCS7Decoder.decode`：pad 取值 1..32 —— **PKCS#7 以 32 字节为块单位补位**（与企微相同，非常见 AES 的 16）。
-- `MsgSignature.getSignature`：`sha1( [token, timestamp, nonce, encrypt] 四值字典序排序后直接拼接 )`，输出小写 hex——与企微四值签名同族。
+- `MsgDecrypt.decrypt`：`aesKey = Base64Decode(encodingAesKey + "=")`；`AES/CBC/NoPadding`（补位手工处理）；`IV = aesKey[0:16]`；解密后去 PKCS#7 补位 → 明文结构 = `random(16B) + msg_len(4B 网络字节序大端) + msg + appId`（截去真实消息后末尾即 appId）
+- `PKCS7Decoder.decode`：pad 取值 1..32 —— **PKCS#7 以 32 字节为块单位补位**（与企微相同，非常见 AES 的 16）
+- `MsgSignature.getSignature`：`sha1( [token, timestamp, nonce, encrypt] 四值字典序排序后直接拼接 )`，输出小写 hex——与企微四值签名同族
 
 ### 11.4 对 §7/§10 的修订与对 MockPulse 的意义
 
-- §10.6「强假设微信同款 WXBizMsgCrypt」→ **官方实锤**（密钥派生/模式/IV/补位/明文结构/签名算法全部与微信系一致）；差异点：信封是 JSON（`{Nonce, Timestamp, Encrypt, MsgSignature}` 在 body 内）、明文尾部 receiveid = **appId**、载荷 JSON。
-- §10.7「支付结果回调正文未抓」→ 关闭（§11.1 字段表）。
-- §7.1/7.5 部分缓解：miniapp 域消息推送的加解密与签名算法已实锤；开发文档正文其余章节与电商 ark 侧仍待核验(09-27)。
-- MockPulse 伪造实现：企微那套 AES-256-CBC 伪造代码可直接复用于小红书，仅三处不同——JSON 信封、receiveid 用 appId、签名值放 body 字段而非 query。
+- §10.6「强假设微信同款 WXBizMsgCrypt」→ **官方实锤**（密钥派生/模式/IV/补位/明文结构/签名算法全部与微信系一致）；差异点：信封是 JSON（`{Nonce, Timestamp, Encrypt, MsgSignature}` 在 body 内）、明文尾部 receiveid = **appId**、载荷 JSON
+- §10.7「支付结果回调正文未抓」→ 关闭（§11.1 字段表）
+- §7.1/7.5 部分缓解：miniapp 域消息推送的加解密与签名算法已实锤；开发文档正文其余章节与电商 ark 侧仍待核验(09-27)
+- MockPulse 伪造实现：企微那套 AES-256-CBC 伪造代码可直接复用于小红书，仅三处不同——JSON 信封、receiveid 用 appId、签名值放 body 字段而非 query
 
 ---
 
 ## 12. 三次补摄：发送侧官方规格（2026-10-14，issue #117 动工前置）
 
-> 背景：#117 票面注明「发送报文字段细节事实库未入库」为已知缺口，动工前先官方补证。三页文档页均为 SSR 正文，curl 直抓成功（DC591932 那种裸 doc id 只回骨架的坑在 DC234367/DC010382 不存在）。
+> 背景：#117 票面注明「发送报文字段细节事实库未入库」为已知缺口，动工前先官方补证。三页文档页均为 SSR 正文，curl 直抓成功（DC591932 那种裸 doc id 只回骨架的坑在 DC234367/DC010382 不存在）
 
 ### 12.1 发送客服消息（DC234367，`[官方]`）
 
 来源：https://miniapp.xiaohongshu.com/doc/DC234367 （页脚更新时间 2025-02-28 14:12:09；页面标签「支持第三方调用」「支持沙箱环境调用」；左侧目录「客服能力」下仅此一个接口）
 
 - 请求地址：`POST https://miniapp.xiaohongshu.com/api/rmp/message/custom`
-- 公共请求参数：
+- 公共请求参数
 
 | 名称 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | app_id | string | 是 | 小程序appid |
 | access_token | string | 是 | 小程序调用凭证 |
 
-- 业务请求参数：
+- 业务请求参数
 
 | 名称 | 类型 | 必填 | 说明 |
 |---|---|---|---|
@@ -427,7 +427,7 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 | out_product_id | string | 否 | 外部商品 ID，msg_type 为 item 时必填 |
 | out_order_id | string | 否 | 外部订单 ID，msg_type 为 order 时必填 |
 
-- 请求示例（body 逐字，仅业务参数）：
+- 请求示例（body 逐字，仅业务参数）
 
 ```json
 {
@@ -440,7 +440,7 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 }
 ```
 
-- 响应参数：`success`（bool，是否成功）、`msg`（string，说明，正确响应时为 success，错误响应时为错误描述）、`code`（int32，错误码，正确响应时为 0，错误响应时非0）。响应示例逐字：
+- 响应参数：`success`（bool，是否成功）、`msg`（string，说明，正确响应时为 success，错误响应时为错误描述）、`code`（int32，错误码，正确响应时为 0，错误响应时非0）。响应示例逐字
 
 ```json
 {
@@ -450,16 +450,16 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 }
 ```
 
-- **不返回消息标识**——发送成功无处取 `external_message_id`，与微信客服消息同病。
-- 业务错误码：页面仅写「参见错误码」未内联枚举。
-- **公共参数携带位置未明示**（待核验·真实凭据联调）：请求示例 body 只含业务参数，`app_id`/`access_token` 走 query 还是 body 官方未写；服务端按微信族惯例走 query（`?app_id=&access_token=`），若有出入只需调整调用处一处拼接。
+- **不返回消息标识**——发送成功无处取 `external_message_id`，与微信客服消息同病
+- 业务错误码：页面仅写「参见错误码」未内联枚举
+- **公共参数携带位置未明示**（待核验·真实凭据联调）：请求示例 body 只含业务参数，`app_id`/`access_token` 走 query 还是 body 官方未写；服务端按微信族惯例走 query（`?app_id=&access_token=`），若有出入只需调整调用处一处拼接
 
 ### 12.2 获取应用调用凭证（DC010382，`[官方]`）
 
 来源：https://miniapp.xiaohongshu.com/doc/DC010382 （页脚更新时间 2025-03-18 19:40:03；标签同 §12.1）
 
 - 请求地址：`POST https://miniapp.xiaohongshu.com/api/rmp/token`
-- 请求参数：`appid`（string，必填，小程序 appid）、`secret`（string，必填，小程序 appsecret）。请求示例逐字：
+- 请求参数：`appid`（string，必填，小程序 appid）、`secret`（string，必填，小程序 appsecret）。请求示例逐字
 
 ```json
 {
@@ -468,7 +468,7 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 }
 ```
 
-- 返回参数：`data`（object，错误响应时为空，但正确响应时不保证非空）内 `access_token`（string，调用凭证）与 `expire_in`（integer，有效期秒），外层 `success`（boolean）、`msg`（string，正确响应时为 success，错误响应时为错误描述）、`code`（integer，0 成功）。返回示例逐字：
+- 返回参数：`data`（object，错误响应时为空，但正确响应时不保证非空）内 `access_token`（string，调用凭证）与 `expire_in`（integer，有效期秒），外层 `success`（boolean）、`msg`（string，正确响应时为 success，错误响应时为错误描述）、`code`（integer，0 成功）。返回示例逐字
 
 ```json
 {
@@ -482,22 +482,22 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段：
 }
 ```
 
-- 凭证规则（原文要点）：有效期目前 2 小时；存储至少保留 128 字符空间；新生成 token 时上一个剩余有效期 >5 分钟的缩至 5 分钟；同一时间最多最近两个 token 生效。
-- 多源佐证 `[多源]`：fireworkor/demo-work（xhs-meiz 官方示例工程）`request-payment.js` 以 `POST {appid, secret}` JSON body 实调 `/api/rmp/token`，与文档一致。
+- 凭证规则（原文要点）：有效期目前 2 小时；存储至少保留 128 字符空间；新生成 token 时上一个剩余有效期 >5 分钟的缩至 5 分钟；同一时间最多最近两个 token 生效
+- 多源佐证 `[多源]`：fireworkor/demo-work（xhs-meiz 官方示例工程）`request-payment.js` 以 `POST {appid, secret}` JSON body 实调 `/api/rmp/token`，与文档一致
 
 ### 12.3 服务端 API 通用约定（DC853803，`[官方]`）
 
-- access_token 是调用服务端 API 的唯一凭证：有效期 2 小时，重复获取使上次 token 失效（5 分钟平滑期后过期）。
-- POST 接口 body 参数以 JSON 写入并设 `content-type: application/json`；GET/POST 严格按各接口文档定义调用。
-- 客服接口能力需开通交易能力后授权调用（基础/地点/群聊/小说等接口创建小程序应用后默认开放）。
+- access_token 是调用服务端 API 的唯一凭证：有效期 2 小时，重复获取使上次 token 失效（5 分钟平滑期后过期）
+- POST 接口 body 参数以 JSON 写入并设 `content-type: application/json`；GET/POST 严格按各接口文档定义调用
+- 客服接口能力需开通交易能力后授权调用（基础/地点/群聊/小说等接口创建小程序应用后默认开放）
 
 ### 12.4 48h 窗口复核与媒体结论维持
 
-- DC897608（接收消息与发送消息）正文原句「48h内可以使用发送客服消息接口进行回复。各消息类型的推送…」——§10.3 的 48h 回复通道复核成立（2026-10-14 实抓）。当前版 DC234367 页面无频次/限额章节。
-- 发送侧补证后，事实库仍无「按 media_id 拉取临时素材」的接口记录（「客服能力」目录仅 DC234367 一项）——媒体读取走链接下载的结论维持（§10.3 image PicUrl / video VideoUrl 链接直出）。
+- DC897608（接收消息与发送消息）正文原句「48h内可以使用发送客服消息接口进行回复。各消息类型的推送…」——§10.3 的 48h 回复通道复核成立（2026-10-14 实抓）。当前版 DC234367 页面无频次/限额章节
+- 发送侧补证后，事实库仍无「按 media_id 拉取临时素材」的接口记录（「客服能力」目录仅 DC234367 一项）——媒体读取走链接下载的结论维持（§10.3 image PicUrl / video VideoUrl 链接直出）
 
 ### 12.5 对 #117 服务端实现的口径
 
-- 发送：先 `POST /api/rmp/token`（appid/secret，JSON body）换 `access_token`，再 `POST /api/rmp/message/custom` 下发 `msg_type=text` 的 `content`；成功以 `success=true` 且 `code=0` 为准，`external_message_id` 为空。
-- `appSecret` 为服务端按公众号先例补入 channel_info 的键（mock-pulse config 无此键——其不模拟 token 换取，同 wechat-mini §6.1 口径）。
-- 接口地址配置键 `dudu.channel.xiaohongshu.api-base`（缺省 `https://miniapp.xiaohongshu.com`，可覆盖为受控替身）。
+- 发送：先 `POST /api/rmp/token`（appid/secret，JSON body）换 `access_token`，再 `POST /api/rmp/message/custom` 下发 `msg_type=text` 的 `content`；成功以 `success=true` 且 `code=0` 为准，`external_message_id` 为空
+- `appSecret` 为服务端按公众号先例补入 channel_info 的键（mock-pulse config 无此键——其不模拟 token 换取，同 wechat-mini §6.1 口径）
+- 接口地址配置键 `dudu.channel.xiaohongshu.api-base`（缺省 `https://miniapp.xiaohongshu.com`，可覆盖为受控替身）
