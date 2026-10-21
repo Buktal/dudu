@@ -2,17 +2,15 @@ package com.dudu.duduserver.channel.wecom;
 
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.AesEnvelopeCodec;
-import com.dudu.duduserver.channel.support.Coordinates;
-import com.dudu.duduserver.channel.support.Digests;
-import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.SecureXml;
 import com.dudu.duduserver.channel.support.Texts;
+import com.dudu.duduserver.channel.support.WechatSignatures;
+import com.dudu.duduserver.channel.support.WechatXmlBodies;
+import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -80,64 +78,20 @@ public class WecomProtocol {
         try {
             return switch (msgType) {
                 case MSG_TYPE_TEXT -> Map.of("type", "text", "text", fields.getOrDefault("Content", ""));
-                case MSG_TYPE_IMAGE ->
-                    media("image", msgType, fields.get("MediaId"), fields.get("PicUrl"), fields.get("MsgId"));
-                case MSG_TYPE_VOICE -> media("audio", msgType, fields.get("MediaId"), null, fields.get("MsgId"));
-                case MSG_TYPE_VIDEO -> media("video", msgType, fields.get("MediaId"), null, fields.get("MsgId"));
-                case MSG_TYPE_LOCATION -> location(fields);
-                case MSG_TYPE_LINK -> link(fields);
+                case MSG_TYPE_IMAGE -> WechatXmlBodies.media("image", msgType,
+                    fields.get("MediaId"), fields.get("PicUrl"), fields.get("MsgId"));
+                case MSG_TYPE_VOICE -> WechatXmlBodies.media("audio", msgType,
+                    fields.get("MediaId"), null, fields.get("MsgId"));
+                case MSG_TYPE_VIDEO -> WechatXmlBodies.media("video", msgType,
+                    fields.get("MediaId"), null, fields.get("MsgId"));
+                case MSG_TYPE_LOCATION -> WechatXmlBodies.location(fields);
+                case MSG_TYPE_LINK -> WechatXmlBodies.link(fields);
                 default -> MessageBodies.unknown(msgType);
             };
         } catch (RuntimeException e) {
             // 字段值不符合类型约定（如位置精度不是数字）时如实落 unknown，不猜测内容
             return MessageBodies.unknown(msgType);
         }
-    }
-
-    // 媒体标识取渠道 MediaId；缺失时用「消息 ID:媒体下标」派生稳定标识（契约第 4 节）；
-    // 两者都没有时没有可如实表达的引用，按 unknown 如实保存不填假值
-    private Map<String, Object> media(String kind, String msgType, String mediaId, String url, String messageId) {
-        String id = Texts.blankToNull(mediaId);
-        if (id == null) {
-            String messageScoped = Texts.blankToNull(messageId);
-            if (messageScoped == null) {
-                return MessageBodies.unknown(msgType);
-            }
-            id = messageScoped + ":0";
-        }
-        return MessageBodies.media(kind, id, url, null);
-    }
-
-    // 官方定义 Location_X 为纬度、Location_Y 为经度
-    private Map<String, Object> location(Map<String, String> fields) {
-        String label = fields.get("Label");
-        Map<String, Object> content = new LinkedHashMap<>();
-        content.put("type", "location");
-        if (label != null && !label.isEmpty()) {
-            content.put("label", label);
-        }
-        content.put("latitude", Coordinates.parse(fields.get("Location_X")));
-        content.put("longitude", Coordinates.parse(fields.get("Location_Y")));
-        return content;
-    }
-
-    private Map<String, Object> link(Map<String, String> fields) {
-        String url = Texts.blankToNull(fields.get("Url"));
-        if (url == null) {
-            return MessageBodies.unknown(MSG_TYPE_LINK);
-        }
-        Map<String, Object> content = new LinkedHashMap<>();
-        content.put("type", "link");
-        String title = Texts.blankToNull(fields.get("Title"));
-        if (title != null) {
-            content.put("title", title);
-        }
-        content.put("url", url);
-        String description = Texts.blankToNull(fields.get("Description"));
-        if (description != null) {
-            content.put("description", description);
-        }
-        return content;
     }
 
     /**
@@ -149,9 +103,7 @@ public class WecomProtocol {
             || msgEncrypt == null) {
             return false;
         }
-        String[] parts = {token, timestamp, nonce, msgEncrypt};
-        Arrays.sort(parts);
-        return Digests.constantTimeEquals(Digests.sha1Hex(String.join("", parts)), signature);
+        return WechatSignatures.verifySha1(signature, token, timestamp, nonce, msgEncrypt);
     }
 
     /**

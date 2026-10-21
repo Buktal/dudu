@@ -3,13 +3,13 @@ package com.dudu.duduserver.channel.wechatmini;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
-import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.SecureXml;
 import com.dudu.duduserver.channel.support.Texts;
+import com.dudu.duduserver.channel.support.WechatSignatures;
+import com.dudu.duduserver.channel.support.WechatXmlBodies;
 import org.springframework.stereotype.Component;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,9 +39,7 @@ public class WechatMiniProtocol {
         if (Texts.isBlank(token) || Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
             return false;
         }
-        String[] parts = {token, timestamp, nonce};
-        Arrays.sort(parts);
-        return Digests.constantTimeEquals(Digests.sha1Hex(String.join("", parts)), signature);
+        return WechatSignatures.verifySha1(signature, token, timestamp, nonce);
     }
 
     /**
@@ -53,9 +51,7 @@ public class WechatMiniProtocol {
         if (Texts.isBlank(token) || Texts.isBlank(msgSignature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce) || Texts.isBlank(encrypt)) {
             return false;
         }
-        String[] parts = {token, timestamp, nonce, encrypt};
-        Arrays.sort(parts);
-        return Digests.constantTimeEquals(Digests.sha1Hex(String.join("", parts)), msgSignature);
+        return WechatSignatures.verifySha1(msgSignature, token, timestamp, nonce, encrypt);
     }
 
     /**
@@ -127,8 +123,8 @@ public class WechatMiniProtocol {
         try {
             return switch (msgType) {
                 case MSG_TYPE_TEXT -> Map.of("type", "text", "text", fields.getOrDefault("Content", ""));
-                case MSG_TYPE_IMAGE ->
-                    media("image", msgType, fields.get("MediaId"), fields.get("PicUrl"), fields.get("MsgId"));
+                case MSG_TYPE_IMAGE -> WechatXmlBodies.media("image", msgType,
+                    fields.get("MediaId"), fields.get("PicUrl"), fields.get("MsgId"));
                 case MSG_TYPE_MINI_PROGRAM_PAGE -> miniProgramCard(fields);
                 default -> MessageBodies.unknown(msgType);
             };
@@ -136,20 +132,6 @@ public class WechatMiniProtocol {
             // 字段值不符合类型约定时如实落 unknown，不猜测内容
             return MessageBodies.unknown(msgType);
         }
-    }
-
-    // 媒体标识取渠道 MediaId；只有公开链接时用「消息 ID:媒体下标」派生稳定标识；
-    // 两者都没有时契约第 4 节要求媒体引用必有 id，没有可如实表达的引用，按 unknown 如实保存不填假值
-    private Map<String, Object> media(String kind, String msgType, String mediaId, String url, String messageId) {
-        String id = Texts.blankToNull(mediaId);
-        if (id == null) {
-            String messageScoped = Texts.blankToNull(messageId);
-            if (messageScoped == null) {
-                return MessageBodies.unknown(msgType);
-            }
-            id = messageScoped + ":0";
-        }
-        return MessageBodies.media(kind, id, url, null);
     }
 
     // 小程序卡片映射 card：Title 进 title；PagePath 是小程序页内路径不是外链、ThumbMediaId
