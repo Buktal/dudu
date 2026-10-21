@@ -72,6 +72,28 @@ it("不可见对象写入失败后重取当前查询，读取失败不会循环�
   ).rejects.toMatchObject({ code: 12100 });
   expect(client.getSnapshot().accessRevision).toBe(1);
 });
+it("写成功失效数据一次，读取与查询不触发失效", async () => {
+  vi.spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(
+      reply({ token: "token", expiresAt: 1900000000, profile }),
+    )
+    .mockImplementation(async () => reply(null));
+  const client = new ConsoleClient();
+  await client.login("100001", "owner", "secret");
+  // 登录是会话建立而非数据写入，不触发失效
+  expect(client.getSnapshot().dataRevision).toBe(0);
+  await client.request("/console/groups/2/members", {
+    method: "PUT",
+    validate: isEmpty,
+  });
+  await vi.waitFor(() => expect(client.getSnapshot().dataRevision).toBe(1));
+  await client.request("/console/employees", { validate: isEmpty });
+  await client.request("/console/groups/query", {
+    method: "POST",
+    validate: isEmpty,
+  });
+  expect(client.getSnapshot().dataRevision).toBe(1);
+});
 it("拒绝错误身份和非字符串ID", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
     reply({

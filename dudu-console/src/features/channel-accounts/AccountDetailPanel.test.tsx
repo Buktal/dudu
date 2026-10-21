@@ -68,7 +68,7 @@ it("换组先确认历史可见性，候选只包含可管理目标组，提交�
           { groupId: "4", groupName: "不可管理组" },
         ]}
         onClose={vi.fn()}
-        onChanged={changed}
+        notify={changed}
       />
     </ConsoleContext>,
   );
@@ -117,7 +117,7 @@ it("不可见账号关闭失效详情", async () => {
         definitions={[]}
         groups={[]}
         onClose={closed}
-        onChanged={vi.fn()}
+        notify={vi.fn()}
       />
     </ConsoleContext>,
   );
@@ -126,7 +126,30 @@ it("不可见账号关闭失效详情", async () => {
 
 it("保存时账号不可见会卸载凭据编辑器并重新读取详情", async () => {
   let invalidated = false;
-  const fetcher = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+  const fetcher = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    // 写命令携带登录态：未登录的裸 client 不会触发 12100 的权限失效重查
+    if (String(url).endsWith("/login"))
+      return new Response(
+        JSON.stringify({
+          code: 0,
+          msg: "",
+          data: {
+            token: "token",
+            expiresAt: Math.floor(Date.now() / 1000) + 3600,
+            profile: {
+              company: { companyId: "100001", companyName: "企业" },
+              user: {
+                userId: "9",
+                username: "manager",
+                name: "管理员",
+                role: "console",
+                isInitialAdmin: true,
+              },
+              managedGroupIds: ["2"],
+            },
+          },
+        }),
+      );
     if (init?.method === "PUT") invalidated = true;
     return new Response(
       JSON.stringify(
@@ -137,9 +160,11 @@ it("保存时账号不可见会卸载凭据编辑器并重新读取详情", asyn
     );
   });
   vi.stubGlobal("fetch", fetcher);
+  const client = new ConsoleClient();
+  await client.login("100001", "manager", "password");
   const closed = vi.fn();
   render(
-    <ConsoleContext value={new ConsoleClient()}>
+    <ConsoleContext value={client}>
       <AccountDetailPanel
         id="1"
         definitions={[
@@ -164,7 +189,7 @@ it("保存时账号不可见会卸载凭据编辑器并重新读取详情", asyn
         ]}
         groups={[]}
         onClose={closed}
-        onChanged={vi.fn()}
+        notify={vi.fn()}
       />
     </ConsoleContext>,
   );
@@ -182,7 +207,9 @@ it("保存时账号不可见会卸载凭据编辑器并重新读取详情", asyn
   await waitFor(() =>
     expect(
       fetcher.mock.calls.filter(
-        ([, init]) => !init?.method || init.method === "GET",
+        ([url, init]) =>
+          !String(url).endsWith("/login") &&
+          (!init?.method || init.method === "GET"),
       ),
     ).toHaveLength(2),
   );

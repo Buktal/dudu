@@ -9,9 +9,9 @@ import { useQuery } from "./use-query";
 // 「筛选变化与重置都回第一页且保留 pageSize」「page 只暴露服务端回显这一份真相
 // （加载或失败时回退请求值）」。「任一命名筛选已应用」的 filtered 布尔也在这里
 // 单点派生：非分页字段出现非 undefined 即已应用，空串视为未应用，0 等是合法值。
-// domain 数据模块（useCompanies/useLogs）只装订命名筛选操作词汇，不重复机制；
-// load 须引用稳定（adminApi 上的函数天然满足），包装成 useQuery 需要的稳定身份
-// 也在这里单点完成，调用方不再写 useCallback 仪式。
+// accessRevision（权限变化）与 dataRevision（写成功即失效）都进入重查依赖，
+// 页面不再手工编排写后刷新；load 须引用稳定（consoleApi 上的函数天然满足），
+// 包装成 useQuery 需要的稳定身份也在这里单点完成，调用方不再写 useCallback 仪式。
 export function usePagedQuery<F extends { page: number; pageSize: number }, T>(
   load: (
     client: ConsoleClient,
@@ -21,14 +21,14 @@ export function usePagedQuery<F extends { page: number; pageSize: number }, T>(
   initialFilters: F,
 ) {
   const client = useConsole();
-  const { accessRevision } = useSession();
+  const { accessRevision, dataRevision } = useSession();
   // initialFilters 只在挂载读取：props 更新不覆盖已应用的筛选，重挂载才生效。
   const [filters, setFilters] = useState(initialFilters);
   const query = useQuery(
-    // biome-ignore lint/correctness/useExhaustiveDependencies: 权限发生变化后必须重新查询列表。
+    // biome-ignore lint/correctness/useExhaustiveDependencies: 权限或数据失效后必须重新查询列表。
     useCallback(
       (signal: AbortSignal) => load(client, filters, signal),
-      [client, filters, load, accessRevision],
+      [client, filters, load, accessRevision, dataRevision],
     ),
   );
   // 「任一命名筛选已应用」：非分页字段中存在非 undefined 且非空串的值即 true，

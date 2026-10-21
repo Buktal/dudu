@@ -32,11 +32,11 @@ async function loadDetail(
 export function EmployeeDetail({
   id,
   close,
-  changed,
+  notify,
 }: {
   id: string;
   close: () => void;
-  changed: (message: string) => void;
+  notify: (message: string) => void;
 }) {
   const query = useConsoleQuery(loadDetail, [id, close]);
   const profile = useSession().profile;
@@ -141,8 +141,7 @@ export function EmployeeDetail({
                     close={() => setAction(null)}
                     saved={(_, message) => {
                       setAction(null);
-                      query.refresh();
-                      changed(message);
+                      notify(message);
                     }}
                   />
                 )}

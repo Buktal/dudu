@@ -45,7 +45,7 @@ it("initial administrator details expose name editing but protect role, status a
   await client.login("100001", "owner", "password");
   render(
     <ConsoleContext value={client}>
-      <EmployeeDetail id="1" close={vi.fn()} changed={vi.fn()} />
+      <EmployeeDetail id="1" close={vi.fn()} notify={vi.fn()} />
     </ConsoleContext>,
   );
   expect(

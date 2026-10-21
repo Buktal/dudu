@@ -61,10 +61,8 @@ function EmployeeList({
   } as EmployeeFilters);
   const [notice, setNotice] = useState<string | null>(null);
   const closeDetail = useCallback(() => onSelect(null), [onSelect]);
-  const changed = (message: string) => {
-    setNotice(message);
-    query.refresh();
-  };
+  // 写成功后的旁路通知：列表与详情重查由 dataRevision 驱动，这里只负责文案
+  const notify = (message: string) => setNotice(message);
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -191,7 +189,7 @@ function EmployeeList({
           close={() => onCreate(false)}
           saved={(_, message) => {
             onCreate(false);
-            changed(message);
+            notify(message);
           }}
         />
       )}
@@ -200,7 +198,7 @@ function EmployeeList({
           key={selectedId}
           id={selectedId}
           close={closeDetail}
-          changed={changed}
+          notify={notify}
         />
       )}
     </div>

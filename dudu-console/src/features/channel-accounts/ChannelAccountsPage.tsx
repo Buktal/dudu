@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useConsoleQuery } from "@/api/console-query";
 import { usePagedQuery } from "@/api/paged-query";
 import { ErrorState, LoadingState, Message } from "@/components/feedback";
-import { SelectField, TextField } from "@/components/form-field";
+import { FilterBar } from "@/components/filter-bar";
+import { FilterSelect } from "@/components/page-parts";
 import { QueryView } from "@/components/query-view";
 import { Button } from "@/components/ui/button";
-import { FieldGroup } from "@/components/ui/field";
 import {
   Table,
   TableBody,
@@ -37,15 +37,12 @@ export function ChannelAccountsPage({
     pageSize: 20,
     groupId: groupId ?? undefined,
   } as AccountFilters);
-  const [keyword, setKeyword] = useState("");
-  const [channel, setChannel] = useState("");
-  const [group, setGroup] = useState(groupId ?? "");
   const [notice, setNotice] = useState("");
-  const { setFilter } = query;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 路由参数变化时同步筛选；setFilter 是分页机制每次渲染的新函数。
+  const { setFilter, filters } = query;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 路由参数变化时同步筛选，已应用值一致时不再触发（避免挂载期多余请求）；setFilter 是分页机制每次渲染的新函数。
   useEffect(() => {
-    setGroup(groupId ?? "");
-    setFilter({ groupId: groupId ?? undefined });
+    const value = groupId ?? undefined;
+    if (filters.groupId !== value) setFilter({ groupId: value });
   }, [groupId]);
   if (catalog.loading || groups.loading) return <LoadingState />;
   if (catalog.error || groups.error)
@@ -78,65 +75,51 @@ export function ChannelAccountsPage({
           },
         }}
         filters={
-          <form
-            className="flex w-full min-w-0 flex-wrap items-end gap-3 lg:flex-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              query.setFilter({
-                keyword: keyword.trim() || undefined,
-                channel: channel || undefined,
-                groupId: group || undefined,
-              });
-            }}
+          <FilterBar
+            label="渠道账号筛选"
+            searchLabel="搜索账号名称"
+            placeholder="搜索账号名称"
+            value={query.filters.keyword}
+            hasConditions={
+              query.filters.channel !== undefined ||
+              query.filters.groupId !== undefined
+            }
+            onSearch={(keyword) => query.setFilter({ keyword })}
+            onReset={query.reset}
           >
-            <FieldGroup className="grid gap-3 sm:grid-cols-3">
-              <TextField
-                label="账号名称"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                placeholder="搜索账号名称"
-              />
-              <SelectField
-                label="渠道"
-                value={channel}
-                onChange={setChannel}
-                options={[
-                  { value: "", label: "全部渠道" },
-                  ...definitions.map((d) => ({
-                    value: d.channel,
-                    label: d.name,
-                  })),
-                ]}
-              />
-              <SelectField
-                label="用户组"
-                value={group}
-                onChange={setGroup}
-                options={[
-                  { value: "", label: "全部可管理组" },
-                  ...options.map((g) => ({
-                    value: g.groupId,
-                    label: `${g.groupName} · ${g.groupId}`,
-                  })),
-                ]}
-              />
-            </FieldGroup>
-            <Button type="submit" variant="outline">
-              筛选
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setKeyword("");
-                setChannel("");
-                setGroup("");
-                query.reset();
-              }}
-            >
-              重置
-            </Button>
-          </form>
+            <FilterSelect
+              label="渠道"
+              value={query.filters.channel ?? "all"}
+              options={[
+                { value: "all", label: "全部渠道" },
+                ...definitions.map((d) => ({
+                  value: d.channel,
+                  label: d.name,
+                })),
+              ]}
+              onChange={(value) =>
+                query.setFilter({
+                  channel: value === "all" ? undefined : value,
+                })
+              }
+            />
+            <FilterSelect
+              label="用户组"
+              value={query.filters.groupId ?? "all"}
+              options={[
+                { value: "all", label: "全部可管理组" },
+                ...options.map((g) => ({
+                  value: g.groupId,
+                  label: `${g.groupName} · ${g.groupId}`,
+                })),
+              ]}
+              onChange={(value) =>
+                query.setFilter({
+                  groupId: value === "all" ? undefined : value,
+                })
+              }
+            />
+          </FilterBar>
         }
         actions={
           <>
@@ -200,15 +183,11 @@ export function ChannelAccountsPage({
           groups={options}
           initialGroup={groupId}
           onClose={() => onCreate(false)}
-          onUnavailable={() => {
-            onCreate(false);
-            query.refresh();
-          }}
+          onUnavailable={() => onCreate(false)}
           onSaved={(a) => {
             onCreate(false);
             onSelect(a.companyChannelId);
             setNotice("参数已保存，请在渠道平台配置并验证。");
-            query.refresh();
           }}
         />
       )}
@@ -219,11 +198,7 @@ export function ChannelAccountsPage({
           definitions={definitions}
           groups={options}
           onClose={() => onSelect(null)}
-          onChanged={() => {
-            setNotice("参数已保存，请在渠道平台配置并验证。");
-            query.refresh();
-            groups.refresh();
-          }}
+          notify={(message) => setNotice(message)}
         />
       )}
     </div>

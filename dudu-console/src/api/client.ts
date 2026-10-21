@@ -7,6 +7,8 @@ const REQUEST_TIMEOUT_MS = 20_000;
 export const PROFILE_PATH = "/console/profile";
 export const COMPANY_ID_CONFLICT = 12300;
 const EXPIRED_CODES = new Set([10100, 10101, 10102, 10103]);
+// 会话生命周期接口不计入数据写入：登录退出不改变业务数据，失效重查只属于业务写成功
+const SESSION_PATHS = new Set(["/console/login", "/console/logout"]);
 
 export class ApiError extends Error {
   constructor(
@@ -29,6 +31,7 @@ interface ClientState {
   restoring: boolean;
   generation: number;
   accessRevision: number;
+  dataRevision: number;
   notice: string | null;
 }
 
@@ -56,6 +59,7 @@ export class ConsoleClient {
       restoring: !!this.token,
       generation: 0,
       accessRevision: 0,
+      dataRevision: 0,
       notice: null,
     };
   }
@@ -110,7 +114,8 @@ export class ConsoleClient {
     const writing =
       options.method !== undefined &&
       options.method !== "GET" &&
-      !path.endsWith("/query");
+      !path.endsWith("/query") &&
+      !SESSION_PATHS.has(path);
     const abort = () => controller.abort();
     options.signal?.addEventListener("abort", abort, { once: true });
     if (options.signal?.aborted) controller.abort();
@@ -183,6 +188,13 @@ export class ConsoleClient {
       }
       const data = options.paginated ? envelope : envelope.data;
       if (!options.validate(data)) throw new ApiError("服务响应异常，请重试");
+      // 写成功即失效：所有写入必经此处，成功后失效一次驱动列表与详情重查，页面不再手工编排刷新；
+      // 推迟到宏任务一拍，让提交方的成功收尾（关弹层、旁路通知）先行，
+      // 避免重查的 loading 回退抢先卸载提交中的弹层而吞掉它的 commit
+      if (writing)
+        setTimeout(() =>
+          this.publish({ dataRevision: this.state.dataRevision + 1 }),
+        );
       return data;
     } catch (error) {
       if (

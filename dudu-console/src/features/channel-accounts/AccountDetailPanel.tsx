@@ -66,13 +66,13 @@ export function AccountDetailPanel({
   definitions,
   groups,
   onClose,
-  onChanged,
+  notify,
 }: {
   id: string;
   definitions: ChannelDefinition[];
   groups: GroupOption[];
   onClose: () => void;
-  onChanged: () => void;
+  notify: (message: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [moving, setMoving] = useState(false);
@@ -98,11 +98,11 @@ export function AccountDetailPanel({
   const query = useConsoleQuery(loader, [id]);
   const account = query.data;
   const definition = definitions.find((d) => d.channel === account?.channel);
+  // 写成功后的本地收尾：详情与列表重查由 dataRevision 驱动，这里只关弹层与旁路通知
   const saved = () => {
     setEditing(false);
     setMoving(false);
-    query.refresh();
-    onChanged();
+    notify("参数已保存，请在渠道平台配置并验证。");
   };
   return (
     <>
@@ -116,7 +116,6 @@ export function AccountDetailPanel({
           onSaved={saved}
           onUnavailable={() => {
             setEditing(false);
-            query.refresh();
             onClose();
           }}
         />

@@ -40,13 +40,7 @@ const empty = {
     description: "添加已启用的员工；没有候选时请联系初始管理员创建或启用员工",
   },
 };
-export function GroupMembers({
-  groupId,
-  changed,
-}: {
-  groupId: string;
-  changed: () => void;
-}) {
+export function GroupMembers({ groupId }: { groupId: string }) {
   const { profile } = useSession();
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<Member | null>(null);
@@ -58,10 +52,6 @@ export function GroupMembers({
     ),
     initial,
   );
-  const refresh = () => {
-    query.refresh();
-    changed();
-  };
   return (
     <div className="flex flex-col gap-3">
       <Button onClick={() => setAdding(true)}>添加成员</Button>
@@ -108,18 +98,13 @@ export function GroupMembers({
         </Table>
       </QueryView>
       {adding && (
-        <AddMembers
-          groupId={groupId}
-          close={() => setAdding(false)}
-          changed={refresh}
-        />
+        <AddMembers groupId={groupId} close={() => setAdding(false)} />
       )}
       {removing && (
         <RemoveMember
           groupId={groupId}
           member={removing}
           close={() => setRemoving(null)}
-          changed={refresh}
         />
       )}
     </div>
@@ -128,11 +113,9 @@ export function GroupMembers({
 function AddMembers({
   groupId,
   close,
-  changed,
 }: {
   groupId: string;
   close: () => void;
-  changed: () => void;
 }) {
   const client = useConsole();
   const shell = useSubmit();
@@ -190,8 +173,6 @@ function AddMembers({
                       {
                         commit: () => {
                           setSelected(null);
-                          query.refresh();
-                          changed();
                         },
                       },
                     );
@@ -227,12 +208,10 @@ function RemoveMember({
   groupId,
   member,
   close,
-  changed,
 }: {
   groupId: string;
   member: Member;
   close: () => void;
-  changed: () => void;
 }) {
   const client = useConsole();
   const shell = useSubmit();
@@ -251,12 +230,7 @@ function RemoveMember({
               () => null,
               (signal) =>
                 groupsApi.remove(client, groupId, member.userId, signal),
-              {
-                commit: () => {
-                  changed();
-                  close();
-                },
-              },
+              { commit: close },
             )
           }
         >

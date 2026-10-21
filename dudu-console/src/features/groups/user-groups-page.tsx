@@ -127,7 +127,6 @@ export function UserGroupsPage({
         <CreateGroup
           close={() => onCreate(false)}
           saved={(group) => {
-            query.refresh();
             onCreate(false);
             onSelect(group.groupId);
           }}
@@ -137,7 +136,6 @@ export function UserGroupsPage({
         <GroupDetail
           key={selectedId}
           groupId={selectedId}
-          changed={query.refresh}
           close={() => onSelect(null)}
         />
       )}
@@ -194,11 +192,9 @@ function CreateGroup({
 }
 function GroupDetail({
   groupId,
-  changed,
   close,
 }: {
   groupId: string;
-  changed: () => void;
   close: () => void;
 }) {
   const shell = useSubmit();
@@ -207,13 +203,8 @@ function GroupDetail({
   useEffect(() => {
     if (query.data === null && !query.loading && !query.error) {
       close();
-      changed();
     }
-  }, [query.data, query.loading, query.error, close, changed]);
-  const refresh = () => {
-    query.refresh();
-    changed();
-  };
+  }, [query.data, query.loading, query.error, close]);
   return (
     <Sheet open {...shell.hold(close)}>
       <SheetContent
@@ -236,7 +227,6 @@ function GroupDetail({
                   key={`${groupId}:${query.data.groupName}`}
                   group={query.data}
                   shell={shell}
-                  saved={refresh}
                 />
                 <Message>
                   初始管理员自动拥有权限，不计入实际成员，也无需添加。成员操作仅影响当前组，保留员工的其他组关系。
@@ -270,7 +260,7 @@ function GroupDetail({
                     </Tabs.Tab>
                   </Tabs.List>
                   <Tabs.Panel value="members">
-                    <GroupMembers groupId={groupId} changed={refresh} />
+                    <GroupMembers groupId={groupId} />
                   </Tabs.Panel>
                   <Tabs.Panel value="accounts">
                     <GroupAccounts groupId={groupId} />
@@ -287,11 +277,9 @@ function GroupDetail({
 function RenameGroup({
   group,
   shell,
-  saved,
 }: {
   group: Group;
   shell: ReturnType<typeof useSubmit>;
-  saved: () => void;
 }) {
   const client = useConsole();
   const [name, setName] = useState(group.groupName);
@@ -303,7 +291,6 @@ function RenameGroup({
           event,
           () => (name.trim() ? null : "请输入组名"),
           (signal) => groupsApi.save(client, name, group.groupId, signal),
-          { commit: saved },
         )
       }
     >
