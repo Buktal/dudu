@@ -59,8 +59,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DeskLiveIntegrationTest extends DeskIntegrationSupport {
 
-    private static final long COMPANY_ID = 788001L;
-    private static final long OTHER_COMPANY_ID = 788002L;
+    // 企业 ID 与 ConsoleIdentityIntegrationTest 的自增号段（788000 起）错开，避免同一评审库内种子碰撞
+    private static final long COMPANY_ID = 785001L;
+    private static final long OTHER_COMPANY_ID = 785002L;
     private static final String CALLBACK_TOKEN = "live-callback-token";
 
     @DynamicPropertySource

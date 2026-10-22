@@ -23,9 +23,20 @@ use super::{
     HandshakeOutcome, WecomSystem,
 };
 
-/// 16 字节随机数：复用 uuid v4（已在依赖内），一个 v4 即 16 随机字节。
-pub(super) fn random_16() -> [u8; 16] {
-    *uuid::Uuid::new_v4().as_bytes()
+// 16 字节随机数原语单点在 util::random_bytes_16（曾在企微/小红书/飞书逐字
+// 复制）；企微族消费面（agent/aibot/echo 握手、dingtalk、微信族骨架）沿用
+// 既有 wecom::random_16 路径转发。
+pub(super) use crate::connections::util::random_bytes_16 as random_16;
+
+/// 从回执文本提取加密被动回复的 Encrypt 密文（XML 包结构 `<Encrypt><![CDATA[
+/// 密文]]></Encrypt>`；无则 None）。企微 §3.5 与公众号 §5.14 为同一 XML 信封
+/// （小程序 XML 形态同形），单点在本模块；小程序的 JSON 双形态提取留在
+/// wechat_mini::push。
+pub(crate) fn extract_reply_encrypt(body: &str) -> Option<&str> {
+    const OPEN: &str = "<Encrypt><![CDATA[";
+    let start = body.find(OPEN)? + OPEN.len();
+    let end = start + body[start..].find("]]>")?;
+    Some(&body[start..end])
 }
 
 /// echostr 握手的随机明文：32 位 hex（可打印、无引号换行，官方仅要求原样回显）。
@@ -138,8 +149,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Wecom { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Wecom { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Wecom { url } => url.as_str())
     }
 
     fn handshake_client(&self) -> reqwest::blocking::Client {

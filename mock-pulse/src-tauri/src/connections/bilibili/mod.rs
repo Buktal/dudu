@@ -34,7 +34,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::{hmac_sha256_hex, md5_hex, now_secs, utc8_timestamp};
+use crate::connections::util::{hmac_sha256_hex, md5_hex, now_secs, random_digits, utc8_timestamp};
 
 use super::adapter::narrow;
 use super::{
@@ -161,18 +161,15 @@ pub(crate) fn probe_envelope(data: i64, timestamp: &str) -> String {
     .to_string()
 }
 
-/// 握手 data：本侧生成同形态的 10 位数字（首位非零）——rand Uniform 均匀
-/// 采样（原 uuid 字节 `% 9`/`% 10` 有模偏差，同 Alphanumeric 退件口径）。
+/// 握手 data：本侧生成同形态的 10 位数字——首位 1-9（非零）为本模块形态
+/// 约束，余位走 util::random_digits 逐位均匀采样（原 uuid 字节 `% 9`/`% 10`
+/// 有模偏差，同 Alphanumeric 退件口径）。
 fn random_probe_data() -> i64 {
     use rand::distributions::{Distribution, Uniform};
-    let mut rng = rand::thread_rng();
-    let digit = Uniform::new(0u8, 10);
-    let head = Uniform::new_inclusive(1u8, 9);
-    let digits = std::iter::once(head.sample(&mut rng))
-        .chain(std::iter::repeat_with(|| digit.sample(&mut rng)).take(9))
-        .map(|value| char::from(b'0' + value))
-        .collect::<String>();
-    digits.parse().unwrap_or(0)
+    let head = Uniform::new_inclusive(1u8, 9).sample(&mut rand::thread_rng());
+    format!("{}{}", char::from(b'0' + head), random_digits(9))
+        .parse()
+        .unwrap_or(0)
 }
 
 /// verify_webhooks 应答核对（§3.2 镜像口径「解析出 data 值并原样返回」）：
@@ -252,8 +249,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Bilibili { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Bilibili { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Bilibili { url } => url.as_str())
     }
 
     fn verify_handshake(

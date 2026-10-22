@@ -2,7 +2,7 @@
 
 嘟嘟（DuDu）的客服坐席桌面端，使用 React 19、Vite、Tailwind CSS、shadcn、Redux Toolkit 和 Tauri 2。本阶段将已确认的接待原型迁入正式前端，统一三种接待模式、八套主题、会话状态与 API 契约；初始范围见 [规格 #50](https://github.com/Buktal/dudu/issues/50)，当前功能见 [功能图谱](../docs/features/dudu-desk.md)。
 
-2026-10-12 纯文本回复与实时推送已接通：已接入真实账户、访客摘要、按需历史、文本回复与 `/ws/desk` 实时通道适配器，登录后先建立 Socket、收到 ready 再读取初始数据，来信按 ID/version 合并（未打开访客只更新摘要，首次打开仍取最近页）；发送中先显示本地气泡，HTTP 返回与 Socket 通知按同一消息 ID 合并为一条，渠道失败按已保存的失败气泡展示真实原因并可手动重试（新 `clientRequestId`，原失败记录保留）；服务端不返回个人已读，待处理提醒在本次运行的内存态维护。收到 `access-changed`（员工-组或账号-组关系变化）后重查身份与列表，清理已无权的对话、名片、草稿、固定与提醒并保留仍有权数据，旧请求的迟到结果不写回新范围。断线后实时通道按退避自动重连，重连 ready 重新执行同一初始化查询——重查身份/权限、重读访客列表第一页与计数，显示中访客重取名片与最近页、旧历史缓存失效重载（更早消息照常向上分页），结果直接取查询结果；临时断线保留合法草稿与提醒，已处理事项不重新提醒，退出重登仍清空。本轮发送收窄为纯文本：附件准备/上传/发送延期，收到的非文本消息展示保留，真实适配器下附件入口按能力停用（不伪装可用）。企业登录、身份恢复与接待范围已按 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)接入真实 Server：未登录时显示企业登录页，`unavailableInboxApi` 仍不会假装收发成功。
+2026-10-12 纯文本回复与实时推送已接通：已接入真实账户、访客摘要、按需历史、文本回复与 `/ws/desk` 实时通道适配器，登录后先建立 Socket、收到 ready 再读取初始数据，来信按 ID/version 合并（未打开访客只更新摘要，首次打开仍取最近页）；发送中先显示本地气泡，HTTP 返回与 Socket 通知按同一消息 ID 合并为一条，渠道失败按已保存的失败气泡展示真实原因并可手动重试（新 `clientRequestId`，原失败记录保留）；服务端不返回个人已读，待处理提醒在本次运行的内存态维护。收到 `access-changed`（员工-组或账号-组关系变化）后重查身份与列表，清理已无权的对话、名片、草稿、固定与提醒并保留仍有权数据，旧请求的迟到结果不写回新范围。断线后实时通道按退避自动重连，重连 ready 重新执行同一初始化查询——重查身份/权限、重读访客列表第一页与计数，显示中访客重取名片与最近页、旧历史缓存失效重载（更早消息照常向上分页），结果直接取查询结果；临时断线保留合法草稿与提醒，已处理事项不重新提醒，退出重登仍清空。本轮发送收窄为纯文本，收到的非文本消息展示保留；附件实现已随 2026-10-22 架构审查移除——入口本已停用、API 桩不可达，待服务端附件契约落地后从 git 历史恢复（2026-10-22 全量架构审查决策）。企业登录、身份恢复与接待范围已按 [企业认证子契约与实施票](../docs/design/dudu-desk/ticket-01-login.md)接入真实 Server：未登录时显示企业登录页，`unavailableInboxApi` 仍不会假装收发成功。
 
 ## 运行与检查
 
@@ -44,7 +44,7 @@ yarn tauri:build
 
 名称调整不改变稳定标识，已有模式偏好继续生效。“我的会话”旁的查询条件图标统一打开就近浮层，包含搜索、状态、来源和排序；指定筛选条件后显示圆点，清除筛选后消失，排序本身不计为筛选。Ctrl+K 打开浮层并聚焦搜索，Esc 关闭。状态菜单包含全部、待回复、等待中、已结束及对应计数；计数超过 999 时显示 `999+`。星标功能已移除，并排固定会话保留。
 
-会话队列保留三行信息并压缩留白；顶部模式栏、会话标题和来访资料标题采用紧凑高度。消息时间默认隐藏，悬停或键盘聚焦对应消息时在外侧显示，预留位置避免跳动；时间朝向聊天区中央，与正文末行对齐，隐藏常规回执，不挤占正文或增加常规消息行高；失败与未确认提示单独保留在下方。卡片只显示与左侧列表共用的最后一条消息摘要，不因卡片挂载查询历史；完整对话按需加载消息并向上分页，首次展示（专注选中、并排任一侧、卡片展开）才读取最近页，切回已初始化的访客直接复用缓存。共用初始化流程只读取摘要并把首位访客设为当前对象，不预取历史与资料。点击“回复”展开编辑器，点击卡片外或键盘焦点移出后收起，操作表情、快捷回复等浮层时保持展开；草稿和附件继续按会话保留，收起后显示“继续草稿”。
+会话队列保留三行信息并压缩留白；顶部模式栏、会话标题和来访资料标题采用紧凑高度。消息时间默认隐藏，悬停或键盘聚焦对应消息时在外侧显示，预留位置避免跳动；时间朝向聊天区中央，与正文末行对齐，隐藏常规回执，不挤占正文或增加常规消息行高；失败与未确认提示单独保留在下方。卡片只显示与左侧列表共用的最后一条消息摘要，不因卡片挂载查询历史；完整对话按需加载消息并向上分页，首次展示（专注选中、并排任一侧、卡片展开）才读取最近页，切回已初始化的访客直接复用缓存。共用初始化流程只读取摘要并把首位访客设为当前对象，不预取历史与资料。点击“回复”展开编辑器，点击卡片外或键盘焦点移出后收起，操作表情、快捷回复等浮层时保持展开；草稿继续按会话保留，收起后显示“继续草稿”。
 
 桌面宽度下，专注与并排模式固定显示左侧会话队列，卡片模式不显示队列侧栏。并排会话的固定、取消固定及更换操作放在各自的窗口标题内；窄窗保留会话列表返回入口和主接待／固定会话切换。
 
@@ -70,7 +70,7 @@ yarn tauri:build
 | 状态 | 本次运行内切换会话、模式或主题 | 完整刷新、关闭重开或替换工作上下文 |
 | --- | --- | --- |
 | 主题、接待模式、减少动态效果 | 立即生效 | 从合法的本地偏好恢复 |
-| 未发送文字、待发送附件 | 按会话保留 | 清空 |
+| 未发送文字 | 按会话保留 | 清空 |
 | 并排固定对象、当前回复选择 | 按明确操作改变 | 不恢复旧状态 |
 | 会话、消息、标签、内部备注 | 使用 API 确认的共享状态 | 重新读取 API |
 
@@ -113,15 +113,15 @@ src/
 src-tauri/                      Tauri 桌面宿主与本地平台桥接
 ```
 
-跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。账户 feature 已接入真实 Server 认证（[http-account-api.ts](src/features/account/http-account-api.ts)）：token 只由适配器写入会话存储（[desk-session.ts](src/lib/desk-session.ts)），界面与业务 store 只接收身份及授权元数据，身份恢复必须经 `GET /api/desk/profile` 重新确认，不能仅凭本地 token 或解码结果放行。inbox 已接入真实访客摘要、按需历史、文本回复、结束／继续与实时通道适配器（[http-inbox-api.ts](src/features/inbox/http-inbox-api.ts)）：列表查询走 `POST /api/desk/visitors/query`，历史分页走 `GET /api/desk/visitors/{visitorId}/messages`（首次展示完整对话读取最近页，向上滚动用 `nextCursor` 读取更早页），纯文本回复走 `POST /api/desk/visitors/{visitorId}/messages`、能力走 `GET …/capability`，结束／继续走 `PUT /api/desk/visitors/{visitorId}/status`，来访资料读取与保存走 `GET/PUT /api/desk/visitors/{visitorId}/profile`，订阅走 `/ws/desk` 的 message、conversation 与 profile 报文，登录后只读写授权范围内的访客；服务端不返回个人已读，待处理提醒由本次运行的内存态维护（[reminders.ts](src/features/inbox/stores/reminders.ts)），附件发送尚未接入并在真实适配器下停用入口。也可向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端三表、HTTP 与 Socket 已在[最小对接契约](../docs/design/dudu-desk/implementation-contract.md)定稿；按实施票逐项接通，契约确定不代表全部真实适配器已经实现。
+跨 feature 通过各自的 `index.ts` 引用，业务 feature 单向依赖共享层。`App` 从账户会话提取 `agentId` / `workspaceId`，并将账户菜单作为插槽传入工作台；inbox 不依赖 account 内部实现。账户 feature 已接入真实 Server 认证（[http-account-api.ts](src/features/account/http-account-api.ts)）：token 只由适配器写入会话存储（[desk-session.ts](src/lib/desk-session.ts)），界面与业务 store 只接收身份及授权元数据，身份恢复必须经 `GET /api/desk/profile` 重新确认，不能仅凭本地 token 或解码结果放行。inbox 已接入真实访客摘要、按需历史、文本回复、结束／继续与实时通道适配器（[http-inbox-api.ts](src/features/inbox/http-inbox-api.ts)）：列表查询走 `POST /api/desk/visitors/query`，历史分页走 `GET /api/desk/visitors/{visitorId}/messages`（首次展示完整对话读取最近页，向上滚动用 `nextCursor` 读取更早页），纯文本回复走 `POST /api/desk/visitors/{visitorId}/messages`、能力走 `GET …/capability`，结束／继续走 `PUT /api/desk/visitors/{visitorId}/status`，来访资料读取与保存走 `GET/PUT /api/desk/visitors/{visitorId}/profile`，订阅走 `/ws/desk` 的 message、conversation 与 profile 报文，登录后只读写授权范围内的访客；服务端不返回个人已读，待处理提醒由本次运行的内存态维护（[reminders.ts](src/features/inbox/stores/reminders.ts)）。也可向 `App` 注入稳定的 `accountApi` 与 `inboxApi`。`InboxWorkspace` 也保留独立 `api` / `context` 接口用于集成；现有签名见 [InboxApi](src/features/inbox/api.ts)，后端三表、HTTP 与 Socket 已在[最小对接契约](../docs/design/dudu-desk/implementation-contract.md)定稿；按实施票逐项接通，契约确定不代表全部真实适配器已经实现。
 
 Tauri 承担桌面宿主与所需的平台桥接；渠道签名、加解密、回调和消息转发由 Server 实现，具体接入边界见[仓库首页](../README.md#渠道与限制)。
 
 ## 桌面窗口
 
-主窗口使用 `decorations: false` 与 `shadow: false` 关闭原生标题栏及 Windows 白色边线，保留 `resizable: true`，由宿主处理边缘与角落缩放。[DesktopWindowControls](src/components/desktop-window-controls.tsx) 提供最小化、最大化／还原、关闭按钮，并跟随当前主题；纯浏览器运行时隐藏。最大化状态通过窗口 resize 事件同步，组件卸载时清理订阅和防抖任务。
+主窗口使用 `decorations: false` 关闭原生标题栏及 Windows 白色边线，保留 `resizable: true`，由宿主处理边缘与角落缩放。[DesktopWindowControls](src/components/desktop-window-controls.tsx) 提供最小化、最大化／还原、关闭按钮，并跟随当前主题；纯浏览器运行时隐藏。最大化状态通过窗口 resize 事件同步，组件卸载时清理订阅和防抖任务。
 
-标题栏空白区域使用 `data-tauri-drag-region="deep"`，由 Tauri 处理拖拽和双击最大化；交互控件不参与拖拽，窗口按钮区域显式设置为 `false`。[desktop-window.ts](src/lib/desktop-window.ts) 也提供同一套窗口命令用于其他入口，Web 下安全返回。关闭使用可拦截的 `Window.close()`，沿用上文的草稿生命周期：关闭重开不恢复未发送文字和附件。主窗口能力只新增拖拽、最小化、切换最大化和关闭四项权限，状态读取与事件订阅沿用现有 `core:default`。
+标题栏空白区域使用 `data-tauri-drag-region="deep"`，由 Tauri 处理拖拽和双击最大化；交互控件不参与拖拽，窗口按钮区域显式设置为 `false`。[desktop-window.ts](src/lib/desktop-window.ts) 也提供同一套窗口命令用于其他入口，Web 下安全返回。关闭使用可拦截的 `Window.close()`，沿用上文的草稿生命周期：关闭重开不恢复未发送文字。主窗口能力只新增拖拽、最小化、切换最大化和关闭四项权限，状态读取与事件订阅沿用现有 `core:default`。
 
 ## 相关资料
 

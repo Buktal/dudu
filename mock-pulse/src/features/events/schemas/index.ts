@@ -7,6 +7,7 @@ export { defineSchema } from "./define";
 export {
   type ChannelTemplatePack,
   EVENT_SCHEMAS,
+  hasSchema,
   schemaById,
   schemasByChannel,
 } from "./registry";

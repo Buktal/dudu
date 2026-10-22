@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::plans::PlanFailure;
 
-use super::snapshot::ScenarioRunSnapshot;
+use super::snapshot::{ScenarioFailure, ScenarioRunSnapshot};
 
 /// 跳过原因：策略决策的产出，落盘结论（verdict.reason）文案的唯一来源。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -140,7 +140,7 @@ impl<'a> LanePolicy<'a> {
         propagates: bool,
         halt: Option<SkipReason>,
     ) -> Self {
-        let scenario_stops = scenario.failure.as_deref().unwrap_or("stop") != "continue";
+        let scenario_stops = scenario.failure != Some(ScenarioFailure::Continue);
         Self {
             user_cancel,
             orchestration_cancel,
@@ -204,9 +204,9 @@ impl<'a> LanePolicy<'a> {
 mod tests {
     use super::*;
 
-    fn scenario(failure: Option<&str>) -> ScenarioRunSnapshot {
+    fn scenario(failure: Option<ScenarioFailure>) -> ScenarioRunSnapshot {
         ScenarioRunSnapshot {
-            failure: failure.map(str::to_string),
+            failure,
             run_id: "run-policy".into(),
             scenario_id: "scn-1".into(),
             scenario_name: "剧本".into(),
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn user_stop_outranks_every_other_branch() {
         let user = AtomicBool::new(true);
-        let snap = scenario(Some("continue"));
+        let snap = scenario(Some(ScenarioFailure::Continue));
         // 前剧失败种子（#3）+ 本剧已失败（#2）同时成立：用户停止（#1）仍最先命中
         let mut policy = LanePolicy::serial(PlanFailure::Stop, &snap, &user, true);
         policy.note_failure();
@@ -253,7 +253,7 @@ mod tests {
     #[test]
     fn own_failure_ranks_above_latched_halt() {
         let user = AtomicBool::new(false);
-        let snap = scenario(Some("continue"));
+        let snap = scenario(Some(ScenarioFailure::Continue));
         // halt 已被前剧失败种子占据（#3），但本剧失败（#2）优先归因
         let mut policy = LanePolicy::serial(PlanFailure::Stop, &snap, &user, true);
         policy.note_failure();
@@ -297,7 +297,7 @@ mod tests {
         );
 
         // 剧本级 continue：失败记录后继续执行后续步骤
-        let cont = scenario(Some("continue"));
+        let cont = scenario(Some(ScenarioFailure::Continue));
         let mut cont_policy = LanePolicy::serial(PlanFailure::Continue, &cont, &user, false);
         cont_policy.note_failure();
         assert_eq!(cont_policy.decide(), StepDecision::Execute);
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn plan_stop_overrides_scenario_continue_in_policy() {
         let user = AtomicBool::new(false);
-        let snap = scenario(Some("continue"));
+        let snap = scenario(Some(ScenarioFailure::Continue));
 
         // 编排 stop：剧本 continue 被覆盖，本剧失败仍截停
         let mut serial = LanePolicy::serial(PlanFailure::Stop, &snap, &user, false);

@@ -153,15 +153,19 @@ export function interpretTemplateStep<
 
 /**
  * 存在性引用解释：lane 剧本（快照优先解析命中与否）/ 编辑时钟窄行（只有 id
- * 维度）/ 删除守卫计数（引用名列表非空与否）+ 时钟 → 唯一词汇。只有
- * ok / id-missing 两态：四类 edit 门同值（ok 全放行、id-missing 全拦截），
- * 两列 guard 门同值（有引用即拦删、无引用放行），故同步门 / 钉快照门 /
- * 删事件与删剧本守卫共用本入口，无需再按形态分岔。
+ * 维度）/ 删除守卫计数（引用名列表非空与否）+ 时钟 → 唯一词汇。主语可传
+ * 引用本体（undefined 即不存在，存在性由本入口内部判定，调用侧不再自行
+ * 换算布尔）或布尔谓词（删除守卫计数的既有形态：true = 有引用、false =
+ * 无引用；布尔主语按谓词取义，不当本体）。只有 ok / id-missing 两态：
+ * 四类 edit 门同值（ok 全放行、id-missing 全拦截），两列 guard 门同值
+ * （有引用即拦删、无引用放行），故同步门 / 钉快照门 / 删事件与删剧本
+ * 守卫共用本入口，无需再按形态分岔。
  */
-export function interpretPresence(
-  present: boolean,
+export function interpretPresence<Subject>(
+  subject: Subject | undefined,
   clock: InterpretClock,
 ): InterpretedStep<never, never> {
+  const present = subject !== undefined && subject !== false;
   const status = refStatusForPresence(present);
   const consequence = REF_CONSEQUENCES[status];
   return {

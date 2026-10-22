@@ -28,6 +28,7 @@ export {
   selectEvents,
   selectFieldDefinitions,
   selectFilters,
+  selectHiddenUnregistered,
   selectLoaded,
   selectPage,
   selectSchemaUserDefinition,

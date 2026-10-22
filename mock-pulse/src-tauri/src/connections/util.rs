@@ -23,8 +23,12 @@
 //!   小程序/微博同式，曾在三处换名薄包装）
 //! - [`append_absent`]：签名参数集追加缺失的系统参数（美团/饿了么/拼多多
 //!   「系统参数并入签名参数集」共用形态）
+//! - [`borrowed_pairs`]：String 参数集转借用 kv 对（签名原语收 &str 对，
+//!   美团/饿了么/拼多多直发路径共用）
 //! - [`now_secs`]/[`now_millis`]：当前 Unix 秒/毫秒（各渠道 timestamp 取现值，
 //!   曾在 16 处渠道逐字复制）
+//! - [`random_bytes_16`]/[`random_digits`]：随机原语（16 字节 uuid v4 字节、
+//!   定长逐位均匀数字串；曾在企微/小红书/飞书与 WhatsApp/微博/B站逐字复制）
 //!
 //! 拼接序/密钥来源等渠道语义由各 adapter 组合，本模块只提供纯原语。
 
@@ -130,6 +134,16 @@ pub(crate) fn append_absent(params: &mut Vec<(String, String)>, extras: &[(&str,
     }
 }
 
+/// 借用 kv 参数集（String 对 → &str 对）：签名原语收 `&[(&str, &str)]`
+/// （探针路径传字面量数组），持有 String 参数集的直发路径经此一行转借用
+/// （美团/饿了么/拼多多三处同形转换收敛单点）。
+pub(crate) fn borrowed_pairs(params: &[(String, String)]) -> Vec<(&str, &str)> {
+    params
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect()
+}
+
 /// 当前 Unix 秒（各渠道 timestamp 系统参数取现值；曾在 16 处渠道逐字复制，
 /// 审计退件收敛单点）。
 pub(crate) fn now_secs() -> u64 {
@@ -145,6 +159,24 @@ pub(crate) fn now_millis() -> u128 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|elapsed| elapsed.as_millis())
         .unwrap_or(0)
+}
+
+/// 16 字节随机数：uuid v4 字节（依赖内已有的随机源，不额外引随机库）。
+/// 曾在企微/小红书/飞书三处逐字复制，收敛单点。
+pub(crate) fn random_bytes_16() -> [u8; 16] {
+    *uuid::Uuid::new_v4().as_bytes()
+}
+
+/// 定长数字串：逐位 0-9 均匀采样（rand Uniform，无模偏差）。曾在 WhatsApp/
+/// 微博/B站三处同形复制，收敛单点；首位非零、数值区间等形态约束由调用方
+/// 组合（B站首位、抖音服务商数值区间各留渠道模块）。
+pub(crate) fn random_digits(len: usize) -> String {
+    use rand::distributions::{Distribution, Uniform};
+    let digit = Uniform::new(0u8, 10);
+    let mut rng = rand::thread_rng();
+    (0..len)
+        .map(|_| char::from(b'0' + digit.sample(&mut rng)))
+        .collect()
 }
 
 /// HMAC-SHA256（RFC 2104，RustCrypto hmac 构造：key pad / 过长先散列 /

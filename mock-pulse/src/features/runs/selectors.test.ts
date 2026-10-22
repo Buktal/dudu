@@ -7,9 +7,17 @@ import {
   filterRuns,
   laneGroups,
   lastRunFor,
+  type RunFilters,
   runStatus,
   selectedRun,
 } from "./selectors";
+
+/** 只带查询词的默认筛选（来源/结果为 all，与 slice 初始态一致） */
+const query = (value: string): RunFilters => ({
+  query: value,
+  source: "all",
+  outcome: "all",
+});
 
 function step(channel: ChannelId, overrides: Partial<RunStep> = {}): RunStep {
   return {
@@ -82,37 +90,43 @@ describe("运行状态与选中 selector", () => {
 
 describe("运行记录筛选 selector（查询分词 + 干草堆）", () => {
   it("空查询返回全部；列表按开始时间倒序（新→旧）", () => {
-    expect(filterRuns(ALL, "").map((run) => run.id)).toEqual([
+    expect(filterRuns(ALL, query("")).map((run) => run.id)).toEqual([
       "run-3",
       "run-2",
       "run-1",
     ]);
-    expect(filterRuns(ALL, "   ")).toHaveLength(3);
+    expect(filterRuns(ALL, query("   "))).toHaveLength(3);
   });
 
   it("查询按空白分词，全部词命中才保留（AND）", () => {
-    expect(filterRuns(ALL, "抖音 接待").map((run) => run.id)).toEqual([
+    expect(filterRuns(ALL, query("抖音 接待")).map((run) => run.id)).toEqual([
       "run-2",
     ]);
-    expect(filterRuns(ALL, "抖音 企微")).toEqual([]);
+    expect(filterRuns(ALL, query("抖音 企微"))).toEqual([]);
   });
 
   it("命中 id / 编排名 / 剧本名，大小写不敏感", () => {
-    expect(filterRuns(ALL, "run-1").map((run) => run.id)).toEqual(["run-1"]);
-    expect(filterRuns(ALL, "接待").map((run) => run.id)).toEqual([
+    expect(filterRuns(ALL, query("run-1")).map((run) => run.id)).toEqual([
+      "run-1",
+    ]);
+    expect(filterRuns(ALL, query("接待")).map((run) => run.id)).toEqual([
       "run-3",
       "run-2",
     ]);
   });
 
   it("状态词匹配：成功/通过命中全通过；失败/未通过命中含失败步骤（「未通过」含「通过」的子串语义）", () => {
-    expect(filterRuns(ALL, "成功").map((run) => run.id)).toEqual([
+    expect(filterRuns(ALL, query("成功")).map((run) => run.id)).toEqual([
       "run-3",
       "run-1",
     ]);
-    expect(filterRuns(ALL, "失败").map((run) => run.id)).toEqual(["run-2"]);
-    expect(filterRuns(ALL, "未通过").map((run) => run.id)).toEqual(["run-2"]);
-    expect(filterRuns(ALL, "通过").map((run) => run.id)).toEqual([
+    expect(filterRuns(ALL, query("失败")).map((run) => run.id)).toEqual([
+      "run-2",
+    ]);
+    expect(filterRuns(ALL, query("未通过")).map((run) => run.id)).toEqual([
+      "run-2",
+    ]);
+    expect(filterRuns(ALL, query("通过")).map((run) => run.id)).toEqual([
       "run-3",
       "run-2",
       "run-1",
@@ -121,12 +135,70 @@ describe("运行记录筛选 selector（查询分词 + 干草堆）", () => {
 
   it("命中步骤事件名与渠道名", () => {
     // 三条运行的首步事件名都是「新客问价」（fixture 默认）
-    expect(filterRuns(ALL, "新客问价").map((run) => run.id)).toEqual([
+    expect(filterRuns(ALL, query("新客问价")).map((run) => run.id)).toEqual([
       "run-3",
       "run-2",
       "run-1",
     ]);
-    expect(filterRuns(ALL, "企业微信").map((run) => run.id)).toEqual(["run-3"]);
+    expect(filterRuns(ALL, query("企业微信")).map((run) => run.id)).toEqual([
+      "run-3",
+    ]);
+  });
+});
+
+describe("来源/结果筛选（slice 维度：来源与结果先收敛，查询词继续过滤）", () => {
+  const filters = (partial: Partial<RunFilters>): RunFilters => ({
+    query: "",
+    source: "all",
+    outcome: "all",
+    ...partial,
+  });
+
+  it("source 维：direct / scenario 命中各自来源，plan 无记录", () => {
+    expect(
+      filterRuns(ALL, filters({ source: "direct" })).map((run) => run.id),
+    ).toEqual(["run-1"]);
+    expect(
+      filterRuns(ALL, filters({ source: "scenario" })).map((run) => run.id),
+    ).toEqual(["run-3", "run-2"]);
+    expect(
+      filterRuns(ALL, filters({ source: "plan" })).map((run) => run.id),
+    ).toEqual([]);
+  });
+
+  it("outcome 维：passed 排除失败；failed 只留失败；cancelled 只留停止", () => {
+    expect(
+      filterRuns(ALL, filters({ outcome: "passed" })).map((run) => run.id),
+    ).toEqual(["run-3", "run-1"]);
+    expect(
+      filterRuns(ALL, filters({ outcome: "failed" })).map((run) => run.id),
+    ).toEqual(["run-2"]);
+    expect(
+      filterRuns(ALL, filters({ outcome: "cancelled" })).map((run) => run.id),
+    ).toEqual([]);
+    const stopped: RunRecord = {
+      ...directPass,
+      id: "run-stop",
+      cancelled: true,
+    };
+    expect(
+      filterRuns([stopped, ...ALL], filters({ outcome: "cancelled" })).map(
+        (run) => run.id,
+      ),
+    ).toEqual(["run-stop"]);
+  });
+
+  it("维度组合：source 与 outcome、查询词叠加生效", () => {
+    expect(
+      filterRuns(ALL, filters({ source: "scenario", outcome: "failed" })).map(
+        (run) => run.id,
+      ),
+    ).toEqual(["run-2"]);
+    expect(
+      filterRuns(ALL, filters({ source: "scenario", query: "企微" })).map(
+        (run) => run.id,
+      ),
+    ).toEqual(["run-3"]);
   });
 });
 
@@ -187,9 +259,9 @@ const planRun: RunRecord = {
 
 describe("编排运行记录 selector", () => {
   it("干草堆携带编排名，可按名称命中编排运行", () => {
-    expect(filterRuns([planRun], "双平台").map((run) => run.id)).toEqual([
-      "run-plan",
-    ]);
+    expect(filterRuns([planRun], query("双平台")).map((run) => run.id)).toEqual(
+      ["run-plan"],
+    );
   });
 
   it("laneGroups：按 laneIndex 分组、组间按 lane 序号、组内保序", () => {

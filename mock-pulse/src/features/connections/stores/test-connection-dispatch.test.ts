@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { describe, expect, it, vi } from "vitest";
+import type { ChannelId } from "@/lib/channels";
 
 import type { ConnectionConfig } from "../api";
 import {
@@ -212,10 +213,6 @@ describe("testConnection 按渠道分发", () => {
 
       expect(vi.mocked(testConnectionInvoke)).toHaveBeenCalledTimes(1);
       expect(vi.mocked(testConnectionInvoke)).toHaveBeenCalledWith(config);
-      expect(selectTestState(store.getState().connections)).toEqual({
-        status: "success",
-        message: "分发器已接受",
-      });
       expect(
         selectTestState(store.getState().connections, config.channel),
       ).toEqual({
@@ -237,6 +234,10 @@ describe("testConnection 按渠道分发", () => {
     const action = await store.dispatch(testConnection(rogue));
 
     expect(action.type).toBe(testConnection.rejected.type);
-    expect(selectTestState(store.getState().connections).status).toBe("failed");
+    // 状态只落渠道： rogue 渠道键原样写入（未知渠道无独立全局态）
+    expect(
+      selectTestState(store.getState().connections, rogue.channel as ChannelId)
+        .status,
+    ).toBe("failed");
   });
 });

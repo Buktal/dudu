@@ -89,6 +89,16 @@ it("创建冲突保留资料并要求重新检测，成功后打开相同企业�
     remark: null,
     adminInit: { username: "admin", password: "Password-123", name: null },
   });
+  // 创建成功后列表经企业聚合失效自动重查：无需页面手工重置
+  await waitFor(() =>
+    expect(
+      request.mock.calls.filter(
+        ([url, init]) =>
+          new URL(String(url), window.location.href).pathname ===
+            "/api/admin/companies/query" && init.method === "POST",
+      ),
+    ).toHaveLength(2),
+  );
 });
 
 it("保存完整资料时空字段传 null，详情和列表刷新为新资料", async () => {

@@ -52,7 +52,6 @@ describe("http inbox reply adapter", () => {
       clientRequestId: "client-1",
       target: SEND_TARGET,
       text: "好的，已登记",
-      attachments: [],
     });
 
     expect(message).toEqual(EXPECTED_OUTGOING);
@@ -75,7 +74,6 @@ describe("http inbox reply adapter", () => {
       clientRequestId: "client-1",
       target: SEND_TARGET,
       text: "好的，已登记",
-      attachments: [],
     });
 
     expect(message.id).toBe("9002");
@@ -101,7 +99,6 @@ describe("http inbox reply adapter", () => {
           clientRequestId: "client-1",
           target: SEND_TARGET,
           text: "好的，已登记",
-          attachments: [],
         }),
       ).rejects.toMatchObject({ kind: "invalid-response" });
     }
@@ -137,7 +134,6 @@ describe("http inbox reply adapter", () => {
       clientRequestId: "client-1",
       target: SEND_TARGET,
       text: "好的，已登记",
-      attachments: [],
     });
     expect(message.delivery).toEqual({ state: "sending" });
   });
@@ -159,36 +155,9 @@ describe("http inbox reply adapter", () => {
       clientRequestId: "client-1",
       target: SEND_TARGET,
       text: "好的，已登记",
-      attachments: [],
     });
     expect(message.id).toBe("9002");
     expect(message.delivery).toBeUndefined();
-  });
-
-  it("refuses to send attachments in the text-only integration", async () => {
-    seed("stored-token");
-    const fetcher = vi.fn();
-    const api = createHttpInboxApi({ origin: ORIGIN, fetcher });
-
-    await expect(
-      api.send({
-        context: CONTEXT,
-        signal: signal(),
-        clientRequestId: "client-1",
-        target: SEND_TARGET,
-        text: "带附件的回复",
-        attachments: [
-          {
-            id: "m1",
-            kind: "image",
-            name: "图片.png",
-            mimeType: "image/png",
-            size: 12,
-          },
-        ],
-      }),
-    ).rejects.toMatchObject({ kind: "unavailable" });
-    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it("ends a reception with the PUT status contract and reads the saved conversation back", async () => {

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { DOUYIN_DEFINITIONS, DOUYIN_EVENT_SCHEMAS } from "./douyin";
+import {
+  DOUYIN_DEFINITIONS,
+  DOUYIN_EVENT_SCHEMAS,
+  DOUYIN_SENDER_IDENTITY_PATH,
+  DOUYIN_SENDER_PROFILE_PATH,
+} from "./douyin";
 import { ISV_EXPECTED } from "./douyin/shared";
 import { schemaById } from "./registry";
 
@@ -107,6 +112,17 @@ describe("抖音事件 schema 描述符", () => {
         (field) => field.path === "from_user_id",
       );
       expect(sender?.required, `${id} from_user_id required`).toBe(true);
+    }
+  });
+
+  it("全部模板渠道级声明发送者身份与资料路径（senderSync 联动的唯一开关）", () => {
+    for (const schema of DOUYIN_EVENT_SCHEMAS) {
+      expect(schema.senderIdentityPath, `${schema.id} senderIdentityPath`).toBe(
+        DOUYIN_SENDER_IDENTITY_PATH,
+      );
+      expect(schema.senderProfilePath, `${schema.id} senderProfilePath`).toBe(
+        DOUYIN_SENDER_PROFILE_PATH,
+      );
     }
   });
 

@@ -37,12 +37,6 @@ export function newPlanId(): string {
   return `plan-${Date.now().toString(36)}-${idCounter.toString(36)}`;
 }
 
-/** 编排运行 id（与剧本运行同一前缀风格，run-progress 事件按 runId 路由） */
-export function newPlanRunId(): string {
-  idCounter += 1;
-  return `run-${Date.now().toString(36)}-${idCounter.toString(36)}`;
-}
-
 /** 新建编排：默认继续失败策略（记录后跑完其余剧本），收藏未标。 */
 export function createPlan(name: string, mode: PlanMode): Plan {
   return {

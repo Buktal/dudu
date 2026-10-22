@@ -7,10 +7,8 @@ import type {
   InboxEvent,
   InboxMessage,
   Page,
-  PreparedAttachment,
   RequestOptions,
   SendSubmission,
-  SendTarget,
   VisitorProfile,
 } from "./types";
 
@@ -26,9 +24,6 @@ export type InboxApi = {
     input: RequestOptions & { conversationId: string },
   ) => Promise<VisitorProfile>;
   send: (input: RequestOptions & SendSubmission) => Promise<InboxMessage>;
-  prepareAttachment: (
-    input: RequestOptions & { target: SendTarget; file: File },
-  ) => Promise<PreparedAttachment>;
   /** 需要渠道凭据的媒体素材：按消息与消息内下标经认证请求取字节。 */
   loadMessageMedia: (
     input: RequestOptions & { messageId: string; index: number },
@@ -64,7 +59,6 @@ export const unavailableInboxApi: InboxApi = {
   listMessages: unavailable,
   readProfile: unavailable,
   send: unavailable,
-  prepareAttachment: unavailable,
   loadMessageMedia: unavailable,
   saveProfile: unavailable,
   endConversation: unavailable,

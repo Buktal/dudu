@@ -1,7 +1,6 @@
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  GlobeIcon,
   PlusIcon,
   SearchIcon,
   WorkflowIcon,
@@ -43,7 +42,6 @@ export function MaterialPicker({
   items,
   onSelect,
   onClose,
-  platforms = false,
   filterByChannel = false,
 }: {
   title: string;
@@ -51,7 +49,6 @@ export function MaterialPicker({
   items: PickerItem[];
   onSelect: (id: string) => unknown | Promise<unknown>;
   onClose: () => void;
-  platforms?: boolean;
   filterByChannel?: boolean;
 }) {
   const [query, setQuery] = useState("");
@@ -108,7 +105,7 @@ export function MaterialPicker({
                   }
                 : undefined
             }
-            placeholder={platforms ? "搜索平台名称" : "搜索名称或类型"}
+            placeholder="搜索名称或类型"
             aria-label="搜索可选素材"
             onChange={(event) => {
               setQuery(event.target.value);
@@ -148,14 +145,7 @@ export function MaterialPicker({
               <ChannelMark channel={item.channel} />
             ) : (
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                {platforms ? (
-                  <GlobeIcon aria-hidden="true" className="size-4 shrink-0" />
-                ) : (
-                  <WorkflowIcon
-                    aria-hidden="true"
-                    className="size-4 shrink-0"
-                  />
-                )}
+                <WorkflowIcon aria-hidden="true" className="size-4 shrink-0" />
               </span>
             )}
             <div className="min-w-0 flex-1">

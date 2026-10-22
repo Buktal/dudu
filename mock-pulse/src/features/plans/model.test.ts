@@ -7,7 +7,6 @@ import {
   createPlan,
   moveLane,
   newPlanId,
-  newPlanRunId,
   type Plan,
   type PlanItem,
   planModeLabel,
@@ -34,15 +33,10 @@ describe("编排领域模型", () => {
     expect(plan.id).toMatch(/^plan-/);
   });
 
-  it("newPlanId / newPlanRunId 生成不重复 id（run 前缀与剧本运行一致）", () => {
-    const ids = new Set([
-      newPlanId(),
-      newPlanId(),
-      newPlanRunId(),
-      newPlanRunId(),
-    ]);
-    expect(ids.size).toBe(4);
-    expect(newPlanRunId()).toMatch(/^run-/);
+  it("newPlanId 生成不重复 id（plan 前缀）", () => {
+    const ids = new Set([newPlanId(), newPlanId(), newPlanId()]);
+    expect(ids.size).toBe(3);
+    expect(newPlanId()).toMatch(/^plan-/);
   });
 
   it("addLane：追加 {scenarioId} 引用；同一剧本可重复入编排", () => {

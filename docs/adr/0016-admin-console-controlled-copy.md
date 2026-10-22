@@ -3,9 +3,9 @@
 DuduConsole 首版按设计决定「复用 Admin 的思路与交互原则，不跨项目导入平台业务」（docs/design/dudu-console/page-flows.md），实际落地方式是把 Admin 的机制层逐字拷贝后按需修改。2026-10-22 架构审查量化确认：console 非测试源码约 57%（约 3650 行）与 admin 逐字节或近似相同（use-query / use-mutation / paged-query / FilterBar / QueryView / SubmitShell / feedback / page-parts / 全套主题 CSS 与 16 个 ui 组件），且分叉已发生退化——console 丢失 admin 的路由语法常量回退手写字面量、拷贝件全部没有配套测试、theme-provider 出现单边快捷键演化。同日决策治理方式
 
 - **不建共享包**：维持各子项目独立 yarn 安装拓扑，不做 workspace 化或 monorepo 包管理改造——根 AGENTS.md 的 worktree 零安装约定（node_modules junction 复用主检出）依赖每项目独立 node_modules 的现状，共享包需重写该约定并使 5 个子项目全部联动，收益不抵风险
-- **受控拷贝**：机制层文件以 admin 为先导演化；console 同步拷贝时必须连同对应测试一起拷入（2026-10-22 已拷入 use-query / use-mutation / paged-query / filter-bar / query-view / submit-shell 六个单点测试作为分叉护栏，首跑全绿）；两侧机制层修 bug 或调语义时，另一侧在同一个变更中同步
-- **分叉仅限真实业务差异**：登录字段、身份域模型、渠道配置等 console 特有语义可以分叉，但须在文件内可辨识；机制层（查询四键、分页查询、草稿-提交-重置、提交外壳）不允许单边演化
-- GLOSSARY 的机制层词汇（查询四键、分页查询、列表页骨架、筛选栏、表单提交外壳、路由构造）按两项目通用的单点语义维护
+- **受控拷贝**：机制层文件以 admin 为先导演化；console 同步拷贝时必须连同对应测试一起拷入（2026-10-22 已拷入 use-query / use-mutation / paged-query / filter-bar / query-view / submit-shell / detail-pane 七个组件及其单点测试与 test/http 请求桩单点作为分叉护栏，首跑全绿）；两侧机制层修 bug 或调语义时，另一侧在同一个变更中同步。同轮新增受控拷贝件：password-fields（密码字段对，含长度契约常量）与 AccountPage 的骨架部分（加载守卫、提交外壳编排同受控；资料投影分叉见下条）
+- **分叉仅限真实业务差异**：登录字段、身份域模型、渠道配置等 console 特有语义可以分叉，但须在文件内可辨识；机制层（查询四键、分页查询、草稿-提交-重置、提交外壳、详情三态编排）不允许单边演化。AccountPage 资料投影即属此类：admin 读会话内平台管理员身份，console 读 Profile（企业 + 按组管理身份），权限刷新（refreshProfile）是 console 单侧的权限变化通路
+- GLOSSARY 的机制层词汇（查询四键、分页查询、列表页骨架、详情页骨架、筛选栏、表单提交外壳、路由构造）按两项目通用的单点语义维护
 
 ## Considered Options
 

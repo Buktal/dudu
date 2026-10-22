@@ -4,6 +4,7 @@ import { DOUYIN_ISV_SCHEMAS } from "./douyin/isv";
 import { DOUYIN_LIFE_SCHEMAS } from "./douyin/life";
 import { DOUYIN_MINI_GAME_SCHEMAS } from "./douyin/minigame";
 import { DOUYIN_DEFINITIONS } from "./douyin/shared";
+import type { EventSchema } from "./types";
 
 /**
  * 抖音渠道协议元数据（四套推送体系聚合，事实库 §2）：
@@ -17,10 +18,21 @@ import { DOUYIN_DEFINITIONS } from "./douyin/shared";
 
 export { DOUYIN_DEFINITIONS };
 
-export const DOUYIN_EVENT_SCHEMAS = [
+/** 抖音信封的发送者字段：senderSync 联动把资料 open_id 对齐到这里
+ * （仅信封带该字段的 dop/IM 体系实际生效，life/minigame/isv 载荷无此路径） */
+export const DOUYIN_SENDER_IDENTITY_PATH = "from_user_id";
+/** 抖音资料的 open_id 字段：senderSync 联动的对齐目标（与身份路径成对声明） */
+export const DOUYIN_SENDER_PROFILE_PATH = "content.user_infos[0].open_id";
+
+export const DOUYIN_EVENT_SCHEMAS: readonly EventSchema[] = [
   ...DOUYIN_DOP_SCHEMAS,
   ...DOUYIN_IM_SCHEMAS,
   ...DOUYIN_LIFE_SCHEMAS,
   ...DOUYIN_MINI_GAME_SCHEMAS,
   ...DOUYIN_ISV_SCHEMAS,
-] as const;
+  // 渠道级声明逐模板补发送者身份与资料路径（协议模块不逐条重复渠道事实）
+].map((schema) => ({
+  ...schema,
+  senderIdentityPath: DOUYIN_SENDER_IDENTITY_PATH,
+  senderProfilePath: DOUYIN_SENDER_PROFILE_PATH,
+}));

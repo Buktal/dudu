@@ -4,25 +4,19 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.mapper.CompanyChannelMapper;
 import com.dudu.duduserver.service.CompanyChannelService;
-import com.dudu.duduserver.socket.DeskAccessChangedEvent;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
 import java.util.List;
 
 /**
- * 渠道接入账号领域服务实现，SQL 全部经 MyBatis-Plus 通用能力与 Lambda 构造器表达。
- * 账号的归属写入（新增、换组）改变接待范围，写操作提交后发布范围变更事件，
- * 由实时网关通知本企业已连接员工重查工作区；管理端操作本身沿用现有写方法。
+ * 渠道接入账号领域服务实现，SQL 全部经 MyBatis-Plus 通用能力与 Lambda 构造器表达，写方法保持
+ * IService 中性语义；账号-组关系变化的 Desk 通知由 Console 显式业务操作（建号入组、换组）在
+ * 事务提交后发布范围变更事件，不在本层按写入动作推断。
  */
 @Service
-@RequiredArgsConstructor
 public class CompanyChannelServiceImpl extends ServiceImpl<CompanyChannelMapper, CompanyChannelDO>
     implements CompanyChannelService {
-
-    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public List<CompanyChannelDO> listByCompanyGroups(Long companyId, Collection<Long> groupIds) {
@@ -34,33 +28,5 @@ public class CompanyChannelServiceImpl extends ServiceImpl<CompanyChannelMapper,
             .in(CompanyChannelDO::getGroupId, groupIds)
             .orderByAsc(CompanyChannelDO::getCompanyChannelId)
             .list();
-    }
-
-    // 新增账号后通知本企业：账号所属组的成员立即可见
-    @Override
-    public boolean save(CompanyChannelDO entity) {
-        boolean saved = super.save(entity);
-        if (saved) {
-            publishAccessChanged(entity.getCompanyId());
-        }
-        return saved;
-    }
-
-    // 账号换组是接待范围变化：按现有行确定企业（增量更新可不携带企业），更新成功后通知
-    @Override
-    public boolean updateById(CompanyChannelDO entity) {
-        CompanyChannelDO existing = getById(entity.getCompanyChannelId());
-        boolean updated = super.updateById(entity);
-        if (updated && existing != null) {
-            publishAccessChanged(existing.getCompanyId());
-        }
-        return updated;
-    }
-
-    // 通知在事务提交后发布（无事务的自动提交写入按当前语义立即发布）；企业为空时不发布
-    private void publishAccessChanged(Long companyId) {
-        if (companyId != null) {
-            eventPublisher.publishEvent(new DeskAccessChangedEvent(companyId));
-        }
     }
 }

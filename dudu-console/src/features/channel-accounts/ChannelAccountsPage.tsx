@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useConsoleQuery } from "@/api/console-query";
 import { ErrorState, LoadingState, Message } from "@/components/feedback";
 import { FilterBar } from "@/components/filter-bar";
-import { FilterSelect, RefreshButton } from "@/components/page-parts";
+import {
+  FilterSelect,
+  PAGE_SIZE,
+  RefreshButton,
+} from "@/components/page-parts";
 import { QueryView } from "@/components/query-view";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,17 +36,14 @@ export function ChannelAccountsPage({
 }) {
   const catalog = useConsoleQuery(channelApi.catalog, []);
   const groups = useConsoleQuery(channelApi.groups, []);
+  // 路由 groupId 只作挂载时的初始筛选种子（用户组页深链进筛选态）：
+  // 页内改组或重置只改查询状态，不回写 URL，也不随路由参数变化重新应用。
   const query = useAccounts({
     page: 1,
-    pageSize: 20,
+    pageSize: PAGE_SIZE,
     groupId: groupId ?? undefined,
   });
   const [notice, setNotice] = useState<string | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 路由参数变化时同步筛选，已应用值一致时不再触发（避免挂载期多余请求）；setGroup 是数据模块每次渲染的新函数。
-  useEffect(() => {
-    if (query.groupId !== (groupId ?? undefined))
-      query.setGroup(groupId ?? "all");
-  }, [groupId]);
   if (catalog.loading || groups.loading) return <LoadingState />;
   if (catalog.error || groups.error)
     return (

@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -92,11 +93,22 @@ public class DeskSocketGateway {
         sessions.remove(sessionId);
     }
 
-    // 鉴权时限到期：仍未认证的连接按策略关闭，已认证或已离开的无事可做
+    // 鉴权时限到期：「仍未认证才关闭」的判定与 authenticate 的身份写入收敛到 sessions 同一键的
+    // 原子计算内，到期与认证并发时不再误关刚认证的连接（先到的计算决定结果，晚到的认证写不进
+    // 已关闭会话）；计算函数内不做阻塞与 IO，关闭在计算外执行
     void expireAuth(String sessionId) {
         authTimeouts.remove(sessionId);
-        if (user(sessionId) == null) {
-            close(sessionId, CloseStatus.POLICY_VIOLATION);
+        AtomicReference<ConnectedSession> unauthenticated = new AtomicReference<>();
+        sessions.computeIfPresent(sessionId, (id, entry) -> {
+            if (entry.user() == null) {
+                unauthenticated.set(entry);
+                return null;
+            }
+            return entry;
+        });
+        ConnectedSession entry = unauthenticated.get();
+        if (entry != null) {
+            close(entry, CloseStatus.POLICY_VIOLATION);
         }
     }
 
@@ -122,15 +134,19 @@ public class DeskSocketGateway {
     }
 
     public void close(String sessionId, CloseStatus status) {
-        ConnectedSession entry = sessions.get(sessionId);
+        ConnectedSession entry = sessions.remove(sessionId);
         if (entry == null) {
             return;
         }
-        sessions.remove(sessionId);
+        close(entry, status);
+    }
+
+    // 关闭已在会话表外的连接；仅 IO 与日志，不回写会话表
+    private void close(ConnectedSession entry, CloseStatus status) {
         try {
             entry.session().close(status);
         } catch (IOException e) {
-            log.warn("[desk-socket] 关闭会话失败, sessionId={}", sessionId, e);
+            log.warn("[desk-socket] 关闭会话失败, sessionId={}", entry.session().getId(), e);
         }
     }
 

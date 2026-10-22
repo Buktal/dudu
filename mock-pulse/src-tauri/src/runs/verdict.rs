@@ -10,17 +10,9 @@ use serde::{Deserialize, Serialize};
 
 use super::{ReceiptSnapshot, RunVerdict};
 
-/// 期望回执的正文形态（与前端 ReceiptBodyMode 一致）。
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub enum ReceiptBodyMode {
-    Contains,
-    Equals,
-    JsonField,
-    WecomReply,
-    DingtalkReply,
-    QqSignReply,
-}
+// 正文形态枚举单点在 events（持久化契约所在域，装载/保存即拒绝未知取值），
+// 此处按既有 `crate::runs::verdict::ReceiptBodyMode` 消费面转发。
+pub use crate::events::ReceiptBodyMode;
 
 /// 步骤期望（快照物化/直发请求由前端从事件版本或草稿带出）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

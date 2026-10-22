@@ -29,7 +29,6 @@ export type {
   MediaReference,
   MessageBody,
   Page,
-  PreparedAttachment,
   ReplyCapability,
   RequestOptions,
   SendKind,

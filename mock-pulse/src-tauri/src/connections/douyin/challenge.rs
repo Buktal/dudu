@@ -4,7 +4,7 @@
 //! 放入 ResponseBody、text 格式的 JSON。签名头按体系算法由调用方注入
 //! （dop=sha1(client_secret+body)、生活服务=sha1(AppSecret+去换行 body)）。
 
-use super::super::{request_error_reason, HandshakeOutcome};
+use super::super::{handshake_read_error, request_error_reason, HandshakeOutcome};
 
 /// 构造 verify_webhook 验证请求体（challenge 为数字）。
 pub(super) fn build_verify_body(client_key: &str, challenge: u64) -> String {
@@ -82,7 +82,16 @@ pub(super) fn verify_handshake(
         };
     }
 
-    let text = response.text().unwrap_or_default();
+    // 响应体读取失败显式归因（不折进空串误判「challenge 不一致」）
+    let text = match response.text() {
+        Ok(text) => text,
+        Err(err) => {
+            return HandshakeOutcome {
+                ok: false,
+                message: handshake_read_error(&err),
+            };
+        }
+    };
     match check_echo(challenge, &text) {
         Ok(()) => HandshakeOutcome {
             ok: true,

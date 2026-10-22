@@ -46,5 +46,8 @@ pub fn definitions_save(
     definition: StoredSchemaDefinition,
 ) -> Result<DefinitionsDoc, String> {
     let dir = app_data_dir(&app)?;
-    store::save_definition(&dir, &schema_id, definition).map_err(|err| err.to_string())
+    // 读改写全程串行（store_io::with_write_lock 全局写锁单点）
+    crate::store_io::with_write_lock(|| {
+        store::save_definition(&dir, &schema_id, definition).map_err(|err| err.to_string())
+    })
 }

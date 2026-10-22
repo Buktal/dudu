@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { firstConversation } from "../stores/test-support";
 import { defineConversation } from "../test-fixtures";
 import type { Conversation } from "../types";
-import {
-  buildReplySubmission,
-  replyReadiness,
-  replyRestriction,
-} from "./pipeline";
+import { buildReplySubmission, replyReadiness } from "./pipeline";
 
 const NOW = "2026-09-16T00:01:00Z";
 
@@ -21,10 +16,6 @@ function conversation(overrides: Partial<Conversation> = {}): Conversation {
       accountId: "account-a",
       accountName: "品牌旗舰店",
     },
-    capability: {
-      state: "allowed",
-      kinds: ["text", "image", "file", "audio", "video"],
-    },
     ...overrides,
   });
 }
@@ -36,7 +27,6 @@ describe("Reply pipeline readiness", () => {
         conversation: conversation(),
         connection: "connected",
         text: "你好",
-        files: [],
         sending: false,
       }),
     ).toEqual({ sendable: true, notice: null });
@@ -48,7 +38,6 @@ describe("Reply pipeline readiness", () => {
         conversation: conversation(),
         connection: "connected",
         text: "   ",
-        files: [],
         sending: false,
       }),
     ).toEqual({ sendable: false, notice: null });
@@ -60,7 +49,6 @@ describe("Reply pipeline readiness", () => {
         conversation: conversation(),
         connection: "connected",
         text: "你好",
-        files: [],
         sending: true,
       }),
     ).toEqual({ sendable: false, notice: null });
@@ -71,7 +59,6 @@ describe("Reply pipeline readiness", () => {
       conversation: conversation({ status: "closed" }),
       connection: "connected",
       text: "你好",
-      files: [],
       sending: false,
     });
     expect(readiness.sendable).toBe(false);
@@ -83,7 +70,6 @@ describe("Reply pipeline readiness", () => {
       conversation: conversation(),
       connection: "disconnected",
       text: "你好",
-      files: [],
       sending: false,
     });
     expect(readiness).toEqual({
@@ -92,84 +78,17 @@ describe("Reply pipeline readiness", () => {
     });
   });
 
-  it("waits for preparing attachments with one notice", () => {
-    expect(
-      replyReadiness({
-        conversation: conversation(),
-        connection: "connected",
-        text: "见图",
-        files: [
-          {
-            name: "a.png",
-            size: 10,
-            mimeType: "image/png",
-            status: "preparing",
-          },
-        ],
-        sending: false,
-      }),
-    ).toEqual({
-      sendable: false,
-      notice: "请等待附件准备完成，或移除失败附件",
-    });
-  });
-
-  it("waits for failed attachments with the same notice", () => {
+  it("reports the restriction when text capability is missing", () => {
     const readiness = replyReadiness({
-      conversation: conversation(),
+      conversation: conversation({
+        capability: { state: "allowed", kinds: [] },
+      }),
       connection: "connected",
-      text: "",
-      files: [
-        {
-          name: "a.png",
-          size: 10,
-          mimeType: "image/png",
-          status: "failed",
-        },
-      ],
+      text: "你好",
       sending: false,
     });
     expect(readiness.sendable).toBe(false);
-    expect(readiness.notice).toBe("请等待附件准备完成，或移除失败附件");
-  });
-
-  it("treats ready status without media as not ready", () => {
-    const readiness = replyReadiness({
-      conversation: conversation(),
-      connection: "connected",
-      text: "",
-      files: [
-        {
-          name: "a.png",
-          size: 10,
-          mimeType: "image/png",
-          status: "ready",
-        },
-      ],
-      sending: false,
-    });
-    expect(readiness.sendable).toBe(false);
-    expect(readiness.notice).toBe("请等待附件准备完成，或移除失败附件");
-  });
-
-  it("is sendable for an attachment-only draft once prepared", () => {
-    expect(
-      replyReadiness({
-        conversation: conversation(),
-        connection: "connected",
-        text: "",
-        files: [
-          {
-            name: "a.png",
-            size: 10,
-            mimeType: "image/png",
-            status: "ready",
-            media: { id: "m1" },
-          },
-        ],
-        sending: false,
-      }),
-    ).toEqual({ sendable: true, notice: null });
+    expect(readiness.notice).toBe("当前会话不支持此类回复");
   });
 });
 
@@ -180,8 +99,6 @@ describe("Reply pipeline submission builder", () => {
       text: "你好",
       draftRevision: 3,
       textRevision: 2,
-      draftAttachmentIds: [],
-      media: [],
       maxSequence: 7,
       incomingSequence: 7,
       selectionRevision: 1,
@@ -207,89 +124,5 @@ describe("Reply pipeline submission builder", () => {
       status: "sending",
     });
     expect(submission.request.target.conversationId).toBe("conversation-a");
-  });
-
-  it("builds a reply body carrying the prepared media", () => {
-    const media = [
-      {
-        id: "m1",
-        kind: "image" as const,
-        name: "a.png",
-        mimeType: "image/png",
-        size: 10,
-      },
-    ];
-    const { message, submission } = buildReplySubmission({
-      conversation: conversation(),
-      text: "见图",
-      draftRevision: 1,
-      textRevision: 1,
-      draftAttachmentIds: ["draft-1"],
-      media,
-      maxSequence: 0,
-      incomingSequence: 0,
-      selectionRevision: 0,
-      clientRequestId: "request-2",
-      now: NOW,
-      next: true,
-    });
-    expect(message.body).toEqual({
-      type: "reply",
-      text: "见图",
-      attachments: media,
-    });
-    expect(submission.next).toBe(true);
-    expect(submission.draftAttachmentIds).toEqual(["draft-1"]);
-  });
-});
-
-describe("Reply policy", () => {
-  const attachable: Conversation = {
-    ...firstConversation,
-    capability: {
-      state: "allowed",
-      kinds: ["text", "image"],
-    },
-  };
-
-  it("allows text alone and empty drafts fall back to the text question", () => {
-    expect(
-      replyRestriction(firstConversation, "connected", {
-        text: "你好",
-        files: [],
-      }),
-    ).toBeNull();
-    expect(
-      replyRestriction(firstConversation, "connected", {
-        text: "  ",
-        files: [],
-      }),
-    ).toBeNull();
-  });
-
-  it("blocks the whole reply when the connection or conversation is gone", () => {
-    expect(
-      replyRestriction(firstConversation, "connecting", {
-        text: "你好",
-        files: [],
-      }),
-    ).not.toBeNull();
-    expect(
-      replyRestriction(undefined, "connected", { text: "你好", files: [] }),
-    ).not.toBeNull();
-  });
-
-  it("derives kinds from content so attachments gate on capability", () => {
-    const image = { name: "a.png", size: 100, mimeType: "image/png" };
-    // text-only capability rejects the image even though text is fine.
-    expect(
-      replyRestriction(firstConversation, "connected", {
-        text: "",
-        files: [image],
-      }),
-    ).not.toBeNull();
-    expect(
-      replyRestriction(attachable, "connected", { text: "", files: [image] }),
-    ).toBeNull();
   });
 });

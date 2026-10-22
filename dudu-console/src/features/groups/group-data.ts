@@ -2,10 +2,11 @@ import { useCallback } from "react";
 import type { ConsoleClient } from "@/api/client";
 import { usePagedQuery } from "@/api/paged-query";
 import type { Page } from "@/api/types";
+import { PAGE_SIZE } from "@/components/page-parts";
 import { type Filters, groupsApi } from "./groups-api";
 
 // 组关系弹层内嵌列表共用的初始分页：重挂载（切换组或重开弹层）才生效。
-const initial: Filters = { page: 1, pageSize: 20 };
+const initial: Filters = { page: 1, pageSize: PAGE_SIZE };
 
 // 组域翻页装订：groupsApi 的组关系查询以 groupId 为首参，与 usePagedQuery 的
 // load 形多一参，绑定身份在此单点完成，调用方（group-relations）不再写
@@ -55,4 +56,25 @@ export function useGroupCandidates(groupId: string) {
 // 组渠道账号列表：当前组的接待账号，只读展示。
 export function useGroupAccounts(groupId: string) {
   return useGroupPaging(groupsApi.accounts, groupId);
+}
+
+// 用户组列表：翻页机制收敛在 usePagedQuery，这里只装订 domain 词汇——
+// 命名操作 setKeyword 把筛选意图映射进 Filters；页面不感知机制侧。
+export function useGroups(initialFilters: Filters) {
+  const paging = usePagedQuery(groupsApi.query, initialFilters);
+  return {
+    keyword: paging.filters.keyword,
+    setKeyword: (keyword?: string) => paging.setFilter({ keyword }),
+    reset: paging.reset,
+    setPage: paging.setPage,
+    list: paging.list,
+    total: paging.total,
+    page: paging.page,
+    pageSize: paging.pageSize,
+    loading: paging.loading,
+    error: paging.error,
+    refresh: paging.refresh,
+    // 机制侧派生键原样透出：任一命名筛选已应用，供空态筛选取向单点消费。
+    filtered: paging.filtered,
+  };
 }

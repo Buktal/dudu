@@ -267,7 +267,8 @@ export class ConsoleClient {
         accessRevision:
           this.state.accessRevision +
           (!refreshQueries &&
-          JSON.stringify(profile) === JSON.stringify(this.state.profile)
+          this.state.profile !== null &&
+          sameProfile(profile, this.state.profile)
             ? 0
             : 1),
       });
@@ -292,3 +293,16 @@ export class ConsoleClient {
 
 export { isRecord } from "./validators";
 export const isEmpty = (data: unknown): data is null => data === null;
+
+// 受控比较：按契约字段逐键比较，不依赖 JSON.stringify 的隐式键序
+const sameProfile = (a: Profile, b: Profile) =>
+  a.company.companyId === b.company.companyId &&
+  a.company.companyName === b.company.companyName &&
+  a.user.userId === b.user.userId &&
+  a.user.username === b.user.username &&
+  a.user.name === b.user.name &&
+  a.user.isInitialAdmin === b.user.isInitialAdmin &&
+  a.managedGroupIds.length === b.managedGroupIds.length &&
+  a.managedGroupIds.every(
+    (groupId, index) => groupId === b.managedGroupIds[index],
+  );

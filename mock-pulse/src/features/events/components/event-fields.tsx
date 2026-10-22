@@ -38,7 +38,7 @@ import { useAppDispatch } from "@/hooks/use-app-store";
 import { cn } from "@/lib/utils";
 import type { EditorField } from "../definitions/resolve";
 import type { EventDraft } from "../model";
-import { getAt } from "../payload";
+import { getAt, senderProfilePath } from "../payload";
 import type { EventSchema } from "../schemas";
 import {
   type EventsState,
@@ -167,6 +167,11 @@ export function EventFields({
       return index(a) - index(b);
     },
   );
+  // 同步入口按模板声明的身份路径与资料路径推导（渠道知识在 schema，不在视图）
+  const profilePath = senderProfilePath(schema, draft.payload);
+  const senderValue = schema.senderIdentityPath
+    ? getAt(draft.payload, schema.senderIdentityPath)
+    : undefined;
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -208,13 +213,13 @@ export function EventFields({
           onDescribe={onDescribe}
           onSync={
             group.includes("用户") &&
-            draft.channelId === "douyin" &&
-            getAt(draft.payload, "content.user_infos[0].open_id") !== undefined
+            profilePath !== null &&
+            senderValue !== undefined
               ? () =>
                   dispatch(
                     setDraftField({
-                      path: "content.user_infos[0].open_id",
-                      value: getAt(draft.payload, "from_user_id"),
+                      path: profilePath,
+                      value: senderValue,
                     }),
                   )
               : undefined

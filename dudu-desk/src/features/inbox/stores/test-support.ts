@@ -63,9 +63,7 @@ export function acceptedMessage(input: SendSubmission): InboxMessage {
     clientRequestId: input.clientRequestId,
     conversationId: input.target.conversationId,
     direction: "outgoing",
-    body: input.attachments.length
-      ? { type: "reply", text: input.text, attachments: input.attachments }
-      : { type: "text", text: input.text },
+    body: { type: "text", text: input.text },
     createdAt: "2026-09-16T00:01:00Z",
     sequence: 2,
     version: 1,

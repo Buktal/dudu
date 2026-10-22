@@ -9,6 +9,7 @@ import {
   runProgress,
 } from "@/features/runs";
 import type { ChannelId } from "@/lib/channels";
+import { draftUnchangedSince } from "@/lib/draft-snapshot";
 
 import {
   createPlan,
@@ -181,13 +182,13 @@ const plansSlice = createSlice({
       })
       .addCase(savePlan.fulfilled, (state, action) => {
         state.items = action.payload.items;
-        if (JSON.stringify(state.draft) !== action.payload.source) return;
+        if (!draftUnchangedSince(state.draft, action.payload.source)) return;
         state.draft = draftFromPlan(action.payload.draft);
         state.selectedId = action.payload.draft.id;
       })
       .addCase(savePlanAs.fulfilled, (state, action) => {
         state.items = action.payload.items;
-        if (JSON.stringify(state.draft) !== action.payload.source) return;
+        if (!draftUnchangedSince(state.draft, action.payload.source)) return;
         state.draft = action.payload.draft;
         state.selectedId = action.payload.draft.id;
       })

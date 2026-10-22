@@ -8,11 +8,10 @@ import type { MediaReference, MessageBody, SendKind } from "./types";
  *
  * Summary prefixes, media extraction, external-URL extraction and the
  * mime/kind/purpose mappings used to live as Repeated Switches across
- * message-text, message-body, attachment-rules and attachment-utils. They
- * converge here behind three small functions, so a new body type or media
- * kind changes one table plus one descriptor branch instead of drifting
- * across callers. `attachment-utils` stays a kind-free URL primitive below
- * this seam.
+ * message-text, message-body and attachment-utils. They converge here behind
+ * three small functions, so a new body type or media kind changes one table
+ * plus one descriptor branch instead of drifting across callers.
+ * `attachment-utils` stays a kind-free URL primitive below this seam.
  */
 
 type MediaKind = Exclude<SendKind, "text">;
@@ -132,13 +131,6 @@ export function describeMessageBody(body: MessageBody): MessageDescriptor {
         externalUrl: safeExternalUrl(body.sourceUrl),
       };
   }
-}
-
-export function mediaKindOfMime(mimeType: string): MediaKind {
-  if (mimeType.startsWith("image/")) return "image";
-  if (mimeType.startsWith("audio/")) return "audio";
-  if (mimeType.startsWith("video/")) return "video";
-  return "file";
 }
 
 export function mediaLabel(kind: MediaKind): string {

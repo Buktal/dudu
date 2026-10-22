@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useConsoleQuery } from "@/api/console-query";
 import { useConsole, useSession } from "@/api/context";
 import { isMissingEntity, useEntityGuard } from "@/api/entity-guard";
-import { ErrorState, LoadingState } from "@/components/feedback";
+import { DetailPane } from "@/components/detail-pane";
 import { SelectField } from "@/components/form-field";
 import {
   SubmitButton,
@@ -31,6 +31,7 @@ import {
   type ChannelDefinition,
   channelApi,
   type GroupOption,
+  SYSTEM_FIELD,
 } from "./api";
 export function ConfigurationStatus({
   account,
@@ -121,12 +122,12 @@ export function AccountDetailPanel({
               <SheetDescription>参数配置情况与渠道侧准备</SheetDescription>
             </SheetHeader>
             <div className="flex flex-col gap-6 p-6">
-              {query.loading ? (
-                <LoadingState />
-              ) : query.error ? (
-                <ErrorState message={query.error} retry={query.refresh} />
-              ) : (
-                account && (
+              <DetailPane
+                loading={query.loading}
+                error={query.error}
+                refresh={query.refresh}
+              >
+                {account && (
                   <>
                     <dl className="detail-grid">
                       <dt>账号 ID</dt>
@@ -195,7 +196,7 @@ export function AccountDetailPanel({
                       <Button
                         disabled={
                           !definition ||
-                          account.missingReceiveFields.includes("system")
+                          account.missingReceiveFields.includes(SYSTEM_FIELD)
                         }
                         onClick={() => setEditing(true)}
                       >
@@ -206,8 +207,8 @@ export function AccountDetailPanel({
                       </Button>
                     </div>
                   </>
-                )
-              )}
+                )}
+              </DetailPane>
             </div>
           </SheetContent>
         </Sheet>

@@ -14,6 +14,19 @@ export function hasOpenOverlay(): boolean {
   return !!document.querySelector(OVERLAY_SELECTOR);
 }
 
+/**
+ * 工作台快捷键的单一键位映射：守卫（本模块）与帮助文案（workspace-help.tsx）
+ * 共用这一份描述，新增或调整键位只改这里。
+ */
+export const INBOX_SHORTCUTS: { keys: string[]; label: string }[] = [
+  { keys: ["Ctrl", "K"], label: "搜索访客或消息" },
+  { keys: ["Enter"], label: "发送回复" },
+  { keys: ["Shift", "Enter"], label: "输入框换行" },
+  { keys: ["Ctrl", "Enter"], label: "发送并接待下一位" },
+  { keys: ["Alt", "1 / 2"], label: "切换并排窗口" },
+  { keys: ["Esc"], label: "关闭当前弹窗" },
+];
+
 export function useInboxSearch(openQueue?: () => void) {
   const present = useIsPresent();
   useEffect(() => {

@@ -66,7 +66,9 @@ describe("connections slice", () => {
     expect(selectConnection(initialConnectionsState, "douyin")?.url).toBe(
       "http://127.0.0.1:8080/webhooks/douyin",
     );
-    expect(selectTestState(initialConnectionsState).status).toBe("idle");
+    expect(selectTestState(initialConnectionsState, "douyin").status).toBe(
+      "idle",
+    );
     expect(initialConnectionsState.loaded).toBe(false);
   });
 
@@ -130,10 +132,10 @@ describe("connections slice", () => {
     });
 
     const pending = store.dispatch(testConnection(savedDouyin));
-    expect(selectTestState(stateOf(store)).status).toBe("testing");
+    expect(selectTestState(stateOf(store), "douyin").status).toBe("testing");
     await pending;
 
-    expect(selectTestState(stateOf(store))).toEqual({
+    expect(selectTestState(stateOf(store), "douyin")).toEqual({
       status: "success",
       message: "challenge 回显一致",
     });
@@ -144,7 +146,7 @@ describe("connections slice", () => {
     });
     await store.dispatch(testConnection(savedDouyin));
 
-    expect(selectTestState(stateOf(store))).toEqual({
+    expect(selectTestState(stateOf(store), "douyin")).toEqual({
       status: "failed",
       message: "响应 challenge 不一致",
     });
@@ -156,7 +158,7 @@ describe("connections slice", () => {
 
     await store.dispatch(testConnection(savedDouyin));
 
-    const test = selectTestState(stateOf(store));
+    const test = selectTestState(stateOf(store), "douyin");
     expect(test.status).toBe("failed");
     expect(test.message).toContain("后端不可用");
   });

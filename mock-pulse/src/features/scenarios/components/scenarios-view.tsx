@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/native-select";
 import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
-import { CHANNELS, type ChannelId } from "@/lib/channels";
+import { CHANNELS, type ChannelId, DEFAULT_CHANNEL } from "@/lib/channels";
 import { filterScenarios, paginateScenarios } from "../selectors";
 import * as actions from "../stores/scenarios-slice";
 import { ScenarioEditor, type ScenarioEditorSlots } from "./scenario-editor";
@@ -43,7 +43,7 @@ export function ScenariosView({
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [channel, setChannel] = useState<ChannelId>("douyin");
+  const [channel, setChannel] = useState<ChannelId>(DEFAULT_CHANNEL);
   const [error, setError] = useState("");
   const rows = filterScenarios(state.items, state.filters);
   const page = paginateScenarios(rows, state.page);
@@ -60,7 +60,7 @@ export function ScenariosView({
   const openCreate = () => {
     setName("");
     setChannel(
-      state.filters.channel === "all" ? "douyin" : state.filters.channel,
+      state.filters.channel === "all" ? DEFAULT_CHANNEL : state.filters.channel,
     );
     setError("");
     setCreating(true);
@@ -120,10 +120,12 @@ export function ScenariosView({
                   request(() => dispatch(actions.openScenario(id)));
               }}
               onContextMenu={setDeleting}
-              page={page.page}
-              pages={page.pages}
-              filteredTotal={page.total}
-              onPage={(value) => dispatch(actions.setPage(value))}
+              pagination={{
+                page: page.page,
+                pages: page.pages,
+                filteredTotal: page.total,
+                onPage: (value) => dispatch(actions.setPage(value)),
+              }}
               onClear={() =>
                 dispatch(
                   actions.setFilters({

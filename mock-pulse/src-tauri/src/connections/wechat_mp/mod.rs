@@ -105,8 +105,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::WechatMp { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, WechatMp { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, WechatMp { url } => url.as_str())
     }
 
     fn verify_handshake(

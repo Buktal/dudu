@@ -10,6 +10,7 @@ import { safePath } from "./paths";
 import {
   getAt,
   parseFieldText,
+  senderProfilePath,
   setAt,
   setPayloadField,
   syncSenderIdentity,
@@ -150,6 +151,25 @@ describe("parseFieldText：字段文本 → 类型化值", () => {
   });
 });
 
+describe("senderProfilePath", () => {
+  it("返回 schema 声明的资料路径（载荷已展开该字段）", () => {
+    const payload = editorPayload(dyText, dyText.payload);
+    expect(senderProfilePath(dyText, payload)).toBe(
+      "content.user_infos[0].open_id",
+    );
+  });
+
+  it("声明渠道的模板载荷未展开资料时返回 null（dy-read 无资料结构）", () => {
+    expect(senderProfilePath(dyRead, dyRead.payload)).toBeNull();
+  });
+
+  it("展开后又被移除时返回 null（同步入口不提供）", () => {
+    const payload = editorPayload(dyText, dyText.payload);
+    delete (payload.content as Record<string, unknown>).user_infos;
+    expect(senderProfilePath(dyText, payload)).toBeNull();
+  });
+});
+
 describe("syncSenderIdentity", () => {
   it("把资料 open_id 对齐到 from_user_id，返回新对象与写入路径", () => {
     const payload = editorPayload(dyText, dyText.payload);
@@ -169,15 +189,16 @@ describe("syncSenderIdentity", () => {
     expect(synced.syncedPath).toBe("content.user_infos[0].open_id");
   });
 
-  it("资料路径改挂 user_infos[1]（schema 推导）：写入路径跟随 schema", () => {
-    // 模拟抖音描述文件把资料 open_id 挂到 user_infos[1]：路径推导只认
-    // schema 字段，不认字面量
+  it("资料路径改挂 user_infos[1]（schema 声明）：写入路径跟随声明", () => {
+    // 模拟抖音渠道声明把资料 open_id 挂到 user_infos[1]：写入路径只认
+    // schema.senderProfilePath 声明，不认字面量
     const profileField = dyText.fields.find(
       (field) => field.path === "content.user_infos[0].open_id",
     );
     if (!profileField) throw new Error("dy-text 应有资料 open_id 字段");
     const altSchema = {
       ...dyText,
+      senderProfilePath: "content.user_infos[1].open_id",
       fields: [
         ...dyText.fields.filter(
           (field) => field.path !== "content.user_infos[0].open_id",

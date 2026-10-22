@@ -35,8 +35,6 @@ pub mod wecom;
 pub mod whatsapp;
 pub mod xiaohongshu;
 
-use std::sync::Mutex;
-
 use serde::{Deserialize, Serialize};
 
 use crate::app_data_dir;
@@ -55,8 +53,8 @@ pub(crate) use adapter::{adapter_by_channel, adapter_of, ADAPTERS, ChannelAdapte
 #[allow(unused_imports)]
 pub(crate) use net::{
     client_with_timeout, dispatch_client, handshake_echo_get, handshake_echo_outcome,
-    no_body_check, no_reply, probe_handshake_outcome, request_error_reason,
-    send_measured_outcome, DispatchSnapshot,
+    handshake_read_error, no_body_check, no_reply, probe_handshake_outcome,
+    request_error_reason, send_measured_outcome, DispatchSnapshot,
 };
 
 /// 握手结果：ok + 人类可读原因（前端直接展示），抖音/企微共用。
@@ -121,17 +119,17 @@ pub fn connections_save(
     app: tauri::AppHandle,
     config: ConnectionConfig,
 ) -> Result<Vec<ConnectionConfig>, String> {
-    // load→retain→push→save 全程串行（与 runs::store::upsert_run 同一纪律，
-    // 不依赖「同步命令主线程串行」的隐式假设）
-    static WRITES: Mutex<()> = Mutex::new(());
-    let _write = WRITES.lock().unwrap_or_else(|error| error.into_inner());
-    let dir = app_data_dir(&app)?;
-    let mut list = store::load_connections(&dir).map_err(|err| err.to_string())?;
-    let variant = std::mem::discriminant(&config);
-    list.retain(|item| std::mem::discriminant(item) != variant);
-    list.push(config);
-    store::save_connections(&dir, &list).map_err(|err| err.to_string())?;
-    Ok(list)
+    // load→retain→push→save 全程经全局写锁串行（store_io::with_write_lock
+    // 单点，与各域写命令同一纪律，不依赖「同步命令主线程串行」的隐式假设）
+    crate::store_io::with_write_lock(|| {
+        let dir = app_data_dir(&app)?;
+        let mut list = store::load_connections(&dir).map_err(|err| err.to_string())?;
+        let variant = std::mem::discriminant(&config);
+        list.retain(|item| std::mem::discriminant(item) != variant);
+        list.push(config);
+        store::save_connections(&dir, &list).map_err(|err| err.to_string())?;
+        Ok(list)
+    })
 }
 
 /// 连接测试公共体：渠道差异（握手协议、超时上限）全部经 adapter 取用；

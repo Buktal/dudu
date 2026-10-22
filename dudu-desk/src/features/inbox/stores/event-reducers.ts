@@ -23,19 +23,14 @@ export const eventReducers = {
     else delete state.reminders[conversationId];
   },
   /**
-   * 真实链路没有服务端已读接口：读到最新处只清除本地待处理提醒并记录进度，
-   * 不产生请求、不改变会话数据。
+   * 真实链路没有服务端已读接口：读到最新处只清除本地待处理提醒，
+   * 不产生请求、不改变会话数据，断线时同样成立。
    */
   readHandledLocally(
     state: InboxState,
-    action: PayloadAction<{ conversationId: string; throughSequence: number }>,
+    action: PayloadAction<{ conversationId: string }>,
   ) {
-    const { conversationId, throughSequence } = action.payload;
-    delete state.reminders[conversationId];
-    state.events.readThrough[conversationId] = Math.max(
-      state.events.readThrough[conversationId] ?? 0,
-      throughSequence,
-    );
+    delete state.reminders[action.payload.conversationId];
   },
   eventReceived(state: InboxState, action: PayloadAction<InboxEvent>) {
     const event = action.payload;

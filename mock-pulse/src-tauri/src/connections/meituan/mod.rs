@@ -30,7 +30,9 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::{append_absent, form_encode_value, form_pairs, md5_hex, now_secs, strip_sig};
+use crate::connections::util::{
+    append_absent, borrowed_pairs, form_encode_value, form_pairs, md5_hex, now_secs, strip_sig,
+};
 
 use super::adapter::narrow;
 use super::{
@@ -113,9 +115,7 @@ fn post_form(
     let timestamp = mt_timestamp(now_secs());
     let pairs = form_pairs(&body);
     let params = sign_params(app_id, &timestamp, &pairs);
-    let borrowed: Vec<(&str, &str)> =
-        params.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
-    let signature = mt_sign(url, &borrowed, secret);
+    let signature = mt_sign(url, &borrowed_pairs(&params), secret);
     let mut wire = body;
     for (key, value) in [
         ("app_id", app_id),
@@ -203,8 +203,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Meituan { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Meituan { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Meituan { url } => url.as_str())
     }
 
     fn verify_handshake(

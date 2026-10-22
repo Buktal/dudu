@@ -82,3 +82,8 @@ export function schemaById(id: string): EventSchema {
   }
   return found;
 }
+
+/** 按 id 判模板是否已注册（非抛错检查：装载层过滤未知 schemaId 用） */
+export function hasSchema(id: string): boolean {
+  return SCHEMAS_BY_ID.has(id);
+}

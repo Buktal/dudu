@@ -9,7 +9,14 @@ import {
 } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { AccountDetail, ChannelDefinition } from "./api";
+import {
+  type AccountDetail,
+  type ChannelDefinition,
+  CREDENTIAL_TEXT_MAX_LENGTH,
+  CREDENTIAL_TEXTAREA_MAX_LENGTH,
+  TELEGRAM_BOT_TOKEN_PATTERN,
+  WECHAT_MINI_APP_ID_FIELD,
+} from "./api";
 export function CredentialFields({
   definition,
   detail,
@@ -72,7 +79,7 @@ export function CredentialFields({
                             [field.key]: event.target.value,
                           })
                         }
-                        maxLength={16384}
+                        maxLength={CREDENTIAL_TEXTAREA_MAX_LENGTH}
                         disabled={
                           disabled || immutable || clear.includes(field.key)
                         }
@@ -107,7 +114,11 @@ export function CredentialFields({
                         (!field.secret || revealed.includes(field.key))
                       }
                       value={values[field.key] ?? ""}
-                      maxLength={field.control === "textarea" ? 16384 : 4096}
+                      maxLength={
+                        field.control === "textarea"
+                          ? CREDENTIAL_TEXTAREA_MAX_LENGTH
+                          : CREDENTIAL_TEXT_MAX_LENGTH
+                      }
                       disabled={
                         disabled || immutable || clear.includes(field.key)
                       }
@@ -188,20 +199,26 @@ export function credentialError(
       return `请填写${field.label}`;
     if (value !== undefined && value !== "" && !value.trim())
       return `${field.label}不能全为空白`;
-    if (value && value.length > (field.control === "textarea" ? 16384 : 4096))
+    if (
+      value &&
+      value.length >
+        (field.control === "textarea"
+          ? CREDENTIAL_TEXTAREA_MAX_LENGTH
+          : CREDENTIAL_TEXT_MAX_LENGTH)
+    )
       return `${field.label}过长`;
   }
   if (
     definition.channel === "telegram" &&
     values.botToken &&
-    !/^[0-9]+:[A-Za-z0-9_-]+$/.test(values.botToken)
+    !TELEGRAM_BOT_TOKEN_PATTERN.test(values.botToken)
   )
     return "Bot token 格式不正确，请使用平台提供的 token";
   if (
     definition.channel === "wechat-mini" &&
     values.encodingAesKey &&
-    !values.appId?.trim() &&
-    !detail?.fields.appId
+    !values[WECHAT_MINI_APP_ID_FIELD]?.trim() &&
+    !detail?.fields[WECHAT_MINI_APP_ID_FIELD]
   )
     return "密文回调需要 appId";
   return null;

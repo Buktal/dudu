@@ -3,15 +3,14 @@ package com.dudu.duduserver.channel.wechatmini;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
-import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.SecureXml;
 import com.dudu.duduserver.channel.support.Texts;
+import com.dudu.duduserver.channel.support.WechatInboundMessages;
 import com.dudu.duduserver.channel.support.WechatSignatures;
 import com.dudu.duduserver.channel.support.WechatXmlBodies;
 import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -26,11 +25,10 @@ import java.util.Optional;
 @Component
 public class WechatMiniProtocol {
 
-    // 小程序客服会话仅有的三种消息类型加事件
+    // 小程序客服会话仅有的三种消息类型
     private static final String MSG_TYPE_TEXT = "text";
     private static final String MSG_TYPE_IMAGE = "image";
     private static final String MSG_TYPE_MINI_PROGRAM_PAGE = "miniprogrampage";
-    private static final String MSG_TYPE_EVENT = "event";
 
     /**
      * 三参验签：token/timestamp/nonce 字典序排序后拼接取 sha1 十六进制小写与渠道签名比对。
@@ -59,25 +57,8 @@ public class WechatMiniProtocol {
      * 解析或缺少发送方身份时抛出 {@link IllegalArgumentException}，由调用方按参数错误拒绝。
      */
     public Optional<ChannelInboundMessage> parse(Long companyChannelId, String body) {
-        Map<String, String> fields = fields(body);
-        String msgType = fields.getOrDefault("MsgType", "");
-        if (MSG_TYPE_EVENT.equals(msgType)) {
-            return Optional.empty();
-        }
-        String externalUserId = fields.getOrDefault("FromUserName", "");
-        if (externalUserId.isEmpty()) {
-            throw new IllegalArgumentException("渠道报文缺少发送方身份");
-        }
-        ChannelInboundMessage inbound = new ChannelInboundMessage(
-            companyChannelId,
-            externalUserId,
-            null,
-            null,
-            List.of(),
-            Texts.blankToNull(fields.get("MsgId")),
-            MessageDirectionEnum.INCOMING,
-            content(msgType, fields));
-        return Optional.of(inbound);
+        // 数据格式二选一（§3.1）：字段提取按首字符分派 XML/JSON，骨架共用事件判定与统一消息组装
+        return WechatInboundMessages.parse(companyChannelId, fields(body), this::content);
     }
 
     /**

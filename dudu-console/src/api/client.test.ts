@@ -1,19 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import { failure, loginResult, profile, success } from "@/test/http";
 import { ApiError, ConsoleClient, isEmpty } from "./client";
 
-const profile = {
-  company: { companyId: "100001", companyName: "测试企业" },
-  user: {
-    userId: "1",
-    username: "owner",
-    name: "管理员",
-    role: "console",
-    isInitialAdmin: true,
-  },
-  managedGroupIds: [],
-};
-const reply = (data: unknown, code = 0) =>
-  new Response(JSON.stringify({ code, msg: code ? "没有权限" : "成功", data }));
 beforeEach(() => {
   sessionStorage.clear();
   vi.restoreAllMocks();
@@ -21,9 +9,7 @@ beforeEach(() => {
 it("登录传递企业身份、保留密码并使用独立会话", async () => {
   const fetcher = vi
     .spyOn(globalThis, "fetch")
-    .mockResolvedValue(
-      reply({ token: "token", expiresAt: 1900000000, profile }),
-    );
+    .mockResolvedValue(success(loginResult));
   const client = new ConsoleClient();
   await client.login("100001", "owner", " pass ");
   expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({
@@ -36,11 +22,9 @@ it("登录传递企业身份、保留密码并使用独立会话", async () => {
 });
 it("业务无权限保留身份并重取权限", async () => {
   vi.spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(
-      reply({ token: "token", expiresAt: 1900000000, profile }),
-    )
-    .mockResolvedValueOnce(reply(null, 10106))
-    .mockResolvedValueOnce(reply(profile));
+    .mockResolvedValueOnce(success(loginResult))
+    .mockResolvedValueOnce(failure(10106, "没有权限"))
+    .mockResolvedValueOnce(success(profile));
   const client = new ConsoleClient();
   await client.login("100001", "owner", "secret");
   await expect(
@@ -54,10 +38,8 @@ it("业务无权限保留身份并重取权限", async () => {
 });
 it("不可见对象写入失败后重取当前查询，读取失败不会循环刷新", async () => {
   vi.spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(
-      reply({ token: "token", expiresAt: 1900000000, profile }),
-    )
-    .mockImplementation(async () => reply(null, 12100));
+    .mockResolvedValueOnce(success(loginResult))
+    .mockImplementation(async () => failure(12100, "对象不可见"));
   const client = new ConsoleClient();
   await client.login("100001", "owner", "secret");
   await expect(
@@ -74,10 +56,8 @@ it("不可见对象写入失败后重取当前查询，读取失败不会循环�
 });
 it("写成功失效数据一次，读取与查询不触发失效", async () => {
   vi.spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(
-      reply({ token: "token", expiresAt: 1900000000, profile }),
-    )
-    .mockImplementation(async () => reply(null));
+    .mockResolvedValueOnce(success(loginResult))
+    .mockImplementation(async () => success(null));
   const client = new ConsoleClient();
   await client.login("100001", "owner", "secret");
   // 登录是会话建立而非数据写入，不触发失效
@@ -96,9 +76,8 @@ it("写成功失效数据一次，读取与查询不触发失效", async () => {
 });
 it("拒绝错误身份和非字符串ID", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    reply({
-      token: "token",
-      expiresAt: 1900000000,
+    success({
+      ...loginResult,
       profile: { ...profile, user: { ...profile.user, userId: 1 } },
     }),
   );
@@ -114,8 +93,8 @@ it("恢复会话从服务端读取身份，身份拒绝后清理会话", async (
     JSON.stringify({ origin: "", token: "old-token" }),
   );
   vi.spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(reply(profile))
-    .mockResolvedValueOnce(reply(null, 10106));
+    .mockResolvedValueOnce(success(profile))
+    .mockResolvedValueOnce(failure(10106, "没有权限"));
   const client = new ConsoleClient();
   expect(client.getSnapshot().restoring).toBe(true);
   await client.restore(new AbortController().signal);
@@ -135,7 +114,7 @@ it("退出会话丢弃在途响应，无法再次写入旧身份", async () => {
   const client = new ConsoleClient();
   const request = client.login("100001", "owner", "secret");
   client.clearSession();
-  resolve(reply({ token: "late", expiresAt: 1900000000, profile }));
+  resolve(success(loginResult));
   await expect(request).rejects.toMatchObject({ name: "AbortError" });
   expect(client.getSnapshot().profile).toBeNull();
 });

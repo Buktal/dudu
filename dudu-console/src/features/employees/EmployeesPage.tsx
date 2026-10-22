@@ -4,6 +4,7 @@ import { Message } from "@/components/feedback";
 import { FilterBar } from "@/components/filter-bar";
 import {
   FilterSelect,
+  PAGE_SIZE,
   RefreshButton,
   StatusBadge,
 } from "@/components/page-parts";
@@ -54,7 +55,7 @@ function EmployeeList({
   onSelect: (id: string | null) => void;
   onCreate: (creating: boolean) => void;
 }) {
-  const query = useEmployees({ page: 1, pageSize: 20 });
+  const query = useEmployees({ page: 1, pageSize: PAGE_SIZE });
   const [notice, setNotice] = useState<string | null>(null);
   const closeDetail = useCallback(() => onSelect(null), [onSelect]);
   // 写成功后的旁路通知：列表与详情重查由 dataRevision 驱动，这里只负责文案

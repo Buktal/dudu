@@ -7,10 +7,24 @@ use serde::{Deserialize, Serialize};
 
 use crate::app_data_dir;
 
-/// 期望回执：状态码 + 正文形态（contains/equals/jsonField）。
-/// bodyMode 在 #16 引入，旧数据缺省按 contains 读入。
-fn default_body_mode() -> String {
-    "contains".to_string()
+/// 期望回执的正文形态（与前端 ReceiptBodyMode 一致）。bodyMode 在 #16 引入，
+/// 旧数据缺省按 contains 读入；未知取值在装载/保存的反序列化即被拒绝。
+/// 单点定义在本域（持久化契约），verdict 按 `crate::events::ReceiptBodyMode`
+/// 复用，不再另设平行定义。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum ReceiptBodyMode {
+    Contains,
+    Equals,
+    JsonField,
+    WecomReply,
+    DingtalkReply,
+    QqSignReply,
+}
+
+/// bodyMode 旧数据缺省：contains。
+fn default_body_mode() -> ReceiptBodyMode {
+    ReceiptBodyMode::Contains
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -19,7 +33,7 @@ pub struct ExpectedReceipt {
     pub status: u16,
     pub body: String,
     #[serde(default = "default_body_mode")]
-    pub body_mode: String,
+    pub body_mode: ReceiptBodyMode,
 }
 
 /// 事件的一个不可变版本：保存时间 + 来源草稿快照。
@@ -58,20 +72,25 @@ pub fn events_load(app: tauri::AppHandle) -> Result<Vec<StoredEvent>, String> {
 #[tauri::command]
 pub fn events_save(app: tauri::AppHandle, event: StoredEvent) -> Result<Vec<StoredEvent>, String> {
     let dir = app_data_dir(&app)?;
-    let mut list = store::load_events(&dir).map_err(|err| err.to_string())?;
-    upsert_event(&mut list, event);
-    store::save_events(&dir, &list).map_err(|err| err.to_string())?;
-    Ok(list)
+    // 读改写全程串行（store_io::with_write_lock 全局写锁单点）
+    crate::store_io::with_write_lock(|| {
+        let mut list = store::load_events(&dir).map_err(|err| err.to_string())?;
+        upsert_event(&mut list, event);
+        store::save_events(&dir, &list).map_err(|err| err.to_string())?;
+        Ok(list)
+    })
 }
 
 /// 按 id 删除事件，返回删除后的完整列表。
 #[tauri::command]
 pub fn events_delete(app: tauri::AppHandle, event_id: String) -> Result<Vec<StoredEvent>, String> {
     let dir = app_data_dir(&app)?;
-    let mut list = store::load_events(&dir).map_err(|err| err.to_string())?;
-    remove_event(&mut list, &event_id);
-    store::save_events(&dir, &list).map_err(|err| err.to_string())?;
-    Ok(list)
+    crate::store_io::with_write_lock(|| {
+        let mut list = store::load_events(&dir).map_err(|err| err.to_string())?;
+        remove_event(&mut list, &event_id);
+        store::save_events(&dir, &list).map_err(|err| err.to_string())?;
+        Ok(list)
+    })
 }
 
 /// 列表内按 id 覆盖（新事件追加）。
@@ -99,7 +118,7 @@ mod tests {
             expected: ExpectedReceipt {
                 status: 200,
                 body: String::new(),
-                body_mode: "contains".into(),
+                body_mode: ReceiptBodyMode::Contains,
             },
         }
     }

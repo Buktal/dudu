@@ -1,6 +1,6 @@
 import { ArrowUpRight, Edit3, KeyRound, Power } from "lucide-react";
 import { useState } from "react";
-import { ErrorState, LoadingState } from "@/components/feedback";
+import { DetailPane } from "@/components/detail-pane";
 import { formatDate, StatusBadge } from "@/components/page-parts";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -43,12 +43,8 @@ export function CompanyDetailSheet({
         </SheetHeader>
         <Separator />
         <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
-          {loading ? (
-            <LoadingState />
-          ) : error ? (
-            <ErrorState message={error} retry={refresh} />
-          ) : (
-            detail && (
+          <DetailPane loading={loading} error={error} refresh={refresh}>
+            {detail && (
               <>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-4">
@@ -156,8 +152,8 @@ export function CompanyDetailSheet({
                   />
                 )}
               </>
-            )
-          )}
+            )}
+          </DetailPane>
         </div>
       </SheetContent>
     </Sheet>

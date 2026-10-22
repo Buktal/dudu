@@ -45,7 +45,14 @@ import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { formatDateTime } from "@/lib/time";
 import { setView } from "@/stores/app-slice";
 import type { RunRecord } from "../model";
-import { filterRuns, paginateRuns, runStatus, selectedRun } from "../selectors";
+import {
+  filterRuns,
+  paginateRuns,
+  type RunOutcomeFilter,
+  type RunSourceFilter,
+  runStatus,
+  selectedRun,
+} from "../selectors";
 import { selectRun, setFilters, setPage } from "../stores/runs-slice";
 import { RunPersistenceNotice } from "./run-persistence-notice";
 import { RunStepDetail } from "./run-step-detail";
@@ -56,28 +63,26 @@ import {
   StatusBadge,
 } from "./run-visualization";
 
-const SOURCES = [
+const SOURCES: readonly { value: RunSourceFilter; label: string }[] = [
   { value: "all", label: "全部来源" },
   { value: "direct", label: "单条事件" },
   { value: "scenario", label: "平台剧本" },
   { value: "plan", label: "执行编排" },
 ];
-type Outcome = "all" | "passed" | "failed" | "cancelled";
+
+const OUTCOMES: readonly { value: RunOutcomeFilter; label: string }[] = [
+  { value: "all", label: "全部" },
+  { value: "passed", label: "通过" },
+  { value: "failed", label: "失败" },
+  { value: "cancelled", label: "停止" },
+];
 
 export function RunsView() {
   const dispatch = useAppDispatch();
   const state = useAppSelector((root) => root.runs);
   const [detail, setDetail] = useState<number | null>(null);
-  const [source, setSource] = useState("all");
-  const [outcome, setOutcome] = useState<Outcome>("all");
-  const rows = filterRuns(state.items, state.filters.query).filter(
-    (item) =>
-      (source === "all" || item.source === source) &&
-      (outcome === "all" ||
-        (outcome === "cancelled"
-          ? item.cancelled
-          : !item.cancelled && runStatus(item) === outcome)),
-  );
+  // 来源/结果筛选归 runs slice（setFilters 单点复位页码），视图不再自持
+  const rows = filterRuns(state.items, state.filters);
   const page = paginateRuns(rows, state.page);
   const run = selectedRun(state);
   const title =
@@ -103,16 +108,16 @@ export function RunsView() {
           total={state.items.length}
           query={state.filters.query}
           onQuery={(query) => dispatch(setFilters({ query }))}
+          emptyTitle="还没有运行记录"
+          emptyDescription="完成一次发送后，请求和回执会保存在这里。"
           filters={
             <>
               <Select
                 items={SOURCES}
-                value={source}
+                value={state.filters.source}
                 onValueChange={(value) => {
-                  if (value) {
-                    setSource(value);
-                    dispatch(setPage(1));
-                  }
+                  if (value)
+                    dispatch(setFilters({ source: value as RunSourceFilter }));
                 }}
               >
                 <SelectTrigger className="w-full" aria-label="运行来源筛选">
@@ -129,19 +134,11 @@ export function RunsView() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <ResourceFilters
-                value={outcome}
+              <ResourceFilters<RunOutcomeFilter>
+                value={state.filters.outcome}
                 label="运行结果筛选"
-                options={[
-                  { value: "all", label: "全部" },
-                  { value: "passed", label: "通过" },
-                  { value: "failed", label: "失败" },
-                  { value: "cancelled", label: "停止" },
-                ]}
-                onChange={(value) => {
-                  setOutcome(value);
-                  dispatch(setPage(1));
-                }}
+                options={OUTCOMES}
+                onChange={(value) => dispatch(setFilters({ outcome: value }))}
               />
             </>
           }
@@ -167,15 +164,15 @@ export function RunsView() {
             dispatch(selectRun(id));
             setDetail(null);
           }}
-          page={page.page}
-          pages={page.pages}
-          filteredTotal={page.total}
-          onPage={(value) => dispatch(setPage(value))}
-          onClear={() => {
-            setSource("all");
-            setOutcome("all");
-            dispatch(setFilters({ query: "" }));
+          pagination={{
+            page: page.page,
+            pages: page.pages,
+            filteredTotal: page.total,
+            onPage: (value) => dispatch(setPage(value)),
           }}
+          onClear={() =>
+            dispatch(setFilters({ query: "", source: "all", outcome: "all" }))
+          }
         />
       )}
     >

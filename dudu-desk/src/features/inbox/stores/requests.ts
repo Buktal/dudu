@@ -2,10 +2,10 @@
  * Owner of inbox request keys, cancellation and the conversation-domain
  * operation ritual in one module. The key namespace (`InboxRequestKey` +
  * `requestKeys`) is the single spelling of every request slot — global
- * singletons, per-conversation, per-attachment and per-choice-scope — and the
- * helpers below are the only way other modules abort, release, fan out, query
- * or run in-flight work, so `runtime.requests` stays an implementation detail
- * of this file. A new per-conversation request registers once in
+ * singletons, per-conversation, per-message-media and per-choice-scope — and
+ * the helpers below are the only way other modules abort, release, fan out,
+ * query or run in-flight work, so `runtime.requests` stays an implementation
+ * detail of this file. A new per-conversation request registers once in
  * CONVERSATION_REQUEST_KINDS: its key and its runConversationOperation slot
  * both derive from that table.
  */
@@ -48,7 +48,6 @@ type InboxRequestKey =
   | "events"
   | "recovery"
   | "access"
-  | `attachment:${string}`
   | `media:${string}`
   | `choices:${string}`
   | `${(typeof CONVERSATION_REQUEST_KINDS)[number]}:${string}`;
@@ -61,7 +60,7 @@ const conversationRequestKey = (
 /** Constructors for the key protocol. Slot-key constructors return
  *  `InboxRequestKey`; `next` spells a choice scope and reaches a slot key
  *  only through `choices`. Global singletons are constants; every scoped
- *  slot derives from its owner (conversation, attachment, message). */
+ *  slot derives from its owner (conversation or message). */
 export const requestKeys = {
   queue: "queue",
   events: "events",
@@ -71,8 +70,6 @@ export const requestKeys = {
     conversationRequestKey("history", conversationId),
   profile: (conversationId: string) =>
     conversationRequestKey("profile", conversationId),
-  attachment: (attachmentId: string): InboxRequestKey =>
-    `attachment:${attachmentId}`,
   media: (messageId: string, index: number): InboxRequestKey =>
     `media:${messageId}:${index}`,
   choices: (scope: string): InboxRequestKey => `choices:${scope}`,
@@ -167,7 +164,6 @@ export function cancelRequests(runtime: InboxRuntime) {
   runtime.unsubscribe = undefined;
   for (const url of runtime.previews.values()) URL.revokeObjectURL(url);
   runtime.previews.clear();
-  runtime.files.clear();
 }
 
 /**
@@ -179,20 +175,6 @@ export function cancelScopeRequests(runtime: InboxRuntime) {
     if (key === requestKeys.events) continue;
     scope.dispose();
     runtime.requests.delete(key);
-  }
-}
-
-export function releaseAttachmentResources(
-  runtime: InboxRuntime,
-  ids: string[],
-) {
-  for (const id of ids) {
-    runtime.requests.get(requestKeys.attachment(id))?.abort();
-    runtime.requests.delete(requestKeys.attachment(id));
-    const preview = runtime.previews.get(id);
-    if (preview) URL.revokeObjectURL(preview);
-    runtime.previews.delete(id);
-    runtime.files.delete(id);
   }
 }
 

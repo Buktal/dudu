@@ -19,6 +19,7 @@ export {
   recordLanes,
 } from "./components/run-visualization";
 export { RunsView } from "./components/runs-view";
+export { newRunId } from "./model";
 export { lastRunFor } from "./selectors";
 export { materializeRunSnapshot, type RunSnapshot } from "./snapshot";
 export { directDispatch } from "./stores/direct-dispatch";
@@ -64,5 +65,6 @@ export {
   isStoppingRun,
   missingConnections,
   type RunPhase,
+  selectDirectDispatchSlot,
   shouldConfirmRunning,
 } from "./stores/session";

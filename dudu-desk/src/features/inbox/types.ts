@@ -131,15 +131,6 @@ export type SendSubmission = {
   clientRequestId: string;
   target: SendTarget;
   text: string;
-  /** 发送中的附件都经过准备阶段：名称、类型与大小完整。 */
-  attachments: PreparedAttachment[];
-};
-
-/** 已准备好的待发送附件：名称、类型与大小在准备阶段必须完整。 */
-export type PreparedAttachment = MediaReference & {
-  name: string;
-  mimeType: string;
-  size: number;
 };
 export type ConnectionState =
   | "unavailable"

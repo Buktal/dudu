@@ -5,10 +5,11 @@ import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.constant.ChannelEnum;
-import com.dudu.duduserver.entity.CompanyChannelDO;
+import com.dudu.duduserver.dto.ConsoleChannelRequests;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.entity.UserGroupMemberDO;
+import com.dudu.duduserver.service.ConsoleChannelService;
 import com.dudu.duduserver.testutil.IntegrationTestEnv;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -61,6 +62,7 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
     }
 
     @Autowired PlatformTransactionManager transactionManager;
+    @Autowired ConsoleChannelService consoleChannels;
 
     private long moveOldGroup;
     private long moveNewGroup;
@@ -174,11 +176,9 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         assertThat(frameType(owner.next(Duration.ofSeconds(5)))).isEqualTo("message");
         assertThat(frameType(leaving.next(Duration.ofSeconds(5)))).isEqualTo("message");
 
-        // 管理端把账号改到新组：沿用现有写入口，操作本身不变
-        CompanyChannelDO patch = new CompanyChannelDO();
-        patch.setCompanyChannelId(moveChannel);
-        patch.setGroupId(moveNewGroup);
-        assertThat(channels.updateById(patch)).isTrue();
+        // 管理端把账号改到新组：走 Console 换组命令，操作本身不变
+        consoleChannels.move(jwtManager.parseToken(ownerToken), String.valueOf(moveChannel),
+            new ConsoleChannelRequests.Move(String.valueOf(moveNewGroup)), "http://localhost");
         assertThat(channels.getById(moveChannel).getGroupId()).isEqualTo(moveNewGroup);
 
         // 本企业全部已连接员工（含迁出员工）收到 access-changed；跨企业连接不收到
@@ -305,10 +305,8 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         callback(multiChannel, "multi-callback-token", textPush("gh_multi", "access-ext-4", "多组来信", "mm-1"));
         Long visitorId = visitorIdOf("access-ext-4");
         assertThat(frameType(multiClient.next(Duration.ofSeconds(5)))).isEqualTo("message");
-        CompanyChannelDO patch = new CompanyChannelDO();
-        patch.setCompanyChannelId(multiChannel);
-        patch.setGroupId(multiFirst);
-        assertThat(channels.updateById(patch)).isTrue();
+        consoleChannels.move(jwtManager.parseToken(ownerToken), String.valueOf(multiChannel),
+            new ConsoleChannelRequests.Move(String.valueOf(multiFirst)), "http://localhost");
         assertAccessChanged(multiClient);
         assertThat(accountIds(access(multiToken))).containsExactly(String.valueOf(multiChannel));
         assertThat(code(getVisitor(multiToken, visitorId))).isZero();

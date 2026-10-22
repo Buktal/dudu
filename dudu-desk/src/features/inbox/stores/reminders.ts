@@ -1,4 +1,4 @@
-import type { Conversation, InboxEvent, InboxMessage } from "../types";
+import type { Conversation, InboxEvent } from "../types";
 import type { InboxState } from "./state";
 import type { InboxRootState } from "./store";
 
@@ -31,7 +31,7 @@ export function reminderChange(
   const conversationId = event.message.conversationId;
   if (served(event)) return { conversationId, unread: 0 };
   if (event.message.direction !== "incoming") return null;
-  if (onScreen(state, conversationId)) return null;
+  if (inReceptionPosition(state, conversationId)) return null;
   return {
     conversationId,
     unread: (state.reminders[conversationId] ?? 0) + 1,
@@ -53,8 +53,14 @@ export function reminderSettlement(state: InboxState): ReminderChange[] {
     .map((conversation) => ({ conversationId: conversation.id, unread: 0 }));
 }
 
-/** 屏幕上的访客：专注选中、并排固定或卡片展开都算正在查看 */
-function onScreen(state: InboxState, conversationId: string): boolean {
+/**
+ * 免打扰的三种接待位置：专注选中、并排固定或卡片展开都算正在查看。
+ * 比 state.ts 的 displaysConversation 更窄：不含回复对象槽位，回复目标切走时仍提醒。
+ */
+function inReceptionPosition(
+  state: InboxState,
+  conversationId: string,
+): boolean {
   return (
     state.activeId === conversationId ||
     state.pinnedId === conversationId ||
@@ -62,12 +68,14 @@ function onScreen(state: InboxState, conversationId: string): boolean {
   );
 }
 
-// 已处理：成功的 outgoing 结果（sent），或本条消息把访客带到 waiting；失败与发送中不算
-function served(event: InboxEvent): boolean {
-  if (event.type !== "message") return false;
+// 已处理：成功的 outgoing 结果（sent），或本条消息把访客带到 waiting；失败与发送中不算。
+// 仅由 reminderChange 在 message 分支内调用，message 报文形态由调用点保证
+function served(event: Extract<InboxEvent, { type: "message" }>): boolean {
   if (event.conversation?.status === "waiting") return true;
-  const message: InboxMessage = event.message;
-  return message.direction === "outgoing" && message.delivery?.state === "sent";
+  return (
+    event.message.direction === "outgoing" &&
+    event.message.delivery?.state === "sent"
+  );
 }
 
 /** 会话角标：本地待处理提醒；服务端不返回个人已读，无提醒即无角标 */

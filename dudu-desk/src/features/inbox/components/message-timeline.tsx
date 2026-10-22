@@ -91,7 +91,7 @@ function HistoryList({
   conversationId: string;
   messages: InboxMessage[];
   onRetry?: (id: string) => void;
-  onAtBottom?: (sequence: number) => void;
+  onAtBottom?: () => void;
 }) {
   const dispatch = useInboxDispatch();
   const identity = useInboxSelector(
@@ -112,10 +112,9 @@ function HistoryList({
     [conversationId, firstCreatedAt],
   );
   const firstItemIndex = anchor.firstItemIndex;
-  const lastSequence = messages[messages.length - 1]?.sequence ?? 0;
   useEffect(() => {
     const markVisible = () => {
-      if (atBottom) onAtBottom?.(lastSequence);
+      if (atBottom) onAtBottom?.();
     };
     markVisible();
     document.addEventListener("visibilitychange", markVisible);
@@ -124,7 +123,7 @@ function HistoryList({
       document.removeEventListener("visibilitychange", markVisible);
       window.removeEventListener("focus", markVisible);
     };
-  }, [atBottom, lastSequence, onAtBottom]);
+  }, [atBottom, onAtBottom]);
   return (
     <div className="relative min-h-0 flex-1">
       <Virtuoso
@@ -191,7 +190,7 @@ export function MessageTimeline({
 }: {
   conversationId: string;
   onRetry?: (id: string) => void;
-  onAtBottom?: (sequence: number) => void;
+  onAtBottom?: () => void;
 }) {
   const dispatch = useInboxDispatch();
   const messages = useInboxSelector((state) =>

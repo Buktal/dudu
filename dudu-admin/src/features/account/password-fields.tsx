@@ -1,3 +1,4 @@
+// 受控拷贝：与 dudu-admin/dudu-console 侧同步演化（ADR-0016）
 import { TextField } from "@/components/form-field";
 import { FieldGroup } from "@/components/ui/field";
 

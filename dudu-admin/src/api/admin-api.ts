@@ -1,10 +1,4 @@
-import {
-  type AdminClient,
-  isAccount,
-  isEmpty,
-  isRecord,
-  PROFILE_PATH,
-} from "./client";
+import { type AdminClient, isEmpty, isRecord } from "./client";
 import type {
   CompanyProfile,
   CompanyQuery,
@@ -24,6 +18,12 @@ import {
 // 企业启停状态值，与后端 EnableStatusEnum 对齐：0 停用、1 恢复
 const STATUS_DISABLED = 0;
 const STATUS_ENABLED = 1;
+
+// 初始企业管理员字段长度契约（数据契约 CompanyAdminInitDTO / ConsoleIdentityRequests）：
+// 登录名 2–64，显示名称最长 100，创建后登录名不改
+export const ADMIN_USERNAME_MIN_LENGTH = 2;
+export const ADMIN_USERNAME_MAX_LENGTH = 64;
+export const ADMIN_NAME_MAX_LENGTH = 100;
 
 export const adminApi = {
   companies: (client: AdminClient, query: CompanyQuery, signal: AbortSignal) =>
@@ -123,11 +123,6 @@ export const adminApi = {
       signal,
       paginated: true,
       validate: pageOf(isLog),
-    }),
-  profile: (client: AdminClient, signal: AbortSignal) =>
-    client.request(PROFILE_PATH, {
-      signal,
-      validate: isAccount,
     }),
   changePassword: (
     client: AdminClient,

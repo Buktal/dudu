@@ -210,6 +210,9 @@ export const CHANNEL_REGISTRY = {
 /** 渠道标识：由注册表键派生（新增渠道自动扩展，无需改类型） */
 export type ChannelId = keyof typeof CHANNEL_REGISTRY;
 
+/** 初始选中渠道（注册表首行）：初始选择用；展示兜底不写渠道字面量 */
+export const DEFAULT_CHANNEL: ChannelId = "douyin";
+
 /** 注册表中的一条渠道：id + 行元数据（图标键已解析为组件） */
 export type Channel = Omit<ChannelRow, "icon"> & {
   id: ChannelId;

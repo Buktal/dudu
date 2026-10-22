@@ -37,7 +37,7 @@ export type InboxRuntime = {
    * idle (see live-refresh.ts). Touch only through the helpers below.
    */
   queueEvents: SettledBus;
-  files: Map<string, File>;
+  /** 消息媒体对象 URL 登记：键同 state.media，回收只经 requests.ts 的取消路径。 */
   previews: Map<string, string>;
   unsubscribe?: () => void;
 };
@@ -119,7 +119,6 @@ export function createInboxStore(options: {
     refreshAccess: options.refreshAccess,
     connection: createConnectionGate(),
     queueEvents: createSettledBus(),
-    files: new Map(),
     previews: new Map(),
   };
   return configureStore({

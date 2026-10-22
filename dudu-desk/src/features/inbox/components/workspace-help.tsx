@@ -12,16 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { receptionModeKeys, receptionModes } from "@/lib/reception-mode";
+import { INBOX_SHORTCUTS } from "../hooks/use-inbox-shortcuts";
 import { ReceptionModePreview } from "./reception-mode-preview";
-
-const shortcuts = [
-  { keys: ["Ctrl", "K"], label: "搜索访客或消息" },
-  { keys: ["Enter"], label: "发送回复" },
-  { keys: ["Shift", "Enter"], label: "输入框换行" },
-  { keys: ["Ctrl", "Enter"], label: "发送并接待下一位" },
-  { keys: ["Alt", "1 / 2"], label: "切换并排窗口" },
-  { keys: ["Esc"], label: "关闭当前弹窗" },
-];
 
 export function WorkspaceHelp() {
   const id = useId();
@@ -93,7 +85,7 @@ export function WorkspaceHelp() {
             快捷操作
           </h3>
           <dl className="flex flex-col gap-1">
-            {shortcuts.map(({ keys, label }) => (
+            {INBOX_SHORTCUTS.map(({ keys, label }) => (
               <div
                 key={label}
                 className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-3 py-1"

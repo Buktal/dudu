@@ -12,7 +12,7 @@ import { Fragment, type ReactNode, useState } from "react";
 import { useAdmin, useSession } from "@/api/context";
 import { useMutation } from "@/api/use-mutation";
 import { cn } from "@/lib/utils";
-import { navigate, routes, type View } from "@/navigation";
+import { href, navigate, routes, type View } from "@/navigation";
 import { Brand } from "./brand";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
@@ -77,7 +77,7 @@ export function AdminLayout({
         <Fragment key={target}>
           {target === "account" && <Separator className="my-3" />}
           <a
-            href={`#/${route()}`}
+            href={href(route())}
             aria-current={target === view ? "page" : undefined}
             className={cn("nav-item", target === view && "nav-item-active")}
             onClick={() => setMobileOpen(false)}
@@ -108,7 +108,7 @@ export function AdminLayout({
         <div className="mt-auto p-3">
           <Separator className="mb-3" />
           <a
-            href={`#/${routes.account()}`}
+            href={href(routes.account())}
             aria-label="查看个人账号"
             className="sidebar-profile"
           >

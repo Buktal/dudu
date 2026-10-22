@@ -32,8 +32,6 @@ pub enum PlanFailure {
 #[serde(rename_all = "camelCase")]
 pub struct StoredPlanItem {
     pub scenario_id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub snapshot: Option<crate::scenarios::StoredScenario>,
 }
 
 /// 与前端交换的编排形态（camelCase 契约）。
@@ -61,16 +59,22 @@ pub fn plans_load(app: tauri::AppHandle) -> Result<Vec<StoredPlan>, String> {
 #[tauri::command]
 pub fn plans_save(app: tauri::AppHandle, plan: StoredPlan) -> Result<Vec<StoredPlan>, String> {
     let dir = app_data_dir(&app)?;
-    store::save_plan(&dir, &plan).map_err(|err| err.to_string())?;
-    store::load_plans(&dir).map_err(|err| err.to_string())
+    // 写 + 重扫全程串行（store_io::with_write_lock 全局写锁单点），
+    // 返回列表不会读到并发写一半的状态
+    crate::store_io::with_write_lock(|| {
+        store::save_plan(&dir, &plan).map_err(|err| err.to_string())?;
+        store::load_plans(&dir).map_err(|err| err.to_string())
+    })
 }
 
 /// 按 id 删除编排，返回删除后的完整列表。
 #[tauri::command]
 pub fn plans_delete(app: tauri::AppHandle, plan_id: String) -> Result<Vec<StoredPlan>, String> {
     let dir = app_data_dir(&app)?;
-    store::delete_plan(&dir, &plan_id).map_err(|err| err.to_string())?;
-    store::load_plans(&dir).map_err(|err| err.to_string())
+    crate::store_io::with_write_lock(|| {
+        store::delete_plan(&dir, &plan_id).map_err(|err| err.to_string())?;
+        store::load_plans(&dir).map_err(|err| err.to_string())
+    })
 }
 
 #[cfg(test)]
@@ -86,11 +90,9 @@ mod tests {
             favorite: false,
             items: vec![
                 StoredPlanItem {
-                    snapshot: None,
                     scenario_id: "scn-dy-001".into(),
                 },
                 StoredPlanItem {
-                    snapshot: None,
                     scenario_id: "scn-wc-001".into(),
                 },
             ],

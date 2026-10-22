@@ -18,8 +18,10 @@ const subscribe = (listener: () => void) => {
   return () => window.removeEventListener("hashchange", listener);
 };
 const getHash = () => window.location.hash;
+// 「#/」前缀单点：站内锚地址与 navigate 的写哈希共用同一约定。
+export const href = (path: string) => `#/${path}`;
 export const navigate = (path: string) => {
-  window.location.hash = `/${path}`;
+  window.location.hash = href(path);
 };
 // 路由构造：页面跳转只表达意图；参数名、编码与「回纯列表即清参关闭弹层」的语义在此单点。
 export const routes = {

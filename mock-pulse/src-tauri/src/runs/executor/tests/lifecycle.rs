@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 use crate::plans::{PlanFailure, PlanMode};
 use crate::runs::progress::StepProgress;
+use crate::runs::snapshot::ScenarioFailure;
 
 use super::*;
 
@@ -39,7 +40,7 @@ fn cancellation_during_wait_skips_all_remaining_requests() {
 #[test]
 fn scenario_continue_attempts_later_steps_after_failure() {
     let mut snap = snapshot("continue", vec![dy_step("a", "a"), dy_step("b", "b")]);
-    snap.failure = Some("continue".into());
+    snap.failure = Some(ScenarioFailure::Continue);
     let mut attempted = Vec::new();
     let run = super::run_scenario_cancellable(
         &snap,
@@ -63,7 +64,7 @@ fn scenario_continue_attempts_later_steps_after_failure() {
 fn plan_stop_overrides_scenario_continue_in_both_modes() {
     for mode in [PlanMode::Serial, PlanMode::Parallel] {
         let mut scene = lane_snapshot("a", "A", vec![dy_step("a1", "a1"), dy_step("a2", "a2")]);
-        scene.failure = Some("continue".into());
+        scene.failure = Some(ScenarioFailure::Continue);
         let snap = plan_snapshot("plan-stop", mode, PlanFailure::Stop, vec![scene]);
         let run = super::super::execute_plan(&snap, &[], Duration::from_secs(1), &mut |_| {});
         assert!(!run.steps[0].skipped);
@@ -185,7 +186,7 @@ fn parallel_checkpoint_patches_land_by_lane_prefix_despite_out_of_order_finish()
         step
     };
     let mut lane_a = lane_snapshot("a", "A", vec![slow, dy_step("a2", "a2")]);
-    lane_a.failure = Some("continue".into());
+    lane_a.failure = Some(ScenarioFailure::Continue);
     let snap = plan_snapshot(
         "patch-order",
         PlanMode::Parallel,

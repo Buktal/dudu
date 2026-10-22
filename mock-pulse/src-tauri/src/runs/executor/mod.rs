@@ -358,8 +358,7 @@ fn channel_url(channel: &str, connections: &[ConnectionConfig]) -> Option<String
     connections
         .iter()
         .find(|config| adapter.matches(config))
-        .and_then(|config| adapter.url(config))
-        .map(str::to_string)
+        .map(|config| adapter.url(config).to_string())
 }
 
 /// 未发出请求即失败的步骤（连接缺失/未知渠道）：结论按期望回执比对推导。
@@ -400,7 +399,7 @@ fn execute_step(
             event_name: step.event_name.clone(),
             event_id: step.event_id.clone(),
             channel: adapter.id().into(),
-            url: adapter.url(config).unwrap_or_default().into(),
+            url: adapter.url(config).into(),
             payload: step.body.clone(),
         },
         outcome,

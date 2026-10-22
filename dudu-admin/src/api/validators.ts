@@ -1,4 +1,3 @@
-import { isRecord } from "./client";
 import type {
   Company,
   CompanyDetail,
@@ -7,6 +6,11 @@ import type {
   Page,
   Resources,
 } from "./types";
+import { operationActions } from "./types";
+
+// record 语义：数组不是对象字典，一律拒绝；与 console 侧 validators 同形（ADR-0016）
+export const isRecord = (data: unknown): data is Record<string, unknown> =>
+  typeof data === "object" && data !== null && !Array.isArray(data);
 
 const nullableText = (value: unknown) =>
   value === null || typeof value === "string";
@@ -49,6 +53,9 @@ export function isDetail(data: unknown): data is CompanyDetail {
   );
 }
 
+// 服务端分页契约（PageQuery.MAX_PAGE_SIZE）：单页最多 100 条
+export const MAX_PAGE_SIZE = 100;
+
 export function pageOf<T>(isItem: (value: unknown) => value is T) {
   return (data: unknown): data is Page<T> =>
     isRecord(data) &&
@@ -58,7 +65,8 @@ export function pageOf<T>(isItem: (value: unknown) => value is T) {
     count(data.page) &&
     data.page > 0 &&
     count(data.pageSize) &&
-    data.pageSize > 0;
+    data.pageSize > 0 &&
+    data.pageSize <= MAX_PAGE_SIZE;
 }
 
 export function isOverview(data: unknown): data is Overview {
@@ -85,13 +93,20 @@ export function isResources(data: unknown): data is Resources {
   );
 }
 
+// 操作类型必须是服务端操作码：类型宣称 keyof operationActions，校验按成员资格
+// 收紧（自有键枚举避开原型链键），未知码在信封校验层拒绝而非由展示层兜底
+const isOperationAction = (
+  value: unknown,
+): value is keyof typeof operationActions =>
+  typeof value === "string" && Object.keys(operationActions).includes(value);
+
 export function isLog(data: unknown): data is OperationLog {
   return (
     isRecord(data) &&
     typeof data.operationLogId === "string" &&
     typeof data.operatorUserId === "string" &&
     (data.companyId === null || validCompanyId(data.companyId)) &&
-    typeof data.action === "string" &&
+    isOperationAction(data.action) &&
     (data.target === "company" || data.target === "user") &&
     nullableText(data.targetId) &&
     nullableText(data.summary) &&

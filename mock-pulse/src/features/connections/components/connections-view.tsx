@@ -1,4 +1,3 @@
-import { isEqual } from "lodash-es";
 import {
   CheckCircle2Icon,
   KeyRoundIcon,
@@ -65,7 +64,8 @@ export function ConnectionsView() {
     state.drafts?.[channel] ??
     saved ??
     channelTraits(channel).defaultConnection;
-  const dirty = !isEqual(draft, saved);
+  // 脏判定取 slice 单点：无草稿即干净，有草稿且与保存值不同才脏
+  const dirty = actions.selectConnectionDirty(state, channel);
   const test = actions.selectTestState(state, channel);
   const testing = test.status === "testing";
   const staleTest = changedSinceTest[channel];
@@ -137,10 +137,6 @@ export function ConnectionsView() {
             setError("");
             setUrlError("");
           }}
-          page={1}
-          pages={1}
-          filteredTotal={matches.length}
-          onPage={() => {}}
         />
       )}
     >

@@ -1,10 +1,7 @@
 import { buildReplySubmission, replyReadiness } from "../reply/pipeline";
 import type { DeliveryState, InboxMessage } from "../types";
 import { receiveNext } from "./next-reception";
-import {
-  releaseAttachmentResources,
-  runConversationOperation,
-} from "./requests";
+import { runConversationOperation } from "./requests";
 import { inboxActions } from "./slice";
 import {
   blankDraft,
@@ -12,22 +9,22 @@ import {
   latestIncomingSequence,
   type ReplySubmission,
 } from "./state";
-import type { InboxCommand, InboxDispatch, InboxRuntime } from "./store";
+import type { InboxCommand, InboxDispatch } from "./store";
 
 /**
  * 历史重试（本地提交缺失，重登或他端加载的失败消息）不占用草稿：用永不可能与草稿
- * 修订相等的哨兵值，让结果结算匹配不到当前草稿，重试不会清掉后来写下的正文或附件。
+ * 修订相等的哨兵值，让结果结算匹配不到当前草稿，重试不会清掉后来写下的正文。
  */
 const NO_DRAFT_MATCH = -1;
 
 /**
  * 发送结果结算：已接受而尚未落定的提交，按合并后的消息结果结算——草稿仍是提交时的
- * 修订就把结果落到提交并释放附件，否则视为已被后续编辑取代，直接释放附件。
+ * 修订就把结果落到提交并清空草稿正文，否则视为已被后续编辑取代，只保留合并结果。
  * 实时来信、receipt 报文与其他端的发送结果都经此单点，重连重载合并同一消息结果后
  * 也调用同一函数，结果判定不因来源而分叉。
  */
 export function settleConfirmedReplies(): InboxCommand {
-  return (dispatch, getState, runtime) => {
+  return (dispatch, getState) => {
     for (const submission of Object.values(getState().inbox.submissions)) {
       // 已落定的提交不再进入扫描：本命令在每条消息事件后运行，
       // 跳过它们让重复结算与扫描集合都不随历史发送增长
@@ -36,16 +33,8 @@ export function settleConfirmedReplies(): InboxCommand {
       const draft = state.drafts[submission.request.target.conversationId];
       const response = state.messages[submission.messageId];
       if (!response) continue;
-      if (
-        draft &&
-        (draft.textRevision === submission.textRevision ||
-          draft.attachmentIds.some((id) =>
-            submission.draftAttachmentIds.includes(id),
-          ))
-      ) {
-        acceptSubmission(dispatch, runtime, submission, response);
-      } else {
-        releaseAttachmentResources(runtime, submission.draftAttachmentIds);
+      if (draft && draft.textRevision === submission.textRevision) {
+        acceptSubmission(dispatch, submission, response);
       }
     }
     const state = getState().inbox;
@@ -75,14 +64,13 @@ export function focusReply(conversationId: string): InboxCommand {
 
 /**
  * Accepted-settlement seam: an accepted send means exactly this — record the
- * server response on the submission and release its draft attachments. Both
+ * server response on the submission and clear the matching draft text. Both
  * the send lifecycle (deliver below) and the Live events merge settle through
  * here, so accepted-means-cleaned-up lives in one module instead of drifting
  * across send / merge writers.
  */
 export function acceptSubmission(
   dispatch: InboxDispatch,
-  runtime: InboxRuntime,
   submission: ReplySubmission,
   response: InboxMessage,
 ) {
@@ -92,7 +80,6 @@ export function acceptSubmission(
       response,
     }),
   );
-  releaseAttachmentResources(runtime, submission.draftAttachmentIds);
 }
 
 /**
@@ -150,7 +137,7 @@ function deliver(
             ? "服务未返回可确认的发送结果"
             : undefined,
         loaded: async (response, op) => {
-          acceptSubmission(dispatch, runtime, submission, response);
+          acceptSubmission(dispatch, submission, response);
           if (submission.next)
             await dispatch(receiveNext(submission, op.current));
         },
@@ -177,14 +164,12 @@ export function sendReply(
     const state = getState().inbox;
     const draft = state.drafts[conversationId] ?? blankDraft;
     const conversation = state.conversations[conversationId];
-    const attachments = draft.attachmentIds.map((id) => state.attachments[id]);
     // One decision per accepted reply: the pipeline owns the
-    // restriction + pending + empty + busy composition.
+    // restriction + empty + busy composition.
     const readiness = replyReadiness({
       conversation,
       connection: state.connection,
       text: draft.text,
-      files: attachments.filter(Boolean),
       sending: !!state.sendingByConversation[conversationId],
     });
     if (!readiness.sendable) {
@@ -193,17 +178,12 @@ export function sendReply(
       return;
     }
     const clientRequestId = runtime.id();
-    const media = attachments.flatMap((attachment) =>
-      attachment.media ? [attachment.media] : [],
-    );
     // Compare events with what was known at submission, even if history arrives first.
     const { submission, message } = buildReplySubmission({
       conversation,
       text: draft.text,
       draftRevision: draft.revision,
       textRevision: draft.textRevision,
-      draftAttachmentIds: [...draft.attachmentIds],
-      media,
       ...watermarks(state, conversationId),
       selectionRevision: state.selectionRevision,
       clientRequestId,
@@ -255,18 +235,10 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
     )
       return;
     // 本地提交缺失（历史加载的失败消息）时从消息自身取原访客与正文，草稿不参与
-    const attachments = original ? original.request.attachments : [];
     const readiness = replyReadiness({
       conversation,
       connection: state.connection,
       text,
-      files: attachments.map((media) => ({
-        name: media.name,
-        size: media.size,
-        mimeType: media.mimeType,
-        status: "ready" as const,
-        media,
-      })),
       sending: false,
     });
     if (!readiness.sendable) {
@@ -280,8 +252,6 @@ export function retryReply(messageId: string): InboxCommand<Promise<void>> {
       // 历史重试不占用草稿：哨兵修订值让结算永不匹配当前草稿
       draftRevision: original?.draftRevision ?? NO_DRAFT_MATCH,
       textRevision: original?.textRevision ?? NO_DRAFT_MATCH,
-      draftAttachmentIds: original ? [...original.draftAttachmentIds] : [],
-      media: attachments,
       ...watermarks(state, conversation.id),
       selectionRevision: state.selectionRevision,
       clientRequestId: runtime.id(),

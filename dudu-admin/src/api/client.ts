@@ -1,4 +1,5 @@
 import type { Account, LoginResult } from "./types";
+import { isRecord } from "./validators";
 
 const SESSION_KEY = "dudu-admin.session";
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -51,8 +52,9 @@ export class AdminClient {
   private listeners = new Set<() => void>();
   private pending = new Set<AbortController>();
   private state: ClientState;
-  readonly development: boolean;
-  readonly onlineOrigin: string;
+  // 环境判定与线上源只在构造期参与 origin 计算，不对外暴露
+  private readonly development: boolean;
+  private readonly onlineOrigin: string;
 
   constructor(options: { development?: boolean; onlineOrigin?: string } = {}) {
     this.development = options.development ?? import.meta.env.DEV;
@@ -264,8 +266,7 @@ export class AdminClient {
   }
 }
 
-export const isRecord = (data: unknown): data is Record<string, unknown> =>
-  typeof data === "object" && data !== null;
+export { isRecord } from "./validators";
 export const isEmpty = (data: unknown): data is null => data === null;
 export const isAccount = (data: unknown): data is Account =>
   isRecord(data) &&

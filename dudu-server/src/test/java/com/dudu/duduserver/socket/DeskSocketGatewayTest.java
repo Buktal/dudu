@@ -95,6 +95,21 @@ class DeskSocketGatewayTest {
         verify(gone, never()).close(any(CloseStatus.class));
     }
 
+    @Test
+    void expireAuthAfterSuccessfulAuthenticationKeepsTheSession() throws Exception {
+        WebSocketSession session = mock(WebSocketSession.class);
+        when(session.getId()).thenReturn("just-authenticated");
+        when(session.isOpen()).thenReturn(true);
+        gateway.register(session);
+        gateway.authenticate("just-authenticated", employee(77L));
+
+        // 认证完成后鉴权时限才到期：到期判定与身份写入收敛在同一会话键上，不得误关已认证连接
+        gateway.expireAuth("just-authenticated");
+
+        verify(session, never()).close(any(CloseStatus.class));
+        assertThat(gateway.user("just-authenticated")).isNotNull();
+    }
+
     private JwtUser employee(long userId) {
         return new JwtUser(COMPANY_ID, userId, UserRoleEnum.USER, DateUtil.currentSeconds() + 600);
     }

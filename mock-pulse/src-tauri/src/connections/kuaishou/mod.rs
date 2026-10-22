@@ -166,8 +166,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Kuaishou { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Kuaishou { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Kuaishou { url } => url.as_str())
     }
 
     fn verify_handshake(

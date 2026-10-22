@@ -20,6 +20,7 @@ import {
 } from "../model";
 import { type LiveRun, startLiveRun } from "./live";
 import {
+  type ConnectionState,
   missingConnections,
   type RunPhase,
   type RunSessionState,
@@ -34,10 +35,9 @@ import {
  * 编排顺序；顺序类 faults 在此集中。
  */
 
-/** 启动编排所需的全局状态：运行会话视角 + 连接表（结构化最小形状） */
-export type LaunchState = RunSessionState & {
-  connections: { items: Record<string, ConnectionConfig | undefined> };
-};
+/** 启动编排所需的全局状态：运行会话视角 + 连接表（结构化最小形状，
+ *  连接表形状复用 session 的 ConnectionState） */
+export type LaunchState = RunSessionState & ConnectionState;
 
 /** 启动骨架所需的 store 形状（thunk 的 getState/dispatch 直接传入） */
 export type LaunchStore = {

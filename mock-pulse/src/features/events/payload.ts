@@ -185,7 +185,22 @@ export function setPayloadField(
 }
 
 /**
- * 发送者 ID 显式同步：把资料的 open_id 对齐到 from_user_id。
+ * 资料身份路径：载荷中已存在的资料 open_id 字段。路径由渠道 schema
+ * 声明（senderProfilePath，与 senderIdentityPath 成对），载荷未展开
+ * 该字段（无值）返回 null，调用方据此决定是否提供同步入口。
+ */
+export function senderProfilePath(
+  schema: EventSchema,
+  payload: WirePayload,
+): string | null {
+  const declared = schema.senderProfilePath;
+  if (!declared || getAt(payload, declared) === undefined) return null;
+  return declared;
+}
+
+/**
+ * 发送者 ID 显式同步：把资料的 open_id 对齐到信封发送者字段
+ * （schema.senderIdentityPath 声明，当前仅抖音）。
  * 入参与返回均为表单形态载荷（contentString 已解析）；返回新载荷与实际
  * 写入的身份路径（schema 推导，未写入为 null——调用方据此作废该字段
  * 的未应用输入），资料路径不存在时载荷原样返回同一引用。
@@ -194,15 +209,10 @@ export function syncSenderIdentity(
   schema: EventSchema,
   payload: WirePayload,
 ): { payload: WirePayload; syncedPath: string | null } {
-  const profilePath = schema.fields
-    .map((field) => field.path)
-    .find(
-      (path) =>
-        path.includes("user_infos") &&
-        path.endsWith(".open_id") &&
-        getAt(payload, path) !== undefined,
-    );
-  const sender = getAt(payload, "from_user_id");
+  const profilePath = senderProfilePath(schema, payload);
+  const sender = schema.senderIdentityPath
+    ? getAt(payload, schema.senderIdentityPath)
+    : undefined;
   if (!profilePath || sender === undefined) {
     return { payload, syncedPath: null };
   }

@@ -347,6 +347,8 @@ fn adapter_registry_covers_every_config_variant() {
     ] {
         let adapter = adapter_of(config);
         assert!(adapter.matches(config), "{channel} 适配器应判别本渠道配置");
-        assert!(adapter.url(config).is_some(), "{channel} 应取到 url 快照");
+        // url 快照经 narrow! 收窄恒能取出（&str 直取配置字段；夹具 url 为空位，
+        // 取出同值即收窄正确——错配变体以 unreachable 终止，不测错配分支）
+        assert_eq!(adapter.url(config), "");
     }
 }

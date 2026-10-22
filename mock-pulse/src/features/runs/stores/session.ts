@@ -53,7 +53,7 @@ export type RunSessionState = {
 type StoppingState = { stoppingRunId?: string | null };
 
 /** 连接配置的最小形状（ConnectionsState 结构化子集） */
-type ConnectionState = {
+export type ConnectionState = {
   connections: { items: Record<string, ConnectionConfig | undefined> };
 };
 
@@ -123,4 +123,30 @@ export function stoppingRunId(state: StoppingState): string | null {
 /** 指定运行是否正在停止（停止按钮的禁用与「正在停止…」文案共用） */
 export function isStoppingRun(state: StoppingState, runId: string): boolean {
   return state.stoppingRunId === runId;
+}
+
+/** 直发面板槽位（App 注入 events 的簿记一次算齐的纯数据） */
+export type DirectDispatchSlot = {
+  /** 该草稿的直发在途（sending 阶段 + 面板簿记指向本草稿） */
+  sending: boolean;
+  /** 在途直发正在停止 */
+  stopping: boolean;
+  /** 在途直发的 run id（无则 null，供停止按钮定位） */
+  runId: string | null;
+};
+
+/**
+ * 直发面板槽位（session 单点）：App 注入 events 的 sending / stopping /
+ * 停止定位一次算齐，不再直读 runs 内部形状（phase + directLive 簿记）。
+ */
+export function selectDirectDispatchSlot(
+  state: RunSessionState,
+  draftId: string | undefined,
+): DirectDispatchSlot {
+  const directLive = state.runs.directLive;
+  return {
+    sending: state.runs.phase === "sending" && directLive?.eventId === draftId,
+    stopping: !!directLive && isStoppingRun(state.runs, directLive.runId),
+    runId: directLive?.runId ?? null,
+  };
 }

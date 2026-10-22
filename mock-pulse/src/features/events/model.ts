@@ -1,3 +1,4 @@
+import { isEqual } from "lodash-es";
 import type { ChannelId } from "@/lib/channels";
 
 import { applyGeneratedIds } from "./ids";
@@ -92,10 +93,6 @@ export function latestVersion(event: EventItem): EventVersion | undefined {
   return latestVersionOf(event);
 }
 
-// 步骤引用解析核心住在 ./reference/resolve（C4：查找与缺失含义同一模块）；
-// 经此处再导出供 model.test.ts，域外门面改从 ./reference 直取。
-export { resolveEventVersion, resolveTemplateVersion } from "./reference";
-
 /** 装载已保存事件为草稿：基于最新版本。 */
 export function draftFromItem(event: EventItem): EventDraft {
   const schema = schemaById(event.schemaId);
@@ -125,13 +122,10 @@ export function isDraftDirty(
   const schema = schemaById(event.schemaId);
   const latest = latestVersion(event);
   if (!latest) return true;
-  if (stableStringify(latest.expected) !== stableStringify(draft.expected)) {
+  if (!isEqual(latest.expected, draft.expected)) {
     return true;
   }
-  return (
-    stableStringify(editorPayload(schema, latest.payload)) !==
-    stableStringify(draft.payload)
-  );
+  return !isEqual(editorPayload(schema, latest.payload), draft.payload);
 }
 
 /**
@@ -159,19 +153,4 @@ export function appendVersion(
     favorite: draft.favorite ?? false,
     versions: [...(event?.versions ?? []), version],
   };
-}
-
-/** 键序无关的稳定序列化（脏比较用）。 */
-function stableStringify(value: unknown): string {
-  if (value == null || typeof value !== "object") {
-    return JSON.stringify(value) ?? "null";
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-  const record = value as Record<string, unknown>;
-  const keys = Object.keys(record).sort();
-  return `{${keys
-    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
-    .join(",")}}`;
 }

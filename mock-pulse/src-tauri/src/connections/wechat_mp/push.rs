@@ -17,17 +17,8 @@
 //! （Encrypt/MsgSignature/TimeStamp/Nonce），解密出明文一并返回。明文不重排
 //! （ADR-0001）。
 
-use super::super::wechat_common::{self, Creds};
+use super::super::wechat_common::{self, extract_reply_encrypt, Creds};
 use super::super::DispatchOutcome;
-
-/// 公众号回执信封密文提取（§5.14 XML 包结构；无则 None）——族内差异点：
-/// 小程序回执另有 JSON 信封形态，双形态提取在 wechat_mini::push。
-fn extract_reply_encrypt(body: &str) -> Option<&str> {
-    const OPEN: &str = "<Encrypt><![CDATA[";
-    let start = body.find(OPEN)? + OPEN.len();
-    let end = start + body[start..].find("]]>")?;
-    Some(&body[start..end])
-}
 
 /// 明文模式直发：明文 XML 逐字节为 body，URL 无加密参数（事实库 §4.1）。
 pub(super) fn dispatch_plain(

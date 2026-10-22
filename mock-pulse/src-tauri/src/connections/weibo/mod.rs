@@ -18,7 +18,9 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::{callback_signature as build_callback_signature, now_millis};
+use crate::connections::util::{
+    callback_signature as build_callback_signature, now_millis, random_digits,
+};
 
 use super::adapter::narrow;
 use super::{
@@ -26,15 +28,10 @@ use super::{
     DispatchSnapshot, HandshakeOutcome,
 };
 
-/// 握手 nonce：8 位数字（官方算例 nonce=57155157 同形态）——rand Uniform
-/// 均匀采样（原 uuid 字节 `% 10` 有模偏差，同 Alphanumeric 退件口径）。
+/// 握手 nonce：8 位数字（官方算例 nonce=57155157 同形态）；逐位均匀采样
+/// 原语单点在 util::random_digits。
 fn random_nonce() -> String {
-    use rand::distributions::{Distribution, Uniform};
-    let mut rng = rand::thread_rng();
-    let digit = Uniform::new(0u8, 10);
-    (0..8)
-        .map(|_| char::from(b'0' + digit.sample(&mut rng)))
-        .collect()
+    random_digits(8)
 }
 
 /// 官方验证请求样例 echostr `dnPdpTZz85` 为 10 位大小写字母数字混合串：
@@ -126,8 +123,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Weibo { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Weibo { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Weibo { url } => url.as_str())
     }
 
     fn verify_handshake(

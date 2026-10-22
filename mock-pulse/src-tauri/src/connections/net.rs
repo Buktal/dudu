@@ -34,6 +34,12 @@ pub(crate) fn request_error_reason(err: &reqwest::Error, timeout_note: &str) -> 
     }
 }
 
+/// 握手响应体读取失败的归因文案（单点，抖音/飞书/WhatsApp 三处 challenge
+/// 握手共用）：读失败折进空串会误判「challenge 不一致」，须显式归因
+pub(crate) fn handshake_read_error(err: &reqwest::Error) -> String {
+    format!("响应读取失败：{err}")
+}
+
 /// 直发测量实现（Reuse-first 审计退件：此收口块曾在 15+ 渠道逐字复制——计时 →
 /// 发送 → 状态/回执/错误/耗时四元组）：计时口径、Ok/Err 折叠与错误文案
 /// （request_error_reason）单点在本体。唯一调用方是 [`send_measured_outcome`]，

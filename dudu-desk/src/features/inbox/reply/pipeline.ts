@@ -2,27 +2,10 @@ import type {
   ConnectionState,
   Conversation,
   InboxMessage,
-  PreparedAttachment,
-  SendKind,
   SendSubmission,
   SendTarget,
 } from "../types";
-import { attachmentKind } from "./attachment-rules";
 import { sendRestriction } from "./send-rules";
-
-/**
- * Reply-side literal shapes, structurally compatible with the store's
- * `DraftAttachment` / `StartSubmission`: the pipeline owns its own interface
- * and stays independent of the store module, while callers pass store state
- * straight through.
- */
-type ReplyFile = {
-  name: string;
-  size: number;
-  mimeType: string;
-  status?: "preparing" | "ready" | "failed";
-  media?: unknown;
-};
 
 type ReplySubmissionStart = {
   submission: {
@@ -30,7 +13,6 @@ type ReplySubmissionStart = {
     messageId: string;
     draftRevision: number;
     textRevision: number;
-    draftAttachmentIds: string[];
     selectionRevision: number;
     incomingSequence: number;
     next: boolean;
@@ -44,30 +26,9 @@ type ReplyReadiness =
   | { sendable: false; notice: string | null };
 
 /**
- * Reply policy: the reply-allowed decision. Owns kinds-derivation, so text
- * and attachment drafts answer one sendRestriction question together.
- */
-export function replyRestriction(
-  conversation: Conversation | undefined,
-  connection: ConnectionState,
-  content: {
-    text: string;
-    files: { name: string; size: number; mimeType: string }[];
-  },
-): string | null {
-  const kinds: SendKind[] = [
-    ...(content.text.trim() || !content.files.length
-      ? (["text"] as const)
-      : []),
-    ...content.files.map((file) => attachmentKind(file.mimeType)),
-  ];
-  return sendRestriction(conversation, connection, kinds);
-}
-
-/**
- * Deep module for the Reply pipeline send decision. Owns the
- * restriction + pending-attachment + empty-draft + busy composition, so the
- * Composer and the sendReply thunk answer the same question.
+ * Deep module for the Reply pipeline send decision. Owns the restriction +
+ * empty-draft + busy composition, so the Composer and the sendReply thunk
+ * answer the same question.
  *
  * A `null` notice with `sendable: false` is a silent block (empty draft or
  * already sending): disable without alerting. A string notice disables and
@@ -77,30 +38,14 @@ export function replyReadiness(input: {
   conversation: Conversation | undefined;
   connection: ConnectionState;
   text: string;
-  files: ReplyFile[];
   sending: boolean;
 }): ReplyReadiness {
   if (input.sending) return { sendable: false, notice: null };
-  if (!input.text.trim() && !input.files.length)
-    return { sendable: false, notice: null };
-  const restriction = replyRestriction(input.conversation, input.connection, {
-    text: input.text,
-    files: input.files.map((file) => ({
-      name: file.name,
-      size: file.size,
-      mimeType: file.mimeType,
-    })),
-  });
+  if (!input.text.trim()) return { sendable: false, notice: null };
+  const restriction = sendRestriction(input.conversation, input.connection, [
+    "text",
+  ]);
   if (restriction) return { sendable: false, notice: restriction };
-  if (
-    input.files.some(
-      (file) => file.status !== "ready" || file.media === undefined,
-    )
-  )
-    return {
-      sendable: false,
-      notice: "请等待附件准备完成，或移除失败附件",
-    };
   return { sendable: true, notice: null };
 }
 
@@ -109,8 +54,6 @@ type ReplySubmissionInput = {
   text: string;
   draftRevision: number;
   textRevision: number;
-  draftAttachmentIds: string[];
-  media: PreparedAttachment[];
   maxSequence: number;
   incomingSequence: number;
   selectionRevision: number;
@@ -121,9 +64,9 @@ type ReplySubmissionInput = {
 
 /**
  * Build the optimistic message + submission pair for one accepted draft. Owns
- * the body shape (text vs reply), the client id correlation and the
- * at-submission watermarks, so sendReply and retryReply share one
- * construction site instead of rebuilding it at each call site.
+ * the text body shape, the client id correlation and the at-submission
+ * watermarks, so sendReply and retryReply share one construction site instead
+ * of rebuilding it at each call site.
  */
 export function buildReplySubmission(
   input: ReplySubmissionInput,
@@ -133,9 +76,7 @@ export function buildReplySubmission(
     clientRequestId: input.clientRequestId,
     conversationId: input.conversation.id,
     direction: "outgoing",
-    body: input.media.length
-      ? { type: "reply", text: input.text, attachments: input.media }
-      : { type: "text", text: input.text },
+    body: { type: "text", text: input.text },
     createdAt: input.now,
     sequence: input.maxSequence + 1,
     version: 0,
@@ -148,12 +89,10 @@ export function buildReplySubmission(
         clientRequestId: input.clientRequestId,
         target: sendTarget(input.conversation),
         text: input.text,
-        attachments: input.media,
       },
       messageId: message.id,
       draftRevision: input.draftRevision,
       textRevision: input.textRevision,
-      draftAttachmentIds: [...input.draftAttachmentIds],
       selectionRevision: input.selectionRevision,
       incomingSequence: input.incomingSequence,
       next: input.next,

@@ -6,9 +6,19 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import {
+  failure,
+  installHttp,
+  loginResult,
+  profile,
+  success,
+} from "@/test/http";
 import App from "./App";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -16,32 +26,23 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 it("企业登录失败保留输入，成功按权限进入用户组", async () => {
-  const profile = {
-    company: { companyId: "100001", companyName: "测试企业" },
-    user: {
-      userId: "1",
-      username: "manager",
-      name: "管理员",
-      role: "console",
-      isInitialAdmin: false,
+  // 受限身份：非初始管理员，员工入口不出现
+  const restricted = {
+    ...loginResult,
+    profile: {
+      ...profile,
+      company: { companyId: "100001", companyName: "测试企业" },
+      user: {
+        ...profile.user,
+        userId: "1",
+        name: "管理员",
+        isInitialAdmin: false,
+      },
     },
-    managedGroupIds: [],
   };
   vi.spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ code: 10104, msg: "登录名或密码错误", data: null }),
-      ),
-    )
-    .mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          code: 0,
-          msg: "成功",
-          data: { token: "token", expiresAt: 1900000000, profile },
-        }),
-      ),
-    );
+    .mockResolvedValueOnce(failure(10104, "登录名或密码错误"))
+    .mockResolvedValueOnce(success(restricted));
   render(<App />);
   fireEvent.change(screen.getByLabelText("企业 ID"), {
     target: { value: "100001" },
@@ -61,30 +62,7 @@ it("企业登录失败保留输入，成功按权限进入用户组", async () =
 });
 
 it("初始管理员登录后进入真实员工管理页面", async () => {
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
-    const data = String(url).endsWith("/login")
-      ? {
-          code: 0,
-          msg: "成功",
-          data: {
-            token: "test-token",
-            expiresAt: 1900000000,
-            profile: {
-              company: { companyId: "100001", companyName: "测试企业" },
-              user: {
-                userId: "1",
-                username: "admin",
-                name: "管理员",
-                role: "console",
-                isInitialAdmin: true,
-              },
-              managedGroupIds: [],
-            },
-          },
-        }
-      : { code: 0, msg: "成功", list: [], total: 0, page: 1, pageSize: 20 };
-    return new Response(JSON.stringify(data));
-  });
+  installHttp(() => success({ list: [], total: 0, page: 1, pageSize: 20 }));
   render(<App />);
   fireEvent.change(screen.getByLabelText("企业 ID"), {
     target: { value: "100001" },

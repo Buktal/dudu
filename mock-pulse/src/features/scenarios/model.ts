@@ -247,7 +247,7 @@ export function validateScenario(
     // 编辑时钟问 interpreter（events 域唯一分岔点；窄行只有存在性：事件保存
     // 只看行存在，超前 revision 存得下、运行时钟再拦；文案一字不动）。
     // 后半为类型收窄，语义以解释为准。
-    if (interpretPresence(event !== undefined, "edit").blocks || !event) {
+    if (interpretPresence(event, "edit").blocks || !event) {
       throw new Error(`步骤引用的事件不存在：${step.eventId}。`);
     }
     if (event.channelId !== scenario.channelId) {

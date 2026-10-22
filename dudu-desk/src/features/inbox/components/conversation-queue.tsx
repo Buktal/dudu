@@ -73,8 +73,6 @@ function ConversationRow({
                 <span className="text-accent-foreground">草稿 · </span>
                 {draft.text}
               </>
-            ) : draft?.attachmentIds.length ? (
-              <span className="text-accent-foreground">草稿 · 待发送附件</span>
             ) : (
               conversation.preview || "暂无消息"
             )}

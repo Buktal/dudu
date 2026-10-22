@@ -40,7 +40,6 @@ export function Composer({
     (state) => state.inbox.drafts[conversationId] ?? blankDraft,
   );
   const connection = useInboxSelector((state) => state.inbox.connection);
-  const attachments = useInboxSelector((state) => state.inbox.attachments);
   const busy = useInboxSelector(
     (state) => !!state.inbox.sendingByConversation[conversationId],
   );
@@ -52,9 +51,6 @@ export function Composer({
     conversation,
     connection,
     text: draft.text,
-    files: draft.attachmentIds
-      .map((attachmentId) => attachments[attachmentId])
-      .filter(Boolean),
     sending: busy,
   });
   const notice = readiness.notice;
@@ -92,7 +88,6 @@ export function Composer({
     <ComposerView
       view={{
         id,
-        conversationId,
         compact,
         target,
         name,
@@ -103,7 +98,6 @@ export function Composer({
           reception?.status === "saving" || connection !== "connected",
         resuming: reception?.status === "saving",
         draftText: draft.text,
-        hasAttachments: draft.attachmentIds.length > 0,
         busy,
         disabled,
         onHistory,

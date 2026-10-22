@@ -7,8 +7,6 @@ import type {
   ConversationQuery,
   InboxMessage,
   LoadState,
-  PreparedAttachment,
-  SendKind,
   SendSubmission,
   VisitorProfile,
   WorkContext,
@@ -36,33 +34,19 @@ export type ProfileChanges = Partial<Pick<ProfileEdit, "tagsText" | "note">>;
 
 type ReplyDraft = {
   text: string;
-  attachmentIds: string[];
   revision: number;
   textRevision: number;
-};
-export type DraftAttachment = {
-  id: string;
-  conversationId: string;
-  kind: Exclude<SendKind, "text">;
-  name: string;
-  mimeType: string;
-  size: number;
-  status: "preparing" | "ready" | "failed";
-  media?: PreparedAttachment;
-  error?: string;
-  previewUrl?: string;
 };
 export type ReplySubmission = {
   request: SendSubmission;
   messageId: string;
   draftRevision: number;
   textRevision: number;
-  draftAttachmentIds: string[];
   selectionRevision: number;
   incomingSequence: number;
   next: boolean;
   status: "sending" | "accepted" | "failed" | "unconfirmed";
-  /** 已按接受结果完成草稿清理与附件释放：结算扫描不再进入（见 sending.ts）。 */
+  /** 已按接受结果完成草稿清理：结算扫描不再进入（见 sending.ts）。 */
   settled?: boolean;
 };
 type EndState = {
@@ -71,7 +55,6 @@ type EndState = {
 };
 export const blankDraft: ReplyDraft = {
   text: "",
-  attachmentIds: [],
   revision: 0,
   textRevision: 0,
 };
@@ -95,11 +78,14 @@ export function latestIncomingSequence(
 }
 
 /**
- * 正在显示的访客：专注选中、当前回复对象、并排固定或完整历史任一槽位。
+ * 会话正被显示：专注选中、当前回复对象、并排固定或完整历史任一槽位。
  * 消息集合持有的判定与重连重载的目标选择共用这一份定义；待处理提醒的免打扰
- * 只看三种接待位置（专注、并排固定、卡片展开），不包含回复对象槽位。
+ * 是更窄的判定（reminders.ts 的 inReceptionPosition，只看三种接待位置，不含回复对象）。
  */
-export function onScreenId(state: InboxState, conversationId: string): boolean {
+export function displaysConversation(
+  state: InboxState,
+  conversationId: string,
+): boolean {
   return (
     state.activeId === conversationId ||
     state.replyId === conversationId ||
@@ -153,7 +139,6 @@ export type InboxState = {
   >;
   profileEdits: Record<string, ProfileEdit>;
   drafts: Record<string, ReplyDraft>;
-  attachments: Record<string, DraftAttachment>;
   submissions: Record<string, ReplySubmission>;
   /** 待处理提醒：真实链路在本次运行维护的未读计数，键存在即提示（见 reminders.ts） */
   reminders: Record<string, number>;
@@ -189,7 +174,6 @@ export function initialInboxState(
     profiles: {},
     profileEdits: {},
     drafts: {},
-    attachments: {},
     submissions: {},
     reminders: {},
     sendingByConversation: {},

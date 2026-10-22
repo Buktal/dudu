@@ -186,7 +186,7 @@ export function CompaniesPage({
           close={() => navigate(routes.companies())}
           onCreated={(company) => {
             setMessage(`企业「${company.companyName}」已创建`);
-            query.reset();
+            // 列表重读由企业聚合失效（companiesChanged）驱动，这里不再手工重置
             setAction(null);
             navigate(routes.companyDetail(company.companyId));
           }}

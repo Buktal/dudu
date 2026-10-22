@@ -8,6 +8,7 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import { ConsoleClient } from "@/api/client";
 import { ConsoleContext } from "@/api/context";
+import { failure, installHttp, success } from "@/test/http";
 import { EmployeeForm } from "./EmployeeForm";
 
 const employee = {
@@ -23,19 +24,15 @@ const employee = {
 };
 afterEach(() => {
   cleanup();
-  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 it("failed creation preserves draft and retries the exact public request", async () => {
   const calls: RequestInit[] = [];
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
-    calls.push(init ?? {});
-    return new Response(
-      JSON.stringify(
-        calls.length === 1
-          ? { code: 12300, msg: "登录名已存在", data: null }
-          : { code: 0, msg: "成功", data: employee },
-      ),
-    );
+  installHttp((_url, init) => {
+    calls.push(init);
+    return calls.length === 1
+      ? failure(12300, "登录名已存在")
+      : success(employee);
   });
   const saved = vi.fn();
   const close = vi.fn();

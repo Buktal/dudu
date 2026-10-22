@@ -16,10 +16,7 @@ export const sendReducers = {
     action: PayloadAction<{ conversationId: string; text: string }>,
   ) {
     const { conversationId, text } = action.payload;
-    const draft = state.drafts[conversationId] ?? {
-      ...blankDraft,
-      attachmentIds: [],
-    };
+    const draft = state.drafts[conversationId] ?? blankDraft;
     state.drafts[conversationId] = {
       ...draft,
       text,
@@ -68,23 +65,15 @@ export const sendReducers = {
           : "accepted";
     if (submission.status !== "accepted") return;
     const draft = state.drafts[conversationId];
-    if (draft) {
-      const attachmentIds = draft.attachmentIds.filter(
-        (id) => !submission.draftAttachmentIds.includes(id),
-      );
-      const clearText = draft.textRevision === submission.textRevision;
-      if (clearText || attachmentIds.length !== draft.attachmentIds.length) {
-        state.drafts[conversationId] = {
-          text: clearText ? "" : draft.text,
-          attachmentIds,
-          revision: draft.revision + 1,
-          textRevision: clearText ? draft.textRevision + 1 : draft.textRevision,
-        };
-      }
+    // 草稿仍是提交时的正文修订才清空：已被后续编辑取代的草稿保留
+    if (draft && draft.textRevision === submission.textRevision) {
+      state.drafts[conversationId] = {
+        text: "",
+        revision: draft.revision + 1,
+        textRevision: draft.textRevision + 1,
+      };
     }
-    for (const id of submission.draftAttachmentIds)
-      delete state.attachments[id];
-    // 落定标记：草稿清理与附件释放已完成，结算扫描不再进入（见 settleConfirmedReplies）
+    // 落定标记：草稿清理已完成，结算扫描不再进入（见 settleConfirmedReplies）
     submission.settled = true;
   },
   submissionFailed(

@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.dto.ConsoleChannelRequests;
 import com.dudu.duduserver.service.ConsoleChannelService;
+import com.dudu.duduserver.socket.DeskAccessChangedEvent;
 import com.dudu.duduserver.entity.UserDO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -41,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = {"dudu.auth.jwt-secret=console-channel-integration-secret",
     "dudu.channel.callback-base-url=https://public.example"}, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
+@RecordApplicationEvents
 @EnabledIfEnvironmentVariable(named = "DUDU_INTEGRATION_TEST", matches = "true")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ConsoleChannelIntegrationTest extends DeskIntegrationSupport {
@@ -49,6 +53,7 @@ class ConsoleChannelIntegrationTest extends DeskIntegrationSupport {
     private static JdbcTemplate admin;
     @Autowired ConsoleChannelService management;
     @Autowired TransactionTemplate transactions;
+    @Autowired ApplicationEvents events;
     private Long companyId;
     private UserGroupDO source;
     private UserGroupDO target;
@@ -192,6 +197,24 @@ class ConsoleChannelIntegrationTest extends DeskIntegrationSupport {
         assertThat((Object) socket.next(Duration.ofMillis(300))).isNull();
         assertThat(create("wechat-mp", Map.of("token", "test-secret")).getInt("code")).isZero();
         assertThat(socket.next(Duration.ofSeconds(3)).getStr("type")).isEqualTo("access-changed");
+    }
+
+    @Test
+    void onlyRelationshipChangesPublishAccessChanged() throws Exception {
+        long before = events.stream(DeskAccessChangedEvent.class).count();
+        // WhatsApp 创建在同一事务补齐回调 url：账号-组关系只建立一次，二次写不叠加第二次广播
+        String id = data(create("whatsapp", Map.of("appSecret", "post-secret", "verifyToken", "get-secret"))).getStr("companyChannelId");
+        assertThat(events.stream(DeskAccessChangedEvent.class).count()).isEqualTo(before + 1);
+        // 纯凭据与账号名维护不广播
+        assertThat(code(update(ownerToken, id, Map.of("appSecret", "rotated-secret"), List.of()))).isZero();
+        assertThat(events.stream(DeskAccessChangedEvent.class).count()).isEqualTo(before + 1);
+        // 换组是一次真实关系变化，提交后广播一次；原组重复换组不广播
+        assertThat(code(deskPut(ownerToken, "/api/console/company_channels/" + id + "/group",
+            "{\"groupId\":\"" + target.getGroupId() + "\"}"))).isZero();
+        assertThat(events.stream(DeskAccessChangedEvent.class).count()).isEqualTo(before + 2);
+        assertThat(code(deskPut(ownerToken, "/api/console/company_channels/" + id + "/group",
+            "{\"groupId\":\"" + target.getGroupId() + "\"}"))).isZero();
+        assertThat(events.stream(DeskAccessChangedEvent.class).count()).isEqualTo(before + 2);
     }
 
     @Test

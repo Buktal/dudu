@@ -3,20 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   appendVersion,
   createDraft,
-  DEFAULT_EXPECTED,
   draftFromItem,
   duplicateDraft,
-  type EventItem,
   type ExpectedReceipt,
   isDraftDirty,
   latestVersion,
   newEventId,
-  resolveEventVersion,
-  resolveTemplateVersion,
 } from "./model";
 import { setPayloadField } from "./payload";
 import { editorPayload } from "./payload/json";
-import { type EventSchema, schemaById } from "./schemas";
+import { schemaById } from "./schemas";
 
 const dyText = schemaById("dy-text");
 const dyEnter = schemaById("dy-enter");
@@ -206,104 +202,6 @@ describe("createDraft / duplicateDraft", () => {
   });
 });
 
-describe("resolveEventVersion（步骤引用解析核心：eventId + revision 下钻）", () => {
-  /** 双版本事件（载荷按版本号可辨） */
-  const event: EventItem = {
-    id: "evt-a",
-    name: "新客问价",
-    channelId: "douyin",
-    schemaId: "dy-text",
-    versions: [1, 2].map((revision) => ({
-      revision,
-      savedAt: `2026-09-12T0${revision}:00:00.000Z`,
-      payload: {
-        event: "im_receive_msg",
-        content: { text: `v${revision}` },
-      },
-      expected: { ...DEFAULT_EXPECTED },
-    })),
-  };
-
-  it("版本命中：返回事件本体与引用版本的载荷", () => {
-    const { event: found, version } = resolveEventVersion([event], {
-      eventId: "evt-a",
-      revision: 1,
-    });
-    expect(found?.id).toBe("evt-a");
-    expect(version?.revision).toBe(1);
-    expect(version?.payload).toEqual(event.versions[0].payload);
-  });
-
-  it("revision 越界：事件命中、版本 undefined（缺失语义由调用时钟决定）", () => {
-    const { event: found, version } = resolveEventVersion([event], {
-      eventId: "evt-a",
-      revision: 9,
-    });
-    expect(found?.id).toBe("evt-a");
-    expect(version).toBeUndefined();
-  });
-
-  it("eventId 缺失：事件与版本均 undefined", () => {
-    const { event: found, version } = resolveEventVersion([event], {
-      eventId: "evt-gone",
-      revision: 1,
-    });
-    expect(found).toBeUndefined();
-    expect(version).toBeUndefined();
-  });
-});
-
-describe("resolveTemplateVersion（模板引用解析核心：templateId + templateVersion 下钻）", () => {
-  const V1 = schemaById("dy-text");
-
-  /** 构造升版条目：同一模板的 v2（注册表并存多版本是钉住语义的数据基础） */
-  const V2: EventSchema = {
-    ...V1,
-    version: "2026.10",
-    payload: {
-      ...V1.payload,
-      content: { ...(V1.payload.content as object), text: "模板v2文本" },
-    },
-  };
-
-  it("版本命中：返回钉住版本的模板本体，载荷原样", () => {
-    const { template } = resolveTemplateVersion([V1, V2], {
-      templateId: "dy-text",
-      templateVersion: V1.version,
-    });
-    expect(template?.id).toBe("dy-text");
-    expect(template?.version).toBe(V1.version);
-    expect(template?.payload).toEqual(V1.payload);
-  });
-
-  it("版本钉住（构造升版数据）：注册表并存 v1/v2 时，钉 v1 的引用仍命中 v1", () => {
-    const pinned = resolveTemplateVersion([V1, V2], {
-      templateId: "dy-text",
-      templateVersion: V1.version,
-    }).template;
-    expect(pinned?.version).toBe(V1.version);
-    expect(pinned?.payload).not.toEqual(V2.payload);
-
-    const latest = resolveTemplateVersion([V1, V2], {
-      templateId: "dy-text",
-      templateVersion: V2.version,
-    }).template;
-    expect(latest?.version).toBe(V2.version);
-  });
-
-  it("超前版本：注册表没有该版本时 undefined（缺失语义由调用时钟决定）", () => {
-    const { template } = resolveTemplateVersion([V1], {
-      templateId: "dy-text",
-      templateVersion: "2026.10",
-    });
-    expect(template).toBeUndefined();
-  });
-
-  it("未注册 id：模板 undefined", () => {
-    const { template } = resolveTemplateVersion([V1], {
-      templateId: "dy-gone",
-      templateVersion: V1.version,
-    });
-    expect(template).toBeUndefined();
-  });
-});
+// 步骤引用解析（eventId + revision / templateId + templateVersion 下钻）
+// 的分类与缺失语义由 ./reference 域内测试钉住（resolve / interpret /
+// consequences），本文件不再经 test-only 再导出重复覆盖。

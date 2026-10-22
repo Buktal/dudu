@@ -13,31 +13,26 @@ import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ConnectionsView, fetchConnections } from "@/features/connections";
 import {
-  discardDraft,
   EventsView,
   fetchEvents,
   fetchFieldDefinitions,
   openEvent,
-  saveEvent,
-  selectDraftDirty,
+  useEventDraftGuard,
 } from "@/features/events";
 import {
   addPlanLane,
-  discardPlanDraft,
   fetchPlans,
   openPlan,
   PlansView,
-  savePlan,
-  selectPlanDirty,
+  usePlanDraftGuard,
 } from "@/features/plans";
 import {
   DispatchPanel,
   directDispatch,
   fetchRuns,
   isRunBusy,
-  isStoppingRun,
   RunsView,
-  selectPanelPhase,
+  selectDirectDispatchSlot,
   stopRun,
 } from "@/features/runs";
 import {
@@ -89,6 +84,8 @@ function MockPulseApp() {
   const [parentScenarioId, setParentScenarioId] = useState<string | null>(null);
   const deleteEvent = useDeleteEventGuarded();
   const deleteScenario = useDeleteScenarioGuarded();
+  const eventGuard = useEventDraftGuard();
+  const planGuard = usePlanDraftGuard();
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
@@ -119,6 +116,8 @@ function MockPulseApp() {
     (root) => (draftId ? scenarioNamesReferencingEvent(root, draftId) : []),
     shallowEqual,
   );
+  // 直发面板槽位一次算齐（session 单点）：App 只剩一行 dispatch
+  const dispatchSlot = selectDirectDispatchSlot(state, draftId);
   // 当前视图行为一次查表：脏判定、草稿名、保存、放弃全部来自注册表条目
   const entry = resolveViewEntry(view);
   const { behavior } = entry;
@@ -146,17 +145,17 @@ function MockPulseApp() {
       >
         {(navigate) => (
           <DraftGuard
-            dirty={selectDraftDirty(state.events)}
-            name={state.events.draft?.name ?? ""}
-            onSave={() => dispatch(saveEvent()).unwrap()}
-            onDiscard={() => dispatch(discardDraft())}
+            dirty={eventGuard.dirty}
+            name={eventGuard.name}
+            onSave={eventGuard.save}
+            onDiscard={eventGuard.discard}
           >
             {(replaceEvent) => (
               <DraftGuard
-                dirty={selectPlanDirty(state.plans)}
-                name={state.plans.draft?.name ?? ""}
-                onSave={() => dispatch(savePlan()).unwrap()}
-                onDiscard={() => dispatch(discardPlanDraft())}
+                dirty={planGuard.dirty}
+                name={planGuard.name}
+                onSave={planGuard.save}
+                onDiscard={planGuard.discard}
               >
                 {(replacePlan) => (
                   <>
@@ -183,21 +182,12 @@ function MockPulseApp() {
                           slots={{
                             onDirectDispatch: () =>
                               void dispatch(directDispatch()),
-                            dispatchSending:
-                              selectPanelPhase(state.runs) === "sending" &&
-                              state.runs.directLive?.eventId === draftId,
+                            dispatchSending: dispatchSlot.sending,
                             dispatchDisabled: isRunBusy(state),
-                            dispatchStopping:
-                              !!state.runs.directLive &&
-                              isStoppingRun(
-                                state.runs,
-                                state.runs.directLive.runId,
-                              ),
+                            dispatchStopping: dispatchSlot.stopping,
                             onStopDispatch: () => {
-                              if (state.runs.directLive)
-                                void dispatch(
-                                  stopRun(state.runs.directLive.runId),
-                                );
+                              if (dispatchSlot.runId)
+                                void dispatch(stopRun(dispatchSlot.runId));
                             },
                             footer: <DispatchPanel />,
                             referencingScenarioNames: referencing,

@@ -281,7 +281,7 @@ describe("reading conversations through the inbox workflow", () => {
       selectQueueConversations(store.getState()).map((item) => item.id),
     ).toEqual(["conversation-b"]);
     // 本地已读不产生请求：待回复状态与队列成员保持不变，目标不重定向
-    await store.dispatch(markConversationRead("conversation-b", 1));
+    await store.dispatch(markConversationRead("conversation-b"));
     expect(
       store.getState().inbox.conversations["conversation-b"],
     ).toMatchObject({ status: "needs-reply" });

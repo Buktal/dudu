@@ -46,8 +46,18 @@ export function laneGroups(run: RunRecord): LaneGroup[] | null {
   return groups.sort((a, b) => a.lane - b.lane);
 }
 
-/** 运行记录筛选：搜索查询词（filters + page 与其余域同构，状态在 runs-slice）。 */
-export type RunFilters = { query: string };
+/** 来源筛选：全部 / 直发 / 剧本 / 编排（RunRecord.source 的超集加 all）。 */
+export type RunSourceFilter = "all" | RunRecord["source"];
+
+/** 结果筛选：全部 / 通过 / 失败 / 停止。 */
+export type RunOutcomeFilter = "all" | "passed" | "failed" | "cancelled";
+
+/** 运行记录筛选：查询词 + 来源 + 结果（filters + page 与其余域同构，状态在 runs-slice）。 */
+export type RunFilters = {
+  query: string;
+  source: RunSourceFilter;
+  outcome: RunOutcomeFilter;
+};
 
 /** 分页：转发 lib 泛型实现（页码收敛到 [1, pages]；空列表为第 1 页）。 */
 export const paginateRuns = paginateList;
@@ -62,17 +72,30 @@ function runHaystack(run: RunRecord): string {
     .join(" ")}`;
 }
 
+/** 结果维谓词：停止 = cancelled；通过/失败 = 未停止且状态命中。 */
+function matchesOutcome(run: RunRecord, outcome: RunOutcomeFilter): boolean {
+  if (outcome === "all") return true;
+  if (outcome === "cancelled") return run.cancelled === true;
+  return !run.cancelled && runStatus(run) === outcome;
+}
+
 /**
- * 筛选：查询按空白分词、全部词命中干草堆才保留（大小写不敏感；
- * 「未通过」含「通过」，状态词按子串语义匹配）。返回按开始时间
- * 倒序（新→旧，列表展示即此序）。
+ * 筛选：来源与结果先收敛，查询按空白分词、全部词命中干草堆才保留
+ * （大小写不敏感；「未通过」含「通过」，状态词按子串语义匹配）。
+ * 返回按开始时间倒序（新→旧，列表展示即此序）。
  */
-export function filterRuns(items: RunRecord[], query: string): RunRecord[] {
-  const words = query.trim().toLowerCase().split(/\s+/);
+export function filterRuns(
+  items: RunRecord[],
+  filters: RunFilters,
+): RunRecord[] {
+  const words = filters.query.trim().toLowerCase().split(/\s+/);
   return [...items]
     .reverse()
-    .filter((run) =>
-      words.every((word) => runHaystack(run).toLowerCase().includes(word)),
+    .filter(
+      (run) =>
+        (filters.source === "all" || run.source === filters.source) &&
+        matchesOutcome(run, filters.outcome) &&
+        words.every((word) => runHaystack(run).toLowerCase().includes(word)),
     );
 }
 

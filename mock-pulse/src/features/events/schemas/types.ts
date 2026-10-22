@@ -133,6 +133,10 @@ export type EventSchema = {
   fields: FieldDescriptor[];
   /** 新建事件时需要按官方形态重新生成的 ID 路径 */
   idGenerations: IdGeneration[];
+  /** 发送者身份路径（信封内代表发送者 ID 的字段；声明了的渠道才启用 senderSync 联动） */
+  senderIdentityPath?: string;
+  /** 发送者资料路径（资料 open_id 字段；senderSync 联动的对齐目标，与身份路径成对声明） */
+  senderProfilePath?: string;
   /** 模板载荷：官方黄金样本原文 */
   payload: WirePayload;
   /** 渠道真实默认期望回执：草稿创建时带入（状态码 + 正文形态） */

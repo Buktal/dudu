@@ -24,8 +24,8 @@ use crate::connections::util::now_secs;
 
 use super::adapter::narrow;
 use super::{
-    client_with_timeout, no_reply, request_error_reason, send_measured_outcome, ConnectionConfig,
-    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
+    client_with_timeout, handshake_read_error, no_reply, request_error_reason,
+    send_measured_outcome, ConnectionConfig, DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// url_verification 的随机 challenge：32 位小写 hex（官方样本 `ajls384kdjxxxx`
@@ -129,7 +129,16 @@ fn verify_handshake(
         };
     }
 
-    let text = response.text().unwrap_or_default();
+    // 响应体读取失败显式归因（不折进空串误判「challenge 不一致」）
+    let text = match response.text() {
+        Ok(text) => text,
+        Err(err) => {
+            return HandshakeOutcome {
+                ok: false,
+                message: handshake_read_error(&err),
+            };
+        }
+    };
     match check_echo(&challenge, &text) {
         Ok(()) => HandshakeOutcome {
             ok: true,
@@ -216,8 +225,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Feishu { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Feishu { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Feishu { url } => url.as_str())
     }
 
     fn handshake_client(&self) -> reqwest::blocking::Client {

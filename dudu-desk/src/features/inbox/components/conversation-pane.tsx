@@ -43,13 +43,10 @@ export function ConversationPane({
   useEffect(() => {
     void dispatch(ensureHistoryLoaded(conversationId));
   }, [conversationId, dispatch]);
-  const markVisible = useCallback(
-    (sequence: number) => {
-      if (focused && document.visibilityState === "visible")
-        void dispatch(markConversationRead(conversationId, sequence));
-    },
-    [conversationId, dispatch, focused],
-  );
+  const markVisible = useCallback(() => {
+    if (focused && document.visibilityState === "visible")
+      void dispatch(markConversationRead(conversationId));
+  }, [conversationId, dispatch, focused]);
   if (!conversation)
     return (
       <InboxEmpty

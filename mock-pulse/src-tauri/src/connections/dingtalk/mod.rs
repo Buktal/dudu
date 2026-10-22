@@ -220,8 +220,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Dingtalk { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Dingtalk { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Dingtalk { url } => url.as_str())
     }
 
     fn handshake_client(&self) -> reqwest::blocking::Client {

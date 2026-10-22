@@ -18,7 +18,14 @@ import { inboxActions } from "./stores/slice";
 import { createInboxStore, type InboxStore } from "./stores/store";
 import type { WorkContext } from "./types";
 
-const defaultContext = { agentId: "unconnected", workspaceId: "desk" };
+/**
+ * 未注入上下文时的独立工作台默认值：workspace 即桌面端本身的 desk 工作区，
+ * agent 尚未连接（登录组合层会传入真实会话上下文替换）。
+ */
+const DEFAULT_DESK_CONTEXT: WorkContext = {
+  agentId: "unconnected",
+  workspaceId: "desk",
+};
 
 function InboxSession({ accountMenu }: { accountMenu?: ReactNode }) {
   const { mode, setMode } = useTheme();
@@ -66,7 +73,7 @@ function InboxSession({ accountMenu }: { accountMenu?: ReactNode }) {
 
 export function InboxWorkspace({
   api,
-  context = defaultContext,
+  context = DEFAULT_DESK_CONTEXT,
   accountMenu,
   refreshAccess,
 }: {

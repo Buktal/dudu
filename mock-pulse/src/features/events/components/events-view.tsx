@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { ChannelPicker } from "@/components/channel-picker";
 import { DraftGuard } from "@/components/draft-guard";
 import { DeleteEntityDialog } from "@/components/entity-dialogs";
+import { Notice } from "@/components/notice";
 import {
   ResourceFilters,
   ResourceLibrary,
@@ -29,11 +30,17 @@ import {
 } from "@/components/ui/native-select";
 import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
-import { CHANNELS, type ChannelId, channelById } from "@/lib/channels";
+import {
+  CHANNELS,
+  type ChannelId,
+  channelById,
+  DEFAULT_CHANNEL,
+} from "@/lib/channels";
 import { latestVersion } from "../model";
 import { schemaById, schemasByChannel } from "../schemas";
 import { libraryRows, paginateEvents, templatesForChannel } from "../selectors";
 import * as actions from "../stores/events-slice";
+import { useEventDraftGuard } from "../use-event-draft-guard";
 import { EventEditor, type EventEditorSlots } from "./event-editor";
 
 /** 模板条目的列表 id 前缀：与用户素材 id（evt-*）区分命名空间 */
@@ -158,6 +165,7 @@ function CreateEventDialog({
 export function EventsView({ slots }: { slots?: EventEditorSlots }) {
   const dispatch = useAppDispatch();
   const events = useAppSelector((state) => state.events);
+  const guard = useEventDraftGuard();
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   // 列表即目录（ADR-0009）：模板区随渠道筛选收敛，组合列表统一分页
@@ -172,143 +180,156 @@ export function EventsView({ slots }: { slots?: EventEditorSlots }) {
   const page = paginateEvents(rows, events.page);
   return (
     <DraftGuard
-      dirty={actions.selectDraftDirty(events)}
-      name={events.draft?.name ?? ""}
-      onSave={() => dispatch(actions.saveEvent()).unwrap()}
-      onDiscard={() => dispatch(actions.discardDraft())}
+      dirty={guard.dirty}
+      name={guard.name}
+      onSave={guard.save}
+      onDiscard={guard.discard}
     >
       {(request) => (
-        <ResourceWorkspace
-          viewId="events"
-          libraryLabel="事件素材"
-          library={(close) => (
-            <ResourceLibrary
-              title="事件素材"
-              singular="事件"
-              total={events.items.length + templates.length}
-              query={events.filters.query}
-              onQuery={(query) => dispatch(actions.setFilters({ query }))}
-              onCreate={() => {
-                close();
-                request(() => setCreating(true));
-              }}
-              filters={
-                <>
-                  <ChannelPicker
-                    allowAll
-                    value={events.filters.channel}
-                    onSelect={(channel) =>
-                      dispatch(actions.setFilters({ channel }))
-                    }
-                  />
-                  <ResourceFilters
-                    value={events.filters.kind}
-                    options={[
-                      { value: "all", label: "全部" },
-                      { value: "message", label: "消息" },
-                      { value: "event", label: "事件" },
-                      { value: "favorite", label: "收藏" },
-                    ]}
-                    onChange={(kind) => dispatch(actions.setFilters({ kind }))}
-                  />
-                </>
-              }
-              entries={page.items.map((row) =>
-                row.region === "template"
-                  ? {
-                      id: `${TEMPLATE_ID_PREFIX}${row.schema.id}`,
-                      name: row.schema.name,
-                      channel: row.schema.channelId,
-                      badge: "内置",
-                      group: row.schema.kind === "message" ? "消息" : "事件",
-                      locked: true,
-                      description: `${channelById(row.schema.channelId)?.name} · ${row.schema.eventName}`,
-                    }
-                  : {
-                      id: row.item.id,
-                      name: row.item.name,
-                      channel: row.item.channelId,
-                      favorite: row.item.favorite,
-                      group: "已保存素材",
-                      description: `${channelById(row.item.channelId)?.name} · ${row.schema?.name ?? row.item.schemaId} · v${latestVersion(row.item)?.revision ?? 1}`,
-                    },
-              )}
-              selectedId={events.selectedId}
-              onSelect={(id) => {
-                close();
-                if (id.startsWith(TEMPLATE_ID_PREFIX)) {
-                  // 点模板 = 以模板开草稿（名字默认模板名），不产生落库实体
-                  const schemaId = id.slice(TEMPLATE_ID_PREFIX.length);
-                  const { name } = schemaById(schemaId);
-                  request(() =>
-                    dispatch(actions.startDraft({ name, schemaId })),
-                  );
-                  return;
+        <>
+          {events.hiddenUnregistered > 0 ? (
+            <Notice className="mb-4">
+              {events.hiddenUnregistered}{" "}
+              条事件来自未注册的渠道版本，已在列表中隐藏；
+              引用它们的剧本步骤会显示为缺失
+            </Notice>
+          ) : null}
+          <ResourceWorkspace
+            viewId="events"
+            libraryLabel="事件素材"
+            library={(close) => (
+              <ResourceLibrary
+                title="事件素材"
+                singular="事件"
+                total={events.items.length + templates.length}
+                query={events.filters.query}
+                onQuery={(query) => dispatch(actions.setFilters({ query }))}
+                onCreate={() => {
+                  close();
+                  request(() => setCreating(true));
+                }}
+                filters={
+                  <>
+                    <ChannelPicker
+                      allowAll
+                      value={events.filters.channel}
+                      onSelect={(channel) =>
+                        dispatch(actions.setFilters({ channel }))
+                      }
+                    />
+                    <ResourceFilters
+                      value={events.filters.kind}
+                      options={[
+                        { value: "all", label: "全部" },
+                        { value: "message", label: "消息" },
+                        { value: "event", label: "事件" },
+                        { value: "favorite", label: "收藏" },
+                      ]}
+                      onChange={(kind) =>
+                        dispatch(actions.setFilters({ kind }))
+                      }
+                    />
+                  </>
                 }
-                if (id !== events.draft?.id)
-                  request(() => dispatch(actions.openEvent(id)));
-              }}
-              onContextMenu={setDeleting}
-              page={page.page}
-              pages={page.pages}
-              filteredTotal={page.total}
-              onPage={(value) => dispatch(actions.setPage(value))}
-              onClear={() =>
-                dispatch(
-                  actions.setFilters({
-                    query: "",
-                    channel: "all",
-                    kind: "all",
-                  }),
-                )
-              }
-            />
-          )}
-        >
-          {events.draft ? (
-            <EventEditor key={events.draft.id} slots={slots} />
-          ) : (
-            <Empty className="min-h-60">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <FileTextIcon aria-hidden="true" />
-                </EmptyMedia>
-                <EmptyTitle>选择一个事件开始</EmptyTitle>
-                <EmptyDescription>
-                  从素材库点开内置模板即改即发，或打开已保存的事件素材继续编辑。
-                </EmptyDescription>
-              </EmptyHeader>
-              <Button variant="secondary" onClick={() => setCreating(true)}>
-                <PlusIcon aria-hidden="true" data-icon="inline-start" />
-                新建事件
-              </Button>
-            </Empty>
-          )}
-          {creating ? (
-            <CreateEventDialog
-              initialChannel={
-                events.filters.channel === "all"
-                  ? "douyin"
-                  : events.filters.channel
-              }
-              onClose={() => setCreating(false)}
-            />
-          ) : null}
-          {deleting ? (
-            <DeleteEntityDialog
-              label="事件"
-              name={
-                events.items.find((item) => item.id === deleting)?.name ?? ""
-              }
-              onClose={() => setDeleting(null)}
-              onDelete={() =>
-                slots
-                  ? slots.onDeleteEvent(deleting)
-                  : dispatch(actions.deleteEvent(deleting)).unwrap()
-              }
-            />
-          ) : null}
-        </ResourceWorkspace>
+                entries={page.items.map((row) =>
+                  row.region === "template"
+                    ? {
+                        id: `${TEMPLATE_ID_PREFIX}${row.schema.id}`,
+                        name: row.schema.name,
+                        channel: row.schema.channelId,
+                        badge: "内置",
+                        group: row.schema.kind === "message" ? "消息" : "事件",
+                        locked: true,
+                        description: `${channelById(row.schema.channelId)?.name} · ${row.schema.eventName}`,
+                      }
+                    : {
+                        id: row.item.id,
+                        name: row.item.name,
+                        channel: row.item.channelId,
+                        favorite: row.item.favorite,
+                        group: "已保存素材",
+                        description: `${channelById(row.item.channelId)?.name} · ${row.schema?.name ?? row.item.schemaId} · v${latestVersion(row.item)?.revision ?? 1}`,
+                      },
+                )}
+                selectedId={events.selectedId}
+                onSelect={(id) => {
+                  close();
+                  if (id.startsWith(TEMPLATE_ID_PREFIX)) {
+                    // 点模板 = 以模板开草稿（名字默认模板名），不产生落库实体
+                    const schemaId = id.slice(TEMPLATE_ID_PREFIX.length);
+                    const { name } = schemaById(schemaId);
+                    request(() =>
+                      dispatch(actions.startDraft({ name, schemaId })),
+                    );
+                    return;
+                  }
+                  if (id !== events.draft?.id)
+                    request(() => dispatch(actions.openEvent(id)));
+                }}
+                onContextMenu={setDeleting}
+                pagination={{
+                  page: page.page,
+                  pages: page.pages,
+                  filteredTotal: page.total,
+                  onPage: (value) => dispatch(actions.setPage(value)),
+                }}
+                onClear={() =>
+                  dispatch(
+                    actions.setFilters({
+                      query: "",
+                      channel: "all",
+                      kind: "all",
+                    }),
+                  )
+                }
+              />
+            )}
+          >
+            {events.draft ? (
+              <EventEditor key={events.draft.id} slots={slots} />
+            ) : (
+              <Empty className="min-h-60">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileTextIcon aria-hidden="true" />
+                  </EmptyMedia>
+                  <EmptyTitle>选择一个事件开始</EmptyTitle>
+                  <EmptyDescription>
+                    从素材库点开内置模板即改即发，或打开已保存的事件素材继续编辑。
+                  </EmptyDescription>
+                </EmptyHeader>
+                <Button variant="secondary" onClick={() => setCreating(true)}>
+                  <PlusIcon aria-hidden="true" data-icon="inline-start" />
+                  新建事件
+                </Button>
+              </Empty>
+            )}
+            {creating ? (
+              <CreateEventDialog
+                initialChannel={
+                  events.filters.channel === "all"
+                    ? DEFAULT_CHANNEL
+                    : events.filters.channel
+                }
+                onClose={() => setCreating(false)}
+              />
+            ) : null}
+            {deleting ? (
+              <DeleteEntityDialog
+                label="事件"
+                name={
+                  events.items.find((item) => item.id === deleting)?.name ?? ""
+                }
+                onClose={() => setDeleting(null)}
+                onDelete={() =>
+                  slots
+                    ? slots.onDeleteEvent(deleting)
+                    : dispatch(actions.deleteEvent(deleting)).unwrap()
+                }
+              />
+            ) : null}
+          </ResourceWorkspace>
+        </>
       )}
     </DraftGuard>
   );

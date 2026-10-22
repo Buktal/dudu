@@ -99,8 +99,12 @@ pub fn scenarios_save(
     scenario: StoredScenario,
 ) -> Result<Vec<StoredScenario>, String> {
     let dir = app_data_dir(&app)?;
-    store::save_scenario(&dir, &scenario).map_err(|err| err.to_string())?;
-    store::load_scenarios(&dir).map_err(|err| err.to_string())
+    // 写 + 重扫全程串行（store_io::with_write_lock 全局写锁单点），
+    // 返回列表不会读到并发写一半的状态
+    crate::store_io::with_write_lock(|| {
+        store::save_scenario(&dir, &scenario).map_err(|err| err.to_string())?;
+        store::load_scenarios(&dir).map_err(|err| err.to_string())
+    })
 }
 
 /// 按 id 删除剧本，返回删除后的完整列表。
@@ -110,6 +114,8 @@ pub fn scenarios_delete(
     scenario_id: String,
 ) -> Result<Vec<StoredScenario>, String> {
     let dir = app_data_dir(&app)?;
-    store::delete_scenario(&dir, &scenario_id).map_err(|err| err.to_string())?;
-    store::load_scenarios(&dir).map_err(|err| err.to_string())
+    crate::store_io::with_write_lock(|| {
+        store::delete_scenario(&dir, &scenario_id).map_err(|err| err.to_string())?;
+        store::load_scenarios(&dir).map_err(|err| err.to_string())
+    })
 }

@@ -3,8 +3,9 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
+import { isEqual } from "lodash-es";
 
-import type { ChannelId } from "@/lib/channels";
+import { type ChannelId, DEFAULT_CHANNEL } from "@/lib/channels";
 
 import {
   type ConnectionConfig,
@@ -24,7 +25,6 @@ export type TestState = {
 export type ConnectionsState = {
   items: Record<string, ConnectionConfig>;
   loaded: boolean;
-  test: TestState;
   testsByChannel: Partial<Record<ChannelId, TestState>>;
   selectedChannel: ChannelId;
   drafts?: Partial<Record<ChannelId, ConnectionConfig>>;
@@ -39,9 +39,8 @@ export const initialConnectionsState: ConnectionsState = {
   // 定义见 ../channel-traits，由各行 defaultConnection 派生）
   items: { ...DEFAULT_CONNECTIONS },
   loaded: false,
-  test: { status: "idle", message: "" },
   testsByChannel: {},
-  selectedChannel: "douyin",
+  selectedChannel: DEFAULT_CHANNEL,
   drafts: {},
 };
 
@@ -102,22 +101,22 @@ export const connectionsSlice = createSlice({
           delete state.drafts[action.meta.arg.channel];
       })
       .addCase(testConnection.pending, (state, action) => {
-        state.test = { status: "testing", message: "" };
-        state.testsByChannel[action.meta.arg.channel] = state.test;
+        state.testsByChannel[action.meta.arg.channel] = {
+          status: "testing",
+          message: "",
+        };
       })
       .addCase(testConnection.fulfilled, (state, action) => {
-        state.test = {
+        state.testsByChannel[action.meta.arg.channel] = {
           status: action.payload.ok ? "success" : "failed",
           message: action.payload.message,
         };
-        state.testsByChannel[action.meta.arg.channel] = state.test;
       })
       .addCase(testConnection.rejected, (state, action) => {
-        state.test = {
+        state.testsByChannel[action.meta.arg.channel] = {
           status: "failed",
           message: action.error.message ?? "测试连接失败",
         };
-        state.testsByChannel[action.meta.arg.channel] = state.test;
       });
   },
 });
@@ -151,9 +150,23 @@ export function selectConnection<C extends ChannelId>(
 
 const idleTest: TestState = { status: "idle", message: "" };
 
+/** 渠道的连接测试状态（只认渠道：无记录即 idle，无全局兜底态） */
 export function selectTestState(
   state: ConnectionsState,
-  channel?: ChannelId,
+  channel: ChannelId,
 ): TestState {
-  return channel ? (state.testsByChannel[channel] ?? idleTest) : state.test;
+  return state.testsByChannel[channel] ?? idleTest;
+}
+
+/**
+ * 渠道草稿是否有未保存改动（编辑守卫与保存按钮共用）：无草稿即干净，
+ * 有草稿且与库内保存值不同才脏。表单展示另有「无草稿回退默认连接」的
+ * 兜底链（connections-view），不参与本判定。
+ */
+export function selectConnectionDirty(
+  state: ConnectionsState,
+  channel: ChannelId,
+): boolean {
+  const draft = state.drafts?.[channel];
+  return !!draft && !isEqual(draft, state.items[channel]);
 }

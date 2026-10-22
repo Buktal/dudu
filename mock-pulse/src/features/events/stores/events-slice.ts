@@ -4,6 +4,7 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import type { ChannelId } from "@/lib/channels";
+import { draftSnapshot, draftUnchangedSince } from "@/lib/draft-snapshot";
 
 import {
   type DefinitionsDoc,
@@ -32,7 +33,7 @@ import {
 } from "../payload";
 import { editorPayload } from "../payload/json";
 import type { FieldDescriptor } from "../schemas";
-import { schemaById, type WirePayload } from "../schemas";
+import { hasSchema, schemaById, type WirePayload } from "../schemas";
 
 /** 素材库筛选：搜索 + 渠道 + 类型（纯 selector，列表渲染交给 react-virtuoso） */
 export type EventFilters = {
@@ -65,6 +66,8 @@ export type EventsState = {
   fieldInputs?: Record<string, { text: string; error?: string }>;
   filters: EventFilters;
   page: number;
+  /** 最近一次装载中因 schemaId 未注册而被隐藏的事件数（0 = 无隐藏） */
+  hiddenUnregistered: number;
   /** 字段说明：用户定义覆写（字典「应用说明」落库） */
   definitions: FieldDefinitionsState;
 };
@@ -79,6 +82,7 @@ export const initialEventsState: EventsState = {
   fieldInputs: {},
   filters: { query: "", channel: "all", kind: "all" },
   page: 1,
+  hiddenUnregistered: 0,
   definitions: { loaded: false, bySchemaId: {} },
 };
 
@@ -136,7 +140,7 @@ export const saveEventAs = createAsyncThunk(
     return {
       items,
       copy,
-      source: JSON.stringify(events.draft),
+      source: draftSnapshot(events.draft),
       rawText: events.rawText,
     };
   },
@@ -216,7 +220,11 @@ const eventsSlice = createSlice({
         action.payload.value,
       );
       let syncedPath: string | null = null;
-      if (state.draft.senderSync && action.payload.path === "from_user_id") {
+      // 联动门槛取模板声明的发送者身份路径（未声明渠道的模板不触发）
+      if (
+        state.draft.senderSync &&
+        action.payload.path === schema.senderIdentityPath
+      ) {
         const synced = syncSenderIdentity(schema, payload);
         payload = synced.payload;
         syncedPath = synced.syncedPath;
@@ -246,7 +254,7 @@ const eventsSlice = createSlice({
           state.rawText = null;
         }
         state.draft.payload = setPayloadField(state.draft.payload, path, value);
-        if (state.draft.senderSync && path === "from_user_id") {
+        if (state.draft.senderSync && path === schema.senderIdentityPath) {
           const synced = syncSenderIdentity(schema, state.draft.payload);
           state.draft.payload = synced.payload;
           discardSyncedInput(state, synced.syncedPath);
@@ -330,7 +338,14 @@ const eventsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchEvents.fulfilled, (state, action) => {
-        state.items = action.payload;
+        // 未注册 schemaId 在装载层一次性过滤（api 层保持 schema 无关）：
+        // 下游编辑器与步骤行经 schemaById 取模板，未知 id 直接抛错，
+        // 库内不放进未注册条目即全链路不再崩（步骤行退化为缺失行语义）
+        const registered = action.payload.filter((item) =>
+          hasSchema(item.schemaId),
+        );
+        state.hiddenUnregistered = action.payload.length - registered.length;
+        state.items = registered;
         state.loaded = true;
       })
       .addCase(saveEvent.fulfilled, (state, action) => {
@@ -351,7 +366,7 @@ const eventsSlice = createSlice({
       .addCase(saveEventAs.fulfilled, (state, action) => {
         state.items = action.payload.items;
         if (
-          JSON.stringify(state.draft) !== action.payload.source ||
+          !draftUnchangedSince(state.draft, action.payload.source) ||
           state.rawText !== action.payload.rawText
         )
           return;
@@ -482,6 +497,11 @@ export function selectSelectedId(state: EventsState): string | null {
 
 export function selectLoaded(state: EventsState): boolean {
   return state.loaded;
+}
+
+/** 装载时因 schemaId 未注册被隐藏的事件数（0 = 无隐藏） */
+export function selectHiddenUnregistered(state: EventsState): number {
+  return state.hiddenUnregistered;
 }
 
 /** 全部用户字段定义 */

@@ -1,12 +1,7 @@
 import { unauthorizedConversationIds } from "./access-reducers";
 import { mediaMessageId } from "./media-reducers";
 import { loadConversations } from "./queue";
-import {
-  cancelScopeRequests,
-  releaseAttachmentResources,
-  requestKeys,
-  runOperation,
-} from "./requests";
+import { cancelScopeRequests, requestKeys, runOperation } from "./requests";
 import { inboxActions } from "./slice";
 import type { InboxState } from "./state";
 import type { InboxCommand, InboxRuntime } from "./store";
@@ -38,7 +33,7 @@ export function applyAccessChanged(): InboxCommand<Promise<void>> {
   };
 }
 
-// 已无权对话的本地附件、媒体与预览随状态清理一并释放：请求已由 cancelScopeRequests
+// 已无权对话的媒体与预览随状态清理一并释放：请求已由 cancelScopeRequests
 // 取消；媒体对象 URL 在 dispatch 拆除前回收，state.media 条目随 detachConversation 删除
 function releaseUnauthorized(
   runtime: InboxRuntime,
@@ -58,12 +53,6 @@ function releaseUnauthorized(
     if (url) URL.revokeObjectURL(url);
     runtime.previews.delete(key);
   }
-  releaseAttachmentResources(
-    runtime,
-    Object.values(state.attachments)
-      .filter((attachment) => pruned.has(attachment.conversationId))
-      .map((attachment) => attachment.id),
-  );
 }
 
 // 身份重查失败（网络故障或已退出）返回 null：不加清理、不放行，交由退出流程与下次刷新收敛

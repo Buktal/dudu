@@ -1,4 +1,3 @@
-import { DeskApiError } from "@/lib/api-response";
 import { requestDesk, requestDeskBlob } from "@/lib/desk-http";
 import { readDeskToken, resolveDeskOrigin } from "@/lib/desk-session";
 import { isRecord } from "@/lib/is-record";
@@ -85,8 +84,8 @@ function parseLiveEvent(
  * nextCursor）；回复走 POST /api/desk/visitors/{visitorId}/messages（回复能力随会话
  * 下发，不单独取），名片读取 / 保存走 GET/PUT /api/desk/visitors/{visitorId}/profile，
  * 结束 / 继续走 PUT /api/desk/visitors/{visitorId}/status；订阅连接 /ws/desk，
- * ready 后接收 message、conversation、profile 与 access-changed 报文；其余能力沿用
- * unavailableInboxApi 的语义；token 由账户适配器写入会话，这里按请求读取。
+ * ready 后接收 message、conversation、profile 与 access-changed 报文；
+ * token 由账户适配器写入会话，这里按请求读取。
  */
 export function createHttpInboxApi(
   options: {
@@ -131,13 +130,7 @@ export function createHttpInboxApi(
         fetcher: options.fetcher,
       });
     },
-    async send({ target, clientRequestId, text, attachments, signal }) {
-      // 本轮只接纯文本：附件发送尚未接入，拒绝而不是静默丢弃
-      if (attachments.length)
-        throw new DeskApiError(
-          "unavailable",
-          "当前仅支持文字回复，附件发送尚未接入",
-        );
+    async send({ target, clientRequestId, text, signal }) {
       return requestDesk({
         url: `${origin}/api/desk/visitors/${encodeURIComponent(target.conversationId)}/messages`,
         method: "POST",

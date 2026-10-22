@@ -20,6 +20,9 @@ export const isProfile = (data: unknown): data is Profile =>
   data.managedGroupIds.every(validId);
 const count = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+// 服务端分页契约（PageQuery.MAX_PAGE_SIZE）：单页最多 100 条
+export const MAX_PAGE_SIZE = 100;
+
 export function pageOf<T>(item: (value: unknown) => value is T) {
   return (data: unknown): data is Page<T> =>
     isRecord(data) &&
@@ -30,5 +33,5 @@ export function pageOf<T>(item: (value: unknown) => value is T) {
     data.page > 0 &&
     count(data.pageSize) &&
     data.pageSize > 0 &&
-    data.pageSize <= 100;
+    data.pageSize <= MAX_PAGE_SIZE;
 }

@@ -104,8 +104,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Douyin { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Douyin { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Douyin { url } => url.as_str())
     }
 
     fn verify_handshake(

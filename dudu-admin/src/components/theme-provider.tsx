@@ -38,6 +38,11 @@ function getSystemTheme(): ResolvedTheme {
   return "light";
 }
 
+// 主题选择的本地持久化单点：写入口只此一处，键名与取值约定不分散
+function persistTheme(storageKey: string, theme: Theme) {
+  localStorage.setItem(storageKey, theme);
+}
+
 function disableTransitionsTemporarily() {
   const style = document.createElement("style");
   style.appendChild(
@@ -75,7 +80,7 @@ export function ThemeProvider({
 
   const setTheme = React.useCallback(
     (nextTheme: Theme) => {
-      localStorage.setItem(storageKey, nextTheme);
+      persistTheme(storageKey, nextTheme);
       setThemeState(nextTheme);
     },
     [storageKey],

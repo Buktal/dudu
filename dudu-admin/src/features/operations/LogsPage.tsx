@@ -102,7 +102,8 @@ export function LogsPage() {
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">
-                    {operationActions[log.action] ?? "其他操作"}
+                    {/* action 经 isLog 成员资格校验，键必在 operationActions 中 */}
+                    {operationActions[log.action]}
                   </Badge>
                 </TableCell>
                 <TableCell>

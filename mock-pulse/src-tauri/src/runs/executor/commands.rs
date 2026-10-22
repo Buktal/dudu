@@ -155,19 +155,17 @@ fn run_in_background(
         },
     );
     drop(active);
-    finish_run(app, snapshot.run_id, shape.shape_record(run));
+    finish_run(app, &dir, snapshot.run_id, shape.shape_record(run));
 }
 
 /// 运行记录落盘失败会随完成事件返回，前端保留快照并提供重试。
 /// finished 事件同时承载落盘错误与相位解锁（前端实况/阶段靠它收束）：
 /// emit 失败不可像进度事件那样静默丢弃，至少留下诊断线索。
-fn finish_run(app: tauri::AppHandle, run_id: String, run: RunRecord) {
-    let saved = (|| -> Result<(), String> {
-        let dir = app_data_dir(&app)?;
-        store::upsert_run(&dir, run.clone())
-            .map(|_| ())
-            .map_err(|error| error.to_string())
-    })();
+/// 落盘目录由调用方带出（与检查点落盘同一 dir，不重算 app_data_dir）。
+fn finish_run(app: tauri::AppHandle, dir: &std::path::Path, run_id: String, run: RunRecord) {
+    let saved = store::upsert_run(dir, run.clone())
+        .map(|_| ())
+        .map_err(|error| error.to_string());
     let event = RunProgressEvent {
         error: saved.err(),
         run_id: run_id.clone(),

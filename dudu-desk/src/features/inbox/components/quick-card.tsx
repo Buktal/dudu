@@ -57,7 +57,7 @@ export const QuickCard = memo(function QuickCard({
     };
   }, [expanded]);
   const name = visitorName(conversation.identity);
-  const hasDraft = !!draft?.text || !!draft?.attachmentIds.length;
+  const hasDraft = !!draft?.text;
   return (
     <article
       ref={card}

@@ -18,8 +18,9 @@ import org.springframework.web.client.RestClient;
  * receiver_id（int64 UID）、type=text、data（JSON URLEncode UTF-8），access_token 为
  * channel_info 直配的粉服凭据；成功以 result==true 为准（接口不返回消息标识），save_sender_box
  * 不传按官方默认 1（消息进入发送方私信箱）；失败原样记录 error_code 与 error，网络与响应
- * 解析异常按调用失败如实返回。接口地址默认官方域名，可用 dudu.channel.weibo.api-base 覆盖
- * 为受控替身。
+ * 解析异常按调用失败如实返回——token 在 URL query 上，异常报文可能携带完整地址，
+ * 日志与失败原因都只留异常类名，凭据不写日志也不返回 Desk。接口地址默认官方域名，
+ * 可用 dudu.channel.weibo.api-base 覆盖为受控替身。
  */
 @Slf4j
 @Component
@@ -53,10 +54,11 @@ public class WeiboTextSender {
             }
             return ChannelSendResult.sent(null);
         } catch (RuntimeException e) {
-            // 网络、HTTP 状态与响应解析异常都按调用失败记录，不猜测发送结果
+            // 网络、HTTP 状态与响应解析异常都按调用失败记录，不猜测发送结果；
+            // access_token 在请求 URL 上，异常报文可能携带完整地址，日志与失败原因只留类名
             log.warn("[weibo] 客服消息发送失败, companyChannelId={}, exception={}",
                 account.getCompanyChannelId(), e.getClass().getSimpleName());
-            return ChannelSendResult.failed("微博接口调用失败：" + e.getMessage());
+            return ChannelSendResult.failed("微博接口调用失败：" + e.getClass().getSimpleName());
         }
     }
 

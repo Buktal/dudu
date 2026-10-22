@@ -8,6 +8,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConsoleClient } from "@/api/client";
 import { ConsoleContext } from "@/api/context";
+import { failure, installHttp, success } from "@/test/http";
 import { UserGroupsPage } from "./user-groups-page";
 
 const group = {
@@ -20,26 +21,14 @@ const group = {
 };
 afterEach(() => {
   cleanup();
-  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 describe("用户组页面操作", () => {
   it("组详情提供可识别的页签并切换到渠道账号", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      async (url) =>
-        new Response(
-          JSON.stringify(
-            String(url).endsWith("/user_groups/8")
-              ? { code: 0, msg: "ok", data: group }
-              : {
-                  code: 0,
-                  msg: "ok",
-                  list: [],
-                  total: 0,
-                  page: 1,
-                  pageSize: 20,
-                },
-          ),
-        ),
+    installHttp((url) =>
+      url.pathname.endsWith("/user_groups/8")
+        ? success(group)
+        : success({ list: [], total: 0, page: 1, pageSize: 20 }),
     );
     render(
       <ConsoleContext value={new ConsoleClient()}>
@@ -60,18 +49,8 @@ describe("用户组页面操作", () => {
     expect(screen.getByRole("button", { name: "添加渠道账号" })).toBeVisible();
   });
   it("搜索提交前保留草稿，打开组通过页面选择接口", async () => {
-    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(
-      async () =>
-        new Response(
-          JSON.stringify({
-            code: 0,
-            msg: "ok",
-            list: [group],
-            total: 1,
-            page: 1,
-            pageSize: 20,
-          }),
-        ),
+    const fetcher = installHttp(() =>
+      success({ list: [group], total: 1, page: 1, pageSize: 20 }),
     );
     const selected = vi.fn();
     render(
@@ -101,12 +80,7 @@ describe("用户组页面操作", () => {
     );
   });
   it("服务失败显示错误而不是没有用户组", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      async () =>
-        new Response(
-          JSON.stringify({ code: 12200, msg: "用户组读取失败", data: null }),
-        ),
-    );
+    installHttp(() => failure(12200, "用户组读取失败"));
     render(
       <ConsoleContext value={new ConsoleClient()}>
         <UserGroupsPage

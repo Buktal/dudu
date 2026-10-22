@@ -91,6 +91,16 @@ const isDetail = (v: unknown): v is AccountDetail =>
   strings(v.configuredSecretFields) &&
   strings(v.notes);
 const MAX_CONFIGURATION_BYTES = 128 * 1024;
+// 凭据文本长度上限（数据契约）：多行控件 16384，单行控件 4096，与组件校验共用
+export const CREDENTIAL_TEXTAREA_MAX_LENGTH = 16384;
+export const CREDENTIAL_TEXT_MAX_LENGTH = 4096;
+// telegram Bot token 形如「数字 ID:密钥」，仅作入口格式初检，授权有效性以渠道平台为准
+export const TELEGRAM_BOT_TOKEN_PATTERN = /^[0-9]+:[A-Za-z0-9_-]+$/;
+// wechat-mini 密文回调必需的应用身份字段：密文回调没有 appId 无法解密回执
+export const WECHAT_MINI_APP_ID_FIELD = "appId";
+// 服务端下发的系统字段（回调地址等由平台生成）：缺失即接入未就绪，
+// 不允许进入「维护名称与凭据」流程
+export const SYSTEM_FIELD = "system";
 function validateConfigurationSize(body: unknown) {
   if (
     new TextEncoder().encode(JSON.stringify(body)).byteLength >

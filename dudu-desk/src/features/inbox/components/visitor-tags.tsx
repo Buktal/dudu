@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { parseTags } from "../tags";
+import { parseTags, TAG_SEPARATORS } from "../tags";
 
 export function VisitorTags({
   id,
@@ -36,7 +36,7 @@ export function VisitorTags({
   function add() {
     const tag = text.trim();
     if (!tag) return;
-    if (/[,，;；\r\n]/.test(tag)) {
+    if (TAG_SEPARATORS.test(tag)) {
       setError("一次添加一个标签，请勿使用逗号或分号。");
       return;
     }

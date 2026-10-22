@@ -179,8 +179,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Telegram { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Telegram { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Telegram { url } => url.as_str())
     }
 
     fn verify_handshake(

@@ -24,6 +24,9 @@
 //! （util::sha1_sorted_hex）。
 
 pub(crate) use crate::connections::util::callback_signature as build_callback_signature;
+// XML 信封密文提取单点在 wecom（企微 §3.5 与公众号 §5.14 同一 XML 包结构），
+// 此处按既有族共享骨架路径转发给各渠道 push 模块。
+pub(crate) use crate::connections::wecom::extract_reply_encrypt;
 use crate::connections::util::{now_secs, sha1_sorted_hex};
 use crate::connections::wecom::crypto::{decrypt_msg, encrypt_msg};
 use crate::connections::wecom::random_16;

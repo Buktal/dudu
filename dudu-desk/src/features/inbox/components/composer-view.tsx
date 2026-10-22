@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
 import type { VisitorIdentity } from "../types";
-import { AttachmentDrafts } from "./attachment-drafts";
 import { ComposerTools } from "./composer-tools";
 import { SourceBadge } from "./identity";
 
@@ -19,7 +18,6 @@ import { SourceBadge } from "./identity";
  *  Reply pipeline answer; no hooks, no dispatches. */
 type ComposerViewModel = {
   id: string;
-  conversationId: string;
   compact: boolean;
   target: string;
   name: string;
@@ -29,7 +27,6 @@ type ComposerViewModel = {
   resumeDisabled: boolean;
   resuming: boolean;
   draftText: string;
-  hasAttachments: boolean;
   busy: boolean;
   disabled: boolean;
   onHistory?: () => void;
@@ -62,7 +59,6 @@ export function ComposerView({
 }) {
   const {
     id,
-    conversationId,
     compact,
     target,
     name,
@@ -72,7 +68,6 @@ export function ComposerView({
     resumeDisabled,
     resuming,
     draftText,
-    hasAttachments,
     busy,
     disabled,
     onHistory,
@@ -145,11 +140,7 @@ export function ComposerView({
             align="block-start"
             className="flex-wrap justify-between gap-x-1 gap-y-1 px-2 pt-1.5 pb-0"
           >
-            <ComposerTools
-              conversationId={conversationId}
-              compact={compact}
-              onInsert={actions.onInsert}
-            />
+            <ComposerTools compact={compact} onInsert={actions.onInsert} />
             <span
               title={`回复给 ${target}`}
               className="ml-auto flex min-w-0 max-w-full items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-[10px] font-normal text-muted-foreground"
@@ -165,11 +156,6 @@ export function ComposerView({
             align="block-end"
             className="flex-col items-stretch gap-0 px-2 pt-0 pb-2"
           >
-            {hasAttachments && (
-              <div className="max-h-24 overflow-y-auto max-[760px]:max-h-16">
-                <AttachmentDrafts conversationId={conversationId} />
-              </div>
-            )}
             <div className="flex items-center justify-between gap-2">
               {onHistory ? (
                 <InputGroupButton

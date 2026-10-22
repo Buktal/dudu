@@ -107,7 +107,11 @@ describe("runs slice 初始态、装载与选择器", () => {
 
   it("初始态", () => {
     expect(initialRunsState.items).toEqual([]);
-    expect(initialRunsState.filters).toEqual({ query: "" });
+    expect(initialRunsState.filters).toEqual({
+      query: "",
+      source: "all",
+      outcome: "all",
+    });
     expect(initialRunsState.page).toBe(1);
     expect(initialRunsState.loaded).toBe(false);
     expect(initialRunsState.live).toBeNull();
@@ -178,8 +182,13 @@ describe("runs slice 面板与记录状态流转", () => {
     const store = makeStore();
     store.dispatch(setPage(3));
     expect(store.getState().runs.page).toBe(3);
-    store.dispatch(setFilters({ query: "抖音" }));
-    expect(store.getState().runs.filters).toEqual({ query: "抖音" });
+    // 来源/结果筛选同走 setFilters：部分合并 + 页码复位单点
+    store.dispatch(setFilters({ query: "抖音", source: "direct" }));
+    expect(store.getState().runs.filters).toEqual({
+      query: "抖音",
+      source: "direct",
+      outcome: "all",
+    });
     expect(store.getState().runs.page).toBe(1);
   });
 

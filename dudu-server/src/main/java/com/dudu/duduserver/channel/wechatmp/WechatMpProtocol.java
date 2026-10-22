@@ -3,12 +3,10 @@ package com.dudu.duduserver.channel.wechatmp;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.SecureXml;
-import com.dudu.duduserver.channel.support.Texts;
+import com.dudu.duduserver.channel.support.WechatInboundMessages;
 import com.dudu.duduserver.channel.support.WechatSignatures;
 import com.dudu.duduserver.channel.support.WechatXmlBodies;
-import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,7 +27,6 @@ public class WechatMpProtocol {
     private static final String MSG_TYPE_SHORT_VIDEO = "shortvideo";
     private static final String MSG_TYPE_LOCATION = "location";
     private static final String MSG_TYPE_LINK = "link";
-    private static final String MSG_TYPE_EVENT = "event";
 
     /**
      * 验签：token/timestamp/nonce 字典序排序后直接拼接取 sha1 十六进制小写，与渠道签名比对。
@@ -46,25 +43,8 @@ public class WechatMpProtocol {
      * 报文无法解析时抛出 {@link IllegalArgumentException}，由调用方按参数错误拒绝。
      */
     public Optional<ChannelInboundMessage> parse(Long companyChannelId, String body) {
-        Map<String, String> fields = SecureXml.flatFields(body);
-        String msgType = fields.getOrDefault("MsgType", "");
-        if (MSG_TYPE_EVENT.equals(msgType)) {
-            return Optional.empty();
-        }
-        String externalUserId = fields.getOrDefault("FromUserName", "");
-        if (externalUserId.isEmpty()) {
-            throw new IllegalArgumentException("渠道报文缺少发送方身份");
-        }
-        ChannelInboundMessage inbound = new ChannelInboundMessage(
-            companyChannelId,
-            externalUserId,
-            null,
-            null,
-            List.of(),
-            Texts.blankToNull(fields.get("MsgId")),
-            MessageDirectionEnum.INCOMING,
-            content(msgType, fields));
-        return Optional.of(inbound);
+        // 明文模式直接按 XML 取根元素一级子元素，骨架共用事件判定与统一消息组装
+        return WechatInboundMessages.parse(companyChannelId, SecureXml.flatFields(body), this::content);
     }
 
     // 按 MsgType 映射统一消息体；渠道不提供的可选信息省略，无法映射的按 unknown 如实保存

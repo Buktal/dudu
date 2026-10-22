@@ -21,7 +21,7 @@ import { appReducer } from "@/stores/app-slice";
 import { expectNeedConnection } from "@/test/thunk-outcomes";
 import * as api from "../api";
 import { runProgress, selectLiveRun } from "./live";
-import { runsReducer, selectRuns, selectScenarioRunPhase } from "./runs-slice";
+import { runsReducer, selectRuns } from "./runs-slice";
 import { startScenarioRun } from "./scenario-run";
 
 vi.mock("../api", () => ({
@@ -143,7 +143,7 @@ const progressStep = {
 
 type ScenarioStore = ReturnType<typeof makeScenarioStore>;
 const phaseOf = (store: ScenarioStore) =>
-  selectScenarioRunPhase(store.getState().runs);
+  store.getState().runs.scenarioRunPhase;
 const liveOf = (store: ScenarioStore) => selectLiveRun(store.getState().runs);
 
 describe("runs 剧本运行状态流转（scenario-run）", () => {
@@ -247,7 +247,7 @@ describe("runs 剧本运行状态流转（scenario-run）", () => {
 
     await empty.dispatch(startScenarioRun());
     expect(apiMock.startScenarioRun).not.toHaveBeenCalled();
-    expect(selectScenarioRunPhase(empty.getState().runs)).toBe("idle");
+    expect(phaseOf(empty)).toBe("idle");
   });
 
   it("runProgress 投影：waiting→success/failed/skipped 逐事件驱动实况", async () => {

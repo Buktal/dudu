@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
 import type { InboxApi } from "../api";
-import type { Conversation, InboxMessage, SendSubmission } from "../types";
-import { addAttachments } from "./attachments";
+import type { InboxMessage, SendSubmission } from "../types";
 import { loadConversations } from "./queue";
 import { loadHistory } from "./reading";
 import { selectMessages } from "./selectors";
@@ -10,7 +9,6 @@ import { editDraft, sendReply } from "./sending";
 import {
   acceptedMessage,
   deferred,
-  firstConversation,
   incomingMessage,
   testStore,
 } from "./test-support";
@@ -156,93 +154,6 @@ describe("receipt correlation across response ordering", () => {
     );
     expect(store.getState().inbox.replyId).toBe("conversation-a");
     expect(store.getState().inbox.notice).toBeNull();
-  });
-
-  it("keeps a newer send locked and preserves its later draft when an older server confirmation settles shared attachments", async () => {
-    let input!: Subscription;
-    const submissions: SendSubmission[] = [];
-    const pending = deferred<InboxMessage>();
-    const conversation: Conversation = {
-      ...firstConversation,
-      capability: {
-        state: "allowed",
-        kinds: ["text", "file"],
-      },
-    };
-    const store = testStore({
-      subscribe: (subscription) => {
-        input = subscription;
-        input.onConnection("connected");
-        return () => {};
-      },
-      listConversations: async () => ({
-        items: [conversation],
-        nextCursor: null,
-      }),
-      prepareAttachment: async ({ file }) => ({
-        id: `prepared:${file.name}`,
-        kind: "file",
-        name: file.name,
-        mimeType: file.type,
-        size: file.size,
-      }),
-      send: async (request) => {
-        submissions.push(request);
-        if (submissions.length === 1)
-          throw new TypeError("first response lost");
-        return pending.promise;
-      },
-    });
-    await store.dispatch(loadConversations());
-    store.dispatch(editDraft("conversation-a", "第一条回复"));
-    await store.dispatch(
-      addAttachments("conversation-a", [
-        new File(["old"], "old.txt", { type: "text/plain" }),
-      ]),
-    );
-    await store.dispatch(sendReply("conversation-a"));
-    store.dispatch(editDraft("conversation-a", "第二条回复"));
-    const sending = store.dispatch(sendReply("conversation-a"));
-    const activeMessageId = `client:${submissions[1].clientRequestId}`;
-    store.dispatch(editDraft("conversation-a", "第二条发送期间的新稿"));
-    await store.dispatch(
-      addAttachments("conversation-a", [
-        new File(["new"], "new.txt", { type: "text/plain" }),
-      ]),
-    );
-    const newestAttachmentId =
-      store.getState().inbox.drafts["conversation-a"].attachmentIds[1];
-    input.onEvent({
-      type: "message",
-      context: input.context,
-      message: {
-        ...acceptedMessage(submissions[0]),
-        version: 3,
-        sequence: 3,
-        delivery: { state: "sent" },
-      },
-    });
-    expect(store.getState().inbox.sendingByConversation["conversation-a"]).toBe(
-      activeMessageId,
-    );
-    expect(store.getState().inbox.submissions[activeMessageId].status).toBe(
-      "sending",
-    );
-    expect(store.getState().inbox.drafts["conversation-a"]).toMatchObject({
-      text: "第二条发送期间的新稿",
-      attachmentIds: [newestAttachmentId],
-    });
-    await store.dispatch(sendReply("conversation-a"));
-    expect(submissions).toHaveLength(2);
-    pending.resolve({ ...acceptedMessage(submissions[1]), sequence: 3 });
-    await sending;
-    expect(
-      store.getState().inbox.sendingByConversation["conversation-a"],
-    ).toBeUndefined();
-    expect(store.getState().inbox.drafts["conversation-a"]).toMatchObject({
-      text: "第二条发送期间的新稿",
-      attachmentIds: [newestAttachmentId],
-    });
   });
 });
 

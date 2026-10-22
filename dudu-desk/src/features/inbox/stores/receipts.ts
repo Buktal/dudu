@@ -12,10 +12,9 @@ import type { InboxMessage } from "../types";
  * reconciliation all write through, so a change to evidence semantics lands
  * in every universe at once.
  *
- * The container also carries the surrounding event-domain slots (read-through
- * progress, latest incoming sequence): one shape for the whole events slice,
- * owned here because its receipts field is the one this module's policy
- * maintains.
+ * The container also carries the surrounding event-domain slot (latest
+ * incoming sequence): one shape for the whole events slice, owned here because
+ * its receipts field is the one this module's policy maintains.
  */
 
 type ReceiptEvidence = {
@@ -25,14 +24,12 @@ type ReceiptEvidence = {
 
 export type InboxEventState = {
   receipts: Record<string, Record<string, ReceiptEvidence>>;
-  readThrough: Record<string, number>;
   incomingSequence: Record<string, number>;
 };
 
 export function initialInboxEventState(): InboxEventState {
   return {
     receipts: {},
-    readThrough: {},
     incomingSequence: {},
   };
 }

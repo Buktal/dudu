@@ -2,7 +2,7 @@ import { matchesConversationFilters } from "../conversation-query";
 import type { Conversation, InboxMessage, VisitorProfile } from "../types";
 import { mediaMessageId } from "./media-reducers";
 import { receiptKeys, rememberReceipt } from "./receipts";
-import { type InboxState, onScreenId } from "./state";
+import { displaysConversation, type InboxState } from "./state";
 
 /**
  * Live events merge kernel: the single place that knows how an incoming
@@ -32,7 +32,7 @@ export function holdsMessages(
 ): boolean {
   return (
     state.histories[conversationId]?.hasLoaded === true ||
-    onScreenId(state, conversationId)
+    displaysConversation(state, conversationId)
   );
 }
 
@@ -179,7 +179,7 @@ export function orderMessages(state: InboxState, ids: string[]): string[] {
  * the notice itself stay with the caller.
  */
 export function detachConversation(state: InboxState, id: string): boolean {
-  const selected = onScreenId(state, id);
+  const selected = displaysConversation(state, id);
   if (state.activeId === id) state.activeId = null;
   if (state.replyId === id) state.replyId = null;
   if (state.quickHistoryId === id) state.quickHistoryId = null;
@@ -205,13 +205,5 @@ export function detachConversation(state: InboxState, id: string): boolean {
   }
   for (const key of Object.keys(state.media))
     if (removedMessageIds.has(mediaMessageId(key))) delete state.media[key];
-  for (const attachment of Object.values(state.attachments))
-    if (attachment.conversationId === id)
-      delete state.attachments[attachment.id];
-  const draft = state.drafts[id];
-  if (draft?.attachmentIds.length) {
-    draft.attachmentIds = [];
-    draft.revision++;
-  }
   return selected;
 }

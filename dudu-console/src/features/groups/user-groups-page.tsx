@@ -3,10 +3,11 @@ import { useState } from "react";
 import { useConsoleQuery } from "@/api/console-query";
 import { useConsole, useSession } from "@/api/context";
 import { useEntityGuard } from "@/api/entity-guard";
-import { usePagedQuery } from "@/api/paged-query";
-import { ErrorState, LoadingState, Message } from "@/components/feedback";
+import { DetailPane } from "@/components/detail-pane";
+import { Message } from "@/components/feedback";
 import { FilterBar } from "@/components/filter-bar";
 import { TextField } from "@/components/form-field";
+import { PAGE_SIZE } from "@/components/page-parts";
 import { QueryView } from "@/components/query-view";
 import {
   SubmitButton,
@@ -36,10 +37,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useGroups } from "./group-data";
 import { GroupAccounts, GroupMembers } from "./group-relations";
 import { type Group, groupsApi } from "./groups-api";
 
-const firstPage = { page: 1, pageSize: 20 };
 export function UserGroupsPage({
   selectedId,
   creating,
@@ -51,10 +52,7 @@ export function UserGroupsPage({
   onSelect: (id: string | null) => void;
   onCreate: (value: boolean) => void;
 }) {
-  const query = usePagedQuery(
-    groupsApi.query,
-    firstPage as { page: number; pageSize: number; keyword?: string },
-  );
+  const query = useGroups({ page: 1, pageSize: PAGE_SIZE });
   const { profile } = useSession();
   return (
     <div className="flex flex-col gap-6">
@@ -76,8 +74,8 @@ export function UserGroupsPage({
             label="用户组筛选"
             searchLabel="搜索组名"
             placeholder="搜索组名"
-            value={query.filters.keyword}
-            onSearch={(keyword) => query.setFilter({ keyword })}
+            value={query.keyword}
+            onSearch={query.setKeyword}
             onReset={query.reset}
           />
         }
@@ -214,12 +212,12 @@ function GroupDetail({
           <SheetDescription>组 ID {groupId}</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-5 px-6 pb-6">
-          {query.loading ? (
-            <LoadingState />
-          ) : query.error ? (
-            <ErrorState message={query.error} retry={query.refresh} />
-          ) : (
-            query.data && (
+          <DetailPane
+            loading={query.loading}
+            error={query.error}
+            refresh={query.refresh}
+          >
+            {query.data && (
               <>
                 <RenameGroup
                   key={`${groupId}:${query.data.groupName}`}
@@ -265,8 +263,8 @@ function GroupDetail({
                   </Tabs.Panel>
                 </Tabs.Root>
               </>
-            )
-          )}
+            )}
+          </DetailPane>
         </div>
       </SheetContent>
     </Sheet>

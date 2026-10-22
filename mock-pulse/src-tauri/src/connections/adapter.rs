@@ -35,9 +35,10 @@ pub(crate) trait ChannelAdapter: Send + Sync {
     fn label(&self) -> &'static str;
     /// 配置判别：该连接配置是否属于本渠道
     fn matches(&self, config: &ConnectionConfig) -> bool;
-    /// 发送目标地址快照：config 必属本渠道（注册表按 matches() 路由保证），
-    /// 恒 Some；错配即编程错误（经 [`narrow!`] 以 unreachable! 终止）。
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str>;
+    /// 发送目标地址快照：config 必属本渠道（注册表按 matches() 路由保证）；
+    /// 错配即编程错误（经 [`narrow!`] 以 unreachable! 终止）。连接缺失在
+    /// 调用方（executor/sends）先判并落「缺连接」文案，不走本方法。
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str;
     /// 连接测试客户端：默认本地 5s 上限（16/19 渠道，各自官方窗口口径见各渠道
     /// 实现注释）；官方窗口更紧的渠道覆写——企业微信 1s（echostr 须 1 秒内
     /// 响应）、飞书 1s（challenge 现行口径 1 秒内应答）、钉钉 1500ms（事件应答

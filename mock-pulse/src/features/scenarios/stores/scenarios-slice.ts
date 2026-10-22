@@ -14,6 +14,7 @@ import {
   schemaById,
 } from "@/features/events";
 import type { ChannelId } from "@/lib/channels";
+import { draftSnapshot, draftUnchangedSince } from "@/lib/draft-snapshot";
 
 import {
   deleteScenarioById as deleteScenarioApi,
@@ -70,7 +71,7 @@ function referencedVersionOf(
   const event = events.find((item) => item.id === eventId);
   // 编辑时钟（同步门）问 interpreter（events 域唯一分岔点）：无行即 id 缺失，
   // 拒绝同步（文案一字不动）。后半为类型收窄，语义以解释为准（两者一致）。
-  if (interpretPresence(event !== undefined, "edit").blocks || !event) {
+  if (interpretPresence(event, "edit").blocks || !event) {
     throw new Error(`事件不存在：${eventId}。`);
   }
   // 取尖单点在 events 域 latestVersionOf（与 interpreter/model 同源）
@@ -202,7 +203,7 @@ export const saveScenarioAs = createAsyncThunk(
     return {
       items: await saveScenarioApi(copy),
       copy,
-      source: JSON.stringify(scenarios.draft),
+      source: draftSnapshot(scenarios.draft),
     };
   },
 );
@@ -380,7 +381,7 @@ const scenariosSlice = createSlice({
       })
       .addCase(saveScenarioAs.fulfilled, (state, action) => {
         state.items = action.payload.items;
-        if (JSON.stringify(state.draft) !== action.payload.source) return;
+        if (!draftUnchangedSince(state.draft, action.payload.source)) return;
         state.draft = action.payload.copy;
         state.selectedId = action.payload.copy.id;
       })

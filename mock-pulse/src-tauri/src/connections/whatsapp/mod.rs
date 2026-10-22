@@ -25,12 +25,12 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::hmac_sha256_hex;
+use crate::connections::util::{hmac_sha256_hex, random_digits};
 
 use super::adapter::narrow;
 use super::{
-    no_reply, request_error_reason, send_measured_outcome, ConnectionConfig, DispatchOutcome,
-    DispatchSnapshot, HandshakeOutcome,
+    handshake_read_error, no_reply, request_error_reason, send_measured_outcome, ConnectionConfig,
+    DispatchOutcome, DispatchSnapshot, HandshakeOutcome,
 };
 
 /// 失败重试口径（§3.3 逐字）：非 200 或不可达即失败，Meta 以递减频率重试
@@ -125,7 +125,16 @@ fn verify_handshake(
         };
     }
 
-    let body = response.bytes().unwrap_or_default();
+    // 响应体读取失败显式归因（不折进空串误判「challenge 不一致」）
+    let body = match response.bytes() {
+        Ok(body) => body,
+        Err(err) => {
+            return HandshakeOutcome {
+                ok: false,
+                message: handshake_read_error(&err),
+            };
+        }
+    };
     if body.as_ref() == challenge.as_bytes() {
         HandshakeOutcome {
             ok: true,
@@ -182,15 +191,10 @@ fn dispatch_event(
 }
 
 /// 握手 hub.challenge：Meta 生成的随机 int/字符串（§3.2），本侧生成同形态的
-/// 16 位数字串（echo-bot 示例 challenge 为随机值、无内容约束）——rand
-/// Uniform 均匀采样（原 uuid 字节 `% 10` 有模偏差，同 Alphanumeric 退件口径）。
+/// 16 位数字串（echo-bot 示例 challenge 为随机值、无内容约束）；逐位均匀
+/// 采样原语单点在 util::random_digits。
 fn random_challenge() -> String {
-    use rand::distributions::{Distribution, Uniform};
-    let mut rng = rand::thread_rng();
-    let digit = Uniform::new(0u8, 10);
-    (0..16)
-        .map(|_| char::from(b'0' + digit.sample(&mut rng)))
-        .collect()
+    random_digits(16)
 }
 
 /// WhatsApp 渠道适配器：[`super::ChannelAdapter`] 的 WhatsApp 实现——GET 三参
@@ -212,8 +216,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Whatsapp { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Whatsapp { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Whatsapp { url } => url.as_str())
     }
 
     fn verify_handshake(

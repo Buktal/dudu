@@ -19,12 +19,7 @@ import { expectNeedConnection } from "@/test/thunk-outcomes";
 import * as api from "../api";
 import type { RunStep } from "../model";
 import { directDispatch } from "./direct-dispatch";
-import {
-  runsReducer,
-  selectLastDispatch,
-  selectPanelPhase,
-  selectRuns,
-} from "./runs-slice";
+import { runsReducer, selectPanelPhase, selectRuns } from "./runs-slice";
 
 vi.mock("../api", () => ({
   loadRuns: vi.fn(),
@@ -141,7 +136,7 @@ describe("runs 直发状态流转（direct-dispatch）", () => {
     // 状态：运行记录入列 + 面板 done + 结果快照
     expect(selectRuns(store.getState().runs)).toEqual([saved]);
     expect(selectPanelPhase(store.getState().runs)).toBe("done");
-    const result = selectLastDispatch(store.getState().runs);
+    const result = store.getState().runs.result;
     expect(result?.eventId).toBe(draftId);
     expect(result?.step.receipt.elapsedMs).toBe(12);
   });
@@ -196,7 +191,7 @@ describe("runs 直发状态流转（direct-dispatch）", () => {
     await store.dispatch(directDispatch());
 
     expect(selectPanelPhase(store.getState().runs)).toBe("error");
-    expect(selectLastDispatch(store.getState().runs)).toBeNull();
+    expect(store.getState().runs.result).toBeNull();
     expect(apiMock.saveRun).not.toHaveBeenCalled();
   });
 

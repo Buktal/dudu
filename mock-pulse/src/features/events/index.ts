@@ -27,13 +27,12 @@ export {
   interpretPresence,
   interpretTemplateStep,
   latestVersionOf,
-  resolveEventVersion,
   resolveRow,
-  resolveTemplateVersion,
 } from "./reference";
 export {
   EVENT_SCHEMAS,
   type EventSchema,
+  hasSchema,
   schemaById,
   schemasByChannel,
   type WireForm,
@@ -67,3 +66,4 @@ export {
   startDraft,
   toggleSenderSync,
 } from "./stores/events-slice";
+export { useEventDraftGuard } from "./use-event-draft-guard";

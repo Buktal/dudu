@@ -55,7 +55,7 @@ export type RunsState = {
 
 export const initialRunsState: RunsState = {
   items: [],
-  filters: { query: "" },
+  filters: { query: "", source: "all", outcome: "all" },
   page: 1,
   loaded: false,
   phase: "idle",
@@ -235,12 +235,4 @@ export function selectRuns(state: RunsState): RunRecord[] {
 
 export function selectPanelPhase(state: RunsState): DispatchPanelPhase {
   return state.phase;
-}
-
-export function selectLastDispatch(state: RunsState): DispatchResult | null {
-  return state.result;
-}
-
-export function selectScenarioRunPhase(state: RunsState): ScenarioRunPhase {
-  return state.scenarioRunPhase;
 }

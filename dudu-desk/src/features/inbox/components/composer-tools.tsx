@@ -7,7 +7,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { AttachmentPicker } from "./attachment-picker";
 
 const quickReplies = [
   { label: "先回应一下", text: "您好，请问有什么可以帮您？" },
@@ -17,11 +16,9 @@ const quickReplies = [
 const emoji = ["😊", "👍", "🙏", "❤️", "✨", "🌷", "👌", "🎉"];
 
 export function ComposerTools({
-  conversationId,
   compact,
   onInsert,
 }: {
-  conversationId: string;
   compact: boolean;
   onInsert: (text: string) => void;
 }) {
@@ -70,7 +67,6 @@ export function ComposerTools({
           </div>
         </PopoverContent>
       </Popover>
-      <AttachmentPicker conversationId={conversationId} />
       <Popover
         open={open === "quick"}
         onOpenChange={(value) => setOpen(value ? "quick" : null)}

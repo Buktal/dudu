@@ -8,6 +8,7 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import { ConsoleClient } from "@/api/client";
 import { ConsoleContext } from "@/api/context";
+import { failure, installHttp, profile, success } from "@/test/http";
 import { AccountDetailPanel } from "./AccountDetailPanel";
 
 const account = {
@@ -33,27 +34,15 @@ afterEach(() => {
   sessionStorage.clear();
 });
 it("换组先确认历史可见性，候选只包含可管理目标组，提交独立 group 请求", async () => {
-  const fetcher = vi.fn(async (url: RequestInfo | URL, _init?: RequestInit) => {
-    const data = String(url).endsWith("/login")
-      ? {
-          token: "console-token",
-          expiresAt: Math.floor(Date.now() / 1000) + 3600,
-          profile: {
-            company: { companyId: "100001", companyName: "企业" },
-            user: {
-              userId: "9",
-              username: "manager",
-              name: "管理员",
-              role: "console",
-              isInitialAdmin: false,
-            },
-            managedGroupIds: ["2", "3"],
-          },
-        }
-      : account;
-    return new Response(JSON.stringify({ code: 0, msg: "", data }));
+  // 受限身份：按组管理的企业管理员，仅管理 2、3 两组
+  const fetcher = installHttp(() => success(account), {
+    token: "console-token",
+    profile: {
+      ...profile,
+      user: { ...profile.user, isInitialAdmin: false },
+      managedGroupIds: ["2", "3"],
+    },
   });
-  vi.stubGlobal("fetch", fetcher);
   const client = new ConsoleClient();
   await client.login("100001", "manager", "password");
   const changed = vi.fn();
@@ -100,15 +89,7 @@ it("换组先确认历史可见性，候选只包含可管理目标组，提交�
   expect(JSON.parse(String(request?.[1]?.body))).toEqual({ groupId: "3" });
 });
 it("不可见账号关闭失效详情", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(
-      async () =>
-        new Response(
-          JSON.stringify({ code: 12100, msg: "账号不可见", data: null }),
-        ),
-    ),
-  );
+  installHttp(() => failure(12100, "账号不可见"));
   const closed = vi.fn();
   render(
     <ConsoleContext value={new ConsoleClient()}>
@@ -126,40 +107,11 @@ it("不可见账号关闭失效详情", async () => {
 
 it("保存时账号不可见会卸载凭据编辑器并重新读取详情", async () => {
   let invalidated = false;
-  const fetcher = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
-    // 写命令携带登录态：未登录的裸 client 不会触发 12100 的权限失效重查
-    if (String(url).endsWith("/login"))
-      return new Response(
-        JSON.stringify({
-          code: 0,
-          msg: "",
-          data: {
-            token: "token",
-            expiresAt: Math.floor(Date.now() / 1000) + 3600,
-            profile: {
-              company: { companyId: "100001", companyName: "企业" },
-              user: {
-                userId: "9",
-                username: "manager",
-                name: "管理员",
-                role: "console",
-                isInitialAdmin: true,
-              },
-              managedGroupIds: ["2"],
-            },
-          },
-        }),
-      );
+  // 写命令携带登录态：未登录的裸 client 不会触发 12100 的权限失效重查
+  const fetcher = installHttp((_url, init) => {
     if (init?.method === "PUT") invalidated = true;
-    return new Response(
-      JSON.stringify(
-        invalidated
-          ? { code: 12100, msg: "账号不可见", data: null }
-          : { code: 0, msg: "", data: account },
-      ),
-    );
+    return invalidated ? failure(12100, "账号不可见") : success(account);
   });
-  vi.stubGlobal("fetch", fetcher);
   const client = new ConsoleClient();
   await client.login("100001", "manager", "password");
   const closed = vi.fn();

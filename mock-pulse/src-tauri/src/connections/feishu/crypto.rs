@@ -34,10 +34,11 @@ pub fn derive_aes_key(encrypt_key: &str) -> Result<[u8; 32], String> {
     Ok(Sha256::digest(encrypt_key.as_bytes()).into())
 }
 
-/// 加密事件信封：随机 16B IV + PKCS#7-16 填充 → AES-256-CBC → Base64
-/// （即 `{"encrypt":"<值>"}` 的字段值，官方 Python 示例同构）。
+/// 加密事件信封：随机 16B IV（原语单点在 util::random_bytes_16）+
+/// PKCS#7-16 填充 → AES-256-CBC → Base64（即 `{"encrypt":"<值>"}` 的字段值，
+/// 官方 Python 示例同构）。
 pub fn encrypt_event(encrypt_key: &str, plaintext: &[u8]) -> Result<String, String> {
-    let iv = random_iv();
+    let iv = crate::connections::util::random_bytes_16();
     encrypt_event_with_iv(encrypt_key, &iv, plaintext)
 }
 
@@ -81,11 +82,6 @@ pub fn decrypt_event(encrypt_key: &str, encrypt: &str) -> Result<Vec<u8>, String
     decryptor
         .decrypt_padded_vec_mut::<Pkcs7>(ciphertext)
         .map_err(|_| "AES 解密失败：密文长度非 16 字节块整数倍或 PKCS#7 补位非法".to_string())
-}
-
-/// 随机 16B IV：uuid v4 字节（依赖内已有的随机源，不额外引随机库）。
-fn random_iv() -> [u8; 16] {
-    *uuid::Uuid::new_v4().as_bytes()
 }
 
 #[cfg(test)]

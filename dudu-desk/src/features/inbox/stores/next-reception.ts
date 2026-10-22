@@ -51,7 +51,7 @@ export function receiveNext(
               .filter((candidate) => candidate !== undefined),
           };
         },
-        duplicateMessage: "The next-visitor cursor did not advance",
+        duplicateMessage: "下一位访客的翻页游标未前进",
         isCurrent: canAdvance,
         shouldStop: (all) => {
           const latest = all[all.length - 1];

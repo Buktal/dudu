@@ -9,7 +9,7 @@ import { DeskApiError } from "@/lib/api-response";
  * drifting across three call sites. Callers pass their own message so the
  * user-facing copy keeps its context.
  */
-export function advancePageCursor(
+function advancePageCursor(
   cursor: string | null,
   seen: Set<string>,
   message: string,

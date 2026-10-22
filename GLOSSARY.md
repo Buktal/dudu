@@ -177,6 +177,10 @@ _Avoid_: 手写 useAdmin + useCallback 绑定仪式（旧实现）
 DuduAdmin 三个列表页（企业、企业资源汇总、操作记录）共用的加载→失败→空态→表格→分页编排单点：「失败不冒充空数据」由分支顺序（error 先于空态判定）单点保证；页面把分页查询返回整只直传单个 query 投影 prop（结构化类型在骨架就地声明，不 import api/）；表格列与行走 children 槽，空态动作按钮与两套空态文案（筛选中 / 全量）归页面，空态文案取向由投影的 filtered 键机制供给。
 _Avoid_: 三步舞手写编排（loading/error/数据分支逐页复制）、失败态渲染空态文案、逐页把查询返回值逐键转写成骨架 props 并手写 filtered 布尔（旧八 prop interface）
 
+**详情页骨架（DetailPane）**:
+DuduAdmin 与 DuduConsole 详情路径（详情弹层与概览卡片）共用的加载→失败→内容三态编排单点（components 层 detail-pane，受控拷贝同步 ADR-0016）：「失败不冒充空数据」由分支顺序（error 先于内容）在外壳唯一保证；调用方只传 loading / error / refresh 三键与 children 内容槽，数据到位后的版式归调用方，外壳不含布局与卡片样式。
+_Avoid_: 三步舞手写编排（loading/error/数据分支逐页复制）、失败态渲染内容槽
+
 **筛选栏（FilterBar）**:
 DuduAdmin 列表页共用的「草稿-提交-重置」编排单点（components 层 filter-bar）：输入只改草稿、点搜索才上报（去空格，空串归 undefined）、草稿跟随已应用值、重置立即清草稿（含校验错误）并上报 onReset、重置按钮仅在草稿或已应用条件存在时可见，这些不变量在 filter-bar 唯一实现与测试；搜索字段差异（标签、占位、校验）走 props，立即生效的下拉走 children 槽，企业筛选（CompanyFilters）与操作记录筛选收缩为它的薄组合。
 _Avoid_: 逐页手写 form 草稿编排、remount key 换重置清空（旧形态）

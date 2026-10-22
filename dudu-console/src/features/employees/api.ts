@@ -1,6 +1,12 @@
 import type { ConsoleClient } from "@/api/client";
 import type { Page } from "@/api/types";
 import { isRecord, pageOf, validId } from "@/api/validators";
+// 员工字段长度契约（data-contract：username2–64，name1–100）：
+// 登录名创建后不改，显示名称可改、允许重名
+export const USERNAME_MIN_LENGTH = 2;
+export const USERNAME_MAX_LENGTH = 64;
+export const NAME_MAX_LENGTH = 100;
+
 export interface Employee {
   userId: string;
   username: string;

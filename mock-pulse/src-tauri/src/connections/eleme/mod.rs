@@ -34,7 +34,9 @@ mod tests;
 
 use percent_encoding::utf8_percent_encode;
 
-use crate::connections::util::{append_absent, form_pairs, now_secs, sha1_hex, strip_sig, SIG_ENCODE_SET};
+use crate::connections::util::{
+    append_absent, borrowed_pairs, form_pairs, now_secs, sha1_hex, strip_sig, SIG_ENCODE_SET,
+};
 
 use super::adapter::narrow;
 use super::{
@@ -158,9 +160,7 @@ fn post_signed(
         form_pairs(&body)
     };
     let params = sign_params(consumer_key, &timestamp, &payload);
-    let borrowed: Vec<(&str, &str)> =
-        params.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
-    let signature = ele_sign(url, &borrowed, secret);
+    let signature = ele_sign(url, &borrowed_pairs(&params), secret);
     send_measured_outcome(
         client
         .post(url)
@@ -245,8 +245,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Eleme { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Eleme { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Eleme { url } => url.as_str())
     }
 
     fn verify_handshake(

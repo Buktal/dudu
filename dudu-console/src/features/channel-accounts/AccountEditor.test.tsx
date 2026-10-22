@@ -8,6 +8,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConsoleClient } from "@/api/client";
 import { ConsoleContext } from "@/api/context";
+import { installHttp, success } from "@/test/http";
 import { AccountEditor } from "./AccountEditor";
 import type { AccountDetail, ChannelDefinition } from "./api";
 
@@ -87,11 +88,7 @@ function renderEditor(existing?: AccountDetail, catalog = [definition]) {
 }
 describe("渠道账号操作", () => {
   it("维护时秘密留空保持，固定应用身份不可改，显式清除只写清除指令", async () => {
-    const fetcher = vi.fn(
-      async (_url: RequestInfo | URL, _init?: RequestInit) =>
-        new Response(JSON.stringify({ code: 0, msg: "", data: detail })),
-    );
-    vi.stubGlobal("fetch", fetcher);
+    const fetcher = installHttp(() => success(detail));
     renderEditor(detail);
     expect(screen.getByLabelText("应用 ID · 发送所需")).toBeDisabled();
     expect(screen.getByLabelText("回调 token · 接收必需")).toHaveValue("");
@@ -104,11 +101,7 @@ describe("渠道账号操作", () => {
     });
   });
   it("创建只要求接收配置，发送可稍后补齐，成功清理秘密输入", async () => {
-    const fetcher = vi.fn(
-      async (_url: RequestInfo | URL, _init?: RequestInit) =>
-        new Response(JSON.stringify({ code: 0, msg: "", data: detail })),
-    );
-    vi.stubGlobal("fetch", fetcher);
+    const fetcher = installHttp(() => success(detail));
     const saved = renderEditor();
     fireEvent.click(screen.getByRole("combobox", { name: "渠道" }));
     fireEvent.pointerDown(
@@ -138,11 +131,7 @@ describe("渠道账号操作", () => {
 it("多行公钥保留 PEM 原文，不裁剪首尾换行", async () => {
   const pem =
     "\n-----BEGIN PUBLIC KEY-----\nPUBLIC\n-----END PUBLIC KEY-----\n";
-  const fetcher = vi.fn(
-    async (_url: RequestInfo | URL, _init?: RequestInit) =>
-      new Response(JSON.stringify({ code: 0, msg: "", data: detail })),
-  );
-  vi.stubGlobal("fetch", fetcher);
+  const fetcher = installHttp(() => success(detail));
   renderEditor(undefined, [
     {
       ...definition,
@@ -182,11 +171,7 @@ it("多行公钥保留 PEM 原文，不裁剪首尾换行", async () => {
 it("默认私钥输入保留粘贴的多行 PEM，提交不丢失换行", async () => {
   const pem =
     "-----BEGIN PRIVATE KEY-----\nPRIVATE\n-----END PRIVATE KEY-----\n";
-  const fetcher = vi.fn(
-    async (_url: RequestInfo | URL, _init?: RequestInit) =>
-      new Response(JSON.stringify({ code: 0, msg: "", data: detail })),
-  );
-  vi.stubGlobal("fetch", fetcher);
+  const fetcher = installHttp(() => success(detail));
   renderEditor(undefined, [
     {
       ...definition,

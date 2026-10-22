@@ -17,11 +17,19 @@ import {
 } from "@/components/ui/dialog";
 import { FieldGroup } from "@/components/ui/field";
 import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from "@/features/account/password-fields";
+import {
   createEmployee,
   type Employee,
+  NAME_MAX_LENGTH,
   resetPassword,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
   updateEmployee,
 } from "./api";
+
 export type EmployeeAction = "name" | "role" | "status" | "password";
 // 弹层标题按动作与目标状态取向：早返回替代嵌套三元，缺省动作（编辑态）取角色取向。
 function formLabel(employee: Employee, action?: EmployeeAction) {
@@ -59,17 +67,19 @@ export function EmployeeForm({
       () => {
         if (
           !employee &&
-          (username.trim().length < 2 || username.trim().length > 64)
+          (username.trim().length < USERNAME_MIN_LENGTH ||
+            username.trim().length > USERNAME_MAX_LENGTH)
         )
           return "登录名需为 2–64 字符";
         if (
           (!employee || action === "name") &&
-          (!name.trim() || name.trim().length > 100)
+          (!name.trim() || name.trim().length > NAME_MAX_LENGTH)
         )
           return "显示名称需为 1–100 字符";
         if (
           (!employee || action === "password") &&
-          (password.length < 8 || password.length > 72)
+          (password.length < PASSWORD_MIN_LENGTH ||
+            password.length > PASSWORD_MAX_LENGTH)
         )
           return "密码需为 8–72 字符";
         return null;
@@ -128,7 +138,7 @@ export function EmployeeForm({
                 label="登录名"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                maxLength={64}
+                maxLength={USERNAME_MAX_LENGTH}
                 required
                 disabled={shell.pending}
                 autoComplete="off"
@@ -139,7 +149,7 @@ export function EmployeeForm({
                 label="显示名称"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                maxLength={100}
+                maxLength={NAME_MAX_LENGTH}
                 required
                 disabled={shell.pending}
               />
@@ -151,8 +161,8 @@ export function EmployeeForm({
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  minLength={8}
-                  maxLength={72}
+                  minLength={PASSWORD_MIN_LENGTH}
+                  maxLength={PASSWORD_MAX_LENGTH}
                   required
                   disabled={shell.pending}
                   autoComplete="new-password"

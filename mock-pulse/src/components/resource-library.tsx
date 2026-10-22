@@ -100,13 +100,12 @@ export function ResourceLibrary({
   entries,
   selectedId,
   onSelect,
-  page,
-  pages,
-  filteredTotal,
-  onPage,
+  pagination,
   onClear,
   onContextMenu,
   error,
+  emptyTitle,
+  emptyDescription,
 }: {
   title: string;
   singular: string;
@@ -118,13 +117,20 @@ export function ResourceLibrary({
   entries: ResourceEntry[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  page: number;
-  pages: number;
-  filteredTotal: number;
-  onPage: (page: number) => void;
+  /** 分页页脚（当前页 / 总页数 / 筛选后条数 / 翻页回调）；不传即无页脚（简单列表） */
+  pagination?: {
+    page: number;
+    pages: number;
+    filteredTotal: number;
+    onPage: (page: number) => void;
+  };
   onClear?: () => void;
   onContextMenu?: (id: string) => void;
   error?: string;
+  /** 空库文案覆写（缺省用「还没有{singular}」通用款） */
+  emptyTitle?: string;
+  /** 空库说明覆写（缺省用「新建第一份{singular}…」通用款） */
+  emptyDescription?: string;
 }) {
   const [followOutput, setFollowOutput] = useState<FollowOutput>("auto");
   const [atTop, setAtTop] = useState<boolean>(false);
@@ -290,16 +296,13 @@ export function ResourceLibrary({
                 {total ? <SearchIcon /> : <FolderOpenIcon />}
               </EmptyMedia>
               <EmptyTitle>
-                {total
-                  ? "没有找到匹配项"
-                  : `还没有${singular === "运行" ? "运行记录" : singular}`}
+                {total ? "没有找到匹配项" : (emptyTitle ?? `还没有${singular}`)}
               </EmptyTitle>
               <EmptyDescription>
                 {total
                   ? "试试其他关键词，或清除筛选。"
-                  : singular === "运行"
-                    ? "完成一次发送后，请求和回执会保存在这里。"
-                    : `新建第一份${singular}，保存后就能反复使用。`}
+                  : (emptyDescription ??
+                    `新建第一份${singular}，保存后就能反复使用。`)}
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
@@ -316,36 +319,39 @@ export function ResourceLibrary({
           </Empty>
         )}
       </div>
-      <footer className="flex min-h-12 shrink-0 items-center justify-between gap-2 border-t px-4 py-2 text-xs text-muted-foreground">
-        <span>
-          {filteredTotal === total
-            ? `共 ${total} 项`
-            : `${filteredTotal} 项结果 · 共 ${total} 项`}
-        </span>
-        {pages > 1 ? (
-          <div className="flex items-center gap-1">
-            <IconButton
-              label="上一页"
-              disabled={page <= 1}
-              onClick={() => onPage(page - 1)}
-            >
-              <ChevronLeftIcon />
-            </IconButton>
-            <span className="font-mono tabular-nums">
-              {page} / {pages}
-            </span>
-            <IconButton
-              label="下一页"
-              disabled={page >= pages}
-              onClick={() => onPage(page + 1)}
-            >
-              <ChevronRightIcon />
-            </IconButton>
-          </div>
-        ) : (
-          <span>本机</span>
-        )}
-      </footer>
+      {/* 分页页脚整体可选：不传即无页脚（简单列表） */}
+      {pagination ? (
+        <footer className="flex min-h-12 shrink-0 items-center justify-between gap-2 border-t px-4 py-2 text-xs text-muted-foreground">
+          <span>
+            {pagination.filteredTotal === total
+              ? `共 ${total} 项`
+              : `${pagination.filteredTotal} 项结果 · 共 ${total} 项`}
+          </span>
+          {pagination.pages > 1 ? (
+            <div className="flex items-center gap-1">
+              <IconButton
+                label="上一页"
+                disabled={pagination.page <= 1}
+                onClick={() => pagination.onPage(pagination.page - 1)}
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <span className="font-mono tabular-nums">
+                {pagination.page} / {pagination.pages}
+              </span>
+              <IconButton
+                label="下一页"
+                disabled={pagination.page >= pagination.pages}
+                onClick={() => pagination.onPage(pagination.page + 1)}
+              >
+                <ChevronRightIcon />
+              </IconButton>
+            </div>
+          ) : (
+            <span>本机</span>
+          )}
+        </footer>
+      ) : null}
     </>
   );
 }

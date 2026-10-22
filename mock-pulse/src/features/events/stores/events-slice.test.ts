@@ -12,6 +12,7 @@ import {
   selectEvents,
   selectFieldDefinitions,
   selectFilters,
+  selectHiddenUnregistered,
   selectPage,
   selectSchemaUserDefinition,
 } from "../selectors";
@@ -517,5 +518,31 @@ describe("草稿 untouched 不误报未保存", () => {
     store.dispatch(startDraft({ name: "群聊收消息", schemaId: "dy-text" }));
     store.dispatch(duplicateCurrentDraft());
     expect(selectDraftDirty(store.getState().events)).toBe(true);
+  });
+
+  it("装载层过滤未注册 schemaId 的存量事件并计数，库内不再出现", async () => {
+    const store = makeStore();
+    apiMock.saveEvent.mockImplementation(async (event: EventItem) => [event]);
+    store.dispatch(startDraft({ name: "在册事件", schemaId: "dy-text" }));
+    await store.dispatch(saveEvent());
+    const registered = selectEvents(store.getState().events)[0];
+    // 模拟存量数据：另一条携带当前注册表不含的 schemaId（如降级安装的旧数据）
+    const unregistered: EventItem = {
+      ...registered,
+      id: "evt-future",
+      schemaId: "future-channel-text",
+    };
+
+    apiMock.loadEvents.mockResolvedValue([registered, unregistered]);
+    await store.dispatch(fetchEvents());
+
+    const items = selectEvents(store.getState().events);
+    expect(items).toHaveLength(1);
+    expect(items[0]?.schemaId).toBe("dy-text");
+    expect(selectHiddenUnregistered(store.getState().events)).toBe(1);
+    // 全部在册时计数归零
+    apiMock.loadEvents.mockResolvedValue([registered]);
+    await store.dispatch(fetchEvents());
+    expect(selectHiddenUnregistered(store.getState().events)).toBe(0);
   });
 });

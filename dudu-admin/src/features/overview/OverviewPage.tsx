@@ -1,5 +1,6 @@
 import { ArrowRight, Plus } from "lucide-react";
-import { EmptyState, ErrorState, LoadingState } from "@/components/feedback";
+import { DetailPane } from "@/components/detail-pane";
+import { EmptyState } from "@/components/feedback";
 import {
   formatDate,
   RefreshButton,
@@ -72,12 +73,8 @@ export function OverviewPage({
           </Button>
         </div>
       </section>
-      {loading ? (
-        <LoadingState />
-      ) : error ? (
-        <ErrorState message={error} retry={refresh} />
-      ) : (
-        stats && (
+      <DetailPane loading={loading} error={error} refresh={refresh}>
+        {stats && (
           <Card className="data-panel gap-0 pb-0">
             <CardHeader className="items-center pb-5">
               <CardTitle>最近开通企业</CardTitle>
@@ -139,8 +136,8 @@ export function OverviewPage({
               )}
             </CardContent>
           </Card>
-        )
-      )}
+        )}
+      </DetailPane>
     </div>
   );
 }

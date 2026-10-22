@@ -83,49 +83,6 @@ export function resolveRef<Row extends { readonly id: string }, Entry>(
   return { status: "ok", row, entry };
 }
 
-/**
- * 步骤引用解析核心（runs 运行时钟 / scenarios 展示时钟共用的下钻单点）：
- * {eventId, revision} → {事件, 版本}。输入取结构子集，
- * 素材库整行与校验侧的窄行都能进。缺失语义（运行时钟抛错拒绝启动 /
- * 展示时钟 missing·outdated 标记）由调用侧按统一词汇决定，本函数只做查找。
- * events 不反向依赖任何 feature。
- */
-export function resolveEventVersion<
-  E extends {
-    readonly id: string;
-    readonly versions: readonly { readonly revision: number }[];
-  },
->(
-  events: readonly E[],
-  ref: { readonly eventId: string; readonly revision: number },
-): { event: E | undefined; version: E["versions"][number] | undefined } {
-  const status = describeEventVersion(events, ref);
-  if (status.status === "ok") {
-    return { event: status.row, version: status.entry };
-  }
-  if (status.status === "version-missing") {
-    return { event: status.row, version: undefined };
-  }
-  return { event: undefined, version: undefined };
-}
-
-/**
- * 模板引用解析核心（与 resolveEventVersion 并列的模板下钻单点，ADR-0009）：
- * {templateId, templateVersion} → 模板。钉住语义的数据基础：注册表同一模板
- * 允许并存多个版本条目（升版 = 追加新条目，旧条目原样保留），按
- * id + version 精确匹配。缺失语义由调用侧按统一词汇决定，
- * 本函数只做查找。templates 不反向依赖任何 feature。
- */
-export function resolveTemplateVersion<
-  T extends { readonly id: string; readonly version: string },
->(
-  templates: readonly T[],
-  ref: { readonly templateId: string; readonly templateVersion: string },
-): { template: T | undefined } {
-  const status = describeTemplateVersion(templates, ref);
-  return { template: status.status === "ok" ? status.entry : undefined };
-}
-
 /** 事件步骤引用分类：统一词汇的事件具名（row = 事件，entry = 版本） */
 export type EventRefStatus<E = EventItem, V = EventVersion> = RefStatus<E, V>;
 

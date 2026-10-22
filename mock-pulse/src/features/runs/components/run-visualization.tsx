@@ -31,7 +31,8 @@ import type { LiveRun } from "../stores/live";
 export type TimelineStep = { name: string; status: string; detail?: string };
 export type TimelineLane = {
   name: string;
-  channel: ChannelId;
+  /** 渠道未知（快照缺省/live 未确认）时不渲染渠道标，不回退字面量 */
+  channel?: ChannelId;
   steps: TimelineStep[];
   timing?: string;
 };
@@ -76,7 +77,7 @@ export function recordLanes(run: RunRecord): TimelineLane[] {
   ];
   return groups.map((lane) => ({
     name: lane.name,
-    channel: lane.steps[0]?.channel ?? "douyin",
+    channel: lane.steps[0]?.channel,
     steps: lane.steps.map((step) => ({
       name: step.eventName,
       status: step.skipped
@@ -93,15 +94,13 @@ export function recordLanes(run: RunRecord): TimelineLane[] {
 
 /**
  * 实况 → 展示轨道（剧本/编排统一的 lane 适配出口）。渠道缺省回退
- * 已完成步骤的快照，再回退抖音（live 阶段渠道尚未经事件确认时兜底）。
+ * 已完成步骤的快照；仍缺省时渠道标不渲染（live 阶段渠道尚未经事件确认）。
  */
 export function liveLanes(run: LiveRun): TimelineLane[] {
   return run.lanes.map((lane) => ({
     name: lane.name,
     channel:
-      lane.channel ??
-      lane.steps.find((step) => step.step)?.step?.channel ??
-      "douyin",
+      lane.channel ?? lane.steps.find((step) => step.step)?.step?.channel,
     steps: lane.steps.map((step) => ({
       name: step.eventName,
       status: step.status,
@@ -236,7 +235,9 @@ export function RunLanes({
             <Card className="min-w-0" size="sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ChannelMark channel={lane.channel} small />
+                  {lane.channel ? (
+                    <ChannelMark channel={lane.channel} small />
+                  ) : null}
                   {lane.name}
                 </CardTitle>
                 <CardDescription>

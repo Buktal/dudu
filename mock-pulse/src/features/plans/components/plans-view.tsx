@@ -27,13 +27,15 @@ import { WorkspaceDialog } from "@/components/workspace-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { type PlanMode, planModeLabel } from "../model";
 import { filterPlans, paginatePlans } from "../selectors";
-import { deletePlan, savePlan } from "../stores/plan-library";
+import { deletePlan } from "../stores/plan-library";
 import * as actions from "../stores/plans-slice";
+import { usePlanDraftGuard } from "../use-plan-draft-guard";
 import { PlanEditor } from "./plan-editor";
 
 export function PlansView() {
   const dispatch = useAppDispatch();
   const state = useAppSelector((root) => root.plans);
+  const guard = usePlanDraftGuard();
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -59,10 +61,10 @@ export function PlansView() {
   };
   return (
     <DraftGuard
-      dirty={actions.selectPlanDirty(state)}
-      name={state.draft?.name ?? ""}
-      onSave={() => dispatch(savePlan()).unwrap()}
-      onDiscard={() => dispatch(actions.discardPlanDraft())}
+      dirty={guard.dirty}
+      name={guard.name}
+      onSave={guard.save}
+      onDiscard={guard.discard}
     >
       {(request) => (
         <ResourceWorkspace
@@ -102,10 +104,12 @@ export function PlansView() {
                   request(() => dispatch(actions.openPlan(id)));
               }}
               onContextMenu={setDeleting}
-              page={page.page}
-              pages={page.pages}
-              filteredTotal={page.total}
-              onPage={(value) => dispatch(actions.setPage(value))}
+              pagination={{
+                page: page.page,
+                pages: page.pages,
+                filteredTotal: page.total,
+                onPage: (value) => dispatch(actions.setPage(value)),
+              }}
               onClear={() =>
                 dispatch(actions.setFilters({ query: "", kind: "all" }))
               }

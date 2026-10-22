@@ -27,7 +27,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::{append_absent, md5_wrapped_sign, now_secs};
+use crate::connections::util::{append_absent, borrowed_pairs, md5_wrapped_sign, now_secs};
 
 use super::adapter::narrow;
 use super::{
@@ -116,9 +116,7 @@ fn post_json(
 ) -> DispatchOutcome {
     let timestamp = pdd_timestamp(now_secs());
     let params = sign_params(client_id, &timestamp, &payload_params(body));
-    let borrowed: Vec<(&str, &str)> =
-        params.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
-    let signature = pdd_sign(&borrowed, client_secret);
+    let signature = pdd_sign(&borrowed_pairs(&params), client_secret);
     send_measured_outcome(
         client
         .post(url)
@@ -196,8 +194,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Pinduoduo { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Pinduoduo { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Pinduoduo { url } => url.as_str())
     }
 
     fn verify_handshake(

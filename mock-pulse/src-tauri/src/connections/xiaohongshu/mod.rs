@@ -25,7 +25,7 @@ mod ark;
 #[cfg(test)]
 mod tests;
 
-use crate::connections::util::now_secs;
+use crate::connections::util::{now_secs, random_bytes_16};
 // 三参签名已进握手构造骨架（handshake_echo_get），本别名仅 tests 黄金对拍取用
 #[cfg(test)]
 use crate::connections::util::callback_signature as build_callback_signature;
@@ -102,7 +102,7 @@ fn build_crypto_push(
     encoding_aes_key: &str,
     app_id: &str,
 ) -> Result<CryptoPush, String> {
-    let encrypt = crypto::encrypt_msg(encoding_aes_key, &random16(), plaintext.as_bytes(), app_id)?;
+    let encrypt = crypto::encrypt_msg(encoding_aes_key, &random_bytes_16(), plaintext.as_bytes(), app_id)?;
     let timestamp = now_secs().to_string();
     let nonce = random_nonce();
     let signature = build_msg_signature(token, &timestamp, &nonce, &encrypt);
@@ -114,11 +114,6 @@ fn build_crypto_push(
     })
     .to_string();
     Ok(CryptoPush { body, signature, timestamp, nonce })
-}
-
-/// 随机 16B：uuid v4 字节（依赖内已有的随机源，不额外引随机库）。
-fn random16() -> [u8; 16] {
-    *uuid::Uuid::new_v4().as_bytes()
 }
 
 /// 小红书直发：小程序加密信封 / ark 数组明文按通道路由，明文由前端逐字节
@@ -189,8 +184,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Xiaohongshu { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Xiaohongshu { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Xiaohongshu { url } => url.as_str())
     }
 
     fn verify_handshake(

@@ -17,7 +17,7 @@ pub fn save_events(dir: &Path, events: &[StoredEvent]) -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{ExpectedReceipt, StoredVersion};
+    use super::super::{ExpectedReceipt, ReceiptBodyMode, StoredVersion};
     use super::*;
     use std::fs;
     use std::path::PathBuf;
@@ -51,7 +51,7 @@ mod tests {
                     expected: ExpectedReceipt {
                         status: 200,
                         body: String::new(),
-                        body_mode: "contains".into(),
+                        body_mode: ReceiptBodyMode::Contains,
                     },
                 },
                 StoredVersion {
@@ -66,7 +66,7 @@ mod tests {
                     expected: ExpectedReceipt {
                         status: 200,
                         body: String::new(),
-                        body_mode: "contains".into(),
+                        body_mode: ReceiptBodyMode::Contains,
                     },
                 },
             ],
@@ -86,6 +86,38 @@ mod tests {
     fn missing_file_yields_empty_list() {
         let dir = temp_dir("missing");
         assert!(load_events(&dir).unwrap().is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn legacy_version_without_body_mode_reads_as_contains() {
+        // bodyMode 在 #16 引入：旧版本文档缺省按 contains 读入
+        let dir = temp_dir("legacy-body-mode");
+        fs::write(
+            dir.join(FILE_NAME),
+            r#"[{"id":"evt-1","name":"旧事件","channelId":"douyin","schemaId":"dy-text",
+                 "versions":[{"revision":1,"savedAt":"2026-09-12T01:00:00.000Z",
+                 "payload":{},"expected":{"status":200,"body":""}}]}]"#,
+        )
+        .unwrap();
+        let loaded = load_events(&dir).unwrap();
+        assert_eq!(loaded[0].versions[0].expected.body_mode, ReceiptBodyMode::Contains);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn unknown_body_mode_is_rejected_at_load() {
+        // 枚举化后未知取值在装载（与保存的读改写）即被拒绝，不再静默落 String
+        let dir = temp_dir("unknown-body-mode");
+        fs::write(
+            dir.join(FILE_NAME),
+            r#"[{"id":"evt-1","name":"坏事件","channelId":"douyin","schemaId":"dy-text",
+                 "versions":[{"revision":1,"savedAt":"2026-09-12T01:00:00.000Z",
+                 "payload":{},"expected":{"status":200,"body":"","bodyMode":"regex"}}]}]"#,
+        )
+        .unwrap();
+        let failure = load_events(&dir).unwrap_err();
+        assert_eq!(failure.kind(), std::io::ErrorKind::InvalidData);
         fs::remove_dir_all(&dir).unwrap();
     }
 

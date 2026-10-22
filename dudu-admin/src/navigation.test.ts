@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseRoute, routes } from "@/navigation";
+import { href, parseRoute, routes } from "@/navigation";
 
 describe("routes -> parseRoute", () => {
   it("round-trips companyDetail", () => {
@@ -46,5 +46,14 @@ describe("routes -> parseRoute", () => {
 
   it("round-trips overview", () => {
     expect(parseRoute(`#/${routes.overview()}`).view).toBe("overview");
+  });
+});
+
+describe("href", () => {
+  it("prefixes the hash route with #/", () => {
+    expect(href(routes.account())).toBe("#/account");
+    expect(href(routes.companyDetail("123456"))).toBe(
+      "#/companies?companyId=123456",
+    );
   });
 });

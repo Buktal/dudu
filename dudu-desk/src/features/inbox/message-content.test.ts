@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   assetPurposeOf,
   describeMessageBody,
-  mediaKindOfMime,
   mediaLabel,
   messageSummary,
 } from "./message-content";
@@ -186,14 +185,6 @@ describe("describeMessageBody", () => {
 });
 
 describe("media kind seam", () => {
-  it("maps mime types to kinds, defaulting to file", () => {
-    expect(mediaKindOfMime("image/png")).toBe("image");
-    expect(mediaKindOfMime("audio/mpeg")).toBe("audio");
-    expect(mediaKindOfMime("video/mp4")).toBe("video");
-    expect(mediaKindOfMime("application/pdf")).toBe("file");
-    expect(mediaKindOfMime("")).toBe("file");
-  });
-
   it("labels every kind with the established copy", () => {
     expect(mediaLabel("image")).toBe("图片");
     expect(mediaLabel("audio")).toBe("音频");

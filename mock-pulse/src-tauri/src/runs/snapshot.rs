@@ -24,12 +24,23 @@ pub struct ScenarioStepSnapshot {
     pub body: String,
 }
 
+/// 剧本级失败策略（与编排 [`PlanFailure`] 同枚举语义，前端同为 "stop"/
+/// "continue" 小写字符串）：stop = 任一步失败即停本剧；continue = 记录后
+/// 继续其余步骤。None = 旧快照缺省，按 stop 执行；未知取值由反序列化即
+/// 拒绝（IPC 边界报错），不再需要启动前校验兜底。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ScenarioFailure {
+    Stop,
+    Continue,
+}
+
 /// 一次剧本运行的完整快照（纯数据，启动时固化，后续编辑不影响）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScenarioRunSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub failure: Option<String>,
+    pub failure: Option<ScenarioFailure>,
     pub run_id: String,
     pub scenario_id: String,
     pub scenario_name: String,
@@ -54,7 +65,8 @@ pub struct PlanRunSnapshot {
     pub scenarios: Vec<ScenarioRunSnapshot>,
 }
 
-/// 启动前校验：非空步骤 + 等待范围 + 失败策略取值（前端已校验，此处契约兜底）。
+/// 启动前校验：非空步骤 + 等待范围（前端已校验，此处契约兜底；
+/// 失败策略取值已由反序列化枚举在 IPC 边界即拒绝）。
 pub(crate) fn validate_snapshot(snapshot: &ScenarioRunSnapshot) -> Result<(), String> {
     if snapshot.steps.is_empty() {
         return Err("剧本还没有步骤。".into());
@@ -64,13 +76,6 @@ pub(crate) fn validate_snapshot(snapshot: &ScenarioRunSnapshot) -> Result<(), St
             .is_some_and(|wait| !wait.is_finite() || !(0.0..=60.0).contains(&wait))
     }) {
         return Err("发送前等待须为 0 到 60 秒。".into());
-    }
-    if snapshot
-        .failure
-        .as_deref()
-        .is_some_and(|failure| failure != "stop" && failure != "continue")
-    {
-        return Err("无效的步骤失败策略。".into());
     }
     Ok(())
 }
@@ -108,7 +113,7 @@ mod tests {
     #[test]
     fn accepts_nonempty_steps_with_valid_wait_and_failure() {
         let mut snap = snapshot(vec![step(Some(0.0)), step(None)]);
-        snap.failure = Some("continue".into());
+        snap.failure = Some(ScenarioFailure::Continue);
         assert_eq!(validate_snapshot(&snap), Ok(()));
     }
 
@@ -127,13 +132,25 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unknown_failure_policy_value() {
-        let mut snap = snapshot(vec![step(None)]);
-        snap.failure = Some("retry".into());
-        assert_eq!(
-            validate_snapshot(&snap),
-            Err("无效的步骤失败策略。".into())
-        );
+    fn unknown_failure_policy_is_rejected_at_deserialization() {
+        // 枚举化后未知取值在 IPC 反序列化即报错（serde lowercase 契约不变）
+        let raw = r#"{"runId":"run-1","scenarioId":"scn-1","scenarioName":"剧本",
+                      "startedAt":"2026-09-12T02:00:00.000Z","steps":[],
+                      "failure":"retry"}"#;
+        assert!(serde_json::from_str::<ScenarioRunSnapshot>(raw).is_err());
+
+        // 缺省（None）= 旧快照按 stop 执行
+        let legacy = r#"{"runId":"run-1","scenarioId":"scn-1","scenarioName":"剧本",
+                         "startedAt":"2026-09-12T02:00:00.000Z","steps":[]}"#;
+        let snap: ScenarioRunSnapshot = serde_json::from_str(legacy).unwrap();
+        assert_eq!(snap.failure, None);
+
+        // 小写字符串照常读入
+        let explicit = r#"{"runId":"run-1","scenarioId":"scn-1","scenarioName":"剧本",
+                           "startedAt":"2026-09-12T02:00:00.000Z","steps":[],
+                           "failure":"continue"}"#;
+        let snap: ScenarioRunSnapshot = serde_json::from_str(explicit).unwrap();
+        assert_eq!(snap.failure, Some(ScenarioFailure::Continue));
     }
 
     #[test]

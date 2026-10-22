@@ -64,7 +64,7 @@ fn direct_step(
         event_name: event_name.into(),
         event_id: event_id.into(),
         channel: adapter.id().into(),
-        url: adapter.url(config).unwrap_or_default().into(),
+        url: adapter.url(config).into(),
         payload: body.into(),
     };
     let step = if cancelled() {

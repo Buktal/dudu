@@ -4,6 +4,19 @@
 
 use std::fs;
 use std::path::Path;
+use std::sync::Mutex;
+
+/// 全局写锁：读改写持久化（load → 修改 → save）的唯一串行点。
+/// 各域「读改写」命令统一经 [`with_write_lock`] 执行，域内不再各自持有
+/// 私有锁；纪律：锁内不得再获取本锁（无嵌套），故无死锁路径。
+static WRITE_LOCK: Mutex<()> = Mutex::new(());
+
+/// 进入全局写锁执行一段读改写持久化。锁中毒时沿用持毒锁继续（持毒方
+/// 只是写盘中途 panic，临时文件 + rename 原子写保证损坏不落盘）。
+pub(crate) fn with_write_lock<T>(write: impl FnOnce() -> T) -> T {
+    let _guard = WRITE_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    write()
+}
 
 /// 解析单个 JSON 文件：读全 + serde 反序列化；解析失败映射 `InvalidData`
 /// （带路径与原始错误，六个域的错误文案单点）。

@@ -1,9 +1,12 @@
 import { type EventItem, interpretPresence } from "@/features/events";
-import { materializeRunSnapshot, type RunSnapshot } from "@/features/runs";
+import {
+  materializeRunSnapshot,
+  newRunId,
+  type RunSnapshot,
+} from "@/features/runs";
 import type { Scenario } from "@/features/scenarios";
 
 import {
-  newPlanRunId,
   type Plan,
   type PlanFailure,
   type PlanMode,
@@ -49,10 +52,7 @@ export function materializePlanRun(input: {
     const scenario = resolveLaneScenario(item, scenarios);
     // 运行时钟问 interpreter（events 域唯一分岔点；存在性引用：快照优先解析
     // 命中即放行，双缺即拦截；文案一字不动）。后半为类型收窄，语义以解释为准。
-    if (
-      interpretPresence(scenario !== undefined, "runtime").blocks ||
-      !scenario
-    ) {
+    if (interpretPresence(scenario, "runtime").blocks || !scenario) {
       throw new Error(
         `编排第 ${lane + 1} 条引用的剧本不存在：${item.scenarioId}。先移除该剧本或调整剧本库。`,
       );
@@ -71,7 +71,8 @@ export function materializePlanRun(input: {
     }
   });
   return {
-    runId: newPlanRunId(),
+    // 编排运行 id 与剧本运行同源（runs 域单点，run-progress 事件按 runId 路由）
+    runId: newRunId(),
     planId: plan.id,
     planName: plan.name,
     mode: plan.mode,

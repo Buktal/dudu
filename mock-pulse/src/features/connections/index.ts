@@ -22,6 +22,7 @@ export {
   isConnectionReady,
   saveConnection,
   selectConnection,
+  selectConnectionDirty,
   selectTestState,
   setConnectionChannel,
   setConnectionDraft,

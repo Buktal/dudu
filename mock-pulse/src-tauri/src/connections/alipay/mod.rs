@@ -273,8 +273,8 @@ impl super::ChannelAdapter for Adapter {
         matches!(config, ConnectionConfig::Alipay { .. })
     }
 
-    fn url<'a>(&self, config: &'a ConnectionConfig) -> Option<&'a str> {
-        narrow!(config, Alipay { url } => Some(url.as_str()))
+    fn url<'a>(&self, config: &'a ConnectionConfig) -> &'a str {
+        narrow!(config, Alipay { url } => url.as_str())
     }
 
     fn verify_handshake(

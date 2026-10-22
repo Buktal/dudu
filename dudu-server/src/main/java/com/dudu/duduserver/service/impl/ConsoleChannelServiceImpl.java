@@ -19,10 +19,12 @@ import com.dudu.duduserver.service.ConsoleAccess;
 import com.dudu.duduserver.service.ConsoleAccessService;
 import com.dudu.duduserver.service.ConsoleChannelService;
 import com.dudu.duduserver.service.UserGroupService;
+import com.dudu.duduserver.socket.DeskAccessChangedEvent;
 import com.dudu.duduserver.util.ConsoleIds;
 import com.dudu.duduserver.util.LikeClauses;
 import com.dudu.duduserver.vo.ConsoleChannelVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
@@ -32,7 +34,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Console 渠道管理；复用账号领域写方法保留提交后 Desk 通知，所有查询在数据库应用企业与组范围。
+ * Console 渠道管理；账号-组关系的显式变更（建号入组、换组）在事务提交后发布范围变更事件，
+ * 通知本企业已连接员工重查工作区，凭据与账号名维护不广播；所有查询在数据库应用企业与组范围。
  */
 @Service
 @RequiredArgsConstructor
@@ -44,6 +47,7 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
     private final ConsoleChannelCatalog catalog;
     private final ConsoleChannelConfiguration configuration;
     private final ConsoleCallbackUrls callbackUrls;
+    private final ApplicationEventPublisher events;
 
     @Override
     public List<ConsoleChannelDefinition> catalog(JwtUser me, String origin) {
@@ -103,6 +107,8 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
                 callbackUrls.callback(origin, account.getCompanyChannelId())));
             accounts.updateById(account);
         }
+        // 新账号入组是一次账号-组关系建立：整个命令只广播一次，WhatsApp 补齐回调 url 的二次写不叠加
+        events.publishEvent(new DeskAccessChangedEvent(access.companyId()));
         return detailView(accounts.getById(account.getCompanyChannelId()), access, origin);
     }
 
@@ -115,6 +121,7 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
         account.setChannelInfo(configuration.merge(account.getChannel(), info(account), changes.set(), changes.clear(),
             callbackUrls.callback(origin, account.getCompanyChannelId())));
         account.setAccountName(name(request.accountName()));
+        // 纯凭据与账号名维护不改变账号-组关系，不做全企业广播
         accounts.updateById(account);
         return detailView(accounts.getById(account.getCompanyChannelId()), access, origin);
     }
@@ -129,6 +136,8 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
         if (!targetId.equals(account.getGroupId())) {
             account.setGroupId(targetId);
             accounts.updateById(account);
+            // 换组是真实的账号-组关系变化，提交后通知本企业重查工作区
+            events.publishEvent(new DeskAccessChangedEvent(access.companyId()));
         }
         return detailView(accounts.getById(account.getCompanyChannelId()), access, origin);
     }

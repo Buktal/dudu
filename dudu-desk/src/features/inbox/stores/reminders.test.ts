@@ -236,10 +236,28 @@ describe("shared pending reminders", () => {
     expect(badge(store.getState(), "conversation-b")).toBe(1);
 
     await store.dispatch(selectConversation("conversation-b"));
-    await store.dispatch(markConversationRead("conversation-b", 2));
+    await store.dispatch(markConversationRead("conversation-b"));
 
     expect(badge(store.getState(), "conversation-b")).toBe(0);
     expect(store.getState().inbox.notice).toBeNull();
+  });
+
+  it("still clears the reminder when reading to the bottom while disconnected", async () => {
+    const { store, live, drop } = realStore();
+    await store.dispatch(loadConversations());
+    live(
+      { ...incomingMessage("conversation-b"), id: "b-2", sequence: 2 },
+      { ...secondConversation, version: 2, messageCount: 2 },
+    );
+    expect(badge(store.getState(), "conversation-b")).toBe(1);
+
+    // 已读是纯本地操作：断线时读到底部同样清除提醒
+    drop();
+    await store.dispatch(markConversationRead("conversation-b"));
+
+    expect(store.getState().inbox.connection).toBe("disconnected");
+    expect(badge(store.getState(), "conversation-b")).toBe(0);
+    expect(store.getState().inbox.reminders).toEqual({});
   });
 
   it("does not fabricate reminders from a reconnect or the initial load", async () => {

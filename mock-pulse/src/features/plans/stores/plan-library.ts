@@ -3,6 +3,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { ConnectionConfig } from "@/features/connections";
 import { interpretPresence } from "@/features/events";
 import type { Scenario } from "@/features/scenarios";
+import { draftSnapshot } from "@/lib/draft-snapshot";
 
 import {
   deletePlanById as deletePlanApi,
@@ -90,7 +91,7 @@ export const savePlan = createAsyncThunk(
     return {
       items: await savePlanApi(saved),
       draft: saved,
-      source: JSON.stringify(draft),
+      source: draftSnapshot(draft),
     };
   },
 );
@@ -111,7 +112,7 @@ export const savePlanAs = createAsyncThunk(
       name: name?.trim() || `${draft.name} · 副本`,
     };
     const items = await savePlanApi(copy);
-    return { items, draft: copy, source: JSON.stringify(draft) };
+    return { items, draft: copy, source: draftSnapshot(draft) };
   },
 );
 
@@ -125,10 +126,7 @@ function pinPlanScenarios(draft: Plan, scenarios: Scenario[]): Plan {
       // 编辑时钟（钉快照门）问 interpreter（events 域唯一分岔点）：库内命中
       // 即钉，缺失留 undefined（保存由 validatePlan 拦；运行时钟同样拒绝；
       // 文案不动）。后半为类型收窄，语义以解释为准。
-      if (
-        interpretPresence(scenario !== undefined, "edit").blocks ||
-        !scenario
-      ) {
+      if (interpretPresence(scenario, "edit").blocks || !scenario) {
         return { ...item, snapshot: undefined };
       }
       return { ...item, snapshot: scenario };

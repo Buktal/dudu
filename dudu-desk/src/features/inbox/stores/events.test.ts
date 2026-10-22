@@ -212,9 +212,8 @@ describe("incremental inbox updates", () => {
       }),
     );
     expect(store.getState().inbox.reminders["conversation-b"]).toBe(1);
-    await store.dispatch(markConversationRead("conversation-b", 1));
-    await store.dispatch(markConversationRead("conversation-b", 1));
-    expect(store.getState().inbox.events.readThrough["conversation-b"]).toBe(1);
+    await store.dispatch(markConversationRead("conversation-b"));
+    await store.dispatch(markConversationRead("conversation-b"));
     expect(store.getState().inbox.reminders["conversation-b"]).toBeUndefined();
     expect(store.getState().inbox.replyId).toBe("conversation-a");
   });

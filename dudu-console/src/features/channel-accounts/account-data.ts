@@ -4,7 +4,7 @@ import { type AccountFilters, channelApi } from "./api";
 // 渠道账号列表：翻页机制收敛在 usePagedQuery，这里只装订 domain 词汇——
 // 命名操作 setKeyword/setChannel/setGroup 把筛选意图映射进 AccountFilters；
 // 下拉「all」哨兵归 undefined 的取值约定也在这里单点，页面不感知机制侧。
-// 路由同步（组入口进页）经 setGroup 回填，与下拉共用同一映射。
+// 路由 groupId 只在挂载时经 initialFilters 作筛选种子，页内筛选不回写 URL。
 export function useAccounts(initialFilters: AccountFilters) {
   const paging = usePagedQuery(channelApi.query, initialFilters);
   return {

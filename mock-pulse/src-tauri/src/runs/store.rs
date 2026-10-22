@@ -2,7 +2,6 @@
 //! 文件读写函数接受目录参数，测试用临时目录。
 
 use std::path::Path;
-use std::sync::Mutex;
 
 use super::RunRecord;
 
@@ -16,18 +15,20 @@ pub fn save_runs(dir: &Path, runs: &[RunRecord]) -> std::io::Result<()> {
     crate::store_io::save_named(dir, FILE_NAME, runs)
 }
 
-/// 同一条运行可重试保存；串行化读改写，避免重试与后台完成互相覆盖。
+/// 同一条运行可重试保存；读改写经全局写锁串行（store_io::with_write_lock
+/// 单点，与各域写命令同一纪律），避免重试与后台完成互相覆盖；
+/// 锁内不再取本锁，无死锁路径。
 pub fn upsert_run(dir: &Path, run: RunRecord) -> std::io::Result<Vec<RunRecord>> {
-    static WRITES: Mutex<()> = Mutex::new(());
-    let _write = WRITES.lock().unwrap_or_else(|error| error.into_inner());
-    let mut runs = load_runs(dir)?;
-    if let Some(index) = runs.iter().position(|item| item.id == run.id) {
-        runs[index] = run;
-    } else {
-        runs.push(run);
-    }
-    save_runs(dir, &runs)?;
-    Ok(runs)
+    crate::store_io::with_write_lock(|| {
+        let mut runs = load_runs(dir)?;
+        if let Some(index) = runs.iter().position(|item| item.id == run.id) {
+            runs[index] = run;
+        } else {
+            runs.push(run);
+        }
+        save_runs(dir, &runs)?;
+        Ok(runs)
+    })
 }
 
 #[cfg(test)]

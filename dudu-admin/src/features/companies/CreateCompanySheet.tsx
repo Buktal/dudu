@@ -1,4 +1,9 @@
 import { useState } from "react";
+import {
+  ADMIN_NAME_MAX_LENGTH,
+  ADMIN_USERNAME_MAX_LENGTH,
+  ADMIN_USERNAME_MIN_LENGTH,
+} from "@/api/admin-api";
 import { ApiError, COMPANY_ID_CONFLICT } from "@/api/client";
 import type { Company } from "@/api/types";
 import { TextField } from "@/components/form-field";
@@ -66,7 +71,7 @@ export function CreateCompanySheet({
               () => {
                 if (
                   !cleaned.companyName ||
-                  username.trim().length < 2 ||
+                  username.trim().length < ADMIN_USERNAME_MIN_LENGTH ||
                   !password.trim()
                 )
                   return "请填写企业名称及有效的管理员登录名和密码";
@@ -128,15 +133,15 @@ export function CreateCompanySheet({
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   required
-                  minLength={2}
-                  maxLength={64}
+                  minLength={ADMIN_USERNAME_MIN_LENGTH}
+                  maxLength={ADMIN_USERNAME_MAX_LENGTH}
                   autoComplete="off"
                 />
                 <TextField
                   label="显示名称"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  maxLength={100}
+                  maxLength={ADMIN_NAME_MAX_LENGTH}
                   placeholder="选填"
                 />
                 <TextField

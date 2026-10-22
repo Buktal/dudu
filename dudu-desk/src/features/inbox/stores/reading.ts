@@ -153,21 +153,10 @@ export function destroyInbox(): InboxCommand {
 
 export function markConversationRead(
   conversationId: string,
-  throughSequence: number,
 ): InboxCommand<Promise<void>> {
   return async (dispatch, getState) => {
-    const state = getState().inbox;
-    if (
-      !state.conversations[conversationId] ||
-      state.connection !== "connected" ||
-      !Number.isSafeInteger(throughSequence) ||
-      throughSequence <= 0 ||
-      throughSequence <= (state.events.readThrough[conversationId] ?? 0)
-    )
-      return;
-    // 服务端没有已读接口：只清除本地待处理提醒，不发请求
-    dispatch(
-      inboxActions.readHandledLocally({ conversationId, throughSequence }),
-    );
+    if (!getState().inbox.conversations[conversationId]) return;
+    // 服务端没有已读接口：只清除本地待处理提醒，不发请求、不受连接状态影响
+    dispatch(inboxActions.readHandledLocally({ conversationId }));
   };
 }
