@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -103,11 +104,11 @@ public class AlipayAdapter implements ChannelAdapter {
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        return AlipayCredentials.of(account) == null ? AlipayTextSender.SEND_CREDENTIALS_MISSING : null;
+        return AlipayCredentials.of(account) == null ? ChannelRestrictions.SEND_CREDENTIALS_MISSING : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
-        return AlipayCredentials.of(account) == null ? AlipayMediaReader.MEDIA_CREDENTIALS_MISSING : null;
+        return AlipayCredentials.of(account) == null ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING : null;
     }
 }

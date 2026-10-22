@@ -1,3 +1,4 @@
+import { Layers3 } from "lucide-react";
 import { adminApi } from "@/api/admin-api";
 import { useAdminQuery } from "@/api/admin-query";
 import { CompanyFilters } from "@/components/company-filters";
@@ -142,5 +143,3 @@ export function ResourcesPage({
     </div>
   );
 }
-
-import { Layers3 } from "lucide-react";

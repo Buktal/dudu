@@ -28,8 +28,7 @@ import java.net.URI;
 public class WhatsappMediaReader {
 
     private static final String DEFAULT_API_BASE = "https://graph.facebook.com";
-    private static final String API_VERSION = "v23.0";
-    private static final String PATH_MEDIA = "/" + API_VERSION + "/{mediaId}";
+    private static final String PATH_MEDIA = "/" + WhatsappErrors.API_VERSION + "/{mediaId}";
     private static final String KEY_AUTHORIZATION = "Authorization";
     private static final String AUTHORIZATION_SCHEME = "Bearer ";
     private static final String KEY_URL = "url";
@@ -69,7 +68,7 @@ public class WhatsappMediaReader {
             byte[] bytes = response.getBody() == null ? new byte[0] : response.getBody();
             return ChannelMediaResult.media(bytes, contentType(response, meta));
         } catch (RestClientResponseException e) {
-            String reason = channelReason(e);
+            String reason = WhatsappErrors.channelReason(e);
             log.warn("[whatsapp] 素材读取被渠道拒绝, companyChannelId={}, reason={}",
                 account.getCompanyChannelId(), reason);
             return ChannelMediaResult.failed("WhatsApp素材读取失败：" + reason);
@@ -79,19 +78,6 @@ public class WhatsappMediaReader {
                 account.getCompanyChannelId(), e.getClass().getSimpleName());
             return ChannelMediaResult.failed("WhatsApp接口调用失败：" + e.getMessage());
         }
-    }
-
-    // 渠道拒绝说明：可识别的 error 体原样透出，其余按状态码与响应原文说明
-    private String channelReason(RestClientResponseException e) {
-        try {
-            JSONObject response = JSONUtil.parseObj(e.getResponseBodyAsString());
-            if (WhatsappErrors.isChannelError(response)) {
-                return WhatsappErrors.describe(response);
-            }
-        } catch (RuntimeException ignored) {
-            // 响应体不是 JSON，落到通用说明
-        }
-        return "HTTP " + e.getStatusCode().value() + " " + e.getResponseBodyAsString();
     }
 
     // 内容类型：二进制响应头优先，回退第一步 meta 的 mime_type（如 audio/ogg; codecs=opus）

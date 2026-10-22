@@ -35,6 +35,8 @@ pub mod wecom;
 pub mod whatsapp;
 pub mod xiaohongshu;
 
+use std::sync::Mutex;
+
 use serde::{Deserialize, Serialize};
 
 use crate::app_data_dir;
@@ -119,6 +121,10 @@ pub fn connections_save(
     app: tauri::AppHandle,
     config: ConnectionConfig,
 ) -> Result<Vec<ConnectionConfig>, String> {
+    // load→retain→push→save 全程串行（与 runs::store::upsert_run 同一纪律，
+    // 不依赖「同步命令主线程串行」的隐式假设）
+    static WRITES: Mutex<()> = Mutex::new(());
+    let _write = WRITES.lock().unwrap_or_else(|error| error.into_inner());
     let dir = app_data_dir(&app)?;
     let mut list = store::load_connections(&dir).map_err(|err| err.to_string())?;
     let variant = std::mem::discriminant(&config);

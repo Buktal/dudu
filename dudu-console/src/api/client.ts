@@ -5,7 +5,8 @@ const SESSION_KEY = "dudu-console.session";
 const REQUEST_TIMEOUT_MS = 20_000;
 // 企业管理员身份恢复与权限刷新共用同一接口。
 export const PROFILE_PATH = "/console/profile";
-export const COMPANY_ID_CONFLICT = 12300;
+// 实体不存在（他人已删除或当前身份不可见）：读取方按「详情已失效」收起详情弹层。
+export const ENTITY_MISSING = 12100;
 const EXPIRED_CODES = new Set([10100, 10101, 10102, 10103]);
 // 会话生命周期接口不计入数据写入：登录退出不改变业务数据，失效重查只属于业务写成功
 const SESSION_PATHS = new Set(["/console/login", "/console/logout"]);
@@ -182,7 +183,7 @@ export class ConsoleClient {
         if (token && envelope.code === 10106 && path !== PROFILE_PATH)
           void this.refreshProfile(writing);
         // 失效写入后重查列表和详情；读取本身失败不触发重查，避免循环。
-        if (token && writing && envelope.code === 12100)
+        if (token && writing && envelope.code === ENTITY_MISSING)
           this.publish({ accessRevision: this.state.accessRevision + 1 });
         throw new ApiError(envelope.msg || "操作失败，请重试", envelope.code);
       }

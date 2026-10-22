@@ -1,6 +1,6 @@
 # DuduConsole 功能图谱
 
-2026-10-21，首版业务页面与 Server 接口已实施；检查结果与实际联调范围见[验收记录](../design/dudu-console/acceptance.md)，行为依据见[规格](../design/dudu-console/README.md)
+2026-10-21，首版业务页面与 Server 接口已实施；检查结果与实际联调范围见[验收记录](../design/dudu-console/acceptance.md)，行为依据见[规格](../design/dudu-console/README.md)；前端机制层与 DuduAdmin 的复用边界见 [ADR-0016](../adr/0016-admin-console-controlled-copy.md)（受控拷贝与测试同步）
 
 | 模块 | 功能与流程 | 当前状态 |
 | --- | --- | --- |

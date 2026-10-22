@@ -1,4 +1,4 @@
-import { Eye, EyeOff, LoaderCircle, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { Spinner } from "@/components/ui/spinner";
 import type { LoginCredentials } from "../api";
 import { AccountScreen } from "./account-screen";
 
@@ -131,10 +132,7 @@ export function SignIn({
             }
           >
             {pending ? (
-              <LoaderCircle
-                data-icon="inline-start"
-                className="animate-spin motion-reduce:animate-none"
-              />
+              <Spinner data-icon="inline-start" />
             ) : (
               <LogIn data-icon="inline-start" />
             )}

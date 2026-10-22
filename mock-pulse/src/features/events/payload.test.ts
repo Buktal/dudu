@@ -151,7 +151,7 @@ describe("parseFieldText：字段文本 → 类型化值", () => {
 });
 
 describe("syncSenderIdentity", () => {
-  it("把资料 open_id 对齐到 from_user_id，返回新对象", () => {
+  it("把资料 open_id 对齐到 from_user_id，返回新对象与写入路径", () => {
     const payload = editorPayload(dyText, dyText.payload);
     (payload.content as Record<string, unknown>).user_infos = [
       {
@@ -161,24 +161,57 @@ describe("syncSenderIdentity", () => {
       },
     ];
     const synced = syncSenderIdentity(dyText, payload);
-    const userInfos = (synced.content as Record<string, unknown>)
+    const userInfos = (synced.payload.content as Record<string, unknown>)
       .user_infos as Array<Record<string, unknown>>;
-    expect(userInfos[0].open_id).toBe(synced.from_user_id);
-    expect(payload).not.toBe(synced);
+    expect(userInfos[0].open_id).toBe(synced.payload.from_user_id);
+    expect(payload).not.toBe(synced.payload);
+    // 写入路径随 schema 推导返回（调用方据此作废该字段的未应用输入）
+    expect(synced.syncedPath).toBe("content.user_infos[0].open_id");
+  });
+
+  it("资料路径改挂 user_infos[1]（schema 推导）：写入路径跟随 schema", () => {
+    // 模拟抖音描述文件把资料 open_id 挂到 user_infos[1]：路径推导只认
+    // schema 字段，不认字面量
+    const profileField = dyText.fields.find(
+      (field) => field.path === "content.user_infos[0].open_id",
+    );
+    if (!profileField) throw new Error("dy-text 应有资料 open_id 字段");
+    const altSchema = {
+      ...dyText,
+      fields: [
+        ...dyText.fields.filter(
+          (field) => field.path !== "content.user_infos[0].open_id",
+        ),
+        { ...profileField, path: "content.user_infos[1].open_id" },
+      ],
+    };
+    const payload = editorPayload(dyText, dyText.payload);
+    (payload.content as Record<string, unknown>).user_infos = [
+      { open_id: "sender-else", nick_name: "刘东", avatar: "" },
+      { open_id: "receiver", nick_name: "毕节", avatar: "" },
+    ];
+    const synced = syncSenderIdentity(altSchema, payload);
+    expect(synced.syncedPath).toBe("content.user_infos[1].open_id");
+    const userInfos = (synced.payload.content as Record<string, unknown>)
+      .user_infos as Array<Record<string, unknown>>;
+    expect(userInfos[1].open_id).toBe(synced.payload.from_user_id);
+    expect(userInfos[0].open_id).toBe("sender-else");
   });
 
   it("contentString 模板同步后 content 仍是解析对象（不破坏结构）", () => {
     const payload = editorPayload(dyEnter, dyEnter.payload);
     const synced = syncSenderIdentity(dyText, payload);
-    expect(typeof synced.content).toBe("object");
-    const userInfos = (synced.content as Record<string, unknown>)
+    expect(typeof synced.payload.content).toBe("object");
+    const userInfos = (synced.payload.content as Record<string, unknown>)
       .user_infos as Array<Record<string, unknown>>;
-    expect(userInfos[0].open_id).toBe(synced.from_user_id);
+    expect(userInfos[0].open_id).toBe(synced.payload.from_user_id);
   });
 
-  it("无资料路径的模板（dy-read）原样返回", () => {
+  it("无资料路径的模板（dy-read）原样返回且无写入路径", () => {
     const payload = structuredClone(schemaById("dy-read").payload);
-    expect(syncSenderIdentity(schemaById("dy-read"), payload)).toBe(payload);
+    const synced = syncSenderIdentity(schemaById("dy-read"), payload);
+    expect(synced.payload).toBe(payload);
+    expect(synced.syncedPath).toBeNull();
   });
 });
 

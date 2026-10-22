@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { ApiError } from "@/api/client";
 import { useConsoleQuery } from "@/api/console-query";
 import { useConsole, useSession } from "@/api/context";
+import { isMissingEntity, useEntityGuard } from "@/api/entity-guard";
 import { ErrorState, LoadingState } from "@/components/feedback";
 import { SelectField } from "@/components/form-field";
 import {
@@ -77,25 +77,14 @@ export function AccountDetailPanel({
   const [editing, setEditing] = useState(false);
   const [moving, setMoving] = useState(false);
   const [copy, setCopy] = useState("");
-  const load = async (
-    client: Parameters<typeof channelApi.detail>[0],
-    accountId: string,
-    signal: AbortSignal,
-  ) => {
-    try {
-      return await channelApi.detail(client, accountId, signal);
-    } catch (error) {
-      if (error instanceof ApiError && error.code === 12100) {
-        setEditing(false);
-        setMoving(false);
-        onClose();
-      }
-      throw error;
-    }
-  };
-  // 查询函数由稳定包装捕获页面关闭动作；id 切换由父级 key 隔离。
-  const [loader] = useState(() => load);
-  const query = useConsoleQuery(loader, [id]);
+  // 账号被删除或当前身份不可见时收起详情弹层：实体缺失守卫单点编排，
+  // 包装身份稳定且回调始终读取最新闭包；id 切换由父级 key 隔离。
+  const load = useEntityGuard(channelApi.detail, () => {
+    setEditing(false);
+    setMoving(false);
+    onClose();
+  });
+  const query = useConsoleQuery(load, [id]);
   const account = query.data;
   const definition = definitions.find((d) => d.channel === account?.channel);
   // 写成功后的本地收尾：详情与列表重查由 dataRevision 驱动，这里只关弹层与旁路通知
@@ -256,9 +245,12 @@ function MoveAccount({
   const manages = (id: string) =>
     !!profile &&
     (profile.user.isInitialAdmin || profile.managedGroupIds.includes(id));
+  // 权限守卫：对源组无管理权限即退出换组流程；依赖限定在权限真相上，
+  // onUnavailable 只表达关闭意图，身份随渲染变化不重跑守卫。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: onUnavailable 的关闭意图不随身份变化，重跑只属于权限真相。
   useEffect(() => {
     if (!manages(account.groupId)) onUnavailable();
-  });
+  }, [account.groupId, profile]);
   return (
     <Dialog open onOpenChange={shell.hold(onClose).onOpenChange}>
       <DialogContent showCloseButton={!shell.pending}>
@@ -292,8 +284,7 @@ function MoveAccount({
               {
                 commit: onSaved,
                 onError: (error) => {
-                  if (error instanceof ApiError && error.code === 12100)
-                    onUnavailable();
+                  if (isMissingEntity(error)) onUnavailable();
                 },
               },
             )

@@ -30,8 +30,7 @@ import java.util.Map;
 public class WhatsappTextSender {
 
     private static final String DEFAULT_API_BASE = "https://graph.facebook.com";
-    private static final String API_VERSION = "v23.0";
-    private static final String PATH_SEND = "/" + API_VERSION + "/{phoneNumberId}/messages";
+    private static final String PATH_SEND = "/" + WhatsappErrors.API_VERSION + "/{phoneNumberId}/messages";
     private static final String KEY_AUTHORIZATION = "Authorization";
     private static final String AUTHORIZATION_SCHEME = "Bearer ";
     private static final String KEY_MESSAGES = "messages";
@@ -62,7 +61,7 @@ public class WhatsappTextSender {
             return ChannelSendResult.sent(wamid);
         } catch (RestClientResponseException e) {
             // 渠道拒绝（HTTP 非 2xx）按渠道原始 error 说明落库
-            String reason = channelReason(e);
+            String reason = WhatsappErrors.channelReason(e);
             log.warn("[whatsapp] 消息发送被渠道拒绝, companyChannelId={}, reason={}",
                 account.getCompanyChannelId(), reason);
             return ChannelSendResult.failed("WhatsApp消息发送失败：" + reason);
@@ -72,19 +71,6 @@ public class WhatsappTextSender {
                 account.getCompanyChannelId(), e.getClass().getSimpleName());
             return ChannelSendResult.failed("WhatsApp接口调用失败：" + e.getMessage());
         }
-    }
-
-    // 渠道拒绝说明：可识别的 error 体原样透出，其余按状态码与响应原文说明
-    private String channelReason(RestClientResponseException e) {
-        try {
-            JSONObject response = JSONUtil.parseObj(e.getResponseBodyAsString());
-            if (WhatsappErrors.isChannelError(response)) {
-                return WhatsappErrors.describe(response);
-            }
-        } catch (RuntimeException ignored) {
-            // 响应体不是 JSON，落到通用说明
-        }
-        return "HTTP " + e.getStatusCode().value() + " " + e.getResponseBodyAsString();
     }
 
     // 文本报文（官方 §5.3 逐字字段）：to 为用户号码（E.164），text.body 即正文

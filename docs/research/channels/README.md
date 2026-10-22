@@ -5,6 +5,8 @@
 > 各文档 §1 均有完整页面地址清单；标注「待核验(09-27)」的条目等配额恢复后补——补摄计划见 issue #14
 > 注：朴朴超市无开放平台（无公开文档入口），未建事实库。海外 WhatsApp/Telegram 2026-09-10 已入库（逐个 research＋并行核验）：WhatsApp 官方摘录交叉全过（3MB 上限落定、v23 快照注、无加密软化）；Telegram 7 页 WebFetch 全文全过（测试根地址落定、challenge 缺席收紧）
 
+跨渠道 IM 能力对照见 [im-capability-matrix.md](./im-capability-matrix.md)
+
 | 渠道 | 形态 | 官方文档门户 | 事实库 | 文档数 |
 |---|---|---|---|---|
 | 抖音 | 直连私信（dop IM，要求企业号）+ 小游戏/服务商/生活服务 | https://developer.open-douyin.com/ | [douyin.md](./douyin.md) | 24 项 |

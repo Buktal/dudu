@@ -6,6 +6,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
+import com.dudu.duduserver.channel.support.JsonBodies;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
@@ -134,12 +135,13 @@ public class QqProtocol {
     public Optional<ChannelInboundMessage> parse(Long companyChannelId, Envelope envelope) {
         return switch (envelope.t() == null ? "" : envelope.t()) {
             case EVENT_C2C -> Optional.of(message(companyChannelId, SCENE_C2C,
-                firstText(envelope.d().getJSONObject("author"), "user_openid", "id"), envelope.d()));
+                firstText(JsonBodies.objectField(envelope.d(), "author", "QQ 回调报文"),
+                    "user_openid", "id"), envelope.d()));
             case EVENT_GROUP_AT, EVENT_GROUP_ALL ->
                 Optional.of(message(companyChannelId, SCENE_GROUP, envelope.d().getStr("group_openid"),
                     envelope.d()));
             case EVENT_GUILD_AT -> Optional.of(message(companyChannelId, SCENE_GUILD,
-                firstText(envelope.d().getJSONObject("author"), "id"), envelope.d()));
+                firstText(JsonBodies.objectField(envelope.d(), "author", "QQ 回调报文"), "id"), envelope.d()));
             default -> Optional.empty();
         };
     }
@@ -150,7 +152,7 @@ public class QqProtocol {
         if (Texts.isBlank(conversationId)) {
             throw new IllegalArgumentException("渠道报文缺少会话对象身份");
         }
-        JSONObject author = d.getJSONObject("author");
+        JSONObject author = JsonBodies.objectField(d, "author", "QQ 回调报文");
         return new ChannelInboundMessage(companyChannelId, scene + ":" + conversationId,
             author == null ? null : Texts.blankToNull(author.getStr("username")),
             author == null ? null : Texts.blankToNull(author.getStr("avatar")),

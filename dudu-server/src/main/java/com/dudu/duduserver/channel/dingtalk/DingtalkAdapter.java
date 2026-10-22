@@ -95,17 +95,13 @@ public class DingtalkAdapter implements ChannelAdapter {
 
     @Override
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
-        if (DingtalkSendCredentials.of(account) == null) {
-            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
-        }
+        // 凭据缺失由注册表的 restriction 先行拦截，send 不再重复检查
         return textSender.send(account, externalUserId, text);
     }
 
     @Override
     public ChannelMediaResult readMedia(CompanyChannelDO account, String externalMediaId) {
-        if (DingtalkSendCredentials.of(account) == null) {
-            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
-        }
+        // 凭据缺失由注册表的 restriction 先行拦截，readMedia 不再重复检查
         return mediaReader.read(account, externalMediaId);
     }
 

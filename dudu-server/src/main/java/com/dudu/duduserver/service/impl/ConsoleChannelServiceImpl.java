@@ -20,9 +20,8 @@ import com.dudu.duduserver.service.ConsoleAccessService;
 import com.dudu.duduserver.service.ConsoleChannelService;
 import com.dudu.duduserver.service.UserGroupService;
 import com.dudu.duduserver.util.ConsoleIds;
+import com.dudu.duduserver.util.LikeClauses;
 import com.dudu.duduserver.vo.ConsoleChannelVO;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +44,6 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
     private final ConsoleChannelCatalog catalog;
     private final ConsoleChannelConfiguration configuration;
     private final ConsoleCallbackUrls callbackUrls;
-    private final ObjectMapper objectMapper;
 
     @Override
     public List<ConsoleChannelDefinition> catalog(JwtUser me, String origin) {
@@ -65,7 +63,9 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
             .eq(groupId != null, CompanyChannelDO::getGroupId, groupId)
             .eq(query.getChannel() != null, CompanyChannelDO::getChannel, query.getChannel());
         if (query.getKeyword() != null && !query.getKeyword().trim().isEmpty()) {
-            wrapper.like(CompanyChannelDO::getAccountName, query.getKeyword().trim());
+            // 关键词字面匹配（% _ ! 转义，口径同 Desk 访客搜索）；MP like 无法表达 ESCAPE，用受支持片段
+            wrapper.apply("account_name LIKE {0}" + LikeClauses.ESCAPE,
+                LikeClauses.pattern(query.getKeyword().trim()));
         }
         long total = accounts.count(wrapper);
         page = query.toPage(total);
@@ -86,7 +86,6 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
     @Transactional(rollbackFor = Exception.class)
     public ConsoleChannelVO.Detail create(JwtUser me, ConsoleChannelRequests.Create request, String origin) {
         ConsoleAccess access = accessService.lock(me);
-        checkSize(request);
         Long groupId = ConsoleIds.parse(request.groupId());
         accessService.requireGroup(access, groupId);
         catalog.requireAvailable(request.channel(), origin);
@@ -111,7 +110,6 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
     @Transactional(rollbackFor = Exception.class)
     public ConsoleChannelVO.Detail update(JwtUser me, String id, ConsoleChannelRequests.Update request, String origin) {
         ConsoleAccess access = accessService.lock(me);
-        checkSize(request);
         CompanyChannelDO account = requireAccount(access, id);
         ConsoleChannelRequests.Changes changes = request.credentialChanges();
         account.setChannelInfo(configuration.merge(account.getChannel(), info(account), changes.set(), changes.clear(),
@@ -168,13 +166,5 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
         if (name == null || name.trim().isEmpty()) throw new BizException(ApiEnum.PARAM_MISSING);
         if (name.trim().length() > MAX_ACCOUNT_NAME_LENGTH) throw new BizException(ApiEnum.PARAM_EXCEED);
         return name.trim();
-    }
-
-    private void checkSize(Object request) {
-        try {
-            if (objectMapper.writeValueAsBytes(request).length > ConsoleChannelRequests.MAX_CONFIGURATION_BYTES) throw new BizException(ApiEnum.PARAM_EXCEED);
-        } catch (JsonProcessingException error) {
-            throw new BizException(ApiEnum.PARAM_ERROR);
-        }
     }
 }

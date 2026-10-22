@@ -192,9 +192,6 @@
   .metric-icon {
     @apply flex size-9 items-center justify-center rounded-xl bg-muted text-muted-foreground;
   }
-  .company-link {
-    @apply min-w-28 max-w-64 whitespace-normal break-words text-left font-semibold hover:text-primary focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring;
-  }
   .detail-grid {
     display: grid;
     grid-template-columns: 6rem minmax(0, 1fr);

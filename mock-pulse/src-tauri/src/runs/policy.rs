@@ -4,7 +4,9 @@
 //! 决策输入 = 构造位置（单剧本 / 串行 lane / 并行 lane，即编织 mode）
 //! × 编排失败策略（stop/continue）× 剧本级失败策略（快照 failure）
 //! × 外部停止信号（用户停 / 编排停 / 无）；输出 = 执行，或跳过 + 原因。
-//! 5 种跳过原因的对外文案由 [`SkipReason`] 唯一持有（落盘/进度一字不改）。
+//! 跳过原因的对外文案由 [`SkipReason`] 唯一持有（落盘/进度一字不改）：决策表
+//! 产出 5 种；第 6 种 [`SkipReason::LanePanicked`] 不经决策表，由并行编排的
+//! lane 线程 panic 折叠产出（见 `executor::execute_plan_parallel`）。
 //!
 //! 两种停止旗标的排序语义（原样保留）：
 //! - 用户停止（`user_cancel`）：`SeqCst` 采样——与 `control::stop_run` 的置位、
@@ -31,6 +33,9 @@ pub(super) enum SkipReason {
     UserStopped,
     /// 发送前等待期间运行被停止（用户停止或编排停止）
     RunStopped,
+    /// 并行编排 lane 线程 panic：该剧本剩余步骤的兜底回执（不经决策表，
+    /// 由 executor 的 join Err 折叠产出）
+    LanePanicked,
 }
 
 impl SkipReason {
@@ -42,6 +47,7 @@ impl SkipReason {
             SkipReason::OrchestrationStopped => "其他剧本已失败，编排停止，本剧本未执行",
             SkipReason::UserStopped => "用户已停止运行，本步骤未执行",
             SkipReason::RunStopped => "运行已停止，本步骤未执行",
+            SkipReason::LanePanicked => "剧本执行线程 panic，本步骤未执行",
         }
     }
 }
@@ -228,6 +234,10 @@ mod tests {
             "用户已停止运行，本步骤未执行"
         );
         assert_eq!(SkipReason::RunStopped.text(), "运行已停止，本步骤未执行");
+        assert_eq!(
+            SkipReason::LanePanicked.text(),
+            "剧本执行线程 panic，本步骤未执行"
+        );
     }
 
     #[test]

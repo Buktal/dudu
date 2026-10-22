@@ -11,7 +11,6 @@ public enum ApiEnum {
     UNKNOWN(10001, "系统繁忙，请稍后重试"),
 
     // 认证段 101xx
-    TOKEN_ERROR(10100, "请先登录"),
     TOKEN_EMPTY(10101, "请先登录"),
     TOKEN_VERIFY(10102, "登录状态无效，请重新登录"),
     TOKEN_EXPIRE(10103, "登录已过期，请重新登录"),
@@ -31,7 +30,6 @@ public enum ApiEnum {
     PASSWORD_WRONG(12310, "原密码错误"),
 
     // 第三方段 13xxx
-    THIRD_ERROR(13000, "第三方服务异常"),
     REQUEST_THIRD_ERROR(13100, "请求第三方服务失败"),
     ;
 

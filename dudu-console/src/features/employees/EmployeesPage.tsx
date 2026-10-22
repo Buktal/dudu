@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { useSession } from "@/api/context";
-import { usePagedQuery } from "@/api/paged-query";
 import { Message } from "@/components/feedback";
 import { FilterBar } from "@/components/filter-bar";
 import {
@@ -18,9 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { type EmployeeFilters, queryEmployees } from "./api";
 import { EmployeeDetail } from "./EmployeeDetail";
 import { EmployeeForm } from "./EmployeeForm";
+import { useEmployees } from "./employee-data";
 export function EmployeesPage({
   selectedId,
   creating,
@@ -55,10 +54,7 @@ function EmployeeList({
   onSelect: (id: string | null) => void;
   onCreate: (creating: boolean) => void;
 }) {
-  const query = usePagedQuery(queryEmployees, {
-    page: 1,
-    pageSize: 20,
-  } as EmployeeFilters);
+  const query = useEmployees({ page: 1, pageSize: 20 });
   const [notice, setNotice] = useState<string | null>(null);
   const closeDetail = useCallback(() => onSelect(null), [onSelect]);
   // 写成功后的旁路通知：列表与详情重查由 dataRevision 驱动，这里只负责文案
@@ -82,46 +78,32 @@ function EmployeeList({
             label="员工筛选"
             searchLabel="登录名或显示名称"
             placeholder="搜索登录名或显示名称"
-            value={query.filters.keyword}
+            value={query.keyword}
             hasConditions={
-              query.filters.status !== undefined ||
-              query.filters.role !== undefined
+              query.status !== undefined || query.role !== undefined
             }
-            onSearch={(keyword) => query.setFilter({ keyword })}
+            onSearch={query.setKeyword}
             onReset={query.reset}
           >
-            <FilterSelect
+            <FilterSelect<"user" | "console" | "all">
               label="角色"
-              value={query.filters.role ?? "all"}
+              value={query.role ?? "all"}
               options={[
                 { value: "all", label: "全部角色" },
                 { value: "user", label: "普通员工" },
                 { value: "console", label: "企业管理员" },
               ]}
-              onChange={(value) =>
-                query.setFilter({
-                  role:
-                    value === "all" ? undefined : (value as "user" | "console"),
-                })
-              }
+              onChange={query.setRole}
             />
-            <FilterSelect
+            <FilterSelect<0 | 1 | "all">
               label="状态"
-              value={
-                query.filters.status === undefined
-                  ? "all"
-                  : String(query.filters.status)
-              }
+              value={query.status ?? "all"}
               options={[
                 { value: "all", label: "全部状态" },
-                { value: "1", label: "正常启用" },
-                { value: "0", label: "已停用" },
+                { value: 1, label: "正常启用" },
+                { value: 0, label: "已停用" },
               ]}
-              onChange={(value) =>
-                query.setFilter({
-                  status: value === "all" ? undefined : value === "1" ? 1 : 0,
-                })
-              }
+              onChange={query.setStatus}
             />
           </FilterBar>
         }

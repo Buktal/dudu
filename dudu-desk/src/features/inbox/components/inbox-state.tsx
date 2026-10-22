@@ -1,4 +1,4 @@
-import { Inbox, LoaderCircle, RefreshCw, Unplug } from "lucide-react";
+import { Inbox, RefreshCw, Unplug } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +8,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Spinner } from "@/components/ui/spinner";
 import type { ApiFailure } from "@/lib/api-response";
 import type { LoadState } from "../types";
 
@@ -37,7 +38,7 @@ export function InboxLoading({ label = "正在读取会话…" }: { label?: stri
       className="flex flex-1 items-center justify-center gap-2 p-6 text-sm text-muted-foreground"
       role="status"
     >
-      <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
+      <Spinner className="size-4" />
       {label}
     </div>
   );

@@ -1,10 +1,11 @@
 import {
-  type LucideIcon,
+  type LucideProps,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
+import type { ComponentType } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 
 type WorkspaceActionProps = {
-  icon: LucideIcon;
+  icon: ComponentType<LucideProps>;
   label: string;
   onClick: () => void;
   disabled?: boolean;

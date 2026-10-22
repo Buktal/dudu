@@ -25,7 +25,11 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { schemaById, templatesForChannel } from "@/features/events";
+import {
+  latestVersionOf,
+  schemaById,
+  templatesForChannel,
+} from "@/features/events";
 import {
   isRunBusy,
   RunButton,
@@ -297,7 +301,7 @@ export function ScenarioEditor({
               id: item.id,
               name: item.name,
               channel: item.channelId,
-              description: `${schemaById(item.schemaId).name} · v${item.versions[item.versions.length - 1]?.revision}`,
+              description: `${schemaById(item.schemaId).name} · v${latestVersionOf(item)?.revision}`,
             }))}
           onClose={() => setPicker(null)}
           onSelect={(eventId) =>

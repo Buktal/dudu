@@ -1,6 +1,7 @@
 import { History, MessageSquareText, X } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { insideOverlay } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { focusReply } from "../stores/sending";
 import type { Conversation } from "../types";
@@ -42,12 +43,9 @@ export const QuickCard = memo(function QuickCard({
       if (
         event.target instanceof Node &&
         !card.current?.contains(event.target) &&
-        !(
-          event.target instanceof Element &&
-          event.target.closest(
-            '[data-slot="popover-content"], [data-slot="dialog-content"], [data-slot="select-content"], [data-slot="dropdown-menu-content"]',
-          )
-        )
+        // 浮层（含 Sheet）内的指针与焦点移动不收起编辑中的卡片：
+        // 判定与快捷键守卫共用同一份浮层选择器
+        !insideOverlay(event.target)
       )
         setEditing(false);
     }

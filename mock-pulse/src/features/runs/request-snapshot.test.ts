@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { CHANNEL_REGISTRY, type ChannelId } from "@/lib/channels";
+
 import type { RunStep } from "./model";
-import { requestSnapshot } from "./request-snapshot";
+import { requestSnapshot, SNAPSHOT_TRAITS } from "./request-snapshot";
 
 /**
  * 发送请求快照的按渠道呈现单测：钉住各渠道头模板/query/报文体的字节形态，
@@ -168,6 +170,16 @@ describe("requestSnapshot（按渠道快照呈现）", () => {
       );
       expect(snapshot).not.toContain("X-Douyin-Signature");
       expect(snapshot).not.toContain("Content-Type");
+    }
+  });
+});
+
+describe("SNAPSHOT_TRAITS 渠道键对齐（仿 channel-registry-parity）", () => {
+  it("快照表每个键都在渠道注册表内（防拼写漂移）", () => {
+    // 登记与否是各渠道呈现需要，不强制全登记：未登记渠道回落通用表单
+    //（只渲染方法/URL/报文体，见上组用例），故只钉单向往表内
+    for (const id of Object.keys(SNAPSHOT_TRAITS) as ChannelId[]) {
+      expect(CHANNEL_REGISTRY[id], id).toBeDefined();
     }
   });
 });

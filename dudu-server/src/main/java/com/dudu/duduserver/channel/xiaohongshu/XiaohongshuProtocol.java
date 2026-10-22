@@ -3,13 +3,12 @@ package com.dudu.duduserver.channel.xiaohongshu;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
-import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
+import com.dudu.duduserver.channel.support.WechatSignatures;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,9 +50,7 @@ public class XiaohongshuProtocol {
         if (Texts.isBlank(token) || Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
             return false;
         }
-        String[] parts = {token, timestamp, nonce};
-        Arrays.sort(parts);
-        return Digests.constantTimeEquals(Digests.sha1Hex(String.join("", parts)), signature);
+        return WechatSignatures.verifySha1(signature, token, timestamp, nonce);
     }
 
     /**
@@ -65,9 +62,7 @@ public class XiaohongshuProtocol {
         if (Texts.isBlank(token) || Texts.isBlank(msgSignature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce) || Texts.isBlank(encrypt)) {
             return false;
         }
-        String[] parts = {token, timestamp, nonce, encrypt};
-        Arrays.sort(parts);
-        return Digests.constantTimeEquals(Digests.sha1Hex(String.join("", parts)), msgSignature);
+        return WechatSignatures.verifySha1(msgSignature, token, timestamp, nonce, encrypt);
     }
 
     /**

@@ -288,7 +288,13 @@ export async function runConversationOperation<T>(
         if (mismatch) throw new DeskApiError("invalid-response", mismatch);
         await operation.loaded(result, { current: op.current });
       } catch (error) {
-        if (!stands()) return;
+        // 会话已移除：迟到结果不得复活已拆除的会话状态，两种取消都保持吞掉
+        if (!getState().inbox.conversations[conversationId]) return;
+        // 本次尝试被取消（范围代数递增或重连取消在途读取）时，非发送操作维持吞掉；
+        // 发送操作仍要本地结算，否则 submission 永远停在 sending、会话发送锁无法
+        // 释放，重连后也没有失败入口可查。取消的错误按 aborted 结算，aborted 归入
+        // uncertain（与 sending.ts deliver 的分类一致），等重连重查的回执证据落定
+        if (!op.current() && kind !== "send") return;
         operation.failed(operationFailure(error));
       }
     },

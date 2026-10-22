@@ -4,6 +4,7 @@ import com.dudu.duduserver.channel.ChannelAdapter;
 import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
+import com.dudu.duduserver.channel.ChannelRoutes;
 import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
@@ -53,7 +54,7 @@ public class MeituanAdapter implements ChannelAdapter {
         if (host == null || host.isEmpty()) {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
-        String url = "http://" + host + "/api/channels/" + account.getCompanyChannelId() + "/callback";
+        String url = "http://" + host + ChannelRoutes.callbackPath(account.getCompanyChannelId());
         // 合并 query 与 body 表单（网关以非标准内容类型直发 body 时容器不解析），按官方
         // 「解码 2 次」口径解码后参签与解析
         Map<String, String> form = protocol.paramsOf(query, body);

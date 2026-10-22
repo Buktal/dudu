@@ -7,6 +7,7 @@ export {
   interpretTemplateStep,
 } from "./interpret";
 export {
+  latestVersionOf,
   resolveEventVersion,
   resolveRow,
   resolveTemplateVersion,

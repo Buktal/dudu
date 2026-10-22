@@ -6,7 +6,7 @@ import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <ThemeProvider>
+    <ThemeProvider storageKey="dudu-console.theme">
       <App />
     </ThemeProvider>
   </React.StrictMode>,

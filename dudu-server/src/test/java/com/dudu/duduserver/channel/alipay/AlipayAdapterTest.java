@@ -2,6 +2,7 @@ package com.dudu.duduserver.channel.alipay;
 
 import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.junit.jupiter.api.BeforeAll;
@@ -179,8 +180,8 @@ class AlipayAdapterTest {
 
     @Test
     void restrictionsReportMissingCredentialsHonesty() {
-        assertThat(adapter.sendRestriction(account(null))).isEqualTo(AlipayTextSender.SEND_CREDENTIALS_MISSING);
-        assertThat(adapter.mediaRestriction(account(null))).isEqualTo(AlipayMediaReader.MEDIA_CREDENTIALS_MISSING);
+        assertThat(adapter.sendRestriction(account(null))).isEqualTo(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
+        assertThat(adapter.mediaRestriction(account(null))).isEqualTo(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         assertThat(adapter.sendRestriction(account(credentials))).isNull();
         assertThat(adapter.mediaRestriction(account(credentials))).isNull();
     }

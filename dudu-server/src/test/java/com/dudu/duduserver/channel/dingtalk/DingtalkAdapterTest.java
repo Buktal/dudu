@@ -2,6 +2,7 @@ package com.dudu.duduserver.channel.dingtalk;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.dudu.duduserver.channel.ChannelAdapterRegistry;
 import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.constant.ChannelEnum;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestClient;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -128,9 +130,11 @@ class DingtalkAdapterTest {
         Map<String, Object> receiveOnly = fullInfo();
         assertThat(adapter.sendRestriction(account(receiveOnly))).isEqualTo("渠道发送凭据未配置");
         assertThat(adapter.mediaRestriction(account(receiveOnly))).isEqualTo("渠道素材凭据未配置");
-        assertThat(adapter.send(account(receiveOnly), "sender-1", "在吗").failureReason())
+        // 发送与素材读取经注册表分派：凭据缺失在 restriction 即拦截，不进入适配器
+        ChannelAdapterRegistry registry = new ChannelAdapterRegistry(List.of(adapter));
+        assertThat(registry.send(account(receiveOnly), "sender-1", "在吗").failureReason())
             .isEqualTo("渠道发送凭据未配置");
-        assertThat(adapter.readMedia(account(receiveOnly), "mIofN…").failureReason())
+        assertThat(registry.readMedia(account(receiveOnly), "mIofN…").failureReason())
             .isEqualTo("渠道素材凭据未配置");
 
         Map<String, Object> complete = fullInfo();

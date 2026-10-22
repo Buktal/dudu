@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.alipay;
 
 import com.dudu.duduserver.channel.ChannelMediaResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.sun.net.httpserver.HttpServer;
@@ -119,7 +120,7 @@ class AlipayMediaReaderTest {
         ChannelMediaResult result = reader().read(bare, "abc123");
 
         assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).isEqualTo("渠道媒体凭据未配置");
+        assertThat(result.failureReason()).isEqualTo(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
         assertThat(bodies).isEmpty();
     }
 

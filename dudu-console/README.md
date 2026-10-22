@@ -21,6 +21,8 @@ yarn test        # 单元测试
 yarn check:all   # 类型 + lint + 测试
 ```
 
+快捷键：任意非输入焦点下按 `d` 切换深浅主题（输入框等可编辑元素内不触发）。
+
 ## 技术栈
 
 - 前端：React 19 + Vite + Tailwind CSS 4 + shadcn（Base UI）

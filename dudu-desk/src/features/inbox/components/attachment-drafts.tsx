@@ -3,7 +3,6 @@ import {
   FileText,
   Film,
   ImageIcon,
-  LoaderCircle,
   RotateCcw,
   X,
 } from "lucide-react";
@@ -18,6 +17,7 @@ import {
   AttachmentMedia,
   AttachmentTitle,
 } from "@/components/ui/attachment";
+import { Spinner } from "@/components/ui/spinner";
 import { formatFileSize, safeAssetUrl } from "@/lib/attachment-utils";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { attachmentRestriction } from "../reply/attachment-rules";
@@ -117,7 +117,7 @@ function DraftMedia({ attachment }: { attachment: DraftAttachment }) {
       {source ? (
         <img src={source} alt="" onError={() => setFailed(true)} />
       ) : attachment.status === "preparing" ? (
-        <LoaderCircle className="animate-spin" />
+        <Spinner />
       ) : (
         <Icon />
       )}

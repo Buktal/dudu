@@ -6,7 +6,11 @@ import {
   refRowOf,
   refStatusForPresence,
 } from "./consequences";
-import { describeEventVersion, describeTemplateVersion } from "./resolve";
+import {
+  describeEventVersion,
+  describeTemplateVersion,
+  latestVersionOf,
+} from "./resolve";
 
 /**
  * 引用解析 interpreter（C1 的唯一深 module，也是 events 域引用解析的唯一出口：
@@ -97,7 +101,7 @@ export function interpretEventStep<
   const consequence = REF_CONSEQUENCES[status.status];
   const row = refRowOf(status);
   const entry = refEntryOf(status);
-  const latest = row?.versions[row.versions.length - 1];
+  const latest = row ? latestVersionOf(row) : undefined;
   const latestRevision = latest?.revision ?? 0;
   return {
     status: status.status,

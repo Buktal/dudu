@@ -25,14 +25,14 @@ import com.dudu.duduserver.service.MessageService;
 import com.dudu.duduserver.service.UserService;
 import com.dudu.duduserver.service.VisitorService;
 import com.dudu.duduserver.socket.DeskSocketGateway;
-import com.dudu.duduserver.util.DeskConversationViews;
+import com.dudu.duduserver.util.LikeClauses;
+import com.dudu.duduserver.util.LockClauses;
 import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessagePageVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskVisitorPageVO;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
@@ -53,7 +53,6 @@ import java.util.stream.Collectors;
  * 结束 / 继续在单事务内锁定读访客行后只改接待状态与等待计时（与来信 / 回复在同一把行锁上
  * 串行），HTTP 返回与 conversation 推送共用同一份会话对象，推送在事务提交后发出。
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeskVisitorServiceImpl implements DeskVisitorService {
@@ -68,11 +67,6 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     private static final String ORDER_MESSAGES =
         "ORDER BY message_count DESC, IFNULL(last_message_time, create_time) DESC, visitor_id ASC";
 
-    // 搜索词的通配符转义子句：转义字符显式指定为 !，字面匹配语义固定，不随连接的默认转义字符、
-    // sql_mode 变化（片段见 applySearch）
-    private static final String LIKE_ESCAPE = " ESCAPE '!'";
-    // 行锁片段：锁定读绕过可重复读快照，读到并发事务已提交的最新行（与 DeskReplyServiceImpl 同口径）
-    private static final String LOCK_ROW = "FOR UPDATE";
 
     private final DeskAuthService deskAuthService;
     private final VisitorService visitorService;
@@ -80,6 +74,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     private final UserService userService;
     private final CompanyChannelService companyChannelService;
     private final DeskSocketGateway deskSocketGateway;
+    private final PushGate pushGate;
     private final DeskConversationViews deskConversationViews;
     private final TransactionTemplate transactionTemplate;
 
@@ -171,7 +166,7 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         // waiting_since，契约第 2 节「已待回复保留原 waiting_since」不被锁前快照覆盖
         VisitorDO visitor = visitorService.getOne(Wrappers.<VisitorDO>lambdaQuery()
             .eq(VisitorDO::getVisitorId, visitorId)
-            .last(LOCK_ROW));
+            .last(LockClauses.LOCK_ROW));
         // 契约第 2 节：结束写 closed 并清空 waiting_since；继续在本轮计时未开始时重新计时，已待回复保留原值
         boolean awaiting = visitor.awaitingReply();
         boolean changed = target == VisitorStatusEnum.CLOSED
@@ -209,16 +204,13 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         throw new BizException(ApiEnum.PARAM_ERROR, "接待状态只接受 closed 或 needs-reply");
     }
 
-    // 状态保存后推送一次 conversation 报文（含操作者本人）；推送失败只记录，不影响已保存的状态
+    // 状态保存后推送一次 conversation 报文（含操作者本人）；推送失败只记录，不影响已保存的状态（机制收编在 PushGate）
     private void pushStatusChange(CompanyChannelDO account, DeskConversationVO conversation) {
         if (account == null) {
             return;
         }
-        try {
-            deskSocketGateway.pushConversation(account.getCompanyId(), account.getCompanyChannelId(), conversation);
-        } catch (RuntimeException e) {
-            log.error("[desk-reception] 推送接待状态失败, visitorId={}", conversation.id(), e);
-        }
+        pushGate.afterCommitQuietly("接待状态 visitorId=" + conversation.id(),
+            () -> deskSocketGateway.pushConversation(account.getCompanyId(), account.getCompanyChannelId(), conversation));
     }
 
     // 访客资源共用的授权读取（Reply / Profile / Media 同一守卫）：ID 非法 11000；不存在 12100；
@@ -350,30 +342,24 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             .filter(account -> matchesAccountText(account, term))
             .map(account -> Long.valueOf(account.companyChannelId()))
             .toList();
-        String pattern = "%" + escapeLike(term) + "%";
+        String pattern = LikeClauses.pattern(term);
         wrapper.and(w -> {
             // 姓名、外部用户 ID 与最后摘要走数据库 LIKE；Lambda 的 like 无法表达 ESCAPE，
             // 用受支持的固定 SQL 片段追加，转义字符显式指定为 !、不随连接默认值变化，
             // 词条仍走占位符参数绑定
-            w.apply("name LIKE {0}" + LIKE_ESCAPE, pattern)
-                .or().apply("external_user_id LIKE {0}" + LIKE_ESCAPE, pattern)
-                .or().apply("last_message_preview LIKE {0}" + LIKE_ESCAPE, pattern);
+            w.apply("name LIKE {0}" + LikeClauses.ESCAPE, pattern)
+                .or().apply("external_user_id LIKE {0}" + LikeClauses.ESCAPE, pattern)
+                .or().apply("last_message_preview LIKE {0}" + LikeClauses.ESCAPE, pattern);
             if (!matchedAccountIds.isEmpty()) {
                 w.or().in(VisitorDO::getCompanyChannelId, matchedAccountIds);
             }
             // 标签为 JSON 数组，Lambda 构造器无法表达 JSON 函数；exists 片段的词条同样参数绑定，
             // LIKE 与 JSON_SEARCH 共用同一显式转义字符 !（JSON_SEARCH 的 escape_char 与 pattern 一致）
             w.or().exists("SELECT 1 FROM visitor_profile vp WHERE vp.visitor_id = visitor.visitor_id"
-                    + " AND (vp.note LIKE {0}" + LIKE_ESCAPE
+                    + " AND (vp.note LIKE {0}" + LikeClauses.ESCAPE
                     + " OR JSON_SEARCH(vp.tags, 'one', {0}, '!', '$[*]') IS NOT NULL)",
                 pattern);
         });
-    }
-
-    // 通配符转义：! 自身先转义（后两步替换会引入 !），% 与 _ 变为字面量；与 SQL 中显式
-    // ESCAPE '!' 及 JSON_SEARCH 的 escape_char 一致，字面匹配不随连接默认转义字符、sql_mode 变化
-    private String escapeLike(String term) {
-        return term.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     // 账号名与渠道名的包含匹配（契约第 3 节：账号名、渠道名，不含渠道代码）：
@@ -389,23 +375,29 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         return query.order() == VisitorQueryOrderEnum.MESSAGES ? ORDER_MESSAGES : ORDER_WAIT;
     }
 
-    // 计数取全部授权账号范围，不受关键词、状态与渠道筛选影响；active = needsReply + waiting
+    // 计数取全部授权账号范围，不受关键词、状态与渠道筛选影响；active = needsReply + waiting；
+    // 三类状态一次 GROUP BY 计数（Lambda 无法表达聚合，用受支持的 select 片段按状态码分组）
     private DeskVisitorPageVO.Counts counts(Long companyId, List<DeskAccessVO.Account> accounts) {
         if (accounts.isEmpty()) {
             return new DeskVisitorPageVO.Counts(0, 0, 0, 0);
         }
         List<Long> scopeIds = accounts.stream().map(account -> Long.valueOf(account.companyChannelId())).toList();
-        int needsReply = countStatus(companyId, scopeIds, VisitorStatusEnum.NEEDS_REPLY);
-        int waiting = countStatus(companyId, scopeIds, VisitorStatusEnum.WAITING);
-        int closed = countStatus(companyId, scopeIds, VisitorStatusEnum.CLOSED);
+        Map<String, Long> byStatus = visitorService.listMaps(Wrappers.<VisitorDO>query()
+                .select("status", "COUNT(*) AS total")
+                .eq("company_id", companyId)
+                .in("company_channel_id", scopeIds)
+                .groupBy("status"))
+            .stream().collect(Collectors.toMap(row -> String.valueOf(row.get("status")),
+                row -> ((Number) row.get("total")).longValue()));
+        int needsReply = countOf(byStatus, VisitorStatusEnum.NEEDS_REPLY);
+        int waiting = countOf(byStatus, VisitorStatusEnum.WAITING);
+        int closed = countOf(byStatus, VisitorStatusEnum.CLOSED);
         return new DeskVisitorPageVO.Counts(needsReply + waiting, needsReply, waiting, closed);
     }
 
-    private int countStatus(Long companyId, List<Long> scopeIds, VisitorStatusEnum status) {
-        return Math.toIntExact(visitorService.count(new LambdaQueryWrapper<VisitorDO>()
-            .eq(VisitorDO::getCompanyId, companyId)
-            .in(VisitorDO::getCompanyChannelId, scopeIds)
-            .eq(VisitorDO::getStatus, status)));
+    // 状态计数按数据库业务代码取值，未出现的状态计 0
+    private int countOf(Map<String, Long> byStatus, VisitorStatusEnum status) {
+        return Math.toIntExact(byStatus.getOrDefault(status.getCode(), 0L));
     }
 
     // 授权账号用到的渠道代码与显示名，按账号顺序去重

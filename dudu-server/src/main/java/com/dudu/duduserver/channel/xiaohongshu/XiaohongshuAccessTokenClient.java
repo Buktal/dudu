@@ -63,7 +63,8 @@ class XiaohongshuAccessTokenClient {
         if (accessToken == null || accessToken.isEmpty()) {
             return FetchedToken.failed("获取小红书接口凭据失败：响应缺少 access_token");
         }
-        return FetchedToken.fetched(accessToken, lifetimeMillis(data));
+        return FetchedToken.fetched(accessToken,
+            AccessTokenCache.expiresInMillis(data, KEY_EXPIRE_IN, DEFAULT_EXPIRE_MILLIS));
     }
 
     // DC010382 请求示例：{appid, secret}，JSON body（DC853803 通用约定 content-type JSON）
@@ -74,9 +75,4 @@ class XiaohongshuAccessTokenClient {
         return payload;
     }
 
-    // expire_in 为秒（官方样例 7200，data 内）；缺失或非法按官方当前有效期
-    private long lifetimeMillis(JSONObject data) {
-        Long expireIn = data == null ? null : data.getLong(KEY_EXPIRE_IN, null);
-        return expireIn == null || expireIn <= 0 ? DEFAULT_EXPIRE_MILLIS : expireIn * 1000;
-    }
 }

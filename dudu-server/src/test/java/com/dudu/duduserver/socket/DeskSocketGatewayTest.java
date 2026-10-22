@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -65,6 +66,33 @@ class DeskSocketGatewayTest {
         verify(healthy, times(1)).sendMessage(captor.capture());
         assertThat(JSONUtil.parseObj(captor.getValue().getPayload()).getStr("type")).isEqualTo("message");
         verify(failing, never()).sendMessage(any());
+    }
+
+    @Test
+    void authTimeoutClosesOnlySessionStillUnauthenticated() throws Exception {
+        WebSocketSession stranger = mock(WebSocketSession.class);
+        WebSocketSession employeeSession = mock(WebSocketSession.class);
+        WebSocketSession gone = mock(WebSocketSession.class);
+        when(stranger.getId()).thenReturn("stranger");
+        when(employeeSession.getId()).thenReturn("employee-session");
+        when(gone.getId()).thenReturn("gone");
+        when(stranger.isOpen()).thenReturn(true);
+        when(employeeSession.isOpen()).thenReturn(true);
+        when(gone.isOpen()).thenReturn(true);
+        gateway.register(stranger);
+        gateway.register(employeeSession);
+        gateway.register(gone);
+        gateway.authenticate("employee-session", employee(51L));
+        gateway.remove("gone");
+
+        // 鉴权时限到期：只有始终未认证的连接被关闭，已认证与已离开的不受影响
+        gateway.expireAuth("stranger");
+        gateway.expireAuth("employee-session");
+        gateway.expireAuth("gone");
+
+        verify(stranger, times(1)).close(CloseStatus.POLICY_VIOLATION);
+        verify(employeeSession, never()).close(any(CloseStatus.class));
+        verify(gone, never()).close(any(CloseStatus.class));
     }
 
     private JwtUser employee(long userId) {

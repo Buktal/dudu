@@ -1,5 +1,6 @@
-import { LoaderCircle, WifiOff } from "lucide-react";
+import { WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Tooltip,
   TooltipContent,
@@ -28,10 +29,7 @@ export function ConnectionStatus() {
         }
       >
         {busy ? (
-          <LoaderCircle
-            data-icon="inline-start"
-            className="animate-spin motion-reduce:animate-none"
-          />
+          <Spinner data-icon="inline-start" />
         ) : (
           <WifiOff data-icon="inline-start" />
         )}

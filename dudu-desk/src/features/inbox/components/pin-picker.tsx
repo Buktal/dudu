@@ -1,6 +1,6 @@
 import { Pin, Search, X } from "lucide-react";
-import { type RefObject, useEffect, useId, useRef, useState } from "react";
-import { type FollowOutput, Virtuoso } from "react-virtuoso";
+import { type RefObject, useEffect, useId, useRef } from "react";
+import { Virtuoso } from "react-virtuoso";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +17,10 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import {
+  useFollowOutput,
+  virtuosoBehaviorProps,
+} from "../hooks/use-follow-output";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import {
   cancelConversationChoices,
@@ -42,15 +46,7 @@ function PinChoices({
     selectPinnableChoices,
   );
   const id = useId();
-  const [followOutput, setFollowOutput] = useState<FollowOutput>("auto");
-  const [atTop, setAtTop] = useState<boolean>(false);
-  const [atBottom, setAtBottom] = useState<boolean>(false);
-
-  useEffect(() => {
-    // atBottom 不一定真的在底部（atTop、atBottom 可同时为 true）
-    const realAtBottom = atTop ? false : atBottom;
-    setFollowOutput(realAtBottom ? "smooth" : "auto");
-  }, [atBottom, atTop]);
+  const { followOutput, setAtTop, setAtBottom } = useFollowOutput();
 
   useEffect(() => {
     void dispatch(
@@ -120,20 +116,13 @@ function PinChoices({
       >
         <Virtuoso
           className="min-h-0 flex-1"
-          // 虚拟滚动视口扩展距离，提前加载视口外项目。
-          increaseViewportBy={{ bottom: 200, top: 300 }}
-          // 滚动时多渲染一些项目，避免滚动时频繁触发 re-render。
-          overscan={{ main: 200, reverse: 300 }}
+          {...virtuosoBehaviorProps}
           // 默认情况下，followOutput 只会在列表已经到底部时向下滚动
           followOutput={followOutput}
           // 当列表滚动到顶部或向下滚动时，会调用此回调并传入 true / false
           atTopStateChange={setAtTop}
           // 当列表滚动到底部或向上滚动时，会调用此回调并传入 true / false
           atBottomStateChange={setAtBottom}
-          // 快速滚动时显示占位符内容，避免性能下降
-          scrollSeekConfiguration={false}
-          // 禁用 requestAnimationFrame 包装，优化性能但可能出现警告
-          skipAnimationFrameInResizeObserver={true}
           // 要渲染的数据数组。设置这个后，会根据数组长度推断总数量
           data={candidates}
           // 自定义列表每项的 key（React key），提升性能，避免重复渲染

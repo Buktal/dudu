@@ -237,6 +237,10 @@ fn execute_plan_serial<F: FnMut(LaneProgress)>(
 /// [`LanePolicy::note_failure`] 置位（Relaxed），其余剧本经决策表锁存
 /// 「编排停止」（在途步骤自然完成）；continue 时策略不持旗标，
 /// 各剧各跑到底（剧内失败即停语义不变）。
+/// lane 线程 panic 不引爆宿主线程（join expect 曾让 finished 事件永不
+/// 发出、RunSession 全局互斥永久占用）：join Err 折叠为该剧本剩余步骤的
+/// 失败回执（[`SkipReason::LanePanicked`]，已完成步骤经台账原样保留），
+/// 编排照常走既有收尾（finished 事件 / 落盘 / 控制注册表释放随命令边界照旧）。
 fn execute_plan_parallel<F>(
     snapshot: &PlanRunSnapshot,
     connections: &[ConnectionConfig],
@@ -251,6 +255,14 @@ where
         (snapshot.failure == PlanFailure::Stop).then(|| Arc::new(AtomicBool::new(false)));
     // 并发 lane 共享一个进度回调（FnMut 需互斥；锁毒化视为不可恢复错误）
     let sink = Mutex::new(on_progress);
+    // 每 lane 台账：已落 Finished 进度事件的步骤快照（事件自带完整快照，
+    // 先于回调记账）。lane 线程 panic 时返回值随线程丢失，已完成步骤据此
+    // 回填，剩余步骤折叠为失败回执。
+    let placed: Vec<Mutex<Vec<Option<RunStep>>>> = snapshot
+        .scenarios
+        .iter()
+        .map(|scenario| Mutex::new(vec![None; scenario.steps.len()]))
+        .collect();
     // scoped 线程：快照与连接都是本函数栈上借用，无需 'static
     let outcomes: Vec<(Vec<RunStep>, bool)> = std::thread::scope(|scope| {
         let handles: Vec<_> = snapshot
@@ -260,8 +272,15 @@ where
             .map(|(lane, scenario)| {
                 let shared = shared_cancel.as_deref();
                 let sink = &sink;
+                let placed = &placed;
                 scope.spawn(move || {
                     let mut on_lane = |progress: StepProgress| {
+                        if let StepProgress::Finished { index, step, .. } = &progress {
+                            let mut slots = placed[lane]
+                                .lock()
+                                .unwrap_or_else(|poisoned| poisoned.into_inner());
+                            slots[*index] = Some(step.clone());
+                        }
                         let mut guard =
                             sink.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
                         guard(LaneProgress { lane, progress });
@@ -272,9 +291,20 @@ where
                 })
             })
             .collect();
+        // join Err = lane 线程 panic：折叠为该 lane 剩余步骤的失败回执后照常
+        // 收尾（逐 handle join 消费 panic 载荷，scope 不再向宿主线程传播）
         handles
             .into_iter()
-            .map(|handle| handle.join().expect("编排 lane 线程不应 panic"))
+            .enumerate()
+            .map(|(lane, handle)| match handle.join() {
+                Ok(outcome) => outcome,
+                Err(_payload) => {
+                    let slots = placed[lane]
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
+                    recover_panicked_lane(&snapshot.scenarios[lane], connections, &slots)
+                }
+            })
             .collect()
     });
     // 记录按 lane 顺序拼接（与完成先后无关）
@@ -284,6 +314,31 @@ where
         all_steps.extend(steps.into_iter().map(|step| tag_lane(step, lane, name)));
     }
     all_steps
+}
+
+/// lane 线程 panic 的兜底折叠（join Err 收口）：台账中已完成的步骤原样
+/// 保留，其余步骤全部折叠为 [`SkipReason::LanePanicked`] 失败回执——该
+/// lane 槽位齐全，「记录内步骤下标 = 按 lane 顺序拼接」的检查点回写契约
+/// 不破，并记 own_failed（剧本确实未跑完）。
+fn recover_panicked_lane(
+    scenario: &ScenarioRunSnapshot,
+    connections: &[ConnectionConfig],
+    placed: &[Option<RunStep>],
+) -> (Vec<RunStep>, bool) {
+    let steps = scenario
+        .steps
+        .iter()
+        .enumerate()
+        .map(|(index, step_snapshot)| match placed.get(index) {
+            Some(Some(step)) => step.clone(),
+            _ => skipped_step(
+                Some(&step_snapshot.expected),
+                step_facts(step_snapshot, connections),
+                SkipReason::LanePanicked.text(),
+            ),
+        })
+        .collect();
+    (steps, true)
 }
 
 /// 步骤快照 → 身份事实（未发出请求的路径：url 按渠道连接解析，缺失记空串）。

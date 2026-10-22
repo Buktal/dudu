@@ -1,4 +1,4 @@
-package com.dudu.duduserver.util;
+package com.dudu.duduserver.service.impl;
 
 import com.dudu.duduserver.channel.ChannelAdapterRegistry;
 import com.dudu.duduserver.constant.ChannelEnum;

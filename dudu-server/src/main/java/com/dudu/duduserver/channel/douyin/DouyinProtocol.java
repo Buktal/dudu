@@ -6,6 +6,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
+import com.dudu.duduserver.channel.support.JsonBodies;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
@@ -123,7 +124,7 @@ public class DouyinProtocol {
     }
 
     private String visitorInfo(JSONObject content, String externalUserId, String field) {
-        JSONArray userInfos = content.getJSONArray(KEY_USER_INFOS);
+        JSONArray userInfos = JsonBodies.arrayField(content, KEY_USER_INFOS, "抖音事件报文");
         if (userInfos == null) {
             return null;
         }

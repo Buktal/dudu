@@ -27,10 +27,9 @@ export function matchesConversationFilters(
   return (
     (query.channelId === "all" ||
       query.channelId === conversation.identity.channelId) &&
-    (query.status === "all" ||
-      (query.status === "active"
-        ? conversation.status !== "closed"
-        : query.status === conversation.status))
+    (query.status === "active"
+      ? conversation.status !== "closed"
+      : query.status === conversation.status)
   );
 }
 

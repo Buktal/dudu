@@ -2,7 +2,6 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   type ContextProp,
-  type FollowOutput,
   Virtuoso,
   type VirtuosoHandle,
 } from "react-virtuoso";
@@ -10,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Marker, MarkerContent } from "@/components/ui/marker";
 import { messageDate } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import {
+  useFollowOutput,
+  virtuosoBehaviorProps,
+} from "../hooks/use-follow-output";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { loadHistory, retryHistory } from "../stores/reading";
 import { selectConversationById, selectMessages } from "../stores/selectors";
@@ -60,6 +63,25 @@ const latestLocation = {
   behavior: "auto",
 } as const;
 
+/** 反向分页锚点：firstItemIndex 基于基准消息在列表中的位置递减，prepend 越多
+ *  值越小，Virtuoso 据此保持滚动锚定。基准消息不在列表中（重连
+ *  historiesInvalidated 剔除旧缓存后重建列表）时以当前首条重算基准，否则锚点
+ *  固定在 100000，后续 prepend 锚定错位。 */
+export const FIRST_ITEM_INDEX_BASE = 100000;
+
+export function firstItemAnchor(
+  messages: { id: string }[],
+  baseId: string,
+): { baseId: string; firstItemIndex: number } {
+  const index = messages.findIndex((message) => message.id === baseId);
+  if (index < 0)
+    return {
+      baseId: messages[0]?.id ?? baseId,
+      firstItemIndex: FIRST_ITEM_INDEX_BASE,
+    };
+  return { baseId, firstItemIndex: FIRST_ITEM_INDEX_BASE - index };
+}
+
 function HistoryList({
   conversationId,
   messages,
@@ -76,29 +98,21 @@ function HistoryList({
     (state) => selectConversationById(state, conversationId)?.identity,
   );
   const virtuoso = useRef<VirtuosoHandle>(null);
-  const [initialFirstId] = useState(messages[0].id);
   // atBottom 初始为 true：initialTopMostItemIndex 定位最新消息，且内容不满一屏时
   // Virtuoso 不会触发 atBottomStateChange。
-  const [atBottom, setAtBottom] = useState(true);
-  const [atTop, setAtTop] = useState<boolean>(false);
-  const [followOutput, setFollowOutput] = useState<FollowOutput>("auto");
+  const { followOutput, atBottom, setAtTop, setAtBottom } =
+    useFollowOutput(true);
+  const [anchorBase, setAnchorBase] = useState(messages[0].id);
+  const anchor = firstItemAnchor(messages, anchorBase);
+  // 基准被剔除时在渲染期换到当前首条：下一次 prepend 从新基准继续递减
+  if (anchor.baseId !== anchorBase) setAnchorBase(anchor.baseId);
   const firstCreatedAt = messages[0].createdAt;
   const context = useMemo(
     () => ({ conversationId, firstCreatedAt }),
     [conversationId, firstCreatedAt],
   );
-  const firstItemIndex =
-    100000 -
-    Math.max(
-      0,
-      messages.findIndex((message) => message.id === initialFirstId),
-    );
+  const firstItemIndex = anchor.firstItemIndex;
   const lastSequence = messages[messages.length - 1]?.sequence ?? 0;
-  useEffect(() => {
-    // atBottom 不一定真的在底部（atTop、atBottom 可同时为 true）
-    const realAtBottom = atTop ? false : atBottom;
-    setFollowOutput(realAtBottom ? "smooth" : "auto");
-  }, [atBottom, atTop]);
   useEffect(() => {
     const markVisible = () => {
       if (atBottom) onAtBottom?.(lastSequence);
@@ -116,9 +130,9 @@ function HistoryList({
       <Virtuoso
         ref={virtuoso}
         className="h-full [scrollbar-gutter:stable]"
-        // 虚拟滚动视口扩展距离，提前加载视口外项目。
+        {...virtuosoBehaviorProps}
+        // 消息高度不一且反向分页更重：视口扩展与 overscan 在共选之上取更大值
         increaseViewportBy={{ bottom: 400, top: 600 }}
-        // 滚动时多渲染一些项目，避免滚动时频繁触发 re-render。
         overscan={{ main: 400, reverse: 600 }}
         // 实现反向无限滚动时使用，结合 totalCount 减少此属性值，以向列表顶部追加项（警告：firstItemIndex 应该是一个正数，基于要显示的总项数）
         firstItemIndex={firstItemIndex}
@@ -130,10 +144,6 @@ function HistoryList({
         atTopStateChange={setAtTop}
         // 当列表滚动到底部或向上滚动时，会调用此回调并传入 true / false
         atBottomStateChange={setAtBottom}
-        // 快速滚动时显示占位符内容，避免性能下降
-        scrollSeekConfiguration={false}
-        // 禁用 requestAnimationFrame 包装，优化性能但可能出现警告
-        skipAnimationFrameInResizeObserver={true}
         // 要渲染的数据数组。设置这个后，会根据数组长度推断总数量
         data={messages}
         // 自定义列表每项的 key（React key），提升性能，避免重复渲染

@@ -186,13 +186,14 @@ export function setPayloadField(
 
 /**
  * 发送者 ID 显式同步：把资料的 open_id 对齐到 from_user_id。
- * 入参与返回均为表单形态载荷（contentString 已解析）；返回新载荷，
- * 路径不存在时原样返回同一引用。
+ * 入参与返回均为表单形态载荷（contentString 已解析）；返回新载荷与实际
+ * 写入的身份路径（schema 推导，未写入为 null——调用方据此作废该字段
+ * 的未应用输入），资料路径不存在时载荷原样返回同一引用。
  */
 export function syncSenderIdentity(
   schema: EventSchema,
   payload: WirePayload,
-): WirePayload {
+): { payload: WirePayload; syncedPath: string | null } {
   const profilePath = schema.fields
     .map((field) => field.path)
     .find(
@@ -203,7 +204,10 @@ export function syncSenderIdentity(
     );
   const sender = getAt(payload, "from_user_id");
   if (!profilePath || sender === undefined) {
-    return payload;
+    return { payload, syncedPath: null };
   }
-  return setPayloadField(payload, profilePath, sender);
+  return {
+    payload: setPayloadField(payload, profilePath, sender),
+    syncedPath: profilePath,
+  };
 }

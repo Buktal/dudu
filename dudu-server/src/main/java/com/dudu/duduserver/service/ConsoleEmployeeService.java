@@ -12,7 +12,9 @@ import com.dudu.duduserver.dto.ConsoleEmployeeQuery;
 import com.dudu.duduserver.dto.ConsoleIdentityRequests;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
+import com.dudu.duduserver.entity.UserGroupMemberDO;
 import com.dudu.duduserver.util.ConsoleIds;
+import com.dudu.duduserver.util.LikeClauses;
 import com.dudu.duduserver.util.PasswordHasher;
 import com.dudu.duduserver.vo.ConsoleEmployeeVO;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
 import com.dudu.duduserver.socket.DeskAccessChangedEvent;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -46,7 +50,10 @@ public class ConsoleEmployeeService {
             .in(UserDO::getRole, UserRoleEnum.USER, UserRoleEnum.CONSOLE);
         if (query.getKeyword() != null && !query.getKeyword().isBlank()) {
             String keyword = query.getKeyword().trim();
-            wrapper.and(w -> w.like(UserDO::getUsername, keyword).or().like(UserDO::getName, keyword));
+            // 关键词字面匹配（% _ ! 转义，口径同 Desk 访客搜索）；MP like 无法表达 ESCAPE，用受支持片段
+            String pattern = LikeClauses.pattern(keyword);
+            wrapper.and(w -> w.apply("username LIKE {0}" + LikeClauses.ESCAPE, pattern)
+                .or().apply("name LIKE {0}" + LikeClauses.ESCAPE, pattern));
         }
         wrapper.eq(query.getRole() != null, UserDO::getRole, query.getRole());
         wrapper.eq(query.getStatus() != null, UserDO::getStatus, query.getStatus());
@@ -54,7 +61,7 @@ public class ConsoleEmployeeService {
         long total = users.count(wrapper);
         Page<UserDO> page = query.toPage(total);
         if (total > 0) page = users.page(page, wrapper);
-        return P.ok(page, page.getRecords().stream().map(user -> view(access, user)).toList());
+        return P.ok(page, views(access, page.getRecords()));
     }
 
     public ConsoleEmployeeVO detail(JwtUser me, String userId) {
@@ -147,12 +154,25 @@ public class ConsoleEmployeeService {
         users.updatePassword(user.getUserId(), request.newPassword());
     }
 
-    private ConsoleEmployeeVO view(ConsoleAccess access, UserDO user) {
+    // 列表页视图：组关系按页内员工一次批量查询，不逐员工往返（组 ID 升序去重，口径同 listGroupIds）
+    private List<ConsoleEmployeeVO> views(ConsoleAccess access, List<UserDO> page) {
+        if (page.isEmpty()) return List.of();
         Set<Long> companyGroups = groups.listByCompany(access.companyId()).stream()
             .map(UserGroupDO::getGroupId).collect(Collectors.toSet());
-        return ConsoleEmployeeVO.of(user, access.company().isInitialAdmin(user.getUserId()),
-            members.listGroupIds(access.companyId(), user.getUserId()).stream()
-                .filter(companyGroups::contains).map(String::valueOf).toList());
+        Map<Long, List<Long>> memberGroupIds = members.lambdaQuery()
+            .eq(UserGroupMemberDO::getCompanyId, access.companyId())
+            .in(UserGroupMemberDO::getUserId, page.stream().map(UserDO::getUserId).toList())
+            .orderByAsc(UserGroupMemberDO::getGroupId)
+            .list().stream().collect(Collectors.groupingBy(UserGroupMemberDO::getUserId,
+                Collectors.mapping(UserGroupMemberDO::getGroupId, Collectors.toList())));
+        return page.stream().map(user -> ConsoleEmployeeVO.of(user,
+            access.company().isInitialAdmin(user.getUserId()),
+            memberGroupIds.getOrDefault(user.getUserId(), List.of()).stream()
+                .distinct().filter(companyGroups::contains).map(String::valueOf).toList())).toList();
+    }
+
+    private ConsoleEmployeeVO view(ConsoleAccess access, UserDO user) {
+        return views(access, List.of(user)).getFirst();
     }
 
 }

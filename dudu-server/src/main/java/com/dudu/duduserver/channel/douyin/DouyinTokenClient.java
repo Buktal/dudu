@@ -89,7 +89,8 @@ class DouyinTokenClient {
             if (accessToken == null || accessToken.isBlank()) {
                 return FetchedToken.failed("获取抖音接口凭据失败：响应缺少 access_token");
             }
-            return FetchedToken.fetched(accessToken, expireMillis(response));
+            return FetchedToken.fetched(accessToken,
+            AccessTokenCache.expiresInMillis(response.getJSONObject(KEY_DATA), KEY_EXPIRES_IN, DEFAULT_EXPIRE_MILLIS));
         } catch (RuntimeException e) {
             return FetchedToken.failed("获取抖音接口凭据失败：" + e.getMessage());
         }
@@ -111,10 +112,4 @@ class DouyinTokenClient {
         return "获取抖音接口凭据失败：" + errorCode + (description == null ? "" : " " + description);
     }
 
-    // expires_in 为秒（官方样例 1296000）；缺失或非法按官方最长寿命
-    private long expireMillis(JSONObject response) {
-        JSONObject data = response.getJSONObject(KEY_DATA);
-        Long expiresIn = data == null ? null : data.getLong(KEY_EXPIRES_IN, null);
-        return expiresIn == null || expiresIn <= 0 ? DEFAULT_EXPIRE_MILLIS : expiresIn * 1000;
-    }
 }

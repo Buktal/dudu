@@ -72,7 +72,7 @@ public class DingtalkMediaReader {
                 .uri(downloadUrl)
                 .retrieve()
                 .toEntity(byte[].class);
-                        return ChannelMediaResult.media(download);
+            return ChannelMediaResult.media(download);
         } catch (RuntimeException e) {
             // 网络、HTTP 状态与响应解析异常都按调用失败记录，不猜测素材内容
             log.warn("[dingtalk] 媒体读取失败, companyChannelId={}, exception={}",

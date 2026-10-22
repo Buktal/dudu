@@ -1,6 +1,7 @@
-package com.dudu.duduserver.channel.douyin;
+package com.dudu.duduserver.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.dudu.duduserver.channel.douyin.DouyinReplyContext;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.entity.MessageDO;
 import com.dudu.duduserver.entity.VisitorDO;
@@ -11,7 +12,9 @@ import org.springframework.stereotype.Component;
 /**
  * 抖音回复上下文的生产实现：从既有 visitor/message 表取访客最近一封来信，解出入站
  * 时留存的复合渠道消息标识（server_message_id:conversation_short_id:发送方 open_id，
- * 见 docs/research/channels/douyin.md §6.1）。只读查询，不新增表与列。
+ * 见 docs/research/channels/douyin.md §6.1）。业务侧实现（ADR-0014：业务表访问不进
+ * channel 包），接口 {@link DouyinReplyContext} 留在渠道 seam 由发送器注入。只读查询，
+ * 不新增表与列。
  */
 @Component
 public class DouyinReplyContextFinder implements DouyinReplyContext {

@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useConsole, useSession } from "@/api/context";
+import { validCompanyId } from "@/api/validators";
 import { Brand } from "@/components/brand";
 import { TextField } from "@/components/form-field";
 import {
@@ -51,9 +52,7 @@ export function LoginPage() {
                 shell.submit(
                   event,
                   () =>
-                    !/^[1-9]\d{5}$/.test(companyId) ||
-                    !username.trim() ||
-                    !password
+                    !validCompanyId(companyId) || !username.trim() || !password
                       ? "请输入六位企业 ID、登录名和密码"
                       : null,
                   (signal) =>

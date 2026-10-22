@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ApiError } from "@/api/client";
 import { useConsole } from "@/api/context";
+import { isMissingEntity } from "@/api/entity-guard";
 import { SelectField, TextField } from "@/components/form-field";
 import {
   SubmitButton,
@@ -114,8 +114,7 @@ export function AccountEditor({
                   onSaved(result);
                 },
                 onError: (error) => {
-                  if (error instanceof ApiError && error.code === 12100)
-                    onUnavailable();
+                  if (isMissingEntity(error)) onUnavailable();
                 },
               },
             )

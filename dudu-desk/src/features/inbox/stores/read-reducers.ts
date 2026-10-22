@@ -4,17 +4,6 @@ import type { InboxMessage, Page, VisitorProfile } from "../types";
 import { mergeMessage, mergeProfile, orderMessages } from "./live-merge";
 import { emptyLoad, type InboxState } from "./state";
 
-/**
- * Re-exported from the Live events merge kernel (live-merge.ts) so existing
- * import sites keep working; new code imports from live-merge.ts directly.
- */
-export {
-  mergeConversation,
-  mergeMessage,
-  mergeProfile,
-  orderMessages,
-} from "./live-merge";
-
 export const readReducers = {
   conversationSelected(
     state: InboxState,

@@ -1,9 +1,12 @@
-import { Check, LoaderCircle, RotateCcw } from "lucide-react";
-import { WorkspaceAction } from "@/components/workspace-action";
+import { Check, RotateCcw } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  WorkspaceAction,
+  WorkspacePanelToggle,
+} from "@/components/workspace-action";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { selectConversationById } from "../stores/selectors";
 import { endReception, focusReply, resumeReception } from "../stores/sending";
-import { VisitorInfoToggle } from "./visitor-info-toggle";
 
 export function ConversationActions({
   conversationId,
@@ -27,10 +30,7 @@ export function ConversationActions({
   return (
     <div className="flex shrink-0 items-center gap-1">
       <WorkspaceAction
-        icon={ending ? LoaderCircle : ended ? RotateCcw : Check}
-        iconClassName={
-          ending ? "animate-spin motion-reduce:animate-none" : undefined
-        }
+        icon={ending ? Spinner : ended ? RotateCcw : Check}
         label={
           ending
             ? ended
@@ -50,8 +50,10 @@ export function ConversationActions({
         }
       />
       {onInfo && (
-        <VisitorInfoToggle
+        <WorkspacePanelToggle
+          side="right"
           open={infoOpen}
+          label="来访资料"
           onToggle={() => {
             dispatch(focusReply(conversationId));
             onInfo();

@@ -2,9 +2,11 @@ package com.dudu.duduserver;
 
 import cn.hutool.json.JSONUtil;
 import cn.hutool.jwt.JWT;
+import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.EnableStatusEnum;
+import com.dudu.duduserver.constant.UserRoleEnum;
 import com.dudu.duduserver.dto.CompanyAdminInitDTO;
 import com.dudu.duduserver.dto.CompanyCreateDTO;
 import com.dudu.duduserver.entity.CompanyChannelDO;
@@ -13,6 +15,9 @@ import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.entity.UserGroupMemberDO;
 import com.dudu.duduserver.service.*;
 import com.dudu.duduserver.testutil.IntegrationTestEnv;
+import com.dudu.duduserver.vo.AdminOverviewVO;
+import com.dudu.duduserver.vo.CompanyResourceSummaryVO;
+import com.dudu.duduserver.vo.DeskAccessVO;
 
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
@@ -27,9 +32,11 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -54,6 +61,8 @@ class ServerIntegrationTest {
     @Autowired UserGroupService groups;
     @Autowired UserGroupMemberService members;
     @Autowired CompanyChannelService channels;
+    @Autowired DeskAuthService deskAuth;
+    @Autowired OverviewService overviewService;
     @Autowired JdbcTemplate jdbc;
 
     @Test
@@ -76,17 +85,27 @@ class ServerIntegrationTest {
         UserGroupDO foreign = group(781002L, "外部组");
         UserDO ordinaryAdmin = users.createInitialAdmin(781001L,
             new CompanyAdminInitDTO("ordinary", "password123", null));
-        assertThat(members.canAccessGroup(initialUserId, second.getGroupId())).isTrue();
-        assertThat(members.canAccessGroup(initialUserId, foreign.getGroupId())).isFalse();
-        assertThat(members.canAccessGroup(ordinaryAdmin.getUserId(), first.getGroupId())).isFalse();
+        // 组权限按 Desk 授权解析锚定：初始管理员的接待范围覆盖本企业全部组，他企业组绝不进入
+        DeskAccessVO initialAccess =
+            deskAuth.requireAccess(new JwtUser(781001L, initialUserId, UserRoleEnum.CONSOLE, null));
+        assertThat(initialAccess.allGroups()).isTrue();
+        assertThat(groupIds(initialAccess))
+            .contains(String.valueOf(first.getGroupId()), String.valueOf(second.getGroupId()))
+            .doesNotContain(String.valueOf(foreign.getGroupId()));
+        // 普通管理员没有成员关系就没有组范围
+        DeskAccessVO ordinaryBefore =
+            deskAuth.requireAccess(new JwtUser(781001L, ordinaryAdmin.getUserId(), UserRoleEnum.CONSOLE, null));
+        assertThat(ordinaryBefore.allGroups()).isFalse();
+        assertThat(groupIds(ordinaryBefore)).isEmpty();
         UserGroupMemberDO member = new UserGroupMemberDO();
         member.setCompanyId(781001L);
         member.setUserId(ordinaryAdmin.getUserId());
         member.setGroupId(first.getGroupId());
         members.save(member);
-        assertThat(members.canAccessGroup(ordinaryAdmin.getUserId(), first.getGroupId())).isTrue();
-        assertThat(members.canAccessGroup(ordinaryAdmin.getUserId(), second.getGroupId())).isFalse();
-        assertThat(members.canAccessGroup(ordinaryAdmin.getUserId(), foreign.getGroupId())).isFalse();
+        // 加入组后按当前成员关系只见到该组，本企业其他组与他企业组仍不可见
+        DeskAccessVO ordinaryAfter =
+            deskAuth.requireAccess(new JwtUser(781001L, ordinaryAdmin.getUserId(), UserRoleEnum.CONSOLE, null));
+        assertThat(groupIds(ordinaryAfter)).containsExactly(String.valueOf(first.getGroupId()));
         // 外键已全部移除，跨企业隔离由应用层判定；此处锚定库内不再存在任何外键的约定
         assertThat(jdbc.queryForObject(
             "SELECT COUNT(*) FROM information_schema.referential_constraints WHERE constraint_schema = DATABASE()", Long.class))
@@ -168,6 +187,45 @@ class ServerIntegrationTest {
     }
 
     @Test
+    void overviewAggregatesPersistedStatePerCompanyAndPlatform() {
+        // 企业资源汇总按企业作用域聚合：独立造数企业锚定精确计数，不受其他用例数据影响
+        companies.createCompany(company("781010"), 1L);
+        UserGroupDO summaryGroup = group(781010L, "汇总组");
+        UserDO extraAdmin = users.createInitialAdmin(781010L,
+            new CompanyAdminInitDTO("summary", "password123", null));
+        jdbc.update("UPDATE `user` SET status = 0 WHERE user_id = ?", extraAdmin.getUserId());
+        CompanyChannelDO summaryChannel = new CompanyChannelDO();
+        summaryChannel.setCompanyId(781010L);
+        summaryChannel.setGroupId(summaryGroup.getGroupId());
+        summaryChannel.setChannel(ChannelEnum.DOUYIN);
+        summaryChannel.setAccountName("汇总账号");
+        summaryChannel.setChannelInfo(Map.of("accountId", "summary-1"));
+        channels.save(summaryChannel);
+
+        CompanyResourceSummaryVO summary = overviewService.getCompanyResourceSummary("781010");
+        assertThat(summary.userCount()).isEqualTo(2L);
+        assertThat(summary.userEnabledCount()).isEqualTo(1L);
+        assertThat(summary.userGroupCount()).isEqualTo(1L);
+        assertThat(summary.companyChannelCount()).isEqualTo(1L);
+        assertThatThrownBy(() -> overviewService.getCompanyResourceSummary("781099"))
+            .isInstanceOf(BizException.class)
+            .hasMessageContaining("企业不存在");
+
+        // 平台概览与库内当前状态同口径（状态过滤、派生停用数与近 7 天窗口），不依赖用例间数据
+        AdminOverviewVO overview = overviewService.getOverview();
+        assertThat(overview.companyCount())
+            .isEqualTo(jdbc.queryForObject("SELECT COUNT(*) FROM company", Long.class));
+        assertThat(overview.companyEnabledCount())
+            .isEqualTo(jdbc.queryForObject("SELECT COUNT(*) FROM company WHERE status = 1", Long.class));
+        assertThat(overview.companyDisabledCount())
+            .isEqualTo(overview.companyCount() - overview.companyEnabledCount());
+        assertThat(overview.companyCreatedLast7DaysCount()).isEqualTo(
+            jdbc.queryForObject("SELECT COUNT(*) FROM company WHERE create_time >= NOW() - INTERVAL 7 DAY", Long.class));
+        assertThat(overview.recentCompanies()).hasSize(Math.toIntExact(
+            Math.min(10L, overview.companyCount())));
+    }
+
+    @Test
     void v1UpgradePreservesExistingRowsAndMovesExternalIdToJson() {
         // 升级库名从门闩 URL 解析派生（任意 dudu_review_* 形态均可），同实例另建独立库；
         // 先清残留保证可重复执行
@@ -200,6 +258,11 @@ class ServerIntegrationTest {
     private CompanyCreateDTO company(String id) {
         return new CompanyCreateDTO(id, "集成验收企业", null, null, null,
             new CompanyAdminInitDTO("admin", "password123", null));
+    }
+
+    // 接待范围里的组 ID（Desk 契约为十进制字符串）
+    private List<String> groupIds(DeskAccessVO access) {
+        return access.groups().stream().map(DeskAccessVO.Group::groupId).toList();
     }
 
     private UserGroupDO group(Long companyId, String name) {

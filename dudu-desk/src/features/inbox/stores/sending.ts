@@ -29,7 +29,9 @@ const NO_DRAFT_MATCH = -1;
 export function settleConfirmedReplies(): InboxCommand {
   return (dispatch, getState, runtime) => {
     for (const submission of Object.values(getState().inbox.submissions)) {
-      if (submission.status !== "accepted") continue;
+      // 已落定的提交不再进入扫描：本命令在每条消息事件后运行，
+      // 跳过它们让重复结算与扫描集合都不随历史发送增长
+      if (submission.settled || submission.status !== "accepted") continue;
       const state = getState().inbox;
       const draft = state.drafts[submission.request.target.conversationId];
       const response = state.messages[submission.messageId];

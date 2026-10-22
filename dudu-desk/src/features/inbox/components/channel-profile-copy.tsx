@@ -1,5 +1,6 @@
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
+import { InlineActionError } from "@/components/inline-action-error";
 import { Button } from "@/components/ui/button";
 import { formatChannelProfile } from "../channel-profile";
 import type { VisitorIdentity, VisitorProfile } from "../types";
@@ -35,18 +36,13 @@ export function ChannelProfileCopy({
 
   return (
     <div className="flex items-center gap-1.5">
-      <span
-        role="status"
-        className={
-          status === "error" ? "text-[10px] text-destructive" : "sr-only"
-        }
-      >
-        {status === "error"
-          ? "复制失败，请重试"
-          : status === "copied"
-            ? "渠道资料已复制"
-            : ""}
-      </span>
+      {status === "error" ? (
+        <InlineActionError className="text-[10px]" message="复制失败，请重试" />
+      ) : (
+        <span className="sr-only" role="status">
+          {status === "copied" ? "渠道资料已复制" : ""}
+        </span>
+      )}
       <Button
         variant="ghost"
         size="icon-xs"

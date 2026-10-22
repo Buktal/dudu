@@ -9,7 +9,8 @@ import com.dudu.duduserver.channel.wechatmp.WechatMpAdapter;
 import com.dudu.duduserver.channel.wechatmp.WechatMpMediaReader;
 import com.dudu.duduserver.channel.wechatmp.WechatMpProtocol;
 import com.dudu.duduserver.channel.wechatmp.WechatMpTextSender;
-import com.dudu.duduserver.util.DeskConversationViews;
+import com.dudu.duduserver.service.impl.DeskConversationViews;
+import com.dudu.duduserver.service.impl.PushGate;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
@@ -56,7 +57,8 @@ class DeskInboundServiceTest {
     private final MessageService messageService = mock(MessageService.class);
     private final DeskSocketGateway deskSocketGateway = mock(DeskSocketGateway.class);
     private final DeskInboundService deskInboundService = new DeskInboundServiceImpl(
-        visitorService, visitorProfileService, messageService, deskSocketGateway, deskConversationViews());
+        visitorService, visitorProfileService, messageService, deskSocketGateway, new PushGate(),
+        deskConversationViews());
     // 能力说明走真实注册表与公众号适配器；本类只用其限制说明，不发起渠道请求
     private static DeskConversationViews deskConversationViews() {
         WechatMpAdapter wechatMp = new WechatMpAdapter(new WechatMpProtocol(),

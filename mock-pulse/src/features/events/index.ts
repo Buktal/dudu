@@ -26,6 +26,7 @@ export {
   interpretEventStep,
   interpretPresence,
   interpretTemplateStep,
+  latestVersionOf,
   resolveEventVersion,
   resolveRow,
   resolveTemplateVersion,

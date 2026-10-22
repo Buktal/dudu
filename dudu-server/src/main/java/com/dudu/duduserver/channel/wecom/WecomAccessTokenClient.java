@@ -54,12 +54,9 @@ class WecomAccessTokenClient {
         if (accessToken == null || accessToken.isEmpty()) {
             return FetchedToken.failed("获取企业微信接口凭据失败：响应缺少 access_token");
         }
-        return FetchedToken.fetched(accessToken, lifetimeMillis(response));
+        return FetchedToken.fetched(accessToken,
+            AccessTokenCache.expiresInMillis(response, KEY_EXPIRES_IN, DEFAULT_EXPIRE_MILLIS));
     }
 
     // expires_in 为秒（官方样例 7200）；缺失或非法按官方有效期
-    private long lifetimeMillis(JSONObject response) {
-        Long expiresIn = response.getLong(KEY_EXPIRES_IN, null);
-        return expiresIn == null || expiresIn <= 0 ? DEFAULT_EXPIRE_MILLIS : expiresIn * 1000;
-    }
 }

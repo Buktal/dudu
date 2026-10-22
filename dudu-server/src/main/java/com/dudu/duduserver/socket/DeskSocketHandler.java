@@ -33,7 +33,7 @@ public class DeskSocketHandler extends TextWebSocketHandler {
 
     // 令牌缺失、无效与过期统一按契约归为登录状态无效
     private static final Set<ApiEnum> TOKEN_FAILURES =
-        Set.of(ApiEnum.TOKEN_ERROR, ApiEnum.TOKEN_EMPTY, ApiEnum.TOKEN_VERIFY, ApiEnum.TOKEN_EXPIRE);
+        Set.of(ApiEnum.TOKEN_EMPTY, ApiEnum.TOKEN_VERIFY, ApiEnum.TOKEN_EXPIRE);
 
     private final JwtManager jwtManager;
     private final DeskAuthService deskAuthService;

@@ -14,7 +14,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { WorkspacePanelToggle } from "@/components/workspace-action";
 import { cn } from "@/lib/utils";
+import { virtuosoGridBehaviorProps } from "../hooks/use-follow-output";
 import { useInboxSearch } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { useVisitorPanel } from "../hooks/use-visitor-panel";
@@ -33,7 +35,6 @@ import { InboxListPhase } from "./inbox-state";
 import { QueueTools } from "./queue-tools";
 import { QuickCard } from "./quick-card";
 import { VisitorInfoPanel } from "./visitor-info-panel";
-import { VisitorInfoToggle } from "./visitor-info-toggle";
 
 const CardGrid = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ children, className, ...props }, ref) => (
@@ -114,10 +115,12 @@ export function QuickWorkspace() {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1">
             <QueueHeading className="h-8 px-0" />
             <QueueTools />
-            <VisitorInfoToggle
+            <WorkspacePanelToggle
+              side="right"
               className="ml-auto"
               disabled={!replyId}
               open={info.open && !!replyId}
+              label="来访资料"
               onToggle={info.toggle}
             />
           </div>
@@ -137,12 +140,7 @@ export function QuickWorkspace() {
           <VirtuosoGrid
             ref={grid}
             className="min-h-0 flex-1 overscroll-y-contain [overflow-anchor:none] [scrollbar-gutter:stable]"
-            // 虚拟滚动视口扩展距离，提前加载视口外项目。
-            increaseViewportBy={{ bottom: 200, top: 300 }}
-            // 滚动时多渲染一些项目，避免滚动时频繁触发 re-render。
-            overscan={{ main: 200, reverse: 300 }}
-            // 快速滚动时显示占位符内容，避免性能下降
-            scrollSeekConfiguration={false}
+            {...virtuosoGridBehaviorProps}
             // 要渲染的数据数组。设置这个后，会根据数组长度推断总数量
             data={conversations}
             // 自定义列表每项的 key（React key），提升性能，避免重复渲染

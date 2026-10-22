@@ -1,6 +1,6 @@
 import { Copy, type LucideIcon, Minus, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InlineActionError } from "@/components/inline-action-error";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -108,13 +108,7 @@ export function DesktopWindowControls({ className }: { className?: string }) {
           onClick={() => void run(closeDesktopWindow, "关闭")}
         />
       </div>
-      {error && (
-        <Alert variant="destructive" className="mt-1 max-w-64 px-3 py-2">
-          <AlertDescription>
-            <p className="text-xs">{error}</p>
-          </AlertDescription>
-        </Alert>
-      )}
+      <InlineActionError message={error} className="mt-1 max-w-64" />
     </div>
   );
 }

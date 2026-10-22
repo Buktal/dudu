@@ -182,7 +182,7 @@ DuduAdmin 列表页共用的「草稿-提交-重置」编排单点（components 
 _Avoid_: 逐页手写 form 草稿编排、remount key 换重置清空（旧形态）
 
 **路由构造（routes）**:
-DuduAdmin 中 hash 路由地址的构造单点：页面间跳转只表达意图（overview / companies / companyCreate / companyDetail / resources 五个命名构造），参数名（companyId / create）、取值约定（create=1）、企业 ID 编码与「回纯列表即清参关闭弹层」的关闭语义收敛在 navigation.ts 一处，与解析侧（parseRoute / useRoute）共用同一组语法常量并有 builder→parser 往返测试；概览页、资源汇总页打开企业弹层等跨页跳转不再手写查询串。
+hash 路由地址的构造单点，DuduAdmin 与 DuduConsole 各自一份、受控拷贝同步（ADR-0016）：页面间跳转只表达意图（admin：overview / companies / companyCreate / companyDetail / resources / logs / account 七个命名构造；console 同构含 employees / user-groups / channel-accounts / account），参数名（companyId / create 等）、取值约定（create=1）、企业 ID 编码与「回纯列表即清参关闭弹层」的关闭语义收敛在各自 navigation.ts 一处，与解析侧（parseRoute / useRoute）共用同一组语法常量并有 builder→parser 往返测试；布局导航与跨页跳转（概览页、资源汇总页打开企业弹层等）不再手写查询串。
 _Avoid_: 手写路由字符串（模板串拼 `companies?companyId=`、字面量 `"companies?create=1"`）
 
 **表单提交外壳（SubmitShell）**:

@@ -1,15 +1,9 @@
 package com.dudu.duduserver.service.impl;
 
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
-import com.dudu.duduserver.entity.CompanyDO;
-import com.dudu.duduserver.entity.UserDO;
-import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.entity.UserGroupMemberDO;
 import com.dudu.duduserver.mapper.UserGroupMemberMapper;
-import com.dudu.duduserver.service.CompanyService;
 import com.dudu.duduserver.service.UserGroupMemberService;
-import com.dudu.duduserver.service.UserGroupService;
-import com.dudu.duduserver.service.UserService;
 import com.dudu.duduserver.socket.DeskAccessChangedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -19,7 +13,6 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * 先检查企业隔离，再识别初始管理员或显式成员；普通管理员无隐式全组权限。
  * 成员关系的写入入口在提交后发布范围变更事件，由实时网关通知本企业已连接员工重查工作区；
  * 管理端操作本身沿用现有写方法，不新增管理接口。
  */
@@ -28,9 +21,6 @@ import java.util.List;
 public class UserGroupMemberServiceImpl extends ServiceImpl<UserGroupMemberMapper, UserGroupMemberDO>
     implements UserGroupMemberService {
 
-    private final UserService userService;
-    private final UserGroupService userGroupService;
-    private final CompanyService companyService;
     private final ApplicationEventPublisher eventPublisher;
 
     // 加入组成员后通知本企业：新增权限的员工要立即可见新范围
@@ -52,25 +42,6 @@ public class UserGroupMemberServiceImpl extends ServiceImpl<UserGroupMemberMappe
             publishAccessChanged(member.getCompanyId());
         }
         return removed;
-    }
-
-    @Override
-    public boolean canAccessGroup(Long userId, Long groupId) {
-        UserDO user = userService.getById(userId);
-        UserGroupDO group = userGroupService.getById(groupId);
-        if (user == null || user.getCompanyId() == null || group == null
-            || !user.getCompanyId().equals(group.getCompanyId())) {
-            return false;
-        }
-        CompanyDO company = companyService.getById(user.getCompanyId());
-        if (company == null) {
-            return false;
-        }
-        if (company.isInitialAdmin(userId)) {
-            return true;
-        }
-        return lambdaQuery().eq(UserGroupMemberDO::getCompanyId, user.getCompanyId())
-            .eq(UserGroupMemberDO::getUserId, userId).eq(UserGroupMemberDO::getGroupId, groupId).exists();
     }
 
     @Override

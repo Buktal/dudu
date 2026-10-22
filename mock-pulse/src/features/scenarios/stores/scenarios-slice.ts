@@ -10,6 +10,7 @@ import {
   type EventsState,
   type EventVersion,
   interpretPresence,
+  latestVersionOf,
   schemaById,
 } from "@/features/events";
 import type { ChannelId } from "@/lib/channels";
@@ -59,10 +60,10 @@ export const initialScenariosState: ScenariosState = {
 type ScenariosRoot = { scenarios: ScenariosState; events: EventsState };
 
 /**
- * 素材库查事件并取其最新版本（添加步骤 / 同步引用共用）：
+ * 素材库查事件并取其当前可引用的最新版本（添加步骤 / 同步引用共用）：
  * 事件不存在或从未保存过版本时抛可读错误。
  */
-function latestVersionOf(
+function referencedVersionOf(
   events: EventsState["items"],
   eventId: string,
 ): { event: EventItem; version: EventVersion } {
@@ -72,7 +73,8 @@ function latestVersionOf(
   if (interpretPresence(event !== undefined, "edit").blocks || !event) {
     throw new Error(`事件不存在：${eventId}。`);
   }
-  const version = event.versions[event.versions.length - 1];
+  // 取尖单点在 events 域 latestVersionOf（与 interpreter/model 同源）
+  const version = latestVersionOf(event);
   // 非引用分类边：行在但零版本（无 ref 可判，不归表），文案不变。
   if (!version) {
     throw new Error(`事件还没有保存过版本：${event.name}。`);
@@ -101,7 +103,7 @@ export const addScenarioStep = createAsyncThunk(
     if (!draft) {
       throw new Error("没有正在编辑的剧本。");
     }
-    const { event, version } = latestVersionOf(events.items, eventId);
+    const { event, version } = referencedVersionOf(events.items, eventId);
     return addStep(draft, {
       id: event.id,
       channelId: event.channelId,
@@ -119,7 +121,7 @@ export const replaceScenarioStep = createAsyncThunk(
     const { scenarios, events } = getState() as ScenariosRoot;
     const draft = scenarios.draft;
     if (!draft?.steps[index]) throw new Error("找不到要替换的步骤。");
-    const { event, version } = latestVersionOf(events.items, eventId);
+    const { event, version } = referencedVersionOf(events.items, eventId);
     assertSameChannel(draft.channelId, event.channelId);
     return {
       ...draft,
@@ -222,7 +224,7 @@ export const syncScenarioStep = createAsyncThunk(
     if (isTemplateStep(step)) {
       return draft;
     }
-    const { version } = latestVersionOf(events.items, step.eventId);
+    const { version } = referencedVersionOf(events.items, step.eventId);
     return withStepRevision(draft, index, version.revision);
   },
 );
@@ -239,7 +241,7 @@ export const syncAllScenarioSteps = createAsyncThunk(
     let updated = draft;
     for (const [index, step] of draft.steps.entries()) {
       if (isTemplateStep(step)) continue;
-      const { version } = latestVersionOf(events.items, step.eventId);
+      const { version } = referencedVersionOf(events.items, step.eventId);
       updated = withStepRevision(updated, index, version.revision);
     }
     return updated;

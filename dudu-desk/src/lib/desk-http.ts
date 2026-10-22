@@ -21,6 +21,26 @@ export type DeskRequest<T> = {
  * visitors/{id}/messages history). Remaining inbox capabilities are still
  * unimplemented adapters.
  */
+/** fetch 层失败的统一映射：取消按 aborted，其余按网络失败。 */
+function mapFetchError(error: unknown): DeskApiError {
+  if (error instanceof Error && error.name === "AbortError") {
+    return new DeskApiError("aborted", "操作已取消");
+  }
+  return new DeskApiError("network", "网络连接失败，请稍后重试");
+}
+
+/** 非 2xx 响应的统一映射：401/403 按登录失效，其余按网络失败。 */
+function mapNotOk(response: Response): DeskApiError {
+  return new DeskApiError(
+    response.status === 401 || response.status === 403
+      ? "authentication"
+      : "network",
+    response.status === 401 || response.status === 403
+      ? "登录已失效，请重新登录"
+      : `服务请求失败（HTTP ${response.status}）`,
+  );
+}
+
 export async function requestDesk<T>(request: DeskRequest<T>): Promise<T> {
   throwIfAborted(request.signal);
   const response = await (request.fetcher ?? fetch)(request.url, {
@@ -36,22 +56,10 @@ export async function requestDesk<T>(request: DeskRequest<T>): Promise<T> {
     signal: request.signal,
   }).catch((error: unknown) => {
     throwIfAborted(request.signal);
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new DeskApiError("aborted", "操作已取消");
-    }
-    throw new DeskApiError("network", "网络连接失败，请稍后重试");
+    throw mapFetchError(error);
   });
   throwIfAborted(request.signal);
-  if (!response.ok) {
-    throw new DeskApiError(
-      response.status === 401 || response.status === 403
-        ? "authentication"
-        : "network",
-      response.status === 401 || response.status === 403
-        ? "登录已失效，请重新登录"
-        : `服务请求失败（HTTP ${response.status}）`,
-    );
-  }
+  if (!response.ok) throw mapNotOk(response);
   let body: unknown;
   try {
     body = await response.json();
@@ -90,22 +98,10 @@ export async function requestDeskBlob(request: DeskBlobRequest): Promise<Blob> {
     signal: request.signal,
   }).catch((error: unknown) => {
     throwIfAborted(request.signal);
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new DeskApiError("aborted", "操作已取消");
-    }
-    throw new DeskApiError("network", "网络连接失败，请稍后重试");
+    throw mapFetchError(error);
   });
   throwIfAborted(request.signal);
-  if (!response.ok) {
-    throw new DeskApiError(
-      response.status === 401 || response.status === 403
-        ? "authentication"
-        : "network",
-      response.status === 401 || response.status === 403
-        ? "登录已失效，请重新登录"
-        : `服务请求失败（HTTP ${response.status}）`,
-    );
-  }
+  if (!response.ok) throw mapNotOk(response);
   const contentType = response.headers.get("Content-Type") ?? "";
   if (contentType.includes("application/json")) {
     let body: unknown;

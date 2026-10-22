@@ -19,6 +19,7 @@ import java.util.Map;
  * 渠道回调实现：按账号现存渠道查注册表分派，零渠道分支；未接入渠道的账号一律返回
  * 不支持，不模拟成功。query 与 headers 原样交给适配器，渠道差异全部住在实现内；入站
  * 落库保持业务层：适配器解析出访客消息后由 deskInboundService.accept 保存。
+ * query 与 headers 的原样透传是渠道协议边界的务实处理，不是可推广的接口模式。
  */
 @Slf4j
 @Service

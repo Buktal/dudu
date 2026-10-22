@@ -1,5 +1,6 @@
 package com.dudu.duduserver.config;
 
+import com.dudu.duduserver.channel.ChannelRoutes;
 import com.dudu.duduserver.config.auth.AdminAuthInterceptor;
 import com.dudu.duduserver.config.auth.AuthInterceptor;
 import com.dudu.duduserver.config.auth.DeskAuthInterceptor;
@@ -22,8 +23,8 @@ public class WebConfig implements WebMvcConfigurer {
     private static final String DESK_LOGIN_PATH = "/api/desk/login";
     private static final String CONSOLE_LOGIN_PATH = "/api/console/login";
 
-    // 渠道回调只开放这一条路由，走渠道自身的签名校验，不使用 Desk JWT
-    private static final String CHANNEL_CALLBACK_PATH = "/api/channels/*/callback";
+    // 渠道回调只开放这一条路由，走渠道自身的签名校验，不使用 Desk JWT（模板的 {id} 换 * 即放行形态）
+    private static final String CHANNEL_CALLBACK_PATH = ChannelRoutes.CALLBACK_PATH.replace("{id}", "*");
 
     private final AuthInterceptor authInterceptor;
     private final AdminAuthInterceptor adminAuthInterceptor;

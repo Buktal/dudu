@@ -1,7 +1,5 @@
-import { useCallback, useState } from "react";
-import type { ConsoleClient } from "@/api/client";
+import { useState } from "react";
 import { useConsole, useSession } from "@/api/context";
-import { usePagedQuery } from "@/api/paged-query";
 import { FilterBar } from "@/components/filter-bar";
 import { QueryView } from "@/components/query-view";
 import {
@@ -26,13 +24,12 @@ import {
 } from "@/components/ui/table";
 import { navigate, routes } from "@/navigation";
 import {
-  type Candidate,
-  type Filters,
-  groupsApi,
-  type Member,
-} from "./groups-api";
+  useGroupAccounts,
+  useGroupCandidates,
+  useGroupMembers,
+} from "./group-data";
+import { type Candidate, groupsApi, type Member } from "./groups-api";
 
-const initial = { page: 1, pageSize: 20 } as Filters;
 const empty = {
   filteredCopy: { title: "未找到匹配员工", description: "调整搜索条件后重试" },
   defaultCopy: {
@@ -44,14 +41,7 @@ export function GroupMembers({ groupId }: { groupId: string }) {
   const { profile } = useSession();
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<Member | null>(null);
-  const query = usePagedQuery(
-    useCallback(
-      (c: ConsoleClient, f: Filters, s: AbortSignal) =>
-        groupsApi.members(c, groupId, f, s),
-      [groupId],
-    ),
-    initial,
-  );
+  const query = useGroupMembers(groupId);
   return (
     <div className="flex flex-col gap-3">
       <Button onClick={() => setAdding(true)}>添加成员</Button>
@@ -121,14 +111,7 @@ function AddMembers({
   const shell = useSubmit();
   const { profile } = useSession();
   const [selected, setSelected] = useState<Candidate | null>(null);
-  const query = usePagedQuery(
-    useCallback(
-      (c: ConsoleClient, f: Filters, s: AbortSignal) =>
-        groupsApi.candidates(c, groupId, f, s),
-      [groupId],
-    ),
-    initial,
-  );
+  const query = useGroupCandidates(groupId);
   return (
     <Dialog open {...shell.hold(close)}>
       <DialogContent
@@ -147,8 +130,8 @@ function AddMembers({
               label="成员候选筛选"
               searchLabel="搜索成员"
               placeholder="登录名或姓名"
-              value={query.filters.keyword}
-              onSearch={(keyword) => query.setFilter({ keyword })}
+              value={query.keyword}
+              onSearch={query.setKeyword}
               onReset={query.reset}
             />
           }
@@ -246,14 +229,7 @@ function RemoveMember({
   );
 }
 export function GroupAccounts({ groupId }: { groupId: string }) {
-  const query = usePagedQuery(
-    useCallback(
-      (c: ConsoleClient, f: Filters, s: AbortSignal) =>
-        groupsApi.accounts(c, groupId, f, s),
-      [groupId],
-    ),
-    initial,
-  );
+  const query = useGroupAccounts(groupId);
   return (
     <div className="flex flex-col gap-3">
       <Button onClick={() => navigate(routes.channelCreate(groupId))}>

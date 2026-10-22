@@ -9,6 +9,7 @@ import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskVisitorProfileVO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,12 +25,17 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Desk 实时网关：按员工维护多个已连接会话（多设备），只向认证成功且当前有权的
  * 已连接员工推送契约第 5 节报文；已接入 message、conversation、profile 与
  * access-changed 四类报文（消息引起的访客更新合并在 message 中）。没有 eventId、
- * ack 与持久游标，未认证会话与离线员工不接收业务数据。
+ * ack 与持久游标，未认证会话与离线员工不接收业务数据；连接后 30 秒内未完成
+ * 鉴权的会话按策略关闭，不无限驻留。
  */
 @Slf4j
 @Component
@@ -40,10 +46,22 @@ public class DeskSocketGateway {
     private static final int SEND_TIME_LIMIT_MS = 10_000;
     private static final int SEND_BUFFER_SIZE_LIMIT = 512 * 1024;
 
+    // 未认证连接的鉴权时限
+    private static final int AUTH_TIMEOUT_SECONDS = 30;
+
     private final DeskAuthService deskAuthService;
     private final ObjectMapper objectMapper;
 
     private final Map<String, ConnectedSession> sessions = new ConcurrentHashMap<>();
+
+    // 鉴权时限的登记与调度：认证或断开时取消，到期仍无身份则关闭
+    private final Map<String, ScheduledFuture<?>> authTimeouts = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService authTimeoutExecutor = Executors.newSingleThreadScheduledExecutor(
+        runnable -> {
+            Thread thread = new Thread(runnable, "desk-auth-timeout");
+            thread.setDaemon(true);
+            return thread;
+        });
 
     // 已连接会话：认证前用户为空，不参与业务推送
     private record ConnectedSession(WebSocketSession session, JwtUser user) {
@@ -51,11 +69,15 @@ public class DeskSocketGateway {
 
     // 连接建立即登记；认证成功的会话才携带员工身份
     public void register(WebSocketSession session) {
-        sessions.put(session.getId(), new ConnectedSession(decorate(session), null));
+        String sessionId = session.getId();
+        sessions.put(sessionId, new ConnectedSession(decorate(session), null));
+        authTimeouts.put(sessionId, authTimeoutExecutor.schedule(() -> expireAuth(sessionId),
+            AUTH_TIMEOUT_SECONDS, TimeUnit.SECONDS));
     }
 
-    // auth 报文校验通过后登记员工身份
+    // auth 报文校验通过后登记员工身份，并解除该连接的鉴权时限
     public void authenticate(String sessionId, JwtUser user) {
+        cancelAuthTimeout(sessionId);
         sessions.computeIfPresent(sessionId, (id, entry) -> new ConnectedSession(entry.session(), user));
     }
 
@@ -66,7 +88,28 @@ public class DeskSocketGateway {
     }
 
     public void remove(String sessionId) {
+        cancelAuthTimeout(sessionId);
         sessions.remove(sessionId);
+    }
+
+    // 鉴权时限到期：仍未认证的连接按策略关闭，已认证或已离开的无事可做
+    void expireAuth(String sessionId) {
+        authTimeouts.remove(sessionId);
+        if (user(sessionId) == null) {
+            close(sessionId, CloseStatus.POLICY_VIOLATION);
+        }
+    }
+
+    @PreDestroy
+    void shutdownAuthTimeoutExecutor() {
+        authTimeoutExecutor.shutdownNow();
+    }
+
+    private void cancelAuthTimeout(String sessionId) {
+        ScheduledFuture<?> timeout = authTimeouts.remove(sessionId);
+        if (timeout != null) {
+            timeout.cancel(false);
+        }
     }
 
     // 发送单条报文；连接已失效时只清理会话，不影响调用方

@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
@@ -107,8 +108,6 @@ public class WeiboAdapter implements ChannelAdapter {
 
     // 只配置了 accessToken 的账号可发送与读取素材，但没有验签与回调接收的能力
     private String appSecret(CompanyChannelDO account) {
-        Map<String, Object> info = account == null ? null : account.getChannelInfo();
-        Object value = info == null ? null : info.get(INFO_APP_SECRET);
-        return value instanceof String appSecret && !appSecret.isEmpty() ? appSecret : null;
+        return ChannelInfoText.text(account == null ? null : account.getChannelInfo(), INFO_APP_SECRET);
     }
 }

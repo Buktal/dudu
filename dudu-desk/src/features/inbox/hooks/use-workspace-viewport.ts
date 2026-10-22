@@ -19,6 +19,5 @@ function useWorkspaceBreakpoint(query: string) {
 export function useWorkspaceViewport() {
   return {
     inlineInfo: useWorkspaceBreakpoint("(min-width: 1091px)"),
-    narrow: useWorkspaceBreakpoint("(max-width: 760px)"),
   };
 }

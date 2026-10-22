@@ -58,15 +58,12 @@ class FeishuTokenClient {
             if (accessToken == null || accessToken.isEmpty()) {
                 return FetchedToken.failed("获取飞书接口凭据失败：响应缺少 tenant_access_token");
             }
-            return FetchedToken.fetched(accessToken, expireMillis(response));
+            return FetchedToken.fetched(accessToken,
+            AccessTokenCache.expiresInMillis(response, KEY_EXPIRE, DEFAULT_EXPIRE_MILLIS));
         } catch (RuntimeException e) {
             return FetchedToken.failed("获取飞书接口凭据失败：" + e.getMessage());
         }
     }
 
     // expire 为秒（官方样例 7200）；缺失或非法按默认窗口
-    private long expireMillis(JSONObject response) {
-        Long expire = response.getLong(KEY_EXPIRE, null);
-        return expire == null || expire <= 0 ? DEFAULT_EXPIRE_MILLIS : expire * 1000;
-    }
 }

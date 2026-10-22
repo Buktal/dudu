@@ -7,6 +7,7 @@ import {
   editFieldText,
   eventsReducer,
   saveEvent,
+  setDraftField,
   startDraft,
   toggleSenderSync,
 } from "./events-slice";
@@ -138,5 +139,56 @@ describe("editFieldText：文本转换与 senderSync 联动", () => {
     expect(getAt(state.draft?.payload, "content.user_infos[0].open_id")).toBe(
       "new-sender",
     );
+  });
+
+  it("senderSync 收敛：toggle 与表单修改同样作废被同步覆盖的身份输入（其余路径保留）", () => {
+    const store = makeStore();
+    store.dispatch(startDraft({ name: "开关", schemaId: "dy-text" }));
+    // 两个身份字段各留一条未应用输入：同步只覆盖 user_infos[0]（schema
+    // 推导的写入路径），[1] 非同步目标、输入必须保留
+    store.dispatch(
+      editFieldText({
+        path: "content.user_infos[0].open_id",
+        type: "text",
+        text: "待作废",
+      }),
+    );
+    store.dispatch(
+      editFieldText({
+        path: "content.user_infos[1].open_id",
+        type: "text",
+        text: "接收方",
+      }),
+    );
+    store.dispatch(toggleSenderSync());
+    const toggled = store.getState().events;
+    expect(
+      toggled.fieldInputs?.["content.user_infos[0].open_id"],
+    ).toBeUndefined();
+    expect(toggled.fieldInputs?.["content.user_infos[1].open_id"]).toEqual({
+      text: "接收方",
+    });
+
+    // 表单路径修改 from_user_id 与编辑器文本输入同语义：被覆盖的身份输入作废
+    store.dispatch(
+      editFieldText({
+        path: "content.user_infos[0].open_id",
+        type: "text",
+        text: "再次待作废",
+      }),
+    );
+    store.dispatch(
+      setDraftField({ path: "from_user_id", value: "form-sender" }),
+    );
+    const after = store.getState().events;
+    expect(
+      after.fieldInputs?.["content.user_infos[0].open_id"],
+    ).toBeUndefined();
+    expect(getAt(after.draft?.payload, "content.user_infos[0].open_id")).toBe(
+      "form-sender",
+    );
+    expect(after.fieldInputs?.["content.user_infos[1].open_id"]).toEqual({
+      text: "接收方",
+    });
   });
 });

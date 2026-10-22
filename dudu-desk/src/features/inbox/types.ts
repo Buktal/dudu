@@ -104,7 +104,7 @@ export type InboxMessage = {
 export type ConversationQuery = {
   search: string;
   channelId: string;
-  status: ConversationStatus | "all" | "active";
+  status: ConversationStatus | "active";
   order: "wait" | "messages";
 };
 

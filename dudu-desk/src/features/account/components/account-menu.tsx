@@ -1,4 +1,4 @@
-import { LoaderCircle, LogOut, Settings2, UserRound } from "lucide-react";
+import { LogOut, Settings2, UserRound } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FieldError } from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
 import { WorkspaceSettings } from "@/components/workspace-settings";
 import { useAccount } from "../account-provider";
 import { AccountAvatar } from "./account-avatar";
@@ -145,10 +146,7 @@ export function AccountMenu() {
                 onClick={() => void account.signOut()}
               >
                 {pending ? (
-                  <LoaderCircle
-                    data-icon="inline-start"
-                    className="animate-spin motion-reduce:animate-none"
-                  />
+                  <Spinner data-icon="inline-start" />
                 ) : (
                   <LogOut data-icon="inline-start" />
                 )}

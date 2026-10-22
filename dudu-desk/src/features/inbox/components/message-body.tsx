@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { InlineActionError } from "@/components/inline-action-error";
 import {
   Attachment,
   AttachmentContent,
@@ -364,11 +365,7 @@ function ExternalAction({
         {downloadName ? <Download /> : <ExternalLink />}
         {label}
       </Button>
-      {failed && (
-        <span role="status" className="text-xs text-destructive">
-          暂时无法打开，请稍后重试
-        </span>
-      )}
+      <InlineActionError message={failed ? "暂时无法打开，请稍后重试" : null} />
     </span>
   );
 }

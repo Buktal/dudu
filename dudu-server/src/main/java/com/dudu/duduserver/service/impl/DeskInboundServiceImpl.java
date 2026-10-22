@@ -13,8 +13,8 @@ import com.dudu.duduserver.service.MessageService;
 import com.dudu.duduserver.service.VisitorProfileService;
 import com.dudu.duduserver.service.VisitorService;
 import com.dudu.duduserver.socket.DeskSocketGateway;
-import com.dudu.duduserver.util.DeskConversationViews;
 import com.dudu.duduserver.util.DeskMessagePreview;
+import com.dudu.duduserver.util.LockClauses;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskVisitorProfileVO;
@@ -23,8 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,14 +42,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DeskInboundServiceImpl implements DeskInboundService {
 
-    // 行锁片段：锁定读绕过可重复读快照，读到并发事务已提交的最新行（来信串行化、并发
-    // 首信撞唯一键后的回读与重推判定共用）
-    private static final String LOCK_ROW = "FOR UPDATE";
 
     private final VisitorService visitorService;
     private final VisitorProfileService visitorProfileService;
     private final MessageService messageService;
     private final DeskSocketGateway deskSocketGateway;
+    private final PushGate pushGate;
     private final DeskConversationViews deskConversationViews;
 
     @Override
@@ -136,7 +132,7 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         if (visitor == null) {
             return null;
         }
-        return visitorService.getOne(sourceOf(account, externalUserId).last(LOCK_ROW));
+        return visitorService.getOne(sourceOf(account, externalUserId).last(LockClauses.LOCK_ROW));
     }
 
     // 渠道消息标识（wamid/msgid 等）在本访客名下已落库即重推；未提供标识的信件不判重。
@@ -147,7 +143,7 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         return inbound.externalMessageId() != null && messageService.getOne(Wrappers.<MessageDO>lambdaQuery()
             .eq(MessageDO::getVisitorId, visitorId)
             .eq(MessageDO::getExternalMessageId, inbound.externalMessageId())
-            .last(LOCK_ROW)) != null;
+            .last(LockClauses.LOCK_ROW)) != null;
     }
 
     // 首信并发：唯一键冲突说明另一事务已创建访客，锁定读回读该行继续本条消息
@@ -166,7 +162,7 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         try {
             visitorService.save(visitor);
         } catch (DuplicateKeyException e) {
-            return visitorService.getOne(sourceOf(account, inbound.externalUserId()).last(LOCK_ROW));
+            return visitorService.getOne(sourceOf(account, inbound.externalUserId()).last(LockClauses.LOCK_ROW));
         }
         VisitorProfileDO profile = new VisitorProfileDO();
         profile.setVisitorId(visitor.getVisitorId());
@@ -198,7 +194,7 @@ public class DeskInboundServiceImpl implements DeskInboundService {
     }
 
     // 事务提交后再推送：读到的摘要与查询接口一致；渠道资料有变化时追加一次 profile 推送（不另发 conversation）；
-    // 推送失败只记录，不回滚已保存的来信
+    // 推送失败只记录，不回滚已保存的来信（机制收编在 PushGate）
     private void pushAfterCommit(CompanyChannelDO account, VisitorDO visitor, MessageDO message,
                                  VisitorProfileDO profileChange) {
         DeskConversationVO conversation = deskConversationViews.conversation(visitor, account);
@@ -206,33 +202,12 @@ public class DeskInboundServiceImpl implements DeskInboundService {
         DeskVisitorProfileVO profileVO = profileChange == null ? null : DeskVisitorProfileVO.of(profileChange);
         Long companyId = account.getCompanyId();
         Long companyChannelId = account.getCompanyChannelId();
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    notifyAuthorized(companyId, companyChannelId, messageVO, conversation, profileVO);
-                }
-            });
+        pushGate.afterCommitQuietly("来信 messageId=" + messageVO.id() + ", visitorId=" + conversation.id(),
+            () -> deskSocketGateway.pushMessage(companyId, companyChannelId, messageVO, conversation));
+        if (profileVO == null) {
             return;
         }
-        notifyAuthorized(companyId, companyChannelId, messageVO, conversation, profileVO);
-    }
-
-    private void notifyAuthorized(Long companyId, Long companyChannelId, DeskMessageVO message,
-                                  DeskConversationVO conversation, DeskVisitorProfileVO profile) {
-        try {
-            deskSocketGateway.pushMessage(companyId, companyChannelId, message, conversation);
-        } catch (RuntimeException e) {
-            log.error("[desk-inbound] 推送来信失败, messageId={}, visitorId={}",
-                message.id(), conversation.id(), e);
-        }
-        if (profile == null) {
-            return;
-        }
-        try {
-            deskSocketGateway.pushProfile(companyId, companyChannelId, profile);
-        } catch (RuntimeException e) {
-            log.error("[desk-inbound] 推送渠道资料失败, visitorId={}", profile.conversationId(), e);
-        }
+        pushGate.afterCommitQuietly("渠道资料 visitorId=" + profileVO.conversationId(),
+            () -> deskSocketGateway.pushProfile(companyId, companyChannelId, profileVO));
     }
 }

@@ -13,6 +13,9 @@ const views = new Set<string>([
   "account",
   "login",
 ]);
+// 路由语法：query 参数名与取值约定，写（routes）读（parseRoute）共用。
+const CREATE_PARAM = "create";
+const CREATE_FLAG = "1";
 const subscribe = (listener: () => void) => {
   window.addEventListener("hashchange", listener);
   return () => window.removeEventListener("hashchange", listener);
@@ -20,6 +23,7 @@ const subscribe = (listener: () => void) => {
 export const navigate = (path: string) => {
   window.location.hash = `/${path}`;
 };
+// 路由构造：页面跳转只表达意图；参数名、取值与「回纯列表即清参关闭弹层」的语义在此单点。
 const route = (
   view: View,
   key?: string,
@@ -42,16 +46,11 @@ export const routes = {
     ),
   account: () => "account",
   login: () => "login",
-  employeeCreate: () => "employees?create=1",
-  groupCreate: () => "user-groups?create=1",
+  employeeCreate: () => `employees?${CREATE_PARAM}=${CREATE_FLAG}`,
+  groupCreate: () => `user-groups?${CREATE_PARAM}=${CREATE_FLAG}`,
   channelCreate: (groupId?: string) =>
     route("channel-accounts", undefined, undefined, {
-      create: "1",
-      ...(groupId ? { groupId } : {}),
-    }),
-  accountCreate: (groupId?: string) =>
-    route("channel-accounts", undefined, undefined, {
-      create: "1",
+      [CREATE_PARAM]: CREATE_FLAG,
       ...(groupId ? { groupId } : {}),
     }),
 };
@@ -70,7 +69,7 @@ export function parseRoute(hash: string) {
   return {
     view,
     selectedId: validId(id) ? id : null,
-    creating: params.get("create") === "1",
+    creating: params.get(CREATE_PARAM) === CREATE_FLAG,
     groupId: validId(groupId) ? groupId : null,
   };
 }

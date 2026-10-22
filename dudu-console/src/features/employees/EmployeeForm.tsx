@@ -23,6 +23,19 @@ import {
   updateEmployee,
 } from "./api";
 export type EmployeeAction = "name" | "role" | "status" | "password";
+// 弹层标题按动作与目标状态取向：早返回替代嵌套三元，缺省动作（编辑态）取角色取向。
+function formLabel(employee: Employee, action?: EmployeeAction) {
+  switch (action) {
+    case "name":
+      return "修改显示名称";
+    case "password":
+      return "重置密码";
+    case "status":
+      return employee.status === 1 ? "停用员工" : "恢复员工";
+    default:
+      return employee.role === "user" ? "设为管理员" : "撤销管理员";
+  }
+}
 export function EmployeeForm({
   employee,
   action,
@@ -39,19 +52,7 @@ export function EmployeeForm({
   const [username, setUsername] = useState("");
   const [name, setName] = useState(employee?.name ?? "");
   const [password, setPassword] = useState("");
-  const label = !employee
-    ? "创建员工"
-    : action === "name"
-      ? "修改显示名称"
-      : action === "password"
-        ? "重置密码"
-        : action === "status"
-          ? employee.status === 1
-            ? "停用员工"
-            : "恢复员工"
-          : employee.role === "user"
-            ? "设为管理员"
-            : "撤销管理员";
+  const label = employee ? formLabel(employee, action) : "创建员工";
   const submit = (event: React.FormEvent) =>
     shell.submit(
       event,

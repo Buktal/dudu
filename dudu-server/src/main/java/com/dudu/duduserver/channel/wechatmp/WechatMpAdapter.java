@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
@@ -106,8 +107,6 @@ public class WechatMpAdapter implements ChannelAdapter {
 
     // 只配置了回调 Token 的账号可完成握手与推送验签，但没有换取接口凭据的能力
     private String callbackToken(CompanyChannelDO account) {
-        Map<String, Object> info = account.getChannelInfo();
-        Object token = info == null ? null : info.get(INFO_TOKEN);
-        return token instanceof String value && !value.isEmpty() ? value : null;
+        return ChannelInfoText.text(account.getChannelInfo(), INFO_TOKEN);
     }
 }

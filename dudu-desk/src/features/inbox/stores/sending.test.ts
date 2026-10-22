@@ -2,10 +2,17 @@ import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
 import type { InboxApi } from "../api";
 import type { InboxMessage, ReplyCapability, SendSubmission } from "../types";
+import { applyAccessChanged } from "./access";
 import { loadConversations } from "./queue";
 import { loadHistory, resetContext, selectConversation } from "./reading";
 import { selectMessages } from "./selectors";
-import { editDraft, endReception, retryReply, sendReply } from "./sending";
+import {
+  editDraft,
+  endReception,
+  retryReply,
+  sendReply,
+  settleConfirmedReplies,
+} from "./sending";
 import {
   acceptedMessage,
   deferred,
@@ -359,6 +366,54 @@ describe("replies through the inbox workflow", () => {
     expect(store.getState().inbox.drafts["conversation-a"].text).toBe(
       "等待结果",
     );
+  });
+
+  it("marks accepted submissions settled so repeated settlements skip them", async () => {
+    const store = testStore({
+      send: async (input) => acceptedMessage(input),
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
+    for (const text of ["第一条回复", "第二条回复", "第三条回复"]) {
+      store.dispatch(editDraft("conversation-a", text));
+      await store.dispatch(sendReply("conversation-a"));
+    }
+    const settled = Object.values(store.getState().inbox.submissions);
+    expect(settled).toHaveLength(3);
+    expect(settled.every((submission) => submission.settled)).toBe(true);
+    // 落定后的提交不进入再扫描：重复结算不产生任何状态变化
+    const before = store.getState().inbox;
+    store.dispatch(settleConfirmedReplies());
+    expect(store.getState().inbox).toBe(before);
+  });
+
+  it("settles an in-flight send locally when a reconnect cancels the scope", async () => {
+    // 真实适配器在取消时以 aborted 拒绝（desk-http 的统一映射）
+    const store = testStore({
+      send: ({ signal }) =>
+        new Promise<InboxMessage>((_, reject) => {
+          const abort = () => reject(new DeskApiError("aborted", "操作已取消"));
+          if (signal.aborted) abort();
+          else signal.addEventListener("abort", abort, { once: true });
+        }),
+    });
+    await store.dispatch(loadConversations());
+    await store.dispatch(loadHistory("conversation-a"));
+    store.dispatch(editDraft("conversation-a", "重连时仍在发送"));
+    const sending = store.dispatch(sendReply("conversation-a"));
+    // 手动重连链路：applyAccessChanged 递增范围代数并取消在途读取
+    await store.dispatch(applyAccessChanged());
+    await sending;
+    const message = selectMessages(store.getState(), "conversation-a")[1];
+    // 取消按无确定结果结算：submission 不再停在 sending，会话发送锁释放
+    expect(message.delivery?.state).toBe("unconfirmed");
+    expect(store.getState().inbox.submissions[message.id].status).toBe(
+      "unconfirmed",
+    );
+    expect(
+      store.getState().inbox.sendingByConversation["conversation-a"],
+    ).toBeUndefined();
+    expect(store.getState().inbox.notice?.kind).toBe("unconfirmed-send");
   });
 
   it("only advances after explicit send-and-next acceptance and never ends reception implicitly", async () => {

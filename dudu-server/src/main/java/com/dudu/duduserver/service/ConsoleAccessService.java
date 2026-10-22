@@ -8,6 +8,7 @@ import com.dudu.duduserver.constant.UserRoleEnum;
 import com.dudu.duduserver.entity.CompanyDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
+import com.dudu.duduserver.util.LockClauses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -38,7 +39,7 @@ public class ConsoleAccessService {
     public ConsoleAccess lock(JwtUser me) {
         requireTokenCompany(me);
         CompanyDO company = companies.lambdaQuery().eq(CompanyDO::getCompanyId, me.companyId())
-            .last("FOR UPDATE").one();
+            .last(LockClauses.LOCK_ROW).one();
         return resolve(me, company);
     }
 

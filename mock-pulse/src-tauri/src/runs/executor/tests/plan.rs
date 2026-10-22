@@ -440,3 +440,80 @@ fn parallel_plan_continue_ignores_other_lane_failures() {
     assert!(run.steps[1..].iter().all(|step| step.verdict.passed));
     assert!(run.steps[1..].iter().all(|step| !step.skipped));
 }
+
+#[test]
+fn parallel_lane_panic_folds_remaining_steps_and_record_still_completes() {
+    // B lane 在回报第 1 步完成时 panic（模拟 lane 线程异常，如 narrow!
+    // unreachable）：join Err 折叠为该剧本剩余步骤的失败回执，宿主线程
+    // 不二次引爆，记录槽位齐全照常产出（finish 链路的事件/落盘消费的就是它）
+    let (addr, rx) = start_concurrent_server(3, ok_responder(), Duration::ZERO);
+    let snap = plan_snapshot(
+        "run-plan-panic",
+        PlanMode::Parallel,
+        PlanFailure::Continue,
+        vec![
+            lane_snapshot(
+                "scn-a",
+                "剧本A",
+                vec![dy_step("a1", "a1"), dy_step("a2", "a2")],
+            ),
+            lane_snapshot(
+                "scn-b",
+                "剧本B",
+                vec![
+                    dy_step("b1", "b1"),
+                    dy_step("b2", "b2"),
+                    dy_step("b3", "b3"),
+                ],
+            ),
+        ],
+    );
+
+    let mut progress = Vec::new();
+    let run = super::super::execute_plan(
+        &snap,
+        &[douyin_connection(format!("http://{addr}/hook"))],
+        Duration::from_secs(3),
+        &mut |p: LaneProgress| {
+            let panic_here =
+                p.lane == 1 && matches!(p.progress, StepProgress::Finished { index: 0, .. });
+            if panic_here {
+                panic!("注入的 lane 线程 panic");
+            }
+            progress.push(p);
+        },
+    );
+
+    // 只有 A 的两步与 B 的第 1 步发出请求（B 在第 2 步启动前已随线程终止）
+    let mut seen = Vec::new();
+    while let Ok(post) = rx.recv_timeout(Duration::from_millis(300)) {
+        seen.push(request_text(&post));
+    }
+    seen.sort();
+    assert_eq!(seen, vec!["a1", "a2", "b1"]);
+
+    // 记录槽位齐全（2 + 3）：B 已完成的首步经台账原样保留，剩余两步折叠
+    // 为「线程 panic」失败回执，lane 归属不变
+    assert_eq!(run.steps.len(), 5);
+    assert!(run.steps[0].verdict.passed && run.steps[1].verdict.passed);
+    assert_eq!(run.steps[2].event_name, "b1");
+    assert!(run.steps[2].verdict.passed, "B 已完成的首步应原样保留");
+    assert!(!run.steps[2].skipped);
+    assert_eq!(run.steps[2].lane_index, Some(1));
+    for step in &run.steps[3..] {
+        assert!(step.skipped);
+        assert!(
+            step.verdict.reason.contains("panic"),
+            "折叠回执应注明线程 panic：{}",
+            step.verdict.reason
+        );
+        assert_eq!(step.receipt.status, 0);
+        assert_eq!(step.lane_index, Some(1));
+        assert_eq!(step.lane_name.as_deref(), Some("剧本B"));
+    }
+
+    // 进度：lane 1 只落到第 1 步的 waiting（finished 上报随线程 panic 丢失）
+    let lane1: Vec<&LaneProgress> = progress.iter().filter(|p| p.lane == 1).collect();
+    assert_eq!(lane1.len(), 1);
+    assert!(matches!(lane1[0].progress, StepProgress::Waiting { index: 0 }));
+}

@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.console;
 
+import com.dudu.duduserver.channel.ChannelRoutes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.net.URI;
@@ -17,7 +18,7 @@ public class ConsoleCallbackUrls {
     }
 
     public String callback(String requestOrigin, Long accountId) {
-        return base(requestOrigin) + "/api/channels/" + accountId + "/callback";
+        return base(requestOrigin) + ChannelRoutes.callbackPath(accountId);
     }
 
     public boolean localFallback() {

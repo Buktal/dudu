@@ -60,12 +60,9 @@ class QqAccessTokenClient {
         if (accessToken == null || accessToken.isEmpty()) {
             return FetchedToken.failed("获取QQ接口凭据失败：响应缺少 access_token");
         }
-        return FetchedToken.fetched(accessToken, lifetimeMillis(response));
+        return FetchedToken.fetched(accessToken,
+            AccessTokenCache.expiresInMillis(response, KEY_EXPIRES_IN, DEFAULT_EXPIRE_MILLIS));
     }
 
     // expires_in 表格口径 number、示例为字符串，hutool 两者均可转秒；缺失按官方有效期
-    private long lifetimeMillis(JSONObject response) {
-        Long expiresIn = response.getLong(KEY_EXPIRES_IN, null);
-        return expiresIn == null || expiresIn <= 0 ? DEFAULT_EXPIRE_MILLIS : expiresIn * 1000;
-    }
 }

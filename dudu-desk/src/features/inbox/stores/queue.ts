@@ -4,6 +4,7 @@ import { compareConversations } from "../conversation-query";
 import type { ConversationQuery } from "../types";
 import { collectPaged } from "./page-cursor";
 import { foldConversationPages } from "./queue-membership";
+import { connectionFromFailure } from "./reload";
 import {
   failedReadCursor,
   hasInFlightRequest,
@@ -123,6 +124,13 @@ export function loadConversations(
               }),
             ),
           );
+          // 失败降级经 connectionChanged 落下后没有其他回写方（queueLoaded 不回写）：
+          // 重查成功即证实服务可达，把仍停在断开的连接态经同一单点恢复；
+          // connecting/reconnecting 由订阅与重载流程自己收敛，不在此干预
+          op.settle(() => {
+            if (getState().inbox.connection === "disconnected")
+              dispatch(inboxActions.connectionChanged("connected"));
+          });
           const current = getState().inbox;
           if (
             !current.activeId &&
@@ -134,14 +142,25 @@ export function loadConversations(
             dispatch(inboxActions.conversationSelected(current.queue.ids[0]));
           }
         } catch (error) {
-          op.settle(() =>
+          const failure = operationFailure(error);
+          op.settle(() => {
             dispatch(
               inboxActions.queueFailed({
-                error: operationFailure(error),
+                error: failure,
                 more: !!options.more,
               }),
-            ),
-          );
+            );
+            // 连接态降级只经 connectionChanged 单点映射（connectionFromFailure）：
+            // 与队列失败前一致的类别（不可用/断网/认证失败）降级，其余失败不改变连接
+            if (
+              ["unavailable", "network", "authentication"].includes(
+                failure.kind,
+              )
+            )
+              dispatch(
+                inboxActions.connectionChanged(connectionFromFailure(failure)),
+              );
+          });
         }
       });
     } finally {

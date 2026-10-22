@@ -4,6 +4,7 @@ import {
   type EventVersion,
   interpretEventStep,
   interpretTemplateStep,
+  latestVersionOf,
 } from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
 import { type Page, paginate as paginateList } from "@/lib/paginate";
@@ -106,8 +107,10 @@ export function resolveSteps(
     // 都由解释直接给出。注意钉住版本不在（version-missing）不标 missing——行
     // 照常展示（表 view.hasRow 为 true），拒绝启动是运行时钟的事。
     const interpreted = interpretEventStep(events, step, "view");
-    const latest =
-      interpreted.row?.versions[interpreted.row.versions.length - 1];
+    // 取尖单点在 events 域 latestVersionOf（与 interpreter/model 同源）
+    const latest = interpreted.row
+      ? latestVersionOf(interpreted.row)
+      : undefined;
     const latestRevision = latest?.revision ?? 0;
     return {
       index,

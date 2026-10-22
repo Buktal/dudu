@@ -1,10 +1,4 @@
-import {
-  Check,
-  FilePenLine,
-  Info,
-  LoaderCircle,
-  RefreshCw,
-} from "lucide-react";
+import { Check, FilePenLine, Info, RefreshCw } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +11,7 @@ import {
 } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { WorkspaceAction } from "@/components/workspace-action";
 import { profileFieldText } from "../channel-profile";
@@ -315,12 +310,7 @@ export function VisitorInfo({
             )}
             <div className="flex flex-wrap gap-2 px-1">
               <Button type="submit" size="sm" disabled={!dirty || saving}>
-                {saving && (
-                  <LoaderCircle
-                    data-icon="inline-start"
-                    className="animate-spin motion-reduce:animate-none"
-                  />
-                )}
+                {saving && <Spinner data-icon="inline-start" />}
                 {saving
                   ? "保存中…"
                   : edit?.status === "error"

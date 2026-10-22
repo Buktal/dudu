@@ -80,8 +80,8 @@ public class QqAdapter implements ChannelAdapter {
         if (envelope.op() != OP_DISPATCH) {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
-        if (!protocol.verify(appSecret, headers == null ? null : headers.getFirst(HEADER_SIGNATURE),
-            headers == null ? null : headers.getFirst(HEADER_TIMESTAMP), body)) {
+        if (!protocol.verify(appSecret, headers.getFirst(HEADER_SIGNATURE),
+            headers.getFirst(HEADER_TIMESTAMP), body)) {
             return ChannelReceiveResult.answer(ChannelCallbackResult.rejected());
         }
         Optional<ChannelInboundMessage> inbound;

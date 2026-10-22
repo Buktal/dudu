@@ -4,6 +4,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.JsonBodies;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -97,7 +98,7 @@ public class TelegramMediaReader {
         if (!(envelope.get(KEY_OK) instanceof Boolean ok) || !ok) {
             return FilePathResult.failed("Telegram 素材读取失败：" + describe(envelope));
         }
-        JSONObject result = envelope.getJSONObject(KEY_RESULT);
+        JSONObject result = JsonBodies.objectField(envelope, KEY_RESULT, "Telegram 素材响应报文");
         String filePath = result == null ? null : result.getStr(KEY_FILE_PATH, null);
         if (filePath == null || filePath.isBlank()) {
             return FilePathResult.failed("Telegram 素材读取失败：响应缺少 file_path");
@@ -164,6 +165,4 @@ public class TelegramMediaReader {
         return index < 0 ? botBase
             : botBase.substring(0, index) + SEGMENT_FILE_BOT + botBase.substring(index + SEGMENT_BOT.length());
     }
-
-    // 渠道给出的内容类型缺失或无法使用时按二进制流返回，不猜具体格式
 }

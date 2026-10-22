@@ -6,6 +6,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Digests;
+import com.dudu.duduserver.channel.support.JsonBodies;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
@@ -97,7 +98,8 @@ public class WhatsappProtocol {
                 if (!(rawChange instanceof JSONObject change) || !FIELD_MESSAGES.equals(change.getStr("field"))) {
                     continue;
                 }
-                Optional<ChannelInboundMessage> inbound = message(companyChannelId, change.getJSONObject("value"));
+                Optional<ChannelInboundMessage> inbound =
+                    message(companyChannelId, JsonBodies.objectField(change, "value", "WhatsApp 回调报文"));
                 if (inbound.isPresent()) {
                     return inbound;
                 }
@@ -132,7 +134,7 @@ public class WhatsappProtocol {
         }
         for (Object raw : contacts) {
             if (raw instanceof JSONObject contact && from.equals(contact.getStr("wa_id"))) {
-                JSONObject profile = contact.getJSONObject("profile");
+                JSONObject profile = JsonBodies.objectField(contact, "profile", "WhatsApp 回调报文");
                 return profile == null ? null : Texts.blankToNull(profile.getStr("name"));
             }
         }

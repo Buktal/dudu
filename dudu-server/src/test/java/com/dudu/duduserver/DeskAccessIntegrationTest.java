@@ -325,23 +325,24 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         SocketClient owner = connectAndAuth(ownerToken);
         UserGroupDO txGroup = group(COMPANY_ID, "事务组");
         UserDO txMember = plainUser(COMPANY_ID, "access.tx");
+        String txToken = login(COMPANY_ID, "access.tx");
 
-        // 事务回滚：成员关系与范围变更事件一起回滚，不产生任何推送
+        // 事务回滚：成员关系与范围变更事件一起回滚，不产生任何推送，员工范围也不含该组
         new TransactionTemplate(transactionManager).execute(status -> {
             members.save(member(COMPANY_ID, txMember.getUserId(), txGroup.getGroupId()));
             status.setRollbackOnly();
             return null;
         });
         assertThat((Object) owner.next(Duration.ofMillis(700))).isNull();
-        assertThat(members.canAccessGroup(txMember.getUserId(), txGroup.getGroupId())).isFalse();
+        assertThat(groupIds(access(txToken))).doesNotContain(String.valueOf(txGroup.getGroupId()));
 
-        // 事务提交：提交后才收敛为 access-changed 报文
+        // 事务提交：提交后才收敛为 access-changed 报文，员工范围随之包含该组
         new TransactionTemplate(transactionManager).execute(status -> {
             members.save(member(COMPANY_ID, txMember.getUserId(), txGroup.getGroupId()));
             return null;
         });
         assertAccessChanged(owner);
-        assertThat(members.canAccessGroup(txMember.getUserId(), txGroup.getGroupId())).isTrue();
+        assertThat(groupIds(access(txToken))).contains(String.valueOf(txGroup.getGroupId()));
     }
 
     @Test
@@ -408,6 +409,12 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
 
     private JSONObject access(String token) throws Exception {
         return data(JSONUtil.parseObj(deskGet(token, "/api/desk/profile"))).getJSONObject("access");
+    }
+
+    // 接待范围里的组 ID（Desk 契约为十进制字符串）
+    private List<String> groupIds(JSONObject access) {
+        return access.getJSONArray("groups").stream()
+            .map(item -> ((JSONObject) item).getStr("groupId")).toList();
     }
 
     private JSONObject query(String token, String search) throws Exception {

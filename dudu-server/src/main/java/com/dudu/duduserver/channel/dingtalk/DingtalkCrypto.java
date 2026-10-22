@@ -2,10 +2,10 @@ package com.dudu.duduserver.channel.dingtalk;
 
 import com.dudu.duduserver.channel.support.AesEnvelopeCodec;
 import com.dudu.duduserver.channel.support.Digests;
+import com.dudu.duduserver.channel.support.WechatSignatures;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.Arrays;
 
 /**
  * 钉钉加解密原语（事实库 §4.1，MockPulse crypto.rs/wecom crypto.rs 对拍）：sha1 四参
@@ -32,9 +32,8 @@ public final class DingtalkCrypto {
      * @return 签名十六进制串
      */
     public static String buildSignature(String token, String timestamp, String nonce, String encrypt) {
-        String[] params = {token, timestamp, nonce, encrypt};
-        Arrays.sort(params);
-        return Digests.sha1Hex(String.join("", params));
+        // 与验签共用同一「字典序排序拼接 sha1」原语，保证加签与验签逐字一致
+        return WechatSignatures.sha1OfSorted(token, timestamp, nonce, encrypt);
     }
 
     /**

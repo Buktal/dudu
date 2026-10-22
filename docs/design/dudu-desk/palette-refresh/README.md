@@ -29,7 +29,7 @@
 
 消息组合复用现有 Bubble 的 `secondary` 变体，客服气泡局部绑定 `accent` 及配对前景色；没有修改 shadcn 生成组件或新增依赖。浅色按钮由主题基色混入 18% 黑色，保留现有 80% 悬停行为的文字对比度。状态色、渠道标识与品牌继续按各自语义维护
 
-当前行为与偏好迁移规则见 [DuduDesk README](../../../../dudu-desk/README.md)。[原型色系卡](../../../prototype/dudu-desk/palette-study/README.md) 保留最初选色历史，颜色与名称不再代表正式版
+当前行为与偏好迁移规则见 [DuduDesk README](../../../../dudu-desk/README.md)。原型色系卡（prototype/dudu-desk/palette-study/）保留最初选色历史，颜色与名称不再代表正式版
 
 ## 验证结果
 

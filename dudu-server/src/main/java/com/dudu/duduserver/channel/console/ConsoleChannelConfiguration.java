@@ -1,5 +1,6 @@
 package com.dudu.duduserver.channel.console;
 
+import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.ChannelEnum;
@@ -10,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.dudu.duduserver.channel.support.ChannelInfoText.text;
 
 /**
  * Console 配置写入边界：白名单合并、必需配置、固定身份保护与安全读模型；不发外部网络请求。
@@ -138,11 +141,6 @@ public class ConsoleChannelConfiguration {
         return system == null || (channel != ChannelEnum.WECOM && channel != ChannelEnum.DINGTALK)
             || (channel == ChannelEnum.WECOM && SYSTEM_AGENT.equals(system))
             || (channel == ChannelEnum.DINGTALK && SYSTEM_HTTP_CRYPTO.equals(system));
-    }
-
-    private static String text(Map<String, Object> info, String key) {
-        Object value = info.get(key);
-        return value instanceof String text && !text.isBlank() ? text : null;
     }
 
     public record Status(Boolean receiveConfigured, Boolean sendConfigured, List<String> missingReceiveFields,

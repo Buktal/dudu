@@ -13,8 +13,10 @@ export function mediaMessageId(key: string): string {
 
 /**
  * 消息媒体读取状态：按「消息:下标」记录在途、成功与失败，成功后持有本地对象 URL。
- * 资源生命周期与附件预览一致：对象 URL 在 detach 时按会话回收（access.ts）、
- * 上下文重置时由 cancelRequests 统一回收，本状态条目随 detachConversation 一并拆除。
+ * 对象 URL 的两条回收路径：上下文重置时统一回收（requests.ts 的 cancelRequests）、
+ * 无权清理时按会话回收（access.ts 的 releaseUnauthorized，在途请求先由
+ * cancelScopeRequests 取消、其本身不回收 URL）；重连的历史失效不丢消息投影，
+ * 不做额外回收。状态条目随 detachConversation 一并拆除。
  */
 export const mediaReducers = {
   mediaRequested(state: InboxState, action: PayloadAction<string>) {

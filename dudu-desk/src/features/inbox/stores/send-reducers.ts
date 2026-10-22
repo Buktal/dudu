@@ -2,6 +2,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
 import type { Conversation, InboxMessage } from "../types";
 import { mergeConversation, mergeMessage, orderMessages } from "./live-merge";
+import { receiptKeys, rememberReceipt } from "./receipts";
 import {
   blankDraft,
   emptyLoad,
@@ -83,6 +84,8 @@ export const sendReducers = {
     }
     for (const id of submission.draftAttachmentIds)
       delete state.attachments[id];
+    // 落定标记：草稿清理与附件释放已完成，结算扫描不再进入（见 settleConfirmedReplies）
+    submission.settled = true;
   },
   submissionFailed(
     state: InboxState,
@@ -106,8 +109,21 @@ export const sendReducers = {
       return;
     }
     submission.status = uncertain ? "unconfirmed" : "failed";
-    if (message.delivery?.state === "sending")
-      message.delivery = { state: submission.status, reason: error.message };
+    if (message.delivery?.state === "sending") {
+      // 本地失败标注经回执证据单点落账（见 receipts.ts 的合并算法）：version 0
+      // 保证任何服务端版本的证据可覆盖；后续服务端帧不带 delivery 到达时，
+      // 这份证据让失败标注与重试入口不消失
+      const evidence = rememberReceipt(
+        state.events,
+        conversationId,
+        receiptKeys(message),
+        {
+          version: 0,
+          delivery: { state: submission.status, reason: error.message },
+        },
+      );
+      if (evidence) message.delivery = evidence.delivery;
+    }
     if (state.sendingByConversation[conversationId] === messageId)
       delete state.sendingByConversation[conversationId];
     state.notice = {

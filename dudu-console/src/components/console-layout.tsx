@@ -1,6 +1,7 @@
 import {
   Building2,
   ChevronRight,
+  CircleUserRound,
   Layers3,
   LogOut,
   Menu,
@@ -23,10 +24,30 @@ import {
 } from "./ui/sheet";
 
 const items = [
-  { view: "employees", label: "员工", icon: UserRound },
-  { view: "user-groups", label: "用户组", icon: Layers3 },
-  { view: "channel-accounts", label: "渠道账号", icon: Building2 },
-  { view: "account", label: "个人账号", icon: UserRound },
+  {
+    view: "employees",
+    label: "员工",
+    icon: UserRound,
+    route: routes.employees,
+  },
+  {
+    view: "user-groups",
+    label: "用户组",
+    icon: Layers3,
+    route: routes.userGroups,
+  },
+  {
+    view: "channel-accounts",
+    label: "渠道账号",
+    icon: Building2,
+    route: routes.channelAccounts,
+  },
+  {
+    view: "account",
+    label: "个人账号",
+    icon: CircleUserRound,
+    route: routes.account,
+  },
 ] as const;
 
 export function ConsoleLayout({
@@ -55,11 +76,11 @@ export function ConsoleLayout({
           (item) =>
             item.view !== "employees" || session.profile?.user.isInitialAdmin,
         )
-        .map(({ view: target, label, icon: Icon }) => (
+        .map(({ view: target, label, icon: Icon, route }) => (
           <Fragment key={target}>
             {target === "account" && <Separator className="my-3" />}
             <a
-              href={`#/${target}`}
+              href={`#/${route()}`}
               aria-current={target === view ? "page" : undefined}
               className={cn("nav-item", target === view && "nav-item-active")}
               onClick={() => setMobileOpen(false)}
@@ -90,7 +111,7 @@ export function ConsoleLayout({
         <div className="mt-auto p-3">
           <Separator className="mb-3" />
           <a
-            href="#/account"
+            href={`#/${routes.account()}`}
             aria-label="查看个人账号"
             className="sidebar-profile"
           >

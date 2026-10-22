@@ -1,5 +1,7 @@
 package com.dudu.duduserver.channel.support;
 
+import cn.hutool.json.JSONObject;
+
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -12,7 +14,8 @@ import java.util.function.Supplier;
  * 未命中、经 getOrLoad 在键锁内重新换取；换取失败不写缓存，下次自然重试。提前量默认
  * 30 分钟（飞书/抖音等渠道口径），渠道官方另有约束时经构造器指定（如钉钉 200 秒）。
  * 缓存键由调用方提供，须能区分不同凭据组——凭据 record 的值等即键，换密或换绑后旧
- * 缓存自然失效；实例由各令牌客户端持有（发送与素材读取各建各的客户端，互不共享）。
+ * 缓存自然失效；键不可为 null（凭据未配置属「未配置」路径，调用方先行处理，不进缓存）。
+ * 实例由各令牌客户端持有（发送与素材读取各建各的客户端，互不共享）。
  *
  * 同键并发未命中经 getOrLoad 单飞：键粒度 ReentrantLock 串行换取、锁内 double-check，
  * 后到者命中先到者刚写回的新值，同键同一时刻只发一次 HTTP。动机：小红书官方规则
@@ -26,6 +29,9 @@ public final class AccessTokenCache<K> {
 
     // 剩余有效期不足 30 分钟即换新（与飞书/抖音缓存窗口口径一致）
     private static final long DEFAULT_REFRESH_AHEAD_MILLIS = Duration.ofMinutes(30).toMillis();
+
+    // 渠道响应的过期字段以秒计，缓存寿命以毫秒计
+    private static final long MILLIS_PER_SECOND = 1000L;
 
     // 缓存条目：令牌与到期时刻（毫秒）
     private record Entry(String token, long expiresAtMillis) {
@@ -62,9 +68,19 @@ public final class AccessTokenCache<K> {
         this.refreshAheadMillis = refreshAheadMillis;
     }
 
+    // 渠道响应的过期秒数转缓存寿命毫秒：报文（嵌套 data 等）或字段缺失、非正值一律回退默认毫秒
+    public static long expiresInMillis(JSONObject response, String expiresKey, long defaultMillis) {
+        Long expiresInSeconds = response == null ? null : response.getLong(expiresKey, null);
+        return expiresInSeconds == null || expiresInSeconds <= 0 ? defaultMillis : expiresInSeconds * MILLIS_PER_SECOND;
+    }
+
     // 取凭据：命中且剩余有效期充足直接复用；未命中在键锁内 double-check 后执行 loader，
     // 成功写缓存返回令牌，失败不写缓存返回失败说明，loader 抛异常不写缓存并原样上抛
     public TokenResult getOrLoad(K key, Supplier<FetchedToken> loader) {
+        if (key == null) {
+            // 键是凭据组身份：null 意味着调用方把未配置当成了换取请求，显式暴露而非 ConcurrentHashMap NPE
+            throw new IllegalArgumentException("令牌缓存键不能为 null：凭据未配置时应先按未配置处理，不进入缓存");
+        }
         Optional<String> cached = get(key);
         if (cached.isPresent()) {
             return new TokenResult(cached.get(), null);

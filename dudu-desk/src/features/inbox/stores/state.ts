@@ -62,6 +62,8 @@ export type ReplySubmission = {
   incomingSequence: number;
   next: boolean;
   status: "sending" | "accepted" | "failed" | "unconfirmed";
+  /** 已按接受结果完成草稿清理与附件释放：结算扫描不再进入（见 sending.ts）。 */
+  settled?: boolean;
 };
 type EndState = {
   status: "saving" | "saved" | "error";

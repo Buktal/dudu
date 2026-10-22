@@ -71,8 +71,5 @@ export const queueReducers = {
     state.queue.status = "error";
     state.queue.error = error;
     state.queue.failedRead = more ? "more" : "refresh";
-    if (error.kind === "unavailable") state.connection = "unavailable";
-    if (error.kind === "network" || error.kind === "authentication")
-      state.connection = "disconnected";
   },
 };

@@ -30,9 +30,9 @@ class ApiEnumTest {
 
     @Test
     void segmentsHoldTheirFamilies() {
-        assertThat(ApiEnum.TOKEN_ERROR.code).isEqualTo(10100);
+        assertThat(ApiEnum.TOKEN_EMPTY.code).isEqualTo(10101);
         assertThat(ApiEnum.PARAM_ERROR.code).isEqualTo(11000);
         assertThat(ApiEnum.DATA_ERROR.code).isEqualTo(12000);
-        assertThat(ApiEnum.THIRD_ERROR.code).isEqualTo(13000);
+        assertThat(ApiEnum.REQUEST_THIRD_ERROR.code).isEqualTo(13100);
     }
 }

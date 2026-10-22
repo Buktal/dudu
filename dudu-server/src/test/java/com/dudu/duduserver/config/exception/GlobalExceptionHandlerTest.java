@@ -54,8 +54,8 @@ class GlobalExceptionHandlerTest {
             .isEqualTo(ApiEnum.TOKEN_EXPIRE.code);
         assertThat(handler.onBiz(new BizException(ApiEnum.DATA_NOT_EXIST)).code())
             .isEqualTo(ApiEnum.DATA_NOT_EXIST.code);
-        assertThat(handler.onBiz(new BizException(ApiEnum.THIRD_ERROR)).code())
-            .isEqualTo(ApiEnum.THIRD_ERROR.code);
+        assertThat(handler.onBiz(new BizException(ApiEnum.REQUEST_THIRD_ERROR)).code())
+            .isEqualTo(ApiEnum.REQUEST_THIRD_ERROR.code);
     }
 
     @Test

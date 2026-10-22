@@ -3,7 +3,6 @@ package com.dudu.duduserver.channel.douyin;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
-import com.dudu.duduserver.channel.support.Texts;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.channel.support.Texts;
 import com.dudu.duduserver.channel.support.TokenResult;

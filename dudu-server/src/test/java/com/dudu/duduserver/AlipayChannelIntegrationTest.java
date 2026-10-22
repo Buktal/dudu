@@ -353,7 +353,7 @@ class AlipayChannelIntegrationTest extends DeskIntegrationSupport {
         JSONObject restricted = errorOf(mvc.perform(get("/api/desk/messages/" + unconfiguredId + "/media")
                 .header("Authorization", "Bearer " + scopedToken)).andReturn());
         assertThat(restricted.getInt("code")).isEqualTo(12200);
-        assertThat(restricted.getStr("msg")).isEqualTo("渠道媒体凭据未配置");
+        assertThat(restricted.getStr("msg")).isEqualTo("渠道素材凭据未配置");
         // 除成功一次下载外，其余用例不再触碰媒体替身
         assertThat(apiRequests.stream().filter(r -> r.contains("/chat/multimedia.do")).toList()).hasSize(1);
     }

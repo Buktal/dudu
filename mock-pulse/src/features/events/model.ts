@@ -3,6 +3,7 @@ import type { ChannelId } from "@/lib/channels";
 import { applyGeneratedIds } from "./ids";
 import { editorPayload, wirePayload } from "./payload/json";
 import { cloneJson } from "./payload-value";
+import { latestVersionOf } from "./reference";
 import type { EventSchema, ExpectedReceipt, WirePayload } from "./schemas";
 import { schemaById } from "./schemas";
 
@@ -86,8 +87,9 @@ export function duplicateDraft(draft: EventDraft): EventDraft {
   };
 }
 
+/** 最新版本（零版本行为 undefined）：取尖单点在 reference 域 latestVersionOf。 */
 export function latestVersion(event: EventItem): EventVersion | undefined {
-  return event.versions[event.versions.length - 1];
+  return latestVersionOf(event);
 }
 
 // 步骤引用解析核心住在 ./reference/resolve（C4：查找与缺失含义同一模块）；

@@ -25,11 +25,31 @@ import {
 } from "./ui/sheet";
 
 const items = [
-  { view: "overview", label: "运营概览", icon: LayoutDashboard },
-  { view: "companies", label: "企业管理", icon: Building2 },
-  { view: "resources", label: "企业资源汇总", icon: Layers3 },
-  { view: "logs", label: "操作记录", icon: FileClock },
-  { view: "account", label: "个人账号", icon: UserRound },
+  {
+    view: "overview",
+    label: "运营概览",
+    icon: LayoutDashboard,
+    route: routes.overview,
+  },
+  {
+    view: "companies",
+    label: "企业管理",
+    icon: Building2,
+    route: routes.companies,
+  },
+  {
+    view: "resources",
+    label: "企业资源汇总",
+    icon: Layers3,
+    route: routes.resources,
+  },
+  { view: "logs", label: "操作记录", icon: FileClock, route: routes.logs },
+  {
+    view: "account",
+    label: "个人账号",
+    icon: UserRound,
+    route: routes.account,
+  },
 ] as const;
 
 export function AdminLayout({
@@ -53,11 +73,11 @@ export function AdminLayout({
       <p className="px-3.5 pb-3 text-xs font-medium text-muted-foreground">
         平台管理
       </p>
-      {items.map(({ view: target, label, icon: Icon }) => (
+      {items.map(({ view: target, label, icon: Icon, route }) => (
         <Fragment key={target}>
           {target === "account" && <Separator className="my-3" />}
           <a
-            href={`#/${target}`}
+            href={`#/${route()}`}
             aria-current={target === view ? "page" : undefined}
             className={cn("nav-item", target === view && "nav-item-active")}
             onClick={() => setMobileOpen(false)}
@@ -88,7 +108,7 @@ export function AdminLayout({
         <div className="mt-auto p-3">
           <Separator className="mb-3" />
           <a
-            href="#/account"
+            href={`#/${routes.account()}`}
             aria-label="查看个人账号"
             className="sidebar-profile"
           >

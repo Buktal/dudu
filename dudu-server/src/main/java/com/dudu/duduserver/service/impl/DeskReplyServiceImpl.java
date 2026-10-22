@@ -21,7 +21,7 @@ import com.dudu.duduserver.service.MessageService;
 import com.dudu.duduserver.service.UserService;
 import com.dudu.duduserver.service.VisitorService;
 import com.dudu.duduserver.socket.DeskSocketGateway;
-import com.dudu.duduserver.util.DeskConversationViews;
+import com.dudu.duduserver.util.LockClauses;
 import com.dudu.duduserver.util.DeskMessagePreview;
 import com.dudu.duduserver.vo.DeskCapabilityVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
@@ -54,8 +54,6 @@ public class DeskReplyServiceImpl implements DeskReplyService {
     private static final int FAILURE_REASON_MAX_LENGTH = 500;
     private static final String CONTENT_TYPE_TEXT = "text";
     private static final String REASON_UNKNOWN = "渠道发送失败";
-    // 行锁片段：锁定读绕过可重复读快照，读到并发事务已提交的最新行（与 DeskInboundServiceImpl 同口径）
-    private static final String LOCK_ROW = "FOR UPDATE";
 
     private final DeskVisitorService deskVisitorService;
     private final VisitorService visitorService;
@@ -65,6 +63,7 @@ public class DeskReplyServiceImpl implements DeskReplyService {
     private final ChannelAdapterRegistry channelAdapters;
     private final DeskConversationViews deskConversationViews;
     private final DeskSocketGateway deskSocketGateway;
+    private final PushGate pushGate;
     private final TransactionTemplate transactionTemplate;
 
     @Override
@@ -146,7 +145,7 @@ public class DeskReplyServiceImpl implements DeskReplyService {
         // 先提交则锁定读到它的 NEEDS_REPLY，WAITING 与 waiting_since 的清除不再覆盖更新的来信
         VisitorDO visitor = visitorService.getOne(Wrappers.<VisitorDO>lambdaQuery()
             .eq(VisitorDO::getVisitorId, message.getVisitorId())
-            .last(LOCK_ROW));
+            .last(LockClauses.LOCK_ROW));
 
         if (succeeded && visitor.awaitingReply() && !hasNewerIncoming(message)) {
             visitorService.update(Wrappers.<VisitorDO>lambdaUpdate()
@@ -174,7 +173,7 @@ public class DeskReplyServiceImpl implements DeskReplyService {
             .eq(MessageDO::getVisitorId, message.getVisitorId())
             .eq(MessageDO::getDirection, MessageDirectionEnum.INCOMING)
             .gt(MessageDO::getSequence, message.getSequence())
-            .last(LOCK_ROW)) > 0;
+            .last(LockClauses.LOCK_ROW)) > 0;
     }
 
     // 渠道边界负责翻译渠道协议；异常也按真实原因记录为失败，不猜测发送结果
@@ -189,18 +188,14 @@ public class DeskReplyServiceImpl implements DeskReplyService {
         }
     }
 
-    // 结果保存后发送一次 message 报文（完整消息与最新访客摘要，含发送者本人）；推送失败只记录
+    // 结果保存后发送一次 message 报文（完整消息与最新访客摘要，含发送者本人）；推送失败只记录（机制收编在 PushGate）
     private void pushOutcome(SendOutcome outcome) {
         if (outcome.companyId() == null || outcome.companyChannelId() == null) {
             return;
         }
-        try {
-            deskSocketGateway.pushMessage(outcome.companyId(), outcome.companyChannelId(),
-                outcome.message(), outcome.conversation());
-        } catch (RuntimeException e) {
-            log.error("[desk-reply] 推送发送结果失败, messageId={}, visitorId={}",
-                outcome.message().id(), outcome.conversation().id(), e);
-        }
+        pushGate.afterCommitQuietly("发送结果 messageId=" + outcome.message().id() + ", visitorId=" + outcome.conversation().id(),
+            () -> deskSocketGateway.pushMessage(outcome.companyId(), outcome.companyChannelId(),
+                outcome.message(), outcome.conversation()));
     }
 
     // clientRequestId 1–64 字符：缺失 11100，空白 11000，超长 11200

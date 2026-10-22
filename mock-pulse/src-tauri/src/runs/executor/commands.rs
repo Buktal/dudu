@@ -159,6 +159,8 @@ fn run_in_background(
 }
 
 /// 运行记录落盘失败会随完成事件返回，前端保留快照并提供重试。
+/// finished 事件同时承载落盘错误与相位解锁（前端实况/阶段靠它收束）：
+/// emit 失败不可像进度事件那样静默丢弃，至少留下诊断线索。
 fn finish_run(app: tauri::AppHandle, run_id: String, run: RunRecord) {
     let saved = (|| -> Result<(), String> {
         let dir = app_data_dir(&app)?;
@@ -166,18 +168,18 @@ fn finish_run(app: tauri::AppHandle, run_id: String, run: RunRecord) {
             .map(|_| ())
             .map_err(|error| error.to_string())
     })();
-    let _ = app.emit(
-        RUN_PROGRESS,
-        RunProgressEvent {
-            error: saved.err(),
-            run_id,
-            index: run.steps.len(),
-            status: RunProgressStatus::Finished,
-            lane: None,
-            step: None,
-            run: Some(run),
-        },
-    );
+    let event = RunProgressEvent {
+        error: saved.err(),
+        run_id: run_id.clone(),
+        index: run.steps.len(),
+        status: RunProgressStatus::Finished,
+        lane: None,
+        step: None,
+        run: Some(run),
+    };
+    if let Err(error) = app.emit(RUN_PROGRESS, event) {
+        eprintln!("[runs] finished 事件发送失败, runId={run_id}, error={error}");
+    }
 }
 
 /// 启动前先保存中断态；每步回执覆盖对应步骤，正常结束再写最终状态。

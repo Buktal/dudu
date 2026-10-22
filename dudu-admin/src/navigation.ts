@@ -28,8 +28,12 @@ export const routes = {
   companyCreate: () => `companies?${CREATE_PARAM}=${CREATE_FLAG}`,
   companyDetail: (companyId: string) =>
     `companies?${COMPANY_ID_PARAM}=${encodeURIComponent(companyId)}`,
-  resources: (companyId: string) =>
-    `resources?${COMPANY_ID_PARAM}=${encodeURIComponent(companyId)}`,
+  resources: (companyId?: string) =>
+    companyId
+      ? `resources?${COMPANY_ID_PARAM}=${encodeURIComponent(companyId)}`
+      : "resources",
+  logs: () => "logs",
+  account: () => "account",
 };
 
 export const parseRoute = (hash: string) => {

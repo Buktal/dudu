@@ -1,8 +1,8 @@
 import { Tabs } from "@base-ui/react/tabs";
-import { useEffect, useState } from "react";
-import { ApiError } from "@/api/client";
+import { useState } from "react";
 import { useConsoleQuery } from "@/api/console-query";
 import { useConsole, useSession } from "@/api/context";
+import { useEntityGuard } from "@/api/entity-guard";
 import { usePagedQuery } from "@/api/paged-query";
 import { ErrorState, LoadingState, Message } from "@/components/feedback";
 import { FilterBar } from "@/components/filter-bar";
@@ -199,12 +199,10 @@ function GroupDetail({
 }) {
   const shell = useSubmit();
 
-  const query = useConsoleQuery(loadGroup, [groupId]);
-  useEffect(() => {
-    if (query.data === null && !query.loading && !query.error) {
-      close();
-    }
-  }, [query.data, query.loading, query.error, close]);
+  // 组被删除或当前身份不可见时收起详情：实体缺失守卫单点编排。
+  const query = useConsoleQuery(useEntityGuard(groupsApi.detail, close), [
+    groupId,
+  ]);
   return (
     <Sheet open {...shell.hold(close)}>
       <SheetContent
@@ -312,16 +310,4 @@ function RenameGroup({
       />
     </form>
   );
-}
-async function loadGroup(
-  client: import("@/api/client").ConsoleClient,
-  groupId: string,
-  signal: AbortSignal,
-) {
-  try {
-    return await groupsApi.detail(client, groupId, signal);
-  } catch (error) {
-    if (error instanceof ApiError && error.code === 12100) return null;
-    throw error;
-  }
 }

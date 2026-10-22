@@ -9,6 +9,7 @@ import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.*;
 import com.dudu.duduserver.dto.*;
 import com.dudu.duduserver.entity.*;
+import com.dudu.duduserver.util.LikeClauses;
 import com.dudu.duduserver.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Console 用户组边界，企业锁串行化管理范围与角色变更。
@@ -37,13 +40,15 @@ public class ConsoleGroupService {
         LambdaQueryWrapper<UserGroupDO> filter = new LambdaQueryWrapper<UserGroupDO>()
             .eq(UserGroupDO::getCompanyId, access.companyId())
             .in(!access.initialAdmin(), UserGroupDO::getGroupId, access.groupIds())
-            .like(!query.keyword().isEmpty(), UserGroupDO::getGroupName, query.keyword())
+            // 关键词字面匹配（% _ ! 转义，口径同 Desk 访客搜索）；MP like 无法表达 ESCAPE，用受支持片段
+            .apply(!query.keyword().isEmpty(), "group_name LIKE {0}" + LikeClauses.ESCAPE,
+                LikeClauses.pattern(query.keyword()))
             .orderByDesc(UserGroupDO::getCreateTime, UserGroupDO::getGroupId);
         Page<UserGroupDO> page = query.toPage(groups.count(filter));
         if (page.getTotal() > 0) {
             groups.page(page, filter);
         }
-        return P.ok(page, page.getRecords().stream().map(this::view).toList());
+        return P.ok(page, views(page.getRecords()));
     }
 
     public ConsoleGroupVO detail(JwtUser me, Long groupId) {
@@ -90,7 +95,9 @@ public class ConsoleGroupService {
             .eq(!access.initialAdmin(), UserDO::getRole, UserRoleEnum.USER)
             .notInSql(UserDO::getUserId, membershipSql(access.companyId(), groupId));
         if (!query.keyword().isEmpty()) {
-            filter.and(part -> part.like(UserDO::getUsername, query.keyword()).or().like(UserDO::getName, query.keyword()));
+            String pattern = LikeClauses.pattern(query.keyword());
+            filter.and(part -> part.apply("username LIKE {0}" + LikeClauses.ESCAPE, pattern)
+                .or().apply("name LIKE {0}" + LikeClauses.ESCAPE, pattern));
         }
         Page<UserDO> page = employeePage(filter, query);
         return P.ok(page, page.getRecords().stream().map(user -> new ConsoleGroupCandidateVO(
@@ -143,15 +150,35 @@ public class ConsoleGroupService {
         return "SELECT user_id FROM user_group_member WHERE company_id=" + companyId + " AND group_id=" + groupId;
     }
 
+    // 统计口径的员工范围：本企业坐席角色（排除 ADMIN 与他企业脏关系）
+    private String employeeSql(Long companyId) {
+        return "SELECT user_id FROM `user` WHERE company_id=" + companyId + " AND role IN ('"
+            + UserRoleEnum.USER.getCode() + "','" + UserRoleEnum.CONSOLE.getCode() + "')";
+    }
+
+    // 列表页视图：组内成员与账号各按页内组一次批量查询计数，不逐组 COUNT
+    private List<ConsoleGroupVO> views(List<UserGroupDO> page) {
+        if (page.isEmpty()) return List.of();
+        Long companyId = page.getFirst().getCompanyId();
+        List<Long> groupIds = page.stream().map(UserGroupDO::getGroupId).toList();
+        // 关联无外键，统计必须排除指向其他企业员工的脏关系
+        Map<Long, Long> memberCounts = members.lambdaQuery()
+            .select(UserGroupMemberDO::getGroupId, UserGroupMemberDO::getUserId)
+            .eq(UserGroupMemberDO::getCompanyId, companyId)
+            .in(UserGroupMemberDO::getGroupId, groupIds)
+            .inSql(UserGroupMemberDO::getUserId, employeeSql(companyId))
+            .list().stream().collect(Collectors.groupingBy(UserGroupMemberDO::getGroupId, Collectors.counting()));
+        Map<Long, Long> channelCounts = channels.lambdaQuery()
+            .select(CompanyChannelDO::getGroupId)
+            .eq(CompanyChannelDO::getCompanyId, companyId)
+            .in(CompanyChannelDO::getGroupId, groupIds)
+            .list().stream().collect(Collectors.groupingBy(CompanyChannelDO::getGroupId, Collectors.counting()));
+        return page.stream().map(group -> new ConsoleGroupVO(group.getGroupId().toString(), group.getGroupName(),
+            memberCounts.getOrDefault(group.getGroupId(), 0L), channelCounts.getOrDefault(group.getGroupId(), 0L),
+            group.getCreateTime(), group.getUpdateTime())).toList();
+    }
+
     private ConsoleGroupVO view(UserGroupDO group) {
-        // 关联无外键，统计必须排除指向其他企业员工的脏关系。
-        long memberCount = members.lambdaQuery().eq(UserGroupMemberDO::getCompanyId, group.getCompanyId())
-            .eq(UserGroupMemberDO::getGroupId, group.getGroupId()).inSql(UserGroupMemberDO::getUserId,
-                "SELECT user_id FROM `user` WHERE company_id=" + group.getCompanyId() + " AND role IN ('"
-                    + UserRoleEnum.USER.getCode() + "','" + UserRoleEnum.CONSOLE.getCode() + "')").count();
-        long channelCount = channels.lambdaQuery().eq(CompanyChannelDO::getCompanyId, group.getCompanyId())
-            .eq(CompanyChannelDO::getGroupId, group.getGroupId()).count();
-        return new ConsoleGroupVO(group.getGroupId().toString(), group.getGroupName(), memberCount,
-            channelCount, group.getCreateTime(), group.getUpdateTime());
+        return views(List.of(group)).getFirst();
     }
 }

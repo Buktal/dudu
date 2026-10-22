@@ -62,10 +62,11 @@ public class AlipayProtocol {
     }
 
     /**
-     * 合并回调参数：Servlet 已解析的 query（form 表单推送时含表单参数）优先，body 原始串
-     * 按 x-www-form-urlencoded 解析补齐（替身或网关以非标准内容类型直发 body 时的兜底）；
-     * 畸形百分号编码等无法解码的表单抛出 {@link IllegalArgumentException}，由调用方按
-     * 参数错误拒绝。
+     * 合并回调参数：query 先入、body 原始串按 x-www-form-urlencoded 解析后覆盖（form
+     * 表单推送时表单参数可能两处都落，同名字段以 body 为准；替身或网关以非标准内容类型
+     * 直发 body 时此处是唯一来源）；畸形百分号编码等无法解码的表单抛出
+     * {@link IllegalArgumentException}，由调用方按参数错误拒绝——官方验签四步要求对参数
+     * url_decode 精确还原（alipay.md §5.1），官方 SDK 对畸形 % 序列直接抛出不回退。
      */
     public Map<String, String> paramsOf(Map<String, String> query, String body) {
         Map<String, String> params = new LinkedHashMap<>();

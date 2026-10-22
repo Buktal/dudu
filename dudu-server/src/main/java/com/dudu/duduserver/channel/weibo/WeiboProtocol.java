@@ -4,13 +4,12 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.Coordinates;
-import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
+import com.dudu.duduserver.channel.support.WechatSignatures;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,9 +45,7 @@ public class WeiboProtocol {
         if (Texts.isBlank(appSecret) || Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
             return false;
         }
-        String[] parts = {appSecret, timestamp, nonce};
-        Arrays.sort(parts);
-        return Digests.constantTimeEquals(Digests.sha1Hex(String.join("", parts)), signature);
+        return WechatSignatures.verifySha1(signature, appSecret, timestamp, nonce);
     }
 
     /**
@@ -65,14 +62,15 @@ public class WeiboProtocol {
             throw new IllegalArgumentException("渠道回调报文无法解析", e);
         }
         String type = payload.getStr("type", "");
+        // 事件推送（follow/unfollow/subscribe/unsubscribe/scan/scan_follow/click/view）与
+        // 被@的 mention 都不是访客消息：返回空表示只应答不保存（事件先于身份检查，与
+        // wechatmp/wechatmini/wecom/douyin 同序，事件推送无需 sender_id）
+        if (MSG_TYPE_EVENT.equals(type) || MSG_TYPE_MENTION.equals(type)) {
+            return Optional.empty();
+        }
         String senderId = payload.getStr("sender_id", "");
         if (senderId.isEmpty()) {
             throw new IllegalArgumentException("渠道报文缺少发送方身份");
-        }
-        // 事件推送（follow/unfollow/subscribe/unsubscribe/scan/scan_follow/click/view）与
-        // 被@的 mention 都不是访客消息：返回空表示只应答不保存
-        if (MSG_TYPE_EVENT.equals(type) || MSG_TYPE_MENTION.equals(type)) {
-            return Optional.empty();
         }
         return Optional.of(new ChannelInboundMessage(
             companyChannelId,
@@ -116,7 +114,7 @@ public class WeiboProtocol {
         if (fileId == null) {
             return MessageBodies.unknown(payload.getStr("type", ""));
         }
-        return Map.of("type", kind, "media", Map.of("kind", kind, "id", fileId));
+        return MessageBodies.media(kind, fileId, null, null);
     }
 }
 

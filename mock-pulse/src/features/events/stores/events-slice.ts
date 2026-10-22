@@ -215,11 +215,15 @@ const eventsSlice = createSlice({
         action.payload.path,
         action.payload.value,
       );
+      let syncedPath: string | null = null;
       if (state.draft.senderSync && action.payload.path === "from_user_id") {
-        payload = syncSenderIdentity(schema, payload);
+        const synced = syncSenderIdentity(schema, payload);
+        payload = synced.payload;
+        syncedPath = synced.syncedPath;
       }
       state.draft.payload = payload;
       if (state.fieldInputs) delete state.fieldInputs[action.payload.path];
+      discardSyncedInput(state, syncedPath);
     },
     editFieldText(
       state,
@@ -243,8 +247,9 @@ const eventsSlice = createSlice({
         }
         state.draft.payload = setPayloadField(state.draft.payload, path, value);
         if (state.draft.senderSync && path === "from_user_id") {
-          state.draft.payload = syncSenderIdentity(schema, state.draft.payload);
-          delete state.fieldInputs["content.user_infos[0].open_id"];
+          const synced = syncSenderIdentity(schema, state.draft.payload);
+          state.draft.payload = synced.payload;
+          discardSyncedInput(state, synced.syncedPath);
         }
       } catch (cause) {
         state.fieldInputs[path].error =
@@ -287,12 +292,12 @@ const eventsSlice = createSlice({
       state.touched = true;
       state.draft.senderSync = !state.draft.senderSync;
       if (state.draft.senderSync) {
-        state.draft.payload = syncSenderIdentity(
+        const synced = syncSenderIdentity(
           schemaById(state.draft.schemaId),
           state.draft.payload,
         );
-        if (state.fieldInputs)
-          delete state.fieldInputs["content.user_infos[0].open_id"];
+        state.draft.payload = synced.payload;
+        discardSyncedInput(state, synced.syncedPath);
       }
     },
     /** 复制 = 新事件携带当前载荷草稿（新 id 未保存，显式置脏） */
@@ -446,6 +451,11 @@ export function selectDraftDirty(state: EventsState): boolean {
 /** 持久化文档 → slice 内 definitions 状态 */
 function definitionsFromDoc(doc: DefinitionsDoc): FieldDefinitionsState {
   return { loaded: true, bySchemaId: doc.schemas };
+}
+
+/** 作废被同步覆盖的身份字段输入（路径取 schema 推导的写入值） */
+function discardSyncedInput(state: EventsState, syncedPath: string | null) {
+  if (state.fieldInputs && syncedPath) delete state.fieldInputs[syncedPath];
 }
 
 // ---- 只读 selector（状态定义处实现，selectors.ts 只留 facade 重导出）----

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { ApiError, type ConsoleClient } from "@/api/client";
 import { useConsoleQuery } from "@/api/console-query";
 import { useSession } from "@/api/context";
+import { useEntityGuard } from "@/api/entity-guard";
 import { ErrorState, LoadingState } from "@/components/feedback";
 import { StatusBadge } from "@/components/page-parts";
 import { Button } from "@/components/ui/button";
@@ -15,20 +15,6 @@ import {
 import { getEmployee } from "./api";
 import { type EmployeeAction, EmployeeForm } from "./EmployeeForm";
 
-async function loadDetail(
-  client: ConsoleClient,
-  id: string,
-  close: () => void,
-  signal: AbortSignal,
-) {
-  try {
-    return await getEmployee(client, id, signal);
-  } catch (error) {
-    if (error instanceof ApiError && error.code === 12100 && !signal.aborted)
-      close();
-    throw error;
-  }
-}
 export function EmployeeDetail({
   id,
   close,
@@ -38,7 +24,7 @@ export function EmployeeDetail({
   close: () => void;
   notify: (message: string) => void;
 }) {
-  const query = useConsoleQuery(loadDetail, [id, close]);
+  const query = useConsoleQuery(useEntityGuard(getEmployee, close), [id]);
   const profile = useSession().profile;
   const [action, setAction] = useState<EmployeeAction | null>(null);
   const employee = query.data;

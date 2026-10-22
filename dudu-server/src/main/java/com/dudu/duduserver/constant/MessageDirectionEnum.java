@@ -9,15 +9,14 @@ import lombok.RequiredArgsConstructor;
 import java.util.Arrays;
 
 /**
- * 消息方向：来访、坐席发出与系统消息；数据库与接口共用业务代码，拒绝未知值。
+ * 消息方向：来访与坐席发出；数据库与接口共用业务代码，拒绝未知值。
  */
 @Getter
 @RequiredArgsConstructor
 public enum MessageDirectionEnum {
 
     INCOMING("incoming"),
-    OUTGOING("outgoing"),
-    SYSTEM("system");
+    OUTGOING("outgoing");
 
     @EnumValue
     @JsonValue

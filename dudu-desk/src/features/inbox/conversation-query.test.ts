@@ -19,6 +19,5 @@ describe("conversation query filters", () => {
     expect(hasConversationFilters({ ...emptyQuery, status: "closed" })).toBe(
       true,
     );
-    expect(hasConversationFilters({ ...emptyQuery, status: "all" })).toBe(true);
   });
 });

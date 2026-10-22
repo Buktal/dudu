@@ -45,6 +45,18 @@ export function resolveRow<Row extends { readonly id: string }>(
 }
 
 /**
+ * 最新版本取尖原语（「事件当前最新版本」的唯一取法，跨域共用）：
+ * 行内 versions 按追加序取末位，零版本行为 undefined。
+ * interpreter 的落后判定（outdated）与 model / scenarios 侧的
+ * 同步·展示取尖同走此处，不再各自手写末位下标。
+ */
+export function latestVersionOf<
+  E extends { readonly versions: readonly unknown[] },
+>(event: E): E["versions"][number] | undefined {
+  return event.versions[event.versions.length - 1];
+}
+
+/**
  * 两级引用 kernel：按 id 找行 → 按版本找条目 → 统一分类。
  * 事件版本：entriesOf 取行内 versions，versionOf 取 revision；
  * 模板版本：注册表扁平（行即版本条目），entriesOf 取同 id 全体，

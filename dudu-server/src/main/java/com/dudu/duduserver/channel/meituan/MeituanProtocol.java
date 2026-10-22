@@ -132,6 +132,9 @@ public class MeituanProtocol {
         return ChannelReceiveResult.accept(inbound, IM_ACK);
     }
 
+    // 宽容回退的渠道依据（meituan.md §8 工程语义）：官方只要求「解码 2 次」（guide/31、
+    // docDetail/177），未定义畸形 % 序列的行为——保留已解码值，不为假想的乱码形态拒绝
+    // 整单推送
     private String decodeOnce(String value) {
         if (value == null) {
             return null;

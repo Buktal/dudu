@@ -28,7 +28,7 @@
 | --- | --- | --- |
 | `assets/desk.png`（保留社交预览地址） | `docs/design/dudu-console/qa-desk-live-1440.png` | 2026-10-21 本地服务端联调，测试数据 |
 | `assets/console-showcase.webp` | `docs/design/project-website/console-showcase.png` | 2026-10-21 当前正式组件、已有隔离浏览器夹具、浅色员工管理；未连接业务数据库 |
-| `assets/admin.webp`（原始 JPG 保留） | `docs/design/dudu-admin/ui-after-overview.jpg` | 2026-09-30 历史布局验收，示例数据 |
+| `assets/admin.webp` | `docs/design/dudu-admin/ui-after-overview.jpg` | 2026-09-30 历史布局验收，示例数据 |
 | `assets/desk-daylight-calm.webp` | `docs/design/dudu-desk/palette-refresh/daylight-calm.jpg` | 2026-10-09 正式组件的历史布局，开发数据 |
 | `assets/mockpulse-editor.webp` | `docs/design/project-website/mockpulse-editor.png` | 2026-10-21 当前源码网页预览的事件编辑局部；Tauri 本地接口不可用，未验证存储、签名和发送 |
 | `assets/mockpulse.svg` | `mock-pulse/public/logo.svg` | MockPulse 项目标识；未使用原型截图代表当前应用 |

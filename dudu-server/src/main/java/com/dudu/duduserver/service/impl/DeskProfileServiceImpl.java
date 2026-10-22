@@ -13,7 +13,6 @@ import com.dudu.duduserver.service.VisitorService;
 import com.dudu.duduserver.socket.DeskSocketGateway;
 import com.dudu.duduserver.vo.DeskVisitorProfileVO;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -27,7 +26,6 @@ import java.util.Set;
  * 名片保存不触碰访客行，消息活动时间、摘要与排序不受影响。
  * 保存后返回并推送同一份完整名片（含操作者本人），不做版本冲突拒绝与反复确认。
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeskProfileServiceImpl implements DeskProfileService {
@@ -41,6 +39,7 @@ public class DeskProfileServiceImpl implements DeskProfileService {
     private final VisitorService visitorService;
     private final VisitorProfileService visitorProfileService;
     private final DeskSocketGateway deskSocketGateway;
+    private final PushGate pushGate;
 
     @Override
     public DeskVisitorProfileVO profile(JwtUser me, String visitorId) {
@@ -112,15 +111,12 @@ public class DeskProfileServiceImpl implements DeskProfileService {
         return note;
     }
 
-    // 保存后推送一次 profile 报文（发给有权员工含操作者本人）；推送失败只记录，不影响已保存的名片
+    // 保存后推送一次 profile 报文（发给有权员工含操作者本人）；推送失败只记录，不影响已保存的名片（机制收编在 PushGate）
     private void pushProfile(VisitorDO visitor, DeskVisitorProfileVO profile) {
         if (visitor == null) {
             return;
         }
-        try {
-            deskSocketGateway.pushProfile(visitor.getCompanyId(), visitor.getCompanyChannelId(), profile);
-        } catch (RuntimeException e) {
-            log.error("[desk-profile] 推送名片失败, visitorId={}", profile.conversationId(), e);
-        }
+        pushGate.afterCommitQuietly("名片 visitorId=" + profile.conversationId(),
+            () -> deskSocketGateway.pushProfile(visitor.getCompanyId(), visitor.getCompanyChannelId(), profile));
     }
 }

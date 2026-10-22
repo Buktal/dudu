@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.dudu.duduserver.channel.support.ChannelInfoText.text;
+
 /**
  * 微信小程序适配器：组合回调验签加解密协议、客服消息纯文本主动回复与临时素材读取，聚合
  * 该渠道的服务器验证、入站接收与发送/读取能力说明（事实见
@@ -139,8 +141,8 @@ public class WechatMiniAdapter implements ChannelAdapter {
             return new Decryption(null, ChannelCallbackResult.unsupported());
         }
         Map<String, Object> info = account.getChannelInfo();
-        String aesKey = textInfo(info, INFO_ENCODING_AES_KEY);
-        String appId = textInfo(info, INFO_APP_ID);
+        String aesKey = text(info, INFO_ENCODING_AES_KEY);
+        String appId = text(info, INFO_APP_ID);
         if (aesKey == null || appId == null) {
             return new Decryption(null, ChannelCallbackResult.unsupported());
         }
@@ -163,11 +165,6 @@ public class WechatMiniAdapter implements ChannelAdapter {
 
     // 只配置了回调 Token 的账号可完成握手与明文验签，但没有加解密与换取接口凭据的能力
     private String callbackToken(CompanyChannelDO account) {
-        return textInfo(account == null ? null : account.getChannelInfo(), INFO_TOKEN);
-    }
-
-    private String textInfo(Map<String, Object> info, String key) {
-        Object value = info == null ? null : info.get(key);
-        return value instanceof String text && !text.isEmpty() ? text : null;
+        return text(account == null ? null : account.getChannelInfo(), INFO_TOKEN);
     }
 }

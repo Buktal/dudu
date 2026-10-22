@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useConsoleQuery } from "@/api/console-query";
-import { usePagedQuery } from "@/api/paged-query";
 import { ErrorState, LoadingState, Message } from "@/components/feedback";
 import { FilterBar } from "@/components/filter-bar";
-import { FilterSelect } from "@/components/page-parts";
+import { FilterSelect, RefreshButton } from "@/components/page-parts";
 import { QueryView } from "@/components/query-view";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +15,8 @@ import {
 } from "@/components/ui/table";
 import { AccountDetailPanel, ConfigurationStatus } from "./AccountDetailPanel";
 import { AccountEditor } from "./AccountEditor";
-import { type AccountFilters, channelApi } from "./api";
+import { useAccounts } from "./account-data";
+import { channelApi } from "./api";
 export function ChannelAccountsPage({
   selectedId,
   creating,
@@ -32,17 +32,16 @@ export function ChannelAccountsPage({
 }) {
   const catalog = useConsoleQuery(channelApi.catalog, []);
   const groups = useConsoleQuery(channelApi.groups, []);
-  const query = usePagedQuery(channelApi.query, {
+  const query = useAccounts({
     page: 1,
     pageSize: 20,
     groupId: groupId ?? undefined,
-  } as AccountFilters);
-  const [notice, setNotice] = useState("");
-  const { setFilter, filters } = query;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 路由参数变化时同步筛选，已应用值一致时不再触发（避免挂载期多余请求）；setFilter 是分页机制每次渲染的新函数。
+  });
+  const [notice, setNotice] = useState<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 路由参数变化时同步筛选，已应用值一致时不再触发（避免挂载期多余请求）；setGroup 是数据模块每次渲染的新函数。
   useEffect(() => {
-    const value = groupId ?? undefined;
-    if (filters.groupId !== value) setFilter({ groupId: value });
+    if (query.groupId !== (groupId ?? undefined))
+      query.setGroup(groupId ?? "all");
   }, [groupId]);
   if (catalog.loading || groups.loading) return <LoadingState />;
   if (catalog.error || groups.error)
@@ -79,17 +78,16 @@ export function ChannelAccountsPage({
             label="渠道账号筛选"
             searchLabel="搜索账号名称"
             placeholder="搜索账号名称"
-            value={query.filters.keyword}
+            value={query.keyword}
             hasConditions={
-              query.filters.channel !== undefined ||
-              query.filters.groupId !== undefined
+              query.channel !== undefined || query.groupId !== undefined
             }
-            onSearch={(keyword) => query.setFilter({ keyword })}
+            onSearch={query.setKeyword}
             onReset={query.reset}
           >
-            <FilterSelect
+            <FilterSelect<string | "all">
               label="渠道"
-              value={query.filters.channel ?? "all"}
+              value={query.channel ?? "all"}
               options={[
                 { value: "all", label: "全部渠道" },
                 ...definitions.map((d) => ({
@@ -97,15 +95,11 @@ export function ChannelAccountsPage({
                   label: d.name,
                 })),
               ]}
-              onChange={(value) =>
-                query.setFilter({
-                  channel: value === "all" ? undefined : value,
-                })
-              }
+              onChange={query.setChannel}
             />
-            <FilterSelect
+            <FilterSelect<string | "all">
               label="用户组"
-              value={query.filters.groupId ?? "all"}
+              value={query.groupId ?? "all"}
               options={[
                 { value: "all", label: "全部可管理组" },
                 ...options.map((g) => ({
@@ -113,23 +107,13 @@ export function ChannelAccountsPage({
                   label: `${g.groupName} · ${g.groupId}`,
                 })),
               ]}
-              onChange={(value) =>
-                query.setFilter({
-                  groupId: value === "all" ? undefined : value,
-                })
-              }
+              onChange={query.setGroup}
             />
           </FilterBar>
         }
         actions={
           <>
-            <Button
-              variant="outline"
-              disabled={query.loading}
-              onClick={query.refresh}
-            >
-              刷新
-            </Button>
+            <RefreshButton loading={query.loading} onClick={query.refresh} />
             <Button disabled={!options.length} onClick={() => onCreate(true)}>
               接入渠道账号
             </Button>
