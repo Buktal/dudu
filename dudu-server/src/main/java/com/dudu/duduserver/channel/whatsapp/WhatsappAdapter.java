@@ -90,8 +90,7 @@ public class WhatsappAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // 来语落库后应答；statuses 与管理面字段变更只按 200 应答不落库（§3.3）
-        return inbound.map(ChannelReceiveResult::accept)
-            .orElseGet(() -> ChannelReceiveResult.answer(ChannelCallbackResult.success()));
+        return acceptOrAnswer(inbound);
     }
 
     @Override

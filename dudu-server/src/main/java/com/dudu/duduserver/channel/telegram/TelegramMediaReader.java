@@ -3,7 +3,6 @@ package com.dudu.duduserver.channel.telegram;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
-import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.channel.support.JsonBodies;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +19,8 @@ import java.nio.charset.StandardCharsets;
  * 下载路径 {@code <源>/file/bot<token>/<file_path>}（与 sendMessage 同源同 token，由基址
  * 在 bot 段前插 file 段派生）取回字节。上传 ≤50MB / 下载 ≤20MB 超限由渠道自身在 getFile
  * 拒绝（#getfile：bots can download files of up to 20MB），错误包络
- * {@code ok:false + error_code/description} 原样描述如实失败，不伪装字节；缺凭据与空
- * 标识不发请求。token 在 URL 路径上，日志只记 companyChannelId 与异常类名。
+ * {@code ok:false + error_code/description} 原样描述如实失败，不伪装字节；空标识
+ * 不发请求。token 在 URL 路径上，日志只记 companyChannelId 与异常类名。
  */
 @Slf4j
 @Component
@@ -52,9 +51,6 @@ public class TelegramMediaReader {
             return ChannelMediaResult.failed(MEDIA_ID_UNRECOGNIZED);
         }
         TelegramSendCredentials credentials = TelegramSendCredentials.of(account);
-        if (credentials == null) {
-            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
-        }
         FilePathResult lookup = requestFilePath(account, credentials, externalMediaId);
         if (lookup.failureReason() != null) {
             return ChannelMediaResult.failed(lookup.failureReason());

@@ -54,20 +54,22 @@ fn signature_and_verify_are_self_reflexive() {
     let headers = golden_headers("self-reflexive-nonce");
     let signature = authorization(GOLDEN_APP_SECRET, &headers);
     // 接收侧独立复现：不经 signing_headers，从 (名, 值) 对按名排序复算
-    let mut received: Vec<(&str, &str)> =
-        headers.iter().map(|(name, value)| (*name, value.as_str())).collect();
+    let mut received: Vec<(&str, &str)> = headers
+        .iter()
+        .map(|(name, value)| (*name, value.as_str()))
+        .collect();
     received.sort_by(|left, right| left.0.cmp(right.0));
-    let joined: String = received.iter().map(|(_, value)| *value).collect::<Vec<_>>().join("\n");
-    let recomputed =
-        crate::connections::util::hmac_sha256_hex(GOLDEN_APP_SECRET, &joined);
+    let joined: String = received
+        .iter()
+        .map(|(_, value)| *value)
+        .collect::<Vec<_>>()
+        .join("\n");
+    let recomputed = crate::connections::util::hmac_sha256_hex(GOLDEN_APP_SECRET, &joined);
     assert_eq!(signature, recomputed);
     // 与按拼接串定义直接计算的形态一致（排序后取值 \n 连接）
     assert_eq!(
         signature,
-        crate::connections::util::hmac_sha256_hex(
-            GOLDEN_APP_SECRET,
-            &signature_string(&headers)
-        )
+        crate::connections::util::hmac_sha256_hex(GOLDEN_APP_SECRET, &signature_string(&headers))
     );
 }
 
@@ -76,7 +78,10 @@ fn signature_string_sorts_by_header_name() {
     let mut headers = golden_headers("orderless-nonce");
     // 打乱输入顺序：拼接串按头名字典序（固定序列）取值，与输入序无关
     headers.reverse();
-    assert_eq!(signature_string(&headers), signature_string(&golden_headers("orderless-nonce")));
+    assert_eq!(
+        signature_string(&headers),
+        signature_string(&golden_headers("orderless-nonce"))
+    );
     // 与固定字段序手工拼接逐字一致
     let headers = golden_headers("orderless-nonce");
     let expected = format!(
@@ -104,7 +109,10 @@ fn authorization_changes_with_any_tamper() {
     assert_ne!(authorization(GOLDEN_APP_SECRET, &tampered_body), base);
     // 密钥被篡改即变
     assert_ne!(
-        authorization("bilibili-open-platform-secree", &golden_headers("tamper-nonce")),
+        authorization(
+            "bilibili-open-platform-secree",
+            &golden_headers("tamper-nonce")
+        ),
         base
     );
     // accesskeyid 被替换即变
@@ -120,10 +128,7 @@ fn authorization_changes_with_any_tamper() {
 #[test]
 fn content_md5_follows_official_lowercase_rule() {
     // §4.2 头表逐字「请求体当字符串做 MD5（全小写）」：RFC 1321 向量
-    assert_eq!(
-        content_md5("abc"),
-        "900150983cd24fb0d6963f7d28e17f72"
-    );
+    assert_eq!(content_md5("abc"), "900150983cd24fb0d6963f7d28e17f72");
     // 「GET 或 body 为空时对空字符串求 MD5」：空串向量
     assert_eq!(content_md5(""), "d41d8cd98f00b204e9800998ecf8427e");
 }
@@ -153,7 +158,10 @@ fn probe_envelope_matches_official_sample_shape() {
     assert_eq!(keys, ["event", "content", "timestamp"]);
     assert_eq!(parsed["event"], "verify_webhooks");
     assert_eq!(parsed["content"]["data"], GOLDEN_PROBE_DATA);
-    assert!(parsed["content"]["data"].is_number(), "官方样本 data 为 JSON number");
+    assert!(
+        parsed["content"]["data"].is_number(),
+        "官方样本 data 为 JSON number"
+    );
     assert_eq!(parsed["timestamp"], GOLDEN_TIMESTAMP);
 }
 

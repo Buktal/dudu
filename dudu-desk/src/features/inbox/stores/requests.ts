@@ -30,7 +30,6 @@ const CONVERSATION_REQUEST_KINDS = [
   "profile",
   "profile-save",
   "send",
-  "read",
   "end",
 ] as const;
 
@@ -103,12 +102,13 @@ export function beginRequest(
       runtime.requests.get(key) === scope &&
       (stable || getState().inbox.generation === generation),
     finish: () => {
-      // Release-only: the original ritual deleted the key without aborting,
-      // and callers (e.g. queue pagination tests) observe the completed
-      // signal as un-aborted. Disposing here would abort our own just-settled
-      // signal as a side effect. The scope is dropped from the map so it is
-      // never reused; late current() checks fail closed on the map mismatch.
-      // Abort remains explicit via scope.abort()/cancelRequests.
+      // Release-only: the ritual deletes the key without aborting, so callers
+      // (e.g. queue pagination tests) observe the completed signal as
+      // un-aborted; disposing here would abort our own just-settled signal.
+      // An interrupted signal (abortRequest) or a re-taken slot releases
+      // nothing here — the slot is left for the next begin under the same key
+      // or a bulk cancel to reclaim, and late current() checks fail closed on
+      // the map mismatch.
       if (runtime.requests.get(key) === scope && scope.isCurrent(signal)) {
         runtime.requests.delete(key);
       }
@@ -117,7 +117,8 @@ export function beginRequest(
 }
 
 /** Abort the in-flight request under `key` without releasing its slot; the
- *  running operation still settles and releases through its own finish. */
+ *  interrupted operation's own finish sees an aborted signal and leaves the
+ *  slot for the next begin under the same key (or a bulk cancel) to reclaim. */
 export function abortRequest(runtime: InboxRuntime, key: InboxRequestKey) {
   runtime.requests.get(key)?.abort();
 }

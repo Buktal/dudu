@@ -7,6 +7,7 @@ import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.DirectHttpMediaReader;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -29,13 +30,20 @@ public class DouyinAdapter implements ChannelAdapter {
     // 官方 §4.1 的签名头（无时间戳/随机数参与）
     private static final String HEADER_SIGNATURE = "X-Douyin-Signature";
 
+    // §6.2：可读范围只有 CDN 直链标识；派生标识（图片载荷无素材标识）与 @-加密标识
+    // （视频 item_id 无公开下载接口）如实返回无下载通道说明
+    private static final String NO_DOWNLOAD_CHANNEL =
+        "抖音素材读取失败：该素材无官方下载通道（图片载荷不含素材标识，视频分享无公开下载接口）";
+    private static final String MEDIA_FAILURE_PREFIX = "抖音素材读取失败：";
+
     private final DouyinProtocol protocol;
 
     private final DouyinTextSender textSender;
 
-    private final DouyinMediaReader mediaReader;
+    private final DirectHttpMediaReader mediaReader;
 
-    public DouyinAdapter(DouyinProtocol protocol, DouyinTextSender textSender, DouyinMediaReader mediaReader) {
+    public DouyinAdapter(DouyinProtocol protocol, DouyinTextSender textSender,
+                         DirectHttpMediaReader mediaReader) {
         this.protocol = protocol;
         this.textSender = textSender;
         this.mediaReader = mediaReader;
@@ -74,8 +82,7 @@ public class DouyinAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // im_send_msg、进入会话页、已读等其余事件只按渠道要求应答，不产生访客与消息数据
-        return inbound.map(ChannelReceiveResult::accept)
-            .orElseGet(() -> ChannelReceiveResult.answer(ChannelCallbackResult.success()));
+        return acceptOrAnswer(inbound);
     }
 
     @Override
@@ -85,7 +92,7 @@ public class DouyinAdapter implements ChannelAdapter {
 
     @Override
     public ChannelMediaResult readMedia(CompanyChannelDO account, String externalMediaId) {
-        return mediaReader.read(account, externalMediaId);
+        return mediaReader.read(account, externalMediaId, NO_DOWNLOAD_CHANNEL, "douyin", MEDIA_FAILURE_PREFIX);
     }
 
     @Override

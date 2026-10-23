@@ -60,10 +60,10 @@ fn post_json(
     let signature = kwaisign(body, app_secret);
     send_measured_outcome(
         client
-        .post(url)
-        .header("kwaisign", signature.clone())
-        .header("Content-Type", "application/json")
-        .body(body.to_string()),
+            .post(url)
+            .header("kwaisign", signature.clone())
+            .header("Content-Type", "application/json")
+            .body(body.to_string()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: message_id_of(body),

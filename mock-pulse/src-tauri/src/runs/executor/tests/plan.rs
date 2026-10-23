@@ -515,5 +515,8 @@ fn parallel_lane_panic_folds_remaining_steps_and_record_still_completes() {
     // 进度：lane 1 只落到第 1 步的 waiting（finished 上报随线程 panic 丢失）
     let lane1: Vec<&LaneProgress> = progress.iter().filter(|p| p.lane == 1).collect();
     assert_eq!(lane1.len(), 1);
-    assert!(matches!(lane1[0].progress, StepProgress::Waiting { index: 0 }));
+    assert!(matches!(
+        lane1[0].progress,
+        StepProgress::Waiting { index: 0 }
+    ));
 }

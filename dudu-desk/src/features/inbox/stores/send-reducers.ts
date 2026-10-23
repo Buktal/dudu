@@ -127,12 +127,22 @@ export const sendReducers = {
   },
   endSucceeded(state: InboxState, action: PayloadAction<Conversation>) {
     mergeConversation(state, action.payload);
-    state.ending[action.payload.id] = { status: "saved" };
+    // 保存态随成功终结：结束结果由会话状态表达，不留在键控表里
+    delete state.ending[action.payload.id];
+    // 机会性回收：已结算的回复提交随结束接待一并释放，未结算的保留给结算扫描
+    const ended = action.payload.id;
+    for (const [messageId, submission] of Object.entries(state.submissions)) {
+      if (
+        submission.request.target.conversationId === ended &&
+        submission.settled
+      )
+        delete state.submissions[messageId];
+    }
     state.notice = { kind: "information", message: "本次接待已结束" };
   },
   resumeSucceeded(state: InboxState, action: PayloadAction<Conversation>) {
     mergeConversation(state, action.payload);
-    state.ending[action.payload.id] = { status: "saved" };
+    delete state.ending[action.payload.id];
     state.notice = { kind: "information", message: "已继续接待" };
   },
   endFailed(

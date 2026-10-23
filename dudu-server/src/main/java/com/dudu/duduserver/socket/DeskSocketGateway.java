@@ -3,7 +3,7 @@ package com.dudu.duduserver.socket;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.service.DeskAuthService;
-import com.dudu.duduserver.vo.DeskAccessVO;
+import com.dudu.duduserver.service.DeskAccess;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
 import com.dudu.duduserver.vo.DeskVisitorProfileVO;
@@ -35,8 +35,8 @@ import java.util.concurrent.TimeUnit;
  * Desk 实时网关：按员工维护多个已连接会话（多设备），只向认证成功且当前有权的
  * 已连接员工推送契约第 5 节报文；已接入 message、conversation、profile 与
  * access-changed 四类报文（消息引起的访客更新合并在 message 中）。没有 eventId、
- * ack 与持久游标，未认证会话与离线员工不接收业务数据；连接后 30 秒内未完成
- * 鉴权的会话按策略关闭，不无限驻留。
+ * ack 与持久游标，未认证会话与离线员工不接收业务数据；广播权限按短 TTL 快照复用、
+ * 关系变更事件失效，连接后 30 秒内未完成鉴权的会话按策略关闭，不无限驻留。
  */
 @Slf4j
 @Component
@@ -49,6 +49,9 @@ public class DeskSocketGateway {
 
     // 未认证连接的鉴权时限
     private static final int AUTH_TIMEOUT_SECONDS = 30;
+
+    // 广播权限复用快照的时限：跨广播复用解析结果，事件失效（见 onAccessChanged）为主、TTL 兜底
+    private static final long ACCESS_CACHE_TTL_MILLIS = 3_000;
 
     private final DeskAuthService deskAuthService;
     private final ObjectMapper objectMapper;
@@ -63,6 +66,14 @@ public class DeskSocketGateway {
             thread.setDaemon(true);
             return thread;
         });
+
+    // 广播权限快照缓存：每条推送不再对每位已连接员工实时解析（多表查询），
+    // 关系变更事件按企业失效，TTL 内复用同一份 DeskAccess 判断各渠道
+    private final Map<Long, CachedAccess> accessCache = new ConcurrentHashMap<>();
+
+    // 快照须与令牌企业一致才可复用（实时路径由 requireIdentity 校验，缓存命中绕过该校验）
+    private record CachedAccess(Long companyId, long cachedAtMillis, DeskAccess access) {
+    }
 
     // 已连接会话：认证前用户为空，不参与业务推送
     private record ConnectedSession(WebSocketSession session, JwtUser user) {
@@ -201,9 +212,11 @@ public class DeskSocketGateway {
     }
 
     // 管理端关系写入完成后发布范围变更事件：事务内发布统一推迟到提交后收敛为 access-changed 报文，
-    // 回滚不产生通知；当前自动提交的单条写入没有事务，按 fallbackExecution 立即收敛，语义不变
+    // 回滚不产生通知；当前自动提交的单条写入没有事务，按 fallbackExecution 立即收敛，语义不变。
+    // 同步丢弃本企业的权限快照：下一次广播回到实时读取，TTL 只是跨进程变更的兜底
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onAccessChanged(DeskAccessChangedEvent event) {
+        accessCache.values().removeIf(cached -> event.companyId().equals(cached.companyId()));
         pushAccessChanged(event.companyId());
     }
 
@@ -224,18 +237,30 @@ public class DeskSocketGateway {
         }
     }
 
-    // 权限按当前持久数据实时读取；员工停用或身份失效（BizException）时该会话不再接收数据；
-    // 读取故障（如 DB 抖动）同样按无权处理并记录，不中断其余会话的广播循环
+    // 权限判断复用短 TTL 快照；员工停用或身份失效（BizException）时该会话不再接收数据；
+    // 读取故障（如 DB 抖动）同样按无权处理并记录，不中断其余会话的广播循环，且不缓存失败
     private boolean canAccess(JwtUser user, Long companyChannelId) {
         try {
-            DeskAccessVO access = deskAuthService.requireAccess(user);
-            return access.containsAccount(companyChannelId);
+            return cachedAccess(user).containsChannel(companyChannelId);
         } catch (BizException e) {
             return false;
         } catch (RuntimeException e) {
             log.warn("[desk-socket] 推送权限读取失败, userId={}", user.userId(), e);
             return false;
         }
+    }
+
+    // TTL 内同员工的多次广播共用一份快照；快照企业须与令牌一致（缓存命中不经过 requireIdentity）
+    private DeskAccess cachedAccess(JwtUser user) {
+        long now = System.currentTimeMillis();
+        CachedAccess cached = accessCache.get(user.userId());
+        if (cached != null && user.companyId().equals(cached.companyId())
+            && now - cached.cachedAtMillis() < ACCESS_CACHE_TTL_MILLIS) {
+            return cached.access();
+        }
+        DeskAccess access = deskAuthService.requireAccess(user);
+        accessCache.put(user.userId(), new CachedAccess(user.companyId(), now, access));
+        return access;
     }
 
     private void send(ConnectedSession entry, String payload) {

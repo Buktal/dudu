@@ -11,9 +11,7 @@ use crate::runs::snapshot::ScenarioRunSnapshot;
 use crate::runs::store;
 use crate::runs::verdict::{ExpectedReceipt, ReceiptBodyMode};
 use crate::runs::{RunRecord, RunStep};
-use crate::test_support::{
-    ok_responder, start_serial_server, RecordedPost, Responder,
-};
+use crate::test_support::{ok_responder, start_serial_server, RecordedPost, Responder};
 
 use super::*;
 
@@ -278,9 +276,13 @@ fn query_map(request_line: &str) -> std::collections::HashMap<String, String> {
 fn wecom_run_sends_decryptable_envelopes_and_records_reply() {
     // 目标按官方语义处理：解密信封取明文、复算签名，回一个可解密的加密被动回复包
     let reply_plaintext = "<xml><Content><![CDATA[你好呀]]></Content></xml>";
-    let reply_encrypt =
-        wecom::encrypt_msg(WC_AES_KEY, &[3u8; 16], reply_plaintext.as_bytes(), WC_CORP_ID)
-            .unwrap();
+    let reply_encrypt = wecom::encrypt_msg(
+        WC_AES_KEY,
+        &[3u8; 16],
+        reply_plaintext.as_bytes(),
+        WC_CORP_ID,
+    )
+    .unwrap();
     let expected_bodies: Vec<String> = vec![
         "<xml><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[你好，企业微信]]></Content></xml>".into(),
         "<xml><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[再见]]></Content></xml>".into(),
@@ -304,21 +306,19 @@ fn wecom_run_sends_decryptable_envelopes_and_records_reply() {
         )
     });
     let (addr, rx) = start_serial_server(2, responder, Duration::ZERO);
-    let wc_step = |name: &str, text: &str| {
-        ScenarioStepSnapshot {
-            wait: None,
-            event_name: name.into(),
-            event_id: format!("evt-{name}"),
-            channel: "wecom".into(),
-            expected: ExpectedReceipt {
-                status: 200,
-                body: "你好呀".into(),
-                body_mode: ReceiptBodyMode::WecomReply,
-            },
-            body: format!(
-                "<xml><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[{text}]]></Content></xml>"
-            ),
-        }
+    let wc_step = |name: &str, text: &str| ScenarioStepSnapshot {
+        wait: None,
+        event_name: name.into(),
+        event_id: format!("evt-{name}"),
+        channel: "wecom".into(),
+        expected: ExpectedReceipt {
+            status: 200,
+            body: "你好呀".into(),
+            body_mode: ReceiptBodyMode::WecomReply,
+        },
+        body: format!(
+            "<xml><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[{text}]]></Content></xml>"
+        ),
     };
     let snap = snapshot(
         "run-wc",

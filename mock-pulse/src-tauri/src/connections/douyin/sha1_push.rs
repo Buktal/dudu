@@ -61,7 +61,10 @@ mod tests {
     fn sign_dop_matches_known_sha1_vector() {
         // 独立来源：FIPS 180-1 测试向量 sha1("abc")
         // 对应 client_secret="abc"、body 为空的官方算法拼接。
-        assert_eq!(sign_dop("abc", ""), "a9993e364706816aba3e25717850c26c9cd0d89d");
+        assert_eq!(
+            sign_dop("abc", ""),
+            "a9993e364706816aba3e25717850c26c9cd0d89d"
+        );
     }
 
     #[test]
@@ -78,7 +81,8 @@ mod tests {
         // 事实库 §4.1：生活服务 = sha1(AppSecret + 去换行 body)。
         // 黄金向量按官方算法以 Node crypto 独立复算：AppSecret="AppSecret"，
         // 多行 body 去换行后拼成单行 JSON 参与 sha1。
-        let multiline = "{\n\"event\":\"life_trade_order_notify\",\n\"client_key\":\"axxxxxxxxxxxxx\"\n}";
+        let multiline =
+            "{\n\"event\":\"life_trade_order_notify\",\n\"client_key\":\"axxxxxxxxxxxxx\"\n}";
         assert_eq!(
             sign_life("AppSecret", multiline),
             "9fe1812b5f4dfe1ec47ba0b39efdf2c7647e87c7"

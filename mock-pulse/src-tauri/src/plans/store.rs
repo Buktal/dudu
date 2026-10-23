@@ -38,7 +38,11 @@ pub fn load_plans(root: &Path) -> std::io::Result<Vec<StoredPlan>> {
 
     let mut plans = Vec::new();
     for file in files {
-        plans.push(crate::store_io::parse_json_file::<StoredPlan>(&file)?);
+        // 损坏文件由 store_io 隔离改名（.corrupt-*，不再匹配 .json 扩展名），
+        // 此处按缺失跳过，单个损坏编排不再瘫痪整个域
+        if let Some(plan) = crate::store_io::load_json_or_quarantine::<StoredPlan>(&file)? {
+            plans.push(plan);
+        }
     }
     Ok(plans)
 }
@@ -107,15 +111,23 @@ mod tests {
 
         let raw = fs::read_to_string(plan_file(&plans_dir(&dir), "plan-a")).unwrap();
         let doc: Value = serde_json::from_str(&raw).unwrap();
-        let top_keys: Vec<&str> =
-            doc.as_object().unwrap().keys().map(String::as_str).collect();
+        let top_keys: Vec<&str> = doc
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
         assert_eq!(
             top_keys,
             vec!["id", "name", "mode", "failure", "favorite", "items"]
         );
         let item = &doc["items"][0];
-        let item_keys: Vec<&str> =
-            item.as_object().unwrap().keys().map(String::as_str).collect();
+        let item_keys: Vec<&str> = item
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
         assert_eq!(item_keys, vec!["scenarioId"]);
         fs::remove_dir_all(&dir).unwrap();
     }
@@ -139,6 +151,25 @@ mod tests {
             .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
             .collect();
         assert_eq!(entries, vec!["plan-a.json".to_string()]);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn corrupt_plan_is_quarantined_and_skipped() {
+        let dir = temp_dir("corrupt");
+        save_plan(&dir, &sample_plan("plan-a")).unwrap();
+        fs::write(plan_file(&plans_dir(&dir), "plan-bad"), "{ not json").unwrap();
+
+        // 好文件照常加载；损坏文件隔离改名留现场，不再瘫痪整个域
+        let loaded = load_plans(&dir).unwrap();
+        assert_eq!(loaded, vec![sample_plan("plan-a")]);
+        let names: Vec<String> = fs::read_dir(plans_dir(&dir))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|name| name.starts_with("plan-bad"))
+            .collect();
+        assert_eq!(names.len(), 1);
+        assert!(names[0].starts_with("plan-bad.corrupt-"));
         fs::remove_dir_all(&dir).unwrap();
     }
 

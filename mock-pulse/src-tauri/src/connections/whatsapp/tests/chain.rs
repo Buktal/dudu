@@ -118,8 +118,7 @@ fn challenge_echo_ok(request: &Recorded) -> (String, String) {
 
 #[test]
 fn handshake_gets_three_params_and_accepts_bare_challenge() {
-    let (addr, rx) =
-        start_request_server(|request| challenge_echo_ok(request), Duration::ZERO);
+    let (addr, rx) = start_request_server(|request| challenge_echo_ok(request), Duration::ZERO);
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
     let outcome = Adapter.verify_handshake(&client(), &config);
 
@@ -153,7 +152,10 @@ fn handshake_fails_when_challenge_wrapped_in_json() {
     let json_envelope = |request: &Recorded| {
         (
             "HTTP/1.1 200 OK".into(),
-            format!(r#"{{"hub.challenge":"{}"}}"#, request.query["hub.challenge"]),
+            format!(
+                r#"{{"hub.challenge":"{}"}}"#,
+                request.query["hub.challenge"]
+            ),
         )
     };
     let (addr, _rx) = start_request_server(json_envelope, Duration::ZERO);
@@ -184,9 +186,7 @@ fn handshake_fails_when_challenge_modified() {
 #[test]
 fn handshake_fails_on_non_200() {
     // 官方示例：verify_token 不匹配回 403（任何非 200 即未通过）
-    let forbidden = |_request: &Recorded| {
-        ("HTTP/1.1 403 Forbidden".into(), String::new())
-    };
+    let forbidden = |_request: &Recorded| ("HTTP/1.1 403 Forbidden".into(), String::new());
     let (addr, _rx) = start_request_server(forbidden, Duration::ZERO);
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
     let outcome = Adapter.verify_handshake(&client(), &config);
@@ -198,10 +198,8 @@ fn handshake_fails_on_non_200() {
 #[test]
 fn handshake_fails_on_timeout() {
     // 官方无秒级应答 SLA（待核验(09-27)）；客户端 200ms 超时 vs 服务器 1s 延迟
-    let (addr, _rx) = start_request_server(
-        |request| challenge_echo_ok(request),
-        Duration::from_secs(1),
-    );
+    let (addr, _rx) =
+        start_request_server(|request| challenge_echo_ok(request), Duration::from_secs(1));
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
     let outcome = Adapter.verify_handshake(&quick_client(Duration::from_millis(200)), &config);
 
@@ -218,13 +216,10 @@ fn dispatch_posts_json_with_signature_header_and_snapshots_wamid() {
             // 接收侧按官方协议验签（§4.1）：头 X-Hub-Signature-256 可由原始
             // body 字节 + AppSecret 复算（常量时间比对由接收侧自保证）
             assert_eq!(
-                request
-                    .head
-                    .lines()
-                    .find_map(|line| line
-                        .split_once(':')
-                        .filter(|(key, _)| key.trim().eq_ignore_ascii_case("x-hub-signature-256"))
-                        .map(|(_, value)| value.trim().to_string())),
+                request.head.lines().find_map(|line| line
+                    .split_once(':')
+                    .filter(|(key, _)| key.trim().eq_ignore_ascii_case("x-hub-signature-256"))
+                    .map(|(_, value)| value.trim().to_string())),
                 Some(x_hub_signature(&request.body, GOLDEN_APP_SECRET)),
                 "X-Hub-Signature-256 头应可由原始 body 复算"
             );
@@ -274,8 +269,7 @@ fn dispatch_posts_json_with_signature_header_and_snapshots_wamid() {
 #[test]
 fn dispatch_outbound_status_snapshots_statuses_wamid() {
     // outbound 状态载荷的幂等键快照取 statuses[].id（三处同源）
-    let empty_receipt =
-        |_request: &Recorded| ("HTTP/1.1 200 OK".into(), String::new());
+    let empty_receipt = |_request: &Recorded| ("HTTP/1.1 200 OK".into(), String::new());
     let (addr, _rx) = start_request_server(empty_receipt, Duration::ZERO);
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
 
@@ -310,8 +304,7 @@ fn dispatch_reports_timeout_with_retry_note() {
     let (addr, _rx) = start_request_server(slow, Duration::from_secs(1));
     let config = whatsapp_config(format!("http://{addr}/webhooks/whatsapp"));
 
-    let outcome =
-        Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
+    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "{}");
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");

@@ -78,14 +78,18 @@ pub(crate) fn verify_validation(
 ) -> Result<(), String> {
     let signature = decode_signature(signature_hex)?;
     let msg = format!("{event_ts}{plain_token}");
-    verify(&signing_key(secret).verifying_key(), msg.as_bytes(), &signature)
+    verify(
+        &signing_key(secret).verifying_key(),
+        msg.as_bytes(),
+        &signature,
+    )
 }
 
 /// 签名 hex 解码 + 官方两道形态检查（§4.2 Go 逐字）：长度须为
 /// `ed25519.SignatureSize` 且 `sig[63]&224 == 0`。
 fn decode_signature(signature_hex: &str) -> Result<Signature, String> {
-    let raw = hex::decode(signature_hex)
-        .map_err(|_| format!("签名不是合法 hex：{signature_hex}"))?;
+    let raw =
+        hex::decode(signature_hex).map_err(|_| format!("签名不是合法 hex：{signature_hex}"))?;
     if raw.len() != SIGNATURE_SIZE {
         return Err(format!(
             "签名长度须为 {SIGNATURE_SIZE} 字节，实际 {} 字节",
@@ -122,8 +126,7 @@ mod tests {
         let key = signing_key(secret);
         let seed = key.to_bytes();
         assert_eq!(
-            seed,
-            *b"naOC0ocQE3shWLAfffVLB1rhYPG7naOC",
+            seed, *b"naOC0ocQE3shWLAfffVLB1rhYPG7naOC",
             "seed = secret 自我翻倍后截断 32 字节"
         );
         let verifying_key = key.verifying_key();
@@ -150,11 +153,21 @@ mod tests {
         let secret = "DG5g3B4j9X2KOErG";
         let signature = "87befc99c42c651b3aac0278e71ada338433ae26fcb24307bdc5ad38c1adc2d01bcfcadc0842edac85e85205028a1132afe09280305f13aa6909ffc2d652c706";
         assert!(verify_validation(secret, "1725442341", "Arq0D5A61EgUu4OxUvOp", signature).is_ok());
-        assert!(verify_validation(secret, "1725442342", "Arq0D5A61EgUu4OxUvOp", signature).is_err());
-        assert!(verify_validation(secret, "1725442341", "Arq0D5A61EgUu4OxUvOQ", signature).is_err());
+        assert!(
+            verify_validation(secret, "1725442342", "Arq0D5A61EgUu4OxUvOp", signature).is_err()
+        );
+        assert!(
+            verify_validation(secret, "1725442341", "Arq0D5A61EgUu4OxUvOQ", signature).is_err()
+        );
         // 事件验签同链路：对自签报文可验回
         let event_signature = sign_validation(secret, "1725442341", "Arq0D5A61EgUu4OxUvOp");
-        assert!(verify_event(secret, "1725442341", b"Arq0D5A61EgUu4OxUvOp", &event_signature).is_ok());
+        assert!(verify_event(
+            secret,
+            "1725442341",
+            b"Arq0D5A61EgUu4OxUvOp",
+            &event_signature
+        )
+        .is_ok());
     }
 
     #[test]

@@ -24,16 +24,11 @@ pub struct ScenarioStepSnapshot {
     pub body: String,
 }
 
-/// 剧本级失败策略（与编排 [`PlanFailure`] 同枚举语义，前端同为 "stop"/
-/// "continue" 小写字符串）：stop = 任一步失败即停本剧；continue = 记录后
-/// 继续其余步骤。None = 旧快照缺省，按 stop 执行；未知取值由反序列化即
-/// 拒绝（IPC 边界报错），不再需要启动前校验兜底。
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum ScenarioFailure {
-    Stop,
-    Continue,
-}
+/// 剧本级失败策略：定义归剧本域（持久化形态与运行快照共用一枚举）。
+/// stop = 任一步失败即停本剧；continue = 记录后继续其余步骤；None = 旧
+/// 快照缺省按 stop 执行；未知取值反序列化即拒绝（IPC 边界报错 / 落盘文件
+/// 经 store_io 隔离自愈），不再需要启动前校验兜底。
+pub use crate::scenarios::ScenarioFailure;
 
 /// 一次剧本运行的完整快照（纯数据，启动时固化，后续编辑不影响）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

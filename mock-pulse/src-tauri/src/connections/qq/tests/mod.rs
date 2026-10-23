@@ -49,16 +49,14 @@ pub(super) fn qq_config(url: String) -> ConnectionConfig {
 /// 忠实目标侧实现（事实库 §3.2）：收 op13 请求后回
 /// `{"plain_token":<同值>,"signature":hex(Ed25519.Sign(priv, event_ts+plain_token))}`。
 /// secret 固定官方向量凭据，签名对官方 event_ts 复算可对拍（golden 向量）。
-pub(super) fn reply_validation(
-    request: &crate::test_support::RecordedPost,
-) -> (String, String) {
+pub(super) fn reply_validation(request: &crate::test_support::RecordedPost) -> (String, String) {
     let payload: serde_json::Value = serde_json::from_str(&request.body).unwrap();
     let d = &payload["d"];
     let plain_token = d["plain_token"].as_str().unwrap();
     let event_ts = d["event_ts"].as_str().unwrap();
     let signature = sign::sign_validation(GOLDEN_APP_SECRET, event_ts, plain_token);
-    let body = serde_json::json!({ "plain_token": plain_token, "signature": signature })
-        .to_string();
+    let body =
+        serde_json::json!({ "plain_token": plain_token, "signature": signature }).to_string();
     ("HTTP/1.1 200 OK".into(), body)
 }
 

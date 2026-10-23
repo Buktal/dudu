@@ -112,12 +112,20 @@ mod tests {
         let doc: Value = serde_json::from_str(&raw).unwrap();
 
         // 顶层键：schemas；条目键：schemaId/version/fields（camelCase）
-        let top_keys: Vec<&str> =
-            doc.as_object().unwrap().keys().map(String::as_str).collect();
+        let top_keys: Vec<&str> = doc
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
         assert_eq!(top_keys, vec!["schemas"]);
         let entry = &doc["schemas"]["dy-text"];
-        let keys: Vec<&str> =
-            entry.as_object().unwrap().keys().map(String::as_str).collect();
+        let keys: Vec<&str> = entry
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
         assert_eq!(keys, vec!["schemaId", "version", "fields"]);
         assert!(!raw.contains("schema_id"));
     }

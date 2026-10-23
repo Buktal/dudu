@@ -10,10 +10,9 @@
 //! 既有 `crate::connections::X` 消费面（sends、runs 与各渠道 import）不变。
 
 mod adapter;
-mod config;
-mod net;
 pub mod alipay;
 pub mod bilibili;
+mod config;
 pub mod dingtalk;
 pub mod douyin;
 pub mod eleme;
@@ -21,6 +20,7 @@ pub mod feishu;
 pub mod jingdong;
 pub mod kuaishou;
 pub mod meituan;
+mod net;
 pub mod pinduoduo;
 pub mod qq;
 pub mod store;
@@ -30,8 +30,8 @@ pub(crate) mod util;
 pub(crate) mod wechat_common;
 pub mod wechat_mini;
 pub mod wechat_mp;
-pub mod weibo;
 pub mod wecom;
+pub mod weibo;
 pub mod whatsapp;
 pub mod xiaohongshu;
 
@@ -42,19 +42,19 @@ use crate::app_data_dir;
 // 体系/通道/模式枚举按 connections:: 路径对外复用（部分仅子模块测试消费）
 #[allow(unused_imports)]
 pub use config::{
-    ConnectionConfig, DingtalkSystem, DouyinSystem, WechatMiniDataFormat,
-    WechatMiniMode, WechatMpMode, WecomSystem, XiaohongshuSystem,
+    ConnectionConfig, DingtalkSystem, DouyinSystem, WechatMiniDataFormat, WechatMiniMode,
+    WechatMpMode, WecomSystem, XiaohongshuSystem,
 };
 
 // 适配器 seam 与网络骨架按既有 super:: 路径供给渠道与 crate 内消费方
 // （ADAPTERS 仅注册表覆盖测试消费）
 #[allow(unused_imports)]
-pub(crate) use adapter::{adapter_by_channel, adapter_of, ADAPTERS, ChannelAdapter};
+pub(crate) use adapter::{adapter_by_channel, adapter_of, ChannelAdapter, ADAPTERS};
 #[allow(unused_imports)]
 pub(crate) use net::{
     client_with_timeout, dispatch_client, handshake_echo_get, handshake_echo_outcome,
-    handshake_read_error, no_body_check, no_reply, probe_handshake_outcome,
-    request_error_reason, send_measured_outcome, DispatchSnapshot,
+    handshake_read_error, no_body_check, no_reply, probe_handshake_outcome, request_error_reason,
+    send_measured_outcome, DispatchSnapshot,
 };
 
 /// 握手结果：ok + 人类可读原因（前端直接展示），抖音/企微共用。

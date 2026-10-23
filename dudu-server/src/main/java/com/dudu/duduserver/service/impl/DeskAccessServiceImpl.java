@@ -4,10 +4,10 @@ import com.dudu.duduserver.entity.CompanyDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.service.CompanyChannelService;
+import com.dudu.duduserver.service.DeskAccess;
 import com.dudu.duduserver.service.DeskAccessService;
 import com.dudu.duduserver.service.UserGroupMemberService;
 import com.dudu.duduserver.service.UserGroupService;
-import com.dudu.duduserver.vo.DeskAccessVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,22 +29,16 @@ public class DeskAccessServiceImpl implements DeskAccessService {
     private final CompanyChannelService companyChannelService;
 
     @Override
-    public DeskAccessVO resolve(CompanyDO company, UserDO user) {
+    public DeskAccess resolve(CompanyDO company, UserDO user) {
         Long companyId = company.getCompanyId();
         boolean allGroups = company.isInitialAdmin(user.getUserId());
         List<UserGroupDO> companyGroups = userGroupService.listByCompany(companyId);
         Set<Long> allowedGroupIds = allowedGroupIds(companyId, user, allGroups, companyGroups);
 
-        List<DeskAccessVO.Group> groups = companyGroups.stream()
-            .filter(group -> allowedGroupIds.contains(group.getGroupId()))
-            .map(group -> new DeskAccessVO.Group(String.valueOf(group.getGroupId()), group.getGroupName()))
-            .toList();
-        List<DeskAccessVO.Account> accounts = companyChannelService.listByCompanyGroups(companyId, allowedGroupIds)
-            .stream()
-            .map(account -> new DeskAccessVO.Account(String.valueOf(account.getCompanyChannelId()),
-                String.valueOf(account.getGroupId()), account.getChannel(), account.getAccountName()))
-            .toList();
-        return new DeskAccessVO(allGroups, groups, accounts);
+        List<UserGroupDO> groups = companyGroups.stream()
+            .filter(group -> allowedGroupIds.contains(group.getGroupId())).toList();
+        return DeskAccess.of(allGroups, groups,
+            companyChannelService.listByCompanyGroups(companyId, allowedGroupIds));
     }
 
     // 初始管理员为本企业全部组；其他员工按成员关系与本企业组取交集，成员行不能指向其他企业的组

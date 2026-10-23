@@ -9,8 +9,8 @@ use std::time::Duration;
 use super::crypto::{GOLDEN_CORP_ID, GOLDEN_ENCODING_AES_KEY, GOLDEN_TOKEN};
 use crate::connections::{ChannelAdapter, ConnectionConfig, WecomSystem};
 use crate::test_support::{
-    ExpectedSnapshots, assert_dispatch_error, assert_dispatch_receipt, assert_snapshots,
-    query_params, run_dispatch_case, run_handshake_case, status_responder,
+    assert_dispatch_error, assert_dispatch_receipt, assert_snapshots, query_params,
+    run_dispatch_case, run_handshake_case, status_responder, ExpectedSnapshots,
 };
 
 use super::*;
@@ -33,8 +33,7 @@ fn wecom_config(url: String) -> ConnectionConfig {
 /// ③ 解密 echostr 取 msg ④ 回显明文（无引号/无换行）。
 fn wecom_echo_ok(_request_line: &str, query: &HashMap<String, String>) -> (String, String) {
     let echostr = &query["echostr"];
-    let expect_sig =
-        build_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"], echostr);
+    let expect_sig = build_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"], echostr);
     assert_eq!(expect_sig, query["msg_signature"], "签名应可复算");
     let decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, echostr).unwrap();
     assert_eq!(decrypted.receiveid, GOLDEN_CORP_ID, "receiveid 应为 corpid");

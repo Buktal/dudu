@@ -17,7 +17,8 @@ import java.util.Map;
 
 /**
  * 钉钉渠道适配器（ADR-0014 接缝）：无 GET URL 验证阶段（check_url 以加密事件形态走
- * POST receive），密文通道只承载 http_crypto 形态；receive 验签与解密失败一律拒绝，
+ * POST receive），密文通道只承载 http_crypto 形态；receive 验签失败拒绝（403），解密与
+ * 明文解析失败按参数错误应答（400，与微信三系口径一致），
  * 事件信封与未知明文只应答加密 success 包，机器人消息解析落库且应答仍为加密包；发送
  * 与素材读取按各自凭据如实给出限制说明，凭据缺失不发起渠道请求。凭据不写入日志。
  */
@@ -70,7 +71,7 @@ public class DingtalkAdapter implements ChannelAdapter {
         } catch (IllegalArgumentException e) {
             log.warn("[dingtalk] 回调密文解密失败, companyChannelId={}, reason={}",
                 account.getCompanyChannelId(), e.getMessage());
-            return ChannelReceiveResult.answer(ChannelCallbackResult.rejected());
+            return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // 应答统一为加密 success 包：timeStamp/nonce 原样取请求带来的值（1500ms 窗由入口承担）
         ChannelCallbackResult encryptedSuccess = new ChannelCallbackResult(200, protocol.successReply(

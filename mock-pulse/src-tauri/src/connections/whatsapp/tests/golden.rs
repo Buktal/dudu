@@ -27,8 +27,9 @@ fn signature_carries_sha256_prefix_and_lowercase_hex_form() {
     let digest = signature.strip_prefix("sha256=").unwrap();
     assert_eq!(digest.len(), 64, "HMAC-SHA256 摘要为 64 位 hex");
     assert!(
-        digest.bytes().all(|byte| byte.is_ascii_hexdigit()
-            && !byte.is_ascii_uppercase()),
+        digest
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase()),
         "应为小写 hex：{digest:?}"
     );
     // 组合层复现 HMAC-SHA256 通行示例向量（key="key"）
@@ -77,7 +78,10 @@ fn golden_inbound_envelope_matches_official_sample() {
     assert_eq!(value["messages"][0]["id"], GOLDEN_INBOUND_WAMID);
     assert_eq!(value["messages"][0]["timestamp"], "1749416383");
     assert_eq!(value["messages"][0]["type"], "text");
-    assert_eq!(value["messages"][0]["text"]["body"], "Does it come in another color?");
+    assert_eq!(
+        value["messages"][0]["text"]["body"],
+        "Does it come in another color?"
+    );
     // 入站 messages[].timestamp 为秒级字符串形态
     assert!(value["messages"][0]["timestamp"].is_string());
 }
@@ -91,7 +95,10 @@ fn golden_delivered_envelope_matches_official_sample() {
     assert_eq!(status["status"], "delivered");
     assert_eq!(status["timestamp"], "1750263773");
     assert_eq!(status["recipient_id"], "16505551234");
-    assert_eq!(status["conversation"]["id"], "6ceb9d929c9bdc4f90e967a32f8639b4");
+    assert_eq!(
+        status["conversation"]["id"],
+        "6ceb9d929c9bdc4f90e967a32f8639b4"
+    );
     assert_eq!(status["conversation"]["origin"]["type"], "service");
     assert_eq!(status["pricing"]["billable"], true);
     assert_eq!(status["pricing"]["pricing_model"], "CBP");

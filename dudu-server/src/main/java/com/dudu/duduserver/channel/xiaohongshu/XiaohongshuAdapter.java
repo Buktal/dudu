@@ -7,6 +7,8 @@ import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.DirectHttpMediaReader;
+import com.dudu.duduserver.channel.support.EchoHandshakes;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -28,16 +30,21 @@ import java.util.Optional;
 @Component
 public class XiaohongshuAdapter implements ChannelAdapter {
 
+    // 推送中的 image/video 素材只有 PicUrl/VideoUrl 公开链接（§10.3、§12.4）：链接直链外的
+    // 引用（无链接落库的历史派生标识）不可读，小红书无按 media_id 拉取的接口
+    private static final String UNREADABLE_REFERENCE = "素材引用不是可读取的素材链接";
+    private static final String MEDIA_FAILURE_PREFIX = "小红书素材下载失败：";
+
     private final XiaohongshuProtocol protocol;
 
     private final XiaohongshuCrypto crypto;
 
     private final XiaohongshuTextSender textSender;
 
-    private final XiaohongshuMediaReader mediaReader;
+    private final DirectHttpMediaReader mediaReader;
 
     public XiaohongshuAdapter(XiaohongshuProtocol protocol, XiaohongshuCrypto crypto,
-                              XiaohongshuTextSender textSender, XiaohongshuMediaReader mediaReader) {
+                              XiaohongshuTextSender textSender, DirectHttpMediaReader mediaReader) {
         this.protocol = protocol;
         this.crypto = crypto;
         this.textSender = textSender;
@@ -52,18 +59,7 @@ public class XiaohongshuAdapter implements ChannelAdapter {
     @Override
     public ChannelCallbackResult verifyUrl(CompanyChannelDO account, Map<String, String> query, HttpHeaders headers) {
         XiaohongshuCredentials credentials = XiaohongshuCredentials.of(account);
-        if (credentials == null) {
-            return ChannelCallbackResult.unsupported();
-        }
-        if (!protocol.verify(credentials.token(), query.get("signature"), query.get("timestamp"),
-            query.get("nonce"))) {
-            return ChannelCallbackResult.rejected();
-        }
-        String echostr = query.get("echostr");
-        if (echostr == null || echostr.isEmpty()) {
-            return ChannelCallbackResult.badRequest();
-        }
-        return ChannelCallbackResult.echo(echostr);
+        return EchoHandshakes.verifyUrl(credentials == null ? null : credentials.token(), protocol::verify, query);
     }
 
     @Override
@@ -100,8 +96,7 @@ public class XiaohongshuAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // 事件回调族与无法识别的推送不是访客消息：只按渠道要求应答，不产生访客与消息数据
-        return inbound.map(ChannelReceiveResult::accept)
-            .orElseGet(() -> ChannelReceiveResult.answer(ChannelCallbackResult.success()));
+        return acceptOrAnswer(inbound);
     }
 
     @Override
@@ -111,7 +106,8 @@ public class XiaohongshuAdapter implements ChannelAdapter {
 
     @Override
     public ChannelMediaResult readMedia(CompanyChannelDO account, String externalMediaId) {
-        return mediaReader.read(account, externalMediaId);
+        return mediaReader.read(account, externalMediaId, UNREADABLE_REFERENCE, "xiaohongshu",
+            MEDIA_FAILURE_PREFIX);
     }
 
     @Override

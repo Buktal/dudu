@@ -24,22 +24,19 @@ use super::*;
 /// 服务器配置示例值（事实库 §3.2/§5.2：token=AAAAA；AESKey 43 个 A；
 /// AppID=wxba5fad812f8e6fb9）。
 pub(super) const GOLDEN_TOKEN: &str = "AAAAA";
-pub(super) const GOLDEN_ENCODING_AES_KEY: &str =
-    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+pub(super) const GOLDEN_ENCODING_AES_KEY: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 pub(super) const GOLDEN_APP_ID: &str = "wxba5fad812f8e6fb9";
 
 /// 数值例一（GET 握手，事实库 §3.2）：token=AAAAA、timestamp=1514711492、
 /// nonce=1714036504 → 排序拼接 15147114921714036504AAAAA → sha1
 /// f464b24…；回包体即官方 echostr 4375120948345356249。
-pub(super) const GOLDEN_HANDSHAKE_SIGNATURE: &str =
-    "f464b24fc39322e44b38aa78f5edd27bd1441696";
+pub(super) const GOLDEN_HANDSHAKE_SIGNATURE: &str = "f464b24fc39322e44b38aa78f5edd27bd1441696";
 pub(super) const GOLDEN_HANDSHAKE_TIMESTAMP: &str = "1514711492";
 pub(super) const GOLDEN_HANDSHAKE_NONCE: &str = "1714036504";
 
 /// 数值例二（明文模式三参签名，事实库 §5.1 推送 URL）：token=AAAAA、
 /// timestamp=1714037059、nonce=486452656 → 899cf89e…。
-pub(super) const GOLDEN_PLAIN_SIGNATURE: &str =
-    "899cf89e464efb63f54ddac96b0a0a235f53aa78";
+pub(super) const GOLDEN_PLAIN_SIGNATURE: &str = "899cf89e464efb63f54ddac96b0a0a235f53aa78";
 pub(super) const GOLDEN_PLAIN_TIMESTAMP: &str = "1714037059";
 pub(super) const GOLDEN_PLAIN_NONCE: &str = "486452656";
 
@@ -51,8 +48,7 @@ pub(super) const GOLDEN_PUSH_ENCRYPT: &str = concat!(
     "zhZv6JsXUnnR8XGT740XgXZUXQ7vJVnAG+tE8NUd4yFyjPy7GgiaviNrlCTj+l5kdfMuFUPpRSrfMZuMcp3Fn2Pede2IuQrKEYwK",
     "SqFIZoNqJ4M8EajAsjLY2km32IIjdf8YL/P50F7mStwntrA2cPDrM1kb6mOcfBgRtWygb3VIYnSeOBrebufAlr7F9mFUPAJGj04=",
 );
-pub(super) const GOLDEN_PUSH_MSG_SIGNATURE: &str =
-    "046e02f8204d34f8ba5fa3b1db94908f3df2e9b3";
+pub(super) const GOLDEN_PUSH_MSG_SIGNATURE: &str = "046e02f8204d34f8ba5fa3b1db94908f3df2e9b3";
 pub(super) const GOLDEN_PUSH_TIMESTAMP: &str = "1714112445";
 pub(super) const GOLDEN_PUSH_NONCE: &str = "415670741";
 
@@ -69,9 +65,9 @@ pub(super) const GOLDEN_PUSH_PLAINTEXT: &str = concat!(
 /// msg={"demo_resp":"good luck"}（25 字节）→ Encrypt（官方页全串）；回包
 /// 签名 TimeStamp=1713424427、Nonce=415670741 → 1b933996…。官方示例回包
 /// Nonce 复用推送 URL 的 nonce（§3.4：415670741 同值）。
-pub(super) const GOLDEN_REPLY_ENCRYPT: &str = "ELGduP2YcVatjqIS+eZbp80MNLoAUWvzzyJxgGzxZO/5sAvd070Bs6qrLARC9nVHm48Y4hyRbtzve1L32tmxSQ==";
-pub(super) const GOLDEN_REPLY_SIGNATURE: &str =
-    "1b9339964ed2e271e7c7b6ff2b0ef902fc94dea1";
+pub(super) const GOLDEN_REPLY_ENCRYPT: &str =
+    "ELGduP2YcVatjqIS+eZbp80MNLoAUWvzzyJxgGzxZO/5sAvd070Bs6qrLARC9nVHm48Y4hyRbtzve1L32tmxSQ==";
+pub(super) const GOLDEN_REPLY_SIGNATURE: &str = "1b9339964ed2e271e7c7b6ff2b0ef902fc94dea1";
 pub(super) const GOLDEN_REPLY_TIMESTAMP: &str = "1713424427";
 pub(super) const GOLDEN_REPLY_NONCE: &str = "415670741";
 pub(super) const GOLDEN_REPLY_PLAINTEXT: &str = r#"{"demo_resp":"good luck"}"#;

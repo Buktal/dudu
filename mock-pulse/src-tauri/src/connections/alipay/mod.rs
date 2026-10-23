@@ -193,9 +193,9 @@ fn post_signed(
     let wire = format!("{body}&sign={}", form_encode_value(&signature));
     send_measured_outcome(
         client
-        .post(url)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(wire.clone()),
+            .post(url)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(wire.clone()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: message_id_of(&pairs),

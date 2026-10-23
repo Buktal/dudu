@@ -119,7 +119,13 @@ mod tests {
     /// 录制细节本域不关心，网络基建在 crate::test_support 共享）。
     /// 返回的 Receiver 须由测试持有到断言结束——它是服务线程的存活凭证
     /// （提前丢弃会让共享 server 在响应首个请求后因 SendError 退出）。
-    fn serial_url(count: usize, responder: Responder) -> (String, std::sync::mpsc::Receiver<crate::test_support::RecordedPost>) {
+    fn serial_url(
+        count: usize,
+        responder: Responder,
+    ) -> (
+        String,
+        std::sync::mpsc::Receiver<crate::test_support::RecordedPost>,
+    ) {
         let (addr, rx) = start_serial_server(count, responder, std::time::Duration::ZERO);
         (format!("http://{addr}/hook"), rx)
     }

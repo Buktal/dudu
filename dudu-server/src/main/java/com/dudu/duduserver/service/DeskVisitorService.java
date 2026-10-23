@@ -12,7 +12,8 @@ import com.dudu.duduserver.vo.DeskVisitorPageVO;
 /**
  * Desk 访客资源服务：先按当前授权账号范围筛选持久访客再做普通分页，计数与渠道来自数据库与
  * 现有账号关系；单访客快照、按需历史与接待状态变更共用同一份契约第 4 节投影；授权访客守卫
- * 公开为 Reply / Profile / Media 共用的读取 seam。
+ * 公开为 Reply / Profile / Media 共用的读取 seam（归属本服务而非独立守卫类：授权判定依赖
+ * 实时权限解析与访客查询，就近暴露避免消费方经 VO 契约回读）。
  */
 public interface DeskVisitorService {
 

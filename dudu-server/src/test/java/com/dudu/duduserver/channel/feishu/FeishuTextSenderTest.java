@@ -105,18 +105,8 @@ class FeishuTextSenderTest {
         assertThat(requestLines).hasSize(1);
     }
 
-    @Test
-    void reportsMissingCredentialsWithoutCallingAnyEndpoint() {
-        CompanyChannelDO unconfigured = new CompanyChannelDO();
-        unconfigured.setChannel(ChannelEnum.FEISHU);
-        unconfigured.setChannelInfo(Map.of("verificationToken", "t"));
-
-        ChannelSendResult result = sender().send(unconfigured, "ou_x", "在吗");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).isEqualTo("渠道发送凭据未配置");
-        assertThat(requestLines).isEmpty();
-    }
+    // 凭据缺失的如实拦截由注册表 restriction 承担（见 FeishuAdapterTest），发送器只按
+    // 已配置凭据翻译渠道协议与异常
 
     @Test
     void reportsTransportFailureInsteadOfPretendingSuccess() {

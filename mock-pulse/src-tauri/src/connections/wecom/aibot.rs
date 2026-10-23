@@ -75,12 +75,10 @@ mod tests {
     use std::sync::Arc;
     use std::time::Duration;
 
-    use super::super::crypto::{
-        GOLDEN_ENCODING_AES_KEY, GOLDEN_TOKEN, GOLDEN_CORP_ID,
-    };
+    use super::super::crypto::{GOLDEN_CORP_ID, GOLDEN_ENCODING_AES_KEY, GOLDEN_TOKEN};
     use crate::connections::{ChannelAdapter, ConnectionConfig, WecomSystem};
     use crate::test_support::{
-        quick_client, query_params, run_dispatch_case, run_handshake_case, start_serial_server,
+        query_params, quick_client, run_dispatch_case, run_handshake_case, start_serial_server,
         status_responder, Responder,
     };
 
@@ -103,8 +101,7 @@ mod tests {
         let (_outcome, request) = run_handshake_case(
             |request| {
                 let query = query_params(&request.request_line);
-                let decrypted =
-                    decrypt_msg(GOLDEN_ENCODING_AES_KEY, &query["echostr"]).unwrap();
+                let decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, &query["echostr"]).unwrap();
                 // 机器人通道语义：receiveid 必须是空串（官方 §4.4/101033）
                 assert_eq!(decrypted.receiveid, "", "机器人握手 receiveid 应为空串");
                 (
@@ -211,14 +208,18 @@ mod tests {
     fn dispatch_decrypts_json_encrypted_passive_reply() {
         // 官方 §3.5 JSON 被动回复包：encrypt + msgsignature + timestamp + nonce
         let reply_plaintext = r#"{"msgtype":"text","text":{"content":"收到"}}"#;
-        let reply_encrypt =
-            encrypt_msg(GOLDEN_ENCODING_AES_KEY, &[5u8; 16], reply_plaintext.as_bytes(), "").unwrap();
+        let reply_encrypt = encrypt_msg(
+            GOLDEN_ENCODING_AES_KEY,
+            &[5u8; 16],
+            reply_plaintext.as_bytes(),
+            "",
+        )
+        .unwrap();
         let reply_envelope = format!(
             r#"{{"encrypt": "{reply_encrypt}", "msgsignature": "sig", "timestamp": 1409659813, "nonce": "1372623149"}}"#
         );
-        let responder: Responder = Arc::new(move |_, _, _| {
-            ("HTTP/1.1 200 OK".to_string(), reply_envelope.clone())
-        });
+        let responder: Responder =
+            Arc::new(move |_, _, _| ("HTTP/1.1 200 OK".to_string(), reply_envelope.clone()));
         let (addr, _rx) = start_serial_server(1, responder, Duration::ZERO);
         let config = aibot_config(format!("http://{addr}/aibot"));
 
@@ -237,18 +238,19 @@ mod tests {
     fn golden_ciphertext_chain_anchors_shared_crypto_and_agent_divergence() {
         // 官方黄金例锚点：同一份 AES 原语下，自建应用密文的明文按机器人语义
         // （receiveid=空串）重加密后可独立解回——证明两通道同算法、仅 receiveid 不同。
-        let golden = decrypt_msg(GOLDEN_ENCODING_AES_KEY, super::super::crypto::GOLDEN_ENCRYPT)
-            .expect("黄金密文应可解密");
-        assert_eq!(golden.receiveid, GOLDEN_CORP_ID, "自建应用 receiveid = corpId");
+        let golden = decrypt_msg(
+            GOLDEN_ENCODING_AES_KEY,
+            super::super::crypto::GOLDEN_ENCRYPT,
+        )
+        .expect("黄金密文应可解密");
+        assert_eq!(
+            golden.receiveid, GOLDEN_CORP_ID,
+            "自建应用 receiveid = corpId"
+        );
         assert!(golden.msg.starts_with(b"<xml>"), "自建应用明文为 XML");
 
-        let aibot_encrypt = encrypt_msg(
-            GOLDEN_ENCODING_AES_KEY,
-            &[9u8; 16],
-            &golden.msg,
-            "",
-        )
-        .expect("机器人语义重加密应成功");
+        let aibot_encrypt = encrypt_msg(GOLDEN_ENCODING_AES_KEY, &[9u8; 16], &golden.msg, "")
+            .expect("机器人语义重加密应成功");
         let aibot_decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, &aibot_encrypt).unwrap();
         assert_eq!(aibot_decrypted.msg, golden.msg);
         assert_eq!(aibot_decrypted.receiveid, "", "机器人 receiveid = 空串");

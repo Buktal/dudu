@@ -103,16 +103,8 @@ class DouyinTextSenderTest {
         assertThat(requestLines).isEmpty();
     }
 
-    @Test
-    void failsHonestlyWhenCredentialsOrAuthorizationAreMissing() {
-        CompanyChannelDO unconfigured = new CompanyChannelDO();
-        unconfigured.setChannel(ChannelEnum.DOUYIN);
-        unconfigured.setChannelInfo(Map.of("clientKey", "asdfavetgbvasf"));
-        ChannelSendResult noCreds = sender(reply("@m", "@c", "o")).send(unconfigured, "v", "在吗");
-        assertThat(noCreds.succeeded()).isFalse();
-        assertThat(noCreds.failureReason()).isEqualTo("渠道发送凭据未配置");
-        assertThat(requestLines).isEmpty();
-    }
+    // 凭据缺失的如实拦截由注册表 restriction 承担（见 DouyinAdapterTest），发送器只按
+    // 已配置凭据翻译渠道协议与异常
 
     @Test
     void reportsChannelRejectionWithTheOriginalErrorCodeAndDescription() {

@@ -36,7 +36,10 @@ public class ConsoleIdentityService {
         if (username.length() > 64) throw new BizException(ApiEnum.PARAM_EXCEED);
         Long companyId = CompanyIdPolicy.parseCompanyId(request.companyId());
         UserDO user = users.findCompanyUser(companyId, username);
-        if (user == null || !PasswordHasher.matches(request.password(), user.getPasswordHash())) {
+        // 不存在的用户名也做等代价比对，失败耗时不泄漏用户名存在性（单点在 loginMatches）
+        boolean matched = PasswordHasher.loginMatches(request.password(),
+            user == null ? null : user.getPasswordHash());
+        if (user == null || !matched) {
             throw new BizException(ApiEnum.LOGIN_FAILED);
         }
         CompanyDO company = companies.getById(companyId);

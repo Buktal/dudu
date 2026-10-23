@@ -6,10 +6,10 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { type AccountApi, unavailableAccountApi } from "./api";
+import type { AccountApi } from "./api";
 import { AccountScreen } from "./components/account-screen";
 import { SignIn } from "./components/sign-in";
-import { loadAccountApi } from "./runtime";
+import { createHttpAccountApi } from "./http-account-api";
 import {
   type AccountSessionStore,
   createAccountSession,
@@ -26,26 +26,14 @@ export function AccountProvider({
 }) {
   const [store, setStore] = useState<AccountSessionStore>();
   useEffect(() => {
-    let active = true;
-    let owned: AccountApi | undefined;
-    let session: AccountSessionStore | undefined;
-    setStore(undefined);
-    void (api ? Promise.resolve(api) : loadAccountApi())
-      .catch(() => unavailableAccountApi)
-      .then((adapter) => {
-        if (!active) {
-          if (!api) adapter.dispose?.();
-          return;
-        }
-        if (!api) owned = adapter;
-        session = createAccountSession(adapter);
-        setStore(session);
-        void session.restore();
-      });
+    // 真实适配器同步构造：未注入时由本组件拥有并在卸载时释放
+    const adapter = api ?? createHttpAccountApi();
+    const session = createAccountSession(adapter);
+    setStore(session);
+    void session.restore();
     return () => {
-      active = false;
-      session?.dispose();
-      owned?.dispose?.();
+      session.dispose();
+      if (!api) adapter.dispose?.();
     };
   }, [api]);
   return store ? (

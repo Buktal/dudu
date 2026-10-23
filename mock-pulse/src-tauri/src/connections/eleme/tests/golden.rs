@@ -9,15 +9,20 @@ use super::*;
 fn sign_reproduces_official_example_concat_and_five_steps() {
     // 官方 §4.1 步骤 2 示例待签串逐字复现：url（末尾带 /，官方「计算 sig 时
     // URL 末尾必须带 /」）+ ? + 字母序 k=v & 连接 + secret 无缝尾拼
-    let concat = format!(
-        "{GOLDEN_URL}?consumer_key=7284397484&timestamp=1374908054{GOLDEN_SECRET}"
-    );
+    let concat =
+        format!("{GOLDEN_URL}?consumer_key=7284397484&timestamp=1374908054{GOLDEN_SECRET}");
     assert_eq!(concat, GOLDEN_SIGN_CONCAT);
     // 五步复算 = 官方示例串的既定结果（Node crypto 交叉复算锚定；官方步骤 4
     // 示例值 e76dfee… 为示意值、与示例待签串对不上——真实 secret 未公开，
     // 照录该不自洽，不以示意值作对拍）
-    assert_eq!(crate::connections::util::sha1_hex(&[&hex::encode(&concat)]), GOLDEN_SIGN);
-    assert_eq!(ele_sign(GOLDEN_URL, &GOLDEN_REQUEST_PARAMS, GOLDEN_SECRET), GOLDEN_SIGN);
+    assert_eq!(
+        crate::connections::util::sha1_hex(&[&hex::encode(&concat)]),
+        GOLDEN_SIGN
+    );
+    assert_eq!(
+        ele_sign(GOLDEN_URL, &GOLDEN_REQUEST_PARAMS, GOLDEN_SECRET),
+        GOLDEN_SIGN
+    );
 }
 
 #[test]
@@ -53,11 +58,9 @@ fn sign_sorts_bytewise_and_output_is_40_lowercase_hex() {
     assert_eq!(signature, byte_order);
     // 官方口径「SHA1(C) 十六进制小写」：40 位小写 hex
     assert_eq!(signature.len(), 40);
-    assert!(
-        signature
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
-    );
+    assert!(signature
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
 }
 
 #[test]
@@ -110,7 +113,11 @@ fn sign_changes_with_param_url_or_secret() {
     // secret 篡改即变（尾拼 secret，替换后摘要必变）
     assert_ne!(
         ele_sign(GOLDEN_URL, &GOLDEN_REQUEST_PARAMS, GOLDEN_SECRET),
-        ele_sign(GOLDEN_URL, &GOLDEN_REQUEST_PARAMS, "4d31ba58fd73c71db697ab5e4946d52X")
+        ele_sign(
+            GOLDEN_URL,
+            &GOLDEN_REQUEST_PARAMS,
+            "4d31ba58fd73c71db697ab5e4946d52X"
+        )
     );
 }
 
@@ -133,10 +140,7 @@ fn plaintext_routing_detects_json_vs_h5_form() {
 fn message_id_snapshot_follows_order_ids() {
     // JSON 推送快照取 eleme_order_id（§5.2–§5.5 四推送共名），缺失回退 order_id
     assert_eq!(message_id_of(GOLDEN_PROBE_PLAINTEXT), "12637645858619059");
-    assert_eq!(
-        message_id_of(r#"{"order_id":"1425223342"}"#),
-        "1425223342"
-    );
+    assert_eq!(message_id_of(r#"{"order_id":"1425223342"}"#), "1425223342");
     // H5 表单推送快照取 order_id（§5.6 字段表）；均缺失不落值
     assert_eq!(message_id_of(GOLDEN_H5_FORM), "12637645858619059");
     assert_eq!(message_id_of("push_action=1&user_id=12345"), "");

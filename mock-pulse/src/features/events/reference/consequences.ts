@@ -14,7 +14,8 @@
  *   落后时由时钟按 latestRevision 计算，mayOutdate 标记该可能。
  * - edit（validateScenario / validatePlan / 同步 thunk / pinPlanScenarios）：
  *   事件保存只看行存在（超前 revision 存得下、运行时再拦），模板保存
- *   两种缺失都拦，lane 保存看库内命中，同步在无行时拒绝。
+ *   两种缺失都拦；lane 保存、同步与钉快照是纯存在性判定，共用 lane 列
+ *   （两态同值，消费经 interpretPresence 直译，不经独立列）。
  * - guard（组合根删除守卫）：存在引用即拦删；事件引用按 id 匹配，
  *   故 version-missing 仍拦删（行在），lane 无版本维度，
  *   version-missing 列为不可达、默认不拦。
@@ -32,12 +33,11 @@ export type RefConsequence = {
   runtime: { blocks: boolean; missingKind: "id" | "version" | null };
   /** 展示时钟：行/条目是否存在；ok 才可能标 outdated */
   view: { hasRow: boolean; hasEntry: boolean; mayOutdate: boolean };
-  /** 编辑时钟：三类保存门 + 同步门 */
+  /** 编辑时钟：三类保存门（lane 列兼代同步与钉快照的存在性判定） */
   edit: {
     eventBlocksSave: boolean;
     templateBlocksSave: boolean;
     laneBlocksSave: boolean;
-    blocksSync: boolean;
   };
   /** 删除守卫：存在引用即拦删 */
   guard: { eventBlocksDelete: boolean; laneBlocksDelete: boolean };
@@ -51,7 +51,6 @@ export const REF_CONSEQUENCES: Record<RefStatusName, RefConsequence> = {
       eventBlocksSave: false,
       templateBlocksSave: false,
       laneBlocksSave: false,
-      blocksSync: false,
     },
     guard: { eventBlocksDelete: true, laneBlocksDelete: true },
   },
@@ -62,7 +61,6 @@ export const REF_CONSEQUENCES: Record<RefStatusName, RefConsequence> = {
       eventBlocksSave: true,
       templateBlocksSave: true,
       laneBlocksSave: true,
-      blocksSync: true,
     },
     guard: { eventBlocksDelete: false, laneBlocksDelete: false },
   },
@@ -76,8 +74,6 @@ export const REF_CONSEQUENCES: Record<RefStatusName, RefConsequence> = {
       templateBlocksSave: true,
       // lane 无版本维度，此列不可达、默认不拦。
       laneBlocksSave: false,
-      // 落后引用可向前同步，不拒绝。
-      blocksSync: false,
     },
     // 事件引用按 id 匹配守卫，行在即拦删；lane 此列不可达。
     guard: { eventBlocksDelete: true, laneBlocksDelete: false },

@@ -20,8 +20,14 @@ export const choiceReducers = {
   ) {
     const { scope, query, append } = action.payload;
     // A continuation keeps the accumulated ids and the cursor it continues.
-    if (!append || !state.choices[scope])
+    if (!state.choices[scope]) {
       state.choices[scope] = { ...emptyLoad(), ids: [], query };
+    } else if (!append) {
+      // 查询变化的重读保留已加载相位（ids 与 hasLoaded）：候选列表不回退
+      // 首读占位，成员由 choicesLoaded 重写落地
+      state.choices[scope].nextCursor = null;
+      state.choices[scope].query = query;
+    }
     const choices = state.choices[scope];
     choices.status = "loading";
     choices.error = null;

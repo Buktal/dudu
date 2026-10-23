@@ -119,7 +119,10 @@ pub(super) fn verify_handshake(
         },
         None => HandshakeOutcome {
             ok: false,
-            message: format!("目标返回 HTTP {}，verify_request 握手未通过", outcome.status),
+            message: format!(
+                "目标返回 HTTP {}，verify_request 握手未通过",
+                outcome.status
+            ),
         },
     }
 }

@@ -10,6 +10,7 @@ import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.entity.UserGroupMemberDO;
 import com.dudu.duduserver.service.ConsoleChannelService;
+import com.dudu.duduserver.service.ConsoleGroupService;
 import com.dudu.duduserver.testutil.IntegrationTestEnv;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -63,6 +64,7 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
 
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired ConsoleChannelService consoleChannels;
+    @Autowired ConsoleGroupService consoleGroups;
 
     private long moveOldGroup;
     private long moveNewGroup;
@@ -235,8 +237,8 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         assertThat(frameType(keeper.next(Duration.ofSeconds(5)))).isEqualTo("message");
         assertThat(frameType(owner.next(Duration.ofSeconds(5)))).isEqualTo("message");
 
-        // 员工退组：删除现有成员关系
-        assertThat(members.removeById(leaverMember.getMemberId())).isTrue();
+        // 员工退组：管理端成员关系业务边界删除（IService 保持中性，事件由业务路径提交后发布）
+        consoleGroups.membership(jwtManager.parseToken(ownerToken), Long.valueOf(leaveGroup), leaverMember.getUserId(), false);
 
         // 收权通知发给本企业全部已连接员工，退组员工自己也收到以便清理工作区
         assertAccessChanged(leaver);
@@ -269,7 +271,8 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         assertThat((Object) grantedClient.next(Duration.ofMillis(700))).isNull();
         assertThat(frameType(owner.next(Duration.ofSeconds(5)))).isEqualTo("message");
 
-        assertThat(members.save(member(COMPANY_ID, granted.getUserId(), grantGroup))).isTrue();
+        // 加入组走管理端业务边界：提交后发布范围变更事件
+        consoleGroups.membership(jwtManager.parseToken(ownerToken), Long.valueOf(grantGroup), granted.getUserId(), true);
 
         assertAccessChanged(grantedClient);
         assertAccessChanged(owner);
@@ -325,9 +328,9 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
         UserDO txMember = plainUser(COMPANY_ID, "access.tx");
         String txToken = login(COMPANY_ID, "access.tx");
 
-        // 事务回滚：成员关系与范围变更事件一起回滚，不产生任何推送，员工范围也不含该组
+        // 事务回滚：业务写路径加入外层事务，成员关系与范围变更事件一起回滚，不产生任何推送
         new TransactionTemplate(transactionManager).execute(status -> {
-            members.save(member(COMPANY_ID, txMember.getUserId(), txGroup.getGroupId()));
+            consoleGroups.membership(jwtManager.parseToken(ownerToken), txGroup.getGroupId(), txMember.getUserId(), true);
             status.setRollbackOnly();
             return null;
         });
@@ -336,7 +339,7 @@ class DeskAccessIntegrationTest extends DeskIntegrationSupport {
 
         // 事务提交：提交后才收敛为 access-changed 报文，员工范围随之包含该组
         new TransactionTemplate(transactionManager).execute(status -> {
-            members.save(member(COMPANY_ID, txMember.getUserId(), txGroup.getGroupId()));
+            consoleGroups.membership(jwtManager.parseToken(ownerToken), txGroup.getGroupId(), txMember.getUserId(), true);
             return null;
         });
         assertAccessChanged(owner);

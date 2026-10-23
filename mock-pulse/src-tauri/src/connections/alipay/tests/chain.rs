@@ -119,7 +119,9 @@ fn dispatch_posts_form_with_fresh_sign_and_snapshots() {
             let sign = body_param(&request.body, "sign").expect("应带 sign 参数");
             assert!(!sign.is_empty());
             // 业务明文段在前、旧 sign 不透传、sign_type 保留在表单
-            assert!(request.body.starts_with("notify_time=2018-10-21%2015%3A45%3A22"));
+            assert!(request
+                .body
+                .starts_with("notify_time=2018-10-21%2015%3A45%3A22"));
             assert!(!request.body.contains("601510b7970e52cc63db0f44997cf70e"));
             assert!(request.body.contains("sign_type=RSA2"));
             assert!(request.body.contains("trade_status=TRADE_SUCCESS"));
@@ -151,7 +153,10 @@ fn dispatch_posts_form_with_fresh_sign_and_snapshots() {
 
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     // 接收侧复算：解码 kv（sign/sign_type 除外）字典序拼串 + 公钥验签
-    assert!(receiver_verify(&request.body, &parse_private_key(&key_pem).unwrap().to_public_key()));
+    assert!(receiver_verify(
+        &request.body,
+        &parse_private_key(&key_pem).unwrap().to_public_key()
+    ));
 }
 
 #[test]
@@ -179,7 +184,10 @@ fn dispatch_appends_sign_type_when_plaintext_missing() {
     // 无 notify_time 信封则不落时间快照
     assert_eq!(outcome.timestamp.as_deref(), Some(""));
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
-    assert!(receiver_verify(&request.body, &parse_private_key(&key_pem).unwrap().to_public_key()));
+    assert!(receiver_verify(
+        &request.body,
+        &parse_private_key(&key_pem).unwrap().to_public_key()
+    ));
 }
 
 #[test]
@@ -206,12 +214,17 @@ fn dispatch_reports_timeout_with_official_retry_note() {
     // 官方口径实锤（§3.3）：fail/非 200 按 25h 8 次重推（支付 4m 首重）——
     // 超时文案附该口径；客户端 200ms 超时 vs 服务器 1s 延迟
     let key_pem = test_private_key_pem();
-    let slow =
-        |_request: &crate::test_support::RecordedPost| ("HTTP/1.1 200 OK".to_string(), String::new());
+    let slow = |_request: &crate::test_support::RecordedPost| {
+        ("HTTP/1.1 200 OK".to_string(), String::new())
+    };
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = alipay_config(format!("http://{addr}/webhooks/alipay"), &key_pem);
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "charset=utf-8");
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_millis(200)),
+        &config,
+        "charset=utf-8",
+    );
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");

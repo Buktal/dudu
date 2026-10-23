@@ -91,16 +91,8 @@ class WeiboTextSenderTest {
             .contains("REMOTE_SERVICE_ERROR");
     }
 
-    @Test
-    void reportsMissingCredentialsWithoutCallingTheEndpoint() {
-        handle(SEND_PATH, 200, "{\"result\": true}");
-
-        ChannelSendResult result = sender().send(weiboAccount(Map.of()), "2489518277", "在吗");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).isEqualTo("渠道发送凭据未配置");
-        assertThat(requestLines).isEmpty();
-    }
+    // 凭据缺失的如实拦截由注册表 restriction 承担（见 WeiboAdapterTest），发送器只按
+    // 已配置凭据翻译渠道协议与异常
 
     @Test
     void reportsTransportAndUnreadableResponsesInsteadOfPretendingSuccess() {

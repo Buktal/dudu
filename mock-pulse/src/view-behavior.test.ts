@@ -7,6 +7,7 @@ import {
 } from "@/features/connections";
 import * as connectionsApi from "@/features/connections/api";
 import {
+  definitionsReducer,
   discardDraft,
   eventsReducer,
   setDraftName,
@@ -30,6 +31,7 @@ function makeStore() {
       app: appReducer,
       connections: connectionsReducer,
       events: eventsReducer,
+      definitions: definitionsReducer,
     },
   });
 }

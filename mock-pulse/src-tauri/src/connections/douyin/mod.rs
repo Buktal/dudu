@@ -33,9 +33,14 @@ fn verify_handshake(
     isv_token: &str,
 ) -> HandshakeOutcome {
     match system {
-        DouyinSystem::Dop => {
-            challenge::verify_handshake(client, url, client_key, client_secret, sha1_push::sign_dop, "")
-        }
+        DouyinSystem::Dop => challenge::verify_handshake(
+            client,
+            url,
+            client_key,
+            client_secret,
+            sha1_push::sign_dop,
+            "",
+        ),
         DouyinSystem::LifeService => challenge::verify_handshake(
             client,
             url,
@@ -44,7 +49,9 @@ fn verify_handshake(
             sha1_push::sign_life,
             "（官方要求 2.5 秒内应答）",
         ),
-        DouyinSystem::MiniGame => minigame::verify_handshake(client, url, client_key, mini_game_token),
+        DouyinSystem::MiniGame => {
+            minigame::verify_handshake(client, url, client_key, mini_game_token)
+        }
         DouyinSystem::Isv => isv::verify_handshake(client, url, isv_token),
     }
 }

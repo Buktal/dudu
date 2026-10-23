@@ -37,7 +37,8 @@ pub(super) const GOLDEN_SIGN: &str = "00934d00d0aea6f12161edfb6456143d";
 /// 官方 §5.3 订单核验样本表单（docDetail/177/180 字段值逐字；form 字节，
 /// wm_poi_name/backup_recipient_phone 按 RFC 3986 大写 hex 百分号编码）：
 /// 探针与直发样本同源，msg_id 快照取 order_id。
-pub(super) const GOLDEN_ORDER_BODY: &str = "app_poi_code=668921&order_id=27061900338318741&wm_poi_name=%E8%8D%AF%E5%93%8101%E5%BA%97";
+pub(super) const GOLDEN_ORDER_BODY: &str =
+    "app_poi_code=668921&order_id=27061900338318741&wm_poi_name=%E8%8D%AF%E5%93%8101%E5%BA%97";
 
 pub(super) fn meituan_config(url: String) -> ConnectionConfig {
     ConnectionConfig::Meituan {

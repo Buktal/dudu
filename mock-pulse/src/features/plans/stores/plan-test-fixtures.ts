@@ -6,6 +6,7 @@ import {
   initialConnectionsState,
 } from "@/features/connections";
 import {
+  definitionsReducer,
   type EventItem,
   eventsReducer,
   initialEventsState,
@@ -124,6 +125,7 @@ export function makeStore(
       plans: plansReducer,
       scenarios: scenariosReducer,
       events: eventsReducer,
+      definitions: definitionsReducer,
       runs: runsReducer,
       connections: connectionsReducer,
     },

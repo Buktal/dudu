@@ -20,6 +20,8 @@ export {
   RECEIPT_BODY_MODES,
 } from "./receipt";
 export {
+  expectEntry,
+  expectRow,
   type InterpretClock,
   type InterpretedStep,
   type InterpretMissingKind,
@@ -27,6 +29,7 @@ export {
   interpretPresence,
   interpretTemplateStep,
   latestVersionOf,
+  type PresenceVerdict,
   resolveRow,
 } from "./reference";
 export {
@@ -43,13 +46,18 @@ export {
   selectDraftId,
 } from "./selectors";
 export {
+  applyFieldDefinitions,
+  definitionsReducer,
+  type FieldDefinitionsState,
+  fetchFieldDefinitions,
+} from "./stores/definitions-slice";
+export {
   deleteEvent,
   discardDraft,
   duplicateCurrentDraft,
   type EventsState,
   eventsReducer,
   fetchEvents,
-  fetchFieldDefinitions,
   initialEventsState,
   openEvent,
   renameEvent,

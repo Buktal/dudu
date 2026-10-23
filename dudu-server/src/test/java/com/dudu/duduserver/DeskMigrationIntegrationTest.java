@@ -13,10 +13,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * V4 三表、V5 渠道码值与 V6 消息唯一键迁移的独立 MySQL 验收：空库（或已迁移库）上全程
- * 执行后的结构契约、V3 状态库升级后旧数据保留与三表可用、V4 状态库存量 wechat 行改写为
- * wechat-mp；通过环境变量显式启用，不使用开发库。空库路径由运行前重建 dudu_review 保证；
- * 本类同时可独立运行。
+ * V4 三表、V5 渠道码值、V6 消息唯一键与 V7 注释口径修正迁移的独立 MySQL 验收：空库（或
+ * 已迁移库）上全程执行后的结构契约、V3 状态库升级后旧数据保留与三表可用、V4 状态库存量
+ * wechat 行改写为 wechat-mp；通过环境变量显式启用，不使用开发库。空库路径由运行前重建
+ * dudu_review 保证；本类同时可独立运行。
  */
 @EnabledIfEnvironmentVariable(named = "DUDU_INTEGRATION_TEST", matches = "true")
 class DeskMigrationIntegrationTest {
@@ -41,6 +41,13 @@ class DeskMigrationIntegrationTest {
         assertThat(jdbc.queryForObject(
             "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '6' AND success = 1", Long.class))
             .isEqualTo(1);
+        // V7 全程跑通：注释口径修正迁移记录成功，列属性（类型/非空）与位置不被 MODIFY 改动
+        assertThat(jdbc.queryForObject(
+            "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '7' AND success = 1", Long.class))
+            .isEqualTo(1);
+        assertThat(columnCommentOf(jdbc, "message", "direction")).isEqualTo("incoming / outgoing");
+        assertThat(columnCommentOf(jdbc, "company", "create_time")).isEqualTo("创建时间");
+        assertThat(columnTypeOf(jdbc, "company", "create_time")).isEqualTo("datetime(3)");
 
         // 外部标识保留大小写：二进制排序规则
         assertThat(collationOf(jdbc, "visitor", "external_user_id")).isEqualTo(VARCHAR_EXTERNAL_BIN);
@@ -87,8 +94,8 @@ class DeskMigrationIntegrationTest {
 
         MigrateResult upgraded = Flyway.configure().dataSource(url, user(), password()).load().migrate();
 
-        // 执行 V4、V5 与 V6 三个迁移，既有 Admin 基线数据保留且重启可读
-        assertThat(upgraded.migrationsExecuted).isEqualTo(3);
+        // 执行 V4 至 V7 四个迁移，既有 Admin 基线数据保留且重启可读
+        assertThat(upgraded.migrationsExecuted).isEqualTo(4);
         assertThat(old.queryForObject("SELECT company_name FROM company WHERE company_id = 784501", String.class))
             .isEqualTo("升级企业");
         assertThat(old.queryForObject("SELECT username FROM user WHERE user_id = 78451", String.class))
@@ -141,8 +148,8 @@ class DeskMigrationIntegrationTest {
 
         MigrateResult upgraded = Flyway.configure().dataSource(url, user(), password()).load().migrate();
 
-        // 执行 V5 与 V6：旧码值改写为新码值，其余渠道不动
-        assertThat(upgraded.migrationsExecuted).isEqualTo(2);
+        // 执行 V5 至 V7：旧码值改写为新码值，其余渠道不动
+        assertThat(upgraded.migrationsExecuted).isEqualTo(3);
         assertThat(v4.queryForObject("SELECT channel FROM company_channel WHERE company_channel_id = 78561", String.class))
             .isEqualTo("wechat-mp");
         assertThat(v4.queryForObject("SELECT channel FROM company_channel WHERE company_channel_id = 78563", String.class))
@@ -185,6 +192,11 @@ class DeskMigrationIntegrationTest {
 
     private String columnTypeOf(JdbcTemplate jdbc, String table, String column) {
         return jdbc.queryForObject("SELECT column_type FROM information_schema.columns"
+            + " WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?", String.class, table, column);
+    }
+
+    private String columnCommentOf(JdbcTemplate jdbc, String table, String column) {
+        return jdbc.queryForObject("SELECT column_comment FROM information_schema.columns"
             + " WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?", String.class, table, column);
     }
 

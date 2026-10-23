@@ -44,6 +44,19 @@ export function hasConversationFilters(query: ConversationQuery): boolean {
   );
 }
 
+/** Whether two standing queries read the same server-side view. */
+export function sameConversationQuery(
+  left: ConversationQuery,
+  right: ConversationQuery,
+): boolean {
+  return (
+    left.search === right.search &&
+    left.channelId === right.channelId &&
+    left.status === right.status &&
+    left.order === right.order
+  );
+}
+
 /**
  * One predicate for queue membership, shared by the queue reducers, the
  * reconnect reload and the merge kernel. Missing conversations never belong.

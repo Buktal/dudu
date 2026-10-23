@@ -23,6 +23,13 @@ pub(crate) fn app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf,
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // 单实例插件须最先注册（官方约定）：第二实例启动时唤起已有主窗口
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             connections::connections_load,

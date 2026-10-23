@@ -19,6 +19,7 @@ import com.dudu.duduserver.entity.MessageDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.entity.VisitorDO;
 import com.dudu.duduserver.service.CompanyChannelService;
+import com.dudu.duduserver.service.DeskAccess;
 import com.dudu.duduserver.service.DeskAuthService;
 import com.dudu.duduserver.service.DeskVisitorService;
 import com.dudu.duduserver.service.MessageService;
@@ -27,7 +28,6 @@ import com.dudu.duduserver.service.VisitorService;
 import com.dudu.duduserver.socket.DeskSocketGateway;
 import com.dudu.duduserver.util.LikeClauses;
 import com.dudu.duduserver.util.LockClauses;
-import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessagePageVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
@@ -81,12 +81,12 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     @Override
     public DeskVisitorPageVO query(JwtUser me, DeskVisitorQueryDTO query) {
         validate(query);
-        DeskAccessVO access = deskAuthService.requireAccess(me);
-        List<DeskAccessVO.Account> accounts = access.accounts();
+        DeskAccess access = deskAuthService.requireAccess(me);
+        List<CompanyChannelDO> accounts = access.accounts();
         DeskVisitorPageVO.Counts counts = counts(me.companyId(), accounts);
         List<DeskVisitorPageVO.Channel> channels = channels(accounts);
 
-        List<DeskAccessVO.Account> scoped = channelScopedAccounts(query.channelId(), accounts);
+        List<CompanyChannelDO> scoped = channelScopedAccounts(query.channelId(), accounts);
         if (scoped.isEmpty()) {
             return new DeskVisitorPageVO(List.of(), 0L, query.page(), query.pageSize(), counts, channels);
         }
@@ -98,10 +98,8 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
             List<VisitorDO> rows = visitorService
                 .page(page, filters(me.companyId(), query, scoped).last(orderSql(query)))
                 .getRecords();
-            // 账号详情用于会话对象的真实回复能力，只在确有本页访客时读取
-            Map<Long, CompanyChannelDO> accountById = companyChannelService
-                .listByIds(scoped.stream().map(account -> Long.valueOf(account.companyChannelId())).toList())
-                .stream()
+            // 授权范围的账号行已在手，直接索引供会话对象取真实回复能力
+            Map<Long, CompanyChannelDO> accountById = scoped.stream()
                 .collect(Collectors.toMap(CompanyChannelDO::getCompanyChannelId, Function.identity(),
                     (existing, replacement) -> existing));
             items = rows.stream()
@@ -217,13 +215,13 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     // 在库但不属于当前企业或当前授权账号统一 10106，不泄漏他人数据
     @Override
     public VisitorDO requireAuthorizedVisitor(JwtUser me, String visitorId) {
-        DeskAccessVO access = deskAuthService.requireAccess(me);
+        DeskAccess access = deskAuthService.requireAccess(me);
         VisitorDO visitor = visitorService.getById(parseVisitorId(visitorId));
         if (visitor == null) {
             throw new BizException(ApiEnum.DATA_NOT_EXIST, "访客不存在");
         }
         boolean authorized = visitor.getCompanyId().equals(me.companyId())
-            && access.containsAccount(visitor.getCompanyChannelId());
+            && access.containsChannel(visitor.getCompanyChannelId());
         if (!authorized) {
             throw new BizException(ApiEnum.FORBIDDEN);
         }
@@ -301,12 +299,12 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     }
 
     // 渠道筛选只收窄授权账号集合：不在授权范围内的渠道值得到空结果，绝不放行
-    private List<DeskAccessVO.Account> channelScopedAccounts(String channelId, List<DeskAccessVO.Account> accounts) {
+    private List<CompanyChannelDO> channelScopedAccounts(String channelId, List<CompanyChannelDO> accounts) {
         if (DeskVisitorQueryDTO.CHANNEL_ALL.equals(channelId)) {
             return accounts;
         }
         ChannelEnum channel = channelOf(channelId);
-        return accounts.stream().filter(account -> account.channel() == channel).toList();
+        return accounts.stream().filter(account -> account.getChannel() == channel).toList();
     }
 
     private ChannelEnum channelOf(String channelId) {
@@ -319,11 +317,11 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
 
     // 授权范围筛选：企业 + 授权账号集合 + 状态与关键词；搜索词经参数绑定，不拼接用户输入
     private LambdaQueryWrapper<VisitorDO> filters(Long companyId, DeskVisitorQueryDTO query,
-                                                  List<DeskAccessVO.Account> scoped) {
+                                                  List<CompanyChannelDO> scoped) {
         LambdaQueryWrapper<VisitorDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(VisitorDO::getCompanyId, companyId)
             .in(VisitorDO::getCompanyChannelId, scoped.stream()
-                .map(account -> Long.valueOf(account.companyChannelId())).toList());
+                .map(CompanyChannelDO::getCompanyChannelId).toList());
         switch (query.status()) {
             case NEEDS_REPLY -> wrapper.eq(VisitorDO::getStatus, VisitorStatusEnum.NEEDS_REPLY);
             case WAITING -> wrapper.eq(VisitorDO::getStatus, VisitorStatusEnum.WAITING);
@@ -337,10 +335,10 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
         return wrapper;
     }
 
-    private void applySearch(LambdaQueryWrapper<VisitorDO> wrapper, String term, List<DeskAccessVO.Account> scoped) {
+    private void applySearch(LambdaQueryWrapper<VisitorDO> wrapper, String term, List<CompanyChannelDO> scoped) {
         List<Long> matchedAccountIds = scoped.stream()
             .filter(account -> matchesAccountText(account, term))
-            .map(account -> Long.valueOf(account.companyChannelId()))
+            .map(CompanyChannelDO::getCompanyChannelId)
             .toList();
         String pattern = LikeClauses.pattern(term);
         wrapper.and(w -> {
@@ -364,10 +362,10 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
 
     // 账号名与渠道名的包含匹配（契约第 3 节：账号名、渠道名，不含渠道代码）：
     // 授权账号已在本企业范围内，按数据库 ai_ci 语义近似处理
-    private boolean matchesAccountText(DeskAccessVO.Account account, String term) {
+    private boolean matchesAccountText(CompanyChannelDO account, String term) {
         String lower = term.toLowerCase(Locale.ROOT);
-        ChannelEnum channel = account.channel();
-        return account.accountName().toLowerCase(Locale.ROOT).contains(lower)
+        ChannelEnum channel = account.getChannel();
+        return account.getAccountName().toLowerCase(Locale.ROOT).contains(lower)
             || channel != null && channel.getDisplayName().toLowerCase(Locale.ROOT).contains(lower);
     }
 
@@ -377,11 +375,11 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
 
     // 计数取全部授权账号范围，不受关键词、状态与渠道筛选影响；active = needsReply + waiting；
     // 三类状态一次 GROUP BY 计数（Lambda 无法表达聚合，用受支持的 select 片段按状态码分组）
-    private DeskVisitorPageVO.Counts counts(Long companyId, List<DeskAccessVO.Account> accounts) {
+    private DeskVisitorPageVO.Counts counts(Long companyId, List<CompanyChannelDO> accounts) {
         if (accounts.isEmpty()) {
             return new DeskVisitorPageVO.Counts(0, 0, 0, 0);
         }
-        List<Long> scopeIds = accounts.stream().map(account -> Long.valueOf(account.companyChannelId())).toList();
+        List<Long> scopeIds = accounts.stream().map(CompanyChannelDO::getCompanyChannelId).toList();
         Map<String, Long> byStatus = visitorService.listMaps(Wrappers.<VisitorDO>query()
                 .select("status", "COUNT(*) AS total")
                 .eq("company_id", companyId)
@@ -401,10 +399,10 @@ public class DeskVisitorServiceImpl implements DeskVisitorService {
     }
 
     // 授权账号用到的渠道代码与显示名，按账号顺序去重
-    private List<DeskVisitorPageVO.Channel> channels(List<DeskAccessVO.Account> accounts) {
+    private List<DeskVisitorPageVO.Channel> channels(List<CompanyChannelDO> accounts) {
         Map<String, String> byCode = new LinkedHashMap<>();
-        for (DeskAccessVO.Account account : accounts) {
-            ChannelEnum channel = account.channel();
+        for (CompanyChannelDO account : accounts) {
+            ChannelEnum channel = account.getChannel();
             if (channel != null) {
                 byCode.putIfAbsent(channel.getCode(), channel.getDisplayName());
             }

@@ -16,8 +16,10 @@ use super::*;
 fn recompute_sig(url: &str, body: &str) -> String {
     let mut pairs = form_pairs(body);
     pairs.retain(|(key, _)| key != "sig");
-    let borrowed: Vec<(&str, &str)> =
-        pairs.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
+    let borrowed: Vec<(&str, &str)> = pairs
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect();
     mt_sign(url, &borrowed, GOLDEN_SECRET)
 }
 
@@ -39,10 +41,7 @@ fn handshake_posts_probe_form_and_accepts_200() {
             let sig = body_param(&request.body, "sig").expect("应带 sig 参数");
             // 待签 url = 请求的 scheme://host + path（Host 头带端口）
             let host = request.header("host").unwrap_or_default();
-            let url = format!(
-                "http://{host}{}",
-                request_path(&request.request_line)
-            );
+            let url = format!("http://{host}{}", request_path(&request.request_line));
             assert_eq!(sig, recompute_sig(&url, &request.body));
             // 探针即官方订单核验样本（§5.3 字段值逐字）+ 系统级参数
             assert!(request.body.contains(GOLDEN_PROBE_BODY));
@@ -223,8 +222,9 @@ fn dispatch_reports_non_200_status_and_body() {
 fn dispatch_reports_timeout_with_official_retry_note() {
     // 官方口径实锤（§3.2/§3.3）：订单类 2 秒内应答、失败 1 分钟×3 重试——
     // 超时文案附该口径；客户端 200ms 超时 vs 服务器 1s 延迟
-    let slow =
-        |_request: &crate::test_support::RecordedPost| ("HTTP/1.1 200 OK".to_string(), String::new());
+    let slow = |_request: &crate::test_support::RecordedPost| {
+        ("HTTP/1.1 200 OK".to_string(), String::new())
+    };
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = meituan_config(format!("http://{addr}/webhooks/meituan"));
 

@@ -43,12 +43,12 @@ use super::{
 /// 官方订单核验样本表单（§5.3 docDetail/177/180 字段值逐字；form 字节，前端
 /// 模板骨架同款）：推送探针复用该样本（官方验证握手正文待核验(09-27)，以带
 /// 合规签名的官方样本作探针，语义同普通推送）。
-pub(crate) const GOLDEN_PROBE_BODY: &str =
-    "app_poi_code=668921&order_id=27061900338318741";
+pub(crate) const GOLDEN_PROBE_BODY: &str = "app_poi_code=668921&order_id=27061900338318741";
 
 /// 失败重试口径（§3.2/§3.3 实锤）：订单类 2 秒内应答、IM 类 4 秒内；失败每隔
 /// 1 分钟重试共 3 次。超时文案附官方口径。
-const RETRY_NOTE: &str = "（官方应答窗口：订单类 2 秒内 / IM 类 4 秒内，失败 1 分钟×3 重试，事实库 §3.2/§3.3）";
+const RETRY_NOTE: &str =
+    "（官方应答窗口：订单类 2 秒内 / IM 类 4 秒内，失败 1 分钟×3 重试，事实库 §3.2/§3.3）";
 
 /// 官方 timestamp 形态（§4.1/§6）：调用时的十进制 UNIX 秒字符串（取现值经
 /// util::now_secs，审计退件收敛）。
@@ -134,9 +134,9 @@ fn post_form(
     }
     send_measured_outcome(
         client
-        .post(url)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(wire.clone()),
+            .post(url)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(wire.clone()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: message_id_of(&pairs),

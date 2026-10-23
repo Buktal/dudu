@@ -61,26 +61,19 @@ describe("interpreter guard / view 时钟（组合根守卫与行过滤经唯一
   });
 
   it("guard·存在性引用：删事件与删剧本守卫共用，有引用即拦删", () => {
-    expect(interpretPresence(true, "guard")).toMatchObject({
-      status: "ok",
-      blocks: true,
-      missing: false,
-    });
-    expect(interpretPresence(false, "guard")).toMatchObject({
-      status: "id-missing",
-      blocks: false,
-      missing: true,
+    // 谓词方向与本体方向相反：有引用（true）拦删，无引用放行带回谓词值
+    expect(interpretPresence(true, "guard")).toEqual({ blocked: true });
+    expect(interpretPresence(false, "guard")).toEqual({
+      blocked: false,
+      row: false,
     });
   });
 
-  it("view·存在性引用：只标 missing 不拦（行过滤谓词语义）", () => {
-    expect(interpretPresence(false, "view")).toMatchObject({
-      blocks: false,
-      missing: true,
-    });
-    expect(interpretPresence(true, "view")).toMatchObject({
-      blocks: false,
-      missing: false,
+  it("view·存在性引用：缺失即行不可用（过滤谓词语义，命中带回主语）", () => {
+    expect(interpretPresence(false, "view")).toEqual({ blocked: true });
+    expect(interpretPresence(true, "view")).toEqual({
+      blocked: false,
+      row: true,
     });
   });
 });

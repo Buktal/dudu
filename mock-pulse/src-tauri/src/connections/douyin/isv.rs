@@ -35,8 +35,8 @@ fn build_envelope(nonce: &str, timestamp: &str, encrypt: &str, signature: &str) 
 
 /// 从模板/前端拼装的信封文本取 Encrypt（缺失或非法 JSON 视为载荷错误，不发送）。
 fn parse_encrypt(body: &str) -> Result<String, String> {
-    let parsed: serde_json::Value = serde_json::from_str(body)
-        .map_err(|_| format!("推送信封不是合法 JSON：{body}"))?;
+    let parsed: serde_json::Value =
+        serde_json::from_str(body).map_err(|_| format!("推送信封不是合法 JSON：{body}"))?;
     parsed
         .get("Encrypt")
         .and_then(|value| value.as_str())
@@ -109,19 +109,17 @@ pub(super) fn verify_handshake(
             ok: false,
             message: error,
         },
-        None if (200..300).contains(&outcome.status) => {
-            match check_success(&outcome.body) {
-                Ok(()) => HandshakeOutcome {
-                    ok: true,
-                    message: "服务商授权推送验证成功：TOKEN 验签信封已被接收并回 success（HTTP 200）"
-                        .into(),
-                },
-                Err(reason) => HandshakeOutcome {
-                    ok: false,
-                    message: format!("HTTP 200 但 {reason}"),
-                },
-            }
-        }
+        None if (200..300).contains(&outcome.status) => match check_success(&outcome.body) {
+            Ok(()) => HandshakeOutcome {
+                ok: true,
+                message: "服务商授权推送验证成功：TOKEN 验签信封已被接收并回 success（HTTP 200）"
+                    .into(),
+            },
+            Err(reason) => HandshakeOutcome {
+                ok: false,
+                message: format!("HTTP 200 但 {reason}"),
+            },
+        },
         None => HandshakeOutcome {
             ok: false,
             message: format!("目标返回 HTTP {}，服务商授权推送验证未通过", outcome.status),
@@ -163,12 +161,7 @@ mod tests {
         // 同族参考向量：服务商验签官方精确拼接序待核验(09-27)，按字典序 sha1
         // 实现的正确性以企微官方 90968 黄金例独立收口（同一原语 util::sha1_sorted_hex）
         assert_eq!(
-            msg_signature(
-                FAMILY_TOKEN,
-                FAMILY_NONCE,
-                FAMILY_TIMESTAMP,
-                FAMILY_ENCRYPT
-            ),
+            msg_signature(FAMILY_TOKEN, FAMILY_NONCE, FAMILY_TIMESTAMP, FAMILY_ENCRYPT),
             "477715d11cdb4164915debcba66cb864d751f3e6"
         );
     }
@@ -275,10 +268,7 @@ mod tests {
         assert_eq!(outcome.request_body.as_deref(), Some(request.body.as_str()));
         assert_eq!(outcome.msg_id, nonce);
         assert_eq!(outcome.timestamp.as_deref(), Some(timestamp));
-        assert_eq!(
-            outcome.signature,
-            sent["MsgSignature"].as_str().unwrap()
-        );
+        assert_eq!(outcome.signature, sent["MsgSignature"].as_str().unwrap());
     }
 
     #[test]

@@ -1,10 +1,13 @@
 export {
+  expectEntry,
+  expectRow,
   type InterpretClock,
   type InterpretedStep,
   type InterpretMissingKind,
   interpretEventStep,
   interpretPresence,
   interpretTemplateStep,
+  type PresenceVerdict,
 } from "./interpret";
 export { latestVersionOf, resolveRow } from "./resolve";
 

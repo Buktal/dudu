@@ -92,8 +92,8 @@ fn dispatch_event(
     ]);
     send_measured_outcome(
         response
-        .header("Content-Type", "application/json")
-        .body(plaintext.to_string()),
+            .header("Content-Type", "application/json")
+            .body(plaintext.to_string()),
         "",
         DispatchSnapshot {
             msg_id: nonce,

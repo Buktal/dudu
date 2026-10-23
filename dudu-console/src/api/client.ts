@@ -8,8 +8,6 @@ export const PROFILE_PATH = "/console/profile";
 // 实体不存在（他人已删除或当前身份不可见）：读取方按「详情已失效」收起详情弹层。
 export const ENTITY_MISSING = 12100;
 const EXPIRED_CODES = new Set([10100, 10101, 10102, 10103]);
-// 会话生命周期接口不计入数据写入：登录退出不改变业务数据，失效重查只属于业务写成功
-const SESSION_PATHS = new Set(["/console/login", "/console/logout"]);
 
 export class ApiError extends Error {
   constructor(
@@ -106,17 +104,15 @@ export class ConsoleClient {
       signal?: AbortSignal;
       anonymous?: boolean;
       paginated?: boolean;
+      /** 显式声明数据写入：成功后失效重查；/query 读与会话接口不声明 */
+      write?: boolean;
       validate: (data: unknown) => data is T;
     },
   ): Promise<T> {
     const controller = new AbortController();
     const generation = this.state.generation;
     const token = options.anonymous ? null : this.token;
-    const writing =
-      options.method !== undefined &&
-      options.method !== "GET" &&
-      !path.endsWith("/query") &&
-      !SESSION_PATHS.has(path);
+    const writing = options.write === true;
     const abort = () => controller.abort();
     options.signal?.addEventListener("abort", abort, { once: true });
     if (options.signal?.aborted) controller.abort();
@@ -149,9 +145,8 @@ export class ConsoleClient {
         redirect: "error",
       });
       assertCurrent();
+      // 认证失败一律走 200 + envelope code（1010x），HTTP 4xx/5xx 只按服务异常报错
       if (!response.ok) {
-        if (token && (response.status === 401 || response.status === 403))
-          this.clearSession("登录已失效，请重新登录");
         throw new ApiError(
           response.status >= 500
             ? "服务暂时不可用，请稍后重试"
@@ -230,7 +225,6 @@ export class ConsoleClient {
         typeof data.token === "string" &&
         !!data.token &&
         Number.isSafeInteger(data.expiresAt) &&
-        Number(data.expiresAt) > Date.now() / 1000 &&
         isProfile(data.profile),
     });
     if (generation !== this.state.generation || signal?.aborted) return;

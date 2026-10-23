@@ -18,10 +18,8 @@ use super::*;
 pub(super) const GOLDEN_URL: &str = "http://openapi.ele.me/v2/restaurants/";
 
 /// 官方 §4.1 步骤 1 示例排序串的参数值逐字。
-pub(super) const GOLDEN_REQUEST_PARAMS: [(&str, &str); 2] = [
-    ("consumer_key", "7284397484"),
-    ("timestamp", "1374908054"),
-];
+pub(super) const GOLDEN_REQUEST_PARAMS: [(&str, &str); 2] =
+    [("consumer_key", "7284397484"), ("timestamp", "1374908054")];
 
 /// 官方 §4.1 步骤 2 示例待签串内嵌的 consumer_secret（`…1374908054` 与
 /// `4d31ba58…` 视觉连写，即 secret 无缝尾拼形态）。

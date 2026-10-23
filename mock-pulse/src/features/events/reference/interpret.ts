@@ -4,7 +4,6 @@ import {
   type RefStatusName,
   refEntryOf,
   refRowOf,
-  refStatusForPresence,
 } from "./consequences";
 import {
   describeEventVersion,
@@ -123,6 +122,31 @@ export function interpretEventStep<
 }
 
 /**
+ * 取必在的行（缺失分支已在调用侧处理 后调用）：行缺失即 interpreter
+ * 不变式破坏（表断言 hasRow 与 kernel 一致，测试钉住），按编程错误
+ * 直接终止——不保留「沿用缺失文案」的伪防御分支（对齐 Rust 侧
+ * narrow! 的 unreachable 口径）。
+ */
+export function expectRow<Row, Entry>(step: InterpretedStep<Row, Entry>): Row {
+  if (step.row === undefined) {
+    throw new Error("interpreter 不变式破坏：缺失分支已处理而行仍缺");
+  }
+  return step.row;
+}
+
+/**
+ * 取必在的条目（同 expectRow 口径：版本缺失分支已在调用侧处理）。
+ */
+export function expectEntry<Row, Entry>(
+  step: InterpretedStep<Row, Entry>,
+): Entry {
+  if (step.entry === undefined) {
+    throw new Error("interpreter 不变式破坏：缺失分支已处理而条目仍缺");
+  }
+  return step.entry;
+}
+
+/**
  * 内置模板步骤解释：{templateId, templateVersion} + 时钟 → 唯一词汇。
  * 版本钉住语义：未注册 id 与版本更替同样 missing（无条目即缺）。
  */
@@ -152,32 +176,37 @@ export function interpretTemplateStep<
 }
 
 /**
- * 存在性引用解释：lane 剧本（快照优先解析命中与否）/ 编辑时钟窄行（只有 id
- * 维度）/ 删除守卫计数（引用名列表非空与否）+ 时钟 → 唯一词汇。主语可传
+ * 存在性引用解释的可辨识联合：命中分支（blocked: false）带回主语本体，
+ * 调用侧直接取 row 使用，不再写 `|| !subject` 补类型收窄；否定分支只有
+ * blocked，文案本体归调用时钟。
+ */
+export type PresenceVerdict<Subject> =
+  | { blocked: true }
+  | { blocked: false; row: Subject };
+
+/**
+ * 存在性引用解释：lane 剧本（快照优先解析命中与否）/ 编辑时钟窄行（只有
+ * id 维度）/ 删除守卫计数（引用名列表非空与否）+ 时钟 → 唯一词汇。主语传
  * 引用本体（undefined 即不存在，存在性由本入口内部判定，调用侧不再自行
  * 换算布尔）或布尔谓词（删除守卫计数的既有形态：true = 有引用、false =
  * 无引用；布尔主语按谓词取义，不当本体）。只有 ok / id-missing 两态：
- * 四类 edit 门同值（ok 全放行、id-missing 全拦截），两列 guard 门同值
- * （有引用即拦删、无引用放行），故同步门 / 钉快照门 / 删事件与删剧本
- * 守卫共用本入口，无需再按形态分岔。
+ * - 本体主语 + runtime / edit / view：缺失即本时钟的否定判定（拒启动 /
+ *   拒保存 / 行不可用不计入），三列与存在性两态同值（表一致由测试钉住），
+ *   命中则放行并带回主语；
+ * - 谓词主语 + guard：有引用即拦删（与存在性反向），无引用放行带回谓词值。
+ * 故同步门 / 钉快照门 / 删事件与删剧本守卫共用本入口，无需再按形态分岔。
  */
 export function interpretPresence<Subject>(
-  subject: Subject | undefined,
+  subject: Subject | undefined | false,
   clock: InterpretClock,
-): InterpretedStep<never, never> {
+): PresenceVerdict<Subject> {
   const present = subject !== undefined && subject !== false;
-  const status = refStatusForPresence(present);
-  const consequence = REF_CONSEQUENCES[status];
-  return {
-    status,
-    row: undefined,
-    entry: undefined,
-    blocks: blocksFor(status, clock, {
-      edit: (edit) => edit.laneBlocksSave,
-      guard: (guard) => guard.laneBlocksDelete,
-    }),
-    missingKind: consequence.runtime.missingKind,
-    missing: !present,
-    outdated: false,
-  };
+  if (clock === "guard") {
+    return present
+      ? { blocked: true }
+      : { blocked: false, row: subject as Subject };
+  }
+  return present
+    ? { blocked: false, row: subject as Subject }
+    : { blocked: true };
 }

@@ -52,7 +52,7 @@ export function planStats(
   // 展示时钟问 interpreter（events 域唯一分岔点）：未解析的 lane（id-missing，
   // 无行）不计入；谓词只做类型收窄，语义以解释为准。
   const referenced = laneScenarios.filter(
-    (scene): scene is ResolvedLane => !interpretPresence(scene, "view").missing,
+    (scene): scene is ResolvedLane => !interpretPresence(scene, "view").blocked,
   );
   const platforms = new Set(referenced.map((scene) => scene.channelId));
   const eventCount = referenced.reduce(

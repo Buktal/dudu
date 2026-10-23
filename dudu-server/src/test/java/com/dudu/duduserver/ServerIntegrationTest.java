@@ -17,7 +17,6 @@ import com.dudu.duduserver.service.*;
 import com.dudu.duduserver.testutil.IntegrationTestEnv;
 import com.dudu.duduserver.vo.AdminOverviewVO;
 import com.dudu.duduserver.vo.CompanyResourceSummaryVO;
-import com.dudu.duduserver.vo.DeskAccessVO;
 
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
@@ -86,14 +85,14 @@ class ServerIntegrationTest {
         UserDO ordinaryAdmin = users.createInitialAdmin(781001L,
             new CompanyAdminInitDTO("ordinary", "password123", null));
         // 组权限按 Desk 授权解析锚定：初始管理员的接待范围覆盖本企业全部组，他企业组绝不进入
-        DeskAccessVO initialAccess =
+        DeskAccess initialAccess =
             deskAuth.requireAccess(new JwtUser(781001L, initialUserId, UserRoleEnum.CONSOLE, null));
         assertThat(initialAccess.allGroups()).isTrue();
         assertThat(groupIds(initialAccess))
-            .contains(String.valueOf(first.getGroupId()), String.valueOf(second.getGroupId()))
-            .doesNotContain(String.valueOf(foreign.getGroupId()));
+            .contains(first.getGroupId(), second.getGroupId())
+            .doesNotContain(foreign.getGroupId());
         // 普通管理员没有成员关系就没有组范围
-        DeskAccessVO ordinaryBefore =
+        DeskAccess ordinaryBefore =
             deskAuth.requireAccess(new JwtUser(781001L, ordinaryAdmin.getUserId(), UserRoleEnum.CONSOLE, null));
         assertThat(ordinaryBefore.allGroups()).isFalse();
         assertThat(groupIds(ordinaryBefore)).isEmpty();
@@ -103,9 +102,9 @@ class ServerIntegrationTest {
         member.setGroupId(first.getGroupId());
         members.save(member);
         // 加入组后按当前成员关系只见到该组，本企业其他组与他企业组仍不可见
-        DeskAccessVO ordinaryAfter =
+        DeskAccess ordinaryAfter =
             deskAuth.requireAccess(new JwtUser(781001L, ordinaryAdmin.getUserId(), UserRoleEnum.CONSOLE, null));
-        assertThat(groupIds(ordinaryAfter)).containsExactly(String.valueOf(first.getGroupId()));
+        assertThat(groupIds(ordinaryAfter)).containsExactly(first.getGroupId());
         // 外键已全部移除，跨企业隔离由应用层判定；此处锚定库内不再存在任何外键的约定
         assertThat(jdbc.queryForObject(
             "SELECT COUNT(*) FROM information_schema.referential_constraints WHERE constraint_schema = DATABASE()", Long.class))
@@ -260,9 +259,9 @@ class ServerIntegrationTest {
             new CompanyAdminInitDTO("admin", "password123", null));
     }
 
-    // 接待范围里的组 ID（Desk 契约为十进制字符串）
-    private List<String> groupIds(DeskAccessVO access) {
-        return access.groups().stream().map(DeskAccessVO.Group::groupId).toList();
+    // 接待范围里的组 ID（服务端口径为 Long）
+    private List<Long> groupIds(DeskAccess access) {
+        return access.groups().stream().map(UserGroupDO::getGroupId).toList();
     }
 
     private UserGroupDO group(Long companyId, String name) {

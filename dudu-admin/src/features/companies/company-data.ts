@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { adminApi } from "@/api/admin-api";
 import { useAdminQuery } from "@/api/admin-query";
 import { useAdmin } from "@/api/context";
@@ -10,29 +10,16 @@ import type {
   CreateCompany,
 } from "@/api/types";
 
-// —— company 聚合失效 ——
-// 「维护成功后重新读取列表和详情」的单点接线：企业维护命令成功即宣告聚合已变更，
-// 挂载中的列表与详情订阅者各自重读，页面不再手工传递刷新回调。
-const subscribers = new Set<() => void>();
-
-function companiesChanged() {
-  for (const notify of subscribers) notify();
-}
-
-function subscribeCompaniesChanged(notify: () => void) {
-  subscribers.add(notify);
-  return () => {
-    subscribers.delete(notify);
-  };
-}
+// —— 企业聚合失效 ——
+// 「维护成功后重新读取列表和详情」由 client 的写后失效单点驱动：维护命令
+// 以 write 声明写入，成功即提升 dataRevision，挂载中的列表与详情（经
+// usePagedQuery / useAdminQuery 的 revision 依赖）各自重读，页面不手工接线。
 
 // 企业列表：翻页机制收敛在 usePagedQuery，这里只装订 domain 词汇——
 // 命名操作 setKeyword/setStatus 把筛选意图映射进 CompanyQuery，请求走
 // adminApi.companies；对外键名与语义不变，调用方不感知机制侧。
 export function useCompanies(initialFilters: CompanyQuery) {
   const paging = usePagedQuery(adminApi.companies, initialFilters);
-  // 企业聚合失效接线：维护成功即重读挂载中的列表。
-  useEffect(() => subscribeCompaniesChanged(paging.refresh), [paging.refresh]);
   return {
     keyword: paging.filters.keyword,
     status: paging.filters.status,
@@ -52,10 +39,9 @@ export function useCompanies(initialFilters: CompanyQuery) {
   };
 }
 
-// 企业详情：与列表共享同一份失效语义。
+// 企业详情：与列表共享同一份失效语义（写后失效经 useAdminQuery 的 revision 依赖）。
 export function useCompany(companyId: string) {
   const query = useAdminQuery(adminApi.company, [companyId]);
-  useEffect(() => subscribeCompaniesChanged(query.refresh), [query.refresh]);
   return {
     detail: query.data,
     loading: query.loading,
@@ -64,47 +50,31 @@ export function useCompany(companyId: string) {
   };
 }
 
-// 企业维护命令：写成功即宣告聚合已变更；已中止的提交视为未发生。
+// 企业维护命令：写请求以 write 声明，成功后的失效重查由 client 单点完成。
 export function useCompanyCommands() {
   const client = useAdmin();
-  return useMemo(() => {
-    const changed = (signal: AbortSignal) => {
-      if (!signal.aborted) companiesChanged();
-    };
-    return {
-      create: async (body: CreateCompany, signal: AbortSignal) => {
-        const company = await adminApi.create(client, body, signal);
-        changed(signal);
-        return company;
-      },
-      update: async (
+  return useMemo(
+    () => ({
+      create: (body: CreateCompany, signal: AbortSignal) =>
+        adminApi.create(client, body, signal),
+      update: (
         companyId: string,
         profile: CompanyProfile,
         signal: AbortSignal,
-      ) => {
-        await adminApi.update(client, companyId, profile, signal);
-        changed(signal);
-      },
-      disable: async (
+      ) => adminApi.update(client, companyId, profile, signal),
+      disable: (
         companyId: string,
         disableReason: string,
         signal: AbortSignal,
-      ) => {
-        await adminApi.disable(client, companyId, disableReason, signal);
-        changed(signal);
-      },
-      enable: async (companyId: string, signal: AbortSignal) => {
-        await adminApi.enable(client, companyId, signal);
-        changed(signal);
-      },
-      resetPassword: async (
+      ) => adminApi.disable(client, companyId, disableReason, signal),
+      enable: (companyId: string, signal: AbortSignal) =>
+        adminApi.enable(client, companyId, signal),
+      resetPassword: (
         companyId: string,
         newPassword: string,
         signal: AbortSignal,
-      ) => {
-        await adminApi.resetPassword(client, companyId, newPassword, signal);
-        changed(signal);
-      },
-    };
-  }, [client]);
+      ) => adminApi.resetPassword(client, companyId, newPassword, signal),
+    }),
+    [client],
+  );
 }

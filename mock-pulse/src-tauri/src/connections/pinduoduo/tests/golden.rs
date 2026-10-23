@@ -8,7 +8,10 @@ use super::*;
 fn sign_matches_official_vector_e4de3e() {
     // 官方 §5.1 黄金向量（事实库标注「可作签名回归向量」逐字）：九参数
     // ASCII 升序 k+v 无缝拼接、testSecret 夹两端、MD5 大写
-    assert_eq!(pdd_sign(&GOLDEN_REQUEST_PARAMS, GOLDEN_CLIENT_SECRET), GOLDEN_SIGN);
+    assert_eq!(
+        pdd_sign(&GOLDEN_REQUEST_PARAMS, GOLDEN_CLIENT_SECRET),
+        GOLDEN_SIGN
+    );
     // 输入参数序不敏感：乱序输入与官方拼串序（§5.1 签名字符串键序逐字：
     // access_token,client_id,data_type,order_status,page,page_size,timestamp,type）
     // 同结果
@@ -23,11 +26,21 @@ fn sign_concatenates_verbatim_documented_string() {
     // secret 夹两端后整体即官方向量的输入原文
     let mut sorted = GOLDEN_REQUEST_PARAMS.to_vec();
     sorted.sort_by(|a, b| a.0.cmp(b.0));
-    let concat: String =
-        [GOLDEN_CLIENT_SECRET, &sorted.iter().map(|(k, v)| format!("{k}{v}")).collect::<String>(), GOLDEN_CLIENT_SECRET].concat();
+    let concat: String = [
+        GOLDEN_CLIENT_SECRET,
+        &sorted
+            .iter()
+            .map(|(k, v)| format!("{k}{v}"))
+            .collect::<String>(),
+        GOLDEN_CLIENT_SECRET,
+    ]
+    .concat();
     assert_eq!(concat, GOLDEN_SIGN_CONCAT);
     // 该拼串的 MD5 大写即官方向量（拼串与签名双重锚定）
-    assert_eq!(crate::connections::util::md5_hex(&[&concat]).to_uppercase(), GOLDEN_SIGN);
+    assert_eq!(
+        crate::connections::util::md5_hex(&[&concat]).to_uppercase(),
+        GOLDEN_SIGN
+    );
 }
 
 #[test]
@@ -45,11 +58,9 @@ fn sign_sorts_ascii_and_output_is_uppercase_hex() {
     assert_eq!(signature, ascii_order);
     // 官方口径「得到的 MD5 加密密文后转为大写」：32 位大写 hex
     assert_eq!(signature.len(), 32);
-    assert!(
-        signature
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase())
-    );
+    assert!(signature
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase()));
 }
 
 #[test]
@@ -106,7 +117,9 @@ fn probe_and_sample_payloads_match_official_vocabulary() {
 fn payload_params_extracts_top_level_scalars_verbatim() {
     // 顶层标量按原文文本参与（number → serde 文本形态，与官方「所有请求参数」
     // 扁平 kv 口径一致）；嵌套结构取紧凑 JSON 文本；null 跳过
-    let params = payload_params(r#"{"order_id":"123","order_status":1,"flag":true,"nested":{"k":1},"none":null}"#);
+    let params = payload_params(
+        r#"{"order_id":"123","order_status":1,"flag":true,"nested":{"k":1},"none":null}"#,
+    );
     assert_eq!(
         params,
         vec![
@@ -138,12 +151,18 @@ fn sign_params_merges_public_params_with_payload_keys() {
         ]
     );
     // 明文无公共参数键时补齐（query 带出的 client_id/timestamp 参签）
-    let filled = sign_params(GOLDEN_CLIENT_ID, "1480411125", &payload_params(GOLDEN_PROBE_PLAINTEXT));
+    let filled = sign_params(
+        GOLDEN_CLIENT_ID,
+        "1480411125",
+        &payload_params(GOLDEN_PROBE_PLAINTEXT),
+    );
     assert!(filled.contains(&("client_id".to_string(), "1".to_string())));
     assert!(filled.contains(&("timestamp".to_string(), "1480411125".to_string())));
     // 组合签名可复算：公共参数 + 明文顶层 kv 排序参签（探针/直发同规则）
-    let borrowed: Vec<(&str, &str)> =
-        filled.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    let borrowed: Vec<(&str, &str)> = filled
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
     assert_eq!(pdd_sign(&borrowed, GOLDEN_CLIENT_SECRET).len(), 32);
 }
 

@@ -125,16 +125,8 @@ class TelegramTextSenderTest {
         assertThat(unauthorized.failureReason()).contains("401").contains("Unauthorized");
     }
 
-    @Test
-    void failsWithoutChannelRequestWhenCredentialsMissing() {
-        // 只配 secretToken 缺 url：凭据不齐按未配置如实失败，不发起渠道请求
-        ChannelSendResult result = sender().send(account(Map.of("secretToken", "dudu-secret-token")),
-            "1111111", "好的，今天发出");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).isEqualTo("渠道发送凭据未配置");
-        assertThat(requestLines).isEmpty();
-    }
+    // 凭据缺失的如实拦截由注册表 restriction 承担（见 TelegramAdapterTest），发送器只按
+    // 已配置凭据翻译渠道协议与异常
 
     private TelegramTextSender sender() {
         return new TelegramTextSender(RestClient.builder());

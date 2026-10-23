@@ -144,19 +144,6 @@ class XiaohongshuTextSenderTest {
         assertThat(unreadable.failureReason()).isNotBlank();
     }
 
-    @Test
-    void reportsMissingSendCredentialsInsteadOfGuessingABusinessFailure() {
-        XiaohongshuTextSender sender = sender();
-
-        ChannelSendResult result = sender.send(
-            xiaohongshuAccount(Map.of("token", "t", "encodingAesKey", "k", "appId", "a")),
-            "USER_OPEN_ID", "在吗");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).contains("发送凭据未配置");
-        assertThat(requestLines).isEmpty();
-    }
-
     private XiaohongshuTextSender sender() {
         return new XiaohongshuTextSender(RestClient.builder(), baseUrl);
     }

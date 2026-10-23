@@ -20,16 +20,17 @@ fn op13_request_body_follows_official_envelope_shape() {
     // 普通事件信封不误判为 op13
     assert!(parse_validation_payload(GOLDEN_EVENT_PLAINTEXT).is_none());
     assert!(parse_validation_payload("not json").is_none());
-    assert!(parse_validation_payload(r#"{"d":{"plain_token":1,"event_ts":"1"},"op":13}"#).is_none());
+    assert!(
+        parse_validation_payload(r#"{"d":{"plain_token":1,"event_ts":"1"},"op":13}"#).is_none()
+    );
 }
 
 #[test]
 fn op13_official_vector_signs_and_verifies_through_reply_path() {
     // 官方 §5.2 逐字向量：secret + event_ts + plain_token → 官方签名 hex；
     // 回包校验入口对官方签名验签通过且回显 plain_token
-    let reply_body = format!(
-        r#"{{"plain_token":"{GOLDEN_PLAIN_TOKEN}","signature":"{GOLDEN_SIGNATURE}"}}"#
-    );
+    let reply_body =
+        format!(r#"{{"plain_token":"{GOLDEN_PLAIN_TOKEN}","signature":"{GOLDEN_SIGNATURE}"}}"#);
     let echoed = verify_validation_reply(
         GOLDEN_APP_SECRET,
         GOLDEN_PLAIN_TOKEN,
@@ -46,9 +47,8 @@ fn op13_official_vector_signs_and_verifies_through_reply_path() {
 
 #[test]
 fn op13_reply_verification_rejects_broken_replies() {
-    let ok_reply = format!(
-        r#"{{"plain_token":"{GOLDEN_PLAIN_TOKEN}","signature":"{GOLDEN_SIGNATURE}"}}"#
-    );
+    let ok_reply =
+        format!(r#"{{"plain_token":"{GOLDEN_PLAIN_TOKEN}","signature":"{GOLDEN_SIGNATURE}"}}"#);
     // plain_token 未回显同值：拒绝
     let wrong_echo = ok_reply.replace(GOLDEN_PLAIN_TOKEN, "OtherToken1234567890");
     assert!(verify_validation_reply(
@@ -84,8 +84,10 @@ fn op13_reply_verification_rejects_broken_replies() {
         missing
     )
     .is_err());
-    assert!(verify_validation_reply(GOLDEN_APP_SECRET, GOLDEN_PLAIN_TOKEN, GOLDEN_EVENT_TS, "ok")
-        .is_err());
+    assert!(
+        verify_validation_reply(GOLDEN_APP_SECRET, GOLDEN_PLAIN_TOKEN, GOLDEN_EVENT_TS, "ok")
+            .is_err()
+    );
 }
 
 #[test]

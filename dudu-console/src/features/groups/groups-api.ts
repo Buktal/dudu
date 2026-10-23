@@ -1,6 +1,8 @@
 import type { ConsoleClient } from "@/api/client";
 import { isRecord } from "@/api/client";
 import { pageOf, validId } from "@/api/validators";
+// 渠道账号实体与校验器收敛在 channel-accounts 单点：组页账号列表查同一接口
+import { isAccount } from "../channel-accounts/api";
 export interface Group {
   groupId: string;
   groupName: string;
@@ -17,19 +19,6 @@ export interface Member {
   status: 0 | 1;
 }
 export type Candidate = Omit<Member, "status">;
-export interface GroupAccount {
-  companyChannelId: string;
-  groupId: string;
-  groupName: string;
-  channel: string;
-  accountName: string;
-  receiveConfigured: boolean;
-  sendConfigured: boolean;
-  missingReceiveFields: string[];
-  missingSendFields: string[];
-  createTime: string;
-  updateTime: string;
-}
 export interface Filters {
   page: number;
   pageSize: number;
@@ -52,14 +41,6 @@ const candidate = (v: unknown): v is Candidate =>
   (v.role === "user" || v.role === "console");
 const member = (v: unknown): v is Member =>
   isRecord(v) && (v.status === 0 || v.status === 1) && candidate(v);
-const account = (v: unknown): v is GroupAccount =>
-  isRecord(v) &&
-  validId(v.companyChannelId) &&
-  validId(v.groupId) &&
-  typeof v.accountName === "string" &&
-  typeof v.channel === "string" &&
-  typeof v.receiveConfigured === "boolean" &&
-  typeof v.sendConfigured === "boolean";
 const base = "/console/user_groups";
 const params = (filters: Filters) =>
   new URLSearchParams(
@@ -84,7 +65,7 @@ export const groupsApi = {
       validate: pageOf(group),
     }),
   detail: (client: ConsoleClient, groupId: string, signal?: AbortSignal) =>
-    client.request(`${base}/${groupId}`, {
+    client.request(`${base}/${encodeURIComponent(groupId)}`, {
       signal,
       validate: (value): value is Group =>
         group(value) && value.groupId === groupId,
@@ -95,10 +76,11 @@ export const groupsApi = {
     groupId?: string,
     signal?: AbortSignal,
   ) =>
-    client.request(groupId ? `${base}/${groupId}` : base, {
+    client.request(groupId ? `${base}/${encodeURIComponent(groupId)}` : base, {
       method: groupId ? "PUT" : "POST",
       body: { groupName: groupName.trim() },
       signal,
+      write: true,
       validate: group,
     }),
   members: (
@@ -107,44 +89,58 @@ export const groupsApi = {
     filters: Filters,
     signal: AbortSignal,
   ) =>
-    client.request(`${base}/${groupId}/members?${params(filters)}`, {
-      signal,
-      paginated: true,
-      validate: pageOf(member),
-    }),
+    client.request(
+      `${base}/${encodeURIComponent(groupId)}/members?${params(filters)}`,
+      {
+        signal,
+        paginated: true,
+        validate: pageOf(member),
+      },
+    ),
   candidates: (
     client: ConsoleClient,
     groupId: string,
     filters: Filters,
     signal: AbortSignal,
   ) =>
-    client.request(`${base}/${groupId}/member_candidates?${params(filters)}`, {
-      signal,
-      paginated: true,
-      validate: pageOf(candidate),
-    }),
+    client.request(
+      `${base}/${encodeURIComponent(groupId)}/member_candidates?${params(filters)}`,
+      {
+        signal,
+        paginated: true,
+        validate: pageOf(candidate),
+      },
+    ),
   add: (
     client: ConsoleClient,
     groupId: string,
     userId: string,
     signal?: AbortSignal,
   ) =>
-    client.request(`${base}/${groupId}/members/${userId}`, {
-      method: "PUT",
-      signal,
-      validate: relation(groupId, userId, true),
-    }),
+    client.request(
+      `${base}/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`,
+      {
+        method: "PUT",
+        signal,
+        write: true,
+        validate: relation(groupId, userId, true),
+      },
+    ),
   remove: (
     client: ConsoleClient,
     groupId: string,
     userId: string,
     signal?: AbortSignal,
   ) =>
-    client.request(`${base}/${groupId}/members/${userId}`, {
-      method: "DELETE",
-      signal,
-      validate: relation(groupId, userId, false),
-    }),
+    client.request(
+      `${base}/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`,
+      {
+        method: "DELETE",
+        signal,
+        write: true,
+        validate: relation(groupId, userId, false),
+      },
+    ),
   accounts: (
     client: ConsoleClient,
     groupId: string,
@@ -156,6 +152,6 @@ export const groupsApi = {
       body: { ...filters, groupId },
       signal,
       paginated: true,
-      validate: pageOf(account),
+      validate: pageOf(isAccount),
     }),
 };

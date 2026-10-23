@@ -35,7 +35,8 @@ use super::{
 
 /// 失败重试口径（§3.3 逐字）：非 200 或不可达即失败，Meta 以递减频率重试
 /// 直到成功、最长 7 天；超时文案附该语义。
-const RETRY_NOTE: &str = "（官方：非 HTTP 200 或不可达即投递失败，Meta 以递减频率重试直到成功，最长 7 天）";
+const RETRY_NOTE: &str =
+    "（官方：非 HTTP 200 或不可达即投递失败，Meta 以递减频率重试直到成功，最长 7 天）";
 
 /// WhatsApp 回调验签（事实库 §4.1）：X-Hub-Signature-256 =
 /// "sha256=" + hex(HMAC-SHA256(AppSecret, POST 原始 body))，64 位小写 hex。
@@ -138,7 +139,9 @@ fn verify_handshake(
     if body.as_ref() == challenge.as_bytes() {
         HandshakeOutcome {
             ok: true,
-            message: "GET 三参握手成功：verify_token 匹配，HTTP 200 裸回 hub.challenge（纯文本非 JSON）".into(),
+            message:
+                "GET 三参握手成功：verify_token 匹配，HTTP 200 裸回 hub.challenge（纯文本非 JSON）"
+                    .into(),
         }
     } else {
         let echoed = String::from_utf8_lossy(&body).to_string();
@@ -162,10 +165,10 @@ fn post_json(
     let signature = x_hub_signature(body, app_secret);
     send_measured_outcome(
         client
-        .post(url)
-        .header("X-Hub-Signature-256", signature.clone())
-        .header("Content-Type", "application/json")
-        .body(body.to_string()),
+            .post(url)
+            .header("X-Hub-Signature-256", signature.clone())
+            .header("Content-Type", "application/json")
+            .body(body.to_string()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: message_id_of(body),

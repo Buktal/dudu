@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{ReceiptSnapshot, RunVerdict};
 
-// 正文形态枚举单点在 events（持久化契约所在域，装载/保存即拒绝未知取值），
+// 正文形态枚举单点在 events（持久化契约所在域，装载遇未知取值触发 store_io
+// 隔离自愈、保存端枚举只写已知值），
 // 此处按既有 `crate::runs::verdict::ReceiptBodyMode` 消费面转发。
 pub use crate::events::ReceiptBodyMode;
 
@@ -59,7 +60,14 @@ fn first_json_mismatch(
 ) -> Option<String> {
     match expected {
         serde_json::Value::Array(items) => {
-            let actual_items = actual.as_array()?;
+            // 类型错配是 mismatch 而非「无法比对」：`?` 会把 None 折叠成通过
+            let Some(actual_items) = actual.as_array() else {
+                return Some(format!(
+                    "{}：期望数组，实际 {}",
+                    if path.is_empty() { "正文" } else { path },
+                    preview(actual)
+                ));
+            };
             if actual_items.len() < items.len() {
                 return Some(format!(
                     "{}：期望 {}，实际 {}",
@@ -78,7 +86,14 @@ fn first_json_mismatch(
             None
         }
         serde_json::Value::Object(fields) => {
-            let actual_fields = actual.as_object()?;
+            // 同上：期望对象而实际非对象必须失败，不得经 `?` 假通过
+            let Some(actual_fields) = actual.as_object() else {
+                return Some(format!(
+                    "{}：期望对象，实际 {}",
+                    if path.is_empty() { "正文" } else { path },
+                    preview(actual)
+                ));
+            };
             for (key, child) in fields {
                 let child_actual = actual_fields.get(key).unwrap_or(&serde_json::Value::Null);
                 let child_path = if path.is_empty() {
@@ -142,7 +157,9 @@ fn compare_body(expected: &ExpectedReceipt, receipt: &ReceiptSnapshot) -> RunVer
         ReceiptBodyMode::DingtalkReply => {
             reply::compare_dingtalk_reply(&expected.body, receipt, &label)
         }
-        ReceiptBodyMode::QqSignReply => reply::compare_qq_sign_reply(&expected.body, receipt, &label),
+        ReceiptBodyMode::QqSignReply => {
+            reply::compare_qq_sign_reply(&expected.body, receipt, &label)
+        }
         ReceiptBodyMode::JsonField => {
             let expected_json: serde_json::Value = match serde_json::from_str(&expected.body) {
                 Ok(value) => value,
@@ -297,6 +314,42 @@ mod tests {
     }
 
     #[test]
+    fn json_field_mode_type_mismatch_fails_instead_of_passing() {
+        // 期望数组、实际对象：类型错配必须判失败（`?` 早退会折叠成通过）
+        let array_expected = compare_receipt(
+            &expected(200, r#"{"items":[1,2]}"#, JsonField),
+            &receipt(200, r#"{"items":{"0":1}}"#, None),
+        );
+        assert!(!array_expected.passed);
+        assert_eq!(
+            array_expected.reason,
+            r#"HTTP 200，items：期望数组，实际 {"0":1}"#
+        );
+
+        // 期望对象、实际标量（字符串按 preview 语义展示裸值）
+        let object_expected = compare_receipt(
+            &expected(200, r#"{"content":{"text":"hi"}}"#, JsonField),
+            &receipt(200, r#"{"content":"hi"}"#, None),
+        );
+        assert!(!object_expected.passed);
+        assert_eq!(
+            object_expected.reason,
+            "HTTP 200，content：期望对象，实际 hi"
+        );
+
+        // 顶层形态错配同样失败
+        let top_level = compare_receipt(
+            &expected(200, r#"[1,2]"#, JsonField),
+            &receipt(200, r#"{"0":1,"1":2}"#, None),
+        );
+        assert!(!top_level.passed);
+        assert_eq!(
+            top_level.reason,
+            r#"HTTP 200，正文：期望数组，实际 {"0":1,"1":2}"#
+        );
+    }
+
+    #[test]
     fn json_field_mode_rejects_non_json_inputs() {
         let bad_expected = compare_receipt(
             &expected(200, "not json", JsonField),
@@ -424,7 +477,11 @@ mod tests {
         // 回显的 plain_token 与期望不一致（请求值被改后未同步期望）：不通过
         let wrong = compare_receipt(
             &expected(200, "Arq0D5A61EgUu4OxUvOp", ReceiptBodyMode::QqSignReply),
-            &receipt(200, r#"{"plain_token":"Other","signature":"…"}"#, Some("Other")),
+            &receipt(
+                200,
+                r#"{"plain_token":"Other","signature":"…"}"#,
+                Some("Other"),
+            ),
         );
         assert!(!wrong.passed);
         assert_eq!(

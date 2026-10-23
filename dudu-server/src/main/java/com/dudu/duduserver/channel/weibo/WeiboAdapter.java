@@ -8,6 +8,7 @@ import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.EchoHandshakes;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -51,18 +52,7 @@ public class WeiboAdapter implements ChannelAdapter {
 
     @Override
     public ChannelCallbackResult verifyUrl(CompanyChannelDO account, Map<String, String> query, HttpHeaders headers) {
-        String appSecret = appSecret(account);
-        if (appSecret == null) {
-            return ChannelCallbackResult.unsupported();
-        }
-        if (!protocol.verify(appSecret, query.get("signature"), query.get("timestamp"), query.get("nonce"))) {
-            return ChannelCallbackResult.rejected();
-        }
-        String echostr = query.get("echostr");
-        if (echostr == null || echostr.isEmpty()) {
-            return ChannelCallbackResult.badRequest();
-        }
-        return ChannelCallbackResult.echo(echostr);
+        return EchoHandshakes.verifyUrl(appSecret(account), protocol::verify, query);
     }
 
     @Override
@@ -82,8 +72,7 @@ public class WeiboAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // 事件推送与被@不是访客消息：同样回空串应答，不产生访客与消息数据
-        return inbound.map(message -> ChannelReceiveResult.accept(message, ACK))
-            .orElseGet(() -> ChannelReceiveResult.answer(ACK));
+        return acceptOrAnswer(inbound, ACK);
     }
 
     @Override

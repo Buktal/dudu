@@ -38,12 +38,13 @@ describe("reception commands", () => {
     expect({
       status: state.conversations["conversation-a"].status,
       draft: state.drafts["conversation-a"].text,
-      saving: state.ending["conversation-a"].status,
+      saving: state.ending["conversation-a"]?.status,
       replyId: state.replyId,
     }).toEqual({
       status: "needs-reply",
       draft: "继续确认配送时间",
-      saving: "saved",
+      // 成功后保存态随条目删除：结束 / 继续结果由会话状态表达
+      saving: undefined,
       replyId: "conversation-a",
     });
   });
@@ -255,9 +256,8 @@ describe("reception commands", () => {
     );
 
     await store.dispatch(resumeReception("conversation-a"));
-    expect(store.getState().inbox.ending["conversation-a"].status).toBe(
-      "saved",
-    );
+    // 成功后保存态随条目删除：结束 / 继续结果由会话状态表达
+    expect(store.getState().inbox.ending["conversation-a"]).toBeUndefined();
     expect(store.getState().inbox.conversations["conversation-a"].status).toBe(
       "waiting",
     );

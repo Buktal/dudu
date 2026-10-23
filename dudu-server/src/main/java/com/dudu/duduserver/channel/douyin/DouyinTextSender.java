@@ -3,7 +3,6 @@ package com.dudu.duduserver.channel.douyin;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
-import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.channel.support.Texts;
 import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
@@ -21,7 +20,7 @@ import org.springframework.web.client.RestClient;
  * <发送方 open_id>（路径尾斜杠为官方要求），Header access-token，body 携带
  * scene=im_reply_msg、msg_id、conversation_id、to_user_id 与 content.msg_type=1
  * 文本报文。成功以 data.error_code=0 为准并取响应 msg_id 作渠道消息标识；回复
- * 上下文缺失、凭据未配置、未完成用户授权与渠道错误如实失败不冒成功。
+ * 上下文缺失、未完成用户授权与渠道错误如实失败不冒成功。
  * 接口地址默认官方域名，可用 dudu.channel.douyin.api-base 覆盖为受控替身。
  */
 @Slf4j
@@ -67,9 +66,6 @@ public class DouyinTextSender {
 
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         DouyinCredentials credentials = DouyinCredentials.of(account);
-        if (credentials == null) {
-            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
-        }
         DouyinReplyContext.Reply reply = replyContext.lookup(account.getCompanyChannelId(), externalUserId);
         if (reply == null || Texts.isBlank(reply.msgId()) || Texts.isBlank(reply.conversationId())
             || Texts.isBlank(reply.ownerOpenId())) {

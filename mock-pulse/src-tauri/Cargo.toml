@@ -20,6 +20,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+# 桌面单实例：本地存储是单份视角，重复启动只唤起已有主窗口，无并行编辑价值
+tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 # preserve_order：Value 按文档序保键序（IndexMap），前端「逐字节确定拼装」跨重启成立的前提
 serde_json = { version = "1", features = ["preserve_order"] }

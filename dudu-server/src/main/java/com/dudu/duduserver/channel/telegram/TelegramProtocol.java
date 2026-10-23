@@ -1,7 +1,6 @@
 package com.dudu.duduserver.channel.telegram;
 
 import cn.hutool.json.JSONArray;
-import cn.hutool.json.JSONException;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelCallbackResult;
@@ -11,6 +10,9 @@ import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
+
+import static com.dudu.duduserver.channel.support.JsonBodies.arrayField;
+import static com.dudu.duduserver.channel.support.JsonBodies.objectField;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -27,6 +29,9 @@ import java.util.Set;
  */
 @Component
 public class TelegramProtocol {
+
+    // 嵌套字段取值报错时的语境前缀（共用取值口径见 JsonBodies）
+    private static final String FIELD_CONTEXT = "Telegram 推送报文";
 
     // Update 信封键（§2.1）：update_id 为幂等键，message 为四件套入站事件字段
     private static final String KEY_UPDATE_ID = "update_id";
@@ -94,7 +99,7 @@ public class TelegramProtocol {
             throw new IllegalArgumentException("Telegram 推送缺少幂等键 update_id");
         }
         String updateId = String.valueOf(update.get(KEY_UPDATE_ID));
-        JSONObject message = objectField(update, KEY_MESSAGE);
+        JSONObject message = objectField(update, KEY_MESSAGE, FIELD_CONTEXT);
         if (message == null) {
             // 其余 26 类事件字段（及未来新增类型）：只应答不落库
             return ChannelReceiveResult.answer(ChannelCallbackResult.success());
@@ -104,7 +109,7 @@ public class TelegramProtocol {
 
     // 发送方身份取 from.id（官方可超 32 位，按 64 位转字符串）；缺失即无法入站
     private ChannelInboundMessage inbound(Long companyChannelId, String updateId, JSONObject message) {
-        JSONObject from = objectField(message, KEY_FROM);
+        JSONObject from = objectField(message, KEY_FROM, FIELD_CONTEXT);
         Object senderId = from == null ? null : from.get(KEY_ID);
         if (!(senderId instanceof Number)) {
             throw new IllegalArgumentException("Telegram 消息缺少发送方身份");
@@ -148,50 +153,32 @@ public class TelegramProtocol {
     // 已知媒体字段按契约形态映射；引用缺失（空数组、缺 file_id）没有可如实表达的
     // 引用，按 unknown 保存不填假值
     private Map<String, Object> mediaField(JSONObject message) {
-        JSONObject photo = largestPhoto(arrayField(message, KEY_PHOTO));
+        JSONObject photo = largestPhoto(arrayField(message, KEY_PHOTO, FIELD_CONTEXT));
         if (photo != null) {
             return media(KIND_IMAGE, photo.getStr(KEY_FILE_ID, null), null);
         }
-        JSONObject voice = objectField(message, KEY_VOICE);
+        JSONObject voice = objectField(message, KEY_VOICE, FIELD_CONTEXT);
         if (voice != null) {
             return media(KIND_AUDIO, voice.getStr(KEY_FILE_ID, null), null);
         }
-        JSONObject audio = objectField(message, KEY_AUDIO);
+        JSONObject audio = objectField(message, KEY_AUDIO, FIELD_CONTEXT);
         if (audio != null) {
             return media(KIND_AUDIO, audio.getStr(KEY_FILE_ID, null),
                 firstText(text(audio, KEY_TITLE), text(audio, KEY_FILE_NAME)));
         }
-        JSONObject video = objectField(message, KEY_VIDEO);
+        JSONObject video = objectField(message, KEY_VIDEO, FIELD_CONTEXT);
         if (video != null) {
             return media(KIND_VIDEO, video.getStr(KEY_FILE_ID, null), text(video, KEY_FILE_NAME));
         }
-        JSONObject videoNote = objectField(message, KEY_VIDEO_NOTE);
+        JSONObject videoNote = objectField(message, KEY_VIDEO_NOTE, FIELD_CONTEXT);
         if (videoNote != null) {
             return media(KIND_VIDEO, videoNote.getStr(KEY_FILE_ID, null), null);
         }
-        JSONObject document = objectField(message, KEY_DOCUMENT);
+        JSONObject document = objectField(message, KEY_DOCUMENT, FIELD_CONTEXT);
         if (document != null) {
             return media(KIND_FILE, document.getStr(KEY_FILE_ID, null), text(document, KEY_FILE_NAME));
         }
         return null;
-    }
-
-    // hutool 对无法转为对象/数组的值（如字符串取对象、对象取数组）抛 JSONException 或
-    // ClassCastException，统一转参数错误由调用方按 400 应答，而不是作为未知异常按 500 处理
-    private JSONObject objectField(JSONObject source, String key) {
-        try {
-            return source.getJSONObject(key);
-        } catch (JSONException | ClassCastException e) {
-            throw new IllegalArgumentException("Telegram 推送报文字段类型不符：" + key, e);
-        }
-    }
-
-    private JSONArray arrayField(JSONObject source, String key) {
-        try {
-            return source.getJSONArray(key);
-        } catch (JSONException | ClassCastException e) {
-            throw new IllegalArgumentException("Telegram 推送报文字段类型不符：" + key, e);
-        }
     }
 
     // photo 为同一图的多分辨率数组：取面积最大一档的 file_id 作素材引用

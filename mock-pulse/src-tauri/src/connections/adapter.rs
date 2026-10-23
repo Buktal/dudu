@@ -100,3 +100,41 @@ pub(crate) fn adapter_of(config: &ConnectionConfig) -> &'static dyn ChannelAdapt
         .find(|adapter| adapter.matches(config))
         .expect("每种连接配置必有渠道适配器")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 黄金夹具（`mock-pulse/shared/channels.json`）中的渠道行：前端注册表
+    /// 测试读同一份文件，两侧渠道集与名称漂移时任一侧测试失败。
+    #[derive(serde::Deserialize)]
+    struct FixtureChannel {
+        id: String,
+        name: String,
+    }
+
+    /// Rust 适配器注册表与黄金夹具一致：渠道集与显示名逐项对齐
+    /// （前端 CHANNEL_REGISTRY ↔ Rust ADAPTERS 的钉子）。
+    #[test]
+    fn adapters_match_golden_channel_fixture() {
+        let fixture_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../shared/channels.json");
+        let fixture: Vec<FixtureChannel> =
+            serde_json::from_str(&std::fs::read_to_string(fixture_path).unwrap()).unwrap();
+
+        let mut fixture_ids: Vec<&str> = fixture.iter().map(|c| c.id.as_str()).collect();
+        fixture_ids.sort_unstable();
+        let mut adapter_ids: Vec<&str> = ADAPTERS.iter().map(|a| a.id()).collect();
+        adapter_ids.sort_unstable();
+        assert_eq!(adapter_ids, fixture_ids, "两侧注册渠道集必须一致");
+
+        for channel in &fixture {
+            let adapter = adapter_by_channel(&channel.id).unwrap();
+            assert_eq!(
+                adapter.label(),
+                channel.name,
+                "{} 显示名与夹具一致",
+                channel.id
+            );
+        }
+    }
+}

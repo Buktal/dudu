@@ -163,9 +163,11 @@ export function AccountDetailPanel({
                       >
                         复制回调地址
                       </Button>
-                      <p role="status" className="text-sm">
-                        {copy}
-                      </p>
+                      {copy && (
+                        <p role="status" className="text-sm">
+                          {copy}
+                        </p>
+                      )}
                     </div>
                     {definition?.fields.map((f) => (
                       <div

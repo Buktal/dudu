@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import fixture from "../../shared/channels.json";
+
 import {
   CHANNEL_REGISTRY,
   CHANNELS,
@@ -53,29 +55,12 @@ describe("渠道注册表", () => {
     }
   });
 
-  it("抖音/企微/小红书/飞书/微博/钉钉/QQ/公众号/小程序/淘宝/京东/拼多多/美团/饿了么/B站/快手/支付宝/WhatsApp/Telegram已实现连接适配器，其余渠道在选择器可见但不可连", () => {
-    const implemented = CHANNELS.filter((channel) => channel.implemented);
-    expect(implemented.map((channel) => channel.id)).toEqual([
-      "douyin",
-      "wecom",
-      "xiaohongshu",
-      "feishu",
-      "weibo",
-      "wechat-mp",
-      "wechat-mini",
-      "dingtalk",
-      "qq",
-      "taobao",
-      "jingdong",
-      "pinduoduo",
-      "meituan",
-      "eleme",
-      "bilibili",
-      "kuaishou",
-      "alipay",
-      "whatsapp",
-      "telegram",
-    ]);
+  it("注册表与黄金夹具 shared/channels.json 逐项一致（与 Rust ADAPTERS 共读同一夹具，钉住两侧渠道事实不漂移）", () => {
+    const rows = Object.entries(CHANNEL_REGISTRY).map(([id, row]) => ({
+      id,
+      ...row,
+    }));
+    expect(rows).toEqual(fixture);
   });
 
   it("淘宝条目取全球栈 HTTP 回调形态并带「全球栈」标注", () => {

@@ -5,12 +5,12 @@
 
 use std::time::Duration;
 
-use crate::connections::ChannelAdapter;
 use crate::connections::util::sha1_sorted_hex;
 use crate::connections::wecom::random_16;
+use crate::connections::ChannelAdapter;
 use crate::test_support::{
-    ExpectedSnapshots, assert_dispatch_error, assert_dispatch_receipt, assert_snapshots,
-    query_params, run_dispatch_case, run_handshake_case, status_responder, RecordedPost,
+    assert_dispatch_error, assert_dispatch_receipt, assert_snapshots, query_params,
+    run_dispatch_case, run_handshake_case, status_responder, ExpectedSnapshots, RecordedPost,
 };
 
 use super::*;
@@ -177,7 +177,10 @@ fn dispatch_posts_signed_envelope_and_snapshots_protocol_elements() {
     assert_snapshots(
         &outcome,
         ExpectedSnapshots {
-            msg_id: params.get("nonce").map(String::as_str).expect("URL 应带 nonce"),
+            msg_id: params
+                .get("nonce")
+                .map(String::as_str)
+                .expect("URL 应带 nonce"),
             signature: params
                 .get("signature")
                 .map(String::as_str)

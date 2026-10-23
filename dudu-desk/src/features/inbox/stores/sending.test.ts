@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
 import type { InboxApi } from "../api";
-import type { InboxMessage, ReplyCapability, SendSubmission } from "../types";
+import type {
+  Conversation,
+  InboxMessage,
+  ReplyCapability,
+  SendSubmission,
+} from "../types";
 import { applyAccessChanged } from "./access";
 import { loadConversations } from "./queue";
 import { loadHistory, resetContext, selectConversation } from "./reading";
@@ -385,6 +390,47 @@ describe("replies through the inbox workflow", () => {
     const before = store.getState().inbox;
     store.dispatch(settleConfirmedReplies());
     expect(store.getState().inbox).toBe(before);
+  });
+
+  it("recycles settled submissions when the conversation reception ends", async () => {
+    // 已结算提交随结束接待机会性回收（D2 拆除清单）；在途提交保留给结算扫描
+    const endConversation = async (): Promise<Conversation> => ({
+      ...firstConversation,
+      status: "closed",
+      version: firstConversation.version + 1,
+    });
+
+    const settledStore = testStore({
+      send: async (input) => acceptedMessage(input),
+      endConversation,
+    });
+    await settledStore.dispatch(loadConversations());
+    await settledStore.dispatch(loadHistory("conversation-a"));
+    settledStore.dispatch(editDraft("conversation-a", "已结算回复"));
+    await settledStore.dispatch(sendReply("conversation-a"));
+    expect(
+      Object.values(settledStore.getState().inbox.submissions),
+    ).toHaveLength(1);
+    await settledStore.dispatch(endReception("conversation-a"));
+    expect(settledStore.getState().inbox.submissions).toEqual({});
+    // 结束结果由会话状态表达：保存态不留键控表（EndState 无 saved 态）
+    expect(
+      settledStore.getState().inbox.ending["conversation-a"],
+    ).toBeUndefined();
+
+    const inFlightStore = testStore({
+      send: () => new Promise<InboxMessage>(() => {}),
+      endConversation,
+    });
+    await inFlightStore.dispatch(loadConversations());
+    await inFlightStore.dispatch(loadHistory("conversation-a"));
+    inFlightStore.dispatch(editDraft("conversation-a", "在途回复"));
+    void inFlightStore.dispatch(sendReply("conversation-a"));
+    await inFlightStore.dispatch(endReception("conversation-a"));
+    // 未结算提交不回收：重连结算扫描仍能找到它
+    expect(
+      Object.values(inFlightStore.getState().inbox.submissions),
+    ).toHaveLength(1);
   });
 
   it("settles an in-flight send locally when a reconnect cancels the scope", async () => {

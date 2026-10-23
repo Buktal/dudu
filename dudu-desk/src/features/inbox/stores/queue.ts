@@ -47,6 +47,14 @@ export const selectQueueConversations = createSelector(
  * history/profile loading stay in reading.ts; queue state shape stays in
  * state.ts; the read interface stays in selectors.ts.
  */
+
+/**
+ * 刷新重找的目标上限：刷新翻页只重找已加载成员的前若干张卡片（可见窗口），
+ * 读取成本随可见量伸缩而不是随历史加载量；上限之外的旧成员不参与停页判定，
+ * 由落地时的成员取代规则按服务端结果收敛。
+ */
+const REFRESH_REFIND_LIMIT = 100;
+
 export function loadConversations(
   options: { query?: ConversationQuery; more?: boolean } = {},
 ): InboxCommand<Promise<void>> {
@@ -75,9 +83,12 @@ export function loadConversations(
         }
         dispatch(inboxActions.queueLoading(options.query));
         try {
-          // Re-find mounted cards before pruning service-owned search membership.
+          // Re-find mounted cards before pruning service-owned search
+          // membership, capped at the visible window (see REFRESH_REFIND_LIMIT).
           const remainingIds = new Set(
-            options.more || options.query ? [] : queue.ids,
+            options.more || options.query
+              ? []
+              : queue.ids.slice(0, REFRESH_REFIND_LIMIT),
           );
           const loadedIds = new Set<string>();
           const { pages } = await collectPaged({

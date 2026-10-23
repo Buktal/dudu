@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use crate::connections::ChannelAdapter;
 use crate::test_support::{
-    ExpectedSnapshots, assert_dispatch_error, assert_dispatch_receipt, assert_snapshots,
-    run_dispatch_case, run_handshake_case, status_responder,
+    assert_dispatch_error, assert_dispatch_receipt, assert_snapshots, run_dispatch_case,
+    run_handshake_case, status_responder, ExpectedSnapshots,
 };
 
 use super::*;

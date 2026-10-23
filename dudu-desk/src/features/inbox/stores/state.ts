@@ -50,7 +50,7 @@ export type ReplySubmission = {
   settled?: boolean;
 };
 type EndState = {
-  status: "saving" | "saved" | "error";
+  status: "saving" | "error";
   error?: ApiFailure;
 };
 export const blankDraft: ReplyDraft = {
@@ -111,6 +111,8 @@ export type InboxState = {
     ids: string[];
     query: ConversationQuery;
     failedRead?: "refresh" | "more";
+    /** 查询变化的重读在途：落地时旧成员整体让位服务端顺序 */
+    pendingRewrite?: boolean;
     total?: number;
     counts?: ConversationPage["counts"];
     channels?: ConversationPage["channels"];

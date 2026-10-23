@@ -16,10 +16,7 @@ fn sign_matches_official_vector_00934d() {
     // 同结果
     let mut scrambled = GOLDEN_REQUEST_PARAMS;
     scrambled.reverse();
-    assert_eq!(
-        mt_sign(GOLDEN_URL, &scrambled, GOLDEN_SECRET),
-        GOLDEN_SIGN
-    );
+    assert_eq!(mt_sign(GOLDEN_URL, &scrambled, GOLDEN_SECRET), GOLDEN_SIGN);
 }
 
 #[test]
@@ -56,11 +53,9 @@ fn sign_sorts_bytewise_and_output_is_lowercase_hex() {
     assert_eq!(signature, byte_order);
     // 官方口径「MD5 加密得 32 位签名，字母小写」：32 位小写 hex
     assert_eq!(signature.len(), 32);
-    assert!(
-        signature
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
-    );
+    assert!(signature
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
 }
 
 #[test]
@@ -119,7 +114,10 @@ fn percent_decode_restores_utf8_bytes_and_plus_as_space() {
 #[test]
 fn form_encode_value_matches_rfc3986_uppercase() {
     // 非保留字集原样，其余大写 %XX（与前端 form.ts 同一语义）
-    assert_eq!(form_encode_value("a b+c=d.e~f-g_h"), "a%20b%2Bc%3Dd.e~f-g_h");
+    assert_eq!(
+        form_encode_value("a b+c=d.e~f-g_h"),
+        "a%20b%2Bc%3Dd.e~f-g_h"
+    );
     assert_eq!(form_encode_value("药品"), "%E8%8D%AF%E5%93%81");
     assert_eq!(form_encode_value(""), "");
 }
@@ -132,10 +130,7 @@ fn form_pairs_decodes_document_order_and_keeps_empty_values() {
         pairs,
         vec![
             ("app_poi_code".to_string(), "668921".to_string()),
-            (
-                "order_id".to_string(),
-                "27061900338318741".to_string()
-            ),
+            ("order_id".to_string(), "27061900338318741".to_string()),
             ("wm_poi_name".to_string(), "药品01店".to_string()),
         ]
     );
@@ -185,6 +180,9 @@ fn message_id_snapshot_follows_payload_order_id() {
     // 幂等键官方无命名：快照取载荷订单号，缺失不落值
     let pairs = form_pairs(GOLDEN_ORDER_BODY);
     assert_eq!(message_id_of(&pairs), "27061900338318741");
-    assert_eq!(message_id_of(&form_pairs(GOLDEN_PROBE_BODY)), "27061900338318741");
+    assert_eq!(
+        message_id_of(&form_pairs(GOLDEN_PROBE_BODY)),
+        "27061900338318741"
+    );
     assert_eq!(message_id_of(&form_pairs("app_poi_code=668921")), "");
 }

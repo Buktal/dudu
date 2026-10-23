@@ -53,7 +53,12 @@ fn random_echostr() -> String {
 /// 推送 MsgSignature 四参签名（§11.3 官方 MsgSignature.getSignature 逐字）：
 /// sha1(字典序排序(token, timestamp, nonce, encrypt) 后拼接)，与企微
 /// msg_signature 同族（原语复用 wecom::crypto）。
-pub(crate) fn build_msg_signature(token: &str, timestamp: &str, nonce: &str, encrypt: &str) -> String {
+pub(crate) fn build_msg_signature(
+    token: &str,
+    timestamp: &str,
+    nonce: &str,
+    encrypt: &str,
+) -> String {
     crypto::build_signature(token, timestamp, nonce, encrypt)
 }
 
@@ -102,7 +107,12 @@ fn build_crypto_push(
     encoding_aes_key: &str,
     app_id: &str,
 ) -> Result<CryptoPush, String> {
-    let encrypt = crypto::encrypt_msg(encoding_aes_key, &random_bytes_16(), plaintext.as_bytes(), app_id)?;
+    let encrypt = crypto::encrypt_msg(
+        encoding_aes_key,
+        &random_bytes_16(),
+        plaintext.as_bytes(),
+        app_id,
+    )?;
     let timestamp = now_secs().to_string();
     let nonce = random_nonce();
     let signature = build_msg_signature(token, &timestamp, &nonce, &encrypt);
@@ -113,7 +123,12 @@ fn build_crypto_push(
         "MsgSignature": signature,
     })
     .to_string();
-    Ok(CryptoPush { body, signature, timestamp, nonce })
+    Ok(CryptoPush {
+        body,
+        signature,
+        timestamp,
+        nonce,
+    })
 }
 
 /// 小红书直发：小程序加密信封 / ark 数组明文按通道路由，明文由前端逐字节
@@ -151,9 +166,9 @@ fn miniapp_dispatch(
     };
     send_measured_outcome(
         client
-        .post(url)
-        .header("Content-Type", "application/json")
-        .body(push.body.clone()),
+            .post(url)
+            .header("Content-Type", "application/json")
+            .body(push.body.clone()),
         "",
         DispatchSnapshot {
             msg_id: push.nonce,

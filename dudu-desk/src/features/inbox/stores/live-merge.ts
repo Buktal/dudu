@@ -195,6 +195,7 @@ export function detachConversation(state: InboxState, id: string): boolean {
   delete state.profileEdits[id];
   delete state.ending[id];
   delete state.sendingByConversation[id];
+  delete state.events.receipts[id];
   delete state.events.incomingSequence[id];
   const removedMessageIds = new Set<string>();
   for (const message of Object.values(state.messages)) {

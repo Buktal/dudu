@@ -6,7 +6,11 @@ import {
   connectionsReducer,
   initialConnectionsState,
 } from "@/features/connections";
-import { eventsReducer, startDraft } from "@/features/events";
+import {
+  definitionsReducer,
+  eventsReducer,
+  startDraft,
+} from "@/features/events";
 import { plansReducer } from "@/features/plans";
 import { initialScenariosState, scenariosReducer } from "@/features/scenarios";
 import type { RootState } from "@/store";
@@ -79,6 +83,7 @@ function makeStore(connection?: ConnectionConfig) {
       app: appReducer,
       runs: runsReducer,
       events: eventsReducer,
+      definitions: definitionsReducer,
       connections: connectionsReducer,
       plans: plansReducer,
       scenarios: scenariosReducer,

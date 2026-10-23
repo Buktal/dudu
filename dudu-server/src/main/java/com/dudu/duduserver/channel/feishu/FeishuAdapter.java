@@ -81,8 +81,7 @@ public class FeishuAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // 已读、撤回等其余事件只按渠道要求应答，不产生访客与消息数据
-        return inbound.map(ChannelReceiveResult::accept)
-            .orElseGet(() -> ChannelReceiveResult.answer(ChannelCallbackResult.success()));
+        return acceptOrAnswer(inbound);
     }
 
     @Override

@@ -5,7 +5,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::{ScenarioFile, StoredScenario};
+use super::{ScenarioFailure, ScenarioFile, StoredScenario};
 
 const SCENARIOS_DIR: &str = "scenarios";
 
@@ -32,11 +32,19 @@ pub fn load_scenarios(root: &Path) -> std::io::Result<Vec<StoredScenario>> {
     channel_dirs.sort();
 
     let mut scenarios = Vec::new();
+    let mut skipped_unknown = 0usize;
     for channel_dir in channel_dirs {
         let channel = channel_dir
             .file_name()
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_default();
+        // 目录名即渠道：未注册渠道（旧渠道移除 / 手误改名）整组跳过并计数
+        // 留痕——未注册渠道的剧本不发往前端（前端按渠道查注册表渲染，
+        // 未知渠道行无处安放；磁盘文件保留，注册回补后再可见）
+        if crate::connections::adapter_by_channel(&channel).is_none() {
+            skipped_unknown += 1;
+            continue;
+        }
         let mut files: Vec<PathBuf> = fs::read_dir(&channel_dir)?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
@@ -49,9 +57,15 @@ pub fn load_scenarios(root: &Path) -> std::io::Result<Vec<StoredScenario>> {
             .collect();
         files.sort();
         for file in files {
-            let parsed = crate::store_io::parse_json_file::<ScenarioFile>(&file)?;
-            scenarios.push(parsed.with_channel(channel.clone()));
+            // 损坏文件由 store_io 隔离改名（.corrupt-*，不再匹配 .json 扩展名），
+            // 此处按缺失跳过，单个损坏剧本不再瘫痪整个域
+            if let Some(parsed) = crate::store_io::load_json_or_quarantine::<ScenarioFile>(&file)? {
+                scenarios.push(parsed.with_channel(channel.clone()));
+            }
         }
+    }
+    if skipped_unknown > 0 {
+        eprintln!("[scenarios] 跳过未注册渠道目录, count={skipped_unknown}");
     }
     Ok(scenarios)
 }
@@ -121,7 +135,7 @@ mod tests {
         StoredScenario {
             favorite: true,
             revision: Some(3),
-            failure: Some("continue".into()),
+            failure: Some(ScenarioFailure::Continue),
             id: "scn-dy-001".into(),
             name: "从进入到咨询".into(),
             channel_id: "douyin".into(),
@@ -146,7 +160,7 @@ mod tests {
         StoredScenario {
             favorite: true,
             revision: Some(3),
-            failure: Some("continue".into()),
+            failure: Some(ScenarioFailure::Continue),
             id: "scn-wc-001".into(),
             name: "企微接待".into(),
             channel_id: "wecom".into(),
@@ -272,6 +286,51 @@ mod tests {
         // 读取回填渠道后与保存形态一致（透传持久化，不解释引用语义）
         let loaded = load_scenarios(&dir).unwrap();
         assert_eq!(loaded, vec![template_scenario()]);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn corrupt_scenario_is_quarantined_and_skipped() {
+        let dir = temp_dir("corrupt");
+        save_scenario(&dir, &douyin_scenario()).unwrap();
+        let channel_dir = scenarios_dir(&dir).join("douyin");
+        fs::write(scenario_file(&channel_dir, "scn-bad"), "{ not json").unwrap();
+
+        // 好文件照常加载；损坏文件隔离改名留现场，不再瘫痪整个域
+        let loaded = load_scenarios(&dir).unwrap();
+        assert_eq!(loaded, vec![douyin_scenario()]);
+        let names: Vec<String> = fs::read_dir(&channel_dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|name| name.starts_with("scn-bad"))
+            .collect();
+        assert_eq!(names.len(), 1);
+        assert!(names[0].starts_with("scn-bad.corrupt-"));
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn unknown_channel_directory_is_skipped() {
+        let dir = temp_dir("unknown-channel");
+        save_scenario(&dir, &douyin_scenario()).unwrap();
+        // 手造未注册渠道目录下的合法剧本文件（磁盘残留 / 手误改名场景）
+        let ghost_dir = scenarios_dir(&dir).join("ghost");
+        fs::create_dir_all(&ghost_dir).unwrap();
+        let ghost = ScenarioFile {
+            favorite: false,
+            revision: None,
+            failure: None,
+            id: "scn-ghost".into(),
+            name: "未注册渠道剧本".into(),
+            steps: Vec::new(),
+        };
+        crate::store_io::save_json_atomic(&ghost_dir, &ghost_dir.join("scn-ghost.json"), &ghost)
+            .unwrap();
+
+        // 装载只回注册渠道（douyin），未注册目录整组跳过、文件保留在磁盘
+        let loaded = load_scenarios(&dir).unwrap();
+        assert_eq!(loaded, vec![douyin_scenario()]);
+        assert!(ghost_dir.join("scn-ghost.json").exists());
         fs::remove_dir_all(&dir).unwrap();
     }
 

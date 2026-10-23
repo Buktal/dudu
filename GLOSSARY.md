@@ -154,7 +154,7 @@ _Avoid_: 事件样例（UI 旧文案，已统一为「事件素材」）
 _Avoid_: demo 发送、试发
 
 **企业聚合失效**:
-DuduAdmin 中企业资料、启停状态或初始管理员维护成功后，挂载中的企业列表与企业详情自动重新读取的共享失效语义；宣告与订阅收敛在 companies 域数据模块（company-data）单点，页面与弹层不再手工接线刷新。
+DuduAdmin 中企业资料、启停状态或初始管理员维护成功后，挂载中的企业列表与企业详情自动重新读取的共享失效语义；维护命令以 write 显式声明写入，成功后由 client 提升数据修订（dataRevision），列表与详情查询经修订依赖重读，页面与弹层不再手工接线刷新。
 _Avoid_: 手工刷新回调、onChanged 刷新链（旧实现）
 
 **企业列表筛选操作**:
@@ -194,7 +194,7 @@ DuduAdmin 表单写操作共用的提交编排单点（components 层 submit-she
 _Avoid_: 逐表单手写守卫-写错-中断、错误 Message 位逐字复制、手写 loggingOut 重入门卫（旧形态）
 
 **会话域操作（ConversationOperation）**:
-DuduDesk 中对单个会话的一次请求级读写（读历史 / 读资料、存资料 / 已读、发送、结束 / 恢复接待）的统一执行 seam：loading → api 调用 → 结算守卫 → 成功 / 失败效果。「迟到结果不得复活已移除会话」（仅当本次尝试仍是当前尝试且会话仍在册才结算）、响应校验惯用形（不匹配即 invalid-response）与失败映射兜底文案收敛在 inbox stores/requests 单点，各 thunk 只声明哪个键、调哪个 api、成功装什么。
+DuduDesk 中对单个会话的一次请求级读写（读历史 / 读资料、存资料，发送、结束 / 恢复接待）的统一执行 seam：loading → api 调用 → 结算守卫 → 成功 / 失败效果。「迟到结果不得复活已移除会话」（仅当本次尝试仍是当前尝试且会话仍在册才结算）、响应校验惯用形（不匹配即 invalid-response）与失败映射兜底文案收敛在 inbox stores/requests 单点，各 thunk 只声明哪个键、调哪个 api、成功装什么。
 _Avoid_: 手写 runOperation 仪式、逐处兜底串（旧实现）
 
 **列表相位（ListPhase）**:

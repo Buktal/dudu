@@ -26,8 +26,8 @@ import { cn } from "@/lib/utils";
 import {
   type PlanItem,
   type PlanMode,
+  laneSnapshotOutdated,
   resolveLaneScenario,
-  scenarioById,
 } from "../model";
 import { moveDraftLane, removeDraftLane } from "../stores/plans-slice";
 
@@ -54,9 +54,8 @@ export function PlanLanes({
     >
       {items.map((item, index) => {
         const scene = resolveLaneScenario(item, scenarios);
-        const current = scenarioById(scenarios, item.scenarioId);
-        const outdated =
-          scene && current && (current.revision ?? 1) > (scene.revision ?? 1);
+        // 快照落后库内最新版的展示标记（判定单点在 model）
+        const outdated = laneSnapshotOutdated(item, scenarios);
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: 编排允许重复剧本；轨道按模型中的位置标识，没有局部组件状态。
           <Fragment key={`${index}-${item.scenarioId}`}>

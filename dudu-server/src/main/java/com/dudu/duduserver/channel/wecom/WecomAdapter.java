@@ -111,8 +111,7 @@ public class WecomAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // 事件推送不是访客消息：按官方三态之一应答 success，不产生访客与消息数据
-        return inbound.map(ChannelReceiveResult::accept)
-            .orElseGet(() -> ChannelReceiveResult.answer(ChannelCallbackResult.success()));
+        return acceptOrAnswer(inbound);
     }
 
     @Override

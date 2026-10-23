@@ -1,16 +1,16 @@
 import { X } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Provider } from "react-redux";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { WorkspaceShell } from "@/components/workspace-shell";
-import { type InboxApi, unavailableInboxApi } from "./api";
+import type { InboxApi } from "./api";
 import { ConnectionStatus } from "./components/connection-status";
 import { InboxLoading } from "./components/inbox-state";
 import { ReceptionWorkspace } from "./components/reception-shell";
 import { WorkspaceHelp } from "./components/workspace-help";
 import { useInboxDispatch, useInboxSelector } from "./hooks/use-inbox-store";
-import { loadInboxApi } from "./runtime";
+import { createHttpInboxApi } from "./http-inbox-api";
 import { startInboxUpdates } from "./stores/events";
 import { loadConversations } from "./stores/queue";
 import { destroyInbox } from "./stores/reading";
@@ -85,35 +85,28 @@ export function InboxWorkspace({
 }) {
   const [store, setStore] = useState<InboxStore>();
   const { mode, setMode } = useTheme();
+  // 权限重查经 ref 转发：回调身份变化只换转发目标，不重建工作台
+  // （store 重建会销毁全部会话状态），调用时始终取最新回调
+  const refreshAccessRef = useRef(refreshAccess);
+  refreshAccessRef.current = refreshAccess;
   useEffect(() => {
-    let active = true;
-    let runtimeStore: InboxStore | undefined;
-    let ownedAdapter: InboxApi | undefined;
-    setStore(undefined);
-    void (api ? Promise.resolve(api) : loadInboxApi())
-      .catch(() => unavailableInboxApi)
-      .then((adapter) => {
-        if (!active) {
-          if (!api) adapter.dispose?.();
-          return;
-        }
-        if (!api) ownedAdapter = adapter;
-        runtimeStore = createInboxStore({
-          api: adapter,
-          context: {
-            agentId: context.agentId,
-            workspaceId: context.workspaceId,
-          },
-          refreshAccess,
-        });
-        setStore(runtimeStore);
-      });
+    // 真实适配器同步构造：未注入时由本组件拥有并在卸载时释放
+    const adapter = api ?? createHttpInboxApi();
+    const runtimeStore = createInboxStore({
+      api: adapter,
+      context: {
+        agentId: context.agentId,
+        workspaceId: context.workspaceId,
+      },
+      // 回调缺失时解析为 null：与不传时的「只重查列表，不清理缓存」语义一致
+      refreshAccess: async () => (await refreshAccessRef.current?.()) ?? null,
+    });
+    setStore(runtimeStore);
     return () => {
-      active = false;
-      runtimeStore?.dispatch(destroyInbox());
-      ownedAdapter?.dispose?.();
+      runtimeStore.dispatch(destroyInbox());
+      if (!api) adapter.dispose?.();
     };
-  }, [api, context.agentId, context.workspaceId, refreshAccess]);
+  }, [api, context.agentId, context.workspaceId]);
   return store ? (
     <Provider store={store}>
       <InboxSession accountMenu={accountMenu} />

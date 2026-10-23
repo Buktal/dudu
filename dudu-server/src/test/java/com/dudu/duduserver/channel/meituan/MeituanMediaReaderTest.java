@@ -12,20 +12,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 美团素材读取验证（docs/research/channels/meituan.md §7 第 5/6 条、§8 第 7 条；票面渠道
- * 要点 4）：官方素材下载接口未实锤、不编造下载链路——未配置凭据按受限说明，凭据齐备也
- * 如实返回「接口未实锤」失败，均不发起任何渠道请求。
+ * 要点 4）：官方素材下载接口未实锤、不编造下载链路——如实返回「接口未实锤」失败，
+ * 不发起任何渠道请求；凭据缺失的拦截由注册表 restriction 承担（见 MeituanAdapterTest）。
  */
 class MeituanMediaReaderTest {
 
     private final MeituanMediaReader reader = new MeituanMediaReader();
-
-    @Test
-    void reportsMissingCredentialsHonestly() {
-        ChannelMediaResult result = reader.read(meituanAccount(Map.of("app_id", "mt-app-1")), "media-1");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).isEqualTo("渠道素材凭据未配置");
-    }
 
     @Test
     void reportsTheUnconfirmedApiInsteadOfFabricatingBytes() {

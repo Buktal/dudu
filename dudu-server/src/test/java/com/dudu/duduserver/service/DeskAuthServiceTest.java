@@ -10,9 +10,9 @@ import com.dudu.duduserver.constant.UserRoleEnum;
 import com.dudu.duduserver.dto.DeskLoginDTO;
 import com.dudu.duduserver.entity.CompanyDO;
 import com.dudu.duduserver.entity.UserDO;
+import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.service.impl.DeskAuthServiceImpl;
 import com.dudu.duduserver.util.PasswordHasher;
-import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskLoginVO;
 import com.dudu.duduserver.vo.DeskProfileVO;
 import org.junit.jupiter.api.BeforeEach;
@@ -111,7 +111,7 @@ class DeskAuthServiceTest {
 
         assertThat(profile.user().userId()).isEqualTo("9");
         assertThat(profile.company().companyId()).isEqualTo("783101");
-        assertThat(profile.access()).isEqualTo(access());
+        assertThat(profile.access()).isEqualTo(access().toVO());
         verify(deskAccessService).resolve(storedCompany, stored);
     }
 
@@ -203,7 +203,11 @@ class DeskAuthServiceTest {
         return user;
     }
 
-    private DeskAccessVO access() {
-        return new DeskAccessVO(true, List.of(new DeskAccessVO.Group("31", "售前")), List.of());
+    // 授权范围夹具经真实 toVO 投影后进入登录与身份报文
+    private DeskAccess access() {
+        UserGroupDO group = new UserGroupDO();
+        group.setGroupId(31L);
+        group.setGroupName("售前");
+        return DeskAccess.of(true, List.of(group), List.of());
     }
 }

@@ -17,6 +17,8 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.util.Optional;
+
 /**
  * 全局异常处理器：应用层响应 HTTP 恒 200（#6 决策），业务语义由 R.code 表达；
  * 路由层 404/405 例外走真实状态码（见下方窄 handler 注释）。
@@ -34,30 +36,29 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BindException.class)
     public R<Void> onBind(BindException e) {
-        String msg = e.getAllErrors().stream()
+        return firstViolation(e.getAllErrors().stream()
             .findFirst()
-            .map(MessageSourceResolvable::getDefaultMessage)
-            .orElseGet(() -> ApiEnum.PARAM_ERROR.desc);
-        return R.err(ApiEnum.PARAM_ERROR, msg);
+            .map(MessageSourceResolvable::getDefaultMessage));
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
     public R<Void> onMethodValidation(HandlerMethodValidationException e) {
-        String msg = e.getParameterValidationResults().stream()
+        return firstViolation(e.getParameterValidationResults().stream()
             .flatMap(result -> result.getResolvableErrors().stream())
             .findFirst()
-            .map(MessageSourceResolvable::getDefaultMessage)
-            .orElseGet(() -> ApiEnum.PARAM_ERROR.desc);
-        return R.err(ApiEnum.PARAM_ERROR, msg);
+            .map(MessageSourceResolvable::getDefaultMessage));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public R<Void> onConstraintViolation(ConstraintViolationException e) {
-        String msg = e.getConstraintViolations().stream()
+        return firstViolation(e.getConstraintViolations().stream()
             .findFirst()
-            .map(ConstraintViolation::getMessage)
-            .orElseGet(() -> ApiEnum.PARAM_ERROR.desc);
-        return R.err(ApiEnum.PARAM_ERROR, msg);
+            .map(ConstraintViolation::getMessage));
+    }
+
+    // 三类校验异常共用：取第一条错误说明，无错误细节时回落参数错误描述
+    private R<Void> firstViolation(Optional<String> message) {
+        return R.err(ApiEnum.PARAM_ERROR, message.orElseGet(() -> ApiEnum.PARAM_ERROR.desc));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

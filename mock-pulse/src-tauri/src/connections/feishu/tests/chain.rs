@@ -5,8 +5,8 @@
 
 use std::time::Duration;
 
-use crate::connections::ChannelAdapter;
 use crate::connections::util::sha256_hex;
+use crate::connections::ChannelAdapter;
 use crate::test_support::{start_single_server, RecordedPost};
 
 use super::*;

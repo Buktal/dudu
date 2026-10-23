@@ -1,6 +1,7 @@
 package com.dudu.duduserver.channel.qq;
 
 import com.dudu.duduserver.channel.ChannelReceiveResult;
+import com.dudu.duduserver.channel.support.DirectHttpMediaReader;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.constant.ChannelEnum;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class QqAdapterTest {
     private final QqProtocol protocol = new QqProtocol();
     private final QqAdapter adapter = new QqAdapter(protocol,
         new QqTextSender(org.springframework.web.client.RestClient.builder(), "http://127.0.0.1:1"),
-        new QqMediaReader(org.springframework.web.client.RestClient.builder()));
+        new DirectHttpMediaReader(org.springframework.web.client.RestClient.builder()));
 
     @Test
     void channelRoutesThroughQqValue() {

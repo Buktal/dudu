@@ -1,5 +1,6 @@
 package com.dudu.duduserver.controller.console;
 
+import com.dudu.duduserver.channel.console.ConsoleCallbackUrls;
 import com.dudu.duduserver.channel.console.ConsoleChannelDefinition;
 import com.dudu.duduserver.common.P;
 import com.dudu.duduserver.common.R;
@@ -36,7 +37,7 @@ public class ConsoleChannelController {
 
     @GetMapping("/channels")
     public R<Map<String, List<ConsoleChannelDefinition>>> catalog(@Me JwtUser me, HttpServletRequest request) {
-        return R.ok(Map.of("channels", channels.catalog(me, origin(request))));
+        return R.ok(Map.of("channels", channels.catalog(me, ConsoleCallbackUrls.originOf(request))));
     }
 
     @PostMapping("/company_channels/query")
@@ -48,25 +49,25 @@ public class ConsoleChannelController {
     public R<ConsoleChannelVO.Detail> detail(@Me JwtUser me, @PathVariable String id,
                                             HttpServletRequest request, HttpServletResponse response) {
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
-        return R.ok(channels.detail(me, id, origin(request)));
+        return R.ok(channels.detail(me, id, ConsoleCallbackUrls.originOf(request)));
     }
 
     @PostMapping("/company_channels")
     public R<ConsoleChannelVO.Detail> create(@Me JwtUser me, @RequestBody byte[] body,
                                             HttpServletRequest request) {
-        return R.ok(channels.create(me, configurationBody(body, ConsoleChannelRequests.Create.class), origin(request)));
+        return R.ok(channels.create(me, configurationBody(body, ConsoleChannelRequests.Create.class), ConsoleCallbackUrls.originOf(request)));
     }
 
     @PutMapping("/company_channels/{id}")
     public R<ConsoleChannelVO.Detail> update(@Me JwtUser me, @PathVariable String id,
                                             @RequestBody byte[] body, HttpServletRequest request) {
-        return R.ok(channels.update(me, id, configurationBody(body, ConsoleChannelRequests.Update.class), origin(request)));
+        return R.ok(channels.update(me, id, configurationBody(body, ConsoleChannelRequests.Update.class), ConsoleCallbackUrls.originOf(request)));
     }
 
     @PutMapping("/company_channels/{id}/group")
     public R<ConsoleChannelVO.Detail> move(@Me JwtUser me, @PathVariable String id,
                                           @Valid @RequestBody ConsoleChannelRequests.Move body, HttpServletRequest request) {
-        return R.ok(channels.move(me, id, body, origin(request)));
+        return R.ok(channels.move(me, id, body, ConsoleCallbackUrls.originOf(request)));
     }
 
     private <T> T configurationBody(byte[] body, Class<T> type) {
@@ -81,13 +82,5 @@ public class ConsoleChannelController {
         var violations = validator.validate(value);
         if (!violations.isEmpty()) throw new ConstraintViolationException(violations);
         return value;
-    }
-
-    private String origin(HttpServletRequest request) {
-        int port = request.getServerPort();
-        String host = request.getServerName();
-        if (host.contains(":")) host = "[" + host + "]";
-        return request.getScheme() + "://" + host + ((port == 80 && "http".equals(request.getScheme()))
-            || (port == 443 && "https".equals(request.getScheme())) ? "" : ":" + port);
     }
 }

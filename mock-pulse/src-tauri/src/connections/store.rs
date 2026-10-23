@@ -63,11 +63,7 @@ mod tests {
         // #30 体系字段缺省：无 system 时按 dop、体系凭据按空串落位
         let dir = temp_dir("legacy");
         let legacy = r#"[{"channel":"douyin","url":"http://localhost/hook","clientKey":"k","clientSecret":"s"}]"#;
-        fs::write(
-            dir.join(FILE_NAME),
-            legacy,
-        )
-        .unwrap();
+        fs::write(dir.join(FILE_NAME), legacy).unwrap();
         assert_eq!(
             load_connections(&dir).unwrap(),
             vec![ConnectionConfig::Douyin {

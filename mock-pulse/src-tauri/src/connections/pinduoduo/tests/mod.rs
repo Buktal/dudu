@@ -37,7 +37,8 @@ pub(super) const GOLDEN_REQUEST_PARAMS: [(&str, &str); 8] = [
 
 /// 官方 §5.1 order_status 参数词汇 + §2.1 照录状态 1 锚定的订单推送样本明文
 /// （order_id 为通名暂代——官方字段名待核验(09-27)，事实库模拟口径仅「含订单号」）。
-pub(super) const GOLDEN_ORDER_PLAINTEXT: &str = r#"{"order_id":"110770592823138","order_status":2}"#;
+pub(super) const GOLDEN_ORDER_PLAINTEXT: &str =
+    r#"{"order_id":"110770592823138","order_status":2}"#;
 
 pub(super) fn pinduoduo_config(url: String) -> ConnectionConfig {
     ConnectionConfig::Pinduoduo {

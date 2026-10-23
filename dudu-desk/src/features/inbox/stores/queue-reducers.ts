@@ -1,5 +1,6 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ApiFailure } from "@/lib/api-response";
+import { sameConversationQuery } from "../conversation-query";
 import type {
   Conversation,
   ConversationPage,
@@ -7,7 +8,7 @@ import type {
 } from "../types";
 import { mergeConversation } from "./live-merge";
 import { applyQueuePageMeta, rewriteQueueIds } from "./queue-membership";
-import { emptyLoad, type InboxState } from "./state";
+import type { InboxState } from "./state";
 
 /**
  * Conversation queue reducers: own queue membership, cursors and counts.
@@ -27,13 +28,13 @@ export const queueReducers = {
     action: PayloadAction<ConversationQuery | undefined>,
   ) {
     if (action.payload) {
-      state.queue = {
-        ...emptyLoad(),
-        ids: [],
-        query: action.payload,
-        counts: state.queue.counts,
-        channels: state.queue.channels,
-      };
+      // 查询变化的重读保留已加载相位（ids 与 hasLoaded）：列表不回退首读
+      // 占位；标记待整体重写，落地时旧成员与顺序让位服务端结果
+      if (!sameConversationQuery(state.queue.query, action.payload))
+        state.queue.pendingRewrite = true;
+      state.queue.nextCursor = null;
+      state.queue.query = action.payload;
+      state.queue.total = undefined;
     }
     state.queue.status = "loading";
     state.queue.error = null;
@@ -48,7 +49,10 @@ export const queueReducers = {
     }>,
   ) {
     const { page, append, preserveIds } = action.payload;
-    const previousIds = [...state.queue.ids];
+    // 查询变化的重读落地：服务端成员与顺序整体取代旧列表（换搜索后旧
+    // 成员不因 live 版本更新混入新结果）；同查询刷新仍走位置稳定的保留规则
+    const rewrite = !!state.queue.pendingRewrite;
+    const previousIds = rewrite ? [] : [...state.queue.ids];
     // Merge entities without touching queue membership: the single rewrite
     // below owns ids, so the merge kernel must not push/prune mid-flight.
     for (const conversation of page.items)
@@ -59,8 +63,9 @@ export const queueReducers = {
       previousIds,
       incomingIds: page.items.map((item) => item.id),
       mode: append ? "append" : "refresh",
-      preserveIds,
+      preserveIds: rewrite ? [] : preserveIds,
     });
+    delete state.queue.pendingRewrite;
     applyQueuePageMeta(state.queue, page);
   },
   queueFailed(

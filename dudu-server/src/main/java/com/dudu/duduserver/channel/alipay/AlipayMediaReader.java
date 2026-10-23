@@ -3,7 +3,6 @@ package com.dudu.duduserver.channel.alipay;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
-import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,9 +40,6 @@ public class AlipayMediaReader {
 
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
         AlipayCredentials credentials = AlipayCredentials.of(account);
-        if (credentials == null) {
-            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
-        }
         try {
             Map<String, String> params = AlipayRequests.params(credentials, METHOD_MEDIA_DOWNLOAD,
                 JSONUtil.createObj().set("mediaId", externalMediaId).toString());

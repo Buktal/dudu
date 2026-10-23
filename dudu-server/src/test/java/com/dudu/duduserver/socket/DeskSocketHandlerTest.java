@@ -10,8 +10,9 @@ import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.UserRoleEnum;
+import com.dudu.duduserver.entity.CompanyChannelDO;
+import com.dudu.duduserver.service.DeskAccess;
 import com.dudu.duduserver.service.DeskAuthService;
-import com.dudu.duduserver.vo.DeskAccessVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,9 +57,7 @@ class DeskSocketHandlerTest {
 
     @Test
     void validEmployeeTokenReceivesReadyAndRegistersPushIdentity() throws Exception {
-        when(deskAuthService.requireAccess(any()))
-            .thenReturn(new DeskAccessVO(false, List.of(),
-                List.of(new DeskAccessVO.Account("7", "3", ChannelEnum.WECHAT_MP, "公众号"))));
+        when(deskAuthService.requireAccess(any())).thenReturn(access(false, 7L));
 
         handler.handleTextMessage(session, auth(employeeToken()));
 
@@ -110,8 +109,7 @@ class DeskSocketHandlerTest {
 
     @Test
     void authenticatedSessionIgnoresFurtherClientFrames() throws Exception {
-        when(deskAuthService.requireAccess(any()))
-            .thenReturn(new DeskAccessVO(true, List.of(), List.of()));
+        when(deskAuthService.requireAccess(any())).thenReturn(access(true, null));
         handler.handleTextMessage(session, auth(employeeToken()));
         assertThat(sentFrames().get(0).getStr("type")).isEqualTo("ready");
 
@@ -127,6 +125,17 @@ class DeskSocketHandlerTest {
 
     private TextMessage auth(String token) {
         return new TextMessage("{\"type\":\"auth\",\"token\":\"" + token + "\"}");
+    }
+
+    // 授权范围夹具：companyChannelId 为 null 时表示没有授权账号
+    private DeskAccess access(boolean allGroups, Long companyChannelId) {
+        CompanyChannelDO account = new CompanyChannelDO();
+        account.setCompanyChannelId(companyChannelId);
+        account.setGroupId(3L);
+        account.setChannel(ChannelEnum.WECHAT_MP);
+        account.setAccountName("公众号");
+        return DeskAccess.of(allGroups, List.of(),
+            companyChannelId == null ? List.of() : List.of(account));
     }
 
     private List<JSONObject> sentFrames() {

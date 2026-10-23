@@ -60,14 +60,25 @@ const MODE_LABEL: Record<ReceiptBodyMode, string> = {
 
 /** 期望的人类可读描述（回执面板/运行记录展示用） */
 export function describeExpected(expected: ExpectedReceipt): string {
-  if (expected.body === "" && expected.bodyMode !== "wecomReply") {
+  // 空正文的免校验白名单与运行时判定（verdict.rs compare_body）逐字一致：
+  // 三种 reply 形态空正文仍校验回包形态本身，不得展示为「不校验正文」
+  if (
+    expected.body === "" &&
+    expected.bodyMode !== "wecomReply" &&
+    expected.bodyMode !== "dingtalkReply" &&
+    expected.bodyMode !== "qqSignReply"
+  ) {
     return `期望 HTTP ${expected.status}，不校验正文`;
   }
   if (expected.bodyMode === "dingtalkReply") {
-    return `期望 HTTP ${expected.status}，加密回包解密明文包含「${clip(expected.body)}」（1500ms 窗口）`;
+    return expected.body === ""
+      ? `期望 HTTP ${expected.status}，要求目标回可验签解密的加密回包（1500ms 窗口）`
+      : `期望 HTTP ${expected.status}，加密回包解密明文包含「${clip(expected.body)}」（1500ms 窗口）`;
   }
   if (expected.bodyMode === "qqSignReply") {
-    return `期望 HTTP ${expected.status}，op13 验签回包 plain_token 回显「${clip(expected.body)}」（Ed25519 验签由适配器完成）`;
+    return expected.body === ""
+      ? `期望 HTTP ${expected.status}，要求 plain_token 回显且 Ed25519 验签通过`
+      : `期望 HTTP ${expected.status}，op13 验签回包 plain_token 回显「${clip(expected.body)}」（Ed25519 验签由适配器完成）`;
   }
   if (expected.bodyMode === "wecomReply" && expected.body === "") {
     return `期望 HTTP ${expected.status}，微信系回执为空串`;

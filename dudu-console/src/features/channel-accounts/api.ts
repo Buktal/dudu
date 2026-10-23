@@ -71,7 +71,7 @@ const isDefinition = (v: unknown): v is ChannelDefinition =>
   Array.isArray(v.fields) &&
   v.fields.every(isField) &&
   strings(v.notes);
-const isAccount = (v: unknown): v is Account =>
+export const isAccount = (v: unknown): v is Account =>
   isRecord(v) &&
   validId(v.companyChannelId) &&
   validId(v.groupId) &&
@@ -169,6 +169,7 @@ export const channelApi = {
       method: "POST",
       body,
       signal,
+      write: true,
       validate: isDetail,
     });
   },
@@ -186,6 +187,7 @@ export const channelApi = {
       method: "PUT",
       body,
       signal,
+      write: true,
       validate: isDetail,
     });
   },
@@ -199,6 +201,7 @@ export const channelApi = {
       method: "PUT",
       body: { groupId },
       signal,
+      write: true,
       validate: isDetail,
     }),
 };

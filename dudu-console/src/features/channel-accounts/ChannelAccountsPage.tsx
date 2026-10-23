@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useConsoleQuery } from "@/api/console-query";
-import { ErrorState, LoadingState, Message } from "@/components/feedback";
+import { Message } from "@/components/feedback";
 import { FilterBar } from "@/components/filter-bar";
 import {
   FilterSelect,
@@ -34,8 +34,10 @@ export function ChannelAccountsPage({
   onSelect: (id: string | null) => void;
   onCreate: (creating: boolean) => void;
 }) {
-  const catalog = useConsoleQuery(channelApi.catalog, []);
-  const groups = useConsoleQuery(channelApi.groups, []);
+  // 渠道目录与组列表是目录类查询：不随写后失效陪跑重查（stable），权限变化仍重查；
+  // 读取中或失败只降级下拉占位项，账号列表独立可用
+  const catalog = useConsoleQuery(channelApi.catalog, [], { stable: true });
+  const groups = useConsoleQuery(channelApi.groups, [], { stable: true });
   // 路由 groupId 只作挂载时的初始筛选种子（用户组页深链进筛选态）：
   // 页内改组或重置只改查询状态，不回写 URL，也不随路由参数变化重新应用。
   const query = useAccounts({
@@ -44,21 +46,26 @@ export function ChannelAccountsPage({
     groupId: groupId ?? undefined,
   });
   const [notice, setNotice] = useState<string | null>(null);
-  if (catalog.loading || groups.loading) return <LoadingState />;
-  if (catalog.error || groups.error)
-    return (
-      <ErrorState
-        message={catalog.error ?? groups.error ?? "读取失败"}
-        retry={() => {
-          catalog.refresh();
-          groups.refresh();
-        }}
-      />
-    );
   const definitions = catalog.data?.channels ?? [];
   const options = groups.data ?? [];
+  const asideOption = (state: { loading: boolean; error: string | null }) =>
+    state.loading || state.error
+      ? [
+          {
+            value: "none",
+            label: state.error ? "读取失败，可刷新重试" : "读取中…",
+            disabled: true,
+          },
+        ]
+      : [];
   return (
     <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="text-2xl font-semibold">渠道账号</h1>
+        <p className="text-sm text-muted-foreground">
+          维护各渠道的接入账号；凭据以渠道平台为准，修改后需重新验证
+        </p>
+      </div>
       {notice && <Message>{notice}</Message>}
       <QueryView
         query={query}
@@ -91,6 +98,7 @@ export function ChannelAccountsPage({
               value={query.channel ?? "all"}
               options={[
                 { value: "all", label: "全部渠道" },
+                ...asideOption(catalog),
                 ...definitions.map((d) => ({
                   value: d.channel,
                   label: d.name,
@@ -103,6 +111,7 @@ export function ChannelAccountsPage({
               value={query.groupId ?? "all"}
               options={[
                 { value: "all", label: "全部可管理组" },
+                ...asideOption(groups),
                 ...options.map((g) => ({
                   value: g.groupId,
                   label: `${g.groupName} · ${g.groupId}`,

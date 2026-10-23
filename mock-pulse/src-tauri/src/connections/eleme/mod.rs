@@ -132,7 +132,10 @@ fn sign_params(
         .filter(|(key, _)| key != "sig")
         .cloned()
         .collect();
-    append_absent(&mut params, &[("consumer_key", consumer_key), ("timestamp", timestamp)]);
+    append_absent(
+        &mut params,
+        &[("consumer_key", consumer_key), ("timestamp", timestamp)],
+    );
     params
 }
 
@@ -163,21 +166,21 @@ fn post_signed(
     let signature = ele_sign(url, &borrowed_pairs(&params), secret);
     send_measured_outcome(
         client
-        .post(url)
-        .query(&[
-            ("consumer_key", consumer_key),
-            ("sig", signature.as_str()),
-            ("timestamp", timestamp.as_str()),
-        ])
-        .header(
-            "Content-Type",
-            if json_push {
-                "application/json"
-            } else {
-                "application/x-www-form-urlencoded"
-            },
-        )
-        .body(body.clone()),
+            .post(url)
+            .query(&[
+                ("consumer_key", consumer_key),
+                ("sig", signature.as_str()),
+                ("timestamp", timestamp.as_str()),
+            ])
+            .header(
+                "Content-Type",
+                if json_push {
+                    "application/json"
+                } else {
+                    "application/x-www-form-urlencoded"
+                },
+            )
+            .body(body.clone()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: message_id_of(plaintext),
@@ -201,7 +204,13 @@ fn verify_handshake(
     consumer_key: &str,
     consumer_secret: &str,
 ) -> HandshakeOutcome {
-    let outcome = post_signed(client, url, consumer_key, consumer_secret, GOLDEN_PROBE_PLAINTEXT);
+    let outcome = post_signed(
+        client,
+        url,
+        consumer_key,
+        consumer_secret,
+        GOLDEN_PROBE_PLAINTEXT,
+    );
     probe_handshake_outcome(
         outcome,
         RETRY_NOTE,

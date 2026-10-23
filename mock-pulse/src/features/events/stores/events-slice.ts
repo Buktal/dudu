@@ -7,12 +7,8 @@ import type { ChannelId } from "@/lib/channels";
 import { draftSnapshot, draftUnchangedSince } from "@/lib/draft-snapshot";
 
 import {
-  type DefinitionsDoc,
   deleteEventById as deleteEventApi,
-  loadDefinitions,
   loadEvents,
-  type StoredSchemaDefinition,
-  saveDefinition,
   saveEvent as saveEventApi,
 } from "../api";
 import {
@@ -32,7 +28,6 @@ import {
   syncSenderIdentity,
 } from "../payload";
 import { editorPayload } from "../payload/json";
-import type { FieldDescriptor } from "../schemas";
 import { hasSchema, schemaById, type WirePayload } from "../schemas";
 
 /** 素材库筛选：搜索 + 渠道 + 类型（纯 selector，列表渲染交给 react-virtuoso） */
@@ -40,12 +35,6 @@ export type EventFilters = {
   query: string;
   channel: ChannelId | "all";
   kind: "all" | "message" | "event" | "favorite";
-};
-
-/** 用户编辑的字段定义（#22）：按 schemaId 覆写随应用分发的渠道描述文件基线 */
-export type FieldDefinitionsState = {
-  loaded: boolean;
-  bySchemaId: Record<string, StoredSchemaDefinition>;
 };
 
 export type EventsState = {
@@ -68,8 +57,6 @@ export type EventsState = {
   page: number;
   /** 最近一次装载中因 schemaId 未注册而被隐藏的事件数（0 = 无隐藏） */
   hiddenUnregistered: number;
-  /** 字段说明：用户定义覆写（字典「应用说明」落库） */
-  definitions: FieldDefinitionsState;
 };
 
 export const initialEventsState: EventsState = {
@@ -83,7 +70,6 @@ export const initialEventsState: EventsState = {
   filters: { query: "", channel: "all", kind: "all" },
   page: 1,
   hiddenUnregistered: 0,
-  definitions: { loaded: false, bySchemaId: {} },
 };
 
 type EventsRoot = { events: EventsState };
@@ -151,26 +137,6 @@ export const deleteEvent = createAsyncThunk(
   async (id: string) => deleteEventApi(id),
 );
 
-/** 装载用户字段定义（启动时随事件视图拉取） */
-export const fetchFieldDefinitions = createAsyncThunk(
-  "events/fetchDefinitions",
-  async () => loadDefinitions(),
-);
-
-/** 字典「应用说明」：把生效字段写成该 schemaId 的用户定义并持久化 */
-export const applyFieldDefinitions = createAsyncThunk(
-  "events/applyDefinitions",
-  async ({
-    schemaId,
-    version,
-    fields,
-  }: {
-    schemaId: string;
-    version: string;
-    fields: FieldDescriptor[];
-  }) => saveDefinition(schemaId, { schemaId, version, fields }),
-);
-
 const eventsSlice = createSlice({
   name: "events",
   initialState: initialEventsState,
@@ -206,32 +172,14 @@ const eventsSlice = createSlice({
     ) {
       if (!state.draft) return;
       state.touched = true;
-      const schema = schemaById(state.draft.schemaId);
-      if (state.rawText != null) {
-        state.draft.payload = editorPayload(
-          schema,
-          parseWireDraft(schema, state.rawText),
-        );
-        state.rawText = null;
-      }
-      let payload = setPayloadField(
-        state.draft.payload,
+      applyDraftEdit(
+        state,
+        state.draft,
         action.payload.path,
         action.payload.value,
       );
-      let syncedPath: string | null = null;
-      // 联动门槛取模板声明的发送者身份路径（未声明渠道的模板不触发）
-      if (
-        state.draft.senderSync &&
-        action.payload.path === schema.senderIdentityPath
-      ) {
-        const synced = syncSenderIdentity(schema, payload);
-        payload = synced.payload;
-        syncedPath = synced.syncedPath;
-      }
-      state.draft.payload = payload;
+      // 表单回到受控值：该路径的暂存文本输入一并作废
       if (state.fieldInputs) delete state.fieldInputs[action.payload.path];
-      discardSyncedInput(state, syncedPath);
     },
     editFieldText(
       state,
@@ -245,20 +193,12 @@ const eventsSlice = createSlice({
       try {
         // 转换与校验（number 有限性 / JSON / XML 文本约束）单点在 payload.ts
         const schema = schemaById(state.draft.schemaId);
-        const value = parseFieldText(type, text, schema.wire);
-        if (state.rawText != null) {
-          state.draft.payload = editorPayload(
-            schema,
-            parseWireDraft(schema, state.rawText),
-          );
-          state.rawText = null;
-        }
-        state.draft.payload = setPayloadField(state.draft.payload, path, value);
-        if (state.draft.senderSync && path === schema.senderIdentityPath) {
-          const synced = syncSenderIdentity(schema, state.draft.payload);
-          state.draft.payload = synced.payload;
-          discardSyncedInput(state, synced.syncedPath);
-        }
+        applyDraftEdit(
+          state,
+          state.draft,
+          path,
+          parseFieldText(type, text, schema.wire),
+        );
       } catch (cause) {
         state.fieldInputs[path].error =
           cause instanceof Error ? cause.message : "请输入有效的参数值。";
@@ -394,18 +334,10 @@ const eventsSlice = createSlice({
           state.touched = false;
           state.rawText = null;
         }
-      })
-      .addCase(fetchFieldDefinitions.fulfilled, (state, action) => {
-        state.definitions = definitionsFromDoc(action.payload);
-      })
-      .addCase(applyFieldDefinitions.fulfilled, (state, action) => {
-        state.definitions = definitionsFromDoc(action.payload);
       });
   },
 });
 
-// 注：fetchFieldDefinitions / applyFieldDefinitions 是上方导出的 thunk，
-// 不是 slice action creator，不参与此处解构。
 export const {
   discardDraft,
   duplicateCurrentDraft,
@@ -463,9 +395,31 @@ export function selectDraftDirty(state: EventsState): boolean {
   }
 }
 
-/** 持久化文档 → slice 内 definitions 状态 */
-function definitionsFromDoc(doc: DefinitionsDoc): FieldDefinitionsState {
-  return { loaded: true, bySchemaId: doc.schemas };
+/** 草稿字段写入序列（setDraftField / editFieldText 共用单点）：未应用的
+ *  完整报文先落回字段形态（此后以字段编辑为准），再写路径值；同步开关
+ *  开启且写的是模板声明的发送者身份路径时联动同步（未声明渠道的模板
+ *  不触发），并作废被同步覆盖的身份字段输入。 */
+function applyDraftEdit(
+  state: EventsState,
+  draft: EventDraft,
+  path: string,
+  value: unknown,
+) {
+  const schema = schemaById(draft.schemaId);
+  if (state.rawText != null) {
+    draft.payload = editorPayload(
+      schema,
+      parseWireDraft(schema, state.rawText),
+    );
+    state.rawText = null;
+  }
+  let payload = setPayloadField(draft.payload, path, value);
+  if (draft.senderSync && path === schema.senderIdentityPath) {
+    const synced = syncSenderIdentity(schema, payload);
+    payload = synced.payload;
+    discardSyncedInput(state, synced.syncedPath);
+  }
+  draft.payload = payload;
 }
 
 /** 作废被同步覆盖的身份字段输入（路径取 schema 推导的写入值） */
@@ -502,19 +456,4 @@ export function selectLoaded(state: EventsState): boolean {
 /** 装载时因 schemaId 未注册被隐藏的事件数（0 = 无隐藏） */
 export function selectHiddenUnregistered(state: EventsState): number {
   return state.hiddenUnregistered;
-}
-
-/** 全部用户字段定义 */
-export function selectFieldDefinitions(
-  state: EventsState,
-): FieldDefinitionsState {
-  return state.definitions;
-}
-
-/** 指定模板的用户字段定义（表单合并与字典弹窗的读取入口） */
-export function selectSchemaUserDefinition(
-  state: EventsState,
-  schemaId: string,
-): StoredSchemaDefinition | undefined {
-  return state.definitions.bySchemaId[schemaId];
 }

@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http: data: blob:; media-src 'self' https: http: blob:; font-src 'self'; connect-src 'self' https: http: ws: wss:"
     }
   },
   "bundle": {

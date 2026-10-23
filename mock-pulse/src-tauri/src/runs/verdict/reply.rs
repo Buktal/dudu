@@ -119,7 +119,9 @@ pub(super) fn compare_qq_sign_reply(
         },
         None => RunVerdict {
             passed: false,
-            reason: format!("{label}，期望 op13 验签回包，但目标未回 plain_token 回显且签名可验的应答"),
+            reason: format!(
+                "{label}，期望 op13 验签回包，但目标未回 plain_token 回显且签名可验的应答"
+            ),
         },
     }
 }

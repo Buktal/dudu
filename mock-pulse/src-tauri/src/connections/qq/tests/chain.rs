@@ -97,8 +97,7 @@ fn handshake_fails_when_plain_token_is_not_echoed() {
 
 #[test]
 fn handshake_fails_on_non_json_or_missing_signature() {
-    let plain: fn(&RecordedPost) -> (String, String) =
-        |_| ("HTTP/1.1 200 OK".into(), "ok".into());
+    let plain: fn(&RecordedPost) -> (String, String) = |_| ("HTTP/1.1 200 OK".into(), "ok".into());
     let (addr, _rx) = start_single_server(plain, Duration::ZERO);
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
@@ -137,12 +136,7 @@ fn handshake_fails_on_timeout() {
 
 #[test]
 fn dispatch_signs_event_and_snapshots_protocol_elements() {
-    let ok: fn(&RecordedPost) -> (String, String) = |_| {
-        (
-            "HTTP/1.1 200 OK".into(),
-            String::new(),
-        )
-    };
+    let ok: fn(&RecordedPost) -> (String, String) = |_| ("HTTP/1.1 200 OK".into(), String::new());
     let (addr, rx) = start_single_server(ok, Duration::ZERO);
     let config = qq_config(format!("http://{addr}/webhooks/qq"));
 
@@ -151,7 +145,10 @@ fn dispatch_signs_event_and_snapshots_protocol_elements() {
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
     assert_eq!(outcome.reply, None, "普通事件无解密回包");
-    assert_eq!(outcome.request_body.as_deref(), Some(GOLDEN_EVENT_PLAINTEXT));
+    assert_eq!(
+        outcome.request_body.as_deref(),
+        Some(GOLDEN_EVENT_PLAINTEXT)
+    );
 
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     assert_eq!(request.body, GOLDEN_EVENT_PLAINTEXT, "body 逐字节透传");
@@ -161,7 +158,10 @@ fn dispatch_signs_event_and_snapshots_protocol_elements() {
     let timestamp = request
         .header("X-Signature-Timestamp")
         .expect("应带 X-Signature-Timestamp 头");
-    assert_eq!(request.header("X-Bot-Appid").as_deref(), Some(GOLDEN_APP_ID));
+    assert_eq!(
+        request.header("X-Bot-Appid").as_deref(),
+        Some(GOLDEN_APP_ID)
+    );
     assert_eq!(timestamp.len(), 10, "timestamp 为秒级字符串：{timestamp}");
     // 签名快照与实际头一致且对（timestamp + body）可复算
     assert_eq!(outcome.signature, signature);
@@ -218,7 +218,10 @@ fn dispatch_op13_template_verifies_reply_into_receipt() {
     assert_eq!(outcome.error, None);
     // plain_token 回显 + Ed25519 验签通过：回显值落 reply 供期望比对
     assert_eq!(outcome.reply.as_deref(), Some(GOLDEN_PLAIN_TOKEN));
-    assert_eq!(outcome.msg_id, GOLDEN_PLAIN_TOKEN, "plain_token 即唯一标识快照");
+    assert_eq!(
+        outcome.msg_id, GOLDEN_PLAIN_TOKEN,
+        "plain_token 即唯一标识快照"
+    );
 
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     // op13 验证回调按官方形态发：UA + X-Bot-Appid，无签名三头
@@ -226,7 +229,10 @@ fn dispatch_op13_template_verifies_reply_into_receipt() {
         request.header("User-Agent").as_deref(),
         Some("QQBot-Callback")
     );
-    assert_eq!(request.header("X-Bot-Appid").as_deref(), Some(GOLDEN_APP_ID));
+    assert_eq!(
+        request.header("X-Bot-Appid").as_deref(),
+        Some(GOLDEN_APP_ID)
+    );
     assert!(request.header("X-Signature-Ed25519").is_none());
     assert_eq!(request.body, plaintext);
 }

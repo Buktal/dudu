@@ -44,6 +44,7 @@ export const adminApi = {
       method: "POST",
       body,
       signal,
+      write: true,
       validate: isCompany,
     }),
   update: (
@@ -56,6 +57,7 @@ export const adminApi = {
       method: "PUT",
       body,
       signal,
+      write: true,
       validate: isCompany,
     }),
   candidate: (client: AdminClient, signal: AbortSignal) =>
@@ -86,6 +88,7 @@ export const adminApi = {
       method: "PUT",
       body: { status: STATUS_DISABLED, disableReason },
       signal,
+      write: true,
       validate: isEmpty,
     }),
   enable: (client: AdminClient, id: string, signal: AbortSignal) =>
@@ -93,6 +96,7 @@ export const adminApi = {
       method: "PUT",
       body: { status: STATUS_ENABLED },
       signal,
+      write: true,
       validate: isEmpty,
     }),
   resetPassword: (
@@ -103,7 +107,13 @@ export const adminApi = {
   ) =>
     client.request(
       `/admin/companies/${encodeURIComponent(id)}/initial_admin/password`,
-      { method: "PUT", body: { newPassword }, signal, validate: isEmpty },
+      {
+        method: "PUT",
+        body: { newPassword },
+        signal,
+        write: true,
+        validate: isEmpty,
+      },
     ),
   overview: (client: AdminClient, signal: AbortSignal) =>
     client.request("/admin/overview", { signal, validate: isOverview }),

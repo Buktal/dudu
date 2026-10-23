@@ -29,7 +29,8 @@ use super::{
 
 /// 失败重试口径（§3.2 逐字）：超 500ms 未收到 200 即推送失败，半小时后重试、
 /// 最多 12 次；超时文案附该语义。
-const RETRY_NOTE: &str = "（官方 500ms 内未收到 HTTP 200 即视为推送失败：半小时后重试，最多 12 次）";
+const RETRY_NOTE: &str =
+    "（官方 500ms 内未收到 HTTP 200 即视为推送失败：半小时后重试，最多 12 次）";
 
 /// 官方正向样本明文（§5.6 逐字，键序同官方文档）：Verify 握手探针复用该样本
 /// （官方未披露验证请求体，以带合规签名头的官方样本明文作探针，语义同普通推送）。
@@ -84,10 +85,10 @@ fn post_json(
     let signature = authorization(body, app_key, app_secret);
     send_measured_outcome(
         client
-        .post(url)
-        .header("Authorization", signature.clone())
-        .header("Content-Type", "application/json")
-        .body(body.to_string()),
+            .post(url)
+            .header("Authorization", signature.clone())
+            .header("Content-Type", "application/json")
+            .body(body.to_string()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: message_id_of(body),
@@ -148,7 +149,7 @@ impl super::ChannelAdapter for Adapter {
     }
 
     fn label(&self) -> &'static str {
-        "淘宝"
+        "淘宝/天猫"
     }
 
     fn matches(&self, config: &ConnectionConfig) -> bool {

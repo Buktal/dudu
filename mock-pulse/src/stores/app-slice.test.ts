@@ -31,12 +31,6 @@ describe("应用壳导航（五视图）", () => {
     ]);
   });
 
-  it("五个视图全部已实现（无空态占位）", () => {
-    expect(
-      VIEWS.filter((view) => view.implemented).map((view) => view.id),
-    ).toEqual(["events", "scenarios", "plans", "runs", "connections"]);
-  });
-
   it("每个视图注册项都带图标与侧栏分组（单一注册表完整）", () => {
     for (const view of VIEWS) {
       expect(view.icon).toBeDefined();

@@ -87,9 +87,7 @@ public class AlipayAdapter implements ChannelAdapter {
         // 文本/图片落访客消息并回无签名 ack（ToUserId 按官方口径回显来报 FromUserId，见协议层）；
         // 事件族与无法解析的报文只应答 ack
         ChannelCallbackResult ack = new ChannelCallbackResult(200, protocol.ackReply(credentials, bizContent));
-        return inbound
-            .map(message -> ChannelReceiveResult.accept(message, ack))
-            .orElseGet(() -> ChannelReceiveResult.answer(ack));
+        return acceptOrAnswer(inbound, ack);
     }
 
     @Override

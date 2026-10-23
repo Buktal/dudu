@@ -8,8 +8,8 @@ use std::time::Duration;
 
 use crate::connections::{ChannelAdapter, ConnectionConfig};
 use crate::test_support::{
-    ExpectedSnapshots, assert_dispatch_error, assert_dispatch_receipt, assert_snapshots,
-    run_dispatch_case, run_handshake_case, status_responder,
+    assert_dispatch_error, assert_dispatch_receipt, assert_snapshots, run_dispatch_case,
+    run_handshake_case, status_responder, ExpectedSnapshots,
 };
 
 use super::*;
@@ -22,9 +22,7 @@ fn probe_posts_official_update_with_identity_header() {
         |request| {
             // 接收侧原样比对（§4.1）：头值与配置 secret_token 字符串相等
             assert_eq!(
-                request
-                    .header("x-telegram-bot-api-secret-token")
-                    .as_deref(),
+                request.header("x-telegram-bot-api-secret-token").as_deref(),
                 Some(GOLDEN_SECRET_TOKEN),
                 "恒等头应与连接配置的 Secret Token 原样一致"
             );
@@ -99,9 +97,7 @@ fn dispatch_posts_update_verbatim_and_snapshots_update_id() {
         |request| {
             // 接收侧原样比对验证链路：头值与配置逐字符一致
             assert_eq!(
-                request
-                    .header("x-telegram-bot-api-secret-token")
-                    .as_deref(),
+                request.header("x-telegram-bot-api-secret-token").as_deref(),
                 Some(GOLDEN_SECRET_TOKEN)
             );
             ("HTTP/1.1 204 No Content".into(), String::new())
@@ -210,9 +206,7 @@ fn dispatch_carries_256_char_boundary_token_verbatim() {
     let (outcome, request) = run_dispatch_case(
         move |request| {
             assert_eq!(
-                request
-                    .header("x-telegram-bot-api-secret-token")
-                    .as_deref(),
+                request.header("x-telegram-bot-api-secret-token").as_deref(),
                 Some(expected.as_str()),
                 "边界 token 应原样进头"
             );
@@ -234,9 +228,7 @@ fn dispatch_carries_256_char_boundary_token_verbatim() {
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.signature, token);
     assert_eq!(
-        request
-            .header("x-telegram-bot-api-secret-token")
-            .as_deref(),
+        request.header("x-telegram-bot-api-secret-token").as_deref(),
         Some(token.as_str())
     );
 }

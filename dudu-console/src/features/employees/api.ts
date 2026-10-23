@@ -67,6 +67,7 @@ export const createEmployee = (
     method: "POST",
     body,
     signal,
+    write: true,
     validate: isEmployee,
   });
 export const updateEmployee = (
@@ -78,7 +79,7 @@ export const updateEmployee = (
 ) =>
   client.request<Employee>(
     `/console/employees/${encodeURIComponent(id)}${action === "name" ? "" : `/${action}`}`,
-    { method: "PUT", body, signal, validate: isEmployee },
+    { method: "PUT", body, signal, write: true, validate: isEmployee },
   );
 export const resetPassword = (
   client: ConsoleClient,
@@ -92,6 +93,7 @@ export const resetPassword = (
       method: "PUT",
       body: { newPassword },
       signal,
+      write: true,
       validate: (data): data is null => data === null,
     },
   );

@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.DirectHttpMediaReader;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
@@ -55,7 +56,7 @@ class XiaohongshuAdapterTest {
     private final XiaohongshuCrypto crypto = new XiaohongshuCrypto();
     private final XiaohongshuAdapter adapter = new XiaohongshuAdapter(new XiaohongshuProtocol(), crypto,
         new XiaohongshuTextSender(RestClient.builder(), "http://127.0.0.1:9"),
-        new XiaohongshuMediaReader(RestClient.builder()));
+        new DirectHttpMediaReader(RestClient.builder()));
     private final ChannelAdapterRegistry registry = new ChannelAdapterRegistry(List.of(adapter));
     private final ChannelCallbackService service =
         new ChannelCallbackServiceImpl(companyChannelService, registry, deskInboundService);
@@ -159,15 +160,15 @@ class XiaohongshuAdapterTest {
 
     @Test
     void sendAndReadMediaGateOnTheirOwnCredentialsAndRestrictionsDescribeThem() {
-        // 发送凭据（appId/appSecret）缺失：如实失败，不猜业务错误
-        ChannelSendResult send = adapter.send(xiaohongshuAccount(
+        // 发送凭据（appId/appSecret）缺失：经注册表先被 restriction 拦截，如实失败
+        ChannelSendResult send = registry.send(xiaohongshuAccount(
                 Map.of("token", TOKEN, "encodingAesKey", ENCODING_AES_KEY, "appId", APP_ID)),
             "USER_OPEN_ID", "在吗");
         assertThat(send.succeeded()).isFalse();
         assertThat(send.failureReason()).contains("发送凭据未配置");
 
-        // 素材读取凭据（回调三件套）缺失：如实失败且 restriction 同步说明
-        ChannelMediaResult media = adapter.readMedia(
+        // 素材读取凭据（回调三件套）缺失：同样先被 restriction 拦截
+        ChannelMediaResult media = registry.readMedia(
             xiaohongshuAccount(Map.of("appId", APP_ID, "appSecret", "s")), "https://img.example/a.jpg");
         assertThat(media.succeeded()).isFalse();
         assertThat(media.failureReason()).contains("素材凭据未配置");

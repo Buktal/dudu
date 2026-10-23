@@ -119,20 +119,8 @@ class AlipayTextSenderTest {
             .contains("48 小时内未交互");
     }
 
-    @Test
-    void reportsMissingCredentialsWithoutCallingTheEndpoint() {
-        handle(SEND_PATH, 200, "{\"alipay_open_public_message_custom_send_response\":{\"code\":\"10000\"}}");
-
-        CompanyChannelDO bare = new CompanyChannelDO();
-        bare.setChannel(ChannelEnum.ALIPAY);
-        bare.setChannelInfo(Map.of());
-
-        ChannelSendResult result = sender().send(bare, "2088102111111111", "在吗");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).isEqualTo("渠道发送凭据未配置");
-        assertThat(bodies).isEmpty();
-    }
+    // 凭据缺失的如实拦截由注册表 restriction 承担（见 AlipayAdapterTest），发送器只按
+    // 已配置凭据翻译渠道协议与异常
 
     @Test
     void reportsTransportAndUnreadableResponsesInsteadOfPretendingSuccess() {

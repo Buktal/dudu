@@ -109,10 +109,10 @@ fn post_json(
     }
     send_measured_outcome(
         client
-        .post(url)
-        .header(SECRET_TOKEN_HEADER, secret_token)
-        .header("Content-Type", "application/json")
-        .body(body.to_string()),
+            .post(url)
+            .header(SECRET_TOKEN_HEADER, secret_token)
+            .header("Content-Type", "application/json")
+            .body(body.to_string()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: update_id_of(body),

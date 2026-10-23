@@ -1,4 +1,8 @@
-import { interpretPresence, interpretTemplateStep } from "@/features/events";
+import {
+  expectEntry,
+  interpretPresence,
+  interpretTemplateStep,
+} from "@/features/events";
 import { type ChannelId, channelById } from "@/lib/channels";
 
 /**
@@ -230,12 +234,8 @@ export function validateScenario(
           `步骤引用的内置模板版本不存在：${step.templateId} v${step.templateVersion}。`,
         );
       }
-      // 解释取条目（blocks 为 false 即 ok，条目必存在；取不到为防御，
-      // 文案沿用 id 缺失款，表与 kernel 一致时不可达）。
-      const matched = interpreted.entry;
-      if (!matched) {
-        throw new Error(`步骤引用的内置模板不存在：${step.templateId}。`);
-      }
+      // 解释取条目（blocks 为 false 即 ok，条目必在；不变式破坏按编程错误终止）
+      const matched = expectEntry(interpreted);
       if (matched.channelId !== scenario.channelId) {
         throw new Error(
           `剧本渠道为${channelName(scenario.channelId)}，步骤引用了${channelName(matched.channelId)}的内置模板：${step.templateId}。`,
@@ -245,14 +245,14 @@ export function validateScenario(
     }
     const event = events.find((item) => item.id === step.eventId);
     // 编辑时钟问 interpreter（events 域唯一分岔点；窄行只有存在性：事件保存
-    // 只看行存在，超前 revision 存得下、运行时钟再拦；文案一字不动）。
-    // 后半为类型收窄，语义以解释为准。
-    if (interpretPresence(event, "edit").blocks || !event) {
+    // 只看行存在，超前 revision 存得下、运行时钟再拦；命中带回主语文案一字不动）
+    const verdict = interpretPresence(event, "edit");
+    if (verdict.blocked) {
       throw new Error(`步骤引用的事件不存在：${step.eventId}。`);
     }
-    if (event.channelId !== scenario.channelId) {
+    if (verdict.row.channelId !== scenario.channelId) {
       throw new Error(
-        `剧本渠道为${channelName(scenario.channelId)}，步骤引用了${channelName(event.channelId)}的事件：${event.id}。`,
+        `剧本渠道为${channelName(scenario.channelId)}，步骤引用了${channelName(verdict.row.channelId)}的事件：${verdict.row.id}。`,
       );
     }
   }

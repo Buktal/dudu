@@ -44,6 +44,7 @@ interface ClientState {
   user: Account | null;
   restoring: boolean;
   generation: number;
+  dataRevision: number;
   notice: string | null;
 }
 
@@ -81,6 +82,7 @@ export class AdminClient {
       user: null,
       restoring: !!this.token,
       generation: 0,
+      dataRevision: 0,
       notice: null,
     };
   }
@@ -126,6 +128,8 @@ export class AdminClient {
       signal?: AbortSignal;
       anonymous?: boolean;
       paginated?: boolean;
+      /** 显式声明数据写入：成功后失效重查；/query 读与会话接口不声明 */
+      write?: boolean;
       validate: (data: unknown) => data is T;
     },
   ): Promise<T> {
@@ -164,9 +168,8 @@ export class AdminClient {
         redirect: "error",
       });
       assertCurrent();
+      // 认证失败一律走 200 + envelope code（1010x），HTTP 4xx/5xx 只按服务异常报错
       if (!response.ok) {
-        if (token && (response.status === 401 || response.status === 403))
-          this.clearSession("登录已失效，请重新登录");
         throw new ApiError(
           response.status >= 500
             ? "服务暂时不可用，请稍后重试"
@@ -195,6 +198,13 @@ export class AdminClient {
       }
       const data = options.paginated ? envelope : envelope.data;
       if (!options.validate(data)) throw new ApiError("服务响应异常，请重试");
+      // 写成功即失效：所有写入必经此处，成功后失效一次驱动列表与详情重查，页面不再手工编排刷新；
+      // 推迟到宏任务一拍，让提交方的成功收尾（关弹层、旁路通知）先行，
+      // 避免重查的 loading 回退抢先卸载提交中的弹层而吞掉它的 commit
+      if (options.write)
+        setTimeout(() =>
+          this.publish({ dataRevision: this.state.dataRevision + 1 }),
+        );
       return data;
     } catch (error) {
       if (

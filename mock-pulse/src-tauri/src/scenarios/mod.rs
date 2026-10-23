@@ -26,6 +26,15 @@ pub struct StoredStep {
     pub wait: Option<f64>,
 }
 
+/// 剧本失败策略（唯一定义点，runs 运行快照经再导出共用）：stop（失败即停）
+/// | continue（记录后继续）；Option::None 兼容旧文档，取义在前端按 stop。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ScenarioFailure {
+    Stop,
+    Continue,
+}
+
 /// 与前端交换的剧本形态（camelCase 契约）。
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -35,7 +44,7 @@ pub struct StoredScenario {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub revision: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub failure: Option<String>,
+    pub failure: Option<ScenarioFailure>,
     pub id: String,
     pub name: String,
     pub channel_id: String,
@@ -51,7 +60,7 @@ struct ScenarioFile {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     revision: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    failure: Option<String>,
+    failure: Option<ScenarioFailure>,
     id: String,
     name: String,
     steps: Vec<StoredStep>,

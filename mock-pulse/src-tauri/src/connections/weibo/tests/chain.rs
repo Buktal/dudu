@@ -103,8 +103,7 @@ fn echo_ok(query: &HashMap<String, String>) -> (String, String) {
 
 #[test]
 fn handshake_succeeds_when_echostr_echoed_verbatim() {
-    let (addr, rx) =
-        start_request_server(|query, _body| echo_ok(query), Duration::ZERO);
+    let (addr, rx) = start_request_server(|query, _body| echo_ok(query), Duration::ZERO);
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
     let outcome = Adapter.verify_handshake(&client(), &config);
 
@@ -114,9 +113,17 @@ fn handshake_succeeds_when_echostr_echoed_verbatim() {
     // 请求侧逐项核对官方协议要素（事实库 §3.1 四参数 GET）
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     for key in ["signature", "timestamp", "nonce", "echostr"] {
-        assert!(request.query.contains_key(key), "缺少 {key} 参数：{:?}", request.query);
+        assert!(
+            request.query.contains_key(key),
+            "缺少 {key} 参数：{:?}",
+            request.query
+        );
     }
-    assert_eq!(request.query["echostr"].len(), 10, "echostr 为随机字母数字明文");
+    assert_eq!(
+        request.query["echostr"].len(),
+        10,
+        "echostr 为随机字母数字明文"
+    );
     assert_eq!(
         request.query["signature"],
         build_callback_signature(
@@ -136,8 +143,7 @@ fn handshake_fails_when_echostr_is_modified() {
             format!("{}X", query["echostr"].clone()),
         )
     };
-    let (addr, _rx) =
-        start_request_server(move |query, _body| wrong_echo(query), Duration::ZERO);
+    let (addr, _rx) = start_request_server(move |query, _body| wrong_echo(query), Duration::ZERO);
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
     let outcome = Adapter.verify_handshake(&client(), &config);
 
@@ -161,10 +167,7 @@ fn handshake_fails_on_non_200() {
 #[test]
 fn handshake_fails_on_timeout() {
     // 官方 5 秒应答窗口（超时断开×3 重试）；客户端 200ms 超时 vs 服务器 1s 延迟
-    let (addr, _rx) = start_request_server(
-        |query, _body| echo_ok(query),
-        Duration::from_secs(1),
-    );
+    let (addr, _rx) = start_request_server(|query, _body| echo_ok(query), Duration::from_secs(1));
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
     let outcome = Adapter.verify_handshake(&quick_client(Duration::from_millis(200)), &config);
 
@@ -193,7 +196,11 @@ fn dispatch_posts_json_with_signature_query_and_snapshots_elements() {
     // 请求侧逐项核对官方协议要素（事实库 §3.2：推送同样带三参签名）
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     for key in ["signature", "timestamp", "nonce"] {
-        assert!(request.query.contains_key(key), "缺少 {key} 参数：{:?}", request.query);
+        assert!(
+            request.query.contains_key(key),
+            "缺少 {key} 参数：{:?}",
+            request.query
+        );
     }
     assert_eq!(
         request.query["signature"],
@@ -212,7 +219,10 @@ fn dispatch_posts_json_with_signature_query_and_snapshots_elements() {
         outcome.timestamp.as_deref(),
         Some(request.query["timestamp"].as_str())
     );
-    assert_eq!(outcome.request_body.as_deref(), Some(GOLDEN_EVENT_PLAINTEXT));
+    assert_eq!(
+        outcome.request_body.as_deref(),
+        Some(GOLDEN_EVENT_PLAINTEXT)
+    );
 }
 
 #[test]
@@ -233,9 +243,8 @@ fn dispatch_reports_non_200_status_and_body() {
 
 #[test]
 fn dispatch_reports_timeout_without_response() {
-    let slow = |_query: &HashMap<String, String>, _body: &str| {
-        ("HTTP/1.1 200 OK".into(), String::new())
-    };
+    let slow =
+        |_query: &HashMap<String, String>, _body: &str| ("HTTP/1.1 200 OK".into(), String::new());
     let (addr, _rx) = start_request_server(slow, Duration::from_secs(1));
     let config = weibo_config(format!("http://{addr}/webhooks/weibo"));
 

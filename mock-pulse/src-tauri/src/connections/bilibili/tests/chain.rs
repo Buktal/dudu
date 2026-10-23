@@ -6,7 +6,7 @@
 use std::time::Duration;
 
 use crate::connections::{ChannelAdapter, ConnectionConfig};
-use crate::test_support::{RecordedPost, quick_client, start_single_server};
+use crate::test_support::{quick_client, start_single_server, RecordedPost};
 
 use super::*;
 
@@ -30,8 +30,7 @@ fn signature_verifies(request: &RecordedPost, app_secret: &str) -> bool {
             None => return false,
         }
     }
-    let recomputed =
-        crate::connections::util::hmac_sha256_hex(app_secret, &values.join("\n"));
+    let recomputed = crate::connections::util::hmac_sha256_hex(app_secret, &values.join("\n"));
     request.header("Authorization").as_deref() == Some(recomputed.as_str())
 }
 
@@ -111,9 +110,8 @@ fn handshake_posts_verify_webhooks_and_accepts_data_echo() {
 #[test]
 fn handshake_fails_when_data_not_echoed() {
     // 官方要求解析出 data 原样返回（回显别的值即校验失败）
-    let wrong_echo = |_request: &RecordedPost| {
-        ("HTTP/1.1 200 OK".into(), r#"{"data":42}"#.to_string())
-    };
+    let wrong_echo =
+        |_request: &RecordedPost| ("HTTP/1.1 200 OK".into(), r#"{"data":42}"#.to_string());
     let (addr, _rx) = start_single_server(wrong_echo, Duration::ZERO);
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
     let outcome = Adapter.verify_handshake(&client(), &config);
@@ -125,8 +123,7 @@ fn handshake_fails_when_data_not_echoed() {
 #[test]
 fn handshake_fails_on_json_without_data_field() {
     // 回 JSON 信封但缺 data（官方要求解析出 data 原样返回）
-    let no_data =
-        |_request: &RecordedPost| ("HTTP/1.1 200 OK".into(), r#"{"code":0}"#.to_string());
+    let no_data = |_request: &RecordedPost| ("HTTP/1.1 200 OK".into(), r#"{"code":0}"#.to_string());
     let (addr, _rx) = start_single_server(no_data, Duration::ZERO);
     let config = bilibili_config(format!("http://{addr}/webhooks/bilibili"));
     let outcome = Adapter.verify_handshake(&client(), &config);

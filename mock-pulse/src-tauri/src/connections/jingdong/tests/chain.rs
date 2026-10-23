@@ -123,7 +123,10 @@ fn dispatch_posts_plaintext_with_jos_query_and_snapshots_elements() {
     let timestamp = outcome.timestamp.clone().expect("应带 timestamp 快照");
     assert_eq!(timestamp.len(), 19);
     assert!(timestamp.as_bytes()[4] == b'-' && timestamp.as_bytes()[10] == b' ');
-    assert_eq!(date_part_of(&timestamp), date_part_of(&jos_timestamp(now_secs())));
+    assert_eq!(
+        date_part_of(&timestamp),
+        date_part_of(&jos_timestamp(now_secs()))
+    );
 
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     assert_eq!(request.body, GOLDEN_ORDER_PLAINTEXT);
@@ -172,8 +175,9 @@ fn dispatch_reports_non_200_status_and_body() {
 fn dispatch_reports_timeout_with_pending_retry_note() {
     // 官方重试口径待核验(09-27)：超时文案附待核验提示；客户端 200ms 超时 vs
     // 服务器 1s 延迟
-    let slow =
-        |_request: &crate::test_support::RecordedPost| ("HTTP/1.1 200 OK".to_string(), String::new());
+    let slow = |_request: &crate::test_support::RecordedPost| {
+        ("HTTP/1.1 200 OK".to_string(), String::new())
+    };
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = jingdong_config(format!("http://{addr}/webhooks/jingdong"));
 
@@ -191,7 +195,10 @@ fn dispatch_reports_timeout_with_pending_retry_note() {
 fn request_line_query(request_line: &str) -> String {
     // 请求行形如 `POST /webhooks/jingdong?app_key=…&… HTTP/1.1`
     let raw = request_line.split(' ').nth(1).unwrap_or_default();
-    raw.split_once('?').map(|(_, query)| query).unwrap_or("").to_string()
+    raw.split_once('?')
+        .map(|(_, query)| query)
+        .unwrap_or("")
+        .to_string()
 }
 
 fn query_param(query: &str, name: &str) -> Option<String> {

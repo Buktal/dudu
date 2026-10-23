@@ -20,7 +20,7 @@ import {
 } from "../definitions/io";
 import { finalizeField, resolveEditorFields } from "../definitions/resolve";
 import type { EventSchema, FieldDescriptor, WirePayload } from "../schemas";
-import { applyFieldDefinitions } from "../stores/events-slice";
+import { applyFieldDefinitions } from "../stores/definitions-slice";
 
 /** 单文件导入上限（照原型的防呆尺寸） */
 const IMPORT_SIZE_LIMIT = 5 * 1024 * 1024;

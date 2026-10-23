@@ -40,7 +40,9 @@ fn extract_reply_encrypt(body: &str) -> Option<&str> {
         #[serde(rename = "Encrypt")]
         encrypt: Option<&'a str>,
     }
-    serde_json::from_str::<CipherEnvelope<'_>>(body).ok()?.encrypt
+    serde_json::from_str::<CipherEnvelope<'_>>(body)
+        .ok()?
+        .encrypt
 }
 
 /// 明文模式直发：明文 XML 逐字节为 body，URL 无加密参数（事实库 §3.3）。
@@ -54,7 +56,12 @@ pub(super) fn dispatch_plain(
 ) -> DispatchOutcome {
     wechat_common::dispatch_plain(
         client,
-        &Creds { url, token, app_id, encoding_aes_key },
+        &Creds {
+            url,
+            token,
+            app_id,
+            encoding_aes_key,
+        },
         extract_reply_encrypt,
         plaintext,
     )
@@ -71,7 +78,12 @@ pub(super) fn dispatch_compatible(
 ) -> DispatchOutcome {
     wechat_common::dispatch_compatible(
         client,
-        &Creds { url, token, app_id, encoding_aes_key },
+        &Creds {
+            url,
+            token,
+            app_id,
+            encoding_aes_key,
+        },
         extract_reply_encrypt,
         plaintext,
     )
@@ -88,7 +100,12 @@ pub(super) fn dispatch_secure(
 ) -> DispatchOutcome {
     wechat_common::dispatch_secure(
         client,
-        &Creds { url, token, app_id, encoding_aes_key },
+        &Creds {
+            url,
+            token,
+            app_id,
+            encoding_aes_key,
+        },
         extract_reply_encrypt,
         plaintext,
     )

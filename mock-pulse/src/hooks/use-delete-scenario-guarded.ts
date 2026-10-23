@@ -32,7 +32,7 @@ export function useDeleteScenarioGuarded(): (
       );
       // 守卫时钟问 interpreter（events 域唯一分岔点）：有引用（ok）即拦删，
       // 无引用（id-missing）放行（文案一字不动）。
-      if (interpretPresence(referencing.length > 0, "guard").blocks) {
+      if (interpretPresence(referencing.length > 0, "guard").blocked) {
         const names = referencing.map((name) => `「${name}」`).join("、");
         throw new Error(
           `剧本被编排引用：${names}。先删除或调整编排，再删除剧本。`,

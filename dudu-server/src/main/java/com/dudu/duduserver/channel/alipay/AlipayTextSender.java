@@ -3,7 +3,6 @@ package com.dudu.duduserver.channel.alipay;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
-import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,8 +19,8 @@ import java.util.Map;
  * text:{content}}，接口 alipay.open.public.message.custom.send（48h 交互窗口、单用户
  * 每日百条频控由渠道约束，失败时原样透出）。请求加签按官方规则剔除 sign 与空值参数
  * （sign_type 参与），SHA256WithRSA 后 Base64；响应按响应节点 code=10000 判成功（接口
- * 不返回消息标识）；响应验签需支付宝公钥（不在凭据集）不做。凭据缺失、业务失败与调用
- * 异常如实返回。接口地址默认官方域名，可用 dudu.channel.alipay.api-base 覆盖为受控替身。
+ * 不返回消息标识）；响应验签需支付宝公钥（不在凭据集）不做。业务失败与调用异常
+ * 如实返回。接口地址默认官方域名，可用 dudu.channel.alipay.api-base 覆盖为受控替身。
  * timestamp 按支付宝官方 GMT+8 口径（Asia/Shanghai）生成——渠道协议保真，非业务时间。
  */
 @Slf4j
@@ -43,9 +42,6 @@ public class AlipayTextSender {
 
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         AlipayCredentials credentials = AlipayCredentials.of(account);
-        if (credentials == null) {
-            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
-        }
         try {
             Map<String, String> params = AlipayRequests.params(credentials, METHOD_CUSTOM_SEND,
                 bizContent(externalUserId, text));

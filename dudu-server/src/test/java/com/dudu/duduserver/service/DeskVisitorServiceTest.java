@@ -21,10 +21,10 @@ import com.dudu.duduserver.dto.DeskVisitorQueryDTO;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.MessageDO;
 import com.dudu.duduserver.entity.UserDO;
+import com.dudu.duduserver.entity.UserGroupDO;
 import com.dudu.duduserver.entity.VisitorDO;
 import com.dudu.duduserver.service.impl.DeskVisitorServiceImpl;
 import com.dudu.duduserver.socket.DeskSocketGateway;
-import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskConversationVO;
 import com.dudu.duduserver.vo.DeskMessagePageVO;
 import com.dudu.duduserver.vo.DeskMessageVO;
@@ -83,9 +83,11 @@ class DeskVisitorServiceTest {
 
     @BeforeEach
     void setUp() {
+        UserGroupDO group = new UserGroupDO();
+        group.setGroupId(31L);
+        group.setGroupName("售前");
         when(deskAuthService.requireAccess(me)).thenReturn(
-            new DeskAccessVO(false, List.of(new DeskAccessVO.Group("31", "售前")),
-                List.of(new DeskAccessVO.Account(ACCOUNT_ID, "31", ChannelEnum.WECHAT_MP, "公众号"))));
+            DeskAccess.of(false, List.of(group), List.of(channelAccount(Map.of()))));
     }
 
     @ParameterizedTest
@@ -331,6 +333,7 @@ class DeskVisitorServiceTest {
     private CompanyChannelDO channelAccount(Map<String, Object> channelInfo) {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setCompanyChannelId(Long.valueOf(ACCOUNT_ID));
+        account.setGroupId(31L);
         account.setChannel(ChannelEnum.WECHAT_MP);
         account.setAccountName("公众号");
         account.setChannelInfo(channelInfo);

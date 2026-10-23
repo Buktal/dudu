@@ -34,7 +34,7 @@ export function useDeleteEventGuarded(): (eventId: string) => Promise<void> {
       // 守卫时钟问 interpreter（events 域唯一分岔点）：有引用（ok）即拦删，
       // 无引用（id-missing）放行；引用按 id 匹配，落后 revision 同样拦
       // （文案一字不动）。
-      if (interpretPresence(pinnedPlans.length > 0, "guard").blocks)
+      if (interpretPresence(pinnedPlans.length > 0, "guard").blocked)
         throw new Error(
           `事件仍被编排快照引用：${pinnedPlans.map((name) => `「${name}」`).join("、")}。先同步或移除对应剧本，再删除事件。`,
         );
@@ -42,7 +42,7 @@ export function useDeleteEventGuarded(): (eventId: string) => Promise<void> {
         store.getState(),
         eventId,
       );
-      if (interpretPresence(referencing.length > 0, "guard").blocks) {
+      if (interpretPresence(referencing.length > 0, "guard").blocked) {
         const names = referencing.map((name) => `「${name}」`).join("、");
         throw new Error(
           `事件被剧本引用：${names}。先删除或调整剧本，再删除事件。`,

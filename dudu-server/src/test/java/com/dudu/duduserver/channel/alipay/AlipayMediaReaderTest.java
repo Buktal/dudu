@@ -1,7 +1,6 @@
 package com.dudu.duduserver.channel.alipay;
 
 import com.dudu.duduserver.channel.ChannelMediaResult;
-import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.sun.net.httpserver.HttpServer;
@@ -109,19 +108,6 @@ class AlipayMediaReaderTest {
         assertThat(result.succeeded()).isFalse();
         assertThat(result.bytes()).isNull();
         assertThat(result.failureReason()).isNotBlank();
-    }
-
-    @Test
-    void reportsMissingCredentialsWithoutCallingTheEndpoint() {
-        CompanyChannelDO bare = new CompanyChannelDO();
-        bare.setChannel(ChannelEnum.ALIPAY);
-        bare.setChannelInfo(Map.of());
-
-        ChannelMediaResult result = reader().read(bare, "abc123");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).isEqualTo(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
-        assertThat(bodies).isEmpty();
     }
 
     private AlipayMediaReader reader() {

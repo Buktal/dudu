@@ -3,7 +3,6 @@ package com.dudu.duduserver.channel.meituan;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
-import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,9 +58,6 @@ public class MeituanTextSender {
 
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         MeituanCredentials credentials = MeituanCredentials.of(account);
-        if (credentials == null) {
-            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
-        }
         LinkedMultiValueMap<String, String> form = form(credentials, externalUserId, text);
         try {
             String response = restClient.post()

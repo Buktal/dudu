@@ -5,8 +5,9 @@ import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.constant.UserRoleEnum;
+import com.dudu.duduserver.entity.CompanyChannelDO;
+import com.dudu.duduserver.service.DeskAccess;
 import com.dudu.duduserver.service.DeskAuthService;
-import com.dudu.duduserver.vo.DeskAccessVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -55,8 +56,7 @@ class DeskSocketGatewayTest {
             if (user.userId() == 42L) {
                 throw new DataAccessResourceFailureException("db down");
             }
-            return new DeskAccessVO(false, List.of(),
-                List.of(new DeskAccessVO.Account("7", "3", ChannelEnum.WECHAT_MP, "公众号")));
+            return authorizedAccess();
         });
 
         // 权限读取故障不得外泄：另一位员工的会话照常收到本次推送
@@ -108,6 +108,36 @@ class DeskSocketGatewayTest {
 
         verify(session, never()).close(any(CloseStatus.class));
         assertThat(gateway.user("just-authenticated")).isNotNull();
+    }
+
+    @Test
+    void broadcastReusesAccessSnapshotWithinTtlAndAccessChangedInvalidatesIt() throws Exception {
+        WebSocketSession session = mock(WebSocketSession.class);
+        when(session.getId()).thenReturn("session-1");
+        when(session.isOpen()).thenReturn(true);
+        gateway.register(session);
+        gateway.authenticate("session-1", employee(42L));
+        when(deskAuthService.requireAccess(any())).thenReturn(authorizedAccess());
+
+        // TTL 内的两次广播共用一份权限快照，不重复实时解析
+        gateway.pushMessage(COMPANY_ID, CHANNEL_ID, null, null);
+        gateway.pushMessage(COMPANY_ID, CHANNEL_ID, null, null);
+        verify(deskAuthService, times(1)).requireAccess(any());
+
+        // 关系变更事件丢弃本企业快照：下一次广播回到实时读取
+        gateway.onAccessChanged(new DeskAccessChangedEvent(COMPANY_ID));
+        gateway.pushMessage(COMPANY_ID, CHANNEL_ID, null, null);
+        verify(deskAuthService, times(2)).requireAccess(any());
+    }
+
+    // 授权范围夹具：可接待 CHANNEL_ID 账号的员工
+    private DeskAccess authorizedAccess() {
+        CompanyChannelDO account = new CompanyChannelDO();
+        account.setCompanyChannelId(CHANNEL_ID);
+        account.setGroupId(3L);
+        account.setChannel(ChannelEnum.WECHAT_MP);
+        account.setAccountName("公众号");
+        return DeskAccess.of(false, List.of(), List.of(account));
     }
 
     private JwtUser employee(long userId) {

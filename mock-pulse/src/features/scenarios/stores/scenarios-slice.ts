@@ -70,17 +70,18 @@ function referencedVersionOf(
 ): { event: EventItem; version: EventVersion } {
   const event = events.find((item) => item.id === eventId);
   // 编辑时钟（同步门）问 interpreter（events 域唯一分岔点）：无行即 id 缺失，
-  // 拒绝同步（文案一字不动）。后半为类型收窄，语义以解释为准（两者一致）。
-  if (interpretPresence(event, "edit").blocks || !event) {
+  // 拒绝同步（文案一字不动）；命中带回主语
+  const verdict = interpretPresence(event, "edit");
+  if (verdict.blocked) {
     throw new Error(`事件不存在：${eventId}。`);
   }
   // 取尖单点在 events 域 latestVersionOf（与 interpreter/model 同源）
-  const version = latestVersionOf(event);
+  const version = latestVersionOf(verdict.row);
   // 非引用分类边：行在但零版本（无 ref 可判，不归表），文案不变。
   if (!version) {
-    throw new Error(`事件还没有保存过版本：${event.name}。`);
+    throw new Error(`事件还没有保存过版本：${verdict.row.name}。`);
   }
-  return { event, version };
+  return { event: verdict.row, version };
 }
 
 /** 装载已保存剧本为独立草稿副本（编辑不影响库内对象）。 */

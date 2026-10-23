@@ -14,7 +14,7 @@ use crate::plans::{PlanFailure, PlanMode};
 
 use super::super::control;
 use super::super::progress::{
-    progress_event, LaneProgress, RunProgressEvent, RunProgressStatus, RUN_PROGRESS, StepProgress,
+    progress_event, LaneProgress, RunProgressEvent, RunProgressStatus, StepProgress, RUN_PROGRESS,
 };
 use super::super::snapshot::{validate_snapshot, PlanRunSnapshot, ScenarioRunSnapshot};
 use super::super::store;
@@ -138,18 +138,13 @@ fn run_in_background(
             );
             if let StepProgress::Finished { index, step, .. } = &lane_progress.progress {
                 // 回执回写检查点（补丁 + 注入落盘）：失败进事件，回执不静默丢失
-                event.error = write_checkpoint_step(
-                    &mut checkpoint,
-                    lane,
-                    *index,
-                    step.clone(),
-                    |record| {
+                event.error =
+                    write_checkpoint_step(&mut checkpoint, lane, *index, step.clone(), |record| {
                         store::upsert_run(&dir, record)
                             .map(|_| ())
                             .map_err(|error| error.to_string())
-                    },
-                )
-                .err();
+                    })
+                    .err();
             }
             let _ = app.emit(RUN_PROGRESS, event);
         },

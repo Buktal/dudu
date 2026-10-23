@@ -4,8 +4,8 @@
 //! 校验、非 200 与超时。
 //! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
-use crate::connections::ChannelAdapter;
 use crate::connections::wechat_common::build_msg_signature;
+use crate::connections::ChannelAdapter;
 
 use super::*;
 
@@ -13,8 +13,7 @@ use super::*;
 
 /// 忠实实现官方三步：① 参数已 urldecode ② 重算三参签名比对 ③ 原样回 echostr。
 fn echo_ok(query: &HashMap<String, String>) -> (String, String) {
-    let expect_sig =
-        build_callback_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"]);
+    let expect_sig = build_callback_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"]);
     assert_eq!(expect_sig, query["signature"], "三参签名应可复算");
     ("HTTP/1.1 200 OK".into(), query["echostr"].clone())
 }
@@ -99,7 +98,10 @@ const SAMPLE_PLAINTEXT: &str = concat!(
 fn naive_extract_encrypt(envelope: &str) -> &str {
     let open = "<Encrypt><![CDATA[";
     let start = envelope.find(open).expect("应含 Encrypt 元素") + open.len();
-    let end = start + envelope[start..].find("]]>").expect("Encrypt 应有 CDATA 闭合");
+    let end = start
+        + envelope[start..]
+            .find("]]>")
+            .expect("Encrypt 应有 CDATA 闭合");
     &envelope[start..end]
 }
 
@@ -110,7 +112,11 @@ fn plain_mode_posts_plaintext_verbatim_with_three_param_signature() {
     let (addr, rx) = start_single_server(success, Duration::ZERO);
     let config = mini_config(format!("http://{addr}/hook"));
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_secs(2)),
+        &config,
+        SAMPLE_PLAINTEXT,
+    );
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.body, "success");
@@ -148,7 +154,11 @@ fn secure_mode_posts_envelope_independently_decryptable_verbatim() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_secs(2)),
+        &config,
+        SAMPLE_PLAINTEXT,
+    );
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.body, "");
@@ -157,7 +167,14 @@ fn secure_mode_posts_envelope_independently_decryptable_verbatim() {
 
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     let query = query_of(&request.request_line);
-    for key in ["signature", "timestamp", "nonce", "openid", "encrypt_type", "msg_signature"] {
+    for key in [
+        "signature",
+        "timestamp",
+        "nonce",
+        "openid",
+        "encrypt_type",
+        "msg_signature",
+    ] {
         assert!(query.contains_key(key), "缺少 {key} 参数：{query:?}");
     }
     assert_eq!(query["encrypt_type"], "aes");
@@ -175,7 +192,12 @@ fn secure_mode_posts_envelope_independently_decryptable_verbatim() {
     // 四参 msg_signature 与快照一致（密文校验用 msg_signature 而非 signature）
     assert_eq!(
         query["msg_signature"],
-        build_msg_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"], ciphertext)
+        build_msg_signature(
+            GOLDEN_TOKEN,
+            &query["timestamp"],
+            &query["nonce"],
+            ciphertext
+        )
     );
     assert_eq!(outcome.signature, query["msg_signature"]);
     assert_eq!(outcome.msg_id, query["nonce"]);
@@ -192,7 +214,11 @@ fn compatible_mode_keeps_plaintext_and_appends_encrypt() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_secs(2)),
+        &config,
+        SAMPLE_PLAINTEXT,
+    );
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.error, None);
@@ -207,14 +233,21 @@ fn compatible_mode_keeps_plaintext_and_appends_encrypt() {
         SAMPLE_PLAINTEXT.strip_suffix("</xml>").unwrap()
     );
     assert_eq!(request.body, expected_body);
-    assert!(request.body.starts_with(SAMPLE_PLAINTEXT.strip_suffix("</xml>").unwrap()));
+    assert!(request
+        .body
+        .starts_with(SAMPLE_PLAINTEXT.strip_suffix("</xml>").unwrap()));
     // 密文可独立解回原明文
     let decrypted = decrypt_msg(GOLDEN_ENCODING_AES_KEY, ciphertext).unwrap();
     assert_eq!(decrypted.msg, SAMPLE_PLAINTEXT.as_bytes());
     assert_eq!(decrypted.receiveid, GOLDEN_APP_ID);
     assert_eq!(
         query["msg_signature"],
-        build_msg_signature(GOLDEN_TOKEN, &query["timestamp"], &query["nonce"], ciphertext)
+        build_msg_signature(
+            GOLDEN_TOKEN,
+            &query["timestamp"],
+            &query["nonce"],
+            ciphertext
+        )
     );
 }
 
@@ -231,7 +264,11 @@ fn secure_mode_decrypts_json_reply_envelope_official_sample() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_secs(2)),
+        &config,
+        SAMPLE_PLAINTEXT,
+    );
 
     // 原始回执原样保留；解密明文一并返回（入运行记录）
     assert_eq!(outcome.status, 200);
@@ -257,7 +294,11 @@ fn secure_mode_decrypts_xml_reply_envelope_with_appid_check() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_secs(2)),
+        &config,
+        SAMPLE_PLAINTEXT,
+    );
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.body, reply_envelope);
@@ -268,8 +309,13 @@ fn secure_mode_decrypts_xml_reply_envelope_with_appid_check() {
 #[test]
 fn secure_mode_ignores_reply_whose_tail_appid_mismatches() {
     // 尾部 AppId 校验失败（事实库 §4.3「appid 须校验」）：不产出解密回复
-    let mismatch_encrypt =
-        encrypt_msg(GOLDEN_ENCODING_AES_KEY, &[7u8; 16], b"<xml/>", "wx_other_appid").unwrap();
+    let mismatch_encrypt = encrypt_msg(
+        GOLDEN_ENCODING_AES_KEY,
+        &[7u8; 16],
+        b"<xml/>",
+        "wx_other_appid",
+    )
+    .unwrap();
     let envelope = format!("<xml><Encrypt><![CDATA[{mismatch_encrypt}]]></Encrypt></xml>");
     let (addr, _rx) = start_single_server(
         move |_| ("HTTP/1.1 200 OK".into(), envelope.clone()),
@@ -281,7 +327,11 @@ fn secure_mode_ignores_reply_whose_tail_appid_mismatches() {
         WechatMiniDataFormat::Xml,
     );
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_secs(2)),
+        &config,
+        SAMPLE_PLAINTEXT,
+    );
 
     assert_eq!(outcome.status, 200);
     assert_eq!(outcome.reply, None, "尾部 AppId 不符的回复不进记录");
@@ -291,8 +341,7 @@ fn secure_mode_ignores_reply_whose_tail_appid_mismatches() {
 fn plain_mode_still_posts_verbatim_when_data_format_records_json() {
     // 数据格式取 XML 为主（事实库结论）：即便配置记录 JSON，明文直发仍逐字节
     // 透传模板 XML（数据格式项随连接记录目标侧形态，不改推送报文）。
-    let success: fn(&RecordedPost) -> (String, String) =
-        |_| ("HTTP/1.1 200 OK".into(), "".into());
+    let success: fn(&RecordedPost) -> (String, String) = |_| ("HTTP/1.1 200 OK".into(), "".into());
     let (addr, rx) = start_single_server(success, Duration::ZERO);
     let config = mini_config_with(
         format!("http://{addr}/hook"),
@@ -300,7 +349,11 @@ fn plain_mode_still_posts_verbatim_when_data_format_records_json() {
         WechatMiniDataFormat::Json,
     );
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, SAMPLE_PLAINTEXT);
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_secs(2)),
+        &config,
+        SAMPLE_PLAINTEXT,
+    );
 
     assert_eq!(outcome.status, 200);
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
@@ -314,7 +367,11 @@ fn dispatch_reports_non_200_status_and_body() {
     let (addr, _rx) = start_single_server(boom, Duration::ZERO);
     let config = mini_config(format!("http://{addr}/hook"));
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_secs(2)), &config, "<xml></xml>");
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_secs(2)),
+        &config,
+        "<xml></xml>",
+    );
 
     assert_eq!(outcome.status, 500);
     assert_eq!(outcome.body, "boom");
@@ -329,7 +386,11 @@ fn dispatch_reports_timeout_without_response() {
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = mini_config(format!("http://{addr}/hook"));
 
-    let outcome = Adapter.dispatch_event(&quick_client(Duration::from_millis(200)), &config, "<xml></xml>");
+    let outcome = Adapter.dispatch_event(
+        &quick_client(Duration::from_millis(200)),
+        &config,
+        "<xml></xml>",
+    );
 
     assert_eq!(outcome.status, 0, "未收到响应时 status 为 0");
     let error = outcome.error.clone().expect("应有错误原因");

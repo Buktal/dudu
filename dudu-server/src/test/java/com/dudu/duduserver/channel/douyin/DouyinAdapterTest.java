@@ -2,6 +2,7 @@ package com.dudu.duduserver.channel.douyin;
 
 import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
+import com.dudu.duduserver.channel.support.DirectHttpMediaReader;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +39,7 @@ class DouyinAdapterTest {
         // 发送与素材实现不参与回调路径：接口地址指向本机保留端口，误请求会以连接失败暴露
         adapter = new DouyinAdapter(new DouyinProtocol(),
             new DouyinTextSender(RestClient.builder(), "http://127.0.0.1:9", (channelId, userId) -> null),
-            new DouyinMediaReader(RestClient.builder()));
+            new DirectHttpMediaReader(RestClient.builder()));
     }
 
     @Test

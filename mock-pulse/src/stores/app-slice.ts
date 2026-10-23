@@ -47,8 +47,6 @@ export type ViewEntry = {
   name: string;
   /** 空态/入口的一句话定位，沿用原型文案 */
   hint: string;
-  /** 视图是否已落地（五视图现已全部实现） */
-  implemented: boolean;
   icon: LucideIcon;
   navSection: NavSection;
   /** 行为位：view-behavior.ts 按 id 装配；本文件的 VIEWS 只带元数据 */
@@ -61,7 +59,6 @@ export const VIEWS: readonly ViewEntry[] = [
     id: "events",
     name: "事件调试",
     hint: "调好一条，反复复用。",
-    implemented: true,
     icon: Zap,
     navSection: "build",
   },
@@ -69,8 +66,6 @@ export const VIEWS: readonly ViewEntry[] = [
     id: "scenarios",
     name: "平台剧本",
     hint: "同平台的事件，按顺序串起来。",
-    // 剧本编辑已落地（#19）；剧本整体运行与运行记录联动归 #20
-    implemented: true,
     icon: ListVideo,
     navSection: "build",
   },
@@ -78,8 +73,6 @@ export const VIEWS: readonly ViewEntry[] = [
     id: "plans",
     name: "执行编排",
     hint: "让多个剧本一起跑，或依次跑。",
-    // 编排编辑与运行已落地（#21）
-    implemented: true,
     icon: Workflow,
     navSection: "build",
   },
@@ -87,8 +80,6 @@ export const VIEWS: readonly ViewEntry[] = [
     id: "runs",
     name: "运行记录",
     hint: "查看每次模拟运行时的参数和回执。",
-    // 直发记录列表已落地（#16）；剧本/编排的完整运行视图归 #20
-    implemented: true,
     icon: History,
     navSection: "monitor",
   },
@@ -96,7 +87,6 @@ export const VIEWS: readonly ViewEntry[] = [
     id: "connections",
     name: "平台连接",
     hint: "为不同平台分别设置目标服务。",
-    implemented: true,
     icon: Plug,
     navSection: "bottom",
   },

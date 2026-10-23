@@ -48,12 +48,14 @@ function Workspace() {
           selectedId={route.selectedId}
           creating={route.creating}
           groupId={route.groupId}
-          onSelect={(id) => navigate(routes.channelAccounts(id, route.groupId))}
+          // groupId 深链种子只在挂载消费一次，页内导航不回写（防止页内
+          // 已清除的组筛选经 URL 复活）；创建入口保留种子作「为该组添加」预选
+          onSelect={(id) => navigate(routes.channelAccounts(id))}
           onCreate={(open) =>
             navigate(
               open
                 ? routes.channelCreate(route.groupId ?? undefined)
-                : routes.channelAccounts(null, route.groupId),
+                : routes.channelAccounts(null),
             )
           }
         />

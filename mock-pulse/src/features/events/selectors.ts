@@ -24,14 +24,16 @@ export {
   templatesForChannel,
 } from "./library";
 export {
+  selectFieldDefinitions,
+  selectSchemaUserDefinition,
+} from "./stores/definitions-slice";
+export {
   selectDraft,
   selectEvents,
-  selectFieldDefinitions,
   selectFilters,
   selectHiddenUnregistered,
   selectLoaded,
   selectPage,
-  selectSchemaUserDefinition,
   selectSelectedId,
 } from "./stores/events-slice";
 

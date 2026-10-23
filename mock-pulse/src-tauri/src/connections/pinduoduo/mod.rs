@@ -88,7 +88,12 @@ pub(crate) fn payload_params(body: &str) -> Vec<(String, String)> {
 fn message_id_of(body: &str) -> String {
     serde_json::from_str::<serde_json::Value>(body)
         .ok()
-        .and_then(|value| value.get("order_id").and_then(|id| id.as_str()).map(String::from))
+        .and_then(|value| {
+            value
+                .get("order_id")
+                .and_then(|id| id.as_str())
+                .map(String::from)
+        })
         .unwrap_or_default()
 }
 
@@ -100,7 +105,10 @@ fn sign_params(
     payload: &[(String, String)],
 ) -> Vec<(String, String)> {
     let mut params: Vec<(String, String)> = payload.to_vec();
-    append_absent(&mut params, &[("client_id", client_id), ("timestamp", timestamp)]);
+    append_absent(
+        &mut params,
+        &[("client_id", client_id), ("timestamp", timestamp)],
+    );
     params
 }
 
@@ -119,14 +127,14 @@ fn post_json(
     let signature = pdd_sign(&borrowed_pairs(&params), client_secret);
     send_measured_outcome(
         client
-        .post(url)
-        .query(&[
-            ("client_id", client_id),
-            ("timestamp", timestamp.as_str()),
-            ("sign", signature.as_str()),
-        ])
-        .header("Content-Type", "application/json")
-        .body(body.to_string()),
+            .post(url)
+            .query(&[
+                ("client_id", client_id),
+                ("timestamp", timestamp.as_str()),
+                ("sign", signature.as_str()),
+            ])
+            .header("Content-Type", "application/json")
+            .body(body.to_string()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: message_id_of(body),
@@ -150,7 +158,13 @@ fn verify_handshake(
     client_id: &str,
     client_secret: &str,
 ) -> HandshakeOutcome {
-    let outcome = post_json(client, url, client_id, client_secret, GOLDEN_PROBE_PLAINTEXT);
+    let outcome = post_json(
+        client,
+        url,
+        client_id,
+        client_secret,
+        GOLDEN_PROBE_PLAINTEXT,
+    );
     probe_handshake_outcome(
         outcome,
         RETRY_NOTE,

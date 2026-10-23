@@ -92,8 +92,11 @@ fn start_request_server(
 /// 忠实实现官方三步（事实库 §10.4）：① 参数已 urldecode ② 重算三参签名比对
 /// ③ 原样回 echostr。
 fn echo_ok(request: &Recorded) -> (String, String) {
-    let expect_sig =
-        build_callback_signature(GOLDEN_TOKEN, &request.query["timestamp"], &request.query["nonce"]);
+    let expect_sig = build_callback_signature(
+        GOLDEN_TOKEN,
+        &request.query["timestamp"],
+        &request.query["nonce"],
+    );
     assert_eq!(expect_sig, request.query["signature"], "三参签名应可复算");
     ("HTTP/1.1 200 OK".into(), request.query["echostr"].clone())
 }
@@ -110,9 +113,17 @@ fn handshake_succeeds_when_echostr_echoed_verbatim() {
     // 请求侧逐项核对官方协议要素（事实库 §10.4：四 query 参数，非请求头）
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
     for key in ["signature", "timestamp", "nonce", "echostr"] {
-        assert!(request.query.contains_key(key), "缺少 {key} 参数：{:?}", request.query);
+        assert!(
+            request.query.contains_key(key),
+            "缺少 {key} 参数：{:?}",
+            request.query
+        );
     }
-    assert_eq!(request.query["echostr"].len(), 32, "echostr 为随机 hex 明文");
+    assert_eq!(
+        request.query["echostr"].len(),
+        32,
+        "echostr 为随机 hex 明文"
+    );
     assert_eq!(
         request.query["signature"],
         build_callback_signature(
@@ -142,9 +153,8 @@ fn handshake_fails_when_echostr_is_modified() {
 
 #[test]
 fn handshake_fails_on_non_200() {
-    let responder = |_request: &Recorded| {
-        ("HTTP/1.1 500 Internal Server Error".into(), "boom".into())
-    };
+    let responder =
+        |_request: &Recorded| ("HTTP/1.1 500 Internal Server Error".into(), "boom".into());
     let (addr, _rx) = start_request_server(responder, Duration::ZERO);
     let config = miniapp_config(format!("http://{addr}/callback"));
     let outcome = Adapter.verify_handshake(&client(), &config);
@@ -207,9 +217,7 @@ fn dispatch_posts_encrypted_envelope_and_snapshots_elements() {
 
 #[test]
 fn dispatch_reports_non_200_status_and_body() {
-    let boom = |_request: &Recorded| {
-        ("HTTP/1.1 500 Internal Server Error".into(), "boom".into())
-    };
+    let boom = |_request: &Recorded| ("HTTP/1.1 500 Internal Server Error".into(), "boom".into());
     let (addr, _rx) = start_request_server(boom, Duration::ZERO);
     let config = miniapp_config(format!("http://{addr}/callback"));
 

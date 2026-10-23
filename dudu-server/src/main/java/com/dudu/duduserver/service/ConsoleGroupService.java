@@ -9,9 +9,11 @@ import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.*;
 import com.dudu.duduserver.dto.*;
 import com.dudu.duduserver.entity.*;
+import com.dudu.duduserver.socket.DeskAccessChangedEvent;
 import com.dudu.duduserver.util.LikeClauses;
 import com.dudu.duduserver.vo.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ public class ConsoleGroupService {
     private final UserGroupMemberService members;
     private final UserService users;
     private final CompanyChannelService channels;
+    private final ApplicationEventPublisher events;
 
     public P<ConsoleGroupVO> query(JwtUser me, ConsoleGroupQuery query) {
         ConsoleAccess access = accessService.require(me);
@@ -120,14 +123,19 @@ public class ConsoleGroupService {
         }
         UserGroupMemberDO existing = members.lambdaQuery().eq(UserGroupMemberDO::getCompanyId, access.companyId())
             .eq(UserGroupMemberDO::getGroupId, groupId).eq(UserGroupMemberDO::getUserId, userId).one();
+        boolean changed = false;
         if (member && existing == null) {
             UserGroupMemberDO relation = new UserGroupMemberDO();
             relation.setCompanyId(access.companyId());
             relation.setGroupId(groupId);
             relation.setUserId(userId);
-            members.save(relation);
+            changed = members.save(relation);
         } else if (!member && existing != null) {
-            members.removeById(existing.getMemberId());
+            changed = members.removeById(existing.getMemberId());
+        }
+        if (changed) {
+            // 成员关系变更影响双方的工作区范围：提交后通知本企业已连接员工重查
+            events.publishEvent(new DeskAccessChangedEvent(access.companyId()));
         }
         return new ConsoleGroupMembershipVO(groupId.toString(), userId.toString(), member);
     }

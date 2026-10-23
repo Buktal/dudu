@@ -1,7 +1,6 @@
 package com.dudu.duduserver.channel.feishu;
 
 import cn.hutool.core.codec.Base64;
-import cn.hutool.json.JSONException;
 import cn.hutool.crypto.Mode;
 import cn.hutool.crypto.Padding;
 import cn.hutool.crypto.digest.DigestUtil;
@@ -15,6 +14,8 @@ import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.Texts;
 import org.springframework.stereotype.Component;
+
+import static com.dudu.duduserver.channel.support.JsonBodies.objectField;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -35,6 +36,9 @@ public class FeishuProtocol {
     // 明文事件 v2.0 信封的 token 位置；url_verification 明文三参的 token 在顶层
     private static final String KEY_TOKEN = "token";
     private static final String KEY_HEADER = "header";
+
+    // 嵌套字段取值报错时的语境前缀（共用取值口径见 JsonBodies）
+    private static final String FIELD_CONTEXT = "飞书事件报文";
 
     // 官方 §4.3 加密信封：body 仅 {"encrypt":"<base64>"} 单字段
     private static final String KEY_ENCRYPT = "encrypt";
@@ -111,7 +115,7 @@ public class FeishuProtocol {
         if (event == null) {
             throw new IllegalArgumentException("飞书事件缺少 event 字段");
         }
-        JSONObject message = objectField(event, KEY_MESSAGE);
+        JSONObject message = objectField(event, KEY_MESSAGE, FIELD_CONTEXT);
         if (message == null) {
             // 已读、撤回等其余事件没有可落库的访客消息
             return Optional.empty();
@@ -140,18 +144,8 @@ public class FeishuProtocol {
     }
 
     private JSONObject senderId(JSONObject event) {
-        JSONObject sender = objectField(event, KEY_SENDER);
-        return sender == null ? null : objectField(sender, KEY_SENDER_ID);
-    }
-
-    // hutool 对无法转为对象的值（如字符串、数组）抛 JSONException 或 ClassCastException，
-    // 统一转参数错误由调用方按 400 应答，而不是作为未知异常按 500 处理
-    private JSONObject objectField(JSONObject parent, String key) {
-        try {
-            return parent.getJSONObject(key);
-        } catch (JSONException | ClassCastException e) {
-            throw new IllegalArgumentException("飞书事件报文字段类型不符：" + key, e);
-        }
+        JSONObject sender = objectField(event, KEY_SENDER, FIELD_CONTEXT);
+        return sender == null ? null : objectField(sender, KEY_SENDER_ID, FIELD_CONTEXT);
     }
 
     // 按 message_type 映射统一消息体；渠道不提供的可选信息省略，无法映射的按 unknown 如实保存

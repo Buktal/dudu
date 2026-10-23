@@ -7,6 +7,7 @@ import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.DirectHttpMediaReader;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -44,13 +45,17 @@ public class QqAdapter implements ChannelAdapter {
     // 通用回调防重放口径 ±300 秒）
     private static final long HANDSHAKE_TS_WINDOW_SECONDS = 300;
 
+    // 附件直链（multimedia.nt.qq.com.cn）外的引用不可读：QQ 无独立 MediaId 下载接口
+    private static final String UNREADABLE_REFERENCE = "素材引用不是可读取的附件链接";
+    private static final String MEDIA_FAILURE_PREFIX = "QQ素材读取失败：";
+
     private final QqProtocol protocol;
 
     private final QqTextSender textSender;
 
-    private final QqMediaReader mediaReader;
+    private final DirectHttpMediaReader mediaReader;
 
-    public QqAdapter(QqProtocol protocol, QqTextSender textSender, QqMediaReader mediaReader) {
+    public QqAdapter(QqProtocol protocol, QqTextSender textSender, DirectHttpMediaReader mediaReader) {
         this.protocol = protocol;
         this.textSender = textSender;
         this.mediaReader = mediaReader;
@@ -91,8 +96,7 @@ public class QqAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // 消息事件落库后应答；事件推送/未收录事件只应答（回包体官方无口径，qq.md §7.1）
-        return inbound.map(ChannelReceiveResult::accept)
-            .orElseGet(() -> ChannelReceiveResult.answer(ChannelCallbackResult.success()));
+        return acceptOrAnswer(inbound);
     }
 
     // op13 首次验证握手（官方 §3.2）：回 plain_token 回显 + event_ts+plain_token 的签名；
@@ -126,7 +130,7 @@ public class QqAdapter implements ChannelAdapter {
 
     @Override
     public ChannelMediaResult readMedia(CompanyChannelDO account, String externalMediaId) {
-        return mediaReader.read(account, externalMediaId);
+        return mediaReader.read(account, externalMediaId, UNREADABLE_REFERENCE, "qq", MEDIA_FAILURE_PREFIX);
     }
 
     @Override

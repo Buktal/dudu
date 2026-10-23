@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -30,9 +29,11 @@ public enum VisitorStatusEnum {
     // 数据库、JSON 与查询参数共用业务代码，拒绝未知值
     @JsonCreator
     public static VisitorStatusEnum fromCode(String code) {
-        return Arrays.stream(values())
-            .filter(value -> value.code.equals(code))
-            .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("未知的VisitorStatusEnum: " + code));
+        for (VisitorStatusEnum value : values()) {
+            if (value.code.equals(code)) {
+                return value;
+            }
+        }
+        throw new IllegalArgumentException("未知的VisitorStatusEnum: " + code);
     }
 }

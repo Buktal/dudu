@@ -19,9 +19,7 @@ fn handshake_posts_forward_sample_and_accepts_200() {
             // 接收侧按官方协议验签（§4.2）：Authorization = HEX(HMAC-SHA256(AppKey+body, AppSecret))
             assert_eq!(
                 request.header("Authorization").as_deref(),
-                Some(
-                    authorization(&request.body, GOLDEN_APP_KEY, GOLDEN_APP_SECRET).as_str()
-                ),
+                Some(authorization(&request.body, GOLDEN_APP_KEY, GOLDEN_APP_SECRET).as_str()),
                 "Authorization 头应可由原始 body + AppKey 前缀复算"
             );
             // 探针即官方正向样本明文（§5.6 逐字）
@@ -71,9 +69,7 @@ fn dispatch_posts_plaintext_with_authorization_and_snapshots_elements() {
         |request| {
             assert_eq!(
                 request.header("Authorization").as_deref(),
-                Some(
-                    authorization(&request.body, GOLDEN_APP_KEY, GOLDEN_APP_SECRET).as_str()
-                )
+                Some(authorization(&request.body, GOLDEN_APP_KEY, GOLDEN_APP_SECRET).as_str())
             );
             ("HTTP/1.1 200 OK".into(), String::new())
         },

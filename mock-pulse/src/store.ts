@@ -1,7 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import { connectionsReducer } from "@/features/connections";
-import { eventsReducer } from "@/features/events";
+import { definitionsReducer, eventsReducer } from "@/features/events";
 import { plansReducer } from "@/features/plans";
 import { runsReducer } from "@/features/runs";
 import { scenariosReducer } from "@/features/scenarios";
@@ -14,6 +14,7 @@ export const store = configureStore({
   reducer: {
     app: appReducer,
     connections: connectionsReducer,
+    definitions: definitionsReducer,
     events: eventsReducer,
     plans: plansReducer,
     runs: runsReducer,

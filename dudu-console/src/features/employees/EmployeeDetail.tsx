@@ -3,7 +3,7 @@ import { useConsoleQuery } from "@/api/console-query";
 import { useSession } from "@/api/context";
 import { useEntityGuard } from "@/api/entity-guard";
 import { DetailPane } from "@/components/detail-pane";
-import { StatusBadge } from "@/components/page-parts";
+import { formatDate, StatusBadge } from "@/components/page-parts";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -74,9 +74,9 @@ export function EmployeeDetail({
                   <dt>当前组 ID</dt>
                   <dd>{employee.groupIds.join("、") || "未加入用户组"}</dd>
                   <dt>创建时间</dt>
-                  <dd>{employee.createTime}</dd>
+                  <dd>{formatDate(employee.createTime, true)}</dd>
                   <dt>更新时间</dt>
-                  <dd>{employee.updateTime}</dd>
+                  <dd>{formatDate(employee.updateTime, true)}</dd>
                 </dl>
                 {employee.isInitialAdmin && (
                   <p className="text-sm text-muted-foreground">

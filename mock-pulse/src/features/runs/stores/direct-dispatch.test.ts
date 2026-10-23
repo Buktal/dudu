@@ -7,6 +7,7 @@ import {
   initialConnectionsState,
 } from "@/features/connections";
 import {
+  definitionsReducer,
   eventsReducer,
   setDraftExpected,
   setDraftField,
@@ -80,6 +81,7 @@ function makeStore(connection?: ConnectionConfig) {
       app: appReducer,
       runs: runsReducer,
       events: eventsReducer,
+      definitions: definitionsReducer,
       connections: connectionsReducer,
       plans: plansReducer,
       scenarios: scenariosReducer,

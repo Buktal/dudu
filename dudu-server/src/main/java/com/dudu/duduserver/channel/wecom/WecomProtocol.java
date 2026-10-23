@@ -4,14 +4,12 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.support.AesEnvelopeCodec;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.SecureXml;
-import com.dudu.duduserver.channel.support.Texts;
+import com.dudu.duduserver.channel.support.WechatInboundMessages;
 import com.dudu.duduserver.channel.support.WechatSignatures;
 import com.dudu.duduserver.channel.support.WechatXmlBodies;
-import com.dudu.duduserver.constant.MessageDirectionEnum;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -38,27 +36,11 @@ public class WecomProtocol {
     /**
      * 解析解密后的明文报文（官方 §2.1 普通消息与 §2.2 事件推送）：普通消息转为统一入站
      * 消息，事件推送返回空表示只应答不落库；报文无法解析或缺少发送方身份时抛出
-     * {@link IllegalArgumentException}，由调用方按参数错误拒绝。
+     * {@link IllegalArgumentException}，由调用方按参数错误拒绝。骨架共用微信族的
+     * 事件判定与统一消息组装，差异只在 MsgType 内容映射。
      */
     public Optional<ChannelInboundMessage> parse(Long companyChannelId, String xml) {
-        Map<String, String> fields = SecureXml.flatFields(xml);
-        String msgType = fields.getOrDefault("MsgType", "");
-        if (MSG_TYPE_EVENT.equals(msgType)) {
-            return Optional.empty();
-        }
-        String externalUserId = fields.getOrDefault("FromUserName", "");
-        if (externalUserId.isEmpty()) {
-            throw new IllegalArgumentException("渠道报文缺少发送方身份");
-        }
-        return Optional.of(new ChannelInboundMessage(
-            companyChannelId,
-            externalUserId,
-            null,
-            null,
-            List.of(),
-            Texts.blankToNull(fields.get("MsgId")),
-            MessageDirectionEnum.INCOMING,
-            content(msgType, fields)));
+        return WechatInboundMessages.parse(companyChannelId, SecureXml.flatFields(xml), this::content);
     }
 
     /**
@@ -96,13 +78,10 @@ public class WecomProtocol {
 
     /**
      * 验签：token/timestamp/nonce/密文四值字典序排序拼接取 SHA-1 40 位小写 hex，与渠道
-     * 签名比对（官方 §4.2；材料全在 URL query 与密文本体）。
+     * 签名比对（官方 §4.2；材料全在 URL query 与密文本体）；材料缺失或空白由共用验签
+     * 原语判失败。
      */
     public boolean verify(String token, String signature, String timestamp, String nonce, String msgEncrypt) {
-        if (token == null || token.isEmpty() || signature == null || timestamp == null || nonce == null
-            || msgEncrypt == null) {
-            return false;
-        }
         return WechatSignatures.verifySha1(signature, token, timestamp, nonce, msgEncrypt);
     }
 

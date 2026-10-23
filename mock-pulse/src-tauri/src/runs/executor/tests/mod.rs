@@ -35,8 +35,7 @@ pub(super) fn douyin_connection(url: String) -> ConnectionConfig {
 
 // 企微官方黄金例唯一出处为 wecom::crypto：按测试旧名引作连接配置与加解密断言
 use crate::connections::wecom::crypto::{
-    GOLDEN_CORP_ID as WC_CORP_ID, GOLDEN_ENCODING_AES_KEY as WC_AES_KEY,
-    GOLDEN_TOKEN as WC_TOKEN,
+    GOLDEN_CORP_ID as WC_CORP_ID, GOLDEN_ENCODING_AES_KEY as WC_AES_KEY, GOLDEN_TOKEN as WC_TOKEN,
 };
 
 /// 剧本运行测试入口：与 `start_scenario_run` 命令边界同构——包单 lane 编排

@@ -5,8 +5,8 @@
 //! - [`agent`] 自建应用：明文 XML 报文，加密 receiveid = corpId（官方 90239/90240）
 //! - [`aibot`] 智能机器人：明文 JSON 报文，加密 receiveid = 空串（官方 101033）
 
-mod aibot;
 mod agent;
+mod aibot;
 
 pub(crate) mod crypto;
 
@@ -56,8 +56,12 @@ fn echo_handshake(
     receiveid: &str,
 ) -> HandshakeOutcome {
     let plaintext = random_plaintext();
-    let echostr = match encrypt_msg(encoding_aes_key, &random_16(), plaintext.as_bytes(), receiveid)
-    {
+    let echostr = match encrypt_msg(
+        encoding_aes_key,
+        &random_16(),
+        plaintext.as_bytes(),
+        receiveid,
+    ) {
         Ok(value) => value,
         Err(reason) => {
             return HandshakeOutcome {
@@ -123,10 +127,18 @@ fn dispatch_event(
     plaintext: &str,
 ) -> DispatchOutcome {
     match system {
-        WecomSystem::Agent => {
-            agent::dispatch_event(client, url, corp_id, token, encoding_aes_key, agent_id, plaintext)
+        WecomSystem::Agent => agent::dispatch_event(
+            client,
+            url,
+            corp_id,
+            token,
+            encoding_aes_key,
+            agent_id,
+            plaintext,
+        ),
+        WecomSystem::Aibot => {
+            aibot::dispatch_event(client, url, token, encoding_aes_key, plaintext)
         }
-        WecomSystem::Aibot => aibot::dispatch_event(client, url, token, encoding_aes_key, plaintext),
     }
 }
 

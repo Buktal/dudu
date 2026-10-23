@@ -26,8 +26,10 @@ fn handshake_posts_probe_sample_and_accepts_200() {
             let mut params = payload_params(&request.body);
             params.push(("client_id".into(), client_id));
             params.push(("timestamp".into(), timestamp));
-            let borrowed: Vec<(&str, &str)> =
-                params.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+            let borrowed: Vec<(&str, &str)> = params
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect();
             assert_eq!(sign, pdd_sign(&borrowed, GOLDEN_CLIENT_SECRET));
             // 探针即官方订单状态样本明文（§2.1/§5.1 锚定，逐字）
             assert_eq!(request.body, GOLDEN_PROBE_PLAINTEXT);
@@ -81,8 +83,10 @@ fn dispatch_posts_plaintext_with_query_and_snapshots_elements() {
             let mut params = payload_params(&request.body);
             params.push(("client_id".into(), GOLDEN_CLIENT_ID.to_string()));
             params.push(("timestamp".into(), timestamp));
-            let borrowed: Vec<(&str, &str)> =
-                params.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+            let borrowed: Vec<(&str, &str)> = params
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect();
             assert_eq!(sign, pdd_sign(&borrowed, GOLDEN_CLIENT_SECRET));
             ("HTTP/1.1 200 OK".into(), String::new())
         },
@@ -140,8 +144,9 @@ fn dispatch_reports_non_200_status_and_body() {
 fn dispatch_reports_timeout_with_pending_retry_note() {
     // 官方重试口径待核验(09-27)：超时文案附待核验提示；客户端 200ms 超时 vs
     // 服务器 1s 延迟
-    let slow =
-        |_request: &crate::test_support::RecordedPost| ("HTTP/1.1 200 OK".to_string(), String::new());
+    let slow = |_request: &crate::test_support::RecordedPost| {
+        ("HTTP/1.1 200 OK".to_string(), String::new())
+    };
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = pinduoduo_config(format!("http://{addr}/webhooks/pinduoduo"));
 
@@ -159,7 +164,10 @@ fn dispatch_reports_timeout_with_pending_retry_note() {
 fn request_line_query(request_line: &str) -> String {
     // 请求行形如 `POST /webhooks/pinduoduo?client_id=…&… HTTP/1.1`
     let raw = request_line.split(' ').nth(1).unwrap_or_default();
-    raw.split_once('?').map(|(_, query)| query).unwrap_or("").to_string()
+    raw.split_once('?')
+        .map(|(_, query)| query)
+        .unwrap_or("")
+        .to_string()
 }
 
 fn query_param(query: &str, name: &str) -> Option<String> {

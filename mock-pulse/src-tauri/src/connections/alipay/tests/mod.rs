@@ -45,8 +45,8 @@ pub(super) fn test_private_key_pem() -> String {
     TEST_KEY_PEM
         .get_or_init(|| {
             use rand::rngs::OsRng;
-            let private_key = RsaPrivateKey::new(&mut OsRng, 2048)
-                .expect("生成 2048 位测试密钥对失败");
+            let private_key =
+                RsaPrivateKey::new(&mut OsRng, 2048).expect("生成 2048 位测试密钥对失败");
             use rsa::pkcs8::{EncodePrivateKey, LineEnding};
             private_key
                 .to_pkcs8_pem(LineEnding::LF)

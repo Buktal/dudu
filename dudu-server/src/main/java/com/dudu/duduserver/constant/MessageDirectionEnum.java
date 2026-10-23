@@ -6,8 +6,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Arrays;
-
 /**
  * 消息方向：来访与坐席发出；数据库与接口共用业务代码，拒绝未知值。
  */
@@ -24,9 +22,11 @@ public enum MessageDirectionEnum {
 
     @JsonCreator
     public static MessageDirectionEnum fromCode(String code) {
-        return Arrays.stream(values())
-            .filter(value -> value.code.equals(code))
-            .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("未知的MessageDirectionEnum: " + code));
+        for (MessageDirectionEnum value : values()) {
+            if (value.code.equals(code)) {
+                return value;
+            }
+        }
+        throw new IllegalArgumentException("未知的MessageDirectionEnum: " + code);
     }
 }

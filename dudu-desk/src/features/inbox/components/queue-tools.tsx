@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { emptyQuery, hasConversationFilters } from "../conversation-query";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
+import { SEARCH_MAX_LENGTH, useSearchDraft } from "../hooks/use-search-draft";
 import {
   queueOrders as orders,
   queueCountLabel,
@@ -80,6 +81,11 @@ export function QueueTools() {
     void dispatch(loadConversations({ query: { ...query, ...changes } }));
   }
 
+  // 搜索走「草稿-提交」：逐键只改草稿，防抖停顿或回车才提交查询
+  const search = useSearchDraft(query.search, (keyword) =>
+    change({ search: keyword }),
+  );
+
   return (
     <Popover>
       <PopoverTrigger
@@ -118,8 +124,15 @@ export function QueueTools() {
                 data-inbox-search
                 type="search"
                 placeholder="搜索访客或消息"
-                value={query.search}
-                onChange={(event) => change({ search: event.target.value })}
+                value={search.draft}
+                maxLength={SEARCH_MAX_LENGTH}
+                onChange={(event) => search.onChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    search.onEnter();
+                  }
+                }}
               />
               <InputGroupAddon>
                 <Search aria-hidden="true" />

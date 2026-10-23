@@ -71,11 +71,12 @@ function MockPulseApp() {
   const state = useAppSelector(
     (root) => ({
       app: root.app,
+      connections: root.connections,
+      definitions: root.definitions,
       events: root.events,
-      scenarios: root.scenarios,
       plans: root.plans,
       runs: root.runs,
-      connections: root.connections,
+      scenarios: root.scenarios,
     }),
     shallowEqual,
   );

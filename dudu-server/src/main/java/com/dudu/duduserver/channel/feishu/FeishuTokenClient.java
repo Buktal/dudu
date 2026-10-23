@@ -59,7 +59,7 @@ class FeishuTokenClient {
                 return FetchedToken.failed("获取飞书接口凭据失败：响应缺少 tenant_access_token");
             }
             return FetchedToken.fetched(accessToken,
-            AccessTokenCache.expiresInMillis(response, KEY_EXPIRE, DEFAULT_EXPIRE_MILLIS));
+                AccessTokenCache.expiresInMillis(response, KEY_EXPIRE, DEFAULT_EXPIRE_MILLIS));
         } catch (RuntimeException e) {
             return FetchedToken.failed("获取飞书接口凭据失败：" + e.getMessage());
         }

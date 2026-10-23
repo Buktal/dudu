@@ -39,12 +39,9 @@ public class WeiboProtocol {
 
     /**
      * 三参验签：appsecret/timestamp/nonce 字典序排序后拼接取 sha1 与渠道签名比对；
-     * 材料缺失按校验失败处理。
+     * 材料缺失或空白由共用验签原语判失败。
      */
     public boolean verify(String appSecret, String signature, String timestamp, String nonce) {
-        if (Texts.isBlank(appSecret) || Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
-            return false;
-        }
         return WechatSignatures.verifySha1(signature, appSecret, timestamp, nonce);
     }
 

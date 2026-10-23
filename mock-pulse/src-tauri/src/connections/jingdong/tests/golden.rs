@@ -11,22 +11,34 @@ fn sign_cross_computes_documented_concatenation() {
     // §5.1 结果 30902CFA… 依赖示例 JSON 确切字节序，文档版式换行不可考，
     // 不作对拍——官方参数值本身已逐字锚定）
     let params = [
-        ("360buy_param_json", r#"{"order_id":"123456789","order_state":"WAIT_SELLER_STOCK_OUT"}"#),
+        (
+            "360buy_param_json",
+            r#"{"order_id":"123456789","order_state":"WAIT_SELLER_STOCK_OUT"}"#,
+        ),
         ("app_key", GOLDEN_APP_KEY),
         ("timestamp", GOLDEN_TIMESTAMP),
         ("v", "2.0"),
     ];
-    assert_eq!(jos_sign(&params, GOLDEN_APP_SECRET), "B2F24F0CF98CD8123C01B252388F91E5");
+    assert_eq!(
+        jos_sign(&params, GOLDEN_APP_SECRET),
+        "B2F24F0CF98CD8123C01B252388F91E5"
+    );
     // 授权接口同规则（§4.2：access_token 参签）——第二枚官方参数集向量
     let authorized = [
         ("access_token", "yourtoken"),
-        ("360buy_param_json", r#"{"order_id":"123456789","order_state":"WAIT_SELLER_STOCK_OUT"}"#),
+        (
+            "360buy_param_json",
+            r#"{"order_id":"123456789","order_state":"WAIT_SELLER_STOCK_OUT"}"#,
+        ),
         ("app_key", GOLDEN_APP_KEY),
         ("method", "jingdong.pop.order.search"),
         ("timestamp", GOLDEN_TIMESTAMP),
         ("v", "2.0"),
     ];
-    assert_eq!(jos_sign(&authorized, GOLDEN_APP_SECRET), "1C7E8A031FC9EB89E86DC28B2305C3A2");
+    assert_eq!(
+        jos_sign(&authorized, GOLDEN_APP_SECRET),
+        "1C7E8A031FC9EB89E86DC28B2305C3A2"
+    );
 }
 
 #[test]
@@ -49,11 +61,9 @@ fn sign_sorts_params_internally_and_output_is_uppercase_hex() {
     assert_eq!(signature, jos_sign(&sorted, GOLDEN_APP_SECRET));
     // 官方口径「再转化成大写」：32 位大写 hex
     assert_eq!(signature.len(), 32);
-    assert!(
-        signature
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase())
-    );
+    assert!(signature
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_lowercase()));
 }
 
 #[test]
@@ -69,7 +79,10 @@ fn sign_changes_with_param_value_or_secret_and_rejects_forgery() {
     assert_ne!(
         jos_sign(
             &[
-                ("360buy_param_json", &format!("{GOLDEN_ORDER_PLAINTEXT} ")[..]),
+                (
+                    "360buy_param_json",
+                    &format!("{GOLDEN_ORDER_PLAINTEXT} ")[..]
+                ),
                 ("app_key", GOLDEN_APP_KEY),
                 ("timestamp", GOLDEN_TIMESTAMP),
                 ("v", "2.0"),

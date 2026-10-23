@@ -68,8 +68,7 @@ fn sign_concat_sorts_bytewise_and_decodes_wire_values() {
     .collect();
     let concat = signing_concat(&pairs);
     assert_eq!(
-        concat,
-        "Zebra=1&app_id=3&apple=2&charset=a b",
+        concat, "Zebra=1&app_id=3&apple=2&charset=a b",
         "ASCII 递增（大写在前）、url_decode 后原文值参签"
     );
     // 输入参数序不敏感：乱序输入同结果
@@ -111,10 +110,22 @@ fn verify_fails_on_tampered_concat_or_signature() {
             }
         })
         .collect();
-    assert!(!ali_verify(&signing_concat(&tampered), &public_key, &signature));
+    assert!(!ali_verify(
+        &signing_concat(&tampered),
+        &public_key,
+        &signature
+    ));
     // 签名截断/非 base64：验签必败
-    assert!(!ali_verify(&signing_concat(&pairs), &public_key, &signature[..128]));
-    assert!(!ali_verify(&signing_concat(&pairs), &public_key, "not-base64!!"));
+    assert!(!ali_verify(
+        &signing_concat(&pairs),
+        &public_key,
+        &signature[..128]
+    ));
+    assert!(!ali_verify(
+        &signing_concat(&pairs),
+        &public_key,
+        "not-base64!!"
+    ));
 }
 
 #[test]
@@ -135,7 +146,9 @@ fn private_key_parses_pkcs8_pkcs1_pem_and_base64_der() {
     use rsa::pkcs1::LineEnding as Pkcs1LineEnding;
     let private_key = parse_private_key(&test_private_key_pem()).expect("PKCS#8 PEM");
 
-    let pkcs1_pem = private_key.to_pkcs1_pem(Pkcs1LineEnding::LF).expect("导出 PKCS#1 PEM");
+    let pkcs1_pem = private_key
+        .to_pkcs1_pem(Pkcs1LineEnding::LF)
+        .expect("导出 PKCS#1 PEM");
     let parsed_pkcs1 = parse_private_key(&pkcs1_pem).expect("PKCS#1 PEM");
     assert_eq!(
         private_key.n().to_bytes_be(),
@@ -168,10 +181,13 @@ fn public_key_pem_roundtrip_through_receiver_side() {
     let public_pem = public_key
         .to_public_key_pem(LineEnding::LF)
         .expect("导出公钥 PEM");
-    let parsed_public =
-        RsaPublicKey::from_public_key_pem(&public_pem).expect("解析公钥 PEM");
+    let parsed_public = RsaPublicKey::from_public_key_pem(&public_pem).expect("解析公钥 PEM");
     let signature = ali_sign("notify_type=trade_status_sync", &private_key);
-    assert!(ali_verify("notify_type=trade_status_sync", &parsed_public, &signature));
+    assert!(ali_verify(
+        "notify_type=trade_status_sync",
+        &parsed_public,
+        &signature
+    ));
 }
 
 #[test]
@@ -180,7 +196,8 @@ fn message_id_snapshot_prefers_notify_id_then_trade_ids() {
     // out_trade_no；均缺失不落值
     let pairs = form_pairs(GOLDEN_NOTIFY_BODY);
     assert_eq!(message_id_of(&pairs), GOLDEN_NOTIFY_ID);
-    let without_notify = form_pairs("trade_no=2013112011001004330000121536&out_trade_no=6823789339978248");
+    let without_notify =
+        form_pairs("trade_no=2013112011001004330000121536&out_trade_no=6823789339978248");
     assert_eq!(
         message_id_of(&without_notify),
         "2013112011001004330000121536",
@@ -229,5 +246,8 @@ fn stale_sign_is_stripped_and_never_signs_sign_fields() {
     // 其余业务字节逐段保留（ADR-0001）：notify_time 的 %20 编码原样
     assert!(body.contains("notify_time=2018-10-21%2015%3A45%3A22"));
     // util 泛化原语与旧 strip_sig 行为一致（sig 字段渠道不受影响）
-    assert_eq!(crate::connections::util::strip_sig("a=1&sig=x&b=2"), "a=1&b=2");
+    assert_eq!(
+        crate::connections::util::strip_sig("a=1&sig=x&b=2"),
+        "a=1&b=2"
+    );
 }

@@ -9,12 +9,15 @@ import { useQuery } from "./use-query";
 // deps 是 load 的业务参数实值（client 之外，无参传空数组）：既按 consoleApi
 // 的参数形转发进 load，又充当 useCallback 的依赖，取值与身份同源。
 // accessRevision（权限变化）与 dataRevision（写成功即失效）进入重查依赖，与分页查询对称。
+// 目录类查询（静态渠道定义、低频下拉数据）传 options.stable 跳过写后失效：
+// 写成功不陪跑重查，权限变化仍重查。
 export function useConsoleQuery<P extends unknown[], T>(
   load: (
     client: ConsoleClient,
     ...args: [...P, signal: AbortSignal]
   ) => Promise<T>,
   deps: P,
+  options?: { stable?: boolean },
 ) {
   const client = useConsole();
   const { accessRevision, dataRevision } = useSession();
@@ -22,7 +25,13 @@ export function useConsoleQuery<P extends unknown[], T>(
     // biome-ignore lint/correctness/useExhaustiveDependencies: deps 展开转发进 load，元素即依赖，数组本体不参与比对
     useCallback(
       (signal: AbortSignal) => load(client, ...deps, signal),
-      [client, load, accessRevision, dataRevision, ...deps],
+      [
+        client,
+        load,
+        accessRevision,
+        ...(options?.stable ? [] : [dataRevision]),
+        ...deps,
+      ],
     ),
   );
 }

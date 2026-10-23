@@ -86,7 +86,7 @@ export function AccountPage() {
                   event,
                   () =>
                     passwordError(password, confirmation) ??
-                    (current.trim() ? null : "请输入当前密码"),
+                    (current ? null : "请输入当前密码"),
                   (signal) =>
                     adminApi.changePassword(client, current, password, signal),
                   {

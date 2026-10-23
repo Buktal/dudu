@@ -31,7 +31,12 @@ pub(super) fn dispatch_plain(
 ) -> DispatchOutcome {
     wechat_common::dispatch_plain(
         client,
-        &Creds { url, token, app_id, encoding_aes_key },
+        &Creds {
+            url,
+            token,
+            app_id,
+            encoding_aes_key,
+        },
         extract_reply_encrypt,
         plaintext,
     )
@@ -48,7 +53,12 @@ pub(super) fn dispatch_compatible(
 ) -> DispatchOutcome {
     wechat_common::dispatch_compatible(
         client,
-        &Creds { url, token, app_id, encoding_aes_key },
+        &Creds {
+            url,
+            token,
+            app_id,
+            encoding_aes_key,
+        },
         extract_reply_encrypt,
         plaintext,
     )
@@ -65,7 +75,12 @@ pub(super) fn dispatch_secure(
 ) -> DispatchOutcome {
     wechat_common::dispatch_secure(
         client,
-        &Creds { url, token, app_id, encoding_aes_key },
+        &Creds {
+            url,
+            token,
+            app_id,
+            encoding_aes_key,
+        },
         extract_reply_encrypt,
         plaintext,
     )

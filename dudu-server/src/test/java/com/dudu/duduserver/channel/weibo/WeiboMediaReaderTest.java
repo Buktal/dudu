@@ -75,16 +75,8 @@ class WeiboMediaReaderTest {
         assertThat(result.failureReason()).contains("30021").contains("fid not found");
     }
 
-    @Test
-    void reportsMissingCredentialsWithoutCallingTheEndpoint() {
-        handle(MEDIA_PATH, 200, "{\"result\": true}");
-
-        ChannelMediaResult result = reader().read(weiboAccount(Map.of()), "821804469");
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureReason()).isEqualTo("渠道素材凭据未配置");
-        assertThat(requestLines).isEmpty();
-    }
+    // 凭据缺失的如实拦截由注册表 restriction 承担（见 WeiboAdapterTest），读取器只按
+    // 已配置凭据翻译渠道协议与异常
 
     @Test
     void reportsTransportFailureInsteadOfPretendingSuccess() {

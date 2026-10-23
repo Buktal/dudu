@@ -29,12 +29,10 @@ public class WechatMpProtocol {
     private static final String MSG_TYPE_LINK = "link";
 
     /**
-     * 验签：token/timestamp/nonce 字典序排序后直接拼接取 sha1 十六进制小写，与渠道签名比对。
+     * 验签：token/timestamp/nonce 字典序排序后直接拼接取 sha1 十六进制小写，与渠道签名比对；
+     * 材料缺失或空白由共用验签原语判失败。
      */
     public boolean verify(String token, String signature, String timestamp, String nonce) {
-        if (token == null || token.isEmpty() || signature == null || timestamp == null || nonce == null) {
-            return false;
-        }
         return WechatSignatures.verifySha1(signature, token, timestamp, nonce);
     }
 

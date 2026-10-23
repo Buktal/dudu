@@ -34,7 +34,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AdminLoginVO login(AdminLoginDTO request) {
         UserDO user = userService.findPlatformUser(request.username());
-        if (user == null || !PasswordHasher.matches(request.password(), user.getPasswordHash())) {
+        // 不存在的用户名也做等代价比对，失败耗时不泄漏用户名存在性（单点在 loginMatches）
+        boolean matched = PasswordHasher.loginMatches(request.password(),
+            user == null ? null : user.getPasswordHash());
+        if (user == null || !matched) {
             throw new BizException(ApiEnum.LOGIN_FAILED);
         }
         if (user.getRole() != UserRoleEnum.ADMIN

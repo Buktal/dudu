@@ -5,8 +5,8 @@
 //! AES 原语本身（密钥派生/IV/PKCS#7-32）与微信族同算法，其正确性由企微
 //! 官方 90968 黄金向量（wecom::crypto 测试）锚定，此处锚定小红书侧链路组合。
 
-use base64::Engine;
 use crate::connections::wecom::crypto;
+use base64::Engine;
 
 use super::*;
 
@@ -63,8 +63,7 @@ fn golden_msg_signature_recomputes_from_sorted_concatenation() {
     // timestamp, nonce, encrypt) 四值拼接) 小写 hex——排序序在测试侧独立复现，
     // 不复用被测实现的排序（避免同函数自证）
     let encrypt = "RypEvHKD8QQKFhvQ6QleEB4J58tiPdvo+rtK1I9qca6aM/wvqnLSV5zEPeusUiX";
-    let signature =
-        build_msg_signature(GOLDEN_TOKEN, GOLDEN_TIMESTAMP, GOLDEN_NONCE, encrypt);
+    let signature = build_msg_signature(GOLDEN_TOKEN, GOLDEN_TIMESTAMP, GOLDEN_NONCE, encrypt);
     assert_eq!(signature.len(), 40);
 
     let mut sorted = [GOLDEN_TOKEN, GOLDEN_TIMESTAMP, GOLDEN_NONCE, encrypt];

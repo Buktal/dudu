@@ -24,14 +24,14 @@ fn authorization_cross_computes_documented_concatenation() {
 fn authorization_output_matches_official_header_sample_shape() {
     // 官方样例头（§5.6 逐字）为 64 位小写 hex；实现输出同形态
     assert_eq!(OFFICIAL_HEADER_SAMPLE.len(), 64);
-    assert!(
-        OFFICIAL_HEADER_SAMPLE
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
-    );
+    assert!(OFFICIAL_HEADER_SAMPLE
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
     let signature = authorization(GOLDEN_FORWARD_PLAINTEXT, GOLDEN_APP_KEY, GOLDEN_APP_SECRET);
     assert_eq!(signature.len(), 64);
-    assert!(signature.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+    assert!(signature
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
 }
 
 #[test]
@@ -64,7 +64,10 @@ fn golden_forward_envelope_matches_official_sample_fields() {
     assert_eq!(parsed["seller_id"], "1234567");
     assert_eq!(parsed["message_type"], 0);
     assert_eq!(parsed["data"]["order_status"], "unpaid");
-    assert_eq!(parsed["data"]["trade_order_id"], GOLDEN_FORWARD_TRADE_ORDER_ID);
+    assert_eq!(
+        parsed["data"]["trade_order_id"],
+        GOLDEN_FORWARD_TRADE_ORDER_ID
+    );
     assert_eq!(parsed["data"]["trade_order_line_id"], "260422900298363");
     assert_eq!(parsed["data"]["status_update_time"], 1603698638);
     assert_eq!(parsed["timestamp"], 1_603_766_859_530i64);
@@ -76,7 +79,10 @@ fn golden_forward_envelope_matches_official_sample_fields() {
         .keys()
         .map(String::as_str)
         .collect();
-    assert_eq!(keys, ["seller_id", "message_type", "data", "timestamp", "site"]);
+    assert_eq!(
+        keys,
+        ["seller_id", "message_type", "data", "timestamp", "site"]
+    );
 }
 
 #[test]
@@ -112,10 +118,7 @@ fn golden_offmsg_envelope_matches_official_sample_fields() {
 fn message_id_snapshot_follows_official_idempotency_keys() {
     // 幂等键快照口径（事实库 §3.3）：交易 tid / 退款 refund_id / OpenIM msg_id /
     // 全球栈信封 data.trade_order_id、data.reverse_order_id
-    assert_eq!(
-        message_id_of(GOLDEN_TRADE_PLAINTEXT),
-        GOLDEN_TRADE_TID
-    );
+    assert_eq!(message_id_of(GOLDEN_TRADE_PLAINTEXT), GOLDEN_TRADE_TID);
     assert_eq!(message_id_of(GOLDEN_REFUND_PLAINTEXT), GOLDEN_REFUND_ID);
     assert_eq!(message_id_of(GOLDEN_OFFMSG_PLAINTEXT), GOLDEN_OFFMSG_MSG_ID);
     assert_eq!(

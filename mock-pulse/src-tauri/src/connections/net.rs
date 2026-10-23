@@ -60,7 +60,10 @@ fn send_measured(
         Err(err) => (
             0,
             String::new(),
-            Some(format!("{}：{err}", request_error_reason(&err, timeout_note))),
+            Some(format!(
+                "{}：{err}",
+                request_error_reason(&err, timeout_note)
+            )),
         ),
     };
     (status, receipt, error, elapsed_ms)
@@ -93,7 +96,11 @@ pub(crate) fn send_measured_outcome(
     reply: impl FnOnce(u16, &str) -> Option<String>,
 ) -> DispatchOutcome {
     let (status, body, error, elapsed_ms) = send_measured(request, timeout_note);
-    let reply = if error.is_none() { reply(status, &body) } else { None };
+    let reply = if error.is_none() {
+        reply(status, &body)
+    } else {
+        None
+    };
     DispatchOutcome {
         msg_id: snapshot.msg_id,
         signature: snapshot.signature,
@@ -228,7 +235,10 @@ pub(crate) fn probe_handshake_outcome(
         };
         return HandshakeOutcome {
             ok: false,
-            message: format!("目标返回 HTTP {}，{probe_label}未通过{note}", outcome.status),
+            message: format!(
+                "目标返回 HTTP {}，{probe_label}未通过{note}",
+                outcome.status
+            ),
         };
     }
     if let Some(message) = body_check(outcome.status, &outcome.body) {

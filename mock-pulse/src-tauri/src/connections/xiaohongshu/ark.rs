@@ -36,9 +36,9 @@ fn post_envelope_array(
     let body = format!("[{}]", plaintext.trim());
     send_measured_outcome(
         client
-        .post(url)
-        .header("Content-Type", "application/json")
-        .body(body.clone()),
+            .post(url)
+            .header("Content-Type", "application/json")
+            .body(body.clone()),
         "",
         // ark 推送无唯一标识/签名要素（官方无消息 ID、无签名头），快照不落值
         DispatchSnapshot {
@@ -53,10 +53,7 @@ fn post_envelope_array(
 
 /// ark 连接测试（§3.4 无官方握手机制）：POST 最小推送探针（官方构造示例
 /// 逐字），期望 HTTP 2xx 且应答体满足官方语义 success=true/error_code=0。
-pub(crate) fn probe_handshake(
-    client: &reqwest::blocking::Client,
-    url: &str,
-) -> HandshakeOutcome {
+pub(crate) fn probe_handshake(client: &reqwest::blocking::Client, url: &str) -> HandshakeOutcome {
     let outcome = post_envelope_array(client, url, PROBE_ENVELOPE);
     probe_handshake_outcome(
         outcome,
@@ -95,10 +92,14 @@ mod tests {
     #[test]
     fn ark_reply_ok_follows_official_semantics() {
         // 官方应答（§5.4 逐字）与允许的额外字段形态
-        assert!(ark_reply_ok(r#"{"success":true,"error_code":0,"error_msg":""}"#));
+        assert!(ark_reply_ok(
+            r#"{"success":true,"error_code":0,"error_msg":""}"#
+        ));
         assert!(ark_reply_ok(r#"{"success":true,"error_code":0}"#));
         // 失败/缺字段/非 JSON 一律不合规
-        assert!(!ark_reply_ok(r#"{"success":false,"error_code":500,"error_msg":"boom"}"#));
+        assert!(!ark_reply_ok(
+            r#"{"success":false,"error_code":500,"error_msg":"boom"}"#
+        ));
         assert!(!ark_reply_ok(r#"{"success":true}"#));
         assert!(!ark_reply_ok("not json"));
     }

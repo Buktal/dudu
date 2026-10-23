@@ -3,7 +3,6 @@ package com.dudu.duduserver.channel.weibo;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
-import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.channel.support.JsonBodies;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import lombok.extern.slf4j.Slf4j;
@@ -37,9 +36,6 @@ public class WeiboMediaReader {
 
     public ChannelMediaResult read(CompanyChannelDO account, String externalMediaId) {
         WeiboCredentials credentials = WeiboCredentials.of(account);
-        if (credentials == null) {
-            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
-        }
         try {
             ResponseEntity<byte[]> response = restClient.get()
                 .uri(PATH_MSGET + "?access_token={token}&fid={fid}", credentials.accessToken(), externalMediaId)

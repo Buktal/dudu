@@ -19,9 +19,9 @@ pub fn save_events(dir: &Path, events: &[StoredEvent]) -> std::io::Result<()> {
 mod tests {
     use super::super::{ExpectedReceipt, ReceiptBodyMode, StoredVersion};
     use super::*;
+    use serde_json::json;
     use std::fs;
     use std::path::PathBuf;
-    use serde_json::json;
 
     fn temp_dir(tag: &str) -> PathBuf {
         let dir = std::env::temp_dir()
@@ -101,13 +101,17 @@ mod tests {
         )
         .unwrap();
         let loaded = load_events(&dir).unwrap();
-        assert_eq!(loaded[0].versions[0].expected.body_mode, ReceiptBodyMode::Contains);
+        assert_eq!(
+            loaded[0].versions[0].expected.body_mode,
+            ReceiptBodyMode::Contains
+        );
         fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
-    fn unknown_body_mode_is_rejected_at_load() {
-        // 枚举化后未知取值在装载（与保存的读改写）即被拒绝，不再静默落 String
+    fn unknown_body_mode_is_quarantined_at_load() {
+        // 枚举化后未知取值不静默落 String：装载即触发 store_io 隔离自愈，
+        // 恢复空态（.corrupt-* 留现场），不再整域瘫痪
         let dir = temp_dir("unknown-body-mode");
         fs::write(
             dir.join(FILE_NAME),
@@ -116,8 +120,13 @@ mod tests {
                  "payload":{},"expected":{"status":200,"body":"","bodyMode":"regex"}}]}]"#,
         )
         .unwrap();
-        let failure = load_events(&dir).unwrap_err();
-        assert_eq!(failure.kind(), std::io::ErrorKind::InvalidData);
+        assert!(load_events(&dir).unwrap().is_empty());
+        let leftovers: Vec<String> = fs::read_dir(&dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(leftovers.len(), 1);
+        assert!(leftovers[0].starts_with("events.corrupt-"));
         fs::remove_dir_all(&dir).unwrap();
     }
 

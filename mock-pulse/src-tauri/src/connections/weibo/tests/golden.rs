@@ -30,11 +30,23 @@ fn golden_signature_recomputes_official_vector() {
 fn signature_changes_with_any_param_and_rejects_forgery() {
     let base = build_callback_signature(GOLDEN_APP_SECRET, GOLDEN_TIMESTAMP, GOLDEN_NONCE);
     // 任一参数变化签名即变化（timestamp/nonce 换新值、密钥换新值）
-    assert_ne!(build_callback_signature(GOLDEN_APP_SECRET, "1397022061824", GOLDEN_NONCE), base);
-    assert_ne!(build_callback_signature(GOLDEN_APP_SECRET, GOLDEN_TIMESTAMP, "57155158"), base);
-    assert_ne!(build_callback_signature("xyz123xyZ", GOLDEN_TIMESTAMP, GOLDEN_NONCE), base);
+    assert_ne!(
+        build_callback_signature(GOLDEN_APP_SECRET, "1397022061824", GOLDEN_NONCE),
+        base
+    );
+    assert_ne!(
+        build_callback_signature(GOLDEN_APP_SECRET, GOLDEN_TIMESTAMP, "57155158"),
+        base
+    );
+    assert_ne!(
+        build_callback_signature("xyz123xyZ", GOLDEN_TIMESTAMP, GOLDEN_NONCE),
+        base
+    );
     // 参数次序无关：换序重排仍同一签名（字典序排序的语义）
-    assert_eq!(build_callback_signature(GOLDEN_NONCE, GOLDEN_APP_SECRET, GOLDEN_TIMESTAMP), base);
+    assert_eq!(
+        build_callback_signature(GOLDEN_NONCE, GOLDEN_APP_SECRET, GOLDEN_TIMESTAMP),
+        base
+    );
 }
 
 #[test]

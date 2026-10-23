@@ -22,6 +22,7 @@ import {
   virtuosoBehaviorProps,
 } from "../hooks/use-follow-output";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
+import { SEARCH_MAX_LENGTH, useSearchDraft } from "../hooks/use-search-draft";
 import {
   cancelConversationChoices,
   pinPickerChoicesScope,
@@ -42,9 +43,13 @@ function PinChoices({
 }) {
   const dispatch = useInboxDispatch();
   const pinnedId = useInboxSelector((state) => state.inbox.pinnedId);
-  const { search, loading, error, nextCursor, candidates } = useInboxSelector(
-    selectPinnableChoices,
-  );
+  const {
+    search: appliedSearch,
+    loading,
+    error,
+    nextCursor,
+    candidates,
+  } = useInboxSelector(selectPinnableChoices);
   const id = useId();
   const { followOutput, setAtTop, setAtBottom } = useFollowOutput();
 
@@ -68,6 +73,9 @@ function PinChoices({
     );
   }
 
+  // 搜索走「草稿-提交」：逐键只改草稿，防抖停顿或回车才提交查询
+  const search = useSearchDraft(appliedSearch, change);
+
   return (
     <>
       <FieldGroup className="shrink-0">
@@ -80,14 +88,21 @@ function PinChoices({
               id={id}
               ref={inputRef}
               type="search"
-              value={search}
+              value={search.draft}
+              maxLength={SEARCH_MAX_LENGTH}
               placeholder="搜索未结束的会话…"
-              onChange={(event) => change(event.target.value)}
+              onChange={(event) => search.onChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  search.onEnter();
+                }
+              }}
             />
             <InputGroupAddon>
               <Search aria-hidden="true" />
             </InputGroupAddon>
-            {search && (
+            {search.draft && (
               <InputGroupAddon align="inline-end">
                 <InputGroupButton
                   size="icon-xs"

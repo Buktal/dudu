@@ -302,4 +302,50 @@ describe("access changes", () => {
       mediaKey("conversation-a-message", 0),
     ]);
   });
+
+  it("drops the detached conversation's receipts with its other keyed tables", async () => {
+    // 收权拆除单点收齐键控表（D2）：回执证据随会话删除，不留只写不删的慢泄漏
+    const subscriptions: Subscription[] = [];
+    let allowed = new Set(["account-a", "account-b"]);
+    const store = testStore(
+      {
+        subscribe: (subscription) => {
+          subscriptions.push(subscription);
+          subscription.onConnection("connected");
+          return () => {};
+        },
+        listConversations: async () => {
+          const items = [firstConversation, secondConversation].filter(
+            (conversation) => allowed.has(conversation.identity.accountId),
+          );
+          return { items, nextCursor: null, total: items.length };
+        },
+      },
+      true,
+      { refreshAccess: async () => allowed },
+    );
+    await store.dispatch(loadConversations());
+    for (const conversation of [firstConversation, secondConversation]) {
+      await store.dispatch(loadHistory(conversation.id));
+      subscriptions[0].onEvent({
+        type: "message",
+        context: subscriptions[0].context,
+        message: incomingMessage(conversation.id),
+      });
+    }
+    await flush();
+    const receipts = store.getState().inbox.events.receipts;
+    expect(Object.keys(receipts)).toEqual(["conversation-a", "conversation-b"]);
+
+    // 收权：只剩账号 account-a，conversation-b 连同其回执证据一起拆除
+    allowed = new Set(["account-a"]);
+    subscriptions[0].onEvent(accessChanged(subscriptions[0]));
+    await flush();
+    expect(Object.keys(store.getState().inbox.events.receipts)).toEqual([
+      "conversation-a",
+    ]);
+    expect(
+      store.getState().inbox.events.receipts["conversation-b"],
+    ).toBeUndefined();
+  });
 });

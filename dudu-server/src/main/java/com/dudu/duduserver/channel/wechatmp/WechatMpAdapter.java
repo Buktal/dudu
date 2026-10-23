@@ -8,6 +8,7 @@ import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
 import com.dudu.duduserver.channel.support.ChannelInfoText;
 import com.dudu.duduserver.channel.support.ChannelRestrictions;
+import com.dudu.duduserver.channel.support.EchoHandshakes;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -50,18 +51,7 @@ public class WechatMpAdapter implements ChannelAdapter {
 
     @Override
     public ChannelCallbackResult verifyUrl(CompanyChannelDO account, Map<String, String> query, HttpHeaders headers) {
-        String token = callbackToken(account);
-        if (token == null) {
-            return ChannelCallbackResult.unsupported();
-        }
-        if (!protocol.verify(token, query.get("signature"), query.get("timestamp"), query.get("nonce"))) {
-            return ChannelCallbackResult.rejected();
-        }
-        String echostr = query.get("echostr");
-        if (echostr == null || echostr.isEmpty()) {
-            return ChannelCallbackResult.badRequest();
-        }
-        return ChannelCallbackResult.echo(echostr);
+        return EchoHandshakes.verifyUrl(callbackToken(account), protocol::verify, query);
     }
 
     @Override
@@ -81,8 +71,7 @@ public class WechatMpAdapter implements ChannelAdapter {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
         // 事件推送不是访客消息：只按渠道要求应答，不产生访客与消息数据
-        return inbound.map(ChannelReceiveResult::accept)
-            .orElseGet(() -> ChannelReceiveResult.answer(ChannelCallbackResult.success()));
+        return acceptOrAnswer(inbound);
     }
 
     @Override

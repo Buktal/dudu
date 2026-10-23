@@ -3,7 +3,6 @@ package com.dudu.duduserver.channel.feishu;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelMediaResult;
-import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.channel.support.Texts;
 import com.dudu.duduserver.channel.support.TokenResult;
 import com.dudu.duduserver.entity.CompanyChannelDO;
@@ -52,9 +51,6 @@ public class FeishuMediaReader {
             return ChannelMediaResult.failed(MEDIA_ID_UNRECOGNIZED);
         }
         FeishuSendCredentials credentials = FeishuSendCredentials.of(account);
-        if (credentials == null) {
-            return ChannelMediaResult.failed(ChannelRestrictions.MEDIA_CREDENTIALS_MISSING);
-        }
         TokenResult token = tokenClient.fetch(credentials);
         if (!token.succeeded()) {
             return ChannelMediaResult.failed(token.failureReason());

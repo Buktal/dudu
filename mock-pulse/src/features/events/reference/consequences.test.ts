@@ -79,7 +79,6 @@ describe("consequence 表本体：每 status 一行（runtime / view / edit / gu
         eventBlocksSave: false,
         templateBlocksSave: false,
         laneBlocksSave: false,
-        blocksSync: false,
       },
       guard: { eventBlocksDelete: true, laneBlocksDelete: true },
     });
@@ -93,7 +92,6 @@ describe("consequence 表本体：每 status 一行（runtime / view / edit / gu
         eventBlocksSave: true,
         templateBlocksSave: true,
         laneBlocksSave: true,
-        blocksSync: true,
       },
       guard: { eventBlocksDelete: false, laneBlocksDelete: false },
     });
@@ -107,7 +105,6 @@ describe("consequence 表本体：每 status 一行（runtime / view / edit / gu
         eventBlocksSave: false,
         templateBlocksSave: true,
         laneBlocksSave: false,
-        blocksSync: false,
       },
       guard: { eventBlocksDelete: true, laneBlocksDelete: false },
     });
@@ -343,13 +340,13 @@ describe("edit 时钟问表（保存/同步门不变）", () => {
   });
 
   it("同步门：无行拒绝（id-missing），落后引用可同步（version-missing/ok 放行）", () => {
-    expect(REF_CONSEQUENCES[refStatusForPresence(false)].edit.blocksSync).toBe(
-      true,
-    );
-    expect(REF_CONSEQUENCES[refStatusForPresence(true)].edit.blocksSync).toBe(
-      false,
-    );
-    expect(REF_CONSEQUENCES["version-missing"].edit.blocksSync).toBe(false);
+    // 同步是纯存在性判定，共用 lane 列（两态同值，无独立列）
+    expect(
+      REF_CONSEQUENCES[refStatusForPresence(false)].edit.laneBlocksSave,
+    ).toBe(true);
+    expect(
+      REF_CONSEQUENCES[refStatusForPresence(true)].edit.laneBlocksSave,
+    ).toBe(false);
     // 实现侧：scenarios-slice latestVersionOf 无行抛「事件不存在」，
     // 落后引用走 withStepRevision 前进（既有 slice 测试钉住同步成功与悬空拒绝）。
   });
@@ -553,23 +550,25 @@ describe("interpreter 单点（各时钟一次断言）", () => {
     ).toBe(false);
   });
 
-  it("存在性引用（lane / 窄行）：双缺拦、命中放行，missing 与存在性一致", () => {
-    expect(interpretPresence(false, "runtime")).toMatchObject({
-      status: "id-missing",
-      blocks: true,
-      missingKind: "id",
-      missing: true,
-      outdated: false,
+  it("存在性引用（lane / 窄行）：双缺拦、命中放行带回主语，guard 谓词反向", () => {
+    // 本体方向：缺失即本时钟否定（runtime 拒启动 / edit 拒保存 / view 行不可用）
+    expect(interpretPresence(false, "runtime")).toEqual({ blocked: true });
+    expect(interpretPresence(true, "runtime")).toEqual({
+      blocked: false,
+      row: true,
     });
-    expect(interpretPresence(true, "runtime")).toMatchObject({
-      status: "ok",
-      blocks: false,
-      missingKind: null,
-      missing: false,
+    expect(interpretPresence(false, "edit").blocked).toBe(true);
+    expect(interpretPresence(true, "edit").blocked).toBe(false);
+    expect(interpretPresence(false, "view").blocked).toBe(true);
+    expect(interpretPresence(true, "view").blocked).toBe(false);
+    // 谓词方向（删除守卫计数）：有引用即拦删、无引用放行
+    expect(interpretPresence(false, "guard").blocked).toBe(false);
+    expect(interpretPresence(true, "guard").blocked).toBe(true);
+    // 命中分支带回主语本体：调用侧直接取 row，不再 || !subject 收窄
+    const scenario = { id: "scn-1" } as const;
+    expect(interpretPresence(scenario, "edit")).toEqual({
+      blocked: false,
+      row: scenario,
     });
-    expect(interpretPresence(false, "edit").blocks).toBe(true);
-    expect(interpretPresence(true, "edit").blocks).toBe(false);
-    expect(interpretPresence(false, "view").missing).toBe(true);
-    expect(interpretPresence(true, "view").missing).toBe(false);
   });
 });

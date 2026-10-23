@@ -17,6 +17,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 /**
  * 支付宝 RSA2 签名与验签（事实见 docs/research/channels/alipay.md §3.2、§4.1、§4.3）：
@@ -116,9 +117,11 @@ final class AlipaySignature {
     }
 
     // channel_info 密钥值：兼容 PEM 盔甲（私钥 PKCS#8、公钥 X.509）与裸 Base64 DER 两种存放形态
+    private static final Pattern PEM_LINE_BREAK = Pattern.compile("\\r?\\n");
+
     private static byte[] storedKeyDer(String stored) {
         StringBuilder base64 = new StringBuilder();
-        for (String line : stored.split("\\r?\\n")) {
+        for (String line : PEM_LINE_BREAK.split(stored)) {
             if (line.contains("-----")) {
                 continue;
             }

@@ -31,12 +31,10 @@ public class WechatMiniProtocol {
     private static final String MSG_TYPE_MINI_PROGRAM_PAGE = "miniprogrampage";
 
     /**
-     * 三参验签：token/timestamp/nonce 字典序排序后拼接取 sha1 十六进制小写与渠道签名比对。
+     * 三参验签：token/timestamp/nonce 字典序排序后拼接取 sha1 十六进制小写与渠道签名比对；
+     * 材料缺失或空白由共用验签原语判失败。
      */
     public boolean verify(String token, String signature, String timestamp, String nonce) {
-        if (Texts.isBlank(token) || Texts.isBlank(signature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce)) {
-            return false;
-        }
         return WechatSignatures.verifySha1(signature, token, timestamp, nonce);
     }
 
@@ -46,9 +44,6 @@ public class WechatMiniProtocol {
      */
     public boolean verifySignature(String token, String msgSignature, String timestamp, String nonce,
                                    String encrypt) {
-        if (Texts.isBlank(token) || Texts.isBlank(msgSignature) || Texts.isBlank(timestamp) || Texts.isBlank(nonce) || Texts.isBlank(encrypt)) {
-            return false;
-        }
         return WechatSignatures.verifySha1(msgSignature, token, timestamp, nonce, encrypt);
     }
 

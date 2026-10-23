@@ -12,12 +12,12 @@ import com.dudu.duduserver.dto.DeskLoginDTO;
 import com.dudu.duduserver.entity.CompanyDO;
 import com.dudu.duduserver.entity.UserDO;
 import com.dudu.duduserver.service.CompanyService;
+import com.dudu.duduserver.service.DeskAccess;
 import com.dudu.duduserver.service.DeskAccessService;
 import com.dudu.duduserver.service.DeskAuthService;
 import com.dudu.duduserver.service.UserService;
 import com.dudu.duduserver.util.CompanyIdPolicy;
 import com.dudu.duduserver.util.PasswordHasher;
-import com.dudu.duduserver.vo.DeskAccessVO;
 import com.dudu.duduserver.vo.DeskCompanyVO;
 import com.dudu.duduserver.vo.DeskLoginVO;
 import com.dudu.duduserver.vo.DeskProfileVO;
@@ -50,7 +50,10 @@ public class DeskAuthServiceImpl implements DeskAuthService {
         }
         Long companyId = CompanyIdPolicy.parseCompanyId(request.companyId());
         UserDO user = userService.findCompanyUser(companyId, username);
-        if (user == null || !PasswordHasher.matches(request.password(), user.getPasswordHash())) {
+        // 不存在的用户名也做等代价比对，失败耗时不泄漏用户名存在性（单点在 loginMatches）
+        boolean matched = PasswordHasher.loginMatches(request.password(),
+            user == null ? null : user.getPasswordHash());
+        if (user == null || !matched) {
             throw new BizException(ApiEnum.LOGIN_FAILED);
         }
         CompanyDO company = companyService.getById(companyId);
@@ -62,18 +65,18 @@ public class DeskAuthServiceImpl implements DeskAuthService {
         Long exp = DateUtil.currentSeconds() + jwtProperties.ttlSeconds();
         String token = jwtManager.createToken(new JwtUser(companyId, user.getUserId(), user.getRole(), exp));
         return new DeskLoginVO(token, exp, DeskUserVO.of(user), DeskCompanyVO.of(company),
-            deskAccessService.resolve(company, user));
+            deskAccessService.resolve(company, user).toVO());
     }
 
     @Override
     public DeskProfileVO getProfile(JwtUser me) {
         DeskIdentity identity = requireIdentity(me);
         return new DeskProfileVO(DeskUserVO.of(identity.user()), DeskCompanyVO.of(identity.company()),
-            deskAccessService.resolve(identity.company(), identity.user()));
+            deskAccessService.resolve(identity.company(), identity.user()).toVO());
     }
 
     @Override
-    public DeskAccessVO requireAccess(JwtUser me) {
+    public DeskAccess requireAccess(JwtUser me) {
         DeskIdentity identity = requireIdentity(me);
         return deskAccessService.resolve(identity.company(), identity.user());
     }

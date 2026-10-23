@@ -137,8 +137,8 @@ fn post_json(
     }
     send_measured_outcome(
         request
-        .header("Authorization", signature.clone())
-        .body(body.to_string()),
+            .header("Authorization", signature.clone())
+            .body(body.to_string()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: nonce,

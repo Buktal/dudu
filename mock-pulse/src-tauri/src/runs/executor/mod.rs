@@ -108,16 +108,15 @@ fn tag_lane(mut step: RunStep, lane: usize, scenario_name: &str) -> RunStep {
 /// 保留——归属在检查点构造时已由 [`tag_lane`] 定死，单 lane 剧本形态自然
 /// 退化，本函数不解读运行形态。纯函数：只改内存记录，落盘由调用方注入
 /// （见 `commands.rs` 的回执覆盖路径）。
-fn patch_checkpoint_step(
-    record: &mut RunRecord,
-    lane: usize,
-    index: usize,
-    mut step: RunStep,
-) {
+fn patch_checkpoint_step(record: &mut RunRecord, lane: usize, index: usize, mut step: RunStep) {
     let offset = record
         .steps
         .iter()
-        .filter(|placed| placed.lane_index.is_some_and(|placed_lane| placed_lane < lane))
+        .filter(|placed| {
+            placed
+                .lane_index
+                .is_some_and(|placed_lane| placed_lane < lane)
+        })
         .count();
     let slot = &mut record.steps[offset + index];
     step.lane_index = slot.lane_index;

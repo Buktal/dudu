@@ -14,8 +14,10 @@ use super::*;
 /// 接收侧按官方签名规则复算（§4.1 五步）：params = 参签 kv（解码值），拼
 /// url?…+secret 同一原语，互为对拍。
 fn recompute_sig(url: &str, params: &[(String, String)]) -> String {
-    let borrowed: Vec<(&str, &str)> =
-        params.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
+    let borrowed: Vec<(&str, &str)> = params
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect();
     ele_sign(url, &borrowed, GOLDEN_SECRET)
 }
 
@@ -73,7 +75,10 @@ fn handshake_posts_probe_json_and_accepts_200() {
     // 请求侧逐项核对官方协议要素（§4.1 系统参数一律放 Query String；JSON
     // 推送 Content-Type: application/json）
     let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
-    assert_eq!(request.header("content-type").as_deref(), Some("application/json"));
+    assert_eq!(
+        request.header("content-type").as_deref(),
+        Some("application/json")
+    );
     assert_eq!(request.body, GOLDEN_PROBE_PLAINTEXT);
     let sig = query_param(&request.request_line, "sig").unwrap();
     let params = vec![
@@ -127,15 +132,16 @@ fn dispatch_posts_json_verbatim_with_query_params_and_snapshots() {
     assert_eq!(outcome.reply, None);
     // 明文逐字节透传（ADR-0001）；订单号快照取 eleme_order_id；签名快照即
     // sig 参数（40 位小写 hex）
-    assert_eq!(outcome.request_body.as_deref(), Some(GOLDEN_PROBE_PLAINTEXT));
+    assert_eq!(
+        outcome.request_body.as_deref(),
+        Some(GOLDEN_PROBE_PLAINTEXT)
+    );
     assert_eq!(outcome.msg_id, "12637645858619059");
     assert_eq!(outcome.signature.len(), 40);
-    assert!(
-        outcome
-            .signature
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
-    );
+    assert!(outcome
+        .signature
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
     // timestamp 快照落官方形态（十进制 UNIX 秒）
     let timestamp = outcome.timestamp.clone().expect("应带 timestamp 快照");
     assert!(
@@ -166,7 +172,10 @@ fn dispatch_posts_h5_form_signed_over_all_fields() {
         |request| {
             // H5 表单推送签名覆盖表单全字段（sig 除外）+ 系统参数（§5.6
             // 「签名方式和平台请求饿了么方式一样」+ §4.1 步骤 1 POST 参数口径）
-            assert_eq!(request.header("content-type").as_deref(), Some("application/x-www-form-urlencoded"));
+            assert_eq!(
+                request.header("content-type").as_deref(),
+                Some("application/x-www-form-urlencoded")
+            );
             ("HTTP/1.1 200 OK".into(), String::new())
         },
         Duration::ZERO,
@@ -243,8 +252,9 @@ fn dispatch_reports_non_200_status_and_body() {
 fn dispatch_reports_timeout_with_official_retry_note() {
     // 官方口径实锤（§3.1/§5.1）：非 200 + ok 即判失败并重试，间隔/次数未给出
     // （§7.6）——超时文案附该口径；客户端 200ms 超时 vs 服务器 1s 延迟
-    let slow =
-        |_request: &crate::test_support::RecordedPost| ("HTTP/1.1 200 OK".to_string(), String::new());
+    let slow = |_request: &crate::test_support::RecordedPost| {
+        ("HTTP/1.1 200 OK".to_string(), String::new())
+    };
     let (addr, _rx) = start_single_server(slow, Duration::from_secs(1));
     let config = eleme_config(format!("http://{addr}/webhooks/eleme"));
 

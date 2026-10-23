@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 钉钉适配器回调路径验收（事实库 §3.2/§5.6/§5.11）：无 GET 验证阶段默认不支持、
- * 凭据与通道形态缺失不支持、验签/解密失败拒绝、握手事件与未知明文只应答加密
+ * 凭据与通道形态缺失不支持、验签失败拒绝、解密失败按参数错误应答、握手事件与未知明文只应答加密
  * success 包、机器人消息解析落库且应答仍为加密包、非 JSON 明文按参数错误拒绝、
  * 发送/素材凭据缺失如实限制且不发起渠道请求。
  */
@@ -62,13 +62,13 @@ class DingtalkAdapterTest {
         assertThat(badSignature.message()).isNull();
         assertThat(badSignature.response()).isEqualTo(ChannelCallbackResult.rejected());
 
-        // 签名按篡改密文重算（形式有效）但解密失败：拒绝且不抛
+        // 签名按篡改密文重算（形式有效）但解密失败：按参数错误应答且不抛（与微信三系口径一致）
         String tampered = "not-a-real-ciphertext";
         Map<String, String> tamperedQuery = query(timestampSigned(tampered), tampered);
         ChannelReceiveResult undecryptable = adapter.receive(account(fullInfo()), tamperedQuery,
             new HttpHeaders(), body(tampered));
         assertThat(undecryptable.message()).isNull();
-        assertThat(undecryptable.response()).isEqualTo(ChannelCallbackResult.rejected());
+        assertThat(undecryptable.response()).isEqualTo(ChannelCallbackResult.badRequest());
     }
 
     @Test

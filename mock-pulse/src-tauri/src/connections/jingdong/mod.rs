@@ -105,15 +105,15 @@ fn post_json(
     );
     send_measured_outcome(
         client
-        .post(url)
-        .query(&[
-            ("app_key", app_key),
-            ("timestamp", timestamp.as_str()),
-            ("v", PROTOCOL_VERSION),
-            ("sign", signature.as_str()),
-        ])
-        .header("Content-Type", "application/json")
-        .body(body.to_string()),
+            .post(url)
+            .query(&[
+                ("app_key", app_key),
+                ("timestamp", timestamp.as_str()),
+                ("v", PROTOCOL_VERSION),
+                ("sign", signature.as_str()),
+            ])
+            .header("Content-Type", "application/json")
+            .body(body.to_string()),
         RETRY_NOTE,
         DispatchSnapshot {
             msg_id: message_id_of(body),

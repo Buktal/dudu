@@ -66,10 +66,7 @@ pub(super) fn verify_handshake(
         Err(err) => {
             return HandshakeOutcome {
                 ok: false,
-                message: format!(
-                    "{}：{err}",
-                    request_error_reason(&err, timeout_note)
-                ),
+                message: format!("{}：{err}", request_error_reason(&err, timeout_note)),
             };
         }
     };
@@ -109,8 +106,8 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
-    use crate::test_support::{quick_client, start_single_server, RecordedPost};
     use crate::connections::douyin::sha1_push;
+    use crate::test_support::{quick_client, start_single_server, RecordedPost};
 
     #[test]
     fn build_verify_body_matches_official_schema() {

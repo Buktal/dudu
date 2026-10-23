@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
-use std::sync::Arc;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::connections::{ConnectionConfig, DispatchOutcome, HandshakeOutcome};
@@ -209,13 +209,16 @@ pub(crate) fn query_params(request_line: &str) -> HashMap<String, String> {
         .split_whitespace()
         .last()
         .unwrap_or(without_version);
-    let query = path_query.split_once('?').map(|(_, query)| query).unwrap_or_else(|| {
-        if path_query.starts_with('/') {
-            ""
-        } else {
-            path_query
-        }
-    });
+    let query = path_query
+        .split_once('?')
+        .map(|(_, query)| query)
+        .unwrap_or_else(|| {
+            if path_query.starts_with('/') {
+                ""
+            } else {
+                path_query
+            }
+        });
     query
         .split('&')
         .filter(|pair| !pair.is_empty())

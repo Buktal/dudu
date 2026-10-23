@@ -239,7 +239,10 @@ fn parallel_checkpoint_patches_land_by_lane_prefix_despite_out_of_order_finish()
 fn checkpoint_patch_keeps_scenario_shape_unattributed() {
     // 剧本形态（单 lane 退化）的检查点补丁：偏移恒 0、槽位归属保持 None，
     // 补丁不为单 lane 记录引入 lane 归属。
-    let snap = snapshot("patch-solo", vec![dy_step("one", "one"), dy_step("two", "two")]);
+    let snap = snapshot(
+        "patch-solo",
+        vec![dy_step("one", "one"), dy_step("two", "two")],
+    );
     let mut checkpoint = super::super::commands::interrupted_plan_record(
         &super::super::commands::solo_plan(snap.clone()),
         &[],

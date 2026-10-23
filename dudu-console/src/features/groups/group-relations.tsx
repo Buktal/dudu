@@ -109,7 +109,6 @@ function AddMembers({
 }) {
   const client = useConsole();
   const shell = useSubmit();
-  const { profile } = useSession();
   const [selected, setSelected] = useState<Candidate | null>(null);
   const query = useGroupCandidates(groupId);
   return (
@@ -136,47 +135,43 @@ function AddMembers({
             />
           }
         >
+          {/* 候选的 role 过滤由服务端按身份下沉（初始管理员见全部，其他仅普通员工） */}
           <div className="divide-y">
-            {query.list
-              .filter(
-                (member) =>
-                  profile?.user.isInitialAdmin || member.role === "user",
-              )
-              .map((member) => (
-                <form
-                  key={member.userId}
-                  className="flex items-center justify-between gap-3 p-3"
-                  onSubmit={(event) => {
-                    setSelected(member);
-                    shell.submit(
-                      event,
-                      () => null,
-                      (signal) =>
-                        groupsApi.add(client, groupId, member.userId, signal),
-                      {
-                        commit: () => {
-                          setSelected(null);
-                        },
+            {query.list.map((member) => (
+              <form
+                key={member.userId}
+                className="flex items-center justify-between gap-3 p-3"
+                onSubmit={(event) => {
+                  setSelected(member);
+                  shell.submit(
+                    event,
+                    () => null,
+                    (signal) =>
+                      groupsApi.add(client, groupId, member.userId, signal),
+                    {
+                      commit: () => {
+                        setSelected(null);
                       },
-                    );
-                  }}
-                >
-                  <div>
-                    {member.name}
-                    <p className="text-xs text-muted-foreground">
-                      {member.username} · ID {member.userId} ·{" "}
-                      {member.role === "console" ? "管理员" : "普通员工"}
-                    </p>
-                  </div>
-                  <SubmitButton
-                    shell={shell}
-                    label="添加"
-                    pendingLabel={
-                      selected?.userId === member.userId ? "正在添加" : "请稍候"
-                    }
-                  />
-                </form>
-              ))}
+                    },
+                  );
+                }}
+              >
+                <div>
+                  {member.name}
+                  <p className="text-xs text-muted-foreground">
+                    {member.username} · ID {member.userId} ·{" "}
+                    {member.role === "console" ? "管理员" : "普通员工"}
+                  </p>
+                </div>
+                <SubmitButton
+                  shell={shell}
+                  label="添加"
+                  pendingLabel={
+                    selected?.userId === member.userId ? "正在添加" : "请稍候"
+                  }
+                />
+              </form>
+            ))}
           </div>
         </QueryView>
         <SubmitMessage error={shell.error} />

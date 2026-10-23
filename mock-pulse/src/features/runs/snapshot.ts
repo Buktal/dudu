@@ -3,6 +3,8 @@ import {
   type EventItem,
   type EventSchema,
   type ExpectedReceipt,
+  expectEntry,
+  expectRow,
   interpretEventStep,
   interpretTemplateStep,
   schemaById,
@@ -111,14 +113,8 @@ export function materializeRunSnapshot(input: {
           `第 ${index + 1} 步引用的模板版本不存在：${templateName(templates, step.templateId)} v${step.templateVersion}。`,
         );
       }
-      // 解释取条目（blocks 为 false 即 ok，条目必存在；取不到为防御，
-      // 文案沿用 id 缺失款，表与 kernel 一致时不可达）。
-      const template = interpreted.entry;
-      if (!template) {
-        throw new Error(
-          `第 ${index + 1} 步引用的内置模板不存在：${step.templateId}。先删除该步骤或更新剧本。`,
-        );
-      }
+      // 解释取条目（blocks 为 false 即 ok，条目必在；不变式破坏按编程错误终止）
+      const template = expectEntry(interpreted);
       if (template.channelId !== scenario.channelId) {
         throw new Error(
           `第 ${index + 1} 步引用了${channelName(template.channelId)}的内置模板：${template.id}（剧本渠道为${channelName(scenario.channelId)}）。`,
@@ -144,14 +140,8 @@ export function materializeRunSnapshot(input: {
         `第 ${index + 1} 步引用的事件不存在：${step.eventId}。先删除该步骤或调整素材库。`,
       );
     }
-    // 解释取行（missingKind 为 id 时已抛，此处行必存在；取不到为防御，
-    // 文案沿用 id 缺失款，表与 kernel 一致时不可达）。
-    const event = interpreted.row;
-    if (!event) {
-      throw new Error(
-        `第 ${index + 1} 步引用的事件不存在：${step.eventId}。先删除该步骤或调整素材库。`,
-      );
-    }
+    // 解释取行（missingKind 为 id 时已抛，行必在；不变式破坏按编程错误终止）
+    const event = expectRow(interpreted);
     if (event.channelId !== scenario.channelId) {
       throw new Error(
         `第 ${index + 1} 步引用了${channelName(event.channelId)}的事件：${event.name}（剧本渠道为${channelName(scenario.channelId)}）。`,
@@ -163,14 +153,8 @@ export function materializeRunSnapshot(input: {
         `第 ${index + 1} 步引用的版本不存在：${event.name} v${step.revision}。`,
       );
     }
-    // 解释取条目（version 缺失已抛，此处条目必存在；取不到为防御，
-    // 文案沿用版本缺失款，表与 kernel 一致时不可达）。
-    const referenced = interpreted.entry;
-    if (!referenced) {
-      throw new Error(
-        `第 ${index + 1} 步引用的版本不存在：${event.name} v${step.revision}。`,
-      );
-    }
+    // 解释取条目（version 缺失已抛，条目必在；不变式破坏按编程错误终止）
+    const referenced = expectEntry(interpreted);
     const schema = schemaById(event.schemaId);
     return {
       eventName: event.name,

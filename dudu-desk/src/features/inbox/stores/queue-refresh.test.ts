@@ -189,4 +189,34 @@ describe("loaded conversation window refresh", () => {
       drafts: { "conversation-b": { text: "离开列表也保留的草稿" } },
     });
   });
+  it("keeps the loaded phase while a changed query re-reads", async () => {
+    // 查询变化的重读不回退首读占位：已加载成员与 hasLoaded 保留到新结果落地
+    let reads = 0;
+    const second = { ...firstConversation, id: "conversation-b" };
+    const store = testStore({
+      listConversations: async () => {
+        reads += 1;
+        return reads === 1
+          ? { items: [firstConversation, second], nextCursor: null, total: 2 }
+          : { items: [firstConversation], nextCursor: null, total: 1 };
+      },
+    });
+    await store.dispatch(loadConversations());
+    expect(selectQueue(store.getState()).hasLoaded).toBe(true);
+
+    let midRead: ReturnType<typeof selectQueue> | undefined;
+    const unsubscribe = store.subscribe(() => {
+      const queue = selectQueue(store.getState());
+      if (queue.status === "loading" && queue.query.search === "保修")
+        midRead = queue;
+    });
+    await store.dispatch(
+      loadConversations({ query: { ...emptyQuery, search: "保修" } }),
+    );
+    unsubscribe();
+
+    expect(midRead?.hasLoaded).toBe(true);
+    expect(midRead?.ids).toEqual([firstConversation.id, second.id]);
+    expect(selectQueue(store.getState()).ids).toEqual([firstConversation.id]);
+  });
 });

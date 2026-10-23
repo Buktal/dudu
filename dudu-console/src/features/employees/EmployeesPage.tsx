@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { useSession } from "@/api/context";
 import { Message } from "@/components/feedback";
 import { FilterBar } from "@/components/filter-bar";
 import {
@@ -32,9 +31,7 @@ export function EmployeesPage({
   onSelect: (id: string | null) => void;
   onCreate: (creating: boolean) => void;
 }) {
-  const profile = useSession().profile;
-  if (!profile?.user.isInitialAdmin)
-    return <Message error>仅初始企业管理员可管理员工。</Message>;
+  // 进入性由 App 路由守卫保证（非初始管理员重定向用户组页），页内不再重复判定
   return (
     <EmployeeList
       selectedId={selectedId}

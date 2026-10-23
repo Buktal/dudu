@@ -7,6 +7,7 @@ import {
   initialConnectionsState,
 } from "@/features/connections";
 import {
+  definitionsReducer,
   type EventItem,
   eventsReducer,
   initialEventsState,
@@ -167,6 +168,7 @@ function makeStore() {
       app: appReducer,
       runs: runsReducer,
       events: eventsReducer,
+      definitions: definitionsReducer,
       connections: connectionsReducer,
       plans: plansReducer,
       scenarios: scenariosReducer,

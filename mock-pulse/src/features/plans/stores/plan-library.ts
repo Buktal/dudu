@@ -124,12 +124,13 @@ function pinPlanScenarios(draft: Plan, scenarios: Scenario[]): Plan {
       if (item.snapshot) return item;
       const scenario = resolveLaneScenario(item, scenarios);
       // 编辑时钟（钉快照门）问 interpreter（events 域唯一分岔点）：库内命中
-      // 即钉，缺失留 undefined（保存由 validatePlan 拦；运行时钟同样拒绝；
-      // 文案不动）。后半为类型收窄，语义以解释为准。
-      if (interpretPresence(scenario, "edit").blocks || !scenario) {
+      // 即钉（带回主语），缺失留 undefined（保存由 validatePlan 拦；运行时钟
+      // 同样拒绝；文案不动）
+      const verdict = interpretPresence(scenario, "edit");
+      if (verdict.blocked) {
         return { ...item, snapshot: undefined };
       }
-      return { ...item, snapshot: scenario };
+      return { ...item, snapshot: verdict.row };
     }),
   };
 }

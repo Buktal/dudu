@@ -45,8 +45,11 @@ use time::{OffsetDateTime, UtcOffset};
 /// RFC 3986 非保留字集（A-Za-z0-9 与 `-` `_` `.` `~`）之外逐字节编码的编码集
 /// （percent-encoding 恒输出大写 hex、按 UTF-8 字节序；space 在集内 → `%20`，
 /// 与前端 form.ts 同一语义单点）。
-const FORM_ENCODE_SET: &AsciiSet =
-    &NON_ALPHANUMERIC.remove(b'-').remove(b'_').remove(b'.').remove(b'~');
+const FORM_ENCODE_SET: &AsciiSet = &NON_ALPHANUMERIC
+    .remove(b'-')
+    .remove(b'_')
+    .remove(b'.')
+    .remove(b'~');
 
 /// 饿了么签名线编码集（eleme `sig_encode_value` 专用）：同 [`FORM_ENCODE_SET`]
 /// 但 space 移出集（原样保留，由调用侧改写为官方 `x-www-form-urlencoded`
@@ -231,13 +234,11 @@ pub(crate) fn percent_decode(input: &str) -> String {
     let mut index = 0;
     while index < bytes.len() {
         match bytes[index] {
-            b'%'
-                if index + 2 < bytes.len()
-                    && bytes[index + 1].is_ascii_hexdigit()
-                    && bytes[index + 2].is_ascii_hexdigit() =>
+            b'%' if index + 2 < bytes.len()
+                && bytes[index + 1].is_ascii_hexdigit()
+                && bytes[index + 2].is_ascii_hexdigit() =>
             {
-                let hex = std::str::from_utf8(&bytes[index + 1..index + 3])
-                    .unwrap_or("");
+                let hex = std::str::from_utf8(&bytes[index + 1..index + 3]).unwrap_or("");
                 out.push(u8::from_str_radix(hex, 16).unwrap_or(b'%'));
                 index += 3;
             }
@@ -331,10 +332,7 @@ mod tests {
     #[test]
     fn md5_hex_matches_known_vector() {
         // 独立来源：RFC 1321 测试向量 md5("abc")
-        assert_eq!(
-            md5_hex(&["abc"]),
-            "900150983cd24fb0d6963f7d28e17f72"
-        );
+        assert_eq!(md5_hex(&["abc"]), "900150983cd24fb0d6963f7d28e17f72");
         // 多段按序拼接等价于单段拼接
         assert_eq!(md5_hex(&["a", "bc"]), md5_hex(&["abc"]));
         // 空串向量（RFC 1321）
@@ -385,10 +383,7 @@ mod tests {
         // 独立来源：HMAC-SHA256 通行示例向量 key="key"、
         // data="The quick brown fox jumps over the lazy dog"（Node crypto 交叉复算）
         assert_eq!(
-            hmac_sha256_hex(
-                "key",
-                "The quick brown fox jumps over the lazy dog"
-            ),
+            hmac_sha256_hex("key", "The quick brown fox jumps over the lazy dog"),
             "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8"
         );
         // 多段拼接由调用方完成：同串同钥与 base64 变体摘要一致（编码仅形态不同）
@@ -422,7 +417,10 @@ mod tests {
     #[test]
     fn form_encode_value_matches_rfc3986_uppercase() {
         // 非保留字集原样，其余大写 %XX
-        assert_eq!(form_encode_value("a b+c=d.e~f-g_h"), "a%20b%2Bc%3Dd.e~f-g_h");
+        assert_eq!(
+            form_encode_value("a b+c=d.e~f-g_h"),
+            "a%20b%2Bc%3Dd.e~f-g_h"
+        );
         assert_eq!(form_encode_value("药品"), "%E8%8D%AF%E5%93%81");
         assert_eq!(form_encode_value(""), "");
     }

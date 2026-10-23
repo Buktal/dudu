@@ -30,6 +30,7 @@ it("业务无权限保留身份并重取权限", async () => {
   await expect(
     client.request("/console/employees/2/role", {
       method: "PUT",
+      write: true,
       validate: isEmpty,
     }),
   ).rejects.toBeInstanceOf(ApiError);
@@ -45,6 +46,7 @@ it("不可见对象写入失败后重取当前查询，读取失败不会循环�
   await expect(
     client.request("/console/employees/2", {
       method: "PUT",
+      write: true,
       validate: isEmpty,
     }),
   ).rejects.toMatchObject({ code: 12100 });
@@ -64,6 +66,7 @@ it("写成功失效数据一次，读取与查询不触发失效", async () => {
   expect(client.getSnapshot().dataRevision).toBe(0);
   await client.request("/console/groups/2/members", {
     method: "PUT",
+    write: true,
     validate: isEmpty,
   });
   await vi.waitFor(() => expect(client.getSnapshot().dataRevision).toBe(1));

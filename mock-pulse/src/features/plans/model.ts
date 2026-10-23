@@ -3,7 +3,9 @@
  * 跨渠道把多个已保存剧本组成一次执行；items 有序即 lanes——
  * parallel = 全部剧本 T+0 同时起跑（剧内严格有序，ADR-0004 并发语义）；
  * serial = 前一剧本完全结束后才启动下一个。
- * items 只存剧本引用（scenarioId），运行时经引用解析物化（与剧本步骤同一引用哲学）。
+ * lane = 剧本引用（scenarioId）+ 可选钉住快照（snapshot，保存时钉）：解析
+ * 「快照优先、库内兜底」（resolveLaneScenario），运行物化 / 展示 / 同步
+ * 共用该单点；快照落后库内最新版时经 laneSnapshotOutdated 标记「有新版本」。
  */
 
 import { resolveRow } from "@/features/events";
@@ -154,6 +156,24 @@ export function resolveLaneScenario(
   scenarios: readonly Scenario[],
 ): Scenario | undefined {
   return item.snapshot ?? scenarioById(scenarios, item.scenarioId);
+}
+
+/**
+ * lane 快照是否过期（展示时钟标记）：lane 展示版本（快照优先）落后于库内
+ * 最新 revision 时为真——「有新版本 · 同步」入口的判定单点（复用 revision
+ * 对比，与事件步骤 outdated 同词汇）。
+ */
+export function laneSnapshotOutdated(
+  item: PlanItem,
+  scenarios: readonly Scenario[],
+): boolean {
+  const scene = resolveLaneScenario(item, scenarios);
+  const current = scenarioById(scenarios, item.scenarioId);
+  return (
+    scene !== undefined &&
+    current !== undefined &&
+    (current.revision ?? 1) > (scene.revision ?? 1)
+  );
 }
 
 /** 引用了该剧本的编排列表（剧本删除守卫：非空则拒绝删除）。 */
