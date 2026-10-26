@@ -22,9 +22,11 @@ public final class TranslationModels {
         @Override public String toString() { return "TranslationConfiguration[redacted]"; }
     }
     public record Save(@NotNull Long revision, @Size(max = 64) String defaultService,
+                       @Size(max = 64) String assistantService,
                        @NotNull @Size(max = 40) List<@NotNull @Valid Configuration> services) { }
-    public record View(Long revision, String defaultService, List<Configuration> services,
+    public record View(Long revision, String defaultService, String assistantService, List<Configuration> services,
                        List<Provider> providers) { }
+    public record ModelConfiguration(Configuration configuration, Long revision) { }
     public record Preference(@NotNull Boolean automatic,
                              @NotBlank @Pattern(regexp = "[a-z]{2,3}(-[A-Za-z]{2,8})?") String targetLanguage) { }
     public record Request(@NotNull @Positive Long version,

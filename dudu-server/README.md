@@ -63,6 +63,14 @@ Console 展示的公网回调地址通过 `dudu.channel.callback-base-url=https:
 
 各用例的库名与清理约定以测试类及[Server 功能图谱](../docs/features/dudu-server.md)为准；部分渠道要求固定独立库，不能用同一个 URL 无差别执行全部集成用例。Console 的实际命令边界与结果见[验收记录](../docs/design/dudu-console/acceptance.md)。
 
+## 坐席 AI 助手
+
+GET /api/desk/assistant 返回企业助手可用状态，POST /api/desk/visitors/{visitorId}/assistant 基于已授权会话的近期文本、标签、内部备注和本次草稿执行真实模型请求，完成时重新核验接待权限与配置修订
+
+V9 在 translation_setting 增加 assistant_service，既有企业默认未启用，由初始企业管理员在 Console 独立指定通用模型；复用现有凭据加密、HTTP 出站及并发限制，AI 问答不落库
+
+AssistantMigrationTest 覆盖空库和 V8 升级，使用 dudu_review_assistant 系列独立评审库；本机 Docker Linux 引擎不可用，迁移尚未实测
+
 ## 翻译配置
 
 V8 新增企业翻译配置和坐席偏好，部署后在 Console 的翻译服务页面填写企业自有地址与凭据并测试连接，Desk 在工作台设置启用自动翻译或逐条点击翻译

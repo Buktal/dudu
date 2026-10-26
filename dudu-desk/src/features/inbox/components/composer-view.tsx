@@ -17,6 +17,7 @@ import { SourceBadge } from "./identity";
 /** Resolved display data. Pure derivation from the store snapshot + the
  *  Reply pipeline answer; no hooks, no dispatches. */
 type ComposerViewModel = {
+  conversationId?: string;
   id: string;
   compact: boolean;
   target: string;
@@ -119,6 +120,7 @@ export function ComposerView({
         >
           <InputGroupTextarea
             ref={actions.inputRef}
+            data-conversation-composer={view.conversationId}
             id={id}
             value={draftText}
             aria-label={`回复 ${target}`}

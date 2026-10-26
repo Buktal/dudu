@@ -61,3 +61,9 @@ translation 包提供企业配置、员工偏好与已授权消息翻译，V8 �
 19 项网络服务适配覆盖 9 项常规服务与 10 项模型服务，其余参考目录项目说明实际限制；单次限时、响应限长及企业与全局并发限制不影响消息发送
 
 新增 TranslationEngineTest、TranslationServiceTest 与门闩 TranslationMigrationTest；受控协议与权限测试已通过，Docker 引擎不可用导致空库及升级迁移尚未实测，供应商生产调用未验证
+
+## 坐席 AI 助手（2026-10-26）
+
+assistant 包与 DeskAssistantController 提供企业模型可用状态及授权访客问答，服务端构建有限上下文，复用现有通用模型协议、加密服务实例和出站限制，外呼后重新核验权限与配置
+
+V9 为 translation_setting 增加可空的 assistant_service，默认不启用，不增加 AI 历史表；新增权限、上下文与迁移用例，空库和 V8 升级验证受本机 Docker 引擎不可用影响尚未执行

@@ -3,6 +3,8 @@
 | 专题 | 内容 |
 | --- | --- |
 | [文本消息阅读翻译](translation/contract.md) | 企业服务配置、坐席阅读偏好、手动与自动翻译契约及验证边界 |
+| [坐席 AI 悬浮助手](assistant/contract.md) | 企业模型选择、授权上下文、内部问答与真实草稿采纳契约 |
+| [AI 助手实施验收](assistant/acceptance.md) | 实现入口、自动检查、界面复现和外部验证边界 |
 | [翻译界面精修](translation/ui-review.md) | 后台配置布局、Desk 译文细节及宽屏、窄屏、暗色验证 |
 | [最小对接契约](implementation-contract.md) | 已定稿的三表字段、索引、HTTP 路径/参数/响应及 Socket 报文，实施单一事实源 |
 | [完整实现收简记录](implementation-simplification.md) | 保留全部已确认功能，逐项改为直接实现，撤回额外可靠性/并发方案 |

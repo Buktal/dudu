@@ -53,7 +53,7 @@ export function ServiceCard({
               <h3 className="truncate">{service.name || provider?.name}</h3>
             </CardTitle>
             <CardDescription>
-              {provider?.name} · {model ? "模型翻译" : "常规翻译"}
+              {provider?.name} · {model ? "模型服务" : "常规翻译"}
             </CardDescription>
           </div>
         </div>

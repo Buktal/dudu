@@ -24,7 +24,7 @@ import java.util.List;
 import java.io.ByteArrayOutputStream;
 
 /**
- * 有限并发与有限响应的翻译 HTTP 边界，不跟随重定向、不透传上游响应或密钥。
+ * 模型与翻译共用的有限 HTTP 边界，不跟随重定向、不透传上游响应或密钥。
  */
 @Component
 public class TranslationHttp {
@@ -47,7 +47,7 @@ public class TranslationHttp {
             URI uri = URI.create(endpoint);
             if (uri.getHost() == null || uri.getUserInfo() != null || uri.getFragment() != null
                 || !("https".equals(uri.getScheme()) || allowPrivate && "http".equals(uri.getScheme()))) {
-                throw new BizException(ApiEnum.PARAM_ERROR, "翻译地址须为无账户信息的 HTTPS URL");
+                throw new BizException(ApiEnum.PARAM_ERROR, "服务地址须为无账户信息的 HTTPS URL");
             }
             for (InetAddress address : InetAddress.getAllByName(uri.getHost())) {
                 byte[] bytes = address.getAddress();
@@ -55,17 +55,17 @@ public class TranslationHttp {
                     || address.isLinkLocalAddress() || address.isSiteLocalAddress() || address.isMulticastAddress()
                     || bytes.length == 16 && (bytes[0] & 0xfe) == 0xfc
                     || bytes.length == 4 && (bytes[0] & 255) == 100 && (bytes[1] & 255) >= 64 && (bytes[1] & 255) <= 127)) {
-                    throw new BizException(ApiEnum.PARAM_ERROR, "翻译地址不允许访问本地或私有网络");
+                    throw new BizException(ApiEnum.PARAM_ERROR, "服务地址不允许访问本地或私有网络");
                 }
             }
         } catch (IllegalArgumentException | java.net.UnknownHostException error) {
-            throw new BizException(ApiEnum.PARAM_ERROR, "翻译接口地址无效或无法解析");
+            throw new BizException(ApiEnum.PARAM_ERROR, "服务接口地址无效或无法解析");
         }
     }
 
     public JsonNode post(String endpoint, Map<String, String> headers, String body, boolean form) {
         validateEndpoint(endpoint);
-        if (!slots.tryAcquire()) throw new BizException(ApiEnum.DATA_NOT_ALLOW, "翻译请求较多，请稍后重试");
+        if (!slots.tryAcquire()) throw new BizException(ApiEnum.DATA_NOT_ALLOW, "服务请求较多，请稍后重试");
         try {
             HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(endpoint)).timeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS))
                 .header("Content-Type", form ? "application/x-www-form-urlencoded" : "application/json")
@@ -76,24 +76,24 @@ public class TranslationHttp {
             try { response = future.get(REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS); }
             catch (java.util.concurrent.TimeoutException error) {
                 future.cancel(true);
-                throw new BizException(ApiEnum.REQUEST_THIRD_ERROR, "翻译服务响应超时");
+                throw new BizException(ApiEnum.REQUEST_THIRD_ERROR, "外部服务响应超时");
             } catch (InterruptedException error) {
                 future.cancel(true);
                 throw error;
             }
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new BizException(ApiEnum.REQUEST_THIRD_ERROR, "翻译服务请求失败，请检查凭据、额度与接口地址");
+                throw new BizException(ApiEnum.REQUEST_THIRD_ERROR, "外部服务请求失败，请检查凭据、额度与接口地址");
             }
             JsonNode parsed = json.readTree(response.body());
             if (parsed == null || !parsed.isContainerNode()) throw TranslationEngine.invalidResponse();
             return parsed;
         } catch (InterruptedException error) {
             Thread.currentThread().interrupt();
-            throw new BizException(ApiEnum.REQUEST_THIRD_ERROR, "翻译请求已中断");
+            throw new BizException(ApiEnum.REQUEST_THIRD_ERROR, "外部服务请求已中断");
         } catch (java.io.IOException | java.util.concurrent.ExecutionException error) {
-            throw new BizException(ApiEnum.REQUEST_THIRD_ERROR, "翻译服务超时或响应无效");
+            throw new BizException(ApiEnum.REQUEST_THIRD_ERROR, "外部服务超时或响应无效");
         } catch (IllegalArgumentException error) {
-            throw new BizException(ApiEnum.PARAM_ERROR, "翻译配置包含无效的请求参数");
+            throw new BizException(ApiEnum.PARAM_ERROR, "服务配置包含无效的请求参数");
         } finally {
             slots.release();
         }

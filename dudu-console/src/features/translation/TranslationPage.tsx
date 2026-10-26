@@ -86,7 +86,7 @@ function Editor({ initial }: { initial: Settings }) {
           {
             commit: (value) => {
               setSettings(value);
-              setNotice("翻译服务配置已保存");
+              setNotice("AI 与翻译服务配置已保存");
             },
           },
         )
@@ -94,9 +94,11 @@ function Editor({ initial }: { initial: Settings }) {
     >
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h2 className="text-2xl font-semibold tracking-tight">翻译服务</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            AI 与翻译服务
+          </h2>
           <p className="text-sm text-muted-foreground">
-            接入企业自己的翻译服务，让坐席用熟悉的语言阅读消息。
+            接入企业自有服务，分别设置阅读翻译与坐席 AI 助手使用的模型。
           </p>
         </div>
       </header>
@@ -107,7 +109,7 @@ function Editor({ initial }: { initial: Settings }) {
         >
           <Card size="sm">
             <CardHeader>
-              <CardTitle>默认服务</CardTitle>
+              <CardTitle>默认翻译服务</CardTitle>
               <CardDescription>
                 所有坐席的手动与自动翻译均使用此服务。
               </CardDescription>
@@ -154,8 +156,52 @@ function Editor({ initial }: { initial: Settings }) {
           </Card>
           <Card size="sm">
             <CardHeader>
+              <CardTitle>AI 助手</CardTitle>
+              <CardDescription>
+                为坐席提供会话摘要、回复建议和草稿润色。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FieldGroup className="gap-4">
+                <SelectField
+                  label="助手使用的模型服务"
+                  value={settings.assistantService ?? "none"}
+                  disabled={busy}
+                  onChange={(value) => {
+                    setSettings({
+                      ...settings,
+                      assistantService: value === "none" ? null : value,
+                    });
+                    setNotice(null);
+                  }}
+                  options={[
+                    { value: "none", label: "不启用 AI 助手" },
+                    ...settings.services
+                      .filter((service) =>
+                        settings.providers.some(
+                          (provider) =>
+                            provider.id === service.provider &&
+                            provider.kind === "model" &&
+                            provider.id !== "doubao" &&
+                            !provider.unavailableReason,
+                        ),
+                      )
+                      .map((service) => ({
+                        value: service.id,
+                        label: service.name,
+                      })),
+                  ]}
+                />
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  助手会将当前授权会话的近期文本、标签、内部备注和本次草稿发送给所选模型，结果由坐席审核后使用。
+                </p>
+              </FieldGroup>
+            </CardContent>
+          </Card>
+          <Card size="sm">
+            <CardHeader>
               <CardTitle>添加服务</CardTitle>
-              <CardDescription>常规翻译与模型翻译均可接入。</CardDescription>
+              <CardDescription>可添加常规翻译或通用模型服务。</CardDescription>
             </CardHeader>
             <CardContent>
               <FieldGroup className="gap-3">
@@ -239,6 +285,10 @@ function Editor({ initial }: { initial: Settings }) {
                     settings.defaultService === service.id
                       ? null
                       : settings.defaultService,
+                  assistantService:
+                    settings.assistantService === service.id
+                      ? null
+                      : settings.assistantService,
                   services: settings.services.filter(
                     (item) => item.id !== service.id,
                   ),

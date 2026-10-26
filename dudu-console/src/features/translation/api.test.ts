@@ -6,6 +6,7 @@ describe("翻译配置响应契约", () => {
     const valid = {
       revision: 1,
       defaultService: null,
+      assistantService: null,
       services: [],
       providers: [
         {
@@ -21,6 +22,7 @@ describe("翻译配置响应契约", () => {
       ],
     };
     expect(isSettings(valid)).toBe(true);
+    expect(isSettings({ ...valid, assistantService: 12 })).toBe(false);
     expect(isSettings({ ...valid, providers: [{ id: "incomplete" }] })).toBe(
       false,
     );

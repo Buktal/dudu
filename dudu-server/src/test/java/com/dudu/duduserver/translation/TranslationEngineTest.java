@@ -125,4 +125,21 @@ class TranslationEngineTest {
     private Configuration config(String provider, Map<String, String> values) {
         return new Configuration("test-service", "Test", provider, endpoint, values);
     }
+
+    @Test
+    void assistantUsesConversationHistoryAndRejectsTranslationOnlyServices() throws Exception {
+        response.set("{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"请核实订单\"}}]}");
+        var history = java.util.List.of(Map.of("role", "user", "content", "会话引用资料"),
+            Map.of("role", "assistant", "content", "先前建议"), Map.of("role", "user", "content", "再简短一点"));
+        assertThat(engine.chat(config("custom-openai", Map.of("apiKey", "private", "model", "configured")), "内部助手规则", history))
+            .isEqualTo("请核实订单");
+        var sent = json.readTree(body.get());
+        assertThat(sent.path("messages").path(0).path("role").asText()).isEqualTo("system");
+        assertThat(sent.path("messages").path(3).path("content").asText()).isEqualTo("再简短一点");
+        assertThatThrownBy(() -> engine.chat(config("doubao", Map.of("apiKey", "private", "model", "translation")), "规则", history))
+            .isInstanceOf(BizException.class);
+        response.set("{\"choices\":[{\"finish_reason\":\"length\",\"message\":{\"content\":\"未完成\"}}]}");
+        assertThatThrownBy(() -> engine.chat(config("custom-openai", Map.of("apiKey", "private", "model", "configured")), "规则", history))
+            .isInstanceOf(BizException.class);
+    }
 }

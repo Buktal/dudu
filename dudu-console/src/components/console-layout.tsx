@@ -27,7 +27,7 @@ import {
 const items = [
   {
     view: "translation",
-    label: "翻译服务",
+    label: "AI 与翻译服务",
     icon: Languages,
     route: routes.translation,
   },

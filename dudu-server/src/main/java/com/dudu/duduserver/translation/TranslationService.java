@@ -51,6 +51,7 @@ public class TranslationService {
         consoleAccess.require(me).requireInitialAdmin();
         TranslationSettingDO row = settings.getById(me.companyId());
         return new View(row == null ? 0L : row.getRevision(), row == null ? null : row.getDefaultService(),
+            row == null ? null : row.getAssistantService(),
             read(row).stream().map(this::redact).toList(), TranslationCatalog.PROVIDERS);
     }
 
@@ -73,10 +74,15 @@ public class TranslationService {
             if (request.defaultService() != null && !ids.contains(request.defaultService())) {
                 throw new BizException(ApiEnum.PARAM_ERROR, "默认翻译服务不存在");
             }
+            if (request.assistantService() != null && configs.stream().noneMatch(item ->
+                item.id().equals(request.assistantService()) && TranslationCatalog.supportsAssistant(item.provider()))) {
+                throw new BizException(ApiEnum.PARAM_ERROR, "AI 助手须选择支持通用对话的模型服务");
+            }
             TranslationSettingDO updated = new TranslationSettingDO();
             updated.setCompanyId(me.companyId());
             updated.setRevision(revision + 1);
             updated.setDefaultService(request.defaultService());
+            updated.setAssistantService(request.assistantService());
             try { updated.setConfiguration(cipher.encrypt(me.companyId(), json.writeValueAsString(configs))); }
             catch (com.fasterxml.jackson.core.JsonProcessingException error) { throw new BizException(ApiEnum.DATA_ERROR); }
             if (row == null) settings.save(updated); else settings.updateById(updated);
@@ -140,10 +146,39 @@ public class TranslationService {
         return new Result(translated, request.targetLanguage(), config.name(), row.getRevision());
     }
 
+    // AI 助手复用企业服务实例与加密凭据，选择项独立于阅读翻译。
+    public ModelConfiguration assistantConfiguration(JwtUser me) {
+        deskAuth.requireAccess(me);
+        TranslationSettingDO row = settings.getById(me.companyId());
+        if (row == null || row.getAssistantService() == null) return null;
+        Configuration config = read(row).stream()
+            .filter(item -> item.id().equals(row.getAssistantService()))
+            .findFirst().orElseThrow(() -> new BizException(ApiEnum.DATA_NOT_ALLOW, "AI 助手模型服务不存在"));
+        if (!TranslationCatalog.supportsAssistant(config.provider())) {
+            throw new BizException(ApiEnum.DATA_NOT_ALLOW, "所选服务不支持 AI 对话，请联系企业管理员");
+        }
+        return new ModelConfiguration(config, row.getRevision());
+    }
+
+    public String assist(Long companyId, Configuration config, String instruction, List<Map<String, String>> turns) {
+        return limited(companyId, () -> engine.chat(config, instruction, turns));
+    }
+
+    public void requireAssistantRevision(JwtUser me, Long revision) {
+        TranslationSettingDO current = settings.getById(me.companyId());
+        if (current == null || !Objects.equals(current.getRevision(), revision)) {
+            throw new BizException(ApiEnum.DATA_NOT_ALLOW, "模型服务配置已变化，请重试");
+        }
+    }
+
     private String execute(Long companyId, Configuration config, String text, String language) {
+        return limited(companyId, () -> engine.translate(config, text, language));
+    }
+
+    private String limited(Long companyId, java.util.function.Supplier<String> action) {
         Semaphore slots = companySlots.computeIfAbsent(companyId, ignored -> new Semaphore(MAX_COMPANY_REQUESTS));
-        if (!slots.tryAcquire()) throw new BizException(ApiEnum.DATA_NOT_ALLOW, "企业翻译请求较多，请稍后重试");
-        try { return engine.translate(config, text, language); }
+        if (!slots.tryAcquire()) throw new BizException(ApiEnum.DATA_NOT_ALLOW, "企业模型或翻译请求较多，请稍后重试");
+        try { return action.get(); }
         finally { slots.release(); }
     }
 

@@ -102,4 +102,29 @@ class TranslationServiceTest {
         when(console.require(me)).thenReturn(new ConsoleAccess(company, user, java.util.Set.of()));
         assertThatThrownBy(() -> service.configuration(me)).isInstanceOf(BizException.class);
     }
+
+    @Test
+    void assistantSelectionIsIndependentAndUsesEncryptedModelConfiguration() {
+        var row = settings.getById(me.companyId());
+        assertThat(service.assistantConfiguration(me)).isNull();
+        row.setAssistantService("default");
+        var selected = service.assistantConfiguration(me);
+        assertThat(selected.configuration().name()).isEqualTo("翻译服务");
+        assertThat(selected.revision()).isEqualTo(1L);
+        assertThat(service.configuration(me).assistantService()).isEqualTo("default");
+        assertThat(service.configuration(me).toString()).doesNotContain("private");
+        assertThat(row.getDefaultService()).isEqualTo("default");
+        verifyNoInteractions(engine);
+    }
+
+    @Test
+    void assistantRejectsMissingOrTranslationOnlyService() {
+        var row = settings.getById(me.companyId());
+        row.setAssistantService("missing");
+        assertThatThrownBy(() -> service.assistantConfiguration(me)).isInstanceOf(BizException.class);
+        row.setAssistantService("default");
+        when(cipher.decrypt(me.companyId(), "encrypted")).thenReturn("[{\"id\":\"default\",\"name\":\"常规翻译\",\"provider\":\"deepl\",\"endpoint\":\"https://example.com/translate\",\"values\":{\"apiKey\":\"private\"}}]");
+        assertThatThrownBy(() -> service.assistantConfiguration(me)).hasMessageContaining("不支持 AI 对话");
+        verifyNoInteractions(engine);
+    }
 }

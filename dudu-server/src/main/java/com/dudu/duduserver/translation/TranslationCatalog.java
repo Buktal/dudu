@@ -51,12 +51,15 @@ public final class TranslationCatalog {
         unavailable("claude-code", "Claude Code", "依赖本机 CLI 与独立登录环境"),
         unavailable("codex-cli", "Codex CLI", "依赖本机 CLI 与独立登录环境"),
         unavailable("github-copilot", "GitHub Copilot", "依赖独立账户授权环境"),
-        unavailable("polishing", "润色", "超出本期消息阅读翻译范围"),
-        unavailable("summary", "摘要", "超出本期消息阅读翻译范围")
+        unavailable("polishing", "润色", "通过 Desk AI 助手使用，不作为独立翻译服务"),
+        unavailable("summary", "摘要", "通过 Desk AI 助手使用，不作为独立翻译服务")
     );
     public static Provider require(String id) {
         return PROVIDERS.stream().filter(p -> p.id().equals(id)).findFirst()
             .orElseThrow(() -> new BizException(ApiEnum.PARAM_ERROR, "未知翻译服务"));
+    }
+    public static boolean supportsAssistant(String id) {
+        return "model".equals(require(id).kind()) && !"doubao".equals(id);
     }
     public static void validate(Configuration config) {
         Provider provider = require(config.provider());

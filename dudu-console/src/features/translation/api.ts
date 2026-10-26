@@ -24,6 +24,7 @@ export type Service = {
 export type Settings = {
   revision: number;
   defaultService: string | null;
+  assistantService: string | null;
   services: Service[];
   providers: Provider[];
 };
@@ -55,6 +56,8 @@ export const isSettings = (value: unknown): value is Settings =>
   isRecord(value) &&
   Number.isSafeInteger(value.revision) &&
   (value.defaultService === null || typeof value.defaultService === "string") &&
+  (value.assistantService === null ||
+    typeof value.assistantService === "string") &&
   Array.isArray(value.services) &&
   value.services.every(isService) &&
   Array.isArray(value.providers) &&
@@ -81,6 +84,7 @@ export const translationApi = {
       body: {
         revision: settings.revision,
         defaultService: settings.defaultService,
+        assistantService: settings.assistantService,
         services: settings.services,
       },
       signal,

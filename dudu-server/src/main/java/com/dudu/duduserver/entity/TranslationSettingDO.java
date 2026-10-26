@@ -20,5 +20,7 @@ public class TranslationSettingDO {
     private Long revision;
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String defaultService;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String assistantService;
     private String configuration;
 }

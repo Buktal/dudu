@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import type { InboxApi } from "./api";
 import { ConnectionStatus } from "./components/connection-status";
+import { InboxAssistant } from "./components/inbox-assistant";
 import { InboxLoading } from "./components/inbox-state";
 import { ReceptionWorkspace } from "./components/reception-shell";
 import { WorkspaceHelp } from "./components/workspace-help";
@@ -51,6 +52,7 @@ function InboxSession({ accountMenu }: { accountMenu?: ReactNode }) {
       }
     >
       <ReceptionWorkspace mode={mode} />
+      <InboxAssistant />
       {notice && (
         <div
           role="status"

@@ -17,7 +17,7 @@
 ## 企业配置
 
 - Console 翻译服务页实时核验初始企业管理员身份，仅维护本企业配置，普通管理员的组范围不扩大为全企业配置权限
-- 支持多个命名服务实例，只选择一个企业默认服务，坐席不切换服务
+- 支持多个命名服务实例，defaultService 选择阅读翻译服务，assistantService 独立选择助手使用的通用模型，坐席不切换服务
 - 常规与模型服务分别显示必要字段，常规服务不要求模型名
 - 固定短文本连接测试真实执行翻译，不以地址可达或模型列表代替
 - 秘密字段读取返回 `__DUDU_SECRET_PRESENT__`，同实例及同类型保存此标记时保留原值，填写新值替换
@@ -34,7 +34,7 @@
 - 腾讯旧 TextTranslate 接口不可确认当前可用，不提供假成功适配
 - Apple Dictionary、MDict、Apple Translate 依赖本机环境或属于词典查询，不能直接在通用 Java Server 启用
 - Easydict 内置 AI 不借用上游访问能力，Claude Code、Codex CLI、GitHub Copilot 不借用本机登录身份
-- 润色和摘要保留目录说明，不增加对应产品功能
+- 润色和摘要通过 AI 助手使用，在翻译服务目录中不作为独立服务启用
 - Google、Bing、有道采用企业自有凭据的正式接口，不搬用网页私有请求
 - 上线前仍须用企业实际地址和凭据完成连接测试，受控替身不代表上游生产可用性
 
@@ -44,8 +44,8 @@
 
 | 方法与路径 | 请求 | R.data |
 | --- | --- | --- |
-| GET /api/console/translation | 无 | revision、defaultService、services、providers |
-| PUT /api/console/translation | revision、defaultService、services | 掩码后的已保存配置及目录 |
+| GET /api/console/translation | 无 | revision、defaultService、assistantService、services、providers |
+| PUT /api/console/translation | revision、defaultService、assistantService、services | 掩码后的已保存配置及目录 |
 | POST /api/console/translation/test | configuration、targetLanguage | text、targetLanguage、serviceName、revision=0 |
 | GET /api/desk/translation/preferences | 无 | automatic、targetLanguage |
 | PUT /api/desk/translation/preferences | automatic、targetLanguage | 已保存偏好 |

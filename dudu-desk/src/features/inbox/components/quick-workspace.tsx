@@ -172,6 +172,7 @@ export function QuickWorkspace() {
         }}
       >
         <DialogContent
+          data-desk-assistant-host=""
           initialFocus={historyTitle}
           className="flex h-[min(740px,94dvh)] max-w-[calc(100%-1rem)] flex-col gap-4 rounded-2xl p-5 max-[760px]:p-3 sm:max-w-[810px]"
         >

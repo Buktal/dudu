@@ -87,6 +87,7 @@ export function Composer({
   return (
     <ComposerView
       view={{
+        conversationId,
         id,
         compact,
         target,
