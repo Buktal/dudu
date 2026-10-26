@@ -1,17 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import type { InboxMessage, Page, SendSubmission } from "../types";
 import {
-  collapsePinned,
   enterParallel,
   focusPane,
   pinConversation,
   restorePinned,
-  unpinConversation,
 } from "./parallel";
 import { loadConversations } from "./queue";
 import { destroyInbox, loadHistory, selectConversation } from "./reading";
 import { selectInbox } from "./selectors";
 import { editDraft, focusReply, sendReply } from "./sending";
+import { inboxActions } from "./slice";
 import {
   acceptedMessage,
   deferred,
@@ -44,7 +43,7 @@ describe("parallel reception", () => {
       });
       await store.dispatch(loadConversations());
       await store.dispatch(pinConversation(secondConversation.id));
-      if (collapsed) store.dispatch(collapsePinned());
+      if (collapsed) store.dispatch(inboxActions.pinnedCollapsed());
       store.dispatch(editDraft(firstConversation.id, "主窗原草稿"));
       store.dispatch(editDraft(secondConversation.id, "固定窗原草稿"));
       store.dispatch(editDraft(thirdConversation.id, "速答中的草稿"));
@@ -72,7 +71,7 @@ describe("parallel reception", () => {
     await store.dispatch(loadConversations());
     await store.dispatch(pinConversation(secondConversation.id));
     store.dispatch(editDraft(secondConversation.id, "速答继续编辑的固定会话"));
-    store.dispatch(collapsePinned());
+    store.dispatch(inboxActions.pinnedCollapsed());
     store.dispatch(focusReply(secondConversation.id));
     const before = selectInbox(store.getState());
 
@@ -155,7 +154,7 @@ describe("parallel reception", () => {
     await store.dispatch(pinConversation(secondConversation.id));
     store.dispatch(editDraft(firstConversation.id, "主会话草稿"));
     store.dispatch(editDraft(secondConversation.id, "固定会话草稿"));
-    store.dispatch(collapsePinned());
+    store.dispatch(inboxActions.pinnedCollapsed());
     expect(store.getState().inbox).toMatchObject({
       pinnedId: secondConversation.id,
       pinCollapsed: true,
@@ -167,7 +166,7 @@ describe("parallel reception", () => {
       pinCollapsed: false,
       replyId: secondConversation.id,
     });
-    store.dispatch(unpinConversation());
+    store.dispatch(inboxActions.pinnedReleased());
     expect(store.getState().inbox).toMatchObject({
       activeId: firstConversation.id,
       pinnedId: null,
@@ -185,7 +184,7 @@ describe("parallel reception", () => {
     store.dispatch(editDraft(firstConversation.id, "保留正在写的回复"));
     await store.dispatch(pinConversation(firstConversation.id));
 
-    store.dispatch(unpinConversation());
+    store.dispatch(inboxActions.pinnedReleased());
 
     expect(store.getState().inbox).toMatchObject({
       activeId: firstConversation.id,
@@ -306,7 +305,7 @@ describe("parallel reception", () => {
     await store.dispatch(loadConversations());
     await store.dispatch(pinConversation(secondConversation.id));
     store.dispatch(editDraft(secondConversation.id, "仅本次运行保留"));
-    store.dispatch(collapsePinned());
+    store.dispatch(inboxActions.pinnedCollapsed());
     store.dispatch(destroyInbox());
 
     expect(store.getState().inbox).toMatchObject({

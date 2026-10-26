@@ -51,10 +51,13 @@ it("loads media bytes once per message index and exposes a local blob URL", asyn
   expect(revoke).not.toHaveBeenCalled();
 });
 
-it("keeps a failed media read as an error without inventing a source", async () => {
-  stubObjectUrl();
+it("keeps a failed media read as an error and retries only through the command", async () => {
+  stubObjectUrl("blob:http://localhost/media-recovered");
+  const failures = [new DeskApiError("business", "该消息没有这个媒体", 12100)];
   const loadMessageMediaApi = vi.fn(async () => {
-    throw new DeskApiError("business", "该消息没有这个媒体", 12100);
+    const failure = failures.shift();
+    if (failure) throw failure;
+    return new Blob(["recovered"]);
   });
   const store = testStore({ loadMessageMedia: loadMessageMediaApi });
 
@@ -63,9 +66,14 @@ it("keeps a failed media read as an error without inventing a source", async () 
   expect(store.getState().inbox.media[mediaKey("9001", 0)]).toEqual({
     status: "error",
   });
-  // 失败不重试、不生成素材地址，由界面沿用现有失败提示
+  // 失败不自动重试（不生成素材地址），保留 error 给界面的重试入口；
+  // 用户经重试入口再派发同一命令时允许重新请求并按新结果收敛
   await store.dispatch(loadMessageMedia("9001", 0));
-  expect(loadMessageMediaApi).toHaveBeenCalledTimes(1);
+  expect(loadMessageMediaApi).toHaveBeenCalledTimes(2);
+  expect(store.getState().inbox.media[mediaKey("9001", 0)]).toEqual({
+    status: "ready",
+    url: "blob:http://localhost/media-recovered",
+  });
 });
 
 it("drops a late media response after the work context changed", async () => {

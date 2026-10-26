@@ -3,7 +3,6 @@ import type {
   Conversation,
   InboxMessage,
   SendSubmission,
-  SendTarget,
 } from "../types";
 import { sendRestriction } from "./send-rules";
 
@@ -87,7 +86,7 @@ export function buildReplySubmission(
     submission: {
       request: {
         clientRequestId: input.clientRequestId,
-        target: sendTarget(input.conversation),
+        target: { conversationId: input.conversation.id },
         text: input.text,
       },
       messageId: message.id,
@@ -98,19 +97,5 @@ export function buildReplySubmission(
       next: input.next,
       status: "sending",
     },
-  };
-}
-
-/**
- * Conversation → SendTarget submission projection: the reply request's
- * addressing, owned next to its only construction site.
- */
-export function sendTarget(conversation: Conversation): SendTarget {
-  return {
-    conversationId: conversation.id,
-    visitorId: conversation.identity.id,
-    channelId: conversation.identity.channelId,
-    accountId: conversation.identity.accountId,
-    externalUserId: conversation.identity.externalUserId,
   };
 }

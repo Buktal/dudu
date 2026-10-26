@@ -7,7 +7,9 @@ import type { InboxCommand } from "./store";
  * Reception workspace placement commands: the single seam for pinning,
  * pane focus and quick-history. Every command guards the slot, moves the
  * reply target through focusReply, and ensures the conversation is loaded —
- * callers never coordinate pinnedId/activeId/replyId themselves.
+ * callers never coordinate pinnedId/activeId/replyId themselves. Pure
+ * transitions (pinnedCollapsed / pinnedReleased) dispatch their action
+ * directly at the call site; a command exists only when it orchestrates.
  */
 export type ReceptionPane = "primary" | "pinned";
 
@@ -56,12 +58,6 @@ export function focusPane(pane: ReceptionPane): InboxCommand {
   };
 }
 
-export function collapsePinned(): InboxCommand {
-  return (dispatch) => {
-    dispatch(inboxActions.pinnedCollapsed());
-  };
-}
-
 export function restorePinned(): InboxCommand<Promise<void>> {
   return async (dispatch, getState) => {
     const state = getState().inbox;
@@ -74,12 +70,6 @@ export function restorePinned(): InboxCommand<Promise<void>> {
     }
     dispatch(inboxActions.pinnedRestored());
     await dispatch(ensureConversationLoaded(id));
-  };
-}
-
-export function unpinConversation(): InboxCommand {
-  return (dispatch) => {
-    dispatch(inboxActions.pinnedReleased());
   };
 }
 

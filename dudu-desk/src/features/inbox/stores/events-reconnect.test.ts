@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { InboxApi } from "../api";
 import { defineProfile } from "../test-fixtures";
 import type { InboxMessage, Page } from "../types";
-import { editVisitorProfile } from "./details";
 import { reconnectInbox } from "./events";
 import { loadConversations } from "./queue";
 import { loadHistory, loadProfile, selectConversation } from "./reading";
 import { selectMessages, selectQueueConversations } from "./selectors";
 import { editDraft, sendReply } from "./sending";
+import { inboxActions } from "./slice";
 import {
   deferred,
   firstConversation,
@@ -69,7 +69,10 @@ describe("reconnect re-initialization", () => {
     await store.dispatch(selectConversation(firstConversation.id));
     await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { note: "断线期间改的备注" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { note: "断线期间改的备注" },
+      }),
     );
 
     input.onConnection("disconnected");
@@ -294,7 +297,10 @@ describe("reconnect re-initialization", () => {
     await store.dispatch(loadConversations());
     await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { note: "我的编辑" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { note: "我的编辑" },
+      }),
     );
 
     input.onConnection("disconnected");

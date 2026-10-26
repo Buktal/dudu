@@ -27,6 +27,8 @@ export function loadHistory(
       "history",
       {
         loading: () => dispatch(inboxActions.historyLoading(conversationId)),
+        cancelled: () =>
+          dispatch(inboxActions.historyCancelled(conversationId)),
         call: (io) =>
           runtime.api.listMessages({
             ...io,
@@ -81,6 +83,8 @@ export function loadProfile(
       "profile",
       {
         loading: () => dispatch(inboxActions.profileLoading(conversationId)),
+        cancelled: () =>
+          dispatch(inboxActions.profileCancelled(conversationId)),
         call: (io) => runtime.api.readProfile({ ...io, conversationId }),
         validate: (profile) =>
           profile.conversationId !== conversationId

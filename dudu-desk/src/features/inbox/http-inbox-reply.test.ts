@@ -17,13 +17,7 @@ import type { SendTarget } from "./types";
 beforeEach(() => sessionStorage.clear());
 afterEach(() => vi.restoreAllMocks());
 
-const SEND_TARGET: SendTarget = {
-  conversationId: "41",
-  visitorId: "41",
-  channelId: "wechat-mp",
-  accountId: "51",
-  externalUserId: "external-a",
-};
+const SEND_TARGET: SendTarget = { conversationId: "41" };
 const CHANNEL_FAILURE =
   "微信客服消息发送失败：40001 invalid credential, access_token is invalid or not latest";
 

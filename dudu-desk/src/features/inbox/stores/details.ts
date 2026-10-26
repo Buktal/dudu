@@ -3,23 +3,10 @@ import { loadConversations } from "./queue";
 import { needsQueueReloadAfterProfileSave } from "./queue-membership";
 import { runConversationOperation } from "./requests";
 import { inboxActions } from "./slice";
-import type { ProfileChanges } from "./state";
 import type { InboxCommand } from "./store";
 
-export function editVisitorProfile(
-  conversationId: string,
-  changes: ProfileChanges,
-): InboxCommand {
-  return (dispatch) => {
-    dispatch(inboxActions.profileEdited({ conversationId, changes }));
-  };
-}
-
-export function discardProfileEdits(conversationId: string): InboxCommand {
-  return (dispatch) => {
-    dispatch(inboxActions.profileEditsDiscarded(conversationId));
-  };
-}
+// 资料编辑与放弃是纯 reducer 动作（profileEdited / profileEditsDiscarded），
+// 调用方直派 action；这里只保留有真实编排的保存命令
 
 /**
  * Saves the local draft. The server keeps no version-conflict rejection

@@ -31,9 +31,7 @@ describe("replies through the inbox workflow", () => {
     const received: string[] = [];
     const store = testStore({
       send: async (input) => {
-        received.push(
-          `${input.target.accountId}:${input.target.externalUserId}:${input.text}`,
-        );
+        received.push(`${input.target.conversationId}:${input.text}`);
         return {
           id: "server-a",
           clientRequestId: input.clientRequestId,
@@ -53,7 +51,7 @@ describe("replies through the inbox workflow", () => {
     await store.dispatch(selectConversation("conversation-b"));
     store.dispatch(editDraft("conversation-b", "给海外服务的回复"));
     await store.dispatch(sendReply("conversation-a"));
-    expect(received).toEqual(["account-a:external-a:给旗舰店的回复"]);
+    expect(received).toEqual(["conversation-a:给旗舰店的回复"]);
     expect(store.getState().inbox.drafts["conversation-b"].text).toBe(
       "给海外服务的回复",
     );
@@ -161,7 +159,6 @@ describe("replies through the inbox workflow", () => {
 
     expect(submissions).toHaveLength(1);
     expect(submissions[0].target.conversationId).toBe("conversation-a");
-    expect(submissions[0].target.externalUserId).toBe("external-a");
     expect(submissions[0].text).toBe("历史里的失败内容");
     expect(submissions[0].clientRequestId).not.toBe("client-history");
     const messages = selectMessages(store.getState(), "conversation-a");

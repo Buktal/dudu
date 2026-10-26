@@ -229,6 +229,9 @@ type ConversationOperation<T> = {
   loaded: (result: T, op: { current: () => boolean }) => void | Promise<void>;
   /** Failure effect; receives the mapped failure with the shared fallback copy. */
   failed: (failure: ApiFailure) => void;
+  /** Cancellation effect for read kinds: folds the loading state back to a
+   *  re-enterable form instead of surfacing an error for a superseded read. */
+  cancelled?: () => void;
 };
 
 /**
@@ -273,11 +276,16 @@ export async function runConversationOperation<T>(
       } catch (error) {
         // 会话已移除：迟到结果不得复活已拆除的会话状态，两种取消都保持吞掉
         if (!getState().inbox.conversations[conversationId]) return;
-        // 本次尝试被取消（范围代数递增或重连取消在途读取）时，非发送操作维持吞掉；
-        // 发送操作仍要本地结算，否则 submission 永远停在 sending、会话发送锁无法
-        // 释放，重连后也没有失败入口可查。取消的错误按 aborted 结算，aborted 归入
-        // uncertain（与 sending.ts deliver 的分类一致），等重连重查的回执证据落定
-        if (!op.current() && kind !== "send") return;
+        // 本次尝试被取消（范围代数递增或重连取消在途读取）时，读操作经 cancelled
+        // 把 loading 收敛回可重入形态后吞掉，否则 loading 永远卡住；写操作
+        // （profile-save/send/end）仍要本地结算 failed，否则 submission 停在
+        // sending、保存锁无法释放，重连后也没有失败入口可查。取消的错误按 aborted
+        // 结算，aborted 归入 uncertain（与 sending.ts deliver 的分类一致），等重连
+        // 重查的回执证据落定
+        if (!op.current() && (kind === "history" || kind === "profile")) {
+          operation.cancelled?.();
+          return;
+        }
         operation.failed(operationFailure(error));
       }
     },

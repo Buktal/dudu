@@ -1,7 +1,7 @@
 import { requestDesk, requestDeskBlob } from "@/lib/desk-http";
 import { readDeskToken, resolveDeskOrigin } from "@/lib/desk-session";
 import { isRecord } from "@/lib/is-record";
-import { type InboxApi, unavailableInboxApi } from "./api";
+import type { InboxApi } from "./api";
 import {
   beforeSequence,
   pageNumber,
@@ -96,8 +96,9 @@ export function createHttpInboxApi(
 ): InboxApi {
   const origin = resolveDeskOrigin(options.origin);
 
+  // 不展开 unavailableInboxApi：真实适配器必须实现全部方法，漏实现直接暴露为
+  // 返回类型缺口（编译错误），而不是运行时哑弹；展开占位是 mock 适配器的用法
   return {
-    ...unavailableInboxApi,
     subscribe({ context, signal, onEvent, onConnection }) {
       const token = readDeskToken(origin);
       if (token === null) {

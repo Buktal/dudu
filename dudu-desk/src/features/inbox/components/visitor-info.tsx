@@ -16,13 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { WorkspaceAction } from "@/components/workspace-action";
 import { profileFieldText } from "../channel-profile";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import {
-  discardProfileEdits,
-  editVisitorProfile,
-  saveVisitorProfile,
-} from "../stores/details";
+import { saveVisitorProfile } from "../stores/details";
 import { loadProfile } from "../stores/reading";
 import { selectConversationById } from "../stores/selectors";
+import { inboxActions } from "../stores/slice";
 import type { ProfileField } from "../types";
 import { ChannelProfileCopy } from "./channel-profile-copy";
 import { SourceBadge, VisitorAvatar, visitorName } from "./identity";
@@ -92,7 +89,7 @@ export function VisitorInfo({
   // 取消覆盖显示最新服务端资料：放弃本地输入，不发起保存
   function cancelOverwrite() {
     setOverwritePending(false);
-    dispatch(discardProfileEdits(conversationId));
+    dispatch(inboxActions.profileEditsDiscarded(conversationId));
     setTagInputReset((value) => value + 1);
   }
 
@@ -239,7 +236,12 @@ export function VisitorInfo({
                   showEdit ? (edit?.tagsText ?? "") : profile.tags.join("，")
                 }
                 onChange={(tagsText) =>
-                  dispatch(editVisitorProfile(conversationId, { tagsText }))
+                  dispatch(
+                    inboxActions.profileEdited({
+                      conversationId,
+                      changes: { tagsText },
+                    }),
+                  )
                 }
               />
               <Field className="gap-3 rounded-xl bg-accent p-4 text-accent-foreground">
@@ -254,8 +256,9 @@ export function VisitorInfo({
                   className="min-h-[70px] resize-y border-0 bg-transparent p-0 text-xs leading-[1.85] shadow-none focus-visible:ring-0"
                   onChange={(event) =>
                     dispatch(
-                      editVisitorProfile(conversationId, {
-                        note: event.target.value,
+                      inboxActions.profileEdited({
+                        conversationId,
+                        changes: { note: event.target.value },
                       }),
                     )
                   }
@@ -324,7 +327,7 @@ export function VisitorInfo({
                 disabled={!dirty || saving}
                 onClick={() => {
                   setOverwritePending(false);
-                  dispatch(discardProfileEdits(conversationId));
+                  dispatch(inboxActions.profileEditsDiscarded(conversationId));
                   setTagInputReset((value) => value + 1);
                 }}
               >

@@ -21,9 +21,13 @@ import {
 } from "./store";
 
 /**
- * Conversation queue read interface: queue order and the sorted queue view.
- * Lives with the queue lifecycle above, so query/cursors/counts and their
- * sorted projection change in one module.
+ * Conversation queue read interface: the queue has two deliberate order
+ * contracts (fixed by queue-order.test) — quick cards stay in the order the
+ * last load landed (server order; a stable click target for the virtualized
+ * card grid), while the sidebar list re-sorts live through
+ * selectQueueConversations by query.order. Lives with the queue lifecycle
+ * above, so query/cursors/counts and their sorted projection change in one
+ * module.
  */
 export const selectQuickQueueConversations = createSelector(
   [

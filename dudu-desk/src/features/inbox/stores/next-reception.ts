@@ -70,7 +70,11 @@ export function receiveNext(
       // failed path below instead of surfacing as raw errors.
       loopFailed = true;
     }
-    if (!canAdvance()) return;
+    if (!canAdvance()) {
+      // 翻页中途失去推进条件：搜索作废，scope 的读取状态收敛后再退出
+      dispatch(inboxActions.choicesCancelled(scope));
+      return;
+    }
     if (picked) {
       await dispatch(selectConversation(picked.id));
       // The per-message search is spent once an outcome is reached; the

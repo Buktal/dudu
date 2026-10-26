@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DeskApiError } from "@/lib/api-response";
 import { emptyQuery } from "../conversation-query";
 import type { Conversation, Page, VisitorProfile } from "../types";
-import {
-  discardProfileEdits,
-  editVisitorProfile,
-  saveVisitorProfile,
-} from "./details";
+import { saveVisitorProfile } from "./details";
 import { loadConversations } from "./queue";
 import { loadProfile, resetContext, selectConversation } from "./reading";
 import { selectQueueConversations } from "./selectors";
@@ -45,7 +41,12 @@ describe("visitor details", () => {
       loadConversations({ query: { ...emptyQuery, search: "保修" } }),
     );
     await store.dispatch(loadProfile(firstConversation.id));
-    store.dispatch(editVisitorProfile(firstConversation.id, { tagsText: "" }));
+    store.dispatch(
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { tagsText: "" },
+      }),
+    );
 
     await store.dispatch(saveVisitorProfile(firstConversation.id));
 
@@ -53,7 +54,10 @@ describe("visitor details", () => {
     expect(store.getState().inbox.replyId).toBe("conversation-a");
 
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { tagsText: "保修；回访" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { tagsText: "保修；回访" },
+      }),
     );
     await store.dispatch(saveVisitorProfile(firstConversation.id));
 
@@ -82,7 +86,10 @@ describe("visitor details", () => {
     await store.dispatch(loadConversations());
     await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { note: "正在编辑的备注" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { note: "正在编辑的备注" },
+      }),
     );
     // 他人保存先落库：编辑中的草稿保留，不与服务端字段合并
     profile = { ...profile, version: 2, tags: ["服务端新标签"] };
@@ -101,7 +108,10 @@ describe("visitor details", () => {
     });
     await store.dispatch(loadConversations());
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { note: "旧坐席的未保存备注" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { note: "旧坐席的未保存备注" },
+      }),
     );
     const saving = store.dispatch(saveVisitorProfile(firstConversation.id));
     store.dispatch(
@@ -131,7 +141,10 @@ describe("visitor details", () => {
     });
     await store.dispatch(loadConversations());
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { note: "移除后才返回的备注" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { note: "移除后才返回的备注" },
+      }),
     );
     const saving = store.dispatch(saveVisitorProfile(firstConversation.id));
     // Detach through the reducer-level access cleanup only: the live
@@ -160,14 +173,20 @@ describe("visitor details", () => {
     await store.dispatch(loadConversations());
     await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
-      editVisitorProfile(firstConversation.id, {
-        note: "第一版备注",
-        tagsText: "待回访，首次咨询",
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: {
+          note: "第一版备注",
+          tagsText: "待回访，首次咨询",
+        },
       }),
     );
     const saving = store.dispatch(saveVisitorProfile(firstConversation.id));
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { note: "保存时补充的备注" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { note: "保存时补充的备注" },
+      }),
     );
     result.resolve({
       conversationId: firstConversation.id,
@@ -207,15 +226,21 @@ describe("visitor details", () => {
     await store.dispatch(loadConversations());
     await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
-      editVisitorProfile(firstConversation.id, {
-        note: "品牌店待回访",
-        tagsText: "回访，回访；重点",
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: {
+          note: "品牌店待回访",
+          tagsText: "回访，回访；重点",
+        },
       }),
     );
     await store.dispatch(saveVisitorProfile(firstConversation.id));
     await store.dispatch(selectConversation(secondConversation.id));
     store.dispatch(
-      editVisitorProfile(secondConversation.id, { note: "海外账号备注" }),
+      inboxActions.profileEdited({
+        conversationId: secondConversation.id,
+        changes: { note: "海外账号备注" },
+      }),
     );
 
     expect(
@@ -230,7 +255,7 @@ describe("visitor details", () => {
       store.getState().inbox.profileEdits[secondConversation.id].note,
     ).toBe("海外账号备注");
     expect(store.getState().inbox.replyId).toBe(secondConversation.id);
-    store.dispatch(discardProfileEdits(secondConversation.id));
+    store.dispatch(inboxActions.profileEditsDiscarded(secondConversation.id));
     expect(
       store.getState().inbox.profileEdits[secondConversation.id],
     ).toBeUndefined();
@@ -294,13 +319,19 @@ describe("visitor details", () => {
     });
     await store.dispatch(loadConversations());
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { note: "首次保存的备注" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { note: "首次保存的备注" },
+      }),
     );
     await store.dispatch(saveVisitorProfile(firstConversation.id));
     profile = { ...profile, version: 3, note: "服务端后来更新的备注" };
     await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { tagsText: "刚添加的标签" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { tagsText: "刚添加的标签" },
+      }),
     );
     await store.dispatch(saveVisitorProfile(firstConversation.id));
 
@@ -325,7 +356,10 @@ describe("visitor details", () => {
     await store.dispatch(loadConversations());
     await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { note: "服务端已确认的备注" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { note: "服务端已确认的备注" },
+      }),
     );
     await store.dispatch(saveVisitorProfile(firstConversation.id));
     await store.dispatch(loadProfile(firstConversation.id));
@@ -351,7 +385,10 @@ describe("visitor details", () => {
     await store.dispatch(loadConversations());
     await store.dispatch(loadProfile(firstConversation.id));
     store.dispatch(
-      editVisitorProfile(firstConversation.id, { tagsText: "本地标签" }),
+      inboxActions.profileEdited({
+        conversationId: firstConversation.id,
+        changes: { tagsText: "本地标签" },
+      }),
     );
 
     profileEvent(store, {

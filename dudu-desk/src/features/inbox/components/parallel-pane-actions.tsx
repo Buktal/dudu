@@ -1,12 +1,9 @@
 import { ArrowLeftRight, Pin, PinOff, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
-import {
-  pinConversation,
-  type ReceptionPane,
-  unpinConversation,
-} from "../stores/parallel";
+import { pinConversation, type ReceptionPane } from "../stores/parallel";
 import { selectConversationById } from "../stores/selectors";
+import { inboxActions } from "../stores/slice";
 import { visitorName } from "./identity";
 
 export function ParallelPaneActions({
@@ -36,7 +33,7 @@ export function ParallelPaneActions({
         disabled={!pinned && conversation.status === "closed"}
         aria-label={pinned ? `取消固定 ${name}` : `将 ${name} 固定到右窗`}
         onClick={() => {
-          if (pinned) dispatch(unpinConversation());
+          if (pinned) dispatch(inboxActions.pinnedReleased());
           else void dispatch(pinConversation(conversationId));
         }}
       >

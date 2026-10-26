@@ -119,13 +119,8 @@ export type ConversationPage = Page<Conversation> & {
   channels?: { id: string; name: string }[];
 };
 export type RequestOptions = { context: WorkContext; signal: AbortSignal };
-export type SendTarget = {
-  conversationId: string;
-  visitorId: string;
-  channelId: string;
-  accountId: string;
-  externalUserId: string;
-};
+/** 回复请求的寻址：HTTP 契约只按会话标识投递，身份字段留在 Conversation 投影里。 */
+export type SendTarget = { conversationId: string };
 
 export type SendSubmission = {
   clientRequestId: string;

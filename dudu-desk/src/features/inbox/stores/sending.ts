@@ -29,13 +29,12 @@ export function settleConfirmedReplies(): InboxCommand {
       // 已落定的提交不再进入扫描：本命令在每条消息事件后运行，
       // 跳过它们让重复结算与扫描集合都不随历史发送增长
       if (submission.settled || submission.status !== "accepted") continue;
-      const state = getState().inbox;
-      const draft = state.drafts[submission.request.target.conversationId];
-      const response = state.messages[submission.messageId];
+      const response = getState().inbox.messages[submission.messageId];
       if (!response) continue;
-      if (draft && draft.textRevision === submission.textRevision) {
-        acceptSubmission(dispatch, submission, response);
-      }
+      // 草稿匹配与否由 submissionAccepted 分支处理：仍是提交时的修订就清空草稿
+      // 正文，已被后续编辑取代就只合并结果；两种形态都置 settled，未匹配的
+      // 提交不再留在扫描集合里永久重扫
+      acceptSubmission(dispatch, submission, response);
     }
     const state = getState().inbox;
     if (

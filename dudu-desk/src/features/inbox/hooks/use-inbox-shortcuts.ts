@@ -15,8 +15,9 @@ export function hasOpenOverlay(): boolean {
 }
 
 /**
- * 工作台快捷键的单一键位映射：守卫（本模块）与帮助文案（workspace-help.tsx）
- * 共用这一份描述，新增或调整键位只改这里。
+ * 工作台快捷键的帮助文案键位清单（workspace-help.tsx）：展示用字符串，不是
+ * 机器可执行的绑定；键位守卫在各交互组件内联（搜索守卫在本模块硬编码 Ctrl+K，
+ * 与第一项一致），新增或调整键位时同步这里与对应守卫。
  */
 export const INBOX_SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["Ctrl", "K"], label: "搜索访客或消息" },

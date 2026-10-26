@@ -83,6 +83,14 @@ export const readReducers = {
       error: null,
     };
   },
+  /** 与 historyCancelled 同构：在途读取被取消（会话切换或权限范围变化）时把
+   *  loading 落回 idle，已有数据保留，避免卡在读态无法重新进入。 */
+  profileCancelled(state: InboxState, action: PayloadAction<string>) {
+    const profile = state.profiles[action.payload];
+    if (profile?.status !== "loading") return;
+    profile.status = "idle";
+    profile.error = null;
+  },
   profileLoaded(state: InboxState, action: PayloadAction<VisitorProfile>) {
     mergeProfile(state, action.payload);
   },

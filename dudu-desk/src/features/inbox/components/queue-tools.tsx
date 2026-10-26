@@ -54,27 +54,18 @@ export function QueueTools() {
     counts,
     channels: catalog,
   } = useInboxSelector((state) => state.inbox.queue);
-  const conversations = useInboxSelector((state) => state.inbox.conversations);
   const id = useId();
   const searchRef = useRef<HTMLInputElement>(null);
+  // 渠道目录信任服务端：契约保证每次列表响应都携带 channels，不从会话映射重建
+  // （未加载时目录为空与列表为空一致，不订阅 conversations 避免每条报文重渲染）
   const channels = useMemo(() => {
-    const known =
-      catalog ??
-      Array.from(
-        new Map(
-          Object.values(conversations).map(({ identity }) => [
-            identity.channelId,
-            { id: identity.channelId, name: identity.channelName },
-          ]),
-        ).values(),
-      );
     return [
       { value: "all", label: "全部来源" },
-      ...known
+      ...(catalog ?? [])
         .map((channel) => ({ value: channel.id, label: channel.name }))
         .sort((a, b) => a.label.localeCompare(b.label, "zh-Hans-CN-u-kn-true")),
     ];
-  }, [catalog, conversations]);
+  }, [catalog]);
   const hasFilters = hasConversationFilters(query);
 
   function change(changes: Partial<ConversationQuery>) {

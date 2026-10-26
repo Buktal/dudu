@@ -32,6 +32,7 @@ import {
   safeAssetUrl,
   safeExternalUrl,
 } from "@/lib/attachment-utils";
+import { useInboxDispatch } from "../hooks/use-inbox-store";
 import { useMessageMedia } from "../hooks/use-message-media";
 import {
   assetPurposeOf,
@@ -40,6 +41,7 @@ import {
   mediaLabel,
   mediaName,
 } from "../message-content";
+import { loadMessageMedia } from "../stores/media";
 import type { MessageBody as Body, MediaReference } from "../types";
 
 export function MessageBody({
@@ -160,6 +162,7 @@ function MessageMedia({
   messageId: string;
   index: number;
 }) {
+  const dispatch = useInboxDispatch();
   const [failed, setFailed] = useState(false);
   const purpose = assetPurposeOf(media.kind);
   // 公开链接直连渠道；只有渠道标识的素材经认证的媒体接口取字节
@@ -172,6 +175,11 @@ function MessageMedia({
         media={media}
         source={null}
         pending={fetched.status === "loading"}
+        onRetry={
+          fetched.status === "error"
+            ? () => void dispatch(loadMessageMedia(messageId, index))
+            : undefined
+        }
       />
     );
   if (purpose === "image")
@@ -284,11 +292,14 @@ function MediaFile({
   media,
   source,
   pending,
+  onRetry,
 }: {
   media: MediaReference;
   /** 已解析的素材地址：公开链接或接口取回的本地对象 URL，未就绪为 null。 */
   source: string | null;
   pending: boolean;
+  /** 读取失败时的重试入口；公开链接加载失败的素材没有本地重试路径，不提供。 */
+  onRetry?: () => void;
 }) {
   const Icon = mediaIcon(media.kind);
   return (
@@ -305,6 +316,13 @@ function MediaFile({
         </AttachmentDescription>
         {pending ? (
           <p className="mt-1 text-xs text-muted-foreground">正在读取素材…</p>
+        ) : !source && onRetry ? (
+          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+            素材暂不可读取
+            <Button variant="ghost" size="xs" onClick={onRetry}>
+              重试
+            </Button>
+          </p>
         ) : (
           !source && (
             <p className="mt-1 text-xs text-muted-foreground">素材暂不可读取</p>
