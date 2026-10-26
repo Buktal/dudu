@@ -38,11 +38,23 @@ Explore each application: [Desk](https://buktal.github.io/dudu/products/desk.en.
 
 DuDu is intended for teams that need several official messaging integrations, can manage their own deployment and want control over organization data. Technical setup and ongoing maintenance are required.
 
-- **Current capabilities:** unified conversations, search and filters, history, real-time incoming messages, plain-text replies, message translation, visitor tags and internal notes, staff and channel management, and organization and group access boundaries.
+- **Current capabilities:** unified conversations, search and filters, history, real-time incoming messages, plain-text replies, message translation, an AI assistant for summaries and reply drafts, visitor tags and internal notes, staff and channel management, and organization and group access boundaries.
 - **Current limits:** attachment sending is unavailable. Incoming non-text display and media retrieval depend on the channel. There is no built-in OAuth authorization wizard, automatic connectivity check or channel health monitoring.
 - **Production preparation:** deployers must obtain channel accounts, platform approval and credentials, then validate real message receipt and delivery. Complete configuration does not establish valid authorization or working production messaging.
 
 Implementation status and verification scope are recorded in the [feature maps](docs/features/README.md).
+
+## Floating AI assistant
+
+Open the assistant alongside a conversation to summarize the request, draft a reply, polish your writing or ask follow-up questions. It follows the current visitor across focused, side-by-side and card layouts. Adopt a suggestion into the reply draft, review it and send through the usual composer
+
+![Desk floating AI assistant with a suggested reply and an action to adopt it into the draft](docs/design/dudu-desk/assistant/desk.png)
+
+The initial organization administrator selects a supported model in Console's **AI and translation services**, independently of the translation default. Recent authorized messages, tags, internal notes and the current draft are sent to that model. The assistant remains disabled until configured
+
+![Console separate translation and AI assistant model selections](docs/design/dudu-desk/assistant/console.png)
+
+*Screenshots show real components with fixed sample data and model responses. Actual use requires your own model service. The application UI is currently in Chinese*
 
 ## Message translation
 

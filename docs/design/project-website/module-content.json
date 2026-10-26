@@ -46,6 +46,12 @@
         "Message translation",
         "逐条点击翻译或开启自动翻译，保留原文并选择自己的阅读语言，不改变发送正文。",
         "Translate individual text messages or enable automatic translation. Keep the original text and choose a reading language without changing outbound messages."
+      ],
+      [
+        "AI 悬浮助手",
+        "Floating AI assistant",
+        "结合当前授权会话了解来意、拟写回复和润色草稿。助手跟随当前回复对象，建议由坐席采纳到草稿，核对后发送。",
+        "Summarize an authorized conversation, draft a reply or polish your writing. The assistant follows the current visitor. Agents review suggestions, adopt them into a draft and send when ready."
       ]
     ],
     "steps": [
@@ -80,6 +86,23 @@
         "Desk original messages, translations and reading language settings"
       ],
       "image": "desk-translation.webp",
+      "width": 1280,
+      "height": 720
+    },
+    "assistant": {
+      "title": [
+        "接待时，随时展开 AI 助手",
+        "Open an AI assistant alongside your conversations"
+      ],
+      "description": [
+        "结合当前授权会话了解来意、拟写回复和润色草稿。助手跟随当前回复对象，建议由坐席采纳到草稿，核对后发送。",
+        "Summarize an authorized conversation, draft a reply or polish your writing. The assistant follows the current visitor. Agents review suggestions, adopt them into a draft and send when ready."
+      ],
+      "alt": [
+        "Desk 悬浮 AI 助手为当前来访用户拟写回复，提供放入草稿操作",
+        "Desk floating AI assistant drafts a reply for the current visitor with an action to adopt it into the composer"
+      ],
+      "image": "desk-assistant.webp",
       "width": 1280,
       "height": 720
     }
@@ -131,6 +154,12 @@
         "Organization translation services",
         "初始企业管理员配置常规或模型翻译服务，测试连接并选择全企业默认服务，保存的凭据不回显。",
         "The initial administrator configures conventional or model-based translation services, tests a connection and selects the organization default. Saved secrets are not returned."
+      ],
+      [
+        "AI 助手模型配置",
+        "Assistant model configuration",
+        "初始企业管理员在「AI 与翻译服务」中选择助手模型，可与阅读翻译使用不同服务。启用后，授权会话的近期文本、标签、内部备注和本次草稿会发送给所选模型。",
+        "The initial administrator selects an assistant model in AI and translation services, independently of reading translation. Once enabled, recent authorized messages, tags, internal notes and the current draft are sent to that model."
       ]
     ],
     "steps": [
@@ -165,6 +194,23 @@
         "Console organization translation services and credential configuration"
       ],
       "image": "console-translation.webp",
+      "width": 1265,
+      "height": 712
+    },
+    "assistant": {
+      "title": [
+        "翻译与 AI 助手，分别选择服务",
+        "Choose translation and assistant services separately"
+      ],
+      "description": [
+        "初始企业管理员在「AI 与翻译服务」中选择助手模型，可与阅读翻译使用不同服务。启用后，授权会话的近期文本、标签、内部备注和本次草稿会发送给所选模型。",
+        "The initial administrator selects an assistant model in AI and translation services, independently of reading translation. Once enabled, recent authorized messages, tags, internal notes and the current draft are sent to that model."
+      ],
+      "alt": [
+        "Console 分别选择默认翻译服务与 AI 助手模型",
+        "Console separate selectors for the default translation service and AI assistant model"
+      ],
+      "image": "console-assistant.webp",
       "width": 1265,
       "height": 712
     }

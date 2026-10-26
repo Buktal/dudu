@@ -60,6 +60,11 @@ for module in MODULES:
 <p class="module-lead">{escape(translation['description'][en])}</p>
 <figure><a href="../assets/{translation['image']}"><img src="../assets/{translation['image']}" width="{translation['width']}" height="{translation['height']}" alt="{escape(translation['alt'][en], quote=True)}" loading="lazy"></a>
 <figcaption>{t('固定演示数据，未连接翻译供应商。点击图片查看原图。', 'Fixed sample data; no translation provider is connected. Select the image to view it in full.')}</figcaption></figure></section>'''
+        if assistant := module.get("assistant"):
+            translation_visual += f'''\n<section id="assistant"><h2>{escape(assistant['title'][en])}</h2>
+<p class="module-lead">{escape(assistant['description'][en])}</p>
+<figure><a href="../assets/{assistant['image']}"><img src="../assets/{assistant['image']}" width="{assistant['width']}" height="{assistant['height']}" alt="{escape(assistant['alt'][en], quote=True)}" loading="lazy"></a>
+<figcaption>{t('固定演示数据与模型响应，实际使用需配置企业模型服务。点击图片查看原图。', 'Sample data and model responses. Actual use requires your own model service. Select the image to view it in full.')}</figcaption></figure></section>'''
         source = f'''<!doctype html>
 <html lang="{t('zh-CN', 'en')}">
 <head>

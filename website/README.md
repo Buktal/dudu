@@ -35,6 +35,8 @@
 | `assets/dudu.svg` | `dudu-desk/public/logo.svg` | DuDu 项目标识与站点图标 |
 | `assets/desk-translation.webp` | `docs/design/dudu-desk/translation/desk-preview.png` | 2026-10-26 真实 Desk 组件、固定消息与翻译响应，不连接供应商 |
 | `assets/console-translation.webp` | `docs/design/dudu-desk/translation/console-preview.png` | 2026-10-26 真实 Console 组件、固定服务配置，不包含实际企业凭据 |
+| `assets/desk-assistant.webp` | `docs/design/dudu-desk/assistant/desk.png` | 2026-10-26 真实 Desk 悬浮助手组件、固定会话和模型响应，未调用实际模型 |
+| `assets/console-assistant.webp` | `docs/design/dudu-desk/assistant/console.png` | 2026-10-26 真实 Console 组件、独立翻译与助手选择，不包含实际凭据 |
 
 ## 接待导览与可访问性
 
@@ -59,6 +61,8 @@ Google Search Console 与 Bing Webmaster 的站点所有权验证和 sitemap 提
 ## 模块页维护
 
 2026-10-26 首页新增 `#translation` 双语图文展示；Desk 与 Console 模块源中的 `translation` 字段提供标题、说明、截图、尺寸和替代文本，由生成脚本输出对应功能区，不能只改生成后的产品页
+
+2026-10-26 首页新增 `#assistant` 双语展示；Desk 与 Console 模块源中的 `assistant` 字段生成相应产品页功能区，截图展示正式组件和固定模型响应，说明模型配置、资料使用和人工采纳流程
 
 模块内容的唯一维护源为仓库根 `docs/design/project-website/module-content.json`，生成脚本为同目录 `build-product-pages.py`。在仓库根执行 `python docs/design/project-website/build-product-pages.py`，同步生成 10 个模块页面、公共产品菜单和 sitemap。首页和指南正文仍就地维护；不要直接修改生成的模块页正文。产品页面使用本地资源路径，兼容 GitHub Pages 子路径。
 
