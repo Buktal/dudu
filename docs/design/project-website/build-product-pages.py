@@ -54,6 +54,12 @@ for module in MODULES:
             flow = [t("官方渠道来信", "Incoming channel message"), t("验证与解析 → 会话和消息存储", "Verification and parsing → conversation storage"), t("实时更新 → 坐席工作台 → 渠道回复", "Real-time update → agent workspace → channel reply")]
             visual = '<div class="server-flow" aria-label="' + t("消息处理流程", "Message processing flow") + '">' + '<span aria-hidden="true">↓</span>'.join(f'<div>{step}</div>' for step in flow) + '</div>'
         toggle = '<button type="button" id="theme-toggle" class="theme-toggle" hidden aria-label="' + t("切换外观", "Switch appearance") + '"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/></svg></button>'
+        translation_visual = ""
+        if translation := module.get("translation"):
+            translation_visual = f'''\n<section id="translation"><h2>{escape(translation['title'][en])}</h2>
+<p class="module-lead">{escape(translation['description'][en])}</p>
+<figure><a href="../assets/{translation['image']}"><img src="../assets/{translation['image']}" width="{translation['width']}" height="{translation['height']}" alt="{escape(translation['alt'][en], quote=True)}" loading="lazy"></a>
+<figcaption>{t('固定演示数据，未连接翻译供应商。点击图片查看原图。', 'Fixed sample data; no translation provider is connected. Select the image to view it in full.')}</figcaption></figure></section>'''
         source = f'''<!doctype html>
 <html lang="{t('zh-CN', 'en')}">
 <head>
@@ -75,7 +81,7 @@ for module in MODULES:
 <main id="main" class="shell module-layout"><aside class="module-nav" aria-label="{t('子项目导航', 'Module navigation')}">{nav}</aside>
 <article class="module-content"><div class="kicker">{module['name']} / {module['role'][en]}</div><h1>{display_title}</h1><p class="module-lead">{module['lead'][en]}</p>
 <div class="actions"><a class="button primary" href="https://github.com/Buktal/dudu/blob/main/{module['repo']}/README.md">{t('使用与部署文档 ↗', 'Usage and setup documentation ↗')}</a><a class="text-link" href="{home}#demo">{t('体验接待导览 ↗', 'Explore the support tour ↗')}</a></div>
-{visual}
+{visual}{translation_visual}
 <section><h2>{t('主要功能', 'Key capabilities')}</h2><div class="module-cards">{cards}</div></section>
 <section><h2>{t('使用流程', 'How it works')}</h2><ol>{steps}</ol></section>
 <section class="module-scope"><h2>{t('使用条件与范围', 'Requirements and scope')}</h2><p>{module['scope'][en]}</p><p>{t('各模块配合使用：Admin 开通企业，Console 配置团队与渠道，Desk 负责接待，Server 提供共用服务。MockPulse 为可选的开发联调工具。', 'The modules work together: Admin provisions organizations, Console configures teams and channels, Desk handles conversations, and Server provides shared services. MockPulse is an optional development tool.')}</p></section>

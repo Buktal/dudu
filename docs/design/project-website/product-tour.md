@@ -88,3 +88,20 @@
 ### 发布前最终修订
 
 演示从首页锚点改为独立中英文页面，顶部演示入口标记当前页，首页仅保留简介和入口。全站共 28 页。明亮主题进一步改为中性白、灰色正文与少量珊瑚橙，撤去全局棕橙色；步骤、产品页签和导航选中改为背景区分，删除装饰性长线，保留工作台内部必要分区。用户明确要求完成验证后提交并推送 main，再核对 GitHub Pages 部署
+
+## 2026-10-26 翻译功能展示
+
+中英文 README 新增消息翻译介绍、Desk 阅读译文与 Console 企业服务配置截图，保留演示数据及真实连接条件说明
+
+官网首页新增 #translation，双栏分别说明坐席阅读与初始管理员配置；窄屏改为纵向排列，图片复用现有原图放大交互
+
+Desk 与 Console 中英文模块页通过 module-content.json 的 translation 字段和 build-product-pages.py 生成，不直接修改生成物，其他模块内容不变
+
+原 PNG 保留在翻译设计目录，官网部署目录使用 desk-translation.webp 与 console-translation.webp，来源记录在 website/README.md
+
+验证：28 页本地资源、锚点、alt 和 CSS 引用检查通过；浏览器检查中文与英文展示、中文首页到 Desk 翻译区跳转、图片放大与 Escape 关闭，以及 390px iframe 视口纵向布局
+
+本轮仅调整文档、官网内容与静态样式，不修改客服业务代码，不重复运行业务测试
+
+- [官网翻译展示桌面截图](translation-desktop.png)
+- [官网翻译展示窄屏截图](translation-mobile.png)

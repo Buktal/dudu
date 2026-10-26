@@ -40,6 +40,12 @@
         "Shared visitor details",
         "维护有权限员工之间共享的来访标签和内部备注。",
         "Maintain visitor tags and internal notes shared with authorized staff."
+      ],
+      [
+        "消息阅读翻译",
+        "Message translation",
+        "逐条点击翻译或开启自动翻译，保留原文并选择自己的阅读语言，不改变发送正文。",
+        "Translate individual text messages or enable automatic translation. Keep the original text and choose a reading language without changing outbound messages."
       ]
     ],
     "steps": [
@@ -59,7 +65,24 @@
     "scope": [
       "当前仅支持发送纯文本，暂不支持发送附件。接收非文本消息和读取媒体取决于渠道能力与凭据。",
       "Outbound replies currently support plain text only. Incoming non-text messages and media retrieval depend on channel capabilities and credentials."
-    ]
+    ],
+    "translation": {
+      "title": [
+        "用熟悉的语言阅读消息",
+        "Read messages in your language"
+      ],
+      "description": [
+        "点击消息翻译，或在工作台设置中开启自动翻译。译文与原文同时显示，翻译服务由初始企业管理员在 Console 配置。",
+        "Translate a message on demand or enable automatic translation in workspace settings. Translations appear beside the original text. The initial administrator configures the service in Console."
+      ],
+      "alt": [
+        "Desk 双向消息的原文、译文与阅读语言设置",
+        "Desk original messages, translations and reading language settings"
+      ],
+      "image": "desk-translation.webp",
+      "width": 1280,
+      "height": 720
+    }
   },
   {
     "id": "console",
@@ -102,6 +125,12 @@
         "Credential protection",
         "敏感凭据只写入，不在读取响应中返回秘密值。",
         "Secret credentials are write-only and are not returned in read responses."
+      ],
+      [
+        "企业翻译服务",
+        "Organization translation services",
+        "初始企业管理员配置常规或模型翻译服务，测试连接并选择全企业默认服务，保存的凭据不回显。",
+        "The initial administrator configures conventional or model-based translation services, tests a connection and selects the organization default. Saved secrets are not returned."
       ]
     ],
     "steps": [
@@ -121,7 +150,24 @@
     "scope": [
       "初始企业管理员与普通管理员的管理范围不同。配置完整不代表平台授权有效；当前不提供内置 OAuth 授权向导、自动连通检测或渠道健康监控。",
       "Initial and regular administrators have different management scopes. Complete settings do not establish valid platform authorization. A built-in OAuth wizard, automatic connectivity checks and channel health monitoring are not available."
-    ]
+    ],
+    "translation": {
+      "title": [
+        "统一配置企业翻译服务",
+        "Configure translation for your team"
+      ],
+      "description": [
+        "接入企业自己的常规翻译 API 或模型服务，填写地址与凭据后测试连接，再选择默认服务。坐席可单独设置阅读语言与自动翻译开关。实际可用范围以服务目录和连接测试为准。",
+        "Connect your own translation API or model service, enter its endpoint and credentials, test the connection and choose a default. Agents keep their own reading language and automatic translation preferences. Availability depends on the service directory and a successful connection test."
+      ],
+      "alt": [
+        "Console 企业翻译服务与凭据配置页面",
+        "Console organization translation services and credential configuration"
+      ],
+      "image": "console-translation.webp",
+      "width": 1265,
+      "height": 712
+    }
   },
   {
     "id": "admin",

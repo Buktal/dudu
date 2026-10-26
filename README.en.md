@@ -38,11 +38,27 @@ Explore each application: [Desk](https://buktal.github.io/dudu/products/desk.en.
 
 DuDu is intended for teams that need several official messaging integrations, can manage their own deployment and want control over organization data. Technical setup and ongoing maintenance are required.
 
-- **Current capabilities:** unified conversations, search and filters, history, real-time incoming messages, plain-text replies, visitor tags and internal notes, staff and channel management, and organization and group access boundaries.
+- **Current capabilities:** unified conversations, search and filters, history, real-time incoming messages, plain-text replies, message translation, visitor tags and internal notes, staff and channel management, and organization and group access boundaries.
 - **Current limits:** attachment sending is unavailable. Incoming non-text display and media retrieval depend on the channel. There is no built-in OAuth authorization wizard, automatic connectivity check or channel health monitoring.
 - **Production preparation:** deployers must obtain channel accounts, platform approval and credentials, then validate real message receipt and delivery. Complete configuration does not establish valid authorization or working production messaging.
 
 Implementation status and verification scope are recorded in the [feature maps](docs/features/README.md).
+
+## Message translation
+
+Agents can translate individual text messages or enable automatic translation and choose their reading language in workspace settings. Original text and translations appear together; messages sent to visitors remain unchanged
+
+**Desk: read translations and set your reading preferences**
+
+![Desk message translation: original text, translations and reading language settings](docs/design/dudu-desk/translation/desk-preview.png)
+
+**Console: connect your organization's translation services**
+
+The initial organization administrator can configure conventional translation APIs or model-based services, test a connection and select the organization default. Saved credentials are not returned. Agents share that service while keeping individual reading preferences
+
+![Console translation configuration: organization default, endpoint and credential fields](docs/design/dudu-desk/translation/console-preview.png)
+
+*Screenshots show real components with fixed sample data and do not call providers. Actual translation requires your own service configuration and connection testing. Available services and environment requirements are listed in Console. The application UI is currently in Chinese*
 
 ## Channels and limitations
 
