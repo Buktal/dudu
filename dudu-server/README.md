@@ -62,3 +62,11 @@ Console 展示的公网回调地址通过 `dudu.channel.callback-base-url=https:
 `mvn test` 默认跳过门闩集成用例。显式执行需设置 `DUDU_INTEGRATION_TEST=true`、`DUDU_TEST_JDBC_URL`、`DUDU_TEST_DB_USER` 和 `DUDU_TEST_DB_PASSWORD`；连接本地常驻 MySQL 的独立 `dudu_review_*` 库，评审用户的创建与授权语句见 [compose.yaml](compose.yaml)。禁止使用开发库 `dudu` 或生产业务库。
 
 各用例的库名与清理约定以测试类及[Server 功能图谱](../docs/features/dudu-server.md)为准；部分渠道要求固定独立库，不能用同一个 URL 无差别执行全部集成用例。Console 的实际命令边界与结果见[验收记录](../docs/design/dudu-console/acceptance.md)。
+
+## 翻译配置
+
+V8 新增企业翻译配置和坐席偏好，部署后在 Console 的翻译服务页面填写企业自有地址与凭据并测试连接，Desk 在工作台设置启用自动翻译或逐条点击翻译
+
+可用 dudu.translation.secret 指定至少 32 字符的稳定加密密钥，缺省从 JWT 密钥派生，改密钥前应保留原值，否则需要重新配置企业翻译服务；可信 Ollama 或私有服务部署需显式设置 dudu.translation.allow-private-endpoints=true 并控制出站网络权限
+
+当前本机 Docker 引擎不可用，V8 空库及升级用例尚未执行；真实供应商连接仍需企业凭据验证

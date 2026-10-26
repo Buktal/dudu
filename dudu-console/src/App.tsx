@@ -8,6 +8,7 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { ChannelAccountsPage } from "@/features/channel-accounts/ChannelAccountsPage";
 import { EmployeesPage } from "@/features/employees/EmployeesPage";
 import { UserGroupsPage } from "@/features/groups/user-groups-page";
+import { TranslationPage } from "@/features/translation/TranslationPage";
 import { navigate, routes, useRoute } from "@/navigation";
 
 const selectEmployee = (id: string | null) => navigate(routes.employees(id));
@@ -22,12 +23,17 @@ function Workspace() {
   const session = useSession();
   const initial = session.profile?.user.isInitialAdmin;
   useEffect(() => {
-    if (route.view === "login" || (route.view === "employees" && !initial))
+    if (
+      route.view === "login" ||
+      ((route.view === "employees" || route.view === "translation") && !initial)
+    )
       navigate(initial ? routes.employees() : routes.userGroups());
   }, [route.view, initial]);
   return (
     <ConsoleLayout view={route.view}>
-      {route.view === "account" ? (
+      {route.view === "translation" && initial ? (
+        <TranslationPage />
+      ) : route.view === "account" ? (
         <AccountPage />
       ) : route.view === "employees" && initial ? (
         <EmployeesPage

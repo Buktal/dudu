@@ -7,6 +7,7 @@ import {
   useAccount,
 } from "@/features/account";
 import { type InboxApi, InboxWorkspace } from "@/features/inbox";
+import { TranslationProvider } from "@/features/translation/provider";
 
 function SignedInDesk({ api }: { api?: InboxApi }) {
   const account = useAccount();
@@ -20,13 +21,18 @@ function SignedInDesk({ api }: { api?: InboxApi }) {
   }, [refresh]);
   if (!session) return null;
   return (
-    <InboxWorkspace
-      key={`${session.workspace.id}:${session.agent.id}`}
-      api={api}
-      context={{ workspaceId: session.workspace.id, agentId: session.agent.id }}
-      refreshAccess={refreshAccess}
-      accountMenu={<AccountMenu />}
-    />
+    <TranslationProvider key={`${session.workspace.id}:${session.agent.id}`}>
+      <InboxWorkspace
+        key={`${session.workspace.id}:${session.agent.id}`}
+        api={api}
+        context={{
+          workspaceId: session.workspace.id,
+          agentId: session.agent.id,
+        }}
+        refreshAccess={refreshAccess}
+        accountMenu={<AccountMenu />}
+      />
+    </TranslationProvider>
   );
 }
 

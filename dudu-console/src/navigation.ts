@@ -5,12 +5,14 @@ export type View =
   | "user-groups"
   | "channel-accounts"
   | "account"
+  | "translation"
   | "login";
 const views = new Set<string>([
   "employees",
   "user-groups",
   "channel-accounts",
   "account",
+  "translation",
   "login",
 ]);
 // 路由语法：query 参数名与取值约定，写（routes）读（parseRoute）共用。
@@ -50,6 +52,7 @@ export const routes = {
       groupId ? { [GROUP_ID_PARAM]: groupId } : undefined,
     ),
   account: () => "account",
+  translation: () => "translation",
   login: () => "login",
   employeeCreate: () => `employees?${CREATE_PARAM}=${CREATE_FLAG}`,
   groupCreate: () => `user-groups?${CREATE_PARAM}=${CREATE_FLAG}`,

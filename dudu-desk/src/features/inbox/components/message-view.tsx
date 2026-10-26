@@ -6,6 +6,7 @@ import {
   MessageContent,
   MessageFooter,
 } from "@/components/ui/message";
+import { MessageTranslation } from "@/features/translation/message-translation";
 import { fullTime, messageTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { InboxMessage, VisitorIdentity } from "../types";
@@ -75,6 +76,10 @@ export function MessageView({
                 )}
               >
                 <MessageBody body={message.body} messageId={message.id} />
+                <MessageTranslation
+                  key={`${message.id}:${message.version}`}
+                  message={message}
+                />
               </div>
             </BubbleContent>
           </Bubble>

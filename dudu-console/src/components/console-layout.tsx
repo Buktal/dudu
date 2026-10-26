@@ -2,6 +2,7 @@ import {
   Building2,
   ChevronRight,
   CircleUserRound,
+  Languages,
   Layers3,
   LogOut,
   Menu,
@@ -24,6 +25,12 @@ import {
 } from "./ui/sheet";
 
 const items = [
+  {
+    view: "translation",
+    label: "翻译服务",
+    icon: Languages,
+    route: routes.translation,
+  },
   {
     view: "employees",
     label: "员工",
@@ -74,7 +81,8 @@ export function ConsoleLayout({
       {items
         .filter(
           (item) =>
-            item.view !== "employees" || session.profile?.user.isInitialAdmin,
+            (item.view !== "employees" && item.view !== "translation") ||
+            session.profile?.user.isInitialAdmin,
         )
         .map(({ view: target, label, icon: Icon, route }) => (
           <Fragment key={target}>

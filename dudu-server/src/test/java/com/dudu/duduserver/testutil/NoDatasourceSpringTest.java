@@ -2,6 +2,8 @@ package com.dudu.duduserver.testutil;
 
 import com.dudu.duduserver.config.AdminInitializer;
 import com.dudu.duduserver.service.*;
+import com.dudu.duduserver.translation.TranslationPreferences;
+import com.dudu.duduserver.translation.TranslationSettings;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -19,10 +21,17 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
  */
 @SpringBootTest(properties = {
     "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration",
-    "dudu.auth.jwt-secret=test-secret"
+    "dudu.auth.jwt-secret=test-secret",
+    "dudu.translation.secret=translation-context-test-secret-32"
 })
 @Import(NoDatasourceSpringTest.TxConfig.class)
 public abstract class NoDatasourceSpringTest {
+
+    @MockitoBean
+    protected TranslationSettings translationSettings;
+
+    @MockitoBean
+    protected TranslationPreferences translationPreferences;
 
     @MockitoBean
     protected UserGroupMemberService userGroupMemberService;

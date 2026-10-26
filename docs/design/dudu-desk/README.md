@@ -2,6 +2,8 @@
 
 | 专题 | 内容 |
 | --- | --- |
+| [文本消息阅读翻译](translation/contract.md) | 企业服务配置、坐席阅读偏好、手动与自动翻译契约及验证边界 |
+| [翻译界面精修](translation/ui-review.md) | 后台配置布局、Desk 译文细节及宽屏、窄屏、暗色验证 |
 | [最小对接契约](implementation-contract.md) | 已定稿的三表字段、索引、HTTP 路径/参数/响应及 Socket 报文，实施单一事实源 |
 | [完整实现收简记录](implementation-simplification.md) | 保留全部已确认功能，逐项改为直接实现，撤回额外可靠性/并发方案 |
 | [对接 Spec](integration-spec.md) | 全部功能、48 条故事及核心验收；[GitHub Spec](https://github.com/Buktal/dudu/issues/84)保持开放直到业务完成 |

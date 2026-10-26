@@ -1,6 +1,7 @@
 import { useId } from "react";
 import { Field, FieldDescription, FieldGroup } from "@/components/ui/field";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { TranslationSettings } from "@/features/translation/settings";
 import { receptionModes } from "@/lib/reception-mode";
 import { palettes } from "@/lib/theme-palette";
 import { ReceptionModeSwitch } from "./reception-mode-switch";
@@ -13,6 +14,7 @@ export function WorkspaceSettings() {
   const id = useId();
   return (
     <FieldGroup className="gap-6">
+      <TranslationSettings />
       <Field className="gap-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
