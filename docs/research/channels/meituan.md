@@ -223,6 +223,11 @@ extended_field=string 可选，扩展信息
 应答：{"data":"OK"}，4秒内；超时/格式错→重推+短信报警
 ```
 
+服务端接入已知约束（Server 落地对拍 2026-10-26，dudu-server `MeituanProtocol`）
+
+- 推送体无消息级标识（字段表无 MsgId 类字段，externalMessageId 恒空），应答超时或格式错时渠道按 §3.3 重推，服务端无幂等键可用、重推会产生重复消息
+- 会话粒度为门店：已实锤字段中会话归属仅有 `app_poi_code`（§8 第 6 条），同门店顾客共享一个会话，顾客级会话须待 push_content 结构实锤（§7 第 5 条）后再细化
+
 ### 5.5 门店绑定/解绑推送（docDetail/439 `[摘录]`，字段表逐字）
 
 ```text

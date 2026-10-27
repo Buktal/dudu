@@ -1,4 +1,4 @@
-import { buildFormBody, parseFormBody } from "../codec/form";
+import { buildFormBody } from "../codec/form";
 import type { EventSchema, WirePayload } from "../schemas";
 import { wirePayload } from "./json";
 
@@ -14,8 +14,4 @@ export function formWireText(
   payload: WirePayload,
 ): string {
   return buildFormBody(wirePayload(schema, payload));
-}
-
-export function parseFormDraft(text: string): WirePayload {
-  return parseFormBody(text);
 }

@@ -268,6 +268,11 @@ pub(crate) fn form_encode_value(text: &str) -> String {
 
 /// 明文表单 → 解码 kv 对（文档序）：无值参数落空串（美团「没有值的参数也需
 /// 拼接」§4.1）；空段（连续 &）跳过。
+///
+/// 口径差（有意）：线上侧比编辑侧宽——空段与重复字段名按线上原样放行。
+/// 这里消费的是渠道真实推送，解析以转发为目标，不做可逆唯一假设；编辑侧
+/// （前端 codec/form.ts `parseFormBody`）贴入素材库的载荷要可逆且字段唯一，
+/// 拒绝空段与重复字段。两端不强行对齐。
 pub(crate) fn form_pairs(body: &str) -> Vec<(String, String)> {
     body.split('&')
         .filter(|pair| !pair.is_empty())

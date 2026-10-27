@@ -30,32 +30,41 @@ const items = [
     label: "AI 与翻译服务",
     icon: Languages,
     route: routes.translation,
+    initialAdminOnly: true,
   },
   {
     view: "employees",
     label: "员工",
     icon: UserRound,
     route: routes.employees,
+    initialAdminOnly: true,
   },
   {
     view: "user-groups",
     label: "用户组",
     icon: Layers3,
     route: routes.userGroups,
+    initialAdminOnly: false,
   },
   {
     view: "channel-accounts",
     label: "渠道账号",
     icon: Building2,
     route: routes.channelAccounts,
+    initialAdminOnly: false,
   },
   {
     view: "account",
     label: "个人账号",
     icon: CircleUserRound,
     route: routes.account,
+    initialAdminOnly: false,
   },
 ] as const;
+
+// 「仅初始管理员可见」的单一映射：导航过滤与 App 的路由守卫共读同一来源。
+export const requiresInitialAdmin = (view: View) =>
+  items.some((item) => item.view === view && item.initialAdminOnly);
 
 export function ConsoleLayout({
   view,
@@ -81,8 +90,7 @@ export function ConsoleLayout({
       {items
         .filter(
           (item) =>
-            (item.view !== "employees" && item.view !== "translation") ||
-            session.profile?.user.isInitialAdmin,
+            !item.initialAdminOnly || session.profile?.user.isInitialAdmin,
         )
         .map(({ view: target, label, icon: Icon, route }) => (
           <Fragment key={target}>

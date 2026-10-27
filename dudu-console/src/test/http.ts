@@ -14,7 +14,7 @@ export const profile: Profile = {
   },
   managedGroupIds: [],
 };
-// expiresAt 取远期固定值，任何请求时刻都通过 client 的有效期校验
+// expiresAt 取远期固定值：客户端不做本地有效期校验，过期由服务端 code（1010x）判定
 export const loginResult = {
   token: "test-token",
   expiresAt: 2000000000,

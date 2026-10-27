@@ -1,9 +1,8 @@
 .demo-intro { max-width: 640px; }
 .demo-intro p { color: var(--muted); }
 .demo-disclosure { font-size: 12px; color: var(--muted); margin: 16px 0 26px; }
-.demo-steps { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); border: 0; margin: 28px 0 0; counter-reset: tour; }
-.demo-steps li { counter-increment: tour; padding: 18px 12px; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; }
-.demo-steps li::before { content: counter(tour, decimal-leading-zero); font: 12px var(--mono); margin-right: 10px; }
+.demo-steps { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 28px 0 0; counter-reset: tour; padding: 6px; background: var(--panel); border-radius: 12px; }
+.demo-steps li { counter-increment: tour; padding: 0; border: 0; font-size: 13px; color: var(--muted); }
 .demo-steps [aria-current] { color: var(--text); border-color: var(--coral); }
 .demo-steps .complete { color: var(--ice); }
 .demo-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
@@ -41,79 +40,16 @@
 .demo-composer label { font-size: 11px; color: var(--muted); }
 .demo-composer button { background: var(--text); border: 0; color: var(--base); border-radius: 5px; padding: 11px 16px; font-size: 12px; }
 .demo-workspace button:disabled { opacity: .55; cursor: default; }
-.demo-profile { margin: 0 24px 24px; padding: 18px; border-left: 3px solid var(--ice); background: var(--panel); }
-.demo-profile h4 { font-size: 13px; margin: 0 0 14px; }
-.demo-profile dt { color: var(--muted); font-size: 11px; margin-top: 12px; }
-.demo-profile dd { margin: 5px 0 0; font-size: 13px; line-height: 1.7; }
 .demo-status { font-size: 12px; color: var(--ice); min-height: 24px; margin-bottom: 0; }
-.channel-matrix .channel-mark { display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0; gap: 0; flex-shrink: 0; border-radius: 10px; background: #fff; border: 1px solid #dce3e8; }
-.channel-mark img { width: 23px; height: 23px; }
-.channel-mark b { font: 700 14px "Segoe UI", "Microsoft YaHei", sans-serif; }
-.channel-matrix > span { padding: 12px 8px; gap: 10px; }
-.demo-steps li { padding: 0; border: 0; }
-.demo-steps li::before { content: none; }
-.demo-steps button { width: 100%; text-align: left; padding: 18px 12px; border: 0; border: 0; border-radius: 8px; background: transparent; font-size: 13px; color: var(--muted); }
-.demo-steps button::before { content: counter(tour, decimal-leading-zero); font: 12px var(--mono); margin-right: 10px; }
-.demo-steps button:hover { background: var(--panel); color: var(--text); }
 .demo-guidance { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 18px; min-height: 76px; }
 .demo-guidance p { max-width: 620px; margin: 0; }
 .demo-navigation { display: flex; gap: 10px; flex-shrink: 0; }
 .demo-navigation button { border: 1px solid var(--edge); border-radius: 6px; background: transparent; padding: 12px 16px; font-size: 12px; }
 .demo-navigation button:disabled { opacity: .45; cursor: default; }
 #demo-next { background: var(--text); color: var(--base); border-color: var(--text); }
-.start-layout > div { min-width: 0; }
-.guide-entry a { overflow-wrap: anywhere; }
-.enhanced .product-panel { padding-top: 0; }
-.enhanced .panel-summary { min-height: 112px; margin: 0; align-items: center; }
-.enhanced .panel-summary p { max-width: 780px; }
-.product-panel .product-shot { margin: 0; }
-.product-panel .shot-frame { aspect-ratio: 16 / 9; padding: 0; overflow: hidden; background: #f5f6f9; }
-.product-panel .shot-frame > a { width: 100%; height: 100%; }
-.product-panel .shot-frame img { width: 100%; height: 100%; object-fit: contain; object-position: center top; }
-.product-panel figcaption { margin: 0; min-height: 44px; padding-top: 12px; }
-.channel-groups { display: grid; grid-template-columns: 1fr 1.8fr 1fr; gap: 20px; }
-.channel-group { border: 1px solid var(--line); border-radius: 10px; padding: 22px 18px; min-width: 0; }
-.channel-group h3 { font-size: 14px; margin: 0 8px 16px; color: var(--muted); }
-.channel-group .channel-matrix { grid-template-columns: minmax(0, 1fr); padding: 0; }
-.channel-group:nth-child(2) .channel-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.channel-matrix > span { min-width: 0; }
-.channel-boundaries { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; margin: 36px 0 24px; padding-top: 28px; border-top: 1px solid var(--line); }
-.channel-boundaries h3 { font-size: 16px; }
-.channel-boundaries p { color: var(--muted); margin-bottom: 0; font-size: 13px; }
-@media (max-width: 760px) {
-  .demo-workspace { grid-template-columns: minmax(0, 1fr); }
-  .demo-workspace { height: 760px; grid-template-rows: auto minmax(0, 1fr); }
-  .demo-queue { border-right: 0; border-bottom: 1px solid var(--line); padding: 16px; }
-  .demo-queue h3 { margin-bottom: 12px; }
-  .demo-conversation-button .demo-preview { margin-top: 5px; }
-  .demo-empty { min-height: 220px; }
-  .demo-steps li { padding: 14px 4px; font-size: 11px; }
-  .demo-steps li::before { display: block; margin-bottom: 7px; }
-  .demo-conversation-header { align-items: flex-start; padding: 18px 16px; }
-  .demo-thread, .demo-composer { padding: 18px 16px; }
-  .demo-profile { margin: 0 16px 16px; }
-  .demo-message { max-width: 94%; }
-  .channel-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 480px) {
-  .site-header .nav-source { display: none; }
-}
-@media (max-width: 760px) {
-  .demo-guidance { flex-direction: column; align-items: stretch; gap: 14px; }
-  .demo-guidance .demo-caption { height: 108px; min-height: 108px; }
-  .demo-navigation { min-height: 50px; }
-  .demo-navigation button:last-child { flex: 1; }
-  .demo-steps button { font-size: 11px; padding: 14px 4px; }
-  .demo-steps button::before { display: block; margin-bottom: 7px; }
-  .enhanced .panel-summary { height: 180px; min-height: 180px; padding: 22px 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 10px; }
-  .enhanced .panel-summary a { margin-top: 0; }
-  .product-panel figcaption { font-size: 11px; }
-  .channel-groups, .channel-boundaries { grid-template-columns: minmax(0, 1fr); }
-  .channel-group .channel-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .channel-boundaries { gap: 24px; }
-}
-
-.demo-steps { gap: 8px; padding: 6px; background: var(--panel); border-radius: 12px; }
+.demo-steps button { width: 100%; text-align: left; padding: 18px 12px; border: 0; border-radius: 8px; background: transparent; font-size: 13px; color: var(--muted); }
+.demo-steps button::before { content: counter(tour, decimal-leading-zero); font: 12px var(--mono); margin-right: 10px; }
+.demo-steps button:hover { background: var(--panel); color: var(--text); }
 .demo-steps button[aria-current] { background: var(--base); color: var(--text); box-shadow: 0 2px 7px var(--shadow); }
 .demo-steps button[aria-current]::before { color: var(--coral); }
 .demo-steps button.complete { color: var(--muted); }
@@ -122,19 +58,25 @@
 .demo-conversation-button { border-color: transparent; }
 .demo-conversation-button[aria-pressed="true"] { border-color: transparent; box-shadow: inset 3px 0 var(--coral); }
 .demo-profile { border-left: 0; border-radius: 8px; }
-.tour-entry { display: flex; align-items: center; justify-content: space-between; gap: 48px; }
-.tour-entry > div { max-width: 730px; }
-.tour-entry .button { flex-shrink: 0; }
 .demo-page #demo { padding-top: 44px; }
 .demo-page h1 { font-size: clamp(32px, 3.6vw, 46px); line-height: 1.4; margin: 16px 0 22px; }
-@media(max-width:760px) { .tour-entry { align-items: flex-start; flex-direction: column; gap: 20px; } }
-
-.suite-tabs { border-bottom: 0; gap: 12px; }
-.suite-tab { border: 0; border-radius: 8px; padding: 16px 18px; margin-right: 0; }
-.suite-tab[aria-selected="true"] { background: var(--panel); }
-.suite-tab[aria-selected="true"] b { color: var(--text); }
-.channel-group { border: 0; background: var(--panel); }
-.channel-boundaries { border-top: 0; }
-@media(max-width:760px) { .suite-tabs { gap: 4px; } .suite-tab { padding: 14px 9px; } }
-
-@media(min-width:481px) and (max-width:760px) { .demo-guidance .demo-caption { height: 56px; min-height: 56px; } }
+@media (max-width: 760px) {
+  .demo-workspace { height: 760px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .demo-queue { border-right: 0; border-bottom: 1px solid var(--line); padding: 16px; }
+  .demo-queue h3 { margin-bottom: 12px; }
+  .demo-conversation-button .demo-preview { margin-top: 5px; }
+  .demo-empty { min-height: 220px; }
+  .demo-steps li { padding: 14px 4px; font-size: 11px; }
+  .demo-conversation-header { align-items: flex-start; padding: 18px 16px; }
+  .demo-thread, .demo-composer { padding: 18px 16px; }
+  .demo-profile { margin: 0 16px 16px; }
+  .demo-message { max-width: 94%; }
+  .demo-guidance { flex-direction: column; align-items: stretch; gap: 14px; }
+  .demo-guidance .demo-caption { height: 56px; min-height: 56px; }
+  .demo-navigation { min-height: 50px; }
+  .demo-navigation button:last-child { flex: 1; }
+  .demo-steps button { font-size: 11px; padding: 14px 4px; }
+  .demo-steps button::before { display: block; margin-bottom: 7px; }
+}
+/* 手机屏再把竖排指引抬高：覆盖上方 760 块的 56px 基线 */
+@media (max-width: 480px) { .demo-guidance .demo-caption { height: 108px; min-height: 108px; } }

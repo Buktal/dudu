@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { defineConversation } from "../test-fixtures";
+import { defineConversation, defineMessage } from "../test-fixtures";
 import type { Conversation } from "../types";
-import { buildReplySubmission, replyReadiness } from "./pipeline";
+import {
+  buildReplySubmission,
+  isServerPersisted,
+  replyReadiness,
+} from "./pipeline";
 
 const NOW = "2026-09-16T00:01:00Z";
 
@@ -124,5 +128,48 @@ describe("Reply pipeline submission builder", () => {
       status: "sending",
     });
     expect(submission.request.target.conversationId).toBe("conversation-a");
+  });
+});
+
+describe("Reply pipeline persisted message predicate", () => {
+  it("treats optimistic bubbles as not persisted", () => {
+    expect(
+      isServerPersisted(
+        defineMessage({
+          id: "client:request-1",
+          conversationId: "conversation-a",
+          direction: "outgoing",
+          delivery: { state: "sending" },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("treats numeric server ids as persisted", () => {
+    expect(
+      isServerPersisted(
+        defineMessage({
+          id: "9002",
+          conversationId: "conversation-a",
+          direction: "outgoing",
+          delivery: { state: "sent" },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("follows the server id when the message carries one", () => {
+    // 已被回执合并升级的消息即使 id 还是乐观前缀，也按服务端持久消息对待
+    expect(
+      isServerPersisted(
+        defineMessage({
+          id: "client:request-1",
+          serverId: "9002",
+          conversationId: "conversation-a",
+          direction: "outgoing",
+          delivery: { state: "sent" },
+        }),
+      ),
+    ).toBe(true);
   });
 });

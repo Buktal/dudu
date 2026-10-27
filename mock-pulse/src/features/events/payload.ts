@@ -1,9 +1,10 @@
 import { get, toPath } from "lodash-es";
 
+import { parseFormBody } from "./codec/form";
 import { parseWirePayload } from "./codec/json";
 import { isXmlNonScalar } from "./codec/xml";
 import { safePath, WIRE_FIELD_PATTERN } from "./paths";
-import { formWireText, parseFormDraft } from "./payload/form";
+import { formWireText } from "./payload/form";
 import { editorPayload, jsonDraftText, jsonWireText } from "./payload/json";
 import { parseXmlDraft, xmlWireText } from "./payload/xml";
 import { cloneJson } from "./payload-value";
@@ -168,7 +169,7 @@ export function parseWireDraft(schema: EventSchema, text: string): WirePayload {
     return parseXmlDraft(schema, text);
   }
   if (schema.wire === "form") {
-    return parseFormDraft(text);
+    return parseFormBody(text);
   }
   return parseWirePayload(text);
 }

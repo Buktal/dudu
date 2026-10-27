@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { requestDesk, requestDeskBlob } from "./desk-http";
+import { afterEach, describe, expect, it } from "vitest";
+import { DeskApiError } from "./api-response";
+import { createDeskCaller, requestDesk, requestDeskBlob } from "./desk-http";
+import { DESK_SESSION_KEY } from "./desk-session";
 
 describe("Desk HTTP boundary", () => {
   it("rejects an expired login even when the server returns HTTP 200", async () => {
@@ -67,6 +69,26 @@ describe("Desk HTTP boundary", () => {
         },
       }),
     ).rejects.toMatchObject({ kind: "invalid-response" });
+  });
+
+  it("passes a deliberate DeskApiError from the parser through unchanged", async () => {
+    // parse 刻意抛出的错误带着准确的 kind 与文案（如翻译偏好响应无效），
+    // 不被兜底映射覆盖成笼统的「服务返回的数据格式不完整」
+    await expect(
+      requestDesk({
+        url: "/explicit-route",
+        token: "test-token",
+        signal: new AbortController().signal,
+        fetcher: async () =>
+          Response.json({ code: 0, msg: "ok", data: { wrong: true } }),
+        parse: () => {
+          throw new DeskApiError("invalid-response", "翻译偏好响应无效");
+        },
+      }),
+    ).rejects.toMatchObject({
+      kind: "invalid-response",
+      message: "翻译偏好响应无效",
+    });
   });
 
   it("does not accept a transport failure as a successful response envelope", async () => {
@@ -234,5 +256,111 @@ describe("Desk media byte boundary", () => {
         },
       }),
     ).rejects.toMatchObject({ kind: "aborted" });
+  });
+});
+
+describe("Desk session caller", () => {
+  const ORIGIN = "https://desk.example.test";
+
+  afterEach(() => {
+    sessionStorage.removeItem(DESK_SESSION_KEY);
+  });
+
+  it("sends the stored session token as the bearer header for api calls", async () => {
+    sessionStorage.setItem(
+      DESK_SESSION_KEY,
+      JSON.stringify({ origin: ORIGIN, token: "session-token" }),
+    );
+    const desk = createDeskCaller({
+      origin: ORIGIN,
+      fetcher: async (_url, init) => {
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          "Bearer session-token",
+        );
+        return Response.json({ code: 0, msg: "ok", data: { name: "接待员" } });
+      },
+    });
+    const result = await desk.request({
+      url: `${desk.origin}/api/desk/profile`,
+      signal: new AbortController().signal,
+      parse: (value) => value,
+    });
+    expect(result).toEqual({ name: "接待员" });
+  });
+
+  it("passes media calls through the same session token", async () => {
+    sessionStorage.setItem(
+      DESK_SESSION_KEY,
+      JSON.stringify({ origin: ORIGIN, token: "session-token" }),
+    );
+    const desk = createDeskCaller({
+      origin: ORIGIN,
+      fetcher: async (url, init) => {
+        expect(String(url)).toBe(`${ORIGIN}/api/desk/messages/9001/media`);
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          "Bearer session-token",
+        );
+        return new Response(new Uint8Array([9]), {
+          headers: { "Content-Type": "application/octet-stream" },
+        });
+      },
+    });
+    const blob = await desk.blob({
+      url: `${desk.origin}/api/desk/messages/9001/media`,
+      signal: new AbortController().signal,
+    });
+    expect(new Uint8Array(await blob.arrayBuffer())).toEqual(
+      new Uint8Array([9]),
+    );
+  });
+
+  it("re-reads the session for every call after login stores a token", async () => {
+    // 构造时不缓存 token：登录写入后同一 caller 的下一次调用就带上凭据
+    let expectToken: string | null = null;
+    const desk = createDeskCaller({
+      origin: ORIGIN,
+      fetcher: async (_url, init) => {
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          expectToken ? `Bearer ${expectToken}` : null,
+        );
+        return Response.json({ code: 0, msg: "ok", data: null });
+      },
+    });
+    const call = () =>
+      desk.request({
+        url: `${desk.origin}/api/desk/profile`,
+        signal: new AbortController().signal,
+        parse: (value) => value,
+      });
+    await call();
+    sessionStorage.setItem(
+      DESK_SESSION_KEY,
+      JSON.stringify({ origin: ORIGIN, token: "session-token" }),
+    );
+    expectToken = "session-token";
+    await call();
+  });
+
+  it("keeps a stored session bound to its origin", async () => {
+    sessionStorage.setItem(
+      DESK_SESSION_KEY,
+      JSON.stringify({
+        origin: "https://other.example.test",
+        token: "other-token",
+      }),
+    );
+    const desk = createDeskCaller({
+      origin: ORIGIN,
+      fetcher: async (_url, init) => {
+        // 其他源地址登录的凭据不随本源请求发送
+        expect(new Headers(init?.headers).has("Authorization")).toBe(false);
+        return Response.json({ code: 0, msg: "ok", data: null });
+      },
+    });
+    await desk.request({
+      url: `${desk.origin}/api/desk/profile`,
+      signal: new AbortController().signal,
+      parse: (value) => value,
+    });
   });
 });

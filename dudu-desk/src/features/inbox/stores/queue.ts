@@ -4,7 +4,6 @@ import { compareConversations } from "../conversation-query";
 import type { ConversationQuery } from "../types";
 import { collectPaged } from "./page-cursor";
 import { foldConversationPages } from "./queue-membership";
-import { connectionFromFailure } from "./reload";
 import {
   failedReadCursor,
   hasInFlightRequest,
@@ -13,6 +12,7 @@ import {
   runOperation,
 } from "./requests";
 import { inboxActions } from "./slice";
+import { connectionFromFailure } from "./state";
 import {
   awaitConnectionSettled,
   type InboxCommand,

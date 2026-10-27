@@ -1,5 +1,9 @@
 package com.dudu.duduserver.channel.meituan;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.dudu.duduserver.channel.ChannelAdapterRegistry;
 import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
@@ -13,6 +17,7 @@ import com.dudu.duduserver.service.impl.ChannelCallbackServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestClient;
 
@@ -32,9 +37,9 @@ import static org.mockito.Mockito.when;
 
 /**
  * 美团回调接入验收（docs/research/channels/meituan.md §3、§4.1、§5、§8）：POST 表单推送经
- * 回调服务全链路——验签（签名参数全在表单、待签串含回调 URL）、IM 单聊落库、订单/门店只
- * 应答、伪造签名与缺凭据如实应答；GET 握手按美团无 challenge/verify 口径应答不支持，发送
- * 与素材能力按凭据缺失如实说明。
+ * 回调服务全链路——验签（签名参数全在表单、待签串含回调 URL、基准 URL 可配置）、IM 单聊
+ * 落库、订单/门店只应答、伪造签名与缺凭据如实应答（失败记录待签 URL 供排障）；GET 握手按
+ * 美团无 challenge/verify 口径应答不支持，发送与素材能力按凭据缺失如实说明。
  */
 class MeituanAdapterTest {
 
@@ -50,7 +55,7 @@ class MeituanAdapterTest {
     private final MeituanProtocol protocol = new MeituanProtocol();
     private final MeituanAdapter adapter = new MeituanAdapter(protocol,
         new MeituanTextSender(protocol, RestClient.builder(), "http://127.0.0.1:9"),
-        new MeituanMediaReader());
+        new MeituanMediaReader(), "");
     private final ChannelAdapterRegistry registry = new ChannelAdapterRegistry(List.of(adapter));
     private final ChannelCallbackService service =
         new ChannelCallbackServiceImpl(companyChannelService, registry, deskInboundService);
@@ -133,6 +138,62 @@ class MeituanAdapterTest {
         assertThat(service.receive(String.valueOf(CHANNEL_ID), form, REQUEST_HEADERS, "").status())
             .isEqualTo(501);
         verify(deskInboundService, never()).accept(any(), any());
+    }
+
+    @Test
+    void configuredCallbackBaseUrlSignsAgainstConfiguredValueInsteadOfHostHeader() {
+        // 反代改写 Host 的部署：配置签名基准 URL 后按配置值重建待签串，路径仍由统一路由派生
+        MeituanAdapter configured = new MeituanAdapter(protocol,
+            new MeituanTextSender(protocol, RestClient.builder(), "http://127.0.0.1:9"),
+            new MeituanMediaReader(), "http://gw.example:8080");
+        ChannelCallbackService configuredService = new ChannelCallbackServiceImpl(companyChannelService,
+            new ChannelAdapterRegistry(List.of(configured)), deskInboundService);
+
+        // Host 头是被改写后的代理地址：按 Host 口径签出的 sig 无法通过，按配置口径签出的通过
+        Map<String, String> hostSigned = imChat();
+        sign(hostSigned);
+        assertThat(configuredService.receive(String.valueOf(CHANNEL_ID), hostSigned, REQUEST_HEADERS, "").status())
+            .isEqualTo(403);
+        verifyNoInteractions(deskInboundService);
+
+        Map<String, String> configuredSigned = imChat();
+        configuredSigned.put("app_id", APP_ID);
+        configuredSigned.put("timestamp", "1760000000");
+        configuredSigned.put("sig", protocol.sign("http://gw.example:8080/api/channels/" + CHANNEL_ID + "/callback",
+            configuredSigned, APP_SECRET));
+        ChannelCallbackResult result = configuredService.receive(String.valueOf(CHANNEL_ID), configuredSigned,
+            REQUEST_HEADERS, "");
+
+        assertThat(result.status()).isEqualTo(200);
+        assertThat(result.body()).isEqualTo("{\"data\":\"OK\"}");
+        assertThat(capturedInbound().externalUserId()).isEqualTo("668921");
+    }
+
+    @Test
+    void verificationFailureLogsTheSignedUrlWithoutSecret() {
+        // 验签失败无落库可查：warn 记录账号与重建出的待签 URL，appSecret 不入日志
+        Logger logger = (Logger) LoggerFactory.getLogger(MeituanAdapter.class);
+        ListAppender<ILoggingEvent> events = new ListAppender<>();
+        events.start();
+        logger.addAppender(events);
+        try {
+            Map<String, String> forged = imChat();
+            sign(forged);
+            forged.put("sig", "0".repeat(32));
+
+            ChannelCallbackResult result = service.receive(String.valueOf(CHANNEL_ID), forged, REQUEST_HEADERS, "");
+
+            assertThat(result.status()).isEqualTo(403);
+            assertThat(events.list).anySatisfy(event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                assertThat(event.getFormattedMessage())
+                    .contains("companyChannelId=" + CHANNEL_ID)
+                    .contains("signUrl=http://" + HOST + "/api/channels/" + CHANNEL_ID + "/callback")
+                    .doesNotContain(APP_SECRET);
+            });
+        } finally {
+            logger.detachAppender(events);
+        }
     }
 
     @Test

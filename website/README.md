@@ -4,7 +4,7 @@
 
 - 中文首页：`index.html`；英文页面：`en.html`。
 - 使用指南：`guides/index.html`、`guides/index.en.html`；部署、接待流程、微信公众号、Telegram、WhatsApp 与 MockPulse 各有中英文独立页面。
-- 指南复用官网主题与字体，布局样式为 `guides/guide.css`，仅加载 `theme.js`，不加载首页场景脚本。
+- 指南复用官网主题与字体，布局样式为 `guides/guide.css`；脚本仅加载 `theme.js` 与 `navigation.js`，消息动画样式 `scene.css` 只由首页 `index.html` 与 `en.html` 加载
 - 模块介绍：`products/` 下 Desk、Console、Admin、MockPulse、Server 的中英文独立页面；使用场景、主要功能、截图或流程、使用条件及文档入口。
 - 公共样式：`style.css`；导览：`demo.css` / `demo.js`；消息动画：`scene.css` / `scene.js`；导航：`navigation.css` / `navigation.js`；模块页样式：`products/product.css`。
 - 原生交互：`site.js`（产品页签与图片预览）；`demo.js` / `demo.css`（坐席接待导览）。首屏保留消息流动画；产品展示区统一为每项一张主图，独立介绍页通过顶部产品菜单与首页入口进入。

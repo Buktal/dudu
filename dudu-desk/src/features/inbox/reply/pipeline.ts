@@ -6,6 +6,18 @@ import type {
 } from "../types";
 import { sendRestriction } from "./send-rules";
 
+/**
+ * 消息已服务端持久化：域内显式判据，不猜 id 形状。乐观气泡 id 由
+ * buildReplySubmission 统一带 client: 前缀，回执合并后带合并内核写入的
+ * serverId，其余 id 一律来自服务端事件。翻译等只对已持久化消息开放的
+ * 能力统一用这一份判定
+ */
+export function isServerPersisted(message: InboxMessage): boolean {
+  return (
+    message.serverId !== undefined || !message.id.startsWith("client:")
+  );
+}
+
 type ReplySubmissionStart = {
   submission: {
     request: SendSubmission;

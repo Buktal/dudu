@@ -76,7 +76,8 @@ describe("plans 编排运行状态流转（plan-run）", () => {
   });
 
   it("物化失败（引用剧本不在库）：rejected 且给可读错误，不调命令", async () => {
-    // 草稿直接注入悬空引用（addPlanLane 正常流程会拦下，此处测运行前兜底校验）
+    // 草稿直接注入悬空引用（addPlanLane 正常流程会拦下，此处测物化守卫
+    // 单点拦截：materializePlanRun 的不变式守卫拒绝启动）
     const store = makeStore(
       { douyin: DY_CONNECTION, wecom: WC_CONNECTION },
       addLane(addLane(createPlan("坏引用", "serial"), "scn-dy"), "scn-gone"),

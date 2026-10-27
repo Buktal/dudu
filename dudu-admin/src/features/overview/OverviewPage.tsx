@@ -38,7 +38,8 @@ export function OverviewPage({
         aria-label="企业运营统计"
         className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-4 sm:px-5"
       >
-        {stats && !loading && !error ? (
+        {/* stats 非空即本次查询已成功：loading 与 error 由查询四键不变量排除 */}
+        {stats ? (
           <dl className="grid min-w-0 flex-1 basis-full grid-cols-2 gap-x-6 gap-y-3 sm:basis-auto sm:grid-cols-4">
             {[
               { label: "企业总数", value: stats.companyCount },

@@ -1,4 +1,6 @@
+import { RotateCcw } from "lucide-react";
 import { useId } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
@@ -22,7 +24,7 @@ export function TranslationSettings() {
   const translation = useTranslation();
   const languageId = useId();
   if (!translation) return null;
-  const { preference, save, pending, error } = translation;
+  const { preference, save, pending, error, reload } = translation;
   return (
     <FieldSet className="gap-4">
       <FieldLegend variant="label">消息翻译</FieldLegend>
@@ -76,9 +78,16 @@ export function TranslationSettings() {
         <FieldDescription>偏好随当前坐席账户保存。</FieldDescription>
       </Field>
       {error && (
-        <p role="alert" className="text-xs text-destructive">
-          {error}
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <p role="alert" className="text-xs text-destructive">
+            {error}
+          </p>
+          {/* 与 AI 助手的刷新状态同形态：重新读取偏好，不要求重开工作台 */}
+          <Button variant="ghost" size="xs" disabled={pending} onClick={reload}>
+            <RotateCcw data-icon="inline-start" />
+            重试
+          </Button>
+        </div>
       )}
     </FieldSet>
   );

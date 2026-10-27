@@ -28,6 +28,7 @@ import {
   selectQueue,
   selectQuickQueueConversations,
 } from "../stores/selectors";
+import { useAssistantHostSetter } from "./assistant-host";
 import { ConversationPane } from "./conversation-pane";
 import { QueueHeading } from "./conversation-sidebar";
 import { visitorName } from "./identity";
@@ -62,6 +63,7 @@ export function QuickWorkspace() {
     historyId ? selectConversationById(state, historyId) : undefined,
   );
   const info = useVisitorPanel();
+  const setAssistantHost = useAssistantHostSetter();
   const grid = useRef<VirtuosoGridHandle>(null);
   const historyTitle = useRef<HTMLHeadingElement>(null);
   const previousReply = useRef<string | null>(null);
@@ -172,6 +174,7 @@ export function QuickWorkspace() {
         }}
       >
         <DialogContent
+          ref={setAssistantHost}
           data-desk-assistant-host=""
           initialFocus={historyTitle}
           className="flex h-[min(740px,94dvh)] max-w-[calc(100%-1rem)] flex-col gap-4 rounded-2xl p-5 max-[760px]:p-3 sm:max-w-[810px]"

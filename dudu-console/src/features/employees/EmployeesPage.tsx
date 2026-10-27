@@ -20,28 +20,8 @@ import {
 import { EmployeeDetail } from "./EmployeeDetail";
 import { EmployeeForm } from "./EmployeeForm";
 import { useEmployees } from "./employee-data";
+// 进入性由 App 路由守卫保证（非初始管理员重定向用户组页），页内不再重复判定
 export function EmployeesPage({
-  selectedId,
-  creating,
-  onSelect,
-  onCreate,
-}: {
-  selectedId: string | null;
-  creating: boolean;
-  onSelect: (id: string | null) => void;
-  onCreate: (creating: boolean) => void;
-}) {
-  // 进入性由 App 路由守卫保证（非初始管理员重定向用户组页），页内不再重复判定
-  return (
-    <EmployeeList
-      selectedId={selectedId}
-      creating={creating}
-      onSelect={onSelect}
-      onCreate={onCreate}
-    />
-  );
-}
-function EmployeeList({
   selectedId,
   creating,
   onSelect,

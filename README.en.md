@@ -108,6 +108,7 @@ See the [channel configuration reference](docs/design/dudu-console/channel-field
 | [DuduAdmin](dudu-admin/README.md) | Platform administrators: organization provisioning, overview, and operation logs | React, TypeScript |
 | [DUDU Server](dudu-server/README.md) | Authentication, authorization, persistence, channel adapters, HTTP/WebSocket | Java 21, Spring Boot 3.5, MyBatis-Plus, MySQL |
 | [MockPulse](mock-pulse/README.md) | Developers: local callback simulation and protocol testing | React, Tauri 2, Rust |
+| [Website](website/README.md) | Visitors: GitHub Pages project website with the project overview, product tours, and guides | HTML, CSS, JavaScript |
 
 Each frontend manages its dependencies independently using Yarn 4, Vite, Tailwind CSS, and shadcn. MockPulse is optional: run it when you need to simulate platform callbacks, not as a prerequisite for running the support system.
 

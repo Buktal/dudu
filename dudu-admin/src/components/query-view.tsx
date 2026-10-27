@@ -31,7 +31,8 @@ export function QueryView<T>({
   };
   empty: {
     icon?: LucideIcon;
-    filteredCopy: { title: string; description: string };
+    // 无筛选列表可省略 filteredCopy：filtered 取向回落 defaultCopy
+    filteredCopy?: { title: string; description: string };
     defaultCopy: { title: string; description: string };
     action?: (filtered: boolean) => ReactNode;
   };
@@ -39,7 +40,9 @@ export function QueryView<T>({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const copy = query.filtered ? empty.filteredCopy : empty.defaultCopy;
+  const copy = query.filtered
+    ? (empty.filteredCopy ?? empty.defaultCopy)
+    : empty.defaultCopy;
   return (
     <div className="data-panel min-w-0 overflow-hidden rounded-4xl border bg-card">
       {(filters || actions) && (

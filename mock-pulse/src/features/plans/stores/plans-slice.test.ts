@@ -257,3 +257,38 @@ describe("编排快照与异步草稿回归", () => {
     expect(store.getState().plans.activeRunId).toBeNull();
   });
 });
+
+describe("编排草稿脏判定（touched 门 + 内容差，lib/draft-dirty 装配）", () => {
+  it("新建零编辑不脏；打开库内编排零编辑不脏", () => {
+    const store = makeStore();
+    store.dispatch(startPlanDraft({ name: "新编排", mode: "serial" }));
+    expect(selectPlanDirty(store.getState().plans)).toBe(false);
+
+    store.dispatch(openPlan(SAVED_PLAN.id));
+    expect(selectPlanDirty(store.getState().plans)).toBe(false);
+  });
+
+  it("编辑即脏（新建无基线动手即脏；已保存的与基线比内容）", () => {
+    const store = makeStore();
+    store.dispatch(startPlanDraft({ name: "新编排", mode: "serial" }));
+    store.dispatch(setPlanDraftName("改了名"));
+    expect(selectPlanDirty(store.getState().plans)).toBe(true);
+
+    store.dispatch(openPlan(SAVED_PLAN.id));
+    store.dispatch(setPlanDraftMode("serial"));
+    expect(selectPlanDirty(store.getState().plans)).toBe(true);
+  });
+
+  it("保存后回包等值清脏", async () => {
+    const store = makeStore();
+    store.dispatch(startPlanDraft({ name: "新编排", mode: "parallel" }));
+    store.dispatch(setPlanDraftName("定稿"));
+    expect(selectPlanDirty(store.getState().plans)).toBe(true);
+
+    apiMock.savePlan.mockImplementationOnce(async (plan) => [plan]);
+    await store.dispatch(savePlan()).unwrap();
+
+    expect(store.getState().plans.items[0]?.name).toBe("定稿");
+    expect(selectPlanDirty(store.getState().plans)).toBe(false);
+  });
+});

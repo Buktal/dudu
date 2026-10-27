@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { profile, success } from "@/test/http";
-import { ConsoleClient } from "./client";
+import { ConsoleClient, isEmpty } from "./client";
 import { useConsoleQuery } from "./console-query";
 import { ConsoleContext } from "./context";
 
@@ -129,5 +129,61 @@ it("accessRevision / dataRevision 进入重查依赖：权限刷新后重发请�
     await client.refreshProfile(true);
   });
   await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+  expect(result.current.data).toEqual({ accountId: "3" });
+});
+
+it("写成功失效后重查：dataRevision 进入重查依赖", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => success(null)),
+  );
+  const client = new ConsoleClient();
+  const load = vi.fn<FixtureLoad>(() => Promise.resolve({ accountId: "3" }));
+  const { result } = renderHook(() => useConsoleQuery(load, []), {
+    wrapper: contextWrapper(client),
+  });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(load).toHaveBeenCalledTimes(1);
+
+  // 写成功即失效（宏任务一拍）：非 stable 查询随失效陪跑重查
+  await act(async () => {
+    await client.request("/console/employees/2", {
+      method: "PUT",
+      write: true,
+      validate: isEmpty,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+  expect(result.current.data).toEqual({ accountId: "3" });
+});
+
+it("stable 目录查询跳过写后失效：失效已发布但不重查", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => success(null)),
+  );
+  const client = new ConsoleClient();
+  const load = vi.fn<FixtureLoad>(() => Promise.resolve({ accountId: "3" }));
+  const { result } = renderHook(
+    () => useConsoleQuery(load, [], { stable: true }),
+    {
+      wrapper: contextWrapper(client),
+    },
+  );
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(load).toHaveBeenCalledTimes(1);
+
+  // 写成功失效仍照常发布，stable 查询不陪跑重查
+  await act(async () => {
+    await client.request("/console/employees/2", {
+      method: "PUT",
+      write: true,
+      validate: isEmpty,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  expect(client.getSnapshot().dataRevision).toBe(1);
+  expect(load).toHaveBeenCalledTimes(1);
   expect(result.current.data).toEqual({ accountId: "3" });
 });

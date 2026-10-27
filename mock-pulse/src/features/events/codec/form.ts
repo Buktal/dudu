@@ -120,6 +120,11 @@ export function buildFormBody(payload: WirePayload): string {
 /**
  * form 明文 → 载荷。容忍首尾空白；无值参数（`key` 或 `key=`）落空串
  * （官方「没有值的参数也需拼接」形态）；重复字段名抛可读错误。
+ *
+ * 口径差（有意）：编辑侧比线上侧严——空段（连续 &）与重复字段名在此拒绝。
+ * 贴进素材库的载荷要可逆且字段唯一（编辑器按 kv 对渲染、保存后再装回必须
+ * 逐字节还原）；线上侧（src-tauri/src/connections/util.rs `form_pairs`）按
+ * 线上原样消费真实推送，容忍空段与重复段，不做可逆性假设。两端不强行对齐。
  */
 export function parseFormBody(text: string): WirePayload {
   const source = text.trim();

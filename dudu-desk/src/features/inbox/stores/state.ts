@@ -77,6 +77,11 @@ export function latestIncomingSequence(
   );
 }
 
+/** Failure kinds map to connection states in exactly one place. */
+export function connectionFromFailure(failure: ApiFailure): ConnectionState {
+  return failure.kind === "unavailable" ? "unavailable" : "disconnected";
+}
+
 /**
  * 会话正被显示：专注选中、当前回复对象、并排固定或完整历史任一槽位。
  * 消息集合持有的判定与重连重载的目标选择共用这一份定义；待处理提醒的免打扰

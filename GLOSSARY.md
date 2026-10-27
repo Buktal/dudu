@@ -134,7 +134,7 @@ mock-pulse 剧本/编排运行启动即落盘的中断态记录：步骤先以�
 _Avoid_: 断点续跑（检查点不自动续发）、进度缓存（口语）
 
 **引用解析**:
-mock-pulse 中步骤/编排引用到注册表条目的查找与缺失分类单点：`{id, version}` → ok / id-missing / version-missing。事件素材版本、事件模板版本、编排 lane 剧本三处共用同一 kernel（events 域 reference/resolve）；各时钟（运行 / 展示 / 编辑 / 守卫）的缺失含义收敛到同域 interpreter（reference/interpret，interpret*）这一唯一出口，域外只经它消费，缺失语义变更只改 consequence 表一行。
+mock-pulse 中步骤/编排引用到注册表条目的查找与缺失分类单点：`{id, version}` → ok / id-missing / version-missing。事件素材版本、事件模板版本、编排 lane 剧本三处共用同一 kernel（events 域 reference/resolve）；各时钟（运行 / 展示 / 编辑 / 守卫）的缺失含义收敛到同域 interpreter（reference/interpret，interpret*）这一唯一出口，域外只经它消费；缺失语义变更，引用形态（事件素材 / 事件模板版本）只改 consequence 表一行，存在性（presence）形态语义在 interpret 单点。
 _Avoid_: 查找、引用查找（口语）
 
 **线上编解码（codec）**:

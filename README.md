@@ -108,6 +108,7 @@ DuDu 适合需要接入多个官方消息渠道、能够自行部署和维护系
 | [DuduAdmin](dudu-admin/README.md) | 平台管理员：企业开通、运营概览和操作记录 | React、TypeScript |
 | [DUDU Server](dudu-server/README.md) | 认证、授权、持久化、渠道适配及 HTTP/WebSocket | Java 21、Spring Boot 3.5、MyBatis-Plus、MySQL |
 | [MockPulse](mock-pulse/README.md) | 开发者：本地渠道回调模拟与协议联调 | React、Tauri 2、Rust |
+| [Website](website/README.md) | 访客：GitHub Pages 项目网站，项目介绍、产品导览与使用指南 | HTML、CSS、JavaScript |
 
 各前端独立管理依赖，使用 Yarn 4、Vite、Tailwind CSS 和 shadcn。运行客服系统不需要启动 MockPulse；模拟平台回调时再使用它。
 

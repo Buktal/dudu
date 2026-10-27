@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { failureOf } from "@/lib/api-response";
 import {
   type AssistantAnswer,
   type AssistantRequest,
@@ -59,6 +60,9 @@ export function useAssistant(
   }>({ data: null, attempt: 0 });
   const availability = configuration.data;
   const [configError, setConfigError] = useState<string | null>(null);
+  // 并发上限等待是可自愈的瞬时状态（有生成完成即解除），与「服务状态故障」
+  // 分开承载：不进故障提示位，也不配「刷新状态」动作
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const active = useRef(new Map<string, AbortController>());
   const sequence = useRef(0);
@@ -89,9 +93,7 @@ export function useAssistant(
       },
       (error: unknown) => {
         if (!controller.signal.aborted) {
-          setConfigError(
-            error instanceof Error ? error.message : "AI 服务状态加载失败",
-          );
+          setConfigError(failureOf(error, "AI 服务状态加载失败").message);
           setLoading(false);
         }
       },
@@ -117,10 +119,11 @@ export function useAssistant(
       return;
     if (controllers.size >= MAX_CONCURRENT_VISITORS) {
       change(id, (value) => ({ ...value, question }));
-      setConfigError("正在协助其他会话，请等待生成完成后重试");
+      setNotice("正在协助其他会话，请等待生成完成后重试");
       return;
     }
     setConfigError(null);
+    setNotice(null);
     const visitorId = id;
     const controller = new AbortController();
     controllers.set(visitorId, controller);
@@ -175,10 +178,7 @@ export function useAssistant(
                 ? {
                     ...item,
                     status: "error",
-                    error:
-                      error instanceof Error
-                        ? error.message
-                        : "AI 生成失败，请重试",
+                    error: failureOf(error, "AI 生成失败，请重试").message,
                   }
                 : item,
             ),
@@ -232,6 +232,7 @@ export function useAssistant(
     availability,
     loading,
     configError,
+    notice,
     ask,
     cancel,
     clear,

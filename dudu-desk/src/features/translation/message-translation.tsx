@@ -2,7 +2,9 @@ import { ChevronDown, ChevronUp, Languages, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { isServerPersisted } from "@/features/inbox/reply/pipeline";
 import type { InboxMessage } from "@/features/inbox/types";
+import { failureOf } from "@/lib/api-response";
 import { languages, type Translation } from "./api";
 import { useTranslation } from "./provider";
 
@@ -33,7 +35,7 @@ function TranslationContent({ message }: { message: InboxMessage }) {
   const id = message.serverId ?? message.id;
   const eligible =
     !!translation &&
-    /^\d+$/.test(id) &&
+    isServerPersisted(message) &&
     message.body.type === "text" &&
     message.direction !== "system" &&
     (!message.delivery || message.delivery.state === "sent");
@@ -54,9 +56,7 @@ function TranslationContent({ message }: { message: InboxMessage }) {
       },
       (failure) => {
         if (generation.current === run) {
-          setError(
-            failure instanceof Error ? failure.message : "翻译失败，请重试",
-          );
+          setError(failureOf(failure, "翻译失败，请重试").message);
           setPending(false);
         }
       },

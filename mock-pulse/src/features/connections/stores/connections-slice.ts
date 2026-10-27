@@ -6,6 +6,7 @@ import {
 import { isEqual } from "lodash-es";
 
 import { type ChannelId, DEFAULT_CHANNEL } from "@/lib/channels";
+import { draftDirty } from "@/lib/draft-dirty";
 
 import {
   type ConnectionConfig,
@@ -93,10 +94,12 @@ export const connectionsSlice = createSlice({
       })
       .addCase(saveConnection.fulfilled, (state, action) => {
         state.items = itemsFrom(action.payload);
+        // 回包只清「保存瞬间」的草稿：保存途中又动手的（草稿已换成新对象）
+        // 保留；判等统一 isEqual（与 selectConnectionDirty 同一比较口径，
+        // 弃 JSON.stringify 的键序敏感形态）
         if (
           state.drafts &&
-          JSON.stringify(state.drafts[action.meta.arg.channel]) ===
-            JSON.stringify(action.meta.arg)
+          isEqual(state.drafts[action.meta.arg.channel], action.meta.arg)
         )
           delete state.drafts[action.meta.arg.channel];
       })
@@ -160,13 +163,19 @@ export function selectTestState(
 
 /**
  * 渠道草稿是否有未保存改动（编辑守卫与保存按钮共用）：无草稿即干净，
- * 有草稿且与库内保存值不同才脏。表单展示另有「无草稿回退默认连接」的
- * 兜底链（connections-view），不参与本判定。
+ * 有草稿且与库内保存值不同才脏。装配 lib/draft-dirty 的同一算法——
+ * 草稿只在编辑时产生，touched 门以「有草稿」代言，内容差为整对象深比较。
+ * 表单展示另有「无草稿回退默认连接」的兜底链（connections-view），
+ * 不参与本判定。
  */
 export function selectConnectionDirty(
   state: ConnectionsState,
   channel: ChannelId,
 ): boolean {
   const draft = state.drafts?.[channel];
-  return !!draft && !isEqual(draft, state.items[channel]);
+  return draftDirty({
+    touched: !!draft,
+    draft: draft ?? null,
+    baseline: state.items[channel] ?? null,
+  });
 }

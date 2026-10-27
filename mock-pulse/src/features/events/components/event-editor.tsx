@@ -43,6 +43,9 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
   const connection = useAppSelector((root) =>
     draft ? selectConnection(root.connections, draft.channelId) : undefined,
   );
+  // 用户字段定义已拆独立顶层 slice（definitions 键），与素材库状态分开取；
+  // hook 需在早退之前无条件调用
+  const definitions = useAppSelector((root) => root.definitions);
   const [tab, setTab] = useState<TabKey>("form");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,8 +56,6 @@ export function EventEditor({ slots }: { slots?: EventEditorSlots }) {
   const schema = schemaById(draft.schemaId);
   const event = state.items.find((item) => item.id === draft.id);
   const latest = event && latestVersion(event);
-  // 用户字段定义已拆独立顶层 slice（definitions 键），与素材库状态分开取
-  const definitions = useAppSelector((root) => root.definitions);
   const definition = selectSchemaUserDefinition(definitions, draft.schemaId);
   const fields = resolveEditorFields(schema, definition?.fields, draft.payload);
   const dirty = actions.selectDraftDirty(state);

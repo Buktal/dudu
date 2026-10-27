@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { InboxMessage } from "@/features/inbox/types";
+import { DeskApiError } from "@/lib/api-response";
 import { type Translation, translationApi } from "./api";
 import { MessageTranslation } from "./message-translation";
 import { TranslationProvider } from "./provider";
@@ -71,8 +72,10 @@ describe("消息阅读翻译", () => {
     expect(translationApi.translate).toHaveBeenCalledTimes(1);
   });
   it("翻译失败明确显示并允许重新请求", async () => {
+    // 真实 api 层错误恒为 DeskApiError（信封解析按业务码归类），
+    // mock 形态对齐接缝契约，断言具体业务文案经 failureOf 透传显示
     vi.mocked(translationApi.translate).mockRejectedValueOnce(
-      new Error("企业未配置服务"),
+      new DeskApiError("business", "企业未配置服务"),
     );
     render(view());
     fireEvent.click(screen.getByRole("button", { name: "翻译" }));

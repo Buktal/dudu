@@ -126,7 +126,7 @@ public class TranslationService {
         deskAuth.requireAccess(me);
         var message = messages.getById(messageId);
         if (message == null) throw new BizException(ApiEnum.DATA_NOT_EXIST);
-        visitors.get(me, String.valueOf(message.getVisitorId()));
+        visitors.requireAuthorizedVisitor(me, String.valueOf(message.getVisitorId()));
         if (!Objects.equals(message.getVersion().longValue(), request.version())
             || message.getDirection() == MessageDirectionEnum.OUTGOING && message.getSendStatus() != MessageSendStatusEnum.SENT
             || !"text".equals(message.getContent().get("type")) || !(message.getContent().get("text") instanceof String text)) {
@@ -138,7 +138,7 @@ public class TranslationService {
             .orElseThrow(() -> new BizException(ApiEnum.DATA_NOT_ALLOW, "默认翻译服务不存在"));
         String translated = execute(me.companyId(), config, text, request.targetLanguage());
         // 外部请求期间权限或配置可能变化，完成时再次校验，禁止迟到结果越权返回。
-        visitors.get(me, String.valueOf(message.getVisitorId()));
+        visitors.requireAuthorizedVisitor(me, String.valueOf(message.getVisitorId()));
         TranslationSettingDO current = settings.getById(me.companyId());
         if (current == null || !Objects.equals(row.getRevision(), current.getRevision())) {
             throw new BizException(ApiEnum.DATA_NOT_ALLOW, "翻译服务配置已变化，请重试");

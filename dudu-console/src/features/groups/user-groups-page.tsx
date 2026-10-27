@@ -38,8 +38,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useGroups } from "./group-data";
-import { GroupAccounts, GroupMembers } from "./group-relations";
-import { type Group, groupsApi } from "./groups-api";
+import {
+  AddMembers,
+  GroupAccounts,
+  GroupMembers,
+  RemoveMember,
+} from "./group-relations";
+import { type Group, groupsApi, type Member } from "./groups-api";
 
 export function UserGroupsPage({
   selectedId,
@@ -201,11 +206,23 @@ function GroupDetail({
   const query = useConsoleQuery(useEntityGuard(groupsApi.detail, close), [
     groupId,
   ]);
+  // 内层弹层状态与渲染住在 Sheet 层（query.data 门之外）：写后失效重查会让
+  // 详情数据回落加载快照并卸载内容子树，弹层若挂在子树内会被父级强行拆掉，
+  // 提交被中断且嵌套弹层栈不恢复；上提后弹层生命周期只跟自己的开关走，
+  // 外层关闭守卫（含 shell.pending 的重命名在飞）直接读本地状态
+  const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState<Member | null>(null);
+  const dialog = adding || removing !== null;
   return (
-    <Sheet open {...shell.hold(close)}>
+    <Sheet
+      open
+      onOpenChange={(open) => {
+        if (!open && !dialog && !shell.pending) close();
+      }}
+    >
       <SheetContent
         className="!w-full !max-w-3xl overflow-y-auto"
-        showCloseButton={!shell.pending}
+        showCloseButton={!dialog && !shell.pending}
       >
         <SheetHeader>
           <SheetTitle>{query.data?.groupName ?? "用户组详情"}</SheetTitle>
@@ -256,7 +273,11 @@ function GroupDetail({
                     </Tabs.Tab>
                   </Tabs.List>
                   <Tabs.Panel value="members">
-                    <GroupMembers groupId={groupId} />
+                    <GroupMembers
+                      groupId={groupId}
+                      onAdd={() => setAdding(true)}
+                      onRemove={setRemoving}
+                    />
                   </Tabs.Panel>
                   <Tabs.Panel value="accounts">
                     <GroupAccounts groupId={groupId} />
@@ -266,6 +287,16 @@ function GroupDetail({
             )}
           </DetailPane>
         </div>
+        {adding && (
+          <AddMembers groupId={groupId} close={() => setAdding(false)} />
+        )}
+        {removing && (
+          <RemoveMember
+            groupId={groupId}
+            member={removing}
+            close={() => setRemoving(null)}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );

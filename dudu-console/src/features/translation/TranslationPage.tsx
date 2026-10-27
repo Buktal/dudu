@@ -1,8 +1,8 @@
 import { ChevronDown, Languages, Plus } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
+import { useConsoleQuery } from "@/api/console-query";
 import { useConsole } from "@/api/context";
 import { useMutation } from "@/api/use-mutation";
-import { useQuery } from "@/api/use-query";
 import { DetailPane } from "@/components/detail-pane";
 import { EmptyState } from "@/components/feedback";
 import { SelectField } from "@/components/form-field";
@@ -269,6 +269,9 @@ function Editor({ initial }: { initial: Settings }) {
               result={test?.id === service.id ? test.text : null}
               onChange={(patch) => update(service.id, patch)}
               onTest={() => {
+                // 测试连接单飞行：在飞时其余入口已禁用，此处再拦一层，
+                // 保证 pending 展示始终归属真实在飞的请求
+                if (testing.pending) return;
                 setTest({ id: service.id, text: null });
                 void testing.run(
                   (signal) => translationApi.test(client, service, signal),
@@ -345,12 +348,9 @@ function Editor({ initial }: { initial: Settings }) {
 }
 
 export function TranslationPage() {
-  const client = useConsole();
-  const load = useCallback(
-    (signal: AbortSignal) => translationApi.get(client, signal),
-    [client],
-  );
-  const query = useQuery(load);
+  // 配置读取走 stable：保存成功不陪跑重查，Editor 以本地草稿继续编辑不重挂；
+  // 权限变化仍重查。绑定仪式（client、load 身份）归 useConsoleQuery 单点。
+  const query = useConsoleQuery(translationApi.get, [], { stable: true });
   return (
     <DetailPane {...query}>
       {query.data && <Editor key={query.data.revision} initial={query.data} />}

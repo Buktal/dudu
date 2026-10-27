@@ -23,7 +23,7 @@ Controller 通过 `@Me JwtUser user` 获取 token 载荷，所需类型均在 `c
 - 数据源为 `application.yaml` 明文默认值（`127.0.0.1:3306`、`dudu`/`123456`），无 `.env`、无环境变量直接跑；生产覆盖方式见「线上部署边界」。
 - 公众号接口地址配置键已随 V5 渠道码值迁移更名为 `dudu.channel.wechat-mp.api-base`（旧键 `dudu.channel.wechat.api-base` 不再读取）：从旧版本升级的存量部署须同步改名 `.env` 中的覆盖键，否则覆盖静默失效、回落官方域名。
 - `/api/**` 默认需要 `Authorization: Bearer <token>`；放行路径为 `POST /api/admin/login`、`POST /api/desk/login` 与渠道回调 `/api/channels/*/callback`，`/api/admin/**` 叠加 admin 角色校验，`/api/desk/**` 叠加企业员工身份校验。
-- 公众号回调验签读取账号 `company_channel.channel_info` 中的 `token` 键（服务器配置 Token），未配置该键的账号返回不支持；飞书回调读取 `appId`/`verificationToken`（必填）与 `encryptKey`（可选）：明文模式比对报文 `token`，配 `encryptKey` 时验 `X-Lark-Signature`（sha256(timestamp+nonce+encryptKey+body)）并解密信封；接口地址可用 `dudu.channel.feishu.api-base` 覆盖为受控替身；企业微信回调读取 `corpId`/`token`/`encodingAesKey` 三键（缺任一返回不支持，`corpSecret` 仅发送与素材需要，不影响回调验签解密）；Telegram 回调读取 `url`/`secretToken` 两键（缺 `secretToken` 返回不支持，头值与配置常量时间原样比对；url 为含 `/bot<token>` 路径段的 Bot API 基址，发送与素材同源取用）；`/ws/desk` 由连接后的 `{"type":"auth","token":…}` 报文认证，不属于 `/api/**` 拦截链。- 业务表由 Flyway 版本化迁移维护（当前 V6：V1–V2 建立 company、user、operation_log、user_group、user_group_member、company_channel 六张基础表，V3 移除全部外键，V4 新增 visitor、visitor_profile、message 三张访客会话表，V5 将公众号渠道码值 `wechat` 统一为 `wechat-mp`，V6 为 message 增加 (visitor_id, external_message_id) 唯一索引收敛渠道重推幂等）；已提交迁移不可变，变更新增迁移。
+- 公众号回调验签读取账号 `company_channel.channel_info` 中的 `token` 键（服务器配置 Token），未配置该键的账号返回不支持；飞书回调读取 `appId`/`verificationToken`（必填）与 `encryptKey`（可选）：明文模式比对报文 `token`，配 `encryptKey` 时验 `X-Lark-Signature`（sha256(timestamp+nonce+encryptKey+body)）并解密信封；接口地址可用 `dudu.channel.feishu.api-base` 覆盖为受控替身；企业微信回调读取 `corpId`/`token`/`encodingAesKey` 三键（缺任一返回不支持，`corpSecret` 仅发送与素材需要，不影响回调验签解密）；Telegram 回调读取 `url`/`secretToken` 两键（缺 `secretToken` 返回不支持，头值与配置常量时间原样比对；url 为含 `/bot<token>` 路径段的 Bot API 基址，发送与素材同源取用）；`/ws/desk` 由连接后的 `{"type":"auth","token":…}` 报文认证，不属于 `/api/**` 拦截链。- 业务表由 Flyway 版本化迁移维护（以 `src/main/resources/db/migration/` 目录为准）；已提交迁移不可变，变更新增迁移。
 
 ## 本地 MySQL
 
@@ -55,7 +55,7 @@ dudu.auth.jwt-secret=<openssl rand -hex 32 生成>
 
 在 `.env` 所在目录 `java -jar` 启动。注意：漏写 `dudu.auth.jwt-secret` 时应用会以开发密钥静默启动（不再 fail-fast），上线清单必须核对这一行。换服务器只需迁移 jar 与 `.env` 两个文件。服务端不做 CORS：前端开发走 Vite 同源代理，生产同源部署或由网关（如 Nginx）加 CORS 头。数据库尽量与开发使用相同的 8.4 补丁版本，配置私网访问、备份及恢复验证，并按实际负载确定资源和连接池。业务表仍由 Flyway 版本化迁移维护。
 
-Console 展示的公网回调地址通过 `dudu.channel.callback-base-url=https://callbacks.example.com` 配置，只接受协议、主机和可选端口，不带路径或尾部斜杠。未配置时仅使用服务端请求的 origin，不代表公网可达；美团要求显式配置 HTTP 且端口为80或8080的实际入口，HTTPS-only部署不开放该渠道。
+Console 展示的公网回调地址通过 `dudu.channel.callback-base-url=https://callbacks.example.com` 配置，只接受协议、主机和可选端口，不带路径或尾部斜杠。未配置时仅使用服务端请求的 origin，不代表公网可达；美团要求显式配置 HTTP 且端口为80或8080的实际入口，HTTPS-only部署不开放该渠道。反代改写 Host 的美团部署可另配 `dudu.channel.meituan.callback-base-url`（scheme://host[:port]）作为回调验签待签串的基准 URL，路径仍按统一回调路由派生；未配置时按请求 Host 头重建待签串。
 
 ## 数据库集成测试
 
@@ -69,7 +69,7 @@ GET /api/desk/assistant 返回企业助手可用状态，POST /api/desk/visitors
 
 V9 在 translation_setting 增加 assistant_service，既有企业默认未启用，由初始企业管理员在 Console 独立指定通用模型；复用现有凭据加密、HTTP 出站及并发限制，AI 问答不落库
 
-AssistantMigrationTest 覆盖空库和 V8 升级，使用 dudu_review_assistant 系列独立评审库；本机 Docker Linux 引擎不可用，迁移尚未实测
+AssistantMigrationTest 覆盖空库和 V8 升级，使用 dudu_review_assistant 系列独立评审库；迁移集成用例尚未执行
 
 ## 翻译配置
 
@@ -77,4 +77,4 @@ V8 新增企业翻译配置和坐席偏好，部署后在 Console 的翻译服�
 
 可用 dudu.translation.secret 指定至少 32 字符的稳定加密密钥，缺省从 JWT 密钥派生，改密钥前应保留原值，否则需要重新配置企业翻译服务；可信 Ollama 或私有服务部署需显式设置 dudu.translation.allow-private-endpoints=true 并控制出站网络权限
 
-当前本机 Docker 引擎不可用，V8 空库及升级用例尚未执行；真实供应商连接仍需企业凭据验证
+V8 空库及升级用例尚未执行；真实供应商连接仍需企业凭据验证

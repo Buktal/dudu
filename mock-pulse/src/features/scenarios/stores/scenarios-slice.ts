@@ -1,42 +1,46 @@
-import {
-  createAsyncThunk,
-  createSlice,
-  type PayloadAction,
-} from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { isEqual } from "lodash-es";
-import {
-  EVENT_SCHEMAS,
-  type EventItem,
-  type EventsState,
-  type EventVersion,
-  interpretPresence,
-  latestVersionOf,
-  schemaById,
-} from "@/features/events";
 import type { ChannelId } from "@/lib/channels";
-import { draftSnapshot, draftUnchangedSince } from "@/lib/draft-snapshot";
+import { draftDirty } from "@/lib/draft-dirty";
+import { draftUnchangedSince } from "@/lib/draft-snapshot";
 
 import {
-  deleteScenarioById as deleteScenarioApi,
-  loadScenarios,
-  saveScenario as saveScenarioApi,
-} from "../api";
-import {
-  addStep,
-  addTemplateStep,
-  assertSameChannel,
   changeChannel,
   createScenario,
-  isTemplateStep,
   moveStep,
-  newScenarioId,
   removeStep,
   type Scenario,
   scenariosReferencingEvent,
-  validateScenario,
-  withStepRevision,
 } from "../model";
 import type { ScenarioFilters } from "../selectors";
+import {
+  addScenarioStep,
+  addScenarioTemplateStep,
+  deleteScenario,
+  draftFromScenario,
+  fetchScenarios,
+  replaceScenarioStep,
+  replaceScenarioTemplateStep,
+  saveScenario,
+  saveScenarioAs,
+  syncAllScenarioSteps,
+  syncScenarioStep,
+} from "./scenarios-thunks";
+
+// 异步编排拆到 scenarios-thunks（按职责拆分，单文件 ≤500 行）；
+// 这里转发导出，store 模块对外保持单一入口
+export {
+  addScenarioStep,
+  addScenarioTemplateStep,
+  deleteScenario,
+  fetchScenarios,
+  replaceScenarioStep,
+  replaceScenarioTemplateStep,
+  saveScenario,
+  saveScenarioAs,
+  syncAllScenarioSteps,
+  syncScenarioStep,
+} from "./scenarios-thunks";
 
 export type ScenariosState = {
   /** 已保存的剧本库（渠道由持久层文件路径承载） */
@@ -45,6 +49,11 @@ export type ScenariosState = {
   selectedId: string | null;
   /** 编辑中的剧本草稿；无则为空态 */
   draft: Scenario | null;
+  /**
+   * 草稿自打开 / 新建 / 保存后是否被编辑过（脏判定的 touched 门，
+   * 算法单点 lib/draft-dirty）：派生比较判不了「人动手没」。
+   */
+  touched: boolean;
   filters: ScenarioFilters;
   page: number;
 };
@@ -54,224 +63,34 @@ export const initialScenariosState: ScenariosState = {
   loaded: false,
   selectedId: null,
   draft: null,
+  touched: false,
   filters: { query: "", channel: "all" },
   page: 1,
 };
 
-type ScenariosRoot = { scenarios: ScenariosState; events: EventsState };
-
-/**
- * 素材库查事件并取其当前可引用的最新版本（添加步骤 / 同步引用共用）：
- * 事件不存在或从未保存过版本时抛可读错误。
- */
-function referencedVersionOf(
-  events: EventsState["items"],
-  eventId: string,
-): { event: EventItem; version: EventVersion } {
-  const event = events.find((item) => item.id === eventId);
-  // 编辑时钟（同步门）问 interpreter（events 域唯一分岔点）：无行即 id 缺失，
-  // 拒绝同步（文案一字不动）；命中带回主语
-  const verdict = interpretPresence(event, "edit");
-  if (verdict.blocked) {
-    throw new Error(`事件不存在：${eventId}。`);
-  }
-  // 取尖单点在 events 域 latestVersionOf（与 interpreter/model 同源）
-  const version = latestVersionOf(verdict.row);
-  // 非引用分类边：行在但零版本（无 ref 可判，不归表），文案不变。
-  if (!version) {
-    throw new Error(`事件还没有保存过版本：${verdict.row.name}。`);
-  }
-  return { event: verdict.row, version };
+/** 脏判定的内容规范形：id/revision 出列（保存回包才更新），旧文件缺省的
+ *  favorite/failure 补齐（与既有逐字段比对同口径），steps 深比较。 */
+function comparableScenario(scenario: Scenario) {
+  return {
+    name: scenario.name,
+    channelId: scenario.channelId,
+    favorite: !!scenario.favorite,
+    failure: scenario.failure ?? "stop",
+    steps: scenario.steps,
+  };
 }
 
-/** 装载已保存剧本为独立草稿副本（编辑不影响库内对象）。 */
-function draftFromScenario(item: Scenario): Scenario {
-  return { ...item, steps: item.steps.map((step) => ({ ...step })) };
+/** 草稿与库内基线的内容差（draftDirty 的 differs 半边）。 */
+function scenarioDiffers(draft: Scenario, baseline: Scenario): boolean {
+  return !isEqual(comparableScenario(baseline), comparableScenario(draft));
 }
 
-export const fetchScenarios = createAsyncThunk("scenarios/fetch", async () =>
-  loadScenarios(),
-);
-
-/**
- * 添加步骤：从素材库按事件 id 引用最新版本；
- * 领域层校验渠道一致（ADR-0004 禁混写），违例拒绝并给可读错误。
- */
-export const addScenarioStep = createAsyncThunk(
-  "scenarios/addStep",
-  async ({ eventId }: { eventId: string }, { getState }) => {
-    const { scenarios, events } = getState() as ScenariosRoot;
-    const draft = scenarios.draft;
-    if (!draft) {
-      throw new Error("没有正在编辑的剧本。");
-    }
-    const { event, version } = referencedVersionOf(events.items, eventId);
-    return addStep(draft, {
-      id: event.id,
-      channelId: event.channelId,
-      revision: version.revision,
-    });
-  },
-);
-
-export const replaceScenarioStep = createAsyncThunk(
-  "scenarios/replaceStep",
-  async (
-    { index, eventId }: { index: number; eventId: string },
-    { getState },
-  ) => {
-    const { scenarios, events } = getState() as ScenariosRoot;
-    const draft = scenarios.draft;
-    if (!draft?.steps[index]) throw new Error("找不到要替换的步骤。");
-    const { event, version } = referencedVersionOf(events.items, eventId);
-    assertSameChannel(draft.channelId, event.channelId);
-    return {
-      ...draft,
-      steps: draft.steps.map((step, i) =>
-        i === index
-          ? {
-              eventId,
-              revision: version.revision,
-              ...(step.wait === undefined ? {} : { wait: step.wait }),
-            }
-          : step,
-      ),
-    };
-  },
-);
-
-/**
- * 添加内置模板步骤（ADR-0009 纯引用）：从注册表取模板并钉住其当前版本；
- * 领域层校验渠道一致，违例拒绝并给可读错误。
- */
-export const addScenarioTemplateStep = createAsyncThunk(
-  "scenarios/addTemplateStep",
-  async ({ templateId }: { templateId: string }, { getState }) => {
-    const { scenarios } = getState() as ScenariosRoot;
-    const draft = scenarios.draft;
-    if (!draft) {
-      throw new Error("没有正在编辑的剧本。");
-    }
-    const template = schemaById(templateId);
-    return addTemplateStep(draft, {
-      id: template.id,
-      channelId: template.channelId,
-      version: template.version,
-    });
-  },
-);
-
-/** 替换为内置模板步骤：保留等待秒数，钉住模板当前版本（不残留事件引用）。 */
-export const replaceScenarioTemplateStep = createAsyncThunk(
-  "scenarios/replaceTemplateStep",
-  async (
-    { index, templateId }: { index: number; templateId: string },
-    { getState },
-  ) => {
-    const { scenarios } = getState() as ScenariosRoot;
-    const draft = scenarios.draft;
-    if (!draft?.steps[index]) throw new Error("找不到要替换的步骤。");
-    const template = schemaById(templateId);
-    assertSameChannel(draft.channelId, template.channelId);
-    return {
-      ...draft,
-      steps: draft.steps.map((step, i) =>
-        i === index
-          ? {
-              templateId: template.id,
-              templateVersion: template.version,
-              ...(step.wait === undefined ? {} : { wait: step.wait }),
-            }
-          : step,
-      ),
-    };
-  },
-);
-
-export const saveScenarioAs = createAsyncThunk(
-  "scenarios/saveAs",
-  async (name: string, { getState }) => {
-    const { scenarios, events } = getState() as ScenariosRoot;
-    if (!scenarios.draft) throw new Error("没有可保存的剧本草稿。");
-    const copy = {
-      ...draftFromScenario(scenarios.draft),
-      id: newScenarioId(),
-      name: name.trim(),
-      revision: 1,
-      favorite: false,
-    };
-    validateScenario(copy, events.items, EVENT_SCHEMAS);
-    return {
-      items: await saveScenarioApi(copy),
-      copy,
-      source: draftSnapshot(scenarios.draft),
-    };
-  },
-);
-
-/** 显式同步单个事件步骤的引用到事件最新版本（模板步骤钉住，原样返回）。 */
-export const syncScenarioStep = createAsyncThunk(
-  "scenarios/syncStep",
-  async ({ index }: { index: number }, { getState }) => {
-    const { scenarios, events } = getState() as ScenariosRoot;
-    const draft = scenarios.draft;
-    if (!draft) {
-      throw new Error("没有正在编辑的剧本。");
-    }
-    const step = draft.steps[index];
-    if (!step) {
-      throw new Error(`步骤不存在：第 ${index + 1} 步。`);
-    }
-    // 模板步骤为版本钉住（ADR-0009），无「同步到最新」语义
-    if (isTemplateStep(step)) {
-      return draft;
-    }
-    const { version } = referencedVersionOf(events.items, step.eventId);
-    return withStepRevision(draft, index, version.revision);
-  },
-);
-
-/** 整体同步：把所有事件步骤引用更新到最新版本（模板步骤钉住不动）。 */
-export const syncAllScenarioSteps = createAsyncThunk(
-  "scenarios/syncAll",
-  async (_, { getState }) => {
-    const { scenarios, events } = getState() as ScenariosRoot;
-    const draft = scenarios.draft;
-    if (!draft) {
-      throw new Error("没有正在编辑的剧本。");
-    }
-    let updated = draft;
-    for (const [index, step] of draft.steps.entries()) {
-      if (isTemplateStep(step)) continue;
-      const { version } = referencedVersionOf(events.items, step.eventId);
-      updated = withStepRevision(updated, index, version.revision);
-    }
-    return updated;
-  },
-);
-
-/** 保存草稿：整体校验（防绕过 addStep 的走私步骤，模板步骤对照内置注册表）后持久化 */
-export const saveScenario = createAsyncThunk(
-  "scenarios/save",
-  async (_, { getState }) => {
-    const { scenarios, events } = getState() as ScenariosRoot;
-    const draft = scenarios.draft;
-    if (!draft) {
-      throw new Error("没有可保存的剧本草稿。");
-    }
-    validateScenario(draft, events.items, EVENT_SCHEMAS);
-    const previous = scenarios.items.find((item) => item.id === draft.id);
-    return saveScenarioApi({
-      ...draft,
-      revision: (previous?.revision ?? (previous ? 1 : 0)) + 1,
-    });
-  },
-);
-
-export const deleteScenario = createAsyncThunk(
-  "scenarios/delete",
-  async (scenarioId: string) => deleteScenarioApi(scenarioId),
-);
+/** 基线查找单点：草稿同 id 的库内剧本（未保存过的新草稿为 null）。 */
+function savedOf(state: ScenariosState): Scenario | null {
+  return state.draft
+    ? (state.items.find((item) => item.id === state.draft?.id) ?? null)
+    : null;
+}
 
 const scenariosSlice = createSlice({
   name: "scenarios",
@@ -287,6 +106,7 @@ const scenariosSlice = createSlice({
         action.payload.channelId,
       );
       state.selectedId = null;
+      state.touched = false;
     },
     /** 打开剧本库中的剧本为草稿副本 */
     openScenario(state, action: PayloadAction<string>) {
@@ -294,49 +114,67 @@ const scenariosSlice = createSlice({
       if (!item) return;
       state.selectedId = item.id;
       state.draft = draftFromScenario(item);
+      state.touched = false;
     },
     /** 放弃草稿：已保存的回副本，未保存的回空态 */
     discardScenarioDraft(state) {
       if (!state.draft) return;
       const item = state.items.find((entry) => entry.id === state.draft?.id);
       state.draft = item ? draftFromScenario(item) : null;
+      state.touched = false;
     },
     setDraftName(state, action: PayloadAction<string>) {
       if (!state.draft) return;
+      state.touched = true;
       state.draft.name = action.payload;
     },
     toggleScenarioFavorite(state) {
-      if (state.draft) state.draft.favorite = !state.draft.favorite;
+      if (state.draft) {
+        state.touched = true;
+        state.draft.favorite = !state.draft.favorite;
+      }
     },
     setScenarioFailure(state, action: PayloadAction<"stop" | "continue">) {
-      if (state.draft) state.draft.failure = action.payload;
+      if (state.draft) {
+        state.touched = true;
+        state.draft.failure = action.payload;
+      }
     },
     setStepWait(state, action: PayloadAction<{ index: number; wait: number }>) {
       const step = state.draft?.steps[action.payload.index];
-      if (step && Number.isFinite(action.payload.wait))
+      if (step && Number.isFinite(action.payload.wait)) {
+        state.touched = true;
         step.wait = Math.min(60, Math.max(0, action.payload.wait));
+      }
     },
     /** 换渠道：仅无步骤时允许（领域层拒绝带步骤的换渠道） */
     setDraftChannel(state, action: PayloadAction<ChannelId>) {
       if (!state.draft) return;
+      state.touched = true;
       state.draft = changeChannel(state.draft, action.payload);
     },
-    /** 上移 / 下移：越界为无操作 */
+    /** 上移 / 下移：越界为无操作（不动 touched——无操作不算动手） */
     moveDraftStep(
       state,
       action: PayloadAction<{ index: number; delta: -1 | 1 }>,
     ) {
       if (!state.draft) return;
-      state.draft = moveStep(
+      const moved = moveStep(
         state.draft,
         action.payload.index,
         action.payload.delta,
       );
+      if (moved === state.draft) return;
+      state.draft = moved;
+      state.touched = true;
     },
-    /** 按位置删除步骤 */
+    /** 按位置删除步骤（越界无操作，不动 touched） */
     removeDraftStep(state, action: PayloadAction<number>) {
       if (!state.draft) return;
-      state.draft = removeStep(state.draft, action.payload);
+      const rest = removeStep(state.draft, action.payload);
+      if (rest === state.draft) return;
+      state.draft = rest;
+      state.touched = true;
     },
     setFilters(state, action: PayloadAction<Partial<ScenarioFilters>>) {
       state.filters = { ...state.filters, ...action.payload };
@@ -354,21 +192,31 @@ const scenariosSlice = createSlice({
       })
       .addCase(addScenarioStep.fulfilled, (state, action) => {
         state.draft = action.payload;
+        state.touched = true;
       })
       .addCase(addScenarioTemplateStep.fulfilled, (state, action) => {
         state.draft = action.payload;
+        state.touched = true;
       })
       .addCase(replaceScenarioStep.fulfilled, (state, action) => {
-        if (state.draft?.id === action.payload.id) state.draft = action.payload;
+        if (state.draft?.id === action.payload.id) {
+          state.draft = action.payload;
+          state.touched = true;
+        }
       })
       .addCase(replaceScenarioTemplateStep.fulfilled, (state, action) => {
-        if (state.draft?.id === action.payload.id) state.draft = action.payload;
+        if (state.draft?.id === action.payload.id) {
+          state.draft = action.payload;
+          state.touched = true;
+        }
       })
       .addCase(syncScenarioStep.fulfilled, (state, action) => {
         state.draft = action.payload;
+        state.touched = true;
       })
       .addCase(syncAllScenarioSteps.fulfilled, (state, action) => {
         state.draft = action.payload;
+        state.touched = true;
       })
       .addCase(saveScenario.fulfilled, (state, action) => {
         state.items = action.payload;
@@ -379,12 +227,20 @@ const scenariosSlice = createSlice({
           state.selectedId = saved.id;
           state.draft.revision = saved.revision;
         }
+        // 回包只清「保存瞬间」的脏：保存途中又动手的，脏保留（events 域同例）
+        state.touched = draftDirty({
+          touched: true,
+          draft: state.draft,
+          baseline: saved ?? null,
+          differs: scenarioDiffers,
+        });
       })
       .addCase(saveScenarioAs.fulfilled, (state, action) => {
         state.items = action.payload.items;
         if (!draftUnchangedSince(state.draft, action.payload.source)) return;
         state.draft = action.payload.copy;
         state.selectedId = action.payload.copy.id;
+        state.touched = false;
       })
       .addCase(deleteScenario.fulfilled, (state, action) => {
         state.items = action.payload;
@@ -414,16 +270,14 @@ export const {
 export const scenariosReducer = scenariosSlice.reducer;
 
 export function selectScenarioDirty(state: ScenariosState): boolean {
-  if (!state.draft) return false;
-  const saved = state.items.find((item) => item.id === state.draft?.id);
-  return (
-    !saved ||
-    saved.name !== state.draft.name ||
-    saved.channelId !== state.draft.channelId ||
-    !!saved.favorite !== !!state.draft.favorite ||
-    (saved.failure ?? "stop") !== (state.draft.failure ?? "stop") ||
-    !isEqual(saved.steps, state.draft.steps)
-  );
+  // 脏判定单点 lib/draft-dirty：touched 门 + 与基线的内容差
+  // （新建零编辑不脏——派生比较判不了「人动手没」）
+  return draftDirty({
+    touched: state.touched,
+    draft: state.draft,
+    baseline: savedOf(state),
+    differs: scenarioDiffers,
+  });
 }
 
 export function selectScenarios(state: ScenariosState): Scenario[] {

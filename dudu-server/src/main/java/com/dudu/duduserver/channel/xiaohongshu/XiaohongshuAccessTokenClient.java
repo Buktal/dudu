@@ -40,11 +40,10 @@ class XiaohongshuAccessTokenClient {
         this.restClient = restClient;
     }
 
+    // 凭据由注册表 sendRestriction 前置拦截（ADR-0014 契约，ChannelAdapter 注明），此处
+    // 不再判空；缓存单飞：同键并发未命中只发一次 HTTP（重复获取会使上次凭证失效），
+    // 网络异常原样上抛
     TokenResult fetch(XiaohongshuSendCredentials credentials) {
-        if (credentials == null) {
-            return new TokenResult(null, "获取小红书接口凭据失败：发送凭据未配置");
-        }
-        // 缓存单飞：同键并发未命中只发一次 HTTP（重复获取会使上次凭证失效），网络异常原样上抛
         return cache.getOrLoad(credentials, () -> request(credentials));
     }
 

@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { failureOf } from "@/lib/api-response";
 import { type Preference, type Translation, translationApi } from "./api";
 
 type Context = {
@@ -18,6 +19,8 @@ type Context = {
     version: number,
     language: string,
   ) => Promise<Translation>;
+  /** 重新读取偏好：设置面板在加载失败时用同一入口重试。 */
+  reload: () => void;
 };
 const TranslationContext = createContext<Context | null>(null);
 export const useTranslation = () => useContext(TranslationContext);
@@ -37,32 +40,44 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     Promise.resolve(),
   ]);
   const saving = useRef(false);
+  // 偏好加载的重试计数：reload 递增后重新读取，卸载清理单独走一次
+  const [attempt, setAttempt] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: attempt 只作重试信号：effect 不读取它，递增本身就要重新加载偏好
   useEffect(() => {
     const controller = new AbortController();
-    const controllers = active.current;
-    const cache = requests.current;
-    controllers.add(controller);
+    active.current.add(controller);
+    setPending(true);
     void translationApi
       .preference(controller.signal)
       .then(
         (value) => {
-          if (!controller.signal.aborted) setPreference(value);
+          if (!controller.signal.aborted) {
+            setPreference(value);
+            setError(null);
+          }
         },
         () => {
-          if (!controller.signal.aborted)
-            setError("翻译偏好加载失败，可重新打开工作台重试");
+          if (!controller.signal.aborted) setError("翻译偏好加载失败，请重试");
         },
       )
       .finally(() => {
-        controllers.delete(controller);
+        active.current.delete(controller);
         if (!controller.signal.aborted) setPending(false);
       });
+    // 只取消本次加载：在途的翻译请求与缓存不受重试影响
     return () => {
-      for (const item of controllers) item.abort();
-      controllers.clear();
-      cache.clear();
+      controller.abort();
     };
-  }, []);
+  }, [attempt]);
+  useEffect(
+    () => () => {
+      // 卸载时取消全部在途请求并清空缓存：权限切换或重开会话后重新授权读取
+      for (const item of active.current) item.abort();
+      active.current.clear();
+      requests.current.clear();
+    },
+    [],
+  );
   const save = async (next: Preference) => {
     if (saving.current) return;
     saving.current = true;
@@ -78,7 +93,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       }
     } catch (failure) {
       if (!controller.signal.aborted)
-        setError(failure instanceof Error ? failure.message : "偏好保存失败");
+        setError(failureOf(failure, "偏好保存失败").message);
     } finally {
       active.current.delete(controller);
       saving.current = false;
@@ -110,8 +125,14 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     );
     return promise;
   };
+  const reload = () => {
+    setError(null);
+    setAttempt((value) => value + 1);
+  };
   return (
-    <TranslationContext value={{ preference, pending, error, save, translate }}>
+    <TranslationContext
+      value={{ preference, pending, error, save, translate, reload }}
+    >
       {children}
     </TranslationContext>
   );

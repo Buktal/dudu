@@ -5,6 +5,7 @@ import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import type { InboxApi } from "./api";
+import { AssistantHostProvider } from "./components/assistant-host";
 import { ConnectionStatus } from "./components/connection-status";
 import { InboxAssistant } from "./components/inbox-assistant";
 import { InboxLoading } from "./components/inbox-state";
@@ -51,8 +52,10 @@ function InboxSession({ accountMenu }: { accountMenu?: ReactNode }) {
         </>
       }
     >
-      <ReceptionWorkspace mode={mode} />
-      <InboxAssistant />
+      <AssistantHostProvider>
+        <ReceptionWorkspace mode={mode} />
+        <InboxAssistant />
+      </AssistantHostProvider>
       {notice && (
         <div
           role="status"

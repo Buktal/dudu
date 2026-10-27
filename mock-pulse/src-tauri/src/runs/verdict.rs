@@ -2,53 +2,34 @@
 //! 完成时判定成败（失败即停），并把结论写进运行记录——两条产路共用本模块，
 //! 口径天然一致。（原与前端 features/events/receipt.ts 逐条镜像；直发收编后
 //! 前端实现已删除，前端仅保留期望的展示辅助。）
-//! 特殊回执形态（企微/钉钉/QQ 回包）按职责拆在 [`reply`]。
+//! 按职责拆分：数据类型在 [`model`]，展示辅助在 [`display`]，特殊回执形态
+//! （企微/钉钉/QQ 回包）在 [`reply`]，本文件只留判定内核。
 
+mod display;
+mod model;
 mod reply;
 
-use serde::{Deserialize, Serialize};
+use display::{clip, preview, status_label};
+
+// 正文形态枚举单点在 events（持久化契约所在域），按既有
+// `crate::runs::verdict::ReceiptBodyMode` 消费面转发。
+pub use crate::events::ReceiptBodyMode;
+pub use model::ExpectedReceipt;
 
 use super::{ReceiptSnapshot, RunVerdict};
 
-// 正文形态枚举单点在 events（持久化契约所在域，装载遇未知取值触发 store_io
-// 隔离自愈、保存端枚举只写已知值），
-// 此处按既有 `crate::runs::verdict::ReceiptBodyMode` 消费面转发。
-pub use crate::events::ReceiptBodyMode;
-
-/// 步骤期望（快照物化/直发请求由前端从事件版本或草稿带出）。
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ExpectedReceipt {
-    pub status: u16,
-    /// 期望正文（空 = 不校验正文，只看状态码）
-    pub body: String,
-    pub body_mode: ReceiptBodyMode,
-}
-
-/// 展示用：一段文本截断（避免长正文撑爆原因行；对齐前端 clip(60)）。
-fn clip(text: &str, max: usize) -> String {
-    let chars: Vec<char> = text.chars().collect();
-    if chars.len() > max {
-        let head: String = chars[..max].iter().collect();
-        format!("{head}…")
-    } else {
-        text.to_string()
-    }
-}
-
-fn preview(value: &serde_json::Value) -> String {
-    match value {
-        serde_json::Value::String(text) => clip(text, 60),
-        other => clip(&other.to_string(), 60),
-    }
-}
-
-fn status_label(status: u16) -> String {
-    if status == 0 {
-        "未收到响应".to_string()
-    } else {
-        format!("HTTP {status}")
-    }
+/// 空正文仍校验回包形态的白名单：三种 reply 形态空正文仍校验回包形态本身，
+/// 不得按「不校验正文」放行。单一数据源 shared/receipt-empty-body-modes.json
+/// （前端 receipt.ts 展示侧同读一份，两端各自消费同一清单，漂移即单侧测试
+/// 失败——shared/channels.json 黄金夹具同款先例）。
+fn empty_body_validating_modes() -> &'static [ReceiptBodyMode] {
+    static MODES: std::sync::OnceLock<Vec<ReceiptBodyMode>> = std::sync::OnceLock::new();
+    MODES.get_or_init(|| {
+        serde_json::from_str(include_str!(
+            "../../../shared/receipt-empty-body-modes.json"
+        ))
+        .expect("空正文白名单夹具（shared/）合法")
+    })
 }
 
 /// jsonField 模式的子集匹配：expected 的每个叶子需在 actual 同路径值相等
@@ -130,9 +111,7 @@ fn first_json_mismatch(
 fn compare_body(expected: &ExpectedReceipt, receipt: &ReceiptSnapshot) -> RunVerdict {
     let label = status_label(receipt.status);
     if expected.body.is_empty()
-        && expected.body_mode != ReceiptBodyMode::WecomReply
-        && expected.body_mode != ReceiptBodyMode::DingtalkReply
-        && expected.body_mode != ReceiptBodyMode::QqSignReply
+        && !empty_body_validating_modes().contains(&expected.body_mode)
     {
         return RunVerdict {
             passed: true,
@@ -263,6 +242,24 @@ mod tests {
         );
         assert!(verdict.passed);
         assert_eq!(verdict.reason, "HTTP 200，与期望状态一致");
+    }
+
+    #[test]
+    fn empty_body_whitelist_fixture_pins_three_reply_modes() {
+        // 与前端 receipt.ts 共读同一夹具，两端各自消费，漂移即两侧同时察觉
+        assert_eq!(
+            empty_body_validating_modes(),
+            &[
+                ReceiptBodyMode::WecomReply,
+                ReceiptBodyMode::DingtalkReply,
+                ReceiptBodyMode::QqSignReply,
+            ]
+        );
+        // 白名单成员空正文不按「不校验正文」放行（ DingtalkReply/QqSignReply
+        // 的形态结论见 reply 比对测试）
+        let wecom = compare_receipt(&expected(200, "", WecomReply), &receipt(200, "x", None));
+        assert!(!wecom.passed);
+        assert_eq!(wecom.reason, "HTTP 200，期望空串，实际「x」");
     }
 
     #[test]

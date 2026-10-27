@@ -5,7 +5,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::{ScenarioFailure, ScenarioFile, StoredScenario};
+use super::{ScenarioFile, StoredScenario};
+#[cfg(test)]
+use super::ScenarioFailure;
 
 const SCENARIOS_DIR: &str = "scenarios";
 

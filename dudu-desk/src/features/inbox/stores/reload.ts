@@ -1,18 +1,15 @@
-import type { ApiFailure } from "@/lib/api-response";
-import type { ConnectionState } from "../types";
 import { applyAccessChanged } from "./access";
 import { ensureHistoryLoaded, loadProfile } from "./reading";
 import { reminderSettlement } from "./reminders";
 import { requestKeys, runOperation } from "./requests";
 import { settleConfirmedReplies } from "./sending";
 import { inboxActions } from "./slice";
-import { displaysConversation, type InboxState } from "./state";
+import {
+  connectionFromFailure,
+  displaysConversation,
+  type InboxState,
+} from "./state";
 import type { InboxCommand } from "./store";
-
-/** Failure kinds map to connection states in exactly one place. */
-export function connectionFromFailure(failure: ApiFailure): ConnectionState {
-  return failure.kind === "unavailable" ? "unavailable" : "disconnected";
-}
 
 /**
  * 断线重连后的重新加载（契约第 3、5 节）：Socket 重新 ready 后重新执行已有初始化

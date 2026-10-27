@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -95,6 +96,20 @@ class DeskSocketHandlerTest {
         handler.handleTextMessage(session, auth(employeeToken()));
 
         assertThat(sentFrames().get(0).getInt("code")).isEqualTo(10102);
+        assertThat(gateway.user(SESSION_ID)).isNull();
+    }
+
+    @Test
+    void accessStoreFailureReceivesSystemErrorFrameInsteadOfLeakingClose() throws Exception {
+        // requireAccess 的基础设施故障（数据库不可用）按系统错误回 error 帧再关闭，不外泄异常关闭
+        when(deskAuthService.requireAccess(any())).thenThrow(new DataAccessResourceFailureException("db down"));
+
+        handler.handleTextMessage(session, auth(employeeToken()));
+
+        JSONObject error = sentFrames().get(0);
+        assertThat(error.getStr("type")).isEqualTo("error");
+        assertThat(error.getInt("code")).isEqualTo(10001);
+        verify(session).close(CloseStatus.NORMAL);
         assertThat(gateway.user(SESSION_ID)).isNull();
     }
 

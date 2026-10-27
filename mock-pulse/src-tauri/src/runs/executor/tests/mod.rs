@@ -1,10 +1,11 @@
-//! 执行器测试：按主题分文件——scenario（单剧本串行）、plan（编排串并行）、
-//! lifecycle（取消/继续/中断落盘）。本文件只放各主题共用的构造（连接配置、
-//! 步骤/快照 builder、剧本运行测试入口）；TcpListener 网络基建在
-//! crate::test_support（全仓共享）。
+//! 执行器测试：按主题分文件——scenario（单剧本串行）、plan（编排编织语义）、
+//! plan_policy（失败策略与 lane 异常落点）、lifecycle（取消/继续/中断落盘）。
+//! 本文件只放各主题共用的构造（连接配置、步骤/快照 builder、剧本运行测试
+//! 入口）；TcpListener 网络基建在 crate::test_support（全仓共享）。
 
 mod lifecycle;
 mod plan;
+mod plan_policy;
 mod scenario;
 
 use std::sync::atomic::AtomicBool;
@@ -16,6 +17,21 @@ use crate::runs::progress::StepProgress;
 use crate::runs::snapshot::{PlanRunSnapshot, ScenarioRunSnapshot, ScenarioStepSnapshot};
 use crate::runs::verdict::{ExpectedReceipt, ReceiptBodyMode};
 use crate::runs::RunRecord;
+use crate::test_support::RecordedPost;
+
+/// 从请求 body 提取步骤文本（快照 body = {"event":...,"content":{"text":"xx"}}）。
+pub(super) fn request_text(post: &RecordedPost) -> String {
+    let start = post
+        .body
+        .find("\"text\":\"")
+        .map(|index| index + "\"text\":\"".len())
+        .unwrap_or(0);
+    post.body[start..]
+        .split('"')
+        .next()
+        .unwrap_or_default()
+        .to_string()
+}
 
 // ---- 快照/配置构造 ----
 

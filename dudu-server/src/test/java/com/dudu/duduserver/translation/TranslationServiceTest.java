@@ -58,7 +58,7 @@ class TranslationServiceTest {
 
     @Test
     void unauthorizedMessageNeverReachesExternalProvider() {
-        when(visitors.get(me, "20")).thenThrow(new BizException(ApiEnum.DATA_NOT_EXIST));
+        when(visitors.requireAuthorizedVisitor(me, "20")).thenThrow(new BizException(ApiEnum.DATA_NOT_EXIST));
         assertThatThrownBy(() -> service.translate(me, 42L, new Request(1L, "zh"))).isInstanceOf(BizException.class);
         verifyNoInteractions(engine);
     }
@@ -69,7 +69,7 @@ class TranslationServiceTest {
     }
     @Test
     void permissionsRevokedDuringTranslationDiscardResult() {
-        when(visitors.get(me, "20")).thenReturn(null).thenThrow(new BizException(ApiEnum.DATA_NOT_EXIST));
+        when(visitors.requireAuthorizedVisitor(me, "20")).thenReturn(null).thenThrow(new BizException(ApiEnum.DATA_NOT_EXIST));
         assertThatThrownBy(() -> service.translate(me, 42L, new Request(1L, "zh"))).isInstanceOf(BizException.class);
         verify(engine).translate(any(), eq("Hello"), eq("zh"));
     }
@@ -84,7 +84,7 @@ class TranslationServiceTest {
     @Test
     void successfulTranslationDoesNotUpdateOriginalMessage() {
         assertThat(service.translate(me, 42L, new Request(1L, "zh"))).isEqualTo(new Result("你好", "zh", "翻译服务", 1L));
-        verify(visitors, times(2)).get(me, "20");
+        verify(visitors, times(2)).requireAuthorizedVisitor(me, "20");
         verify(messages, never()).updateById(any());
     }
     @Test

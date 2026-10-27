@@ -21,8 +21,10 @@ import {
  * 拿回 {row, entry, blocks, missingKind, missing, outdated}，不再手写 status 分岔、
  * 不再自选 refRowOf / refEntryOf、不再直查 REF_CONSEQUENCES。
  *
- * seam 说明：新增引用形态 = 本 module 加一个 interpret* 函数；缺失语义变更 = 只改
- * consequence 表一行，调用侧不动。调用侧（runs 快照物化 / plans 编排物化与统计 /
+ * seam 说明：新增引用形态 = 本 module 加一个 interpret* 函数；缺失语义变更 =
+ * 引用形态（事件素材 / 事件模板版本）只改 consequence 表一行，存在性
+ * （presence）形态语义在本 module 单点（interpretPresence），调用侧不动。
+ * 调用侧（runs 快照物化 / plans 编排物化与统计 /
  * scenarios 展示与校验 / 组合根删除守卫）只剩薄 adapter——错误文案模板注入
  * （措辞一字不动）与渠道一致性检查。归位：kernel、consequence 表与本 module
  * 一并住 ./reference（评审 C1），reference/index.ts 是子系统的域内出口。
@@ -64,8 +66,8 @@ export type InterpretedStep<Row, Entry> = {
 /**
  * 时钟→拦截门：runtime 问拒绝启动，edit 问各形态的保存门，guard 问删除
  * 守卫，view 不拦截（只标记）。各形态只认领自己有的列：事件步骤按 id
- * 匹配守卫（version-missing 行在仍拦删），内置模板不可删除恒放行，
- * 存在性引用的保存 / 守卫列在两态同值，查 lane 列代言。
+ * 匹配守卫（version-missing 行在仍拦删），内置模板不可删除恒放行；
+ * 存在性引用不查表（两态语义在 interpretPresence 单点直译）。
  */
 function blocksFor(
   status: RefStatusName,
@@ -191,8 +193,7 @@ export type PresenceVerdict<Subject> =
  * 换算布尔）或布尔谓词（删除守卫计数的既有形态：true = 有引用、false =
  * 无引用；布尔主语按谓词取义，不当本体）。只有 ok / id-missing 两态：
  * - 本体主语 + runtime / edit / view：缺失即本时钟的否定判定（拒启动 /
- *   拒保存 / 行不可用不计入），三列与存在性两态同值（表一致由测试钉住），
- *   命中则放行并带回主语；
+ *   拒保存 / 行不可用不计入），命中则放行并带回主语；
  * - 谓词主语 + guard：有引用即拦删（与存在性反向），无引用放行带回谓词值。
  * 故同步门 / 钉快照门 / 删事件与删剧本守卫共用本入口，无需再按形态分岔。
  */

@@ -4,6 +4,7 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import type { ChannelId } from "@/lib/channels";
+import { draftDirty } from "@/lib/draft-dirty";
 import { draftSnapshot, draftUnchangedSince } from "@/lib/draft-snapshot";
 
 import {
@@ -382,17 +383,22 @@ export function resolveCurrentDraft(state: EventsState): EventDraft | null {
 }
 
 export function selectDraftDirty(state: EventsState): boolean {
-  // 没动手就不脏：派生比较判内容差，touched 判人动手没。
-  // 未保存过的新草稿内容恒与空存量不同，只看派生比较会误报。
-  if (!state.draft || !state.touched) return false;
-  try {
-    const draft = resolveCurrentDraft(state);
-    const saved =
-      state.items.find((item) => item.id === state.draft?.id) ?? null;
-    return draft !== null && isDraftDirty(saved, draft);
-  } catch {
-    return true;
-  }
+  // 脏判定单点 lib/draft-dirty：touched 门 + 与基线的内容差。
+  // 没动手就不脏——派生比较判内容差，touched 判人动手没，未保存过的新
+  // 草稿内容恒与空存量不同，只看派生比较会误报。
+  return draftDirty({
+    touched: state.touched,
+    draft: state.draft,
+    baseline: state.items.find((item) => item.id === state.draft?.id) ?? null,
+    differs: (draft, saved) => {
+      // 未应用的完整报文先落回字段形态再比较；解析失败（暂不合法输入）按脏
+      try {
+        return isDraftDirty(saved, resolveCurrentDraft(state) ?? draft);
+      } catch {
+        return true;
+      }
+    },
+  });
 }
 
 /** 草稿字段写入序列（setDraftField / editFieldText 共用单点）：未应用的

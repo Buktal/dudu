@@ -81,16 +81,16 @@ export function AccountEditor({
                       : !groupId
                         ? "请选择用户组"
                         : credentialError(definition, values, detail),
-              (signal) => {
-                if (!definition) throw new Error("请选择渠道");
-                return detail
+              (signal) =>
+                detail
                   ? channelApi.update(
                       client,
                       detail.companyChannelId,
                       {
                         accountName: name.trim(),
                         credentialChanges: {
-                          set: editableValues(definition, values, detail),
+                          // biome-ignore lint/style/noNonNullAssertion: 校验已拦截未选渠道，提交时渠道定义必然存在
+                          set: editableValues(definition!, values, detail),
                           clear,
                         },
                       },
@@ -102,11 +102,11 @@ export function AccountEditor({
                         accountName: name.trim(),
                         channel,
                         groupId,
-                        fields: editableValues(definition, values),
+                        // biome-ignore lint/style/noNonNullAssertion: 校验已拦截未选渠道，提交时渠道定义必然存在
+                        fields: editableValues(definition!, values),
                       },
                       signal,
-                    );
-              },
+                    ),
               {
                 commit: (result) => {
                   setValues({});

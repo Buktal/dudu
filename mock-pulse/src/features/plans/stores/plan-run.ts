@@ -11,7 +11,7 @@ import type { RootState } from "@/store";
 
 import { startPlanRun as startPlanRunApi } from "../api";
 import { materializePlanRun, type PlanRunSnapshot } from "../materialize";
-import { resolveLaneScenario, validatePlan } from "../model";
+import { resolveLaneScenario } from "../model";
 
 // 编译期契约：编排快照满足 runs 实况所需的最小形状（单点见 plan-adapter.ts）。
 type _PlanSnapshotConformsToLive = PlanRunSnapshot extends PlanSnapshotLike
@@ -28,8 +28,9 @@ void _planSnapshotConformsToLive;
  * 启动互斥由运行会话模块裁决。
  */
 
-/** 启动编排运行（当前选中的编排草稿）：引用剧本不存在时拒绝启动。
- *  结果即统一词汇的投影子集（runs 域拥有），本域只做引用整形与校验。 */
+/** 启动编排运行（当前选中的编排草稿）：引用剧本不存在时拒绝启动
+ *  （拒绝单点在 materializePlanRun 的不变式守卫，此处不重复校验）。
+ *  结果即统一词汇的投影子集（runs 域拥有），本域只做引用整形。 */
 export const startPlanRun = createAsyncThunk<
   ProjectedOutcome,
   void,
@@ -41,20 +42,21 @@ export const startPlanRun = createAsyncThunk<
     if (!plan) {
       return { kind: "noop" as const };
     }
-    // 单次状态快照：校验、门禁输入与物化读同一份剧本/事件表，
-    // 门禁与快照之间不因二次读取漂移。
+    // 单次状态快照：门禁输入与物化读同一份剧本/事件表，门禁与快照之间
+    // 不因二次读取漂移。lane 存在性校验只保留 materializePlanRun 一处
+    // （含用户可达文案），启动路径不再三层重复校验。
     const state = getState();
-    validatePlan(plan, state.scenarios.items);
-    const laneScenarios = plan.items.map((item) => {
-      const scenario = resolveLaneScenario(item, state.scenarios.items);
-      if (!scenario) {
-        throw new Error(`编排引用的剧本不存在：${item.scenarioId}。`);
-      }
-      return scenario;
-    });
-    // 连接门输入：去重后的渠道（未配置给「前往平台连接」指引）
+    const laneScenarios = plan.items.map((item) =>
+      resolveLaneScenario(item, state.scenarios.items),
+    );
+    // 连接门输入：去重后的渠道（未配置给「前往平台连接」指引）；悬空 lane
+    // 解析不到剧本、无渠道可贡献，拒绝启动由物化守卫负责
     const channels = [
-      ...new Set(laneScenarios.map((scenario) => scenario.channelId)),
+      ...new Set(
+        laneScenarios.flatMap((scenario) =>
+          scenario ? [scenario.channelId] : [],
+        ),
+      ),
     ];
     return launchProjectedRun(
       {

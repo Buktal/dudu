@@ -30,22 +30,32 @@ import {
 } from "./group-data";
 import { type Candidate, groupsApi, type Member } from "./groups-api";
 
-const empty = {
-  filteredCopy: { title: "未找到匹配员工", description: "调整搜索条件后重试" },
+// 成员列表无筛选入口：空态只保留 defaultCopy；候选弹层带搜索，两套文案齐备。
+const membersEmpty = {
   defaultCopy: {
     title: "暂无成员",
     description: "添加已启用的员工；没有候选时请联系初始管理员创建或启用员工",
   },
 };
-export function GroupMembers({ groupId }: { groupId: string }) {
+const candidatesEmpty = {
+  filteredCopy: { title: "未找到匹配员工", description: "调整搜索条件后重试" },
+  defaultCopy: membersEmpty.defaultCopy,
+};
+export function GroupMembers({
+  groupId,
+  onAdd,
+  onRemove,
+}: {
+  groupId: string;
+  onAdd: () => void;
+  onRemove: (member: Member) => void;
+}) {
   const { profile } = useSession();
-  const [adding, setAdding] = useState(false);
-  const [removing, setRemoving] = useState<Member | null>(null);
   const query = useGroupMembers(groupId);
   return (
     <div className="flex flex-col gap-3">
-      <Button onClick={() => setAdding(true)}>添加成员</Button>
-      <QueryView query={query} empty={empty}>
+      <Button onClick={onAdd}>添加成员</Button>
+      <QueryView query={query} empty={membersEmpty}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -72,7 +82,7 @@ export function GroupMembers({ groupId }: { groupId: string }) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setRemoving(member)}
+                      onClick={() => onRemove(member)}
                     >
                       移除
                     </Button>
@@ -87,20 +97,10 @@ export function GroupMembers({ groupId }: { groupId: string }) {
           </TableBody>
         </Table>
       </QueryView>
-      {adding && (
-        <AddMembers groupId={groupId} close={() => setAdding(false)} />
-      )}
-      {removing && (
-        <RemoveMember
-          groupId={groupId}
-          member={removing}
-          close={() => setRemoving(null)}
-        />
-      )}
     </div>
   );
 }
-function AddMembers({
+export function AddMembers({
   groupId,
   close,
 }: {
@@ -123,7 +123,7 @@ function AddMembers({
         </DialogDescription>
         <QueryView
           query={query}
-          empty={empty}
+          empty={candidatesEmpty}
           filters={
             <FilterBar
               label="成员候选筛选"
@@ -182,7 +182,7 @@ function AddMembers({
     </Dialog>
   );
 }
-function RemoveMember({
+export function RemoveMember({
   groupId,
   member,
   close,
@@ -230,10 +230,10 @@ export function GroupAccounts({ groupId }: { groupId: string }) {
       <Button onClick={() => navigate(routes.channelCreate(groupId))}>
         添加渠道账号
       </Button>
+      {/* 组内账号列表无筛选入口：空态只保留 defaultCopy */}
       <QueryView
         query={query}
         empty={{
-          filteredCopy: { title: "暂无渠道账号", description: "请调整筛选" },
           defaultCopy: {
             title: "暂无渠道账号",
             description: "为当前组添加渠道账号",

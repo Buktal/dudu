@@ -125,6 +125,23 @@ class AlipayAdapterTest {
     }
 
     @Test
+    void answersMalformedBizContentWithUnchangedAckWithoutStoring() {
+        // 验签已过的真实来信 biz_content 畸形：仍回无签名 ack（应答语义不变），不落访客消息
+        Map<String, String> params = signedParams(Map.of(
+            "service", "alipay.mobile.public.message.notify",
+            "charset", "GBK",
+            "biz_content", "<?xml version=\"1.0\" encoding=\"GBK\"?><XML><MsgType><![CDATA[text]]></MsgType>"
+                + "<Text><Content"), false);
+
+        ChannelReceiveResult result = adapter.receive(account(credentials), params, new HttpHeaders(), "");
+
+        assertThat(result.message()).isNull();
+        assertThat(result.response().status()).isEqualTo(200);
+        assertThat(result.response().body()).contains("<ToUserId><![CDATA[]]></ToUserId>")
+            .contains("<MsgType><![CDATA[ack]]></MsgType></XML>");
+    }
+
+    @Test
     void answersMockPulseProbeWithoutServiceFieldAsPlainSuccess() {
         // mock-pulse 探测（支付通知形态）：无 service/biz_content，通用规则加签（剔除
         // sign_type），只要求 HTTP 200（no_body_check），明文 success 即兼容应答

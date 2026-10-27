@@ -100,6 +100,30 @@ it("空数据时呈现空态与分页，文案按 query.filtered 取向选择", 
   expect(screen.queryByText("暂无企业")).not.toBeInTheDocument();
 });
 
+it("无筛选列表可省略 filteredCopy：空态一律回落 defaultCopy", () => {
+  const base = viewProps();
+  const view = render(
+    <QueryView
+      {...viewProps({
+        query: { ...base.query, list: [] },
+        empty: { defaultCopy: base.empty.defaultCopy },
+      })}
+    />,
+  );
+  expect(screen.getByText("暂无企业")).toBeInTheDocument();
+  expect(screen.getByText("创建第一家企业。")).toBeInTheDocument();
+  // 省略 filteredCopy 时即使 filtered 取向为真也不落空
+  view.rerender(
+    <QueryView
+      {...viewProps({
+        query: { ...base.query, list: [], filtered: true },
+        empty: { defaultCopy: base.empty.defaultCopy },
+      })}
+    />,
+  );
+  expect(screen.getByText("暂无企业")).toBeInTheDocument();
+});
+
 it("空态动作按钮由页面差异提供，并得知当前筛选取向", () => {
   const action = vi.fn((filtered: boolean) => (
     <button type="button">{filtered ? "清除筛选" : "创建企业"}</button>

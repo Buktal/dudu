@@ -1,5 +1,5 @@
-import { requestDesk, requestDeskBlob } from "@/lib/desk-http";
-import { readDeskToken, resolveDeskOrigin } from "@/lib/desk-session";
+import { createDeskCaller, type DeskCaller } from "@/lib/desk-http";
+import { readDeskToken } from "@/lib/desk-session";
 import { isRecord } from "@/lib/is-record";
 import type { InboxApi } from "./api";
 import {
@@ -22,20 +22,17 @@ const QUERY_PATH = "/desk/visitors/query";
 
 // 接待状态写入：结束与继续共用同一资源，后端返回保存后的完整会话对象
 function writeConversationStatus(
-  origin: string,
+  desk: DeskCaller,
   conversationId: string,
   status: ConversationStatus,
   signal: AbortSignal,
-  fetcher?: typeof fetch,
 ) {
-  return requestDesk({
-    url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/status`,
+  return desk.request({
+    url: `${desk.origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/status`,
     method: "PUT",
-    token: readDeskToken(origin) ?? undefined,
     signal,
     body: { status },
     parse: parseConversation,
-    fetcher,
   });
 }
 
@@ -94,20 +91,25 @@ export function createHttpInboxApi(
     socket?: (url: string) => DeskSocket;
   } = {},
 ): InboxApi {
-  const origin = resolveDeskOrigin(options.origin);
+  const desk = createDeskCaller({
+    origin: options.origin,
+    fetcher: options.fetcher,
+  });
 
   // 不展开 unavailableInboxApi：真实适配器必须实现全部方法，漏实现直接暴露为
   // 返回类型缺口（编译错误），而不是运行时哑弹；展开占位是 mock 适配器的用法
   return {
     subscribe({ context, signal, onEvent, onConnection }) {
-      const token = readDeskToken(origin);
+      // 实时通道不走 requestDesk：无登录凭据时要按 null 区分「未接入」，
+      // 不能像 HTTP 调用那样静默省略认证头
+      const token = readDeskToken(desk.origin);
       if (token === null) {
         // 无登录凭据时不发起连接，按服务未接入如实上报
         onConnection("unavailable");
         return () => {};
       }
       return subscribeDeskSocket({
-        origin,
+        origin: desk.origin,
         token,
         signal,
         socket: options.socket,
@@ -123,79 +125,61 @@ export function createHttpInboxApi(
       const params = new URLSearchParams();
       if (before !== undefined) params.set("beforeSequence", before);
       params.set("limit", String(HISTORY_LIMIT));
-      return requestDesk({
-        url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/messages?${params}`,
-        token: readDeskToken(origin) ?? undefined,
+      return desk.request({
+        url: `${desk.origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/messages?${params}`,
         signal,
         parse: parseMessagePage,
-        fetcher: options.fetcher,
       });
     },
     async send({ target, clientRequestId, text, signal }) {
-      return requestDesk({
-        url: `${origin}/api/desk/visitors/${encodeURIComponent(target.conversationId)}/messages`,
+      return desk.request({
+        url: `${desk.origin}/api/desk/visitors/${encodeURIComponent(target.conversationId)}/messages`,
         method: "POST",
-        token: readDeskToken(origin) ?? undefined,
         signal,
         body: { clientRequestId, text },
         parse: parseMessage,
-        fetcher: options.fetcher,
       });
     },
     async endConversation({ conversationId, signal }) {
-      return writeConversationStatus(
-        origin,
-        conversationId,
-        "closed",
-        signal,
-        options.fetcher,
-      );
+      return writeConversationStatus(desk, conversationId, "closed", signal);
     },
     async resumeConversation({ conversationId, signal }) {
       return writeConversationStatus(
-        origin,
+        desk,
         conversationId,
         "needs-reply",
         signal,
-        options.fetcher,
       );
     },
     async readProfile({ conversationId, signal }) {
-      return requestDesk({
-        url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/profile`,
-        token: readDeskToken(origin) ?? undefined,
+      return desk.request({
+        url: `${desk.origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/profile`,
         signal,
         parse: parseProfile,
-        fetcher: options.fetcher,
       });
     },
     async saveProfile({ conversationId, tags, note, signal }) {
       // 契约只接受标签与备注：渠道资料由入站管道维护，版本冲突不由服务端拒绝
-      return requestDesk({
-        url: `${origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/profile`,
+      return desk.request({
+        url: `${desk.origin}/api/desk/visitors/${encodeURIComponent(conversationId)}/profile`,
         method: "PUT",
-        token: readDeskToken(origin) ?? undefined,
         signal,
         body: { tags, note },
         parse: parseProfile,
-        fetcher: options.fetcher,
       });
     },
     async loadMessageMedia({ messageId, index, signal }) {
       // 公开链接的素材由界面直连渠道：这里只取需要渠道凭据的字节，JWT 只出现在请求头
-      return requestDeskBlob({
-        url: `${origin}/api/desk/messages/${encodeURIComponent(messageId)}/media?index=${index}`,
-        token: readDeskToken(origin) ?? undefined,
+      return desk.blob({
+        url: `${desk.origin}/api/desk/messages/${encodeURIComponent(messageId)}/media?index=${index}`,
         signal,
-        fetcher: options.fetcher,
       });
     },
     async listConversations({ query, cursor, signal }) {
       const page = pageNumber(cursor);
-      const data = await requestDesk({
-        url: `${origin}/api${QUERY_PATH}`,
+      const data = await desk.request({
+        url: `${desk.origin}/api${QUERY_PATH}`,
         method: "POST",
-        token: readDeskToken(origin) ?? undefined,
         signal,
         body: {
           search: query.search,
@@ -206,7 +190,6 @@ export function createHttpInboxApi(
           pageSize: PAGE_SIZE,
         },
         parse: parseConversationPage,
-        fetcher: options.fetcher,
       });
       // 服务端按页码普通分页；还有下一页时游标为下一页页码字符串，尾页为 null
       const consumed = (data.page - 1) * data.pageSize + data.items.length;

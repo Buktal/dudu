@@ -212,6 +212,35 @@ class AlipayProtocolTest {
     }
 
     @Test
+    void warnsOnMalformedBizContentAndStillAnswersEmptyWithoutStoring() {
+        // 验签已过的真实来信 biz_content 畸形：记录告警（含账号与原因）后仍按只应答处理；
+        // 事件族报文不告警，两口径可区分
+        ch.qos.logback.classic.Logger logger =
+            (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(AlipayProtocol.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> events =
+            new ch.qos.logback.core.read.ListAppender<>();
+        events.start();
+        logger.addAppender(events);
+        try {
+            assertThat(protocol.parse(7L, envelope("<MsgType><![CDATA[text]]></MsgType><Text><Content"))).isEmpty();
+
+            assertThat(events.list).anySatisfy(event -> {
+                assertThat(event.getLevel()).isEqualTo(ch.qos.logback.classic.Level.WARN);
+                assertThat(event.getFormattedMessage())
+                    .contains("companyChannelId=7")
+                    .contains("reason=");
+            });
+
+            events.list.clear();
+            assertThat(protocol.parse(7L, envelope(
+                "<MsgType><![CDATA[event]]></MsgType><EventType><![CDATA[follow]]></EventType>"))).isEmpty();
+            assertThat(events.list).isEmpty();
+        } finally {
+            logger.detachAppender(events);
+        }
+    }
+
+    @Test
     void rejectsRecognizableMessageWithoutSenderIdentity() {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> protocol.parse(7L, envelope(
                 "<MsgType><![CDATA[text]]></MsgType><Text><Content><![CDATA[hi]]></Content></Text>")))

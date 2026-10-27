@@ -1,8 +1,9 @@
 import { useIsPresent } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { findFocusable } from "@/lib/focus";
+import { hasOpenOverlay } from "@/lib/overlay";
 import { cn } from "@/lib/utils";
-import { hasOpenOverlay } from "../hooks/use-inbox-shortcuts";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { useVisitorPanel } from "../hooks/use-visitor-panel";
 import {
@@ -55,11 +56,10 @@ export function ParallelWorkspace() {
       if (!(pane === "primary" ? primaryId : pinnedId)) return;
       setShowQueue(false);
       requestAnimationFrame(() => {
-        document
-          .querySelector<HTMLTextAreaElement>(
-            `[data-parallel-pane="${pane}"] textarea`,
-          )
-          ?.focus();
+        // 与其他聚焦入口同一谓词：列表重新可见前的隐藏编辑器不参与聚焦
+        findFocusable<HTMLTextAreaElement>(
+          `[data-parallel-pane="${pane}"] textarea`,
+        )?.focus();
       });
     },
     [dispatch, primaryId, pinnedId, setShowQueue],

@@ -6,6 +6,7 @@ import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.channel.support.MessageBodies;
 import com.dudu.duduserver.channel.support.SecureXml;
 import com.dudu.duduserver.channel.support.Texts;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -31,6 +32,7 @@ import java.util.Optional;
  * 发送方身份取 FromAlipayUserId（现用 userid），缺失回退 FromUserId（官方标注已废弃仍下发）；
  * UserInfo.user_name 作为来访用户名（JSON 字符串，解析失败不阻塞收信）。
  */
+@Slf4j
 @Component
 public class AlipayProtocol {
 
@@ -130,14 +132,22 @@ public class AlipayProtocol {
 
     /**
      * 解析被动通知 biz_content XML（§2.3）：text/image 消息转为统一入站消息，事件推送
-     * （MsgType=event）返回空表示只应答 ack 不落库；无法解析的报文返回空按只应答处理；
+     * （MsgType=event）返回空表示只应答 ack 不落库；biz_content 无法解析时记录告警后同样
+     * 返回空按只应答处理（应答语义不变，与事件族的区分见 {@link #fieldsOf}）；
      * 可识别消息缺发送方身份抛出 {@link IllegalArgumentException}，由调用方按参数错误拒绝。
      */
     public Optional<ChannelInboundMessage> parse(Long companyChannelId, String bizContent) {
-        Map<String, String> fields = fields(bizContent);
+        Map<String, String> fields;
+        try {
+            fields = fieldsOf(bizContent);
+        } catch (IllegalArgumentException e) {
+            // 验签已过的真实来信解析失败时不能无据可查：记录后仍按只应答处理，不改变应答语义
+            log.warn("[alipay] 回调报文解析失败, companyChannelId={}, reason={}", companyChannelId, e.getMessage());
+            return Optional.empty();
+        }
         String msgType = fields.getOrDefault(FIELD_MSG_TYPE, "");
         if (MSG_TYPE_EVENT.equals(msgType) || fields.isEmpty()) {
-            // 事件族与无法解析的报文只应答不保存
+            // 事件族与空报文只应答不保存
             return Optional.empty();
         }
         String externalUserId = Texts.firstNonBlank(fields.get(FIELD_FROM_ALIPAY_USER_ID), fields.get(FIELD_FROM_USER_ID));
@@ -156,9 +166,19 @@ public class AlipayProtocol {
             content(msgType, fields)));
     }
 
-    // 报文两级扁平化：一级字段直接存；Text/Image 等嵌套节点记为「节点.子节点」
-    // （DOM textContent 会拼接后代文本，嵌套结构须按下层元素展开）
+    // 应答构建取字段：解析失败与空报文同按空 map 处理，不阻塞 ack 回包
     private Map<String, String> fields(String bizContent) {
+        try {
+            return fieldsOf(bizContent);
+        } catch (IllegalArgumentException e) {
+            return Map.of();
+        }
+    }
+
+    // 报文两级扁平化：一级字段直接存；Text/Image 等嵌套节点记为「节点.子节点」
+    // （DOM textContent 会拼接后代文本，嵌套结构须按下层元素展开）；空报文返回空 map，
+    // XML 解析失败抛出 {@link IllegalArgumentException}，由调用方区分「空报文」与「解析失败」
+    private Map<String, String> fieldsOf(String bizContent) {
         if (bizContent == null || bizContent.isBlank()) {
             return Map.of();
         }
@@ -166,7 +186,7 @@ public class AlipayProtocol {
         try {
             document = SecureXml.builder().parse(new InputSource(new StringReader(bizContent)));
         } catch (Exception e) {
-            return Map.of();
+            throw new IllegalArgumentException("biz_content 无法解析: " + e, e);
         }
         Map<String, String> fields = new LinkedHashMap<>();
         NodeList children = document.getDocumentElement().getChildNodes();

@@ -2,7 +2,64 @@ import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { Field, FieldDescription, FieldError, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { Textarea } from "./ui/textarea";
+
+export function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+  required,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string; disabled?: boolean }[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  required?: boolean;
+}) {
+  const id = useId();
+  return (
+    <Field data-disabled={disabled}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Select
+        items={options}
+        value={value}
+        disabled={disabled}
+        required={required}
+        onValueChange={(next) => {
+          if (next !== null) onChange(next);
+        }}
+      >
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="start" alignItemWithTrigger={false}>
+          <SelectGroup>
+            {options.map((option) => (
+              <SelectItem
+                key={option.value}
+                value={option.value}
+                disabled={option.disabled}
+              >
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+}
 
 type TextFieldProps = Omit<
   React.ComponentProps<typeof Input>,

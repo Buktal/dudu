@@ -24,9 +24,9 @@ import { useAppDispatch, useAppSelector } from "@/hooks/use-app-store";
 import { channelById } from "@/lib/channels";
 import { cn } from "@/lib/utils";
 import {
+  laneSnapshotOutdated,
   type PlanItem,
   type PlanMode,
-  laneSnapshotOutdated,
   resolveLaneScenario,
 } from "../model";
 import { moveDraftLane, removeDraftLane } from "../stores/plans-slice";

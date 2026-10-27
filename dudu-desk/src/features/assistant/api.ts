@@ -1,6 +1,5 @@
 import { DeskApiError } from "@/lib/api-response";
-import { requestDesk } from "@/lib/desk-http";
-import { readDeskToken, resolveDeskOrigin } from "@/lib/desk-session";
+import { createDeskCaller } from "@/lib/desk-http";
 import { isRecord } from "@/lib/is-record";
 
 export type AssistantTask = "chat" | "summary" | "reply";
@@ -64,10 +63,11 @@ function request<T>(
   parse: (value: unknown) => T,
   body?: unknown,
 ) {
-  const origin = resolveDeskOrigin();
-  return requestDesk({
-    url: `${origin}/api/desk${path}`,
-    token: readDeskToken(origin) ?? undefined,
+  // 逐请求构造：源地址解析失败（构建注入的地址非法）保持按单次调用报错，
+  // 不在模块加载时打断整个应用
+  const desk = createDeskCaller();
+  return desk.request({
+    url: `${desk.origin}/api/desk${path}`,
     method: body === undefined ? "GET" : "POST",
     signal,
     body,

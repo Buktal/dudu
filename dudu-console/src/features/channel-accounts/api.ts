@@ -130,7 +130,7 @@ export const channelApi = {
       validate: pageOf(isAccount),
     }),
   detail: (client: ConsoleClient, id: string, signal: AbortSignal) =>
-    client.request(`/console/company_channels/${id}`, {
+    client.request(`/console/company_channels/${encodeURIComponent(id)}`, {
       signal,
       validate: isDetail,
     }),
@@ -183,13 +183,16 @@ export const channelApi = {
     signal: AbortSignal,
   ) => {
     validateConfigurationSize(body);
-    return client.request(`/console/company_channels/${id}`, {
-      method: "PUT",
-      body,
-      signal,
-      write: true,
-      validate: isDetail,
-    });
+    return client.request(
+      `/console/company_channels/${encodeURIComponent(id)}`,
+      {
+        method: "PUT",
+        body,
+        signal,
+        write: true,
+        validate: isDetail,
+      },
+    );
   },
   move: (
     client: ConsoleClient,
@@ -197,11 +200,14 @@ export const channelApi = {
     groupId: string,
     signal: AbortSignal,
   ) =>
-    client.request(`/console/company_channels/${id}/group`, {
-      method: "PUT",
-      body: { groupId },
-      signal,
-      write: true,
-      validate: isDetail,
-    }),
+    client.request(
+      `/console/company_channels/${encodeURIComponent(id)}/group`,
+      {
+        method: "PUT",
+        body: { groupId },
+        signal,
+        write: true,
+        validate: isDetail,
+      },
+    ),
 };

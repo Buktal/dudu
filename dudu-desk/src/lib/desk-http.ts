@@ -1,4 +1,5 @@
 import { DeskApiError, readApiEnvelope } from "./api-response";
+import { readDeskToken, resolveDeskOrigin } from "./desk-session";
 
 export type DeskRequest<T> = {
   url: string | URL;
@@ -71,7 +72,10 @@ export async function requestDesk<T>(request: DeskRequest<T>): Promise<T> {
   const data = readApiEnvelope(body);
   try {
     return request.parse(data);
-  } catch {
+  } catch (error) {
+    // parse 刻意抛出的 DeskApiError（如「AI 回答与当前会话不匹配」「翻译偏好响应无效」）
+    // 带着准确的 kind 与文案，原样上抛；其余抛出物才是无法识别的数据结构
+    if (error instanceof DeskApiError) throw error;
     throw new DeskApiError("invalid-response", "服务返回的数据格式不完整");
   }
 }
@@ -122,4 +126,43 @@ export async function requestDeskBlob(request: DeskBlobRequest): Promise<Blob> {
 
 function throwIfAborted(signal: AbortSignal) {
   if (signal.aborted) throw new DeskApiError("aborted", "操作已取消");
+}
+
+/** 已绑源地址的调用输入：token 与 fetcher 由调用源统一注入，调用方不再各自拼写。 */
+export type DeskApiCall<T> = Omit<DeskRequest<T>, "token" | "fetcher">;
+export type DeskMediaCall = Omit<DeskBlobRequest, "token" | "fetcher">;
+
+export type DeskCaller = {
+  /** 已解析的 API 源地址：socket 等不走 requestDesk 的调用仍要用它组装地址。 */
+  readonly origin: string;
+  /** JSON API 调用。 */
+  request: <T>(request: DeskApiCall<T>) => Promise<T>;
+  /** 认证的媒体字节调用。 */
+  blob: (request: DeskMediaCall) => Promise<Blob>;
+};
+
+/**
+ * 认证的 Desk API 调用源：解析一次源地址，之后每次调用按当前登录会话读取 token
+ * 并组装认证头。「取 token + 认证头包装」只在这里写一份，translation / assistant /
+ * inbox 三个适配器共用，登录与登出对后续调用即时生效。
+ */
+export function createDeskCaller(
+  options: { origin?: string; fetcher?: typeof fetch } = {},
+): DeskCaller {
+  const origin = resolveDeskOrigin(options.origin);
+  return {
+    origin,
+    request: (request) =>
+      requestDesk({
+        ...request,
+        token: readDeskToken(origin) ?? undefined,
+        fetcher: options.fetcher,
+      }),
+    blob: (request) =>
+      requestDeskBlob({
+        ...request,
+        token: readDeskToken(origin) ?? undefined,
+        fetcher: options.fetcher,
+      }),
+  };
 }

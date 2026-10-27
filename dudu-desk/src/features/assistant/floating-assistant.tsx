@@ -9,7 +9,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   InputGroupButton,
   InputGroupTextarea,
 } from "@/components/ui/input-group";
+import { hasAssistantBlockingOverlay } from "@/lib/overlay";
 import { cn } from "@/lib/utils";
 import { MAX_PROMPT_LENGTH } from "./api";
 import { AssistantMark, AssistantThread } from "./assistant-thread";
@@ -44,10 +45,11 @@ export function FloatingAssistant({
     if (assistant.open && assistant.availability?.enabled)
       input.current?.focus();
   }, [assistant.open, assistant.availability?.enabled]);
-  function close() {
+  // 收起后焦点回到触发按钮；setOpen 身份稳定，回调按它固定
+  const close = useCallback(() => {
     assistant.setOpen(false);
     requestAnimationFrame(() => trigger.current?.focus());
-  }
+  }, [assistant.setOpen]);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing || event.repeat) return;
@@ -57,13 +59,16 @@ export function FloatingAssistant({
         !event.metaKey &&
         event.key.toLowerCase() === "a"
       ) {
+        // 其他弹层占用时快捷键不抢键；内嵌助手宿主的弹层（quick 历史弹层）
+        // 豁免，助手自身展开时也要能收起
+        if (hasAssistantBlockingOverlay()) return;
         event.preventDefault();
         assistant.setOpen(!assistant.open);
       } else if (event.key === "Escape" && assistant.open) close();
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
-  });
+  }, [assistant.open, assistant.setOpen, close]);
   const enabled = !!target && !!assistant.availability?.enabled;
   const content = (
     <div
@@ -157,6 +162,13 @@ export function FloatingAssistant({
             >
               <LoaderCircle className="size-3 animate-spin motion-reduce:animate-none" />
               正在读取 AI 服务配置…
+            </div>
+          )}
+          {assistant.notice && (
+            <div className="px-3 pb-2">
+              <Alert>
+                <AlertDescription>{assistant.notice}</AlertDescription>
+              </Alert>
             </div>
           )}
           {(assistant.configError ||

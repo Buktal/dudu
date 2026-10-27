@@ -47,6 +47,11 @@ describe("routes -> parseRoute", () => {
   it("round-trips overview", () => {
     expect(parseRoute(`#/${routes.overview()}`).view).toBe("overview");
   });
+
+  it("rejects malformed ids and unknown views fall back to companies", () => {
+    expect(parseRoute("#/companies?companyId=abc").selectedId).toBeNull();
+    expect(parseRoute("#/nowhere").view).toBe("companies");
+  });
 });
 
 describe("href", () => {

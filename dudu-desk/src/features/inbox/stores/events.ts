@@ -1,7 +1,7 @@
 import type { InboxEvent } from "../types";
 import { applyAccessChanged } from "./access";
 import { createRefreshScheduler } from "./live-refresh";
-import { connectionFromFailure, reloadInbox } from "./reload";
+import { reloadInbox } from "./reload";
 import { reminderChange } from "./reminders";
 import {
   abortRequest,
@@ -12,6 +12,7 @@ import {
 } from "./requests";
 import { settleConfirmedReplies } from "./sending";
 import { inboxActions } from "./slice";
+import { connectionFromFailure } from "./state";
 import { type InboxCommand, onQueueSettled, releaseConnection } from "./store";
 
 function connectInbox(reconnecting: boolean): InboxCommand<Promise<void>> {

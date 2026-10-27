@@ -1,3 +1,4 @@
+import { isFocusable } from "@/lib/focus";
 import { selectFocusedId } from "./selectors";
 import { editDraft, focusReply } from "./sending";
 import { inboxActions } from "./slice";
@@ -46,8 +47,7 @@ export function adoptAssistantReply(
           .find(
             (input) =>
               input.dataset.conversationComposer === visitorId &&
-              !input.closest("[inert]") &&
-              input.getClientRects().length > 0,
+              isFocusable(input),
           )
           ?.focus();
       }),

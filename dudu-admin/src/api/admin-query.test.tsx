@@ -1,9 +1,14 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
+import { success } from "@/test/http";
 import { useAdminQuery } from "./admin-query";
-import { AdminClient } from "./client";
+import { AdminClient, isEmpty } from "./client";
 import { AdminContext } from "./context";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 // 领域无关的单记录夹具：结构与单记录接口对齐——client 之外只有业务参数与信号。
 interface FixtureItem {
@@ -110,4 +115,64 @@ it("失败时 error 透出，失败不冒充空数据", async () => {
   await waitFor(() => expect(result.current.loading).toBe(false));
   expect(result.current.error).toBe("企业不存在");
   expect(result.current.data).toBeNull();
+});
+
+it("写成功失效后重查：dataRevision 进入重查依赖", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => success(null)),
+  );
+  const client = new AdminClient();
+  const load = vi.fn<FixtureLoad>(() =>
+    Promise.resolve({ companyId: "123456" }),
+  );
+  const { result } = renderHook(() => useAdminQuery(load, []), {
+    wrapper: contextWrapper(client),
+  });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(load).toHaveBeenCalledTimes(1);
+
+  // 写成功即失效（宏任务一拍）：非 stable 查询随失效陪跑重查
+  await act(async () => {
+    await client.request("/admin/companies/123456", {
+      method: "PUT",
+      write: true,
+      validate: isEmpty,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+  expect(result.current.data).toEqual({ companyId: "123456" });
+});
+
+it("stable 目录查询跳过写后失效：失效已发布但不重查", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => success(null)),
+  );
+  const client = new AdminClient();
+  const load = vi.fn<FixtureLoad>(() =>
+    Promise.resolve({ companyId: "123456" }),
+  );
+  const { result } = renderHook(
+    () => useAdminQuery(load, [], { stable: true }),
+    {
+      wrapper: contextWrapper(client),
+    },
+  );
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(load).toHaveBeenCalledTimes(1);
+
+  // 写成功失效仍照常发布，stable 查询不陪跑重查
+  await act(async () => {
+    await client.request("/admin/companies/123456", {
+      method: "PUT",
+      write: true,
+      validate: isEmpty,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  expect(client.getSnapshot().dataRevision).toBe(1);
+  expect(load).toHaveBeenCalledTimes(1);
+  expect(result.current.data).toEqual({ companyId: "123456" });
 });

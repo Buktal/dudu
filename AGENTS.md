@@ -4,6 +4,8 @@
 
 开始任务前按任务读取适用的专项规范
 
+技能安装锁文件 `skills-lock.json` 与 `.agents/skills/` 目录由安装工具维护，条目对应关系与 `yarn.lock` 同理
+
 ### Issue tracker
 
 操作 GitHub Issue 时使用 `gh` CLI 并读取 [Issue 操作规范](docs/agents/issue-tracker.md) 文档

@@ -1,7 +1,7 @@
 import { History, MessageSquareText, X } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { insideOverlay } from "../hooks/use-inbox-shortcuts";
+import { insideOverlay } from "@/lib/overlay";
 import { useInboxDispatch, useInboxSelector } from "../hooks/use-inbox-store";
 import { focusReply } from "../stores/sending";
 import type { Conversation } from "../types";

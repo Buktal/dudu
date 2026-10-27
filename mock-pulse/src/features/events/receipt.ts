@@ -1,3 +1,4 @@
+import emptyBodyModes from "../../../shared/receipt-empty-body-modes.json";
 import type { ExpectedReceipt, ReceiptBodyMode } from "./model";
 
 /**
@@ -58,15 +59,17 @@ const MODE_LABEL: Record<ReceiptBodyMode, string> = {
   qqSignReply: "QQ op13 验签回包（plain_token 回显）",
 };
 
+// 空正文仍校验回包形态的白名单：单一数据源 shared/receipt-empty-body-modes.json
+// （运行时判定 verdict.rs compare_body 同读一份，两端各自消费同一清单，
+// 漂移即单侧测试失败——shared/channels.json 黄金夹具同款先例）
+const EMPTY_BODY_STILL_VALIDATES: ReadonlySet<string> = new Set(emptyBodyModes);
+
 /** 期望的人类可读描述（回执面板/运行记录展示用） */
 export function describeExpected(expected: ExpectedReceipt): string {
-  // 空正文的免校验白名单与运行时判定（verdict.rs compare_body）逐字一致：
   // 三种 reply 形态空正文仍校验回包形态本身，不得展示为「不校验正文」
   if (
     expected.body === "" &&
-    expected.bodyMode !== "wecomReply" &&
-    expected.bodyMode !== "dingtalkReply" &&
-    expected.bodyMode !== "qqSignReply"
+    !EMPTY_BODY_STILL_VALIDATES.has(expected.bodyMode)
   ) {
     return `期望 HTTP ${expected.status}，不校验正文`;
   }

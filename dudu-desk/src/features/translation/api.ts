@@ -1,6 +1,5 @@
 import { DeskApiError } from "@/lib/api-response";
-import { requestDesk } from "@/lib/desk-http";
-import { readDeskToken, resolveDeskOrigin } from "@/lib/desk-session";
+import { createDeskCaller } from "@/lib/desk-http";
 import { isRecord } from "@/lib/is-record";
 
 export type Preference = { automatic: boolean; targetLanguage: string };
@@ -29,16 +28,19 @@ export const languages = [
 ] as const;
 
 export function parsePreference(value: unknown): Preference {
+  // 语言代码只校验非空字符串：服务端新增语言时旧客户端原样往返，
+  // 不因客户端词表缺失而让整个偏好面板报错（Select 已能兜底显示未知代码）
   if (
     !isRecord(value) ||
     typeof value.automatic !== "boolean" ||
-    !languages.some(([code]) => code === value.targetLanguage)
+    typeof value.targetLanguage !== "string" ||
+    !value.targetLanguage
   ) {
     throw new DeskApiError("invalid-response", "翻译偏好响应无效");
   }
   return {
     automatic: value.automatic,
-    targetLanguage: value.targetLanguage as string,
+    targetLanguage: value.targetLanguage,
   };
 }
 export function parseTranslation(value: unknown): Translation {
@@ -66,12 +68,13 @@ function request<T>(
   body?: unknown,
   method?: "PUT" | "POST",
 ) {
-  const origin = resolveDeskOrigin();
-  return requestDesk({
-    url: `${origin}/api/desk${path}`,
+  // 逐请求构造：源地址解析失败（构建注入的地址非法）保持按单次调用报错，
+  // 不在模块加载时打断整个应用
+  const desk = createDeskCaller();
+  return desk.request({
+    url: `${desk.origin}/api/desk${path}`,
     method: method ?? "GET",
     body,
-    token: readDeskToken(origin) ?? undefined,
     signal,
     parse,
   });

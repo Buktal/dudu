@@ -87,6 +87,10 @@ export const sendReducers = {
     const { messageId, error, uncertain } = action.payload;
     const submission = state.submissions[messageId];
     if (!submission) return;
+    // 已按服务端接受落定的提交不再进入失败结算：POST 已返回且 acceptSubmission
+    // 完成后，loaded 链上（接待下一位）的异常与本条发送无关；走到这里只会把
+    // 服务端已确认的接受降级成 unconfirmed，并污染回执证据与提示
+    if (submission.settled && submission.status === "accepted") return;
     const conversationId = submission.request.target.conversationId;
     const message = state.messages[messageId];
     const evidence = message.delivery?.state;

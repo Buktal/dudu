@@ -1,7 +1,10 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ConsoleClient } from "@/api/client";
 import { ConsoleContext, useSession } from "@/api/context";
-import { ConsoleLayout } from "@/components/console-layout";
+import {
+  ConsoleLayout,
+  requiresInitialAdmin,
+} from "@/components/console-layout";
 import { LoadingState } from "@/components/feedback";
 import { AccountPage } from "@/features/account/AccountPage";
 import { LoginPage } from "@/features/auth/LoginPage";
@@ -25,17 +28,20 @@ function Workspace() {
   useEffect(() => {
     if (
       route.view === "login" ||
-      ((route.view === "employees" || route.view === "translation") && !initial)
+      (requiresInitialAdmin(route.view) && !initial)
     )
       navigate(initial ? routes.employees() : routes.userGroups());
   }, [route.view, initial]);
+  // 受限视图的渲染分支与导航过滤共读 requiresInitialAdmin：守卫先行重定向，
+  // 这里只防重定向落地前的短暂渲染
+  const allowed = initial || !requiresInitialAdmin(route.view);
   return (
     <ConsoleLayout view={route.view}>
-      {route.view === "translation" && initial ? (
+      {route.view === "translation" && allowed ? (
         <TranslationPage />
       ) : route.view === "account" ? (
         <AccountPage />
-      ) : route.view === "employees" && initial ? (
+      ) : route.view === "employees" && allowed ? (
         <EmployeesPage
           selectedId={route.selectedId}
           creating={route.creating}

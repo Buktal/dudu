@@ -120,6 +120,9 @@ public class MeituanProtocol {
         if (externalUserId == null || externalUserId.isEmpty() || pushContent == null) {
             throw new IllegalArgumentException("美团单聊推送缺少必填字段");
         }
+        // 渠道能力约束（meituan.md §5.4 服务端接入已知约束）：推送无消息级标识，
+        // externalMessageId 恒空、渠道重推会产生重复消息；会话粒度为门店编码，
+        // 同店顾客共享会话
         ChannelInboundMessage inbound = new ChannelInboundMessage(
             companyChannelId,
             externalUserId,

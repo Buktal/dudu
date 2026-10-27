@@ -1,5 +1,4 @@
-@import url("scene.css");
-@import url("theme.css?v=3");
+@import url("theme.css");
 :root {
   color-scheme: dark;
   --base: #0b151e;
@@ -97,6 +96,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 .footer-links { display: flex; gap: 25px; }
 .skip { position: absolute; z-index: 30; left: 20px; top: -100px; background: var(--text); color: var(--base); padding: 12px; }
 .skip:focus { top: 15px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .lightbox { width: min(96vw, 1600px); padding: 15px; border: 1px solid var(--edge); border-radius: 8px; background: var(--base); }
 .lightbox::backdrop { background: #03090ee8; backdrop-filter: blur(10px); }
 .lightbox img { display: block; width: 100%; max-height: 80vh; object-fit: contain; }
@@ -163,4 +163,50 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 @media (max-width: 760px) {
   .translation-gallery { grid-template-columns: minmax(0, 1fr); gap: 36px; }
   .translation-gallery article > p { flex: none; }
+}
+
+/* 首页渠道、产品页签与导览入口区块样式，自 demo.css 迁回。 */
+.channel-matrix .channel-mark { display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0; gap: 0; flex-shrink: 0; border-radius: 10px; background: #fff; border: 1px solid #dce3e8; }
+.channel-mark img { width: 23px; height: 23px; }
+.channel-mark b { font: 700 14px "Segoe UI", "Microsoft YaHei", sans-serif; }
+.channel-matrix > span { padding: 12px 8px; gap: 10px; }
+.start-layout > div { min-width: 0; }
+.guide-entry a { overflow-wrap: anywhere; }
+.enhanced .product-panel { padding-top: 0; }
+.enhanced .panel-summary { min-height: 112px; margin: 0; align-items: center; }
+.enhanced .panel-summary p { max-width: 780px; }
+.product-panel .product-shot { margin: 0; }
+.product-panel .shot-frame { aspect-ratio: 16 / 9; padding: 0; overflow: hidden; background: #f5f6f9; }
+.product-panel .shot-frame > a { width: 100%; height: 100%; }
+.product-panel .shot-frame img { width: 100%; height: 100%; object-fit: contain; object-position: center top; }
+.product-panel figcaption { margin: 0; min-height: 44px; padding-top: 12px; }
+.channel-groups { display: grid; grid-template-columns: 1fr 1.8fr 1fr; gap: 20px; }
+.channel-group { border: 1px solid var(--line); border-radius: 10px; padding: 22px 18px; min-width: 0; }
+.channel-group h3 { font-size: 14px; margin: 0 8px 16px; color: var(--muted); }
+.channel-group .channel-matrix { grid-template-columns: minmax(0, 1fr); padding: 0; }
+.channel-group:nth-child(2) .channel-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.channel-matrix > span { min-width: 0; }
+.channel-boundaries { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; margin: 36px 0 24px; padding-top: 28px; border-top: 1px solid var(--line); }
+.channel-boundaries h3 { font-size: 16px; }
+.channel-boundaries p { color: var(--muted); margin-bottom: 0; font-size: 13px; }
+.tour-entry { display: flex; align-items: center; justify-content: space-between; gap: 48px; }
+.tour-entry > div { max-width: 730px; }
+.tour-entry .button { flex-shrink: 0; }
+.suite-tabs { border-bottom: 0; gap: 12px; }
+.suite-tab { border: 0; border-radius: 8px; padding: 16px 18px; margin-right: 0; }
+.suite-tab[aria-selected="true"] { background: var(--panel); }
+.suite-tab[aria-selected="true"] b { color: var(--text); }
+.channel-group { border: 0; background: var(--panel); }
+.channel-boundaries { border-top: 0; }
+@media (max-width: 760px) {
+  .channel-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .enhanced .panel-summary { height: 180px; min-height: 180px; padding: 22px 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 10px; }
+  .enhanced .panel-summary a { margin-top: 0; }
+  .product-panel figcaption { font-size: 11px; }
+  .channel-groups, .channel-boundaries { grid-template-columns: minmax(0, 1fr); }
+  .channel-group .channel-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .channel-boundaries { gap: 24px; }
+  .tour-entry { align-items: flex-start; flex-direction: column; gap: 20px; }
+  .suite-tabs { gap: 4px; }
+  .suite-tab { padding: 14px 9px; }
 }

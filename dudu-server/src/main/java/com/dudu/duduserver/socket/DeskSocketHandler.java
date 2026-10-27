@@ -67,6 +67,11 @@ public class DeskSocketHandler extends TextWebSocketHandler {
             gateway.send(sessionId, Map.of("type", "ready"));
         } catch (BizException e) {
             reject(sessionId, authFailure(e));
+        } catch (RuntimeException e) {
+            // 权限读取的基础设施故障（如数据库不可用）不是客户端身份问题：按系统错误回
+            // error 帧再关闭，不外泄异常关闭；13xxx 段是第三方调用语义，本地存储故障归 UNKNOWN
+            log.warn("[desk-socket] 认证处理异常, sessionId={}, exception={}", sessionId, e.getClass().getSimpleName());
+            reject(sessionId, ApiEnum.UNKNOWN);
         }
     }
 

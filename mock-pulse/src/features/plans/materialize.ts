@@ -51,7 +51,8 @@ export function materializePlanRun(input: {
   const lanes = plan.items.map((item, lane) => {
     const scenario = resolveLaneScenario(item, scenarios);
     // 运行时钟问 interpreter（events 域唯一分岔点；存在性引用：快照优先解析
-    // 命中即放行并带回主语，双缺即拦截；文案一字不动）
+    // 命中即放行并带回主语，双缺即拦截；文案一字不动）。编排启动的 lane
+    // 存在性校验以本守卫为单点（plan-run 只解析收集，不重复校验）。
     const laneScenario = interpretPresence(scenario, "runtime");
     if (laneScenario.blocked) {
       throw new Error(
