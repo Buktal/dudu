@@ -3,6 +3,7 @@
 > 研究日期：2026-09-10。方法：WebSearch 配额耗尽（09-27 恢复），全程未用搜索；采用 WebFetch 直抓 + Wayback CDX 归档枚举 + `gh` GitHub 代码搜索三条通道
 > **事实分级**：`[官方]` = 官方域名/API 直接返回；`[多源]` = ≥2 个独立第三方实现交叉一致；`[单源]` = 仅一处出现，真实性存疑；`[逆向]` = 非官方协议逆向
 > **勘误（2026-09-10 补摄）**：本文件首轮遗漏了 **miniapp.xiaohongshu.com（小红书小程序开放平台）** 域——小红书**有**官方公开推送通道：小程序「客服消息」体系（微信小程序客服消息同款模式），详见 §10。§2.4「专业号私信无官方 webhook」的结论就专业号 DM 而言仍成立，但「小红书侧无官方消息型推送基准」的整体印象作废
+> **勘误（2026-11-03 补摄）**：商业开放平台（ad-market.xiaohongshu.com）存在官方私信三方（third_im）体系——专业号私信**有**面向 ISV 的「接收消息推送 + 发送消息 API」官方通道（接口文档在登录墙内，字段表待核验），详见 §13。**§2.4、§7.3、§10.1 的「专业号私信无官方 ISV 推送」结论全部作废**
 
 ---
 
@@ -88,6 +89,8 @@
 售后单状态（查询接口用，推送引用）：1 待审核 / 2 待用户寄回 / 3 待收货 / 4 完成 / 5 取消 / 6 关闭 / 9 拒绝 / 11 换货转退款 / 12 待商家发货 / 13 商家已发货 / 14 平台介入中 / 9001 商家收货拒绝
 
 ### 2.4 私信（专业号 DM）事件
+
+> **勘误（2026-11-03）**：本节结论已被推翻——商业开放平台私信三方（third_im）体系提供官方「三方客服接收消息」推送与「三方客服发送消息」API，接口文档在企业微信文档登录墙内，详见 §13。下文仅保留历史排查过程
 
 **未找到任何官方公开 webhook 规范。** GitHub 全网代码检索 `sxt.xiaohongshu.com` / `私信通` / `sixin_message` / `专业号+token`，官方通道实现为零。存在的只有
 
@@ -235,7 +238,7 @@ sign = md5_hex_lowercase(signString)
 
 1. **[官方·开发文档正文]** docId=9「开发文档」子树：接入流程、消息推送章节、签名算法官方原文、token 寿命数值、推送重试策略、推送是否带签名头。通道：webReader 恢复后浏览器渲染抓 `https://open.xiaohongshu.com/document/developer/file/{docDetailId}`；或找到 POST `/api/developer/doc/getDocDetailNew` 的带参调用办法。→ **待核验(09-27)**
 2. **[官方·数据加解密]** docDetailId 50/51 正文（encryptedData 的具体算法，大概率 AES，密钥派生方式）。→ **待核验(09-27)**
-3. **[专业号私信官方通道]** 是否存在面向 ISV 的官方私信 webhook/拉取 API。GitHub 无实现痕迹、开放平台文档中心五大板块均为电商域；不排除藏在登录墙后（服务市场 ISV 专属文档）。**部分解决**：miniapp 域已有官方消息型推送（§10），但那是小程序客服会话，不是专业号私信本身——专业号 DM 是否有 ISV 通道仍未知。→ **待核验(09-27)**
+3. **[专业号私信官方通道]** 是否存在面向 ISV 的官方私信 webhook/拉取 API。GitHub 无实现痕迹、开放平台文档中心五大板块均为电商域；不排除藏在登录墙后（服务市场 ISV 专属文档）。**部分解决**：miniapp 域已有官方消息型推送（§10），但那是小程序客服会话，不是专业号私信本身——专业号 DM 是否有 ISV 通道仍未知。→ **已解决（2026-11-03）**：专业号私信 ISV 通道存在——商业开放平台私信三方（third_im）体系的「三方客服接收消息」推送 + 「三方客服发送消息」API，完整接口规格在企业微信文档登录墙内（字段表待核验），详见 §13
 4. **[单源存疑]** `x-xiaohongshu-signature` HMAC-SHA256 + `im.message.receive` + `verify_webhook` challenge 模式（zhilin1719-hue/--）。需官方对质后才能采用；当前判定为模仿飞书的拼装。**注意**：miniapp 域官方握手的参数名叫 `signature`/`echostr`（§10），与该单源声称的头名/事件名仍不相符，维持不可信判定。→ **待核验(09-27)**
 5. **推送 URL 首次配置时是否有连通性校验**（类似微信 echostr）。**已解决**：miniapp 客服消息体系有 echostr 握手（§10.4）；电商 ark 侧仍未知。→ 电商侧待核验(09-27)
 6. 电子面单/规则中心子树（docDetailId 294-318 等，与 mock-pulse 关系弱，低优先级）。→ 待核验(09-27)
@@ -305,6 +308,8 @@ sign = md5_hex_lowercase(signString)
 ### 10.1 域的定位与「平台通讯两形态」
 
 各大平台的通讯开放能力走两条路：**直连私信**（平台 IM 能力直接开放，如抖音 IM、企微）或**小程序客服消息**（平台给小程序生态，用客服会话实现通讯，如微信小程序、小红书小程序）。小红书走的是第二条——专业号私信没有官方 ISV 推送（§2.4），但小程序客服消息有完整官方规范。对 mock-pulse：小红书侧的官方模拟基准＝本体系
+
+> **勘误（2026-11-03）**：专业号私信的官方 ISV 推送通道已确认存在（商业开放平台私信三方体系，§13）；其完整接口规格未公开可抓（企业微信文档登录墙），就「公开文档可抓取的模拟基准」而言本节结论仍成立
 
 ### 10.2 服务器配置（开放平台控制台填写）
 
@@ -501,3 +506,214 @@ POST 到配置 URL，**JSON**。通用字段＋按 MsgType 追加专属字段
 - 发送：先 `POST /api/rmp/token`（appid/secret，JSON body）换 `access_token`，再 `POST /api/rmp/message/custom` 下发 `msg_type=text` 的 `content`；成功以 `success=true` 且 `code=0` 为准，`external_message_id` 为空
 - `appSecret` 为服务端按公众号先例补入 channel_info 的键（mock-pulse config 无此键——其不模拟 token 换取，同 wechat-mini §6.1 口径）
 - 接口地址配置键 `dudu.channel.xiaohongshu.api-base`（缺省 `https://miniapp.xiaohongshu.com`，可覆盖为受控替身）
+
+---
+
+## 13. 四次补摄：商业开放平台（ad-market）私信三方体系（2026-11-03，用户指路 docs-center）
+
+> 背景：用户指路 https://ad-market.xiaohongshu.com/docs-center?bizType=943&articleId=4437 。该域是小红书**商业开放平台**——营销侧 API 开放体系，独立于 §1 电商开放平台（open + ark 网关）与 §10 小程序开放平台（miniapp 域）。docs-center 为 SPA 壳 + POST-only JSON API，WebFetch 抓不到正文，本次全程 curl 逆向直抓全库
+
+### 13.1 docs-center 结构与数据通道 `[官方]`
+
+- bizType 枚举（POST /api/open/article/biz/type 响应逐字）：`聚光=943、蒲公英=944、私信三方=945、乘风=1084`
+
+```json
+{"requestId":"","code":0,"success":true,"msg":"成功","data":{"articleBizList":[{"bizId":0,"bizName":"聚光","categoryId":943,"order":0},{"bizId":0,"bizName":"蒲公英","categoryId":944,"order":0},{"order":0,"bizId":0,"bizName":"私信三方","categoryId":945},{"bizId":0,"bizName":"乘风","categoryId":1084,"order":0}]}}
+```
+
+- 入口 URL 的 `articleId=4437` = 「MAPI 新手指南（品牌方/代理商/服务商）」（MAPI=营销 API 总称；同族 4438=MAPI 技术服务商注册指南、4447=MAPI 特殊开白申请流程）
+- 数据接口（全部 POST + JSON；GET 一律回 Go `404 page not found`）
+
+| 接口 | body | 作用与坑 |
+|---|---|---|
+| POST https://ad-market.xiaohongshu.com/api/open/article/biz/type | `{}` | bizType 枚举 |
+| POST /api/open/category/list | `{"categoryId":945}` | 域内目录树；参数名是 categoryId，传 bizType 报 `code:10002 查询目录id不可为空` |
+| POST /api/open/article/list | `{"categoryId":945,"page":{"pageIndex":1,"pageSize":100}}` | 文章列表含全文；pageSize 上限 100（超限报 `code:20000 调用rpc服务异常: contentService`）；只传 bizType 返回全局前 100 篇，须按 categoryId 圈定或 page 遍历 |
+
+- 全库 656 篇（7 页）。正文为 Slate 富文本：`content` 顶层 `{outline, html, type:"richText", value, version}`，可读文本在 `value` 树叶子 `{text}`，`html` 字段直接是渲染后 HTML（解析取 html 最稳）
+- 私信三方域（945）目录树：新手指南(958)＞账户服务(1421)、Oauth2.0授权(959)＞token管理(969)、账户服务(1422)、私信三方服务介绍(960)、附录-QA(961)
+
+### 13.2 勘误核心：官方私信通道存在（推翻 §2.4）`[官方]`
+
+docs-center 私信三方域 + 官方 FAQ（4439）明确三个官方接口：
+
+| 接口 | 形态 | 证据（FAQ 原文引用） |
+|---|---|---|
+| 三方客服接收消息 | 平台推送到三方配置的 URL | 「用户主动发的手机号会通过消息的方式推到三方的接收消息接口」（二.10）；推送重试规则（二.4）；账号绑定/解绑有通知事件（二.3） |
+| 三方客服发送消息 | 三方调平台 API 下发 | 「『三方客服发送消息』和『三方客服接收消息』接口均没有『语音』这种类型」（二.1）；「调用小红书私信发送视频、图片消息接口」（二.7） |
+| 获取意向评论 | GET/POST `https://adapi.xiaohongshu.com/api/open/im/comment/list` | FAQ 二.15 原文直书完整 URL |
+
+- **完整接口文档（接收/发送的 URL、信封、字段表）不在 docs-center，而在企业微信文档「小红书-三方客服接口文档」，需登录查看**。本次 webReader 两次网络错误；匿名调 `GET /dop-api/opendoc?normal=1&noEscape=1&outformat=1&id={docId}` 返回 `retcode:200060`（权限拒绝）→ 字段级规格 **待核验(11-03)**
+- 官方引用的企业微信文档清单（scode 为原文所带）：
+  - 小红书-三方客服接口文档：`doc.weixin.qq.com/doc/w3_Aa4AnwYNAGYOfLNcOh4Sj6Xg1O35v?scode=ANAAyQcbAAgxhTuZTGAa4AnwYNAGY`
+  - 三方IM 接入流程示意及消息样例：`doc.weixin.qq.com/doc/w3_AfgAWgafAFYdb8y7XM0TAa5IMmCnN?scode=ANAAyQcbAAgg475hPCAfgAWgafAFY`
+  - 完整入驻流程：`doc.weixin.qq.com/doc/w3_ACwAJQbSACQKkvCc2xCT3au2Fq2t2?scode=ANAAyQcbAAgaw2lndsACwAJQbSACQ`
+  - 产品使用说明（对客）：`doc.weixin.qq.com/doc/w3_ACwAJQbSACQDxUzbcgEQOajYhBmeN?scode=ANAAyQcbAAg1JpbLqVACwAJQbSACQ`
+- 接入需加解密：FAQ 一.4 「接入需要加解密，需要secretkey该怎么获取？……待完成加权开白后，会群里同步大家」——secretKey 由小红书在人工开白后于对接群下发（非自助获取）
+
+### 13.3 准入门槛与退出机制（3754 全文，`[官方]`）
+
+| 项 | 要求 |
+|---|---|
+| 三方服务商 | IM 能力服务客户总数 ≥50 家；小红书渠道在服客户（含意向）≥10 家；须官网 |
+| 品牌自研自用 | 「目前仅开放给年框客户对接」（小红书年框广告主） |
+| 必备资质（无资质无法入驻） | 隐私政策；公安部近一年《信息系统安全等级保护备案证明》；近一年《网络安全等级保护等级测评报告》；有效期《增值电信业务经营许可证》（ICP）——FAQ 补充等保「暂无等级要求」 |
+| AI 客服 | 接入须提供 ≥200 个对话样本评估，不通过不允许接入 AI 能力；不接入也会定期抽检回复，不符将关 API 权限 |
+| 应用上线 | 正式应用上线后全部客户可见；beta 测试应用仅填写的 uid 可见 |
+| 人工流程 | 测试账号/域名+应用ID 表单周度汇总开白；测试加白、验收均经对接群产运人工处理（三方服务商须验收，自研客户自测正常可免） |
+
+退出机制（3754 四）：绕过平台风控即刻回收；接入 3 个月内日均调用接口数 <100 提醒、30 天未达标回收；连续两月因服务商问题私信收发异常 >2 起或客诉 >10 个即刻回收；AI 抽检不合格整改 30 天仍不佳则不得再接入 AI 客服
+
+### 13.4 授权与 token（945/Oauth2.0 域，`[官方]`）
+
+- 授权 URL（2603/3754）：`https://ad-market.xiaohongshu.com/auth?appId={appId}&scope={权限范围}&redirectUri={回调}&state={state}`；scope 原始格式为 JSON 数组，使用时 UrlEncode 一次（如 `%5B%22third_im%22%5D`）
+- scope（3197 原句）：「third_im（私信三方工具服务） 需要在授权 URL 的 scope 参数上添加 third_im，进行授权后才能访问私信三方工具服务接口」；线索推送域另有 `three_im_leads_push`。3754 对客授权示例逐字：`https://ad-market.xiaohongshu.com/auth?appId=234&scope=[%22third_im%22,%22three_im_leads_push%22]&redirectUri=https://www.xiaohongshu.com&state=abcd`
+- 授权回调：redirectUri 收 query 参数 `auth_code` `[官方+多源]`（4945「授权时返回的 auth_code（auth_code有效期十分钟，超时未调用本接口，则auth_code失效，需要重新授权）」；leonardsite/xhs-api `url.searchParams.get('auth_code')` 佐证）
+- 获取 token（4945）：`POST https://adapi.xiaohongshu.com/api/open/oauth2/access_token`，body `{app_id(long), secret, auth_code}`，示例逐字
+
+```bash
+curl --location 'https://adapi.xiaohongshu.com/api/open/oauth2/access_token' \
+--header 'content-type: application/json' \
+--data '{ "app_id": 3, "secret": "1234abc", "auth_code": "d6a0b18531a2b9599a2c1e2361659c00" }'
+```
+
+- 响应（4945 示例逐字，结构即字段全集）：`data` 内 `access_token`、`access_token_expires_in`、`refresh_token`、`refresh_token_expires_in`、`user_id`（授权账号）、`app_id`、`approval_role_type`（4 品牌/601 代理商）、`role_type`（1 品牌开发者/2 代理商开发者/3 服务商开发者/4 技术服务商）、`platform_type`（1 聚光/2 蒲公英/**3 私信三方**/4 乘风）、`approval_advertisers[]`（advertiser_id/advertiser_name）、`scope`、`corporation_name`、`virtual_seller_id`、`create_time`/`update_time`
+
+```json
+{"code":0,"success":true,"msg":"成功","data":{"user_id":"5c8650cb0000000001004367","role_type":3,"approval_advertisers":[{"advertiser_id":1234,"advertiser_name":"品牌测试账号222"}],"refresh_token":"5be1789576f45f90ccfbf4ba16ca4a5b","advertiser_id":1234,"refresh_token_expires_in":2591999,"approval_role_type":4,"platform_type":1,"access_token":"0cde2287cd0dedcf472ceb266d0710ba","access_token_expires_in":86399}}
+```
+
+- 刷新（4808）：`POST https://adapi.xiaohongshu.com/api/open/oauth2/refresh_token`，body `{app_id(long), secret, refresh_token}`；「每次刷新都会产生新的 access_token 和 refresh_token，同时重置二者的有效期」
+- 寿命（2607 原句）：access_token **1 天**（示例 86399s）、refresh_token **30 天**（示例 2591999s）；「多次获取token以最后一次token为准，之前的token会在获取新token后5min失效」；refresh_token 失效后须重新走授权
+- 业务 API 网关与鉴权头：`https://adapi.xiaohongshu.com`，token 放 **Access-Token 请求头** `[多源]`（leonardsite/xhs-api `headers['Access-Token'] = accessToken` 并注明「不是 Authorization: Bearer」）——与 ark 网关「body 公共参数 + md5 签名」（§4.1）完全不同族
+
+### 13.5 双步授权与账号体系（3754 + FAQ，`[官方]`）
+
+- 客户侧两步（3754 原文）：**第一步**在聚光「线索工具-三方客服管理」绑定小红书号↔三方客服账号（跳转应用创建时填写的【跳转绑定地址】，平台侧端点形如 `https://ad.xiaohongshu.com/api/leona/three/im/account/add`）；**第二步**在开放平台授权 URL 授权（允许小红书把消息推给三方）。建议三方在客服工具放按钮引导跳授权 URL
+- 授权账号必须是品牌主账号（企业专业号）：FAQ 二.13 「请使用主账号登陆，其他账号（如代理商子账号）无法对三方IM服务商进行授权」——子账号「不存在三方绑定的概念」
+- KOS（员工号）规则：三方接入必须对 KOS 完成授权，授权后 KOS 消息进入企业号客服账号、以来源账号区分，KOS 自身私信通不可用（FAQ 二.10）；企业号授权完成即返回企业号信息含头像，员工号头像在绑定成功通知里（FAQ 二.5）；KOS 绑定第 14 天清退逻辑生效，消费不达标失去高级权益（3754/FAQ 二.6）
+- 意向评论与 KOS（FAQ 二.15/二.18，已完整上线）：员工号意向评论统一通过企业号 UID 获取（员工号 UID 获取返回空）；B 拉到 S 的意向评论后仍须以 S 的 UID 调消息发送回复（以 B 回复报「意向评论未查到」）；**KOS 意向评论回复须在 user_id 和 from_user_id 字段中均填入 KOS UID**
+
+### 13.6 消息、卡片与频控（4439 FAQ，`[官方]`）
+
+- 消息类型：接口文档露出 **text/image/video**（收发接口均无语音类型）；语音来件呈未知消息体并自动同步「暂不支持此消息类型，请到小红书 App 端查看」
+- 卡片组件 5 类：交易卡/留资卡/名片/落地页/服务卡——「在文档中有露出的都支持收发，包括企业号和KOS」；KOS 不能创建/发送企业号落地页；交易卡为获客组件、在专业号后台配置（三方接收接口已有、创建无三方接口）；2026-04 新账号体系后名片/留资卡/交易卡/表单发送可能报「当前账号无发送权限或次数已超限，请至小红书客户端处理」
+- 媒体限制：「视频有，50兆左右；图片没有」
+- 推送重试：「正常情况下推送1次，如出现异常会整体推送3次」
+- 能力边界：无已读未读事件；账号接入量/消息量无限制；小红书内备注不提供给三方
+- 手机号语义：留资手机号只走客资线索推送、会话内不提供；用户在会话主动发的手机号会推到接收消息接口，同时产生一条留资线索推送（未被社区规则屏蔽时）
+- 社区风控（不支持扩容）：主动对非粉丝用户——一天最多 20 个陌生人；对方未回复 24h 内只能发 1 条，24h 后可再发 1 条，累计最多 3 条；「触发小红书私信规则时，会有通知消息说明」（平台推送风控通知给三方呈现）
+
+### 13.7 私信客资 API（3115）——线索推送，独立于实时会话 `[官方+多源]`
+
+- 定位：客户完成一次有效私信标注且完成广告归因后，平台以 POST + JSON 推送到聚光后台「工具-线索行业工具-私信API」配置的接收地址；仅聚光品牌主账户有对接入口，子账户无
+- 应答/重试：「对于response code 为 200 即认为推送成功，对于推送失败的情况，会每隔 30s 重试一次，最多重试 3 次」；联调以 response code 200 判定
+- 验签（非必须）：header `X-Red-Signature`，格式 `sha1=bf0a961d504467e3ce78c0b9401d311ccc03b395`；「以私信api对接工具获取的token 为secretKey，和body 数据生成签名（未经反序列化的原始body），与header 中的signature 进行校验」。算法多源实锤为 **HMAC-SHA1(rawBody, token) 输出 hex**（Maskvvv/java-study `HmacSHA1`+Hex 实现佐证）；fengqililin59-cpu/syqw 的 `SHA1(token + rawBody)` 为第三方变体、与官方示例不符，勿采用
+- 推送字段表（3115）：类型（新增/更新内容/更新归因信息）、时间、小红书号、用户昵称、省份、城市、线索标签、电话号码、微信号、备注、标注客服、投放账号、是否留资、笔记链接、广告计划(ID)/广告单元(ID)/广告创意(ID)、私信接收人(id)——KOS/KOB 模式必须对接私信接收人字段
+- 第三方 DTO 佐证 `[多源]`（Maskvvv/java-study）：`PushLeadsRequest{data, timestamp, source}`；`LeadsInfo{landing_page_id, url, submitted_time(yyyy-MM-dd HH:mm:ss GMT+8), source_channel, account_id, account_name, campaign_id, campaign_name, unit_id, unit_name, creative_id, leads_id, data:[{label,value}], keyword}`
+
+### 13.8 与小程序客服消息体系（§10）的关系：并行双体系
+
+| 维度 | 小程序客服消息（§10，dudu-server 已实现） | 商业开放平台私信三方（本节） |
+|---|---|---|
+| 服务对象 | 小程序生态的客服会话 | 专业号私信/私信通（聚光广告线索营销语境） |
+| 账号主体 | 小程序（appid） | 企业专业号品牌主账号 + KOS 员工号 |
+| 凭证 | appid+secret → access_token（2h，无 refresh） | app_id+secret → access_token（1 天）+ refresh_token（30 天，OAuth 双 token） |
+| 授权 | 平台控制台配 URL + Token + EncodingAESKey | 客户两步授权（聚光绑定 + 开放平台 scope 授权） |
+| 网关 | miniapp.xiaohongshu.com | adapi.xiaohongshu.com |
+| token 携带 | query/body 参数 | Access-Token 请求头 |
+| 握手/验签 | GET echostr + sha1 四值签名 + AES-256-CBC 加密体 | 接收推送验签未公开（另有接入加解密 secretKey 由平台下发）；客资线为 X-Red-Signature HMAC-SHA1 |
+| 应答 | `success` 字符串 | 待核验 |
+| 准入 | 小程序 + 交易能力授权 | 严苛资质与人工开白（§13.3） |
+
+- 两体系互不打通：FAQ 二.12 交易卡跳小程序后的转化关联「这三方服务商是无法直接打通的」；属**并行体系**，非同一渠道的两条通道
+
+### 13.9 对 DuDu 的可行性判定
+
+- 协议形态与 dudu-server「接收=平台回调推送、发送=调平台 API」模型吻合（third_im 接收推送 + 发送 API），领域模型可作第三个小红书渠道容纳；客资线索推送（3115）协议完整，可作线索域候选
+- 但当前阶段**工程接入不可行**，前置条件缺三样：
+  1. **字段规格不公开**：接收/发送消息的 URL、信封、字段表在企业微信文档登录墙内（须服务商/年框身份经人工开白获取）——无规格不能开发
+  2. **准入门槛**：等保备案+等级测评报告+ICP 增值电信许可证+隐私政策；三方服务商另须 50/10 家客户门槛；品牌自研仅年框客户
+  3. **人工流程**：测试账号/域名/secretKey 均经对接群周度开白下发，无自助沙箱
+- 若未来接入：channel_info 需 app_id/secret + OAuth 双 token（1 天/30 天，5 分钟平滑失效）自动刷新模型、Access-Token 请求头网关（`api-base` 缺省 `https://adapi.xiaohongshu.com`）、scope=`third_im`+`three_im_leads_push`；发送侧频控须内建（20 陌生人/天、24h 窗口、累计 3 条）
+- 对 mock 基准：官方未公开任何接收/发送载荷样例，third_im 暂不构成模拟基准；客资线索推送的 3115 字段表完整，若做线索域可依此造模板
+
+### 13.10 待核验(11-03)——第二轮(14)复扫后全部仍卡
+
+1. 三方客服接收消息推送：URL 配置入口、信封字段、验签算法、有无首次握手、应答格式——仍卡：docs-center 全库/厂商文档/GitHub 三路复扫零字段级旁证（§14.2/14.4/14.5）
+2. 三方客服发送消息：接口 URL 与请求体字段、错误码——仍卡（同上）；已知消息类型与频控见 §13.6/§14.1
+3. 接收侧「加解密 secretKey」的具体算法与下发形态——仍卡：仅证实存在且开白后群内下发（FAQ 一.3/一.4）
+4. `/api/open/im/comment/list`（意向评论）请求/响应字段——仍卡：仅有端点 URL 与 B/S 归拢、KOS 双字段语义（FAQ 二.15/二.18，§14.1）
+5. third_im 消息与私信通产品（3213 私信通-新端产品手册）会话界面的对应关系——仍卡：3213 为产品手册，无接口映射
+
+### 13.11 本次来源清单
+
+- docs-center 数据接口（POST 直抓）：`https://ad-market.xiaohongshu.com/api/open/article/biz/type`、`/api/open/category/list`、`/api/open/article/list`（categoryId 959/960/953/1521 等，全库 656 篇）
+- 关键文章：3754（入驻全流程）、4439（FAQ 库）、3115（私信客资API）、3197（scope权限说明）、2603（授权流程）、2607（Token有效期&续期）、4945（获取token）、4808（刷新token）、4437/4438/4447（MAPI）
+- GitHub 交叉 `[多源]`：leonardsite/xhs-api src/index.js（auth_code 回调参数、Access-Token 头、adapi 端点）、Maskvvv/java-study XiaoHongShuController.java（HMAC-SHA1 验签+客资 DTO）、YspCoder/social-hub（Access-Token+scope）、fengqililin59-cpu/syqw（X-Red-Signature 变体，判不采用）、zyfjacksonchen-source/EcoreX、westng/xhs-marketing-api、crossover379/xiaohongshu-juguang-skill、BBiwen/Get_RedNote（auth_code 佐证）
+- 未攻破：企业微信文档登录墙（`doc.weixin.qq.com`，匿名 opendoc 回 retcode 200060；webReader 两次网络错误）
+
+## 14. 五次补摄：third_im 接口规格还原（2026-11-03 第二轮）
+
+目标：把 §13 定性的私信三方体系还原到实施级。结论先行：四块规格均未达实施级，字段级文档确认只存在于企业微信文档登录墙内、随人工开白受控下发；公开互联网三路复扫（docs-center 全库、厂商文档、GitHub）零字段级旁证。§13.10 五项就地标注后全部仍卡。
+
+### 14.1 四块还原度总览
+
+| 块 | 还原度 | 已确证事实 | 缺口 |
+|---|---|---|---|
+| ① 接收消息推送 | 行为级（无信封） | 重试「正常 1 次，异常整体 3 次」（FAQ 二.4）；触发私信规则时推送通知消息给三方呈现（FAQ 一.7）；聚光账号绑定/解绑有通知事件（FAQ 二.3）；留资手机号只走线索推送、会话内用户主动发的手机号会推到接收接口（FAQ 二.10）；授权完成返回企业号信息含头像、KOS 头像在绑定成功通知（FAQ 二.5） | URL 配置入口、信封字段、验签算法、首次握手、应答格式 |
+| ② 发送消息 API | 语义级 | 消息类型 text/image/video + 5 类卡片、视频约 50MB、频控 20 陌生人/天+24h 窗口 1 条+累计 3 条（§13.6）；KOS 意向评论回复须 user_id 与 from_user_id 均填 KOS UID；B 拉到的 S 意向评论须以 S 的 UID 调发送（FAQ 二.15/二.18） | 接口 URL、请求体信封、错误码表（鉴权头可依 §13.4 Access-Token 推断，未实锤） |
+| ③ 加解密 secretKey | 存在级 | 「接入需要加解密」；secretKey 待加权开白后在对接群同步下发（FAQ 一.3/一.4）；域名+应用 ID 表单周度汇总处理 | 算法（模式/填充/密文格式）、字段覆盖范围 |
+| ④ 意向评论 | 端点级 | `https://adapi.xiaohongshu.com/api/open/im/comment/list`（FAQ 二.15 原文）；传 B 的 UID 可获取 B 与授权 S 的评论、传 S 返回空；错报文案「意向评论未查到，确认评论是否存在」；意向笔记新增笔记作者 UID 字段区分来源账号（FAQ 二.15/二.18） | 请求/响应字段表、分页语义 |
+
+### 14.2 docs-center 全库复扫（无新增字段级内容）
+
+- 945 域目录树最终确认仅 5 篇：4808/2607/2603/3197（OAuth 族）+ 3754（入驻全流程）；全库 656 篇（bizType=945 分页 7 页取全）按 `私信|客服|IM|意向|线索|评论|消息|回调|推送|webhook` 扫描命中 20 篇，均为聚光产品手册、FAQ 或 MAPI 文章——复扫坐实「third_im 字段级规格不在 docs-center」
+- FAQ（4439）本轮增量：意向笔记新增「笔记作者 UID」字段用于区分评论来源账号；新企微文档链接三条——企业号认证操作（`w3_AfcAtgblADUvM7ScpQ3SvSugRXWFC`）、意向评论附文档（`w3_ACwAJQbSACQm1hQiqDjS5u31S4oDs`）、员工号实名/授权/绑定（`w3_AccA6AbiAMMwLN01ELSSLSBolZqOo`），均在登录墙内；KOS 评论筛选灰度、4 月新账号体系报错文案（§13.6 已引）
+- 3754 复核增量 `[官方]`：跳转绑定地址真实样例 `https://ai.youju360.com/qing-niao/xhsAuth.html?jumpUrl=https://ad.xiaohongshu.com/api/leona/three/im/account/add&uba_pre=...`（坐实聚光绑定端点 `api/leona/three/im/account/add`）；beta 测试应用仅填写的 uid 可见、正式应用上线后全部客户可见；功能加白表——意向评论/获客工具=满足消耗门槛自动开通、交易卡=by 部分行业客户加白、KOS=联系直客内部申请且第 14 天清退；广告链路测试步骤（聚光-竞价推广-新建计划-客资收集-私信进线量/开口量/留资量→创意 hover 二维码→App 扫码从胶囊组件进线触发）
+- 3115 官方镜像佐证：juxuan.net/22581.html 逐字复刻 3115 全文（验签三步、200/30s×3 重试、字段表、KOS/KOB 须对接私信接收人）——§13.7 维持 `[官方+多源]`
+
+### 14.3 登录墙攻防（全部未攻破）
+
+- doc.weixin.qq.com：GET `/dop-api/opendoc` 匿名携带 scode → `retcode:30004`、`errcode "30004:200062"`、`errmsg "check userInfo failed"`——scode 不能匿名放行，强制登录
+- docs.qq.com 两个疑似镜像 id（d26139c8…/e133a83c…）：`/dop-api/opendoc` 匿名 401；移动端 UA 抓 HTML 258KB 为纯 SPA 壳（无 clientVars 文档数据）；webReader 渲染 d26139c8… 返回的是无关文档「腾飞Webos插件前端开发教程」（撞 id 假象，非小红书文档），e133a83c… 500 网络错误（一次即弃）；搜索引擎对 d26139c8… 显示「没有此网页的信息」（未索引）
+- 结论：字段级规格的唯一现实获取路径=完成准入开白后经对接群取得企微文档阅读权
+
+### 14.4 厂商侧交叉（7 家均为产品配置级，零字段旁证）
+
+- 共同授权路径复现 `[多源]`（与 §13.5 官方两步一致）：商业开放平台授权（米多客逐字「勾选授权功能：三方工具服务、私信留资数据」→【确认授权】）→ 聚光「工具-三方客服管理」对服务商点【授权新账号】绑定（米多客/合力亿捷/官方 3754 三方一致）；合力亿捷补充 OAuth 链接式描述（企业管理员点跳转 URL 至聚光完成授权，勾选「私信消息读取、私信消息回复、用户基础信息读取」，手机号等敏感信息需额外应用权限审核，授权长期有效直至手动解除）
+- 合力亿捷 `[单源]`：消息「通过开放平台API实时推送至AI客服系统」、系统识别「消息内容、来源账号和用户open_id」；「单账号每分钟最多推送60条消息」（推送侧频控厂商口径，未证实，勿作实现依据）；评论标记格式「小红书-评论-笔记ID」；准入三条件=蓝V认证+聚光广告主+员工号预先绑定身份审核
+- 米多客 `[单源]`：接收侧支持图片/视频，机器人自动回复仅图片+文字；门槛「账号必须是小红书企业号或者kos号认证」；自述「官方授权合作的IM工具服务商」
+- 快商通 `[单源]`（163.com 软文）：专业号管理员扫码授权，确认开启「私信、评论读取、留资组件」权限；留资立刻推送至企微/钉钉/飞书/自有 CRM；无 KOS 内容、无任何 API 细节
+- TP CX Cloud OCS `[单源]`（知乎营销稿）：自称 2025-02 通过「小红书三方IM服务商」资质审核、2025-04 评论回复与私信沟通功能上线——第三方过审服务商存在性旁证
+- 网易七鱼/Udesk/容联七陌/智齿/Live800/语聚：帮助中心与搜索引擎检索均无小红书接入接口级文档（智齿/Live800/语聚上一轮已核，本轮七鱼/Udesk/七陌定向检索落空）
+- 结论：七家厂商文档全部止步于授权 UI 操作与产品卖点，无一家泄露信封、字段或签名细节——与 FAQ「群内下发」互证，接口规格是开白后的受控资产
+
+### 14.5 GitHub 复扫（无 third_im 收发实现）
+
+- leonardsite/xhs-api `src/index.js`（本轮全文 18.6KB）：纯聚光 Marketing API 网关（OAuth/投放/报表/账户/素材/工具，路由全在 `/api/open/jg/*`），无 im/leads 路由——§13.11 对其引用（auth_code、Access-Token 头）仍有效但范围仅限 OAuth
+- fengqililin59-cpu/syqw `publicInboxIngest.service.js`（本轮细读）：自研通用 webhook 归一化适配器，xiaohongshu 示例载荷 `{user_id, content, message_id}` 为该仓库自拟（open_id/user_id/sender_id/from_user_id 逐个兜底尝试），非官方信封——可见的第三方「实现」均未真正对接 third_im
+- 关键词组 `adapi.xiaohongshu.com`、`X-Red-Signature`、`third_im`、`three_im_leads_push`、`小红书 私信通/三方客服 接口` GitHub 全网搜索：除 §13.11 已列客资域（3115）实现外，无任何 third_im 收发代码
+
+### 14.6 准入双路径复核（维持 §13.3，补字段级原文）
+
+- 两分法定义（3754 原表）：「三方服务商：申请后，该IM应用可被多品牌授权使用」「品牌自研自用：申请后，该IM应用仅可被品牌内部应用，其他品牌无法授权」
+- 三方服务商硬门槛：IM 能力服务客户总数 ≥50 家、小红书渠道在服客户（含意向）≥10 家、公司官网；品牌自研自用：「是否是小红书年框客户……目前仅开放给年框客户对接」+ 在投账号名称 + 当前/预期私信营销日均预算
+- 必备资质（无资质无法入驻）：隐私政策、公安部近一年《信息系统安全等级保护备案证明》+近一年《网络安全等级保护等级测评报告》、有效期《增值电信业务经营许可证》（ICP）、营业执照；AI 能力须 ≥200 个对话样本评估（不通过禁入 AI 能力；不接入也会被定期抽检，不符将关闭 API 权限）；等保等级 FAQ 明确「暂无等级要求」；材料造假「平台可随时取消合作」
+- 双路径共性：均以企业主体+小红书广告投放关系为前提，开源项目本身不能作为申请主体；DuDu 的现实路径只有两条——未来服务的客户满足准入后以其名义走「品牌自研自用」，或对接已过审服务商（如 TP CX OCS、合力亿捷、米多客等）由其转发消息
+
+### 14.7 实施缺口清单（按块）
+
+1. 接收侧缺信封/验签/握手/应答——回调接收端无法设计；可先行建模的仅有行为契约：幂等（绑定/解绑通知）、推送重试（异常整体 3 次）、风控通知消息事件
+2. 发送侧缺 URL/请求体信封/错误码——出站适配器无法实现；频控规则可先行建模（20 陌生人/天、24h 窗口 1 条、累计 3 条 + 风控通知事件回传）
+3. 加解密算法未知——报文层无法实现；唯一可先行的是参考 §11 小程序体系（AES-256-CBC + Token 验签）设计加解密抽象层，不可假设同构
+4. 意向评论缺字段表——无法实现；已知端点 + B/S 归拢 + KOS 双字段语义 + 笔记作者 UID 可先建领域模型占位
+- 总判定：维持 §13.9「工程接入不可行」，规格获取依赖准入开白；本节作为待接入清单，待任一客户路径满足准入、拿到企微文档后一次性补齐上述四块
+
+### 14.8 本轮来源清单
+
+- docs-center 复扫：`/api/open/category/list`、`/api/open/article/list`（bizType=945 全局分页 656 篇 + 944/1084 目录树），缓存于 worktree `xhs-scan-tmp`（scan_full_report.txt、article_4439/3754.txt）
+- 关键文章复核：4439（FAQ 库增量）、3754（入驻全流程字段级原文）、3115（客资 API，juxuan.net/22581.html 镜像逐字佐证）
+- 厂商文档：hollycrm.com/blog/app/288.html、miduoke.net/info/consultation/3382.html、163.com/dy/article/LAAP6RV605389OCG.html（快商通）、zhuanlan.zhihu.com/p/1897590519900661246（TP CX OCS，WebFetch 403 仅得搜索摘要）；七鱼/Udesk/七陌定向检索落空
+- GitHub：leonardsite/xhs-api src/index.js 全文、fengqililin59-cpu/syqw publicInboxIngest/publicWebhookAuth.service.js、多组关键词全网搜索（无 third_im 实现）
+- 登录墙证据：doc.weixin.qq.com retcode 30004、docs.qq.com opendoc 401×2/SPA 壳/webReader 500、搜索引擎未索引——均记录于 worktree data 目录（weixin_opendoc.json、docsqq_*.json）

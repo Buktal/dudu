@@ -10,6 +10,8 @@ const channelTones = new Map([
   ["douyin", "douyin"],
   ["whatsapp", "whatsapp"],
   ["xiaohongshu", "xiaohongshu"],
+  ["xiaohongshu-third-im", "xiaohongshu"],
+  ["kuaishou", "kuaishou"],
 ]);
 
 export function channelStyle(channelId: string): CSSProperties {
@@ -54,9 +56,15 @@ export function ChannelGlyph({ channelId }: { channelId: string }) {
           />
         </g>
       )}
-      {channelId === "xiaohongshu" && (
+      {(channelId === "xiaohongshu" ||
+        channelId === "xiaohongshu-third-im") && (
         <text x="12" y="19" textAnchor="middle" fontSize="21" fontWeight="800">
           红
+        </text>
+      )}
+      {channelId === "kuaishou" && (
+        <text x="12" y="19" textAnchor="middle" fontSize="21" fontWeight="800">
+          快
         </text>
       )}
     </svg>

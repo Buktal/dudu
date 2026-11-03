@@ -39,9 +39,10 @@ class DouyinTokenClient {
     // §6：access_token 寿命 15 天（expires_in=1296000）；响应缺 expires_in 时按此处理
     private static final long DEFAULT_EXPIRE_MILLIS = Duration.ofDays(15).toMillis();
 
-    // refreshToken 缺失的如实说明：不编造可发能力，指引完成用户授权（适配器限制说明同源）
-    static final String REFRESH_TOKEN_MISSING =
-        "抖音发送未完成用户授权：channel_info 缺少 refreshToken（需运营完成抖音号授权后录入）";
+    // refreshToken 缺失的通用如实说明：发送与素材读取共用同一用户授权链路，场景化文案
+    // 由适配器 restriction 给出
+    static final String TOKEN_REFRESH_MISSING =
+        "抖音接口凭据未完成用户授权：channel_info 缺少 refreshToken（需运营完成抖音号授权后录入）";
 
     private final RestClient restClient;
 
@@ -59,7 +60,7 @@ class DouyinTokenClient {
 
     TokenResult fetch(DouyinCredentials credentials) {
         if (credentials.refreshToken() == null) {
-            return new TokenResult(null, REFRESH_TOKEN_MISSING);
+            return new TokenResult(null, TOKEN_REFRESH_MISSING);
         }
         // 缓存单飞：同键并发未命中只发一次 HTTP，失败不缓存以便重试，网络异常按失败返回
         return cache.getOrLoad(new CacheKey(credentials.clientKey(), credentials.refreshToken()),

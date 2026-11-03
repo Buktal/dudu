@@ -7,7 +7,7 @@
 ## 1. 官方文档入口与关键页面
 
 - 门户首页：https://developer.open-douyin.com/
-- 文档根：https://developer.open-douyin.com/docs/resource/zh-CN/（多棵文档树共存：`dop` 移动/网站应用、`mini-app` 小程序、`mini-game` 小游戏、`local-life` 生活服务、`thirdparty` 服务商；`interaction` 直播互动、`developer` 抖音云等树在本次抓取中未采样，2026-09-10 复核注）
+- 文档根：https://developer.open-douyin.com/docs/resource/zh-CN/（多棵文档树共存：`dop` 移动/网站应用、`mini-app` 小程序、`mini-game` 小游戏、`local-life` 生活服务、`thirdparty` 服务商；`interaction` 直播玩法树与 `developer` 树下的抖音云文档已于 2026-11-03 补摄，见 §8.1、§8.8；另有 `live-interactive-tools` 互动工具树、`ai-avatar` 数字人树未深入采样）
 - 抖音开放平台使用指引：https://developer.open-douyin.com/docs/resource/zh-CN/dop/overview/usage-guide
 
 本次实际抓到并核实的页面清单
@@ -696,19 +696,288 @@ XML 格式
 - 表情（emoji）：带 `resource_url`（可空串）+ resource_width/height（§5.6）；非空时为抖音 CDN 直链，可直接 GET 取字节（无需凭证）；空串则无素材可读
 - 视频分享（video）：带 `item_id`（@-加密串，§5.8）；开放平台视频接口族（/video/list/、/video/data/ 等）面向**授权账号本人的视频**（发送文档明确「视频发布者 uid 要与 OpenID 相同」「只能发送用户自己的公开视频」），访客分享的他人视频 item_id 无公开下载接口 → 不可读
 - 实施侧结论（#118）：入站媒体可读范围 = emoji 的非空 resource_url 直链下载；图片类无标识（统一消息体按既有先例以「消息 ID:媒体下标」派生稳定标识落库，读取时如实返回「无素材标识/无下载接口」）、视频类如实返回「无公开下载接口」。媒体下载接口专章核查完毕：**官方不存在 dop IM 私信入站媒体的通用下载接口**，票面「媒体下载接口专章未收录，实施时补证」到此收口
+- **2026-11-03 复核注**：上文「官方不存在通用下载接口」结论被推翻——`GetIMMessageResource`（GET `/api/im/message/resources/`，scope `im.multimedia_message`）即为本地图片/视频消息的官方读取通道，user_local_image/user_local_video 专用，详见 §8.4；emoji 直链外的 image/video（分享类）仍无读取通道
 
-## 7. 待核验清单（均标：待核验(09-27)）
+## 7. 待核验清单（关闭项就地改写为结论并注明日期）
 
-1. **服务商 MsgSignature 精确算法**：文档只说「根据 TOKEN、Nonce、TimeStamp、Encrypt 获取签名」，sha1 的拼接顺序（是否字典序）在官方示例代码包（java/php/go）里，本次未能下载 → 待核验(09-27)。来源页：thirdparty encryption
-2. **服务商 Encrypt 的 AES 参数**（模式/填充/key 长度/编码，MsgDecrypt 实现）：同样在示例代码包内 → 待核验(09-27)
-3. **dop 群聊事件 content 明细**（im_group_receive_msg / im_group_send_msg / enter_group_audit_change / group_fans_event）：事件列表只给空 `{}`，站内未搜到字段表 → 待核验(09-27)
-4. **抖音客服平台（新）推送协议**：小游戏「消息推送客服」体系 2025-06-30 关闭迁移至「抖音客服平台」，新平台文档已定位（`https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/message-push/douyin-microgame-im-guide`，2026-09-10 复核在 msg-push-config-guide 左侧导航发现），待抓全文核验 → 待核验(09-27)
+1. **服务商 MsgSignature 精确算法**：**已核验（2026-11-03 关闭）**——官方示例代码包 demo.zip 已从 encryption 页下载并解析，算法 = sha1(字典序排序【TOKEN, TimeStamp, Nonce, Encrypt】后直接拼接) hex 小写，java/go/php 三语实现一致；包地址与逐字实现见 §8.7
+2. **服务商 Encrypt 的 AES 参数**（模式/填充/key 长度/编码，MsgDecrypt 实现）：**已核验（2026-11-03 关闭）**——AES-256-CBC/NoPadding，43 字符 base64 EncodingAesKey 补 `=` 解码为 32 字节 key、IV=key 前 16 字节，明文 = 32 字节随机前缀 + 4 字节大端长度 + 消息体 + appid 尾；官方包内 Go 版实现与 Java/PHP 相矛盾（IV 取密文前 16 字节、前缀按 16 字节），逐字照录见 §8.7，实施按 Java/PHP（2/3 样本一致）
+3. **dop 群聊事件 content 明细**（im_group_receive_msg / im_group_send_msg / enter_group_audit_change / group_fans_event）：**已核验（2026-11-03 关闭）**——四个事件专页均已抓全文，字段表与示例见 §8.5
+4. **抖音客服平台（新）推送协议**：**已核验（2026-11-03 关闭）**——指引与两个回复 API、凭证接口全文已抓，协议完整记录见 §8.2；遗留小项「是否需额外开通资格」亦已关闭（2026-11-03）：运营页 bytehi-im 全文无任何独立准入条款，开通 = 小游戏内客服组件（`tt.openCustomerServiceConversation({type:3})`）+ 后台「客服」开关 + 添加客服角色，详见 §8.2 资格收口
 5. **event/status/update 的 HTTP method**：已确认官方矛盾（2026-09-10 双页复核：event-list 内联表为 GET，专页为 POST）→ 做模拟器时按 POST 实现并注明
-6. **IM 文本示例中 conversation_type=2 与字段表「1：私聊」的矛盾**：原文如此，群聊是否=2 无官方字段表佐证 → 待核验(09-27)
-7. **dop 树「私信能力」正式文档页**：企业号线索私信正式页即 clue-component-open（PR 2024112059215，已定位）；mobile-web-app「私信/群管理能力」目录页仍未定位 → 待核验(09-27)
-8. **抖音云专线推送**（interaction 树 danmu-callback 等）：本次未盘 → 待核验(09-27)
-9. **webhook 响应体要求（dop）**：summarize 页只说 5s 断开+重试 3 次，未明确响应体格式（生活服务明确「响应内容可以为空」）；dop 是否要求返回特定 body → 待核验(09-27)
-10. **小程序树订阅消息推送事件**（subscribe-feedcard-webhook、subscription-status-push-event）：本次未抓全文 → 待核验(09-27)
+6. **IM 文本示例中 conversation_type=2 与字段表「1：私聊」的矛盾**：**已核验（2026-11-03 关闭）**——群消息页字段表明确 `conversation_type`（2：群聊），私信页字段表明确（1：私聊），语义定案 1=私聊、2=群聊；§5.5 示例值 2 系官方示例笔误，现版页面（saved 2025-11-17）仍未改正，模拟器按字段表实现
+7. **dop 树「私信能力」正式文档页**：**已核验（2026-11-03 关闭）**——企业号线索私信正式页即 clue-component-open（不变）；「mobile-web-app『私信/群管理能力』目录页」经 BFF 搜索复核：该标题只存在于社区问答帖（DocType 4，无文档路径），正式文档树中不存在同名单独目录页；实际承担目录职能的是 mini-app 树概述页「小程序私信、群聊能力概述」（private-and-group-message，全量能力矩阵表含 scope 与开通前提，见 §8.11）与 dop 树 OpenAPI 目录 `search-management`（group-chat 群管理 API + business-tool 消息资源工具 API）；apiMeta 页内引用的 `dop/develop/openapi/interaction-management/*` 路径现版为死链（照录，2026-11-03 实测 404）
+8. **抖音云专线推送**（interaction 树 danmu-callback 等）：**已核验（2026-11-03 关闭）**——interaction 树已盘：即直播玩法（弹幕玩法）文档树，消息型回调存在 = 直播间互动数据推送（评论/点赞/礼物/粉丝团），x-signature（md5+base64，体系 B 同族加 x-roomid）HTTP 回调 + 抖音云内网专线两种送达；danmu-callback 文档实体在 developer 树 `developer/tools/cloud/.../danmu-callback`；推送协议全量记录见 §8.8；属直播互动数据非客服会话消息，与 dop 私信体系不相通
+9. **webhook 响应体要求（dop）**：**部分关闭（2026-11-03 扩检）**——已复核 mini-app webhook 教程与「抖音 IM 客服私信」页，全站均仅规定握手响应（challenge 放入 ResponseBody、text 格式 json），业务事件的响应体无任何官方条文，重试判定只看连接/响应时长（dop 5s、生活服务 2.5s）；实施按 HTTP 200、body 任意即可（建议空体或 `{}`）。保留注：不能排除存在未采样页面，但 dop/mini-app/local-life 三树主文档已一致沉默。（2026-11-03 二次复核：三个推送事件页统一引用的 mini-app webhook 概述页 `/mini-app/develop/guide/open-capabilities/webhook/` 实为 301 → `/mini-app/develop/tutorial/basic-ability/webhook` 即本项已复核教程页，无新增条款；mini-game 树体系 B 的业务响应体规范在 §8.2——`{"success":true}`/`{"success":false,err_code,reason}`，仅适用于客服平台推送）
+10. **小程序树订阅消息推送事件**（subscribe-feedcard-webhook、subscription-status-push-event）：**已核验（2026-11-03 关闭）**——两页全文已抓（正式目录为 `mini-app/develop/server/reach-marketing/subscribe-notification/`）：`user_subscribe_action`（订阅动作，content 为 json 串，subscribe_action 1-一次性订阅/2-长期订阅/3-长期拒绝/4-一次性拒绝）与 `user_auth_subscribe_card_notification`（订阅异形卡授权成功，仅开放一次性订阅类型）；均为订阅关系状态事件、非消息型回调，字段表与逐字示例见 §8.9
+
+## 8. 补摄：developer 树与客服平台（2026-11-03）
+
+方法补注：正文取自 SSR HTML 内嵌的 `_ROUTER_DATA.loaderData['zh-CN/$'].data.content` zone JSON——根 zone `t/0` 的 ops 定文档顺序；`aceTable` 属性挂表格（值为 `R zone id + C zone id`，R zone 按行、C zone 按列，单元格 zone key 为 `x{rowId}x{colId}`）；`type=codeblock` 的 attributes.zoneId 挂代码块 zone。apiMeta iframe 型 API 页（正文 wc=0、content 只有一个 iframe 属性）的**完整结构化接口定义直接内嵌在 `_ROUTER_DATA.loaderData['zh-CN/$'].data.openApiMeta`**（含 ReqSchema/RespSchema/ErrCodeList/Token/PermissionInfo/三语 SDK 示例），2026-11-03 起优先读此字段，无需走 BFF；`getNodeIdByPath` 对 `docs/resource/zh-CN/...` 前缀路径现返回空 NodeId（复核 2026-11-03）。BFF 搜索中文关键词已恢复命中（`私信`/`弹幕回调`/`客服平台`/`图片上传` 均出结果）——2026-09 与 2026-11-03 上午「中文一律空结果」的结论过期，搜索优先用中文标题词，英文仅协议标识符可搜
+
+### 8.1 developer 树盘点：平台介绍/入驻/规范/工具文档，无任何推送协议
+
+- overview：https://developer.open-douyin.com/docs/resource/zh-CN/developer/introduction/overview （标题「开发者平台概述」，saved 2026-02-02）。正文：平台简介（「两种开放模式：能力开放和行业开放」——能力开放=抖音号/头条号运营能力+小程序的担保支付、客服管理、订阅消息等；行业开放=到店餐饮、机酒旅、泛知识等行业解决方案）、开发者类型（自营开发者/综合类平台开发者）、平台优势、社群入口。纯介绍页
+- 子页面清单（本次全部抓到标题；除 overview 外未逐字展开）：
+
+| 标题 | saved | URL（`.../docs/resource/zh-CN/` 后路径） |
+|---|---|---|
+| 平台简介（开发者平台概述） | 2026-02-02 | developer/introduction/overview |
+| 应用概述 | 2025-08-12 | developer/introduction/apps |
+| 角色概述 | 2025-10-11 | developer/introduction/type-and-permission |
+| 开发者积分介绍 | 2024-11-05 | developer/introduction/points-intro |
+| 抖音开放平台升级（迁移）指引 | 2025-11-25 | developer/introduction/transfer |
+| 能力实验室概述 | 2024-07-24 | developer/introduction/Capability-Lab-Overview |
+| 开发者工具 IDE | 2025-03-13 | developer/tools/dev-tools-ide/ide |
+| 开发者平台入驻操作概览 | 2025-03-17 | developer/join/overview |
+| 抖音开放平台运营规范 | 2025-06-06 | developer/operation-norm/operation-standard |
+| 联系我们 | 2026-02-02 | developer/faq/contact |
+
+- 结论：developer 树不含新的 IM/私信/客服推送体系。抖音系推送体系仍是 §2 四套，加上本次确认的两支：**抖音客服平台**（§8.2，物理位置在 mini-game 树）与小程序「抖音 IM 客服私信」内测变体（§8.3，mini-app 树 open-capacity 目录）
+
+### 8.2 抖音客服平台：小游戏客服消息推送（§7.4 迁移落点全貌）
+
+来源（均 curl SSR 全文/meta）
+- 接入指引：https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/message-push/douyin-microgame-im-guide （标题「抖音客服平台-客服能力消息推送接入指引」，saved 2025-06-16）
+- 回复文本 API：https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/douyin-microgame-im/reply-user-text （apiMeta iframe 型；meta CnName「【抖音客服平台】开发者回复文字格式的客服消息」，doc saved 2025-04-16）
+- 回复图片 API：https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/douyin-microgame-im/reply-user-image （saved 2025-05-29）
+- 凭证：https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/develop/server/interface-request-credential/get-access-token （apiMeta CnName「【小游戏】- 获取 AccessToken」）
+
+机制（逐字要点）
+- 推送完全复用体系 B（§3.4 握手/§4.2 x-signature 验签），同一配置 URL 靠 `x-msg-type` 区分：`verify_request` / `gift_delivery` / `douyin_microgame_im`。「注意：务必判断 x-msg-type 为 douyin_microgame_im 才处理后续的消息推送」「后续抖音还会扩展更多的 x-msg-type，需开发者做好不同事件的隔离」
+- 推送响应：正常 HTTP 200 + `{"success": true}`；异常 HTTP 仍 200 + `{"success": false, "err_code": 100002, "reason": "失败原因"}`；err_code 枚举表仅一行：100002=触发频控，允许稍后重试
+- 幂等（逐字）：「由于平台无法保障一次推送逻辑只触发一次消息推送，在执行推送时，开发者需通过 msg_id 保障幂等，避免同一个 msg_id 被多次使用」
+- 本页未给独立重试条款（沿用体系 B 配置指引），接入第一步即「参考：消息推送配置接入指引 进行接入」（§3.4）
+
+推送载荷字段表（指引页表格逐字）
+
+| 字段 | 必须 | 说明 |
+|---|---|---|
+| app_id | 是 | 小游戏ID |
+| conversation_id | 是 | 会话ID，当前用户所处的会话 |
+| msg_id | 是 | 消息ID（可用作幂等保证） |
+| create_time | 是 | 用户消息的创建时间，秒级时间戳 |
+| msg_type | 是 | 当前消息的类型：text、image、video、score |
+| open_id | 是 | 用户的 open_id |
+| content | 否 | 文本消息内容（msg_type = "text" 时返回） |
+| pic_url | 否 | 图片 url（msg_type = "image" 时返回） |
+| video_url | 否 | 视频 url（msg_type = "video" 时返回） |
+| score_content | 否 | 评分消息内容（msg_type = "score" 时返回） |
+
+官方自相矛盾：字段表称 create_time「秒级时间戳」，四个示例全部是 13 位毫秒（1744940173524 等）——照录；实施按毫秒解析、兼容 10 位秒
+
+载荷示例要点（指引页代码块逐字段照录，注释符号剔除）
+- text：`content` 为 JSON 串 `"{\"text\":\"1\",\"action\":{}}"`（官方注「只需要关注 text 字段」）
+- image：`pic_url` 为带签名 bytemastatic CDN 直链（`...lk3s=86e038d0&x-expires=2062745687&x-signature=...`），可直接 GET
+- video：`video_url` 为 douyinvod 直链（同源直链形态）
+- score：`score_content` JSON 串 `"{\"payload\":{\"score\":5,\"labels\":[{\"id\":1,\"text\":\"处理流畅及时\"},{\"id\":2,\"text\":\"服务态度良好\"},{\"id\":3,\"text\":\"准确理解问题\"}],\"comment\":\"非常\",\"state\":1}}"`，官方注释逐字「score：评分；label：评分标签；coment：评论（原文拼写如此）；state：1-已解决；2-未解决」
+- ID 形态：`conversation_id`/`msg_id` 为裸数值雪花 ID（7494205308479291111），非 dop 的 `@` 加密串；`open_id` 为 `_000` 前缀风格（与 dop 同族）
+
+回复窗口（逐字）：「用户发送信息后，可在48小时内，至多回复5条信息」——对比 dop 私信 24h/6 条（§6.1）、进私 30s/3 次
+
+发送 API（回复文本）
+- `POST https://minigame.zijieapi.com/mgplatform/api/apps/reply/reply_user_text`（meta：Method POST、Domain minigame.zijieapi.com、Path `/mgplatform/api/apps/reply/reply_user_text`）；Header `Content-Type: application/json` + `access-token`
+- Body（meta 逐字）：`micro_game_id`（小游戏ID）、`conversation_id`（会话ID）、`msg_id`（消息ID，用作幂等处理）、`create_time`（消息创建时间）、`content`（文字消息）、`msg_type`（消息类型，text-文字类型）、`sender_name`（选填，「绑定的客服人员用户名，对应开平网站的用户名，非必填（不填会导致B端客服平台的发送人为 Error）」）
+- 回复图片：`POST https://minigame.zijieapi.com/mgplatform/api/apps/reply/reply_user_image`，multipart/form-data，Body 多 `FileContent`（图片二进制流）、`msg_type=image`；meta 页 Scope：`open.ttgame.mgplatform`。参数位置官方两形态并存：meta Body 表列全部字段（含 sender_name），而指引与专页 curl 示例把 micro_game_id/conversation_id/msg_id/create_time/sender_name 放 query、仅图片走 `--data-binary`——照录，实施按 curl 形态
+- 指引页 curl 示例（逐字）：`--data '{"micro_game_id": "tt411d37a0de37d565", "conversation_id": "7483846274349842751", "msg_id": "5123031140113221826", "create_time": 2872345199, "msg_type": "link", "content": "测试demo\n<a rel=\"noopener noreferrer\" target=\"_blank\" href=\"https://www.baidu.com/\">https://www.baidu.com/</a>"}'`——msg_type 竟为 `"link"`（非 text）、create_time=2872345199（2061 年，非真实时间）、URL 用 `http://`；官方示例自身不一致，照录
+- 响应（meta 逐字结构）：`{"BaseResp":{"StatusCode":0,"StatusMessage":""},"data":{"im_msg_id":"...","filter_reason":N},"err_msg":"","err_no":0,"log_id":"..."}`；`im_msg_id`=「IM 返回的消息ID，唯一标识这条消息」；`filter_reason` 枚举：1-命中敏感词；2-非小游戏；3-msg_id 触发幂等；4-已超过最晚回复时间，距离用户上一次发送消息已超过 48 h；5-回复次数过多，用户发送消息后至多只能回复 5 条；6-sender_name 不存在。注意 filter_reason≠0 时 `err_no` 仍可为 0（异常示例即如此，成功判定需看 data.filter_reason）
+- 错误码（两 API 相同，HTTP 恒 200）：28001005 系统内部错误；28001003 access_token无效；28001008 access_token过期
+
+token 模型（与 dop §6 相互独立，纯应用身份）
+- `POST https://minigame.zijieapi.com/mgplatform/api/apps/v2/token`，JSON body：`appid`（小游戏 ID）、`secret`（「小游戏的 APP Secret，可以在开发者后台获取」）、`grant_type=client_credential`
+- 响应：`data{access_token, expires_in(秒，示例 7200), expires_at(过期时间戳)}`、`err_no`、`err_tips`
+- Note 逐字：「access_token 是小游戏的全局唯一调用凭据……access_token 的有效期为 2 个小时，需要定时刷新 access_token，重复获取会导致之前一次获取的 access_token 的有效期缩短为 5 分钟」
+- 错误码：-1 系统错误；40015 appid 错误；40017 secret 错误；40020 grant_type 不是 client_credential
+- 准入结论：仅需小游戏 appid+secret，无用户授权环节；文档未见客服能力单独准入条款 → **资格已收口（2026-11-03）**：运营页 bytehi-im 全文确认无独立准入/资格/类目限制，开通三步 = 小游戏内绘制客服组件并调 `tt.openCustomerServiceConversation({type:3})`（必须；基础库需支持枚举 3，官方建议先 `tt.canIUse('openCustomerServiceConversation.type.3')` 判断）→（可选）按体系 B 配置消息推送 → 开发者后台「客服」打开抖音客服平台开关（必须）并添加客服角色（客服组长=工作台全权限；普通客服=在线工作台+会话记录，加入方式=填开放平台用户名）。工作台功能：路由分配、常用语、自动回复、会话标签、会话记录、数据看板；「会话结束48小时内，支持再次触达用户」；满意度评价框会话结束自动弹出。FAQ 逐字：「抖音客服平台支持第三方的客服系统消息推送吗？支持」。回复 API meta 的 sender_name「对应开平网站的用户名」即此工作台账号。来源：https://developer.open-douyin.com/docs/resource/zh-CN/mini-game/operation1/user-ops/user-service/bytehi-im
+
+同族客服平台辨析（2026-11-03 补摄，防混淆）——另两支为**纯工作台型，无开发者推送/回复 API**，对 DuDu 无接入面：
+- 抖音 IM 客服（mini-game 运营页 `/zh-CN/mini-game/operation1/user-ops/user-service/douyinIM`）：页首逐字「无需接入客服消息推送能力」；配置 = 开发者平台-「消息及客服」-「抖音IM客服」-开启功能 + 绑定客服主管抖音号扫码；接待端为网页工作台 https://life-im.douyin.com/cs/login ；「6小时内无人发言则自动关闭会话」；用户侧入口在抖音-消息-第三方客服消息
+- 抖音来客 IM 客服（mini-app 运营页 `/zh-CN/mini-app/open-capacity/operation/private-account/customer-service/douyin-laike-im-service`）：准入三条件（本地生活类目小程序 + 抖音来客商家 + 来客开通在线咨询能力）；小程序侧组件 `button-lifeim`；接待端为来客后台在线咨询（life.douyin.com），与抖音生活服务原生客服系统打通，含分流/数据看板；无公开 API
+
+对 DuDu 的含义：这是与 dop 私信**并行的另一条可用客服消息体系**，但生态位不同——它面向抖音小游戏（tt 开头 appid、minigame.zijieapi.com 域、48h/5条窗口），凭证只要 appid+secret（比 dop 的用户授权 access_token 容易得多），入口是用户在小游戏内咨询客服会话，非企业号私信。是否为 DuDu 新开渠道取决于产品是否接小游戏生态；协议上自洽可模拟（复用体系 B 验签 + 本节载荷）
+
+### 8.3 内测变体：小程序「抖音 IM 客服私信」（信封家族第五形态，窄场景）
+
+来源：https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/open-capacity/operation/private-account/customer-service/private-message （saved 2023-09-19）；发送 API：https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/instant-message/private-message/service-message （HTML 直嵌格式；旧路径 `/develop/server/other/service-message` 服务端 301 到此）
+
+- 能力定位（逐字）：「在用户进入抖音 IM 客服页面后，可主动向用户发送一条消息」；配置入口「小程序开发者平台-消息及客服-抖音 IM 客服-URL 地址」（内测，开发者运营平台有「私信 URL 地址」配置项）
+- 推送信封（逐字，第五形态，含体内签名字段）
+
+```json
+{
+  "event": "trade_event",
+  "client_key": "tt5daf2b12c1117910",
+  "event_id": "0",
+  "signature": "26ba9e689a6111d589ba644fc571de818d78ad53",
+  "content": {
+    "order_id": "7132729262960263972",
+    "conversation_short_id": "@4F9R0vKUDsthbXTzOI1qGaD6umLoPv1115R5rwygKlMWZ/n73njbQGAsjAv/6TcHHiGVs3/DCjtHNt3ax3IzRw==",
+    "customer_uid": "9eMmlavczcr-i96V",
+    "sp_uid": "m6ZWawSN.flXvpQ0",
+    "challenge": 0
+  }
+}
+```
+
+- 事件枚举（逐字）：「用户咨询私信：trade_event 平台校验：verify_webhook」；握手同 dop（challenge 回显 ResponseBody）
+- 验签算法（逐字要点，**与 X-Douyin-Signature 不同**）：`sha1(appId + url + data)`，其中 appId=client_key、url=Webhook 回调地址、data=content 反序列化后再序列化的 `[]byte`，hex 小写输出
+- 发送 API（逐字）：`POST https://open.douyin.com/im/send/customer/service/msg/`；Scope `im.customer.message`；权限要求「**不需要用户授权**」；Header access-token=「调用 生成 client_token 生成的 token，此 token 不需要用户授权。示例: clt.…」——**client_token 即可调用**；Query `open_id`=客服号 openid（webhook `sp_uid`）；Body：`conversion_id`（官方字段拼写如此，取 webhook `conversation_short_id`）、`send_url`（支付链接，msg_type=1 必传）、`to_user_id`（webhook `customer_uid`）、`msg_type`（1-发送支付链接 2-发送支付成功）；「目前支持发送气泡」
+- 错误码：2100004 内部服务错误；2100005 参数错误；2121000 IM 服务错误；2121001 入参错误校验失败；2121003 消息接收方或发送方填写错误；2121004 消息接收方或发送方没有权限；2121005 链接不合法；2121006 客服号未授权
+- 评估：仅支付咨询气泡的内测能力，非通用客服通道，对 DuDu 无渠道价值；记录价值在信封/验签变体（sha1(client_key+url+content)）与「client_token 可发客服类消息」的先例
+
+### 8.4 入站媒体下载接口补证：推翻 §6.2「无通用下载接口」结论
+
+来源：https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/search-management/business-tool/get-message-resources （apiMeta CnName `GetIMMessageResource`，doc saved 2024-07-12，apiPath `/api/im/message/resources/`）
+
+- `GET https://open.douyin.com/api/im/message/resources/`；Note 逐字：「应用需获取 im.multimedia_message 权限」（新 scope，§2 事件表外）
+- Query：`conversation_id`（=webhook `content.conversation_short_id`，「长期有效」；「由于 conversation_id 包含 + = 等特殊字符，传参时需要进行编码」）、`message_id`（=`content.server_message_id`；「仅支持 webhook content 中 msg_type 为 user_local_image 和 user_local_video 的 message_id」；同样需 URL 编码）、`open_id`（必填）
+- Header：`access-token`=oauth access_token（`act.*`，用户授权类——与 §6.1 发送私信同一凭证链路，client_token 不行）
+- 响应 `data`：`media_type`（image/video）、`url`（逐字要点：「资源访问链接，有效期 30 天」「访问 URL 时，需额外在请求 Header 中携带 Access-Token, OpenID 字段，字段的值与调用本接口的AccessToken, OpenID 相同，否则无法访问相关资源」「URL 中可能包含转义字符 \u0026，需要将其替换为 & 才能正常访问资源」（`&` 为页面渲染后字面原文；源码写作反斜杠 u0026 与 HTML 实体，仅记于此不复原）
+- UseRestriction 逐字：「仅支持在接收消息 webhook 返回的消息类型为 user_local_image 和 user_local_video 时返回相关 url 资源」「只能获取发送时间为半年内消息多媒体资源」
+- ReqExample 逐字（节选）
+
+```bash
+curl --location --request GET 'https://open.douyin.com/api/im/message/resources/?open_id=2d3201d1-4cf2-4f01-8368-b6f2fb047d&message_id=%409VwDhOCRTcMhM22uc8ptWc791m3uPvyEPZV5rgOlKFAVbPT860zdRmYqig357zEB4Kil85ESSP%2B5XoOMbKfd5w%3D%3D&conversation_id=%409VwDhOCRTcMhM22uc8ptWc791WbvOP%2BHMpxwrAOiL1MWa%2FH460zdRmYqig357zEBdsmeO0WyFq81ZGOrbYMEaw%3D%3D' \
+--header 'access-token: act.b5efd5ad64f0cfea3df3ff57e4efd2KnC0VisBaEXFnQRo'
+## 后续访问图片，Header 中需要填充 Access-Token, OpenID 参数
+curl --location 'https://api-normal.amemv.com/im_open/media?type=image&secret=skv2Z1fhiKw1gGBsGa4%3D' \
+--header 'OpenID: 2d3201d1-4cf2-4f01-8368-b6f2fb047d' \
+--header 'Access-Token: act.b5efd5ad64f0cfea3df3ff57e4efd2KnC0VisBaEXFnQRo'
+```
+
+- 错误码（节选，HTTP 恒 200）：28001003/28001008 token 无效/过期；28001018 应用未获得该能力；28003017 quota 已用完；28029006 权限校验失败（检查用户是否有消息访问权限）；28029015 未知资源类型；28029016 不支持的消息类型；28029017 非会话内用户；28029018 消息状态异常；28029020 未获取到资源链接
+- 佐证与漏采说明：private-msg-webhook 页现版（saved 2025-11-17）「使用限制」节已逐字载明「针对用户在会话中发送的本地图片、视频（msg_type 对应 user_local_image, user_local_video），支持通过获取消息中的多媒体资源接口，获取具体的 URL」，该页在 2026-09-10 抓取范围内，§6.2 属漏采；group 群消息页对 user_local_image/user_local_video 也指向本接口
+- 改写后结论：入站媒体可读范围 = emoji 非空 `resource_url` 直链 + **user_local_image/user_local_video 经本接口换 30 天有效 URL**（限半年内消息，需用户授权 token 与 `im.multimedia_message` scope，媒体访问还要带 Access-Token/OpenID 头）；image/video（分享类）仍无读取通道
+- **meta 结构化复核（2026-11-03，SSR 内嵌 openApiMeta）**：响应信封为 `err_no`/`err_msg`/`log_id` + `data{media_type,url}`（**非** dop 常见的 `extra`/`data` 信封，实施解析按此）；Method=GET；错误码增补：28029019 多媒体资源为空、28029014 资源签发失败请重试、28029021 资源加密失败、28029022 无法获取相应消息、28029023 没有权限访问消息、28001016 应用已被封禁或下线、28001019 应用该能力已被封禁、28001014 应用未授权任何能力、28001007 参数不合法；PermissionInfo：能力 `ma.openapi.im.multimedia_message`（获取多媒体消息内容）门禁 = 小程序上线状态「已上线」（`app_online_multi`），页面另挂「发送私信」能力条件（主营类目黑名单）；ReqSchema 中 conversation_id/message_id 标 Optional=true、open_id 必填（与 Note/UseRestriction 联动按必填实施）；mini-app 树镜像页 `/zh-CN/mini-app/develop/server/reach-marketing/instant-message/business-tool/get-message-resources`（apiPath 相同）
+
+### 8.5 群聊事件 content 明细（§7.3 关闭）
+
+- 群消息 Webhook（`im_group_receive_msg` / `im_group_send_msg`）：https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/instant-message/group-chat/group-message/group-fans-webhook （saved 2025-11-28）
+  - 权限：「小程序上线后自动开通权限」+ 开发者后台-设置-关联设置-抖音号管理为小程序经营者申请「粉丝群管理能力」
+  - 使用限制（逐字）：「图片消息和视频分享消息不返回具体 URL，需到抖音端内 APP 内查看」「目前只开放给粉丝群」
+  - content 字段表：`conversation_short_id`（群 ID，群唯一标识）、`server_message_id`、`conversation_type`（2：群聊）、`message_type`（text/image/emoji/video/retain_consult_card/other）、`source`（同私信语义）、`scene_type`（1：关键词自动回复 2：欢迎语 100：其他——私信侧无此字段）、`create_time`（13位毫秒）、`user_infos`（open_id/nick_name/avatar）、`owner_id`（群主ID，表标 int）
+  - 各 message_type 附加字段：text→`text`；emoji→`resource_type/width/height/url`（示例仍空串）；image→仅 message_type（「通过抖开发送群消息 OpenAPI 或其他平台发送的图片消息」）；video→`item_id`；`user_local_image`/`user_local_video`→明细注明「可以通过获取消息中的多媒体资源接口获取…URL」（两个示例 `conversation_type` 又写作 1，官方矛盾照录）；`retain_consult_card`→`card_id/card_status/card_data`，并注明「通过抖音开放平台创建/更新留资卡片接口创建的留资卡片才能收到事件回调」；`other`→`text`=「你收到一条新消息，请打开抖音app查看」
+- 用户加群 `group_fans_event`：https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/search-management/group-chat/join-group/group-fans-webhook/group-fans-join （saved 2023-12-21）
+  - Scope `im.group_fans.create_list`，需申请权限+用户授权；「仅限粉丝群」；事件介绍「用户加入授权万粉群或主播粉丝群成功后推送给开发者」
+  - 信封 `from_user_id`=申请入群用户、`to_user_id`=群主；content 为 JSON 串（示例逐字）：`"{\"open_id\":\"500a9e2f-ca96-4225-865d-a341914502ae\",\"im_group_id\":\"@9VxQh6rGTNAjPS/4do48Es7912frNf2APZB0rQqgKFMUafD160zdRmYqig357zEBN69eGVtkZMdXc4EKtu****==\",\"group_type\":1,\"create_time\":1681720393151,\"create_group_type\":\"5\"}"`；字段表：`group_type` 1-加群；`create_group_type` 2-主播粉丝群，5万粉群（表标 int，示例为字符串 "5"，照录矛盾）
+- 加群申请 `enter_group_audit_change`：https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/search-management/group-chat/join-group/group-fans-webhook/add-group-audit-webhook （saved 2024-06-24）
+  - 信封 `from_user_id`=**群主**、`to_user_id`=**加群用户**（与 group_fans_event 相反，两页各自如此，照录）
+  - content：`group_id`（群ID）、`apply_id`（审批单id）、`user_avatar`（表标 int，示例为头像 URL）、`user_nicker`（表标 int，示例为字符串昵称——两处类型标注均错，照录）、`apply_status`（1-申请中，2-同意，3-拒绝）、`create_time`（表表示例 1690896291 秒级、载荷示例 1679638889110 毫秒级，矛盾照录）
+  - 该页示例 JSON 本身畸形（双左花括号、中文逗号、引号错配），逐字保留于来源页，不作为载荷范本
+- mini-app 树另有同名镜像页（join-group-event / enter-group-audit-change-webhook，BFF 检出路径，本次未逐字抓取）
+
+### 8.6 官方沙盒 mock 推送 API（联调参考）
+
+来源：https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/tools-ability/sandbox-management/mock-webhook-event/ （saved 2025-06-20）
+
+- `POST https://open.douyin.com/sandbox/webhook/event/send/`（基本信息表 Method=POST；页内 curl 示例写 `--request GET`——官方矛盾照录）
+- Header `access-token`=client_token（`clt.*`）；Scope `aweme.webhook`；需申请「Webhook OpenAPI 管理能力」（控制台->能力管理->抖音业务能力->开放平台）；「不需要用户授权」
+- Body 仅 `event_type`，支持枚举（逐字）：create_video、authorize、receive_msg、enter_im、dial_phone、dial_phone（原文重复两次）、website_contact、personal_tab_contact、verify_webhook——与真实事件名不一致（`receive_msg`≠`im_receive_msg`，且无 im_enter_direct_msg/im_send_msg），官方 mock 通道仅覆盖传统三事件
+- 响应 `extra{error_code, sub_error_code, description, logid, now}`；错误码：2100004 系统繁忙；2190004 无权访问；2190005 ticket已过期（ticket 有效时间 7200s）；16388 签名不正确
+
+### 8.7 服务商加解密示例代码包解析（§7.1/§7.2 关闭，2026-11-03）
+
+来源：thirdparty encryption 页「点击下载」超链接逐字提取——官方示例代码包 https://sf1-cdn-tos.douyinstatic.com/obj/microapp/frontend/thirdparty/demo.zip （douyinstatic CDN；zip 时间戳 2020-07-06，源码注释 2019-2021；包名 `com.bytedance`/Go `package main`；readme：验证签名入口 java `ServerVerification.verify` / php `serverVerification.verify` / go `server_verification.VerifyByteDanceServer`，解密入口 java `MsgDecrypt.decrypt`（需配 pom.xml）/ php `msgDecrypt.decrypt` / go `msg_decrypt.DecryptMsg`）
+
+MsgSignature 算法（三语实现一致，逐字）
+1. 取 `[tpToken, TimeStamp, Nonce, Encrypt]` 四串**按字典序排序**（java `Arrays.sort`；go `sort.Strings`；php `sort($values, SORT_STRING)`）
+2. **直接拼接**（无分隔符；java StringBuilder 追加；go `strings.Join(values, "")`；php `join("", $values)`）
+3. SHA-1 后 hex **小写**输出，与 `MsgSignature` 比对
+
+AES 解密（Java/PHP 一致，此为 canonical 形态）
+- EncodingAesKey 为 **43 字符** base64 串（官方校验长度必须 43），末尾补 `=` 后 base64 解码得 **32 字节 AES-256 key**
+- IV = **key 前 16 字节**（java `new IvParameterSpec(aesKey, 0, 16)`；php `substr($this->aesKey, 0, 16)`）
+- 模式/填充：java `AES/CBC/NoPadding`；php `openssl_decrypt(... 'aes-256-cbc', OPENSSL_RAW_DATA | OPENSSL_NO_PADDING ...)`
+- 去 pad：取明文末字节为 pad 长度，**1..32 之外按 0 处理**（php blockSize=32，同一规则），截掉 pad 字节
+- 明文布局：`32 字节随机前缀 + 4 字节大端(int32)消息长度 + 消息体(UTF-8 json) + 尾部为第三方小程序 AppID`
+  - java `RANDOM_BYTES_POS = 32`，长度在 bytes[32:36]，消息体自 36 起，appid 在消息体之后
+  - php 先剥 16 字节、再在偏移 16 处读 4 字节长度（即绝对偏移 32），消息体自绝对偏移 36 起——与 java 布局一致；php 注释「去除16位随机字符串」与代码实际偏移不符，照录
+
+官方示例包内部矛盾（照录）：**Go 版实现与 Java/PHP 不一致**——IV 取**密文**前 16 字节（`iv := encryptData[:blockSize]`）而非 key 前 16 字节；随机前缀按 **16 字节**处理（长度在 `plainText[16:20]`、消息体自 20 起、appid 其后）。三语两派，实施按 Java/PHP（2/3 样本一致且 php/java 相互印证）；若模拟器复刻 Go 形态将无法解开按 canonical 形态加密的密文。哪种与线上服务端实际一致，文档无仲裁，需真实服务商账号实测（本票不阻塞：模拟器自拟密文自收自发时两种自洽即可，但**跨系统与真实抖音互操作时以 Java/PHP 为准**）
+
+页面其他复核补记：推送分两类——向【授权事件接收 URL】推 component_ticket、授权成功/解除/第三方小程序找回授权码通知；向【消息与事件接收 URL】推授权小程序代码提审、改名/图标/简介/类目、短视频挂载/直播组件/获取手机号等审核结果。响应必须直接返回字符串 `success`（不带引号），否则重试 3 次（§4.3 已录，复核一致）；页尾 tip：「其他编程语言还需要根据代码示例转换成你所用的语言」
+
+### 8.8 interaction 树盘点：直播玩法互动数据推送（§7.8 关闭，2026-11-03）
+
+树定位：`/docs/resource/zh-CN/interaction/` = 直播玩法（弹幕玩法）文档树（introduction/develop/jierushuoming 等）；danmu-callback 文档实体在 developer 树：https://developer.open-douyin.com/docs/resource/zh-CN/developer/tools/cloud/develop-guide/local-develop/douyincloud-basedon-app/danmu-callback （标题「直播间玩法指令走内网专线推送到抖音云」——§8.1「developer 树无推送协议」的结论就此修正：developer/tools/cloud 子树承载抖音云文档，含回调配置页，无 webhook 事件协议）
+
+消息型回调确实存在：直播间互动数据推送（评论/点赞/礼物/粉丝团），能力申请页（控制台-直播小玩法-能力-互动数据-申请开通）`/zh-CN/interaction/jierushuoming/hudongshuju/` 下 pinglunshuju（评论）/dianzanshuju（点赞）/liwushuju（礼物）/fensituan（粉丝团）；推送协议页全文：https://developer.open-douyin.com/docs/resource/zh-CN/interaction/develop/server/live-room-scope/data-open/data-open-desc （saved 2024.07.24，变更 2024.09.22 礼物 payload 新增被送礼嘉宾 open_id）
+
+机制（协议页逐字/表格要点）
+- 任务模型：「数据推送任务由（直播间id, 小玩法id, 直播间消息类型）三者唯一确定」；OpenAPI：启动任务 start-task / 停止任务 stop-task / 查询任务状态 query-task-status / 分页查询推送失败数据 page-query-failure（仅礼物、粉丝团；缓存 10w 条、一天）/ 获取粉丝团信息 get-fan-info；主播取消挂载或关播自动停推
+- 送达方式：「推送方式：http回调」，「暂不支持长连接接入」；抖音云内网专线为可选变体（见下）
+- Header：`x-nonce-str`（随机串）、`x-timestamp`（毫秒）、`x-signature`、`x-roomid`（房间 id）、`x-msg-type`（`live_comment`/`live_gift`/`live_like`——表格仅列三枚举，payload 却有粉丝团第四种，照录矛盾）；`Content-Type: application/json`；body 为 payload json 序列化字符串
+- 验签（体系 B 同族变体，多 x-roomid）：header（x-signature、content-type 除外）按 key 字典序拼 `k1=v1&k2=v2...`，直接拼接 body 字符串与 secret（推送配置字段）后 md5 → base64。官方示例拼接串（逐字）：`x-msg-type=live_gift&x-nonce-str=123456&x-roomid=268&x-timestamp=456789abc123你好123abc` → `PDcKhdlsrKEJif6uMKD2dw==`（Go/Java 实现逐字在来源页）
+- 限流与熔断：默认 QPS 100 次/秒；「推送请求响应超过 2秒（礼物数据是3s）或者返回非 2XX 状态码，平台认为推送失败，连续10次推送失败会触发推送的熔断，平台会直接丢弃数据若干秒再尝试推送」；「响应不符合规范或超时未收到，开放平台会认为推送失败且不会继续推送」（与熔断语义并列，照录）
+- ack：HTTP 2XX 即成功
+- 可靠性表（逐字要点）：评论/点赞「不保证可靠性，会有数据丢失」；礼物/粉丝团「尽力而为」+ 有限回查接口；四类均「可能会重复，需要开发者根据消息id做重复判断」、秒级时效、非绝对时序
+- payload（js 对象字面量形态，逐字要点）：评论 `{msg_id, sec_openid（注释原文「当前其实没有加密」）, content, avatar_url, nickname, timestamp(毫秒)}`；礼物 `{msg_id, sec_openid, sec_gift_id, gift_num（不能据此判断单刷/组刷）, gift_value（单位分）, avatar_url, nickname, timestamp, test（true=平台测试数据，统计须过滤；测试工具下发的数据无此字段）, audience_sec_open_id（被送礼嘉宾）, sec_magic_gift_id（幸运魔方抽到的礼物 id）}`；点赞 `{..., like_num（上游 2s 合并一次）}`；粉丝团 `{..., fansclub_reason_type（1-升级 2-加团）, fansclub_level}`
+- 礼物 id 为加密串，页内附常规礼物 17 种（仙女棒 1 抖至稀有宝箱 3000 抖）+ 幸运魔方 id 表（逐字在来源页）
+
+抖音云内网专线变体（danmu-callback 页全文要点）：「弹幕/点赞/礼物通知都会回调到这个地址上来，开发者可以根据回调消息体中的msg_type来区分」；仅支持配置一个回调地址；在抖音云控制台「服务详情-访问控制-抖音回调」添加，且前置需在小玩法控制台完成直播间数据推送能力配置；收益为免域名备案、免公网加解密、低延迟
+
+结论：interaction 树的消息型回调是直播互动数据（弹幕指令），非客服会话消息；与 dop 私信体系（§2 A）完全并行不相通。对 DuDu 渠道无接入价值；模拟器如需第五套验签家族样本可参照本节（体系 B 同族 + x-roomid）
+
+### 8.9 订阅消息推送事件（§7.10 关闭，2026-11-03）
+
+来源（均 curl SSR 全文，信封同 dop A 形态，content 为 json 字符串）
+- 用户订阅动作推送事件：https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/subscribe-notification/subscription-status-push-event
+- 用户授权订阅卡事件：https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/subscribe-notification/subscribe-feedcard-webhook
+- 两页头部均引用 mini-app webhook 概述 `/zh-CN/mini-app/develop/guide/open-capabilities/webhook/`，实测 301 → `/zh-CN/mini-app/develop/tutorial/basic-ability/webhook`（即 §7.9 已复核教程页）
+
+`user_subscribe_action`（用户订阅动作）
+- content 字段表：`msg_id`（消息模板 id，来自添加模板接口，含一次性/长期模板）、`subscribe_action`（int32：0-没有订阅关系（预期不会出现）、1-一次性订阅、2-长期订阅、3-长期拒绝、4-一次性拒绝）、`time`（int64 订阅时间）
+- 版本注（逐字）：「抖音客户端29.8.0版本前，缺少部分场景的一次性订阅、一次性拒绝webhook。29.8.0及后续版本已全量。长期订阅、长期拒绝同步是全量的。」
+- 示例（逐字）
+
+```json
+{
+        "event": "user_subscribe_action",
+        "client_key": "tt5daf2b12c2857***",
+        "from_user_id": "1293498361587***",
+        "content": "{\"msg_id\":\"MSG35128753817358733677838256***\",\"time\":1714029835,\"subscribe_action\":1}"
+}
+```
+
+`user_auth_subscribe_card_notification`（用户订阅异形卡授权成功通知）
+- 使用限制（逐字）：「当前仅开放一次性订阅消息类型」；触发条件：用户授权一次性订阅消息成功且异形卡开关打开
+- content 字段表：`msg_id`（消息模版ID，表标 int，示例为 "MSG..." 字符串，矛盾照录）、`msg_type`（1-一次性消息 2-长期订阅消息）、`auth_time`（用户订阅时间，表标 int，示例为字符串 "1710397343"，矛盾照录）、`app_type`（1-小程序 2-小游戏）；信封带 `log_id`
+- 示例（逐字）
+
+```json
+{
+    "event":"user_auth_subscribe_card_notification",
+    "client_key":"ttb79cc12128a3db2c01",
+    "from_user_id":"_000ZqJqe3CiVSTai4-lwkg_hk6PtebTt6YC",
+    "content":"{\"msg_id\":\"MSG3512882310a91b74b6474cb09027a3ed8b96ee16290\",\"msg_type\":1,\"auth_time\":\"1710397343\",\"app_type\":1}",
+    "log_id":"02171039734323900000000000000000000ffff0a7ab0fc7d9499"
+}
+```
+
+结论：两事件均为订阅关系状态事件，非消息型回调，对 DuDu 无渠道价值。发送侧指针（同目录，不展开）：给用户发送订阅消息 notify-user-v2、模板管理 create-tpl-v2/query-tpl-list-v2 等
+
+### 8.10 发送侧图片上传 ClientImageUpload 全量规格（发送图片 media_id 链路收口，2026-11-03）
+
+来源：https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/search-management/business-tool/image-upload （apiMeta 型；SSR 内嵌 openApiMeta 全量提取）；mini-app 树镜像页 `/zh-CN/mini-app/develop/server/reach-marketing/instant-message/business-tool/image-upload`（apiPath 相同）；能力矩阵出处「小程序私信、群聊能力概述」表内「图片上传」scope `tool.image.upload`
+
+- `POST https://open.douyin.com/tool/imagex/client_upload/`（Name/CnName `ClientImageUpload`，PSM `open.ability.uploader`，meta Method=POST）
+- Header：`access-token` = **client_token**（`clt.*`，「调用 https://open.douyin.com/oauth/client_token/ 生成的token」——**应用身份即可，不需要用户授权**，与发送私信接口的用户 access_token 不同链路）；`Content-Type: multipart/form-data`
+- Body：`image`（文件，必填）
+- UseRestriction（逐字）：「图片不超过 10 MB」「仅支持 jpeg, png, bmp, webp 图片格式」
+- 响应：顶层 `image_id` / `width` / `height` / `md5` + `extra{...}` 与 `data{error_code, description}` 信封；成功示例（逐字）：`{"extra":{...},"data":{"error_code":0,"description":""},"image_id":"@baihq==","width":111,"height":111,"md5":""}`；异常示例 error_code=2100005 参数不合法（HTTP 恒 200）
+- 错误码：28001005 系统内部错误；28001003/28001008 token 无效/过期；28001016 应用已被封禁或下线；28001006 网络调用错误；28001014 应用未授权任何能力；28001018 应用未获得该能力；28003017 quota 已用完；28001019 应用该能力已被封禁；28001007 参数不合法
+- Description（逐字）：「返回的 image_id，可用于 创建/更新留资卡片, 创建更新小程序引导卡片模板 等接口的图片参数」——结合 §6.1 发送私信 `{"msg_type":2,"image":{"media_id":"@..."}}`（「media_id 来自图片上传接口的 image_id」），**发送侧图片链路至此闭合：client_token 上传得 image_id → 作为 media_id 填入发送私信图片消息**；该能力不要求发送方用户授权（上传本身），发送时仍按 §6.1 凭证规则
+- PermissionInfo（meta 结构化能力门禁）：接口挂三个能力条件——`ma.openapi.im.direct_message`（发送私信）、`ma.openapi.im.group_fan.create_list`（粉丝群管理，注意 CapacityKey 拼写为 group_fan 单数，照录）、`ma.openapi.im.group_message`（发送群消息）；条件 = 小程序主营类目黑名单（`main_category_black`，类目码串逐字在 meta：`1,1,500,135,140;1,1,500,135,148;1,1,500,135,700;1,1,504,607,778;1,1,504,607,781;1,1,504,608,777;1,1,504,608,780;1,1,510,602,284`）+ 群消息能力要求小程序上线状态「已上线」（`app_online_multi`）
+- 三语 SDK 示例逐字在 meta（go `github.com/bytedance/douyin-openapi-sdk-go` + `douyin-openapi-util-go` FileField；node `@open-dy/open_api_sdk` ImagexClientUploadRequest；java `com.douyin.openapi.client` ImagexClientUploadRequest）
+- 群聊发送侧指针（同目录新发现，未展开）：发送群消息 `/zh-CN/mini-app/develop/server/reach-marketing/instant-message/group-chat/group-message/im-group-message-send`（scope `im.group_message`，需小程序已上线）、撤回群消息 `.../group-msg-recall`、私信撤回 `.../private-message/recall-msg`（scope `im.recall_message`）
+
+### 8.11 杂项补摄：im_authorize 事件、IM 教程页增量、能力矩阵表、调试台（2026-11-03）
+
+- **`im_authorize` 事件**（IM主动授权webhook）：https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/instant-message/private-message/im-authorize-wenhook ——C 端用户点击同意 button 组件「获取用户私信授权」拉起的授权弹窗后推送；订阅路径「开发者平台-控制台-小程序-开发-开发配置-webhooks 订阅 im_authorize 事件」。content（json 串）：`create_time`/`expire_time`/`update_time`（秒级 int）、`operation_type`（1-新增 2-更新）、`auth_status`（1-授权中 2-未授权）、`source` = **`im.direct_message.bind`**（「授权场景，发送私信时，scene字段传该值」——即 §6.1 场景四 `im_authorize_message` 持续触达的授权来源，与 event-list 页 contract_authorize 描述「scope 名为 xxx.bind」对应）、`extra`（扩展字段）、`log_id`。信封：`from_user_id`=授权 C 端用户、`to_user_id`=被授权的小程序经营者（与普通 IM 事件相反方向）
+- **教程页「接入 IM 消息收发能力」增量**（https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/tutorial/open-capabilities/management/im-messaging-access ）：现版 `im_enter_direct_msg` 示例信封在 §5.11 之外**新增顶层 `msg_id`（32 位 hex）与 `CreateTime`（毫秒）**字段（示例逐字含 `"msg_id": "553ef98e48e2eb804af43c2fb76b31fc5d600ffb5547***"`、`"CreateTime": 1721982974340`）；场景一/二发送请求中 `msg_id` 取值即 webhook 顶层该 `msg_id` 或 content 内 `server_message_id` 两形态并存（示例用 content 内加密串）；场景四 content_list 示例：`{"msg_type":10,"applet_card":{"card_template_id":"@...","path":"index/index","query":"{...}","app_id":"tt..."}}`，不带 msg_id/conversation_id；官方示例代码仓 go 结构（webhook.go/send_msg.go/im_enter_direct_msg_test.go 等）逐字在页；页内引用的小程序引导卡片模板创建接口现版真实路径为 `/zh-CN/dop/develop/openapi/search-management/business-tool/micro-app-card/create-template`（页内写作 `interaction-management/...` 系死链，照录）
+- **能力矩阵表**（「小程序私信、群聊能力概述」https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/tutorial/open-capabilities/management/private-domain/private-and-group-message ，26 行全表逐字在来源页）：私信能力 scope `im.direct_message`（发送/查询授权主动私信用户）、`im.recall_message`（私信撤回）；群聊 scope `im.group_fans.create_list`（查询群信息/创建粉丝群/问候语公告/建群额度/入群审批等 7 API + 2 webhook）、`im.group_message`（发送群消息 OpenAPI + 群消息 Webhook）、撤回群消息同 `im.recall_message`；经营工具 scope `im.microapp_card`（小程序引导卡片模板三 API）与 `tool.image.upload`（图片上传）；开通前提统一为「开发者后台-设置-关联设置-抖音号管理」为小程序经营者申请对应能力，webhook 需另行订阅。`im.direct_message`/`im.group_fans.create_list`/`im.group_message`/`im.multimedia_message`/`tool.image.upload` 等能力的经营类目黑名单与上线状态门禁见 §8.4/§8.10 PermissionInfo
+- **消息推送调试台**（msg-push-config-guide 页增量）：URL 验证 `https://developer.open-douyin.com/docs/openapi-explorer?id=webhook-url`、消息请求构造 `https://developer.open-douyin.com/docs/openapi-explorer?id=webhook-debug`（「支持开发者自定义填写 URL 和 Token，抖音小游戏会发送一条调试验证事件供开发者调试」）
+- 抖音云接入指南（interaction 树 `/zh-CN/interaction/develop/douyincloud/guide`）：弹幕玩法 = 主播客户端 + 开发者后端（收平台指令推送、经 websocket 推给玩法客户端）；抖音云方案提供内网专线推送 + Unity SDK + 免鉴权 OpenAPI；面向「弹幕玩法」类目开放
 
 ## 附：对 MockPulse 模拟的直接含义（速查）
 

@@ -95,6 +95,18 @@ class DouyinProtocolTest {
         assertThat((java.util.Map<String, Object>) image.content().get("media"))
             .containsEntry("kind", "image").containsEntry("id", "@msg:0");
 
+        // §5.7 同构 user_local_image（§8.4 可读）：派生四段复合标识留存 GetIMMessageResource
+        // 三要素与下标（server_message_id:conversation_short_id:信封 to_user_id:0）
+        var localImage = protocol.parse(77L, golden("""
+            {"event":"im_receive_msg","client_key":"asdfavetgbvasf",
+             "from_user_id":"ac6479a5-d7a6-4018-84be-c29bfc00000",
+             "to_user_id":"8067f050-f8cf-4fa3-9357-c29bfc00000",
+             "content":{"conversation_short_id":"@conv","server_message_id":"@msg","conversation_type":1,
+             "create_time":1656571939562,"message_type":"user_local_image","index":"1672502407220000"}}
+            """)).orElseThrow();
+        assertThat((java.util.Map<String, Object>) localImage.content().get("media"))
+            .containsEntry("kind", "image").containsEntry("id", "@msg:@conv:8067f050-f8cf-4fa3-9357-c29bfc00000:0");
+
         // §5.8 视频分享：item_id 即渠道素材标识
         var video = protocol.parse(77L, golden("""
             {"event":"im_receive_msg","client_key":"asdfavetgbvasf",
@@ -133,6 +145,21 @@ class DouyinProtocolTest {
         assertThat((java.util.Map<String, Object>) sticker.content().get("media"))
             .containsEntry("kind", "image").containsEntry("id", "https://p3.douyinpic.com/emoji.gif")
             .containsEntry("url", "https://p3.douyinpic.com/emoji.gif");
+    }
+
+    @Test
+    void mediaResourceOfParsesOnlyCompleteFourSegmentIdentifiers() {
+        // 四段复合标识解析出 GetIMMessageResource 三要素与下标（与派生同源）
+        assertThat(protocol.mediaResourceOf("@msg:@conv:owner-open:0"))
+            .isEqualTo(new DouyinProtocol.MediaResource("@msg", "@conv", "owner-open", "0"));
+
+        // 其余引用形态一律 null：两段派生、@-加密标识、直链、空值与任一段空白
+        assertThat(protocol.mediaResourceOf("@msg:0")).isNull();
+        assertThat(protocol.mediaResourceOf("@72NwHyW53+MN==")).isNull();
+        assertThat(protocol.mediaResourceOf("https://p3.douyinpic.com/emoji.gif")).isNull();
+        assertThat(protocol.mediaResourceOf("@msg:@conv:owner-open:")).isNull();
+        assertThat(protocol.mediaResourceOf("@msg::owner-open:0")).isNull();
+        assertThat(protocol.mediaResourceOf(null)).isNull();
     }
 
     @Test

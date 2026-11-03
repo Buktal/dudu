@@ -21,8 +21,9 @@ import java.util.Optional;
  * 说明。抖音只有 POST Webhooks 回调（官方 §3）：verify_webhook 握手与事件推送共用
  * X-Douyin-Signature 验签（sha1(client_secret + body)），握手按数字 challenge 原样
  * 回显、事件推送解析后交业务层落库；凭据（channel_info 的 clientKey/clientSecret/
- * refreshToken）住在包内，缺失按不支持或限制说明如实回答。发送是用户授权类接口，
- * 可用性随 refreshToken 如实回答。事实见 docs/research/channels/douyin.md。
+ * refreshToken）住在包内，缺失按不支持或限制说明如实回答。发送与本地图片/视频素材
+ * 读取（§8.4 GetIMMessageResource）同为用户授权类接口，可用性随 refreshToken 如实
+ * 回答。事实见 docs/research/channels/douyin.md。
  */
 @Component
 public class DouyinAdapter implements ChannelAdapter {
@@ -30,11 +31,20 @@ public class DouyinAdapter implements ChannelAdapter {
     // 官方 §4.1 的签名头（无时间戳/随机数参与）
     private static final String HEADER_SIGNATURE = "X-Douyin-Signature";
 
-    // §6.2：可读范围只有 CDN 直链标识；派生标识（图片载荷无素材标识）与 @-加密标识
-    // （视频 item_id 无公开下载接口）如实返回无下载通道说明
+    // §8.4：可读范围是 http(s) 直链与 user_local 图片/视频（四段复合标识）；分享类
+    // image/video（无公开下载接口）、旧两段派生标识（留存消息无会话上下文）与 @-加密
+    // 标识（视频 item_id 无公开下载接口）如实返回无下载通道说明
     private static final String NO_DOWNLOAD_CHANNEL =
-        "抖音素材读取失败：该素材无官方下载通道（图片载荷不含素材标识，视频分享无公开下载接口）";
+        "抖音素材读取失败：该素材无官方下载通道（分享类图片/视频与旧版留存的本地素材标识不支持读取）";
     private static final String MEDIA_FAILURE_PREFIX = "抖音素材读取失败：";
+
+    // 发送的用户授权缺口说明（发送与素材读取共用 refreshToken 续期链路，场景化文案在此给出）
+    private static final String SEND_REFRESH_TOKEN_MISSING =
+        "抖音发送未完成用户授权：channel_info 缺少 refreshToken（需运营完成抖音号授权后录入）";
+
+    // 素材读取的用户授权缺口说明（与发送侧同源，主读取通道为用户授权类接口）
+    private static final String MEDIA_REFRESH_TOKEN_MISSING =
+        "抖音素材读取未完成用户授权：channel_info 缺少 refreshToken（需运营完成抖音号授权后录入）";
 
     private final DouyinProtocol protocol;
 
@@ -42,11 +52,14 @@ public class DouyinAdapter implements ChannelAdapter {
 
     private final DirectHttpMediaReader mediaReader;
 
+    private final DouyinMediaResourceClient mediaResourceClient;
+
     public DouyinAdapter(DouyinProtocol protocol, DouyinTextSender textSender,
-                         DirectHttpMediaReader mediaReader) {
+                         DirectHttpMediaReader mediaReader, DouyinMediaResourceClient mediaResourceClient) {
         this.protocol = protocol;
         this.textSender = textSender;
         this.mediaReader = mediaReader;
+        this.mediaResourceClient = mediaResourceClient;
     }
 
     @Override
@@ -92,6 +105,12 @@ public class DouyinAdapter implements ChannelAdapter {
 
     @Override
     public ChannelMediaResult readMedia(CompanyChannelDO account, String externalMediaId) {
+        // user_local 图片/视频的四段复合标识：经 GetIMMessageResource 换 URL 后取字节（§8.4）
+        DouyinProtocol.MediaResource resource = protocol.mediaResourceOf(externalMediaId);
+        if (resource != null) {
+            return mediaResourceClient.read(account, resource);
+        }
+        // 其余引用：http(s) 直链照常直取，@-加密标识与旧两段派生标识无下载通道
         return mediaReader.read(account, externalMediaId, NO_DOWNLOAD_CHANNEL, "douyin", MEDIA_FAILURE_PREFIX);
     }
 
@@ -102,12 +121,17 @@ public class DouyinAdapter implements ChannelAdapter {
             return ChannelRestrictions.SEND_CREDENTIALS_MISSING;
         }
         // 发送是用户授权类接口：refreshToken 缺失即未完成授权，如实指向授权缺口
-        return credentials.refreshToken() == null ? DouyinTokenClient.REFRESH_TOKEN_MISSING : null;
+        return credentials.refreshToken() == null ? SEND_REFRESH_TOKEN_MISSING : null;
     }
 
     @Override
     public String mediaRestriction(CompanyChannelDO account) {
-        // 素材读取只依赖应用凭据（直链下载），不依赖用户授权
-        return DouyinCredentials.of(account) == null ? ChannelRestrictions.MEDIA_CREDENTIALS_MISSING : null;
+        DouyinCredentials credentials = DouyinCredentials.of(account);
+        if (credentials == null) {
+            return ChannelRestrictions.MEDIA_CREDENTIALS_MISSING;
+        }
+        // 主读取通道 GetIMMessageResource 是用户授权类接口（§8.4）：refreshToken 缺失
+        // 即未完成授权，素材读取整体如实受限
+        return credentials.refreshToken() == null ? MEDIA_REFRESH_TOKEN_MISSING : null;
     }
 }

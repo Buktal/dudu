@@ -4,7 +4,7 @@
 
 ## 覆盖与配置语义
 
-实际13个适配器全部列入目录；美团按[部署限制](data-contract.md#回调地址与部署)条件开放。bilibili只有枚举、没有适配器，不进入可接入选项。淘宝、饿了么等未实现的长连接协议不因目录需求而纳入
+实际15个适配器全部列入目录；美团按[部署限制](data-contract.md#回调地址与部署)条件开放。bilibili只有枚举、没有适配器，不进入可接入选项。淘宝、饿了么等未实现的长连接协议不因目录需求而纳入
 
 下表 `*` 表示秘密，只写不回显。公钥虽然不是秘密，仍仅作为对应渠道配置使用。接收必需字段保存时必须齐全，发送字段允许未齐全并展示缺项；条件规则优先于简单必填标记
 
@@ -17,8 +17,10 @@
 | weibo / 微博 | appSecret* | accessToken* | 接收不是自定义token，accessToken由管理员在平台取得；weibo/ |
 | feishu / 飞书 | appId、verificationToken*；encryptKey*可选 | appId、appSecret* | HTTP Webhook；设置encryptKey时按现有验签解密路径；feishu/ |
 | alipay / 支付宝生活号 | appId、appPrivateKey*、alipayPublicKey | 同接收 | 仅生活号体系；应用私钥与支付宝公钥分开，PEM多行输入；alipay/ |
-| douyin / 抖音 | clientKey、clientSecret* | clientKey、clientSecret*、refreshToken* | 发送需已获授权refreshToken，本轮只填已有凭据，不做OAuth；douyin/ |
+| douyin / 抖音 | clientKey、clientSecret* | clientKey、clientSecret*、refreshToken* | 发送与素材读取需已获授权refreshToken，只填已有凭据，不做OAuth；douyin/ |
+| kuaishou / 快手 | appKey | appKey、signSecret*、accessToken* | 智能客服通道，推送地址需线下报备给快手侧；kuaishou/ |
 | xiaohongshu / 小红书 | token*、encodingAesKey*、appId | appId、appSecret* | url/system目前不由适配器读取，不作为可编辑输入；xiaohongshu/ |
+| xiaohongshu-third-im / 小红书私信三方 | appId、secret* | appId、secret*、refreshToken* | 绑定骨架与令牌轮换，收发规格随平台开白下发；xiaohongshuthirdim/ |
 | dingtalk / 钉钉 | token*、encodingAesKey*、ownerKey | appKey、appSecret*、agentId | system后端固定http_crypto，ownerKey为接收身份校验值而非secret；dingtalk/ |
 | meituan / 美团 | app_id、app_secret* | 同接收 | 键名保留下划线；只开放既有HTTP入口，待签URL含实际Host；meituan/ |
 | whatsapp / WhatsApp | appSecret*、verifyToken*；url由后端派生 | accessToken*、phoneNumberId | GET verifyToken和POST appSecret用途不同；api-base/version是部署配置；whatsapp/ |
@@ -42,7 +44,7 @@
 
 参数存在不表示渠道已授权、凭据未过期或生产可收发。首版不提供自动连接探测，不新增检测任务、轮询或“在线”状态。接入验收使用实际HTTP回调及既有mock-pulse受控对拍；真实平台生产验证另按账号条件记录
 
-素材能力也有不同前提：公众号/小程序用appId+appSecret；企微还要corpSecret/agentId；QQ公开签名附件无需额外素材凭据；微博用accessToken；小红书当前媒体限制依赖回调凭据token/encodingAesKey/appId而非发送appSecret；其余按适配器readMedia及mediaRestriction核实。不能用sendConfigured一项覆盖素材能力，Desk继续读取现有能力接口
+素材能力也有不同前提：公众号/小程序用appId+appSecret；企微还要corpSecret/agentId；QQ公开签名附件无需额外素材凭据；微博用accessToken；抖音素材读取走GetIMMessageResource（需refreshToken，返回链接30天有效，仅本地图片/视频且限半年内）；快手图片素材标识被平台推送抹除，无官方读取通道；小红书当前媒体限制依赖回调凭据token/encodingAesKey/appId而非发送appSecret，小红书私信三方媒体规格未随开白下发；其余按适配器readMedia及mediaRestriction核实。不能用sendConfigured一项覆盖素材能力，Desk继续读取现有能力接口
 
 ## 已配置身份字段不可换绑
 
@@ -50,9 +52,10 @@
 
 | 渠道 | 固定字段 |
 | --- | --- |
-| wechat-mp、wechat-mini、qq、feishu、alipay、xiaohongshu | appId |
+| wechat-mp、wechat-mini、qq、feishu、alipay、xiaohongshu、xiaohongshu-third-im | appId |
 | wecom | corpId、agentId |
 | douyin | clientKey |
+| kuaishou | appKey |
 | dingtalk | ownerKey、appKey、agentId |
 | meituan | app_id |
 | whatsapp | phoneNumberId |

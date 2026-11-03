@@ -74,7 +74,7 @@ The initial organization administrator can configure conventional translation AP
 
 ## Channels and limitations
 
-DuDu currently implements **13 channel integrations**. Each supports the specific interface below; this does not imply support for every product or messaging capability offered by the platform.
+DuDu currently implements **15 channel integrations**. Each supports the specific interface below; this does not imply support for every product or messaging capability offered by the platform.
 
 <details>
 <summary>View channel interfaces and limitations</summary>
@@ -88,8 +88,10 @@ DuDu currently implements **13 channel integrations**. Each supports the specifi
 | Feishu | HTTP Webhook, with optional encryption configuration |
 | QQ | Bot Webhook; sending in guild/channel conversations is restricted |
 | Weibo | Fan service messages; sending requires an existing authorized token |
-| Douyin | Implemented direct messaging interface; sending requires existing authorization credentials |
+| Douyin | Direct messaging with media retrieval; sending and media retrieval require existing authorization credentials |
+| Kuaishou | Intelligent customer service channel; the push endpoint requires offline registration, and image media ids are stripped by the platform |
 | Xiaohongshu | Mini program customer service messaging |
+| Xiaohongshu third-party IM | Binding skeleton with token rotation; messaging specs ship after platform allowlisting |
 | Alipay | Life Account messaging |
 | Meituan | Partner platform push; HTTP on port 80/8080 only, preserving the actual public Host |
 | Telegram | Bot API Webhook; token rotation must retain the same Bot ID |

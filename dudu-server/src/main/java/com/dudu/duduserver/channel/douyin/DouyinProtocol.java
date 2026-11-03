@@ -95,7 +95,7 @@ public class DouyinProtocol {
         return Optional.of(new ChannelInboundMessage(companyChannelId, externalUserId,
             visitorName(content, externalUserId), visitorAvatar(content, externalUserId), List.of(),
             replyContext(serverMessageId, conversationId, ownerOpenId), MessageDirectionEnum.INCOMING,
-            unifiedBody(messageType, serverMessageId, content)));
+            unifiedBody(messageType, serverMessageId, conversationId, ownerOpenId, content)));
     }
 
     // content 双形态兼容（票面要点 2）：IM 消息为 object，部分事件为 JSON 字符串
@@ -150,13 +150,16 @@ public class DouyinProtocol {
     }
 
     // 按 message_type 映射统一消息体；渠道不提供的可选信息省略，无法映射的按 unknown 如实保存
-    private Map<String, Object> unifiedBody(String messageType, String serverMessageId, JSONObject content) {
+    private Map<String, Object> unifiedBody(String messageType, String serverMessageId, String conversationId,
+                                            String ownerOpenId, JSONObject content) {
         try {
             return switch (messageType) {
                 case MSG_TEXT -> Map.of("type", "text", KEY_TEXT, content.getStr(KEY_TEXT, ""));
-                case MSG_IMAGE, MSG_USER_LOCAL_IMAGE -> media(messageType, KIND_IMAGE, serverMessageId, content);
-                case MSG_EMOJI -> media(messageType, KIND_IMAGE, serverMessageId, content);
-                case MSG_VIDEO, MSG_USER_LOCAL_VIDEO -> media(messageType, KIND_VIDEO, serverMessageId, content);
+                case MSG_IMAGE, MSG_USER_LOCAL_IMAGE -> media(messageType, KIND_IMAGE, serverMessageId,
+                    conversationId, ownerOpenId, content);
+                case MSG_EMOJI -> media(messageType, KIND_IMAGE, serverMessageId, conversationId, ownerOpenId, content);
+                case MSG_VIDEO, MSG_USER_LOCAL_VIDEO -> media(messageType, KIND_VIDEO, serverMessageId,
+                    conversationId, ownerOpenId, content);
                 case MSG_RETAIN_CONSULT_CARD -> retainCard(messageType, content);
                 default -> MessageBodies.unknown(messageType);
             };
@@ -167,16 +170,52 @@ public class DouyinProtocol {
     }
 
     // 媒体标识（§6.2）：渠道标识优先（item_id/media_id 或非空 resource_url 直链），
-    // 载荷不带标识时按「消息 ID:媒体下标」派生稳定标识；连消息标识都没有则无引用，
-    // 按 unknown 如实保存不填假值
-    private Map<String, Object> media(String messageType, String kind, String serverMessageId, JSONObject content) {
+    // 载荷不带标识时按派生标识留存；连消息标识都没有则无引用，按 unknown 如实保存不填假值
+    private Map<String, Object> media(String messageType, String kind, String serverMessageId,
+                                      String conversationId, String ownerOpenId, JSONObject content) {
         if (Texts.isBlank(serverMessageId)) {
             return MessageBodies.unknown(messageType);
         }
         String resourceUrl = Texts.blankToNull(content.getStr(KEY_RESOURCE_URL, null));
         String identifier = Texts.firstNonBlank(content.getStr(KEY_ITEM_ID, null),
-            content.getStr(KEY_MEDIA_ID, null), resourceUrl, serverMessageId + DERIVED_INDEX);
+            content.getStr(KEY_MEDIA_ID, null), resourceUrl,
+            derivedIdentifier(messageType, serverMessageId, conversationId, ownerOpenId));
         return MessageBodies.media(kind, identifier, resourceUrl, null);
+    }
+
+    // 派生标识：user_local 图片/视频经 GetIMMessageResource 读取（§8.4），按
+    // 「消息 ID:会话 ID:账号 open_id:媒体下标」四段复合留存接口三要素与下标（各段值
+    // 均不含冒号，冒号仅作分隔）；分享类 image/video 与 emoji 无官方下载通道，保持
+    // 「消息 ID:媒体下标」两段。会话或账号身份缺失时按两段留存，不猜会话
+    private String derivedIdentifier(String messageType, String serverMessageId,
+                                     String conversationId, String ownerOpenId) {
+        boolean localMedia = MSG_USER_LOCAL_IMAGE.equals(messageType) || MSG_USER_LOCAL_VIDEO.equals(messageType);
+        if (!localMedia || Texts.isBlank(conversationId) || Texts.isBlank(ownerOpenId)) {
+            return serverMessageId + DERIVED_INDEX;
+        }
+        return serverMessageId + ":" + conversationId + ":" + ownerOpenId + DERIVED_INDEX;
+    }
+
+    /**
+     * 四段复合媒体标识（§8.4 GetIMMessageResource 三要素 + 媒体下标）解析：与
+     * {@link #derivedIdentifier} 派生同源，非四段或任一段空白返回 null，由调用方按
+     * 其他引用形态分流（http(s) 直链或无下载通道说明）。
+     */
+    public MediaResource mediaResourceOf(String externalMediaId) {
+        if (Texts.isBlank(externalMediaId)) {
+            return null;
+        }
+        String[] parts = externalMediaId.split(":", -1);
+        if (parts.length != 4 || Texts.isBlank(parts[0]) || Texts.isBlank(parts[1])
+            || Texts.isBlank(parts[2]) || Texts.isBlank(parts[3])) {
+            return null;
+        }
+        return new MediaResource(parts[0], parts[1], parts[2], parts[3]);
+    }
+
+    // GetIMMessageResource 请求三要素：index 为媒体下标（单媒体恒 0），当前不参与
+    // 接口调用，承载契约位以便多媒体扩展
+    public record MediaResource(String serverMessageId, String conversationId, String ownerOpenId, String index) {
     }
 
     // 留资卡片：card 分支只承载 kind 与 card_id（契约 card 无逐项数据位，card_data 不映射为假字段）

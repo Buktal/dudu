@@ -191,6 +191,14 @@
     #fff0f2,
     color-mix(in srgb, #e6445c 12%, var(--card))
   );
+  --channel-kuaishou-foreground: light-dark(
+    #ff5000,
+    color-mix(in srgb, #ff5000 55%, var(--foreground))
+  );
+  --channel-kuaishou-surface: light-dark(
+    #fff3ec,
+    color-mix(in srgb, #ff5000 12%, var(--card))
+  );
   --channel-wechat-foreground: light-dark(
     #22946b,
     color-mix(in srgb, #22946b 55%, var(--foreground))

@@ -11,6 +11,8 @@ import com.dudu.duduserver.channel.douyin.DouyinAdapter;
 import com.dudu.duduserver.channel.douyin.DouyinProtocol;
 import com.dudu.duduserver.channel.feishu.FeishuAdapter;
 import com.dudu.duduserver.channel.feishu.FeishuProtocol;
+import com.dudu.duduserver.channel.kuaishou.KuaishouAdapter;
+import com.dudu.duduserver.channel.kuaishou.KuaishouProtocol;
 import com.dudu.duduserver.channel.meituan.MeituanAdapter;
 import com.dudu.duduserver.channel.meituan.MeituanProtocol;
 import com.dudu.duduserver.channel.qq.QqAdapter;
@@ -31,6 +33,7 @@ import com.dudu.duduserver.channel.whatsapp.WhatsappProtocol;
 import com.dudu.duduserver.channel.xiaohongshu.XiaohongshuAdapter;
 import com.dudu.duduserver.channel.xiaohongshu.XiaohongshuCrypto;
 import com.dudu.duduserver.channel.xiaohongshu.XiaohongshuProtocol;
+import com.dudu.duduserver.channel.xiaohongshuthirdim.XiaohongshuThirdImAdapter;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.junit.jupiter.api.Test;
@@ -59,6 +62,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ConsoleChannelCredentialParityTest {
 
     private static final String CALLBACK_URL = "https://public.example/api/channels/1/callback";
+
+    // 平台侧发送限制渠道：收发规格未随平台开白下发，凭据齐全时 sendRestriction 仍返回
+    // 平台限制说明（Desk 据此禁用发送；Console 的 sendConfigured 只表达令牌链路完整）
+    private static final java.util.Set<ChannelEnum> PLATFORM_SEND_RESTRICTED =
+        java.util.Set.of(ChannelEnum.XIAOHONGSHU_THIRD_IM);
+
+    // 平台侧素材限制渠道：素材引用被推送协议抹除或规格未开放，凭据齐全时
+    // mediaRestriction 仍返回平台限制说明（与凭据缺失限制区分，Desk 据此禁用素材读取）
+    private static final java.util.Set<ChannelEnum> PLATFORM_MEDIA_RESTRICTED =
+        java.util.Set.of(ChannelEnum.KUAISHOU, ChannelEnum.XIAOHONGSHU_THIRD_IM);
 
     // 验签基准 URL 的显示形态只影响 describe 的回显，不影响本对拍的门判定
     private final ConsoleChannelConfiguration configuration = new ConsoleChannelConfiguration();
@@ -89,8 +102,18 @@ class ConsoleChannelCredentialParityTest {
         // 适配器侧收信门通过（进入验签阶段按假报文拒绝，而非凭据缺失的不支持）
         assertThat(adapter.receive(account, Map.of(), headersWithHost(), "").response().status())
             .isNotEqualTo(501);
-        assertThat(adapter.sendRestriction(account)).isNull();
-        assertThat(adapter.mediaRestriction(account)).isNull();
+        // 平台侧发送限制渠道凭据齐全仍不可发（恒限制说明），其余渠道凭据齐全不设限
+        if (PLATFORM_SEND_RESTRICTED.contains(channel)) {
+            assertThat(adapter.sendRestriction(account)).isNotBlank();
+        } else {
+            assertThat(adapter.sendRestriction(account)).isNull();
+        }
+        // 平台侧素材限制渠道凭据齐全仍不可读（恒限制说明），其余渠道凭据齐全不设限
+        if (PLATFORM_MEDIA_RESTRICTED.contains(channel)) {
+            assertThat(adapter.mediaRestriction(account)).isNotBlank();
+        } else {
+            assertThat(adapter.mediaRestriction(account)).isNull();
+        }
     }
 
     @ParameterizedTest
@@ -179,8 +202,10 @@ class ConsoleChannelCredentialParityTest {
             new WeiboAdapter(new WeiboProtocol(), null, null),
             new FeishuAdapter(new FeishuProtocol(), null, null),
             new AlipayAdapter(new AlipayProtocol(), null, null),
-            new DouyinAdapter(new DouyinProtocol(), null, null),
+            new DouyinAdapter(new DouyinProtocol(), null, null, null),
+            new KuaishouAdapter(new KuaishouProtocol(), null),
             new XiaohongshuAdapter(new XiaohongshuProtocol(), new XiaohongshuCrypto(), null, null),
+            new XiaohongshuThirdImAdapter(),
             dingtalkAdapter(),
             new MeituanAdapter(new MeituanProtocol(), null, null, ""),
             new WhatsappAdapter(new WhatsappProtocol(), null, null),

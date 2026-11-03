@@ -39,7 +39,8 @@ class DouyinAdapterTest {
         // 发送与素材实现不参与回调路径：接口地址指向本机保留端口，误请求会以连接失败暴露
         adapter = new DouyinAdapter(new DouyinProtocol(),
             new DouyinTextSender(RestClient.builder(), "http://127.0.0.1:9", (channelId, userId) -> null),
-            new DirectHttpMediaReader(RestClient.builder()));
+            new DirectHttpMediaReader(RestClient.builder()),
+            new DouyinMediaResourceClient(RestClient.builder(), "http://127.0.0.1:9"));
     }
 
     @Test
@@ -126,7 +127,8 @@ class DouyinAdapterTest {
         assertThat(adapter.sendRestriction(incomplete)).isEqualTo("渠道发送凭据未配置");
         assertThat(adapter.mediaRestriction(incomplete)).isEqualTo("渠道素材凭据未配置");
 
-        // 凭据齐全但未完成用户授权（缺 refreshToken）：不可发的原因如实指向授权，素材不受影响
+        // 凭据齐全但未完成用户授权（缺 refreshToken）：发送与素材读取（§8.4 用户授权类
+        // 主通道）不可用的原因均如实指向授权缺口
         Map<String, Object> withoutRefresh = new HashMap<>();
         withoutRefresh.put("clientKey", "asdfavetgbvasf");
         withoutRefresh.put("clientSecret", CLIENT_SECRET);
@@ -136,11 +138,31 @@ class DouyinAdapterTest {
         unauthorized.setChannelInfo(withoutRefresh);
         assertThat(adapter.sendRestriction(unauthorized))
             .isEqualTo("抖音发送未完成用户授权：channel_info 缺少 refreshToken（需运营完成抖音号授权后录入）");
-        assertThat(adapter.mediaRestriction(unauthorized)).isNull();
+        assertThat(adapter.mediaRestriction(unauthorized))
+            .isEqualTo("抖音素材读取未完成用户授权：channel_info 缺少 refreshToken（需运营完成抖音号授权后录入）");
 
         // 凭据与授权齐全不设限制
         assertThat(adapter.sendRestriction(account("rft.1d1021d2aee3d41fee2d2ad"))).isNull();
         assertThat(adapter.mediaRestriction(account("rft.1d1021d2aee3d41fee2d2ad"))).isNull();
+    }
+
+    @Test
+    void readMediaRoutesByReferenceShape() {
+        // 四段复合标识（user_local 图片/视频）走 GetIMMessageResource 链路：未完成用户
+        // 授权时如实带回接口凭据缺口，而非无下载通道说明
+        var unauthorized = adapter.readMedia(account(null), "@msg:@conv:owner-open:0");
+        assertThat(unauthorized.succeeded()).isFalse();
+        assertThat(unauthorized.failureReason()).contains("用户授权").contains("refreshToken");
+
+        // 旧两段派生标识（留存消息无会话上下文）与 @-加密标识：无下载通道说明
+        assertThat(adapter.readMedia(account(null), "@msg:0").failureReason())
+            .isEqualTo("抖音素材读取失败：该素材无官方下载通道（分享类图片/视频与旧版留存的本地素材标识不支持读取）");
+        assertThat(adapter.readMedia(account(null), "@72NwHyW53+MN==").failureReason())
+            .isEqualTo("抖音素材读取失败：该素材无官方下载通道（分享类图片/视频与旧版留存的本地素材标识不支持读取）");
+
+        // http(s) 直链仍走直取：不可达地址按调用失败如实记录（区别于无通道说明）
+        assertThat(adapter.readMedia(account(null), "http://127.0.0.1:9/emoji.gif").failureReason())
+            .startsWith("抖音素材读取失败：");
     }
 
     // ---- 夹具 ----

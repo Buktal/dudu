@@ -7,7 +7,7 @@ import java.util.List;
 import static com.dudu.duduserver.constant.ChannelEnum.*;
 
 /**
- * 首版十三个实际渠道的配置定义；不从渠道枚举推断适配器存在或接入能力。
+ * 首版十五个实际渠道的配置定义；不从渠道枚举推断适配器存在或接入能力。
  */
 public final class ConsoleChannelDefinitions {
     private ConsoleChannelDefinitions() {
@@ -47,11 +47,20 @@ public final class ConsoleChannelDefinitions {
             field("clientKey", "Client Key", false, true, true, true),
             field("clientSecret", "Client Secret", true, true, true, false),
             field("refreshToken", "Refresh Token", true, false, true, false))),
+        definition(KUAISHOU, "智能客服通道：推送地址需线下报备给快手侧；发送签名密钥与授权令牌由平台分配。", List.of(
+            field("appKey", "App Key", false, true, true, true),
+            field("signSecret", "Sign Secret", true, false, true, false),
+            field("accessToken", "Access Token", true, false, true, false))),
         definition(XIAOHONGSHU, "填写平台回调加密材料；配置齐全不代表平台授权有效。", List.of(
             field("token", "回调 Token", true, true, false, false),
             field("encodingAesKey", "EncodingAESKey", true, true, false, false),
             field("appId", "App ID", false, true, true, true),
             field("appSecret", "App Secret", true, false, true, false))),
+        definition(XIAOHONGSHU_THIRD_IM, "三方私信绑定骨架：令牌由运营完成授权换取后录入，本控制台不发起 OAuth；收发规格随平台开白下发，到手前仅维持绑定与令牌轮换。", List.of(
+            field("appId", "App ID", false, true, true, true),
+            field("secret", "App Secret", true, true, true, false),
+            field("refreshToken", "Refresh Token", true, false, true, false),
+            field("accessToken", "Access Token", true, false, false, false))),
         definition(DINGTALK, "仅支持 HTTP 密文推送，不支持 Stream；Owner Key 是回调身份校验值。", List.of(
             field("token", "回调 Token", true, true, false, false),
             field("encodingAesKey", "EncodingAESKey", true, true, false, false),
