@@ -33,8 +33,9 @@ public class XiaohongshuThirdImTokenClient {
     private static final String KEY_SECRET = "secret";
     private static final String KEY_REFRESH_TOKEN = "refresh_token";
 
-    // 响应信封键（4945 示例逐字）
+    // 响应信封键（4945 示例逐字）；code=0 为成功
     private static final String KEY_CODE = "code";
+    private static final int CODE_SUCCESS = 0;
     private static final String KEY_MSG = "msg";
     private static final String KEY_DATA = "data";
     private static final String KEY_ACCESS_TOKEN = "access_token";
@@ -80,7 +81,7 @@ public class XiaohongshuThirdImTokenClient {
                 .retrieve()
                 .body(String.class));
             Integer code = response.getInt(KEY_CODE, null);
-            if (code == null || code != 0) {
+            if (code == null || code != CODE_SUCCESS) {
                 return new TokenResult(null,
                     "刷新小红书私信三方令牌失败：" + code + " " + response.getStr(KEY_MSG, ""));
             }

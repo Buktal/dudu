@@ -57,14 +57,10 @@ export function ChannelGlyph({ channelId }: { channelId: string }) {
         </g>
       )}
       {(channelId === "xiaohongshu" ||
-        channelId === "xiaohongshu-third-im") && (
+        channelId === "xiaohongshu-third-im" ||
+        channelId === "kuaishou") && (
         <text x="12" y="19" textAnchor="middle" fontSize="21" fontWeight="800">
-          红
-        </text>
-      )}
-      {channelId === "kuaishou" && (
-        <text x="12" y="19" textAnchor="middle" fontSize="21" fontWeight="800">
-          快
+          {channelId === "kuaishou" ? "快" : "红"}
         </text>
       )}
     </svg>

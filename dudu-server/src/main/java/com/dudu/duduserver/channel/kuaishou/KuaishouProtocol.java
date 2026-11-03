@@ -29,24 +29,28 @@ public class KuaishouProtocol {
     // 渠道要求应答体（§6.5.3 逐字 {"result": 1}，JSON 紧凑形态等价）
     public static final String ACK_BODY = "{\"result\":1}";
 
-    // 推送 body 字段（§6.5.3 逐字表）
-    private static final String KEY_REQUEST_ID = "requestId";
-    private static final String KEY_TYPE = "type";
-    private static final String KEY_TEST = "test";
-    private static final String KEY_FROM_USER = "fromUser";
-    private static final String KEY_TO_USER = "toUser";
-    private static final String KEY_MESSAGE = "message";
-    private static final String KEY_OPEN_ID = "openId";
-    private static final String KEY_NICK_NAME = "nickName";
-    private static final String KEY_CONTENT_TYPE = "contentType";
-    private static final String KEY_CONTENT = "content";
-
+    // 收发共用报文字段（§6.5.2 发送入参与 §6.5.3 推送同名字段，语义一致），包内共享
+    static final String KEY_REQUEST_ID = "requestId";
+    static final String KEY_TYPE = "type";
+    static final String KEY_FROM_USER = "fromUser";
+    static final String KEY_NICK_NAME = "nickName";
+    static final String KEY_CONTENT_TYPE = "contentType";
+    static final String KEY_CONTENT = "content";
+    // 文本 content 载荷内层字段（§6.5.2：{"text": "...", "hintTag": {...}}）
+    static final String KEY_TEXT = "text";
     // type 枚举（§6.5.2/§6.5.3）：1 消息、2 转接、4 辅助模式下无法应答
-    private static final int TYPE_MESSAGE = 1;
-
+    static final int TYPE_MESSAGE = 1;
     // message.contentType 枚举（§6.5.2）：1 文本、2 图片（uri 被平台抹空）、
     // 1011 商品卡片、1012 订单卡片
-    private static final int CONTENT_TYPE_TEXT = 1;
+    static final int CONTENT_TYPE_TEXT = 1;
+
+    // 推送独有 body 字段（§6.5.3 逐字表）
+    private static final String KEY_TEST = "test";
+    private static final String KEY_MESSAGE = "message";
+    private static final String KEY_OPEN_ID = "openId";
+
+    // 推送独有 contentType 枚举（§6.5.2）：2 图片（uri 被平台抹空）、
+    // 1011 商品卡片、1012 订单卡片
     private static final int CONTENT_TYPE_IMAGE = 2;
     private static final int CONTENT_TYPE_ITEM = 1011;
     private static final int CONTENT_TYPE_ORDER = 1012;
@@ -54,9 +58,6 @@ public class KuaishouProtocol {
     // 统一消息体 card kind：与小红书 item/order 卡片同构（契约第 4 节）
     private static final String KIND_ITEM = "item";
     private static final String KIND_ORDER = "order";
-
-    // 文本 content 载荷内层字段（§6.5.2：{"text": "...", "hintTag": {...}}）
-    private static final String KEY_TEXT = "text";
 
     /**
      * 验签（§6.5.3 逐字）：Ks-Sign = MD5(appKey + 原始 body 字符串)，常量时间比对；
@@ -124,7 +125,8 @@ public class KuaishouProtocol {
         return switch (contentType) {
             case CONTENT_TYPE_TEXT -> text(content, contentType);
             case CONTENT_TYPE_IMAGE -> MessageBodies.unknown("image");
-            case CONTENT_TYPE_ITEM -> card(KIND_ITEM, itemIdOf(content));
+            // 商品卡片：content 为 {"text": "$itemId"}，text 值即商品标识（保留官方 $ 前缀形态）
+            case CONTENT_TYPE_ITEM -> card(KIND_ITEM, textValueOf(content));
             case CONTENT_TYPE_ORDER -> card(KIND_ORDER, orderIdOf(content));
             default -> MessageBodies.unknown(String.valueOf(contentType));
         };
@@ -143,11 +145,6 @@ public class KuaishouProtocol {
         } catch (RuntimeException e) {
             return MessageBodies.unknown(String.valueOf(contentType));
         }
-    }
-
-    // 商品卡片：content 为 {"text": "$itemId"}，text 值即商品标识（保留官方 $ 前缀形态）
-    private String itemIdOf(String content) {
-        return textValueOf(content);
     }
 
     // 订单卡片：content 为 {"orderId": "12345"}

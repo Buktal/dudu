@@ -9,6 +9,7 @@ package com.dudu.duduserver.channel.xiaohongshuthirdim;
  */
 public interface XiaohongshuThirdImTokenStore {
 
-    // 轮换出的新双 token 回写 channel_info 的 accessToken/refreshToken 键
+    // 轮换出的新双 token 回写 channel_info 的 accessToken/refreshToken 键；账号不存在
+    // 或落库未生效抛 IllegalStateException，由调用方按刷新失败处理促重试
     void store(Long companyChannelId, String accessToken, String refreshToken);
 }

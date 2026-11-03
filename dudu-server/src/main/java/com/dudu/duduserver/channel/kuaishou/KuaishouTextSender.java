@@ -3,6 +3,7 @@ package com.dudu.duduserver.channel.kuaishou;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.dudu.duduserver.channel.ChannelSendResult;
+import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.channel.support.Digests;
 import com.dudu.duduserver.channel.support.Texts;
 import com.dudu.duduserver.entity.CompanyChannelDO;
@@ -51,29 +52,21 @@ public class KuaishouTextSender {
     private static final String VERSION = "1";
     private static final String SIGN_METHOD_MD5 = "MD5";
 
-    // param 业务字段（§6.5.2 入参表）
-    private static final String KEY_REQUEST_ID = "requestId";
-    private static final String KEY_TYPE = "type";
+    // param 业务字段（§6.5.2 入参表）；收发同名字段与枚举复用 KuaishouProtocol 包内常量
     private static final String KEY_GENERATOR = "generator";
-    private static final String KEY_FROM_USER = "fromUser";
     private static final String KEY_TO_USER = "toUser";
     private static final String KEY_MESSAGE_LIST = "messageList";
-    private static final String KEY_NICK_NAME = "nickName";
     private static final String KEY_ROLE = "role";
-    private static final String KEY_CONTENT_TYPE = "contentType";
-    private static final String KEY_CONTENT = "content";
-    private static final String KEY_TEXT = "text";
 
-    // 官方语义：type=1 消息；generator=1 快手侧发起、服务商异步回复；role 1买家 2商家
-    private static final int TYPE_MESSAGE = 1;
+    // 官方语义：generator=1 快手侧发起、服务商异步回复；role 1买家 2商家
     private static final int GENERATOR_KUAISHOU_INITIATED = 1;
     private static final int ROLE_BUYER = 1;
     private static final int ROLE_SELLER = 2;
-    private static final int CONTENT_TYPE_TEXT = 1;
 
     // 出参（官方示例逐字 {"result": 1,"error_msg": "SUCCESS"}）
     private static final String KEY_RESULT = "result";
     private static final String KEY_ERROR_MSG = "error_msg";
+    private static final int RESULT_SUCCESS = 1;
 
     // 发送侧凭据缺口的如实说明（与适配器 restriction 同源）
     static final String SIGN_SECRET_MISSING =
@@ -96,7 +89,10 @@ public class KuaishouTextSender {
 
     public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
         KuaishouCredentials credentials = KuaishouCredentials.of(account);
-        if (credentials == null || credentials.signSecret() == null) {
+        if (credentials == null) {
+            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
+        }
+        if (credentials.signSecret() == null) {
             return ChannelSendResult.failed(SIGN_SECRET_MISSING);
         }
         if (credentials.accessToken() == null) {
@@ -118,7 +114,7 @@ public class KuaishouTextSender {
                 .retrieve()
                 .body(String.class));
             Integer result = response.getInt(KEY_RESULT, null);
-            if (result == null || result != 1) {
+            if (result == null || result != RESULT_SUCCESS) {
                 return ChannelSendResult.failed("快手消息发送失败：" + result + " "
                     + response.getStr(KEY_ERROR_MSG, ""));
             }
@@ -169,14 +165,17 @@ public class KuaishouTextSender {
     // generator:1, type:1, requestId, fromUser{nickName,role:2}}
     private String param(String requestId, String visitorName, String sellerNickName, String text) {
         return JSONUtil.createObj()
-            .set(KEY_TO_USER, JSONUtil.createObj().set(KEY_NICK_NAME, visitorName).set(KEY_ROLE, ROLE_BUYER))
+            .set(KEY_TO_USER, JSONUtil.createObj()
+                .set(KuaishouProtocol.KEY_NICK_NAME, visitorName).set(KEY_ROLE, ROLE_BUYER))
             .set(KEY_MESSAGE_LIST, JSONUtil.createArray().set(
-                JSONUtil.createObj().set(KEY_CONTENT_TYPE, CONTENT_TYPE_TEXT)
-                    .set(KEY_CONTENT, JSONUtil.createObj().set(KEY_TEXT, text).toString())))
+                JSONUtil.createObj().set(KuaishouProtocol.KEY_CONTENT_TYPE, KuaishouProtocol.CONTENT_TYPE_TEXT)
+                    .set(KuaishouProtocol.KEY_CONTENT,
+                        JSONUtil.createObj().set(KuaishouProtocol.KEY_TEXT, text).toString())))
             .set(KEY_GENERATOR, GENERATOR_KUAISHOU_INITIATED)
-            .set(KEY_TYPE, TYPE_MESSAGE)
-            .set(KEY_REQUEST_ID, requestId)
-            .set(KEY_FROM_USER, JSONUtil.createObj().set(KEY_NICK_NAME, sellerNickName).set(KEY_ROLE, ROLE_SELLER))
+            .set(KuaishouProtocol.KEY_TYPE, KuaishouProtocol.TYPE_MESSAGE)
+            .set(KuaishouProtocol.KEY_REQUEST_ID, requestId)
+            .set(KuaishouProtocol.KEY_FROM_USER, JSONUtil.createObj()
+                .set(KuaishouProtocol.KEY_NICK_NAME, sellerNickName).set(KEY_ROLE, ROLE_SELLER))
             .toString();
     }
 }

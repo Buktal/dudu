@@ -45,8 +45,9 @@ public class DouyinMediaResourceClient {
     private static final String HEADER_ACCESS_TOKEN_TITLE = "Access-Token";
     private static final String HEADER_OPEN_ID_TITLE = "OpenID";
 
-    // §8.4 响应信封字段（err_no/err_msg/log_id + data）
+    // §8.4 响应信封字段（err_no/err_msg/log_id + data）；err_no=0 为成功（HTTP 恒 200）
     private static final String KEY_ERR_NO = "err_no";
+    private static final long ERR_NO_SUCCESS = 0L;
     private static final String KEY_ERR_MSG = "err_msg";
     private static final String KEY_LOG_ID = "log_id";
     private static final String KEY_DATA = "data";
@@ -95,7 +96,7 @@ public class DouyinMediaResourceClient {
                 .retrieve()
                 .body(String.class));
             Object errNo = response.get(KEY_ERR_NO);
-            if (!(errNo instanceof Number number) || number.longValue() != 0) {
+            if (!(errNo instanceof Number number) || number.longValue() != ERR_NO_SUCCESS) {
                 return ChannelMediaResult.failed(FAILURE_PREFIX + describeError(response, errNo));
             }
             JSONObject data = response.getJSONObject(KEY_DATA);
