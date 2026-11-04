@@ -102,6 +102,21 @@ describe("requestSnapshot（按渠道快照呈现）", () => {
     );
   });
 
+  it("快手智能客服面：requestId 信封/心跳载荷按载荷判型改挂 Ks-Sign 头", () => {
+    const csStep = makeStep({
+      channel: "kuaishou",
+      payload: '{"requestId":"req-1","type":1}',
+    });
+    expect(requestSnapshot(csStep)).toContain("\nKs-Sign: sig-abc\n");
+    expect(requestSnapshot(csStep)).not.toContain("kwaisign");
+    // 心跳探针 {"test":true} 同为智能客服面载荷
+    const heartbeat = makeStep({
+      channel: "kuaishou",
+      payload: '{"test":true}',
+    });
+    expect(requestSnapshot(heartbeat)).toContain("\nKs-Sign: sig-abc\n");
+  });
+
   it("B站：x-bili-timestamp 快照 + Authorization 双头", () => {
     expect(
       requestSnapshot(

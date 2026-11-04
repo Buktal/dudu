@@ -178,8 +178,10 @@ fn adapter_registry_covers_every_config_variant() {
     };
     let kuaishou_config = ConnectionConfig::Kuaishou {
         url: String::new(),
+        system: KuaishouSystem::Open,
         app_id: String::new(),
         app_secret: String::new(),
+        app_key: String::new(),
     };
     let taobao_config = ConnectionConfig::Taobao {
         url: String::new(),

@@ -1,0 +1,456 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "kuaishou",
+  "version": "2026.09",
+  "schemas": {
+    "ks-cs-heartbeat": {
+      "version": "2026.09",
+      "source": "https://open.kwaixiaodian.com/rest/open/platform/doc/page/detail?pageSign=8cca5d25ba0015e5045a7ebec6383b741614263875756",
+      "fields": [
+        {
+          "path": "test",
+          "title": "心跳旗标",
+          "type": "boolean",
+          "group": "心跳探针",
+          "description": "是否心跳测试事件（消息服务说明字段表逐字 true）：保存推送地址时平台发送 {\"test\":true} 测试消息；平台对推送地址做心跳检测，不可达时暂停发送。新建事件无需重生成任何 ID。",
+          "required": true
+        }
+      ]
+    },
+    "ks-cs-text": {
+      "version": "2026.09",
+      "source": "https://open.kwaixiaodian.com/rest/open/platform/doc/api/name/detail?name=open.cs.intelligent.message.send&version=1",
+      "fields": [
+        {
+          "path": "requestId",
+          "title": "唯一请求 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "唯一请求 ID（对接实践 body 表必填；官方示例 fadbsadfg1323）——智能客服面的幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "createTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "推送信封",
+          "description": "13 位毫秒时间戳（数字形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "generator",
+          "title": "会话发起方",
+          "type": "number",
+          "group": "推送信封",
+          "description": "消息的发起者：1 快手侧发起的会话（买家消息，服务商异步回复）/ 2 服务商侧主动发起。买家推送取 1。",
+          "required": true
+        },
+        {
+          "path": "type",
+          "title": "事件类型",
+          "type": "number",
+          "group": "推送信封",
+          "description": "1 消息 / 2 转接——智能客服推送的判型字段。",
+          "required": true
+        },
+        {
+          "path": "fromUser",
+          "title": "发送者（买家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的发送者 User：nickName（官方示例 快手用户1234）/ role（1 买家 2 商家 3 客服）/ openId（开放平台用户唯一标示，官方无样本值取占位）——推送方向带 openId，与发送结构体不对称。",
+          "required": true
+        },
+        {
+          "path": "toUser",
+          "title": "接受者（商家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的接受者 User：nickName（官方无样本值取占位）/ role=2 商家。",
+          "required": true
+        },
+        {
+          "path": "transferList",
+          "title": "转接用户列表",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息转接用户 User 数组（type=2 转接时携带目标客服 role=3；普通消息为空数组）。",
+          "required": true
+        },
+        {
+          "path": "message.contentType",
+          "title": "消息类型",
+          "type": "number",
+          "group": "消息内容",
+          "description": "1 文本消息 / 2 图片消息 / 1011 商品卡片消息 / 1012 订单卡片消息（MessageContent 结构官方枚举）。",
+          "required": true
+        },
+        {
+          "path": "message.content",
+          "title": "消息内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "String 形态的 JSON：文本 {\"text\":\"…\"}（可带 hintTag 脱敏标签 phone/address/idCard/bankId/email）。本模板 content 为 JSON 字符串，编辑时保持转义形态。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "context",
+          "title": "会话上下文",
+          "type": "json",
+          "group": "会话上下文",
+          "description": "Context 必填：sellerId 商家ID（官方信封样本 12342323）/ openId 用户唯一标志（与 fromUser 同一买家）/ itemId 快手商品ID / orderId 快手订单ID（官方示例 12345）/ orderStatus 订单状态 / assistantOnlineStatus 商家客服在线位（1 在线 2 无）。",
+          "required": true
+        }
+      ]
+    },
+    "ks-cs-image": {
+      "version": "2026.09",
+      "source": "https://open.kwaixiaodian.com/rest/open/platform/doc/api/name/detail?name=open.cs.intelligent.message.send&version=1",
+      "fields": [
+        {
+          "path": "requestId",
+          "title": "唯一请求 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "唯一请求 ID（对接实践 body 表必填；官方示例 fadbsadfg1323）——智能客服面的幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "createTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "推送信封",
+          "description": "13 位毫秒时间戳（数字形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "generator",
+          "title": "会话发起方",
+          "type": "number",
+          "group": "推送信封",
+          "description": "消息的发起者：1 快手侧发起的会话（买家消息，服务商异步回复）/ 2 服务商侧主动发起。买家推送取 1。",
+          "required": true
+        },
+        {
+          "path": "type",
+          "title": "事件类型",
+          "type": "number",
+          "group": "推送信封",
+          "description": "1 消息 / 2 转接——智能客服推送的判型字段。",
+          "required": true
+        },
+        {
+          "path": "fromUser",
+          "title": "发送者（买家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的发送者 User：nickName（官方示例 快手用户1234）/ role（1 买家 2 商家 3 客服）/ openId（开放平台用户唯一标示，官方无样本值取占位）——推送方向带 openId，与发送结构体不对称。",
+          "required": true
+        },
+        {
+          "path": "toUser",
+          "title": "接受者（商家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的接受者 User：nickName（官方无样本值取占位）/ role=2 商家。",
+          "required": true
+        },
+        {
+          "path": "transferList",
+          "title": "转接用户列表",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息转接用户 User 数组（type=2 转接时携带目标客服 role=3；普通消息为空数组）。",
+          "required": true
+        },
+        {
+          "path": "message.contentType",
+          "title": "消息类型",
+          "type": "number",
+          "group": "消息内容",
+          "description": "1 文本消息 / 2 图片消息 / 1011 商品卡片消息 / 1012 订单卡片消息（MessageContent 结构官方枚举）。本模板取 2 图片消息。",
+          "required": true
+        },
+        {
+          "path": "message.content",
+          "title": "消息内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "图片形态 {\"uri\":\"\",\"width\":…,\"height\":…,\"contentLength\":…}：官方口径「uri: 原uri换为空字符串，其他信息保留」（平台抹除原图链）——uri 保持空串即官方推送形态；数值官方无样本取占位。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "context",
+          "title": "会话上下文",
+          "type": "json",
+          "group": "会话上下文",
+          "description": "Context 必填：sellerId 商家ID（官方信封样本 12342323）/ openId 用户唯一标志（与 fromUser 同一买家）/ itemId 快手商品ID / orderId 快手订单ID（官方示例 12345）/ orderStatus 订单状态 / assistantOnlineStatus 商家客服在线位（1 在线 2 无）。",
+          "required": true
+        }
+      ]
+    },
+    "ks-cs-item-card": {
+      "version": "2026.09",
+      "source": "https://open.kwaixiaodian.com/rest/open/platform/doc/api/name/detail?name=open.cs.intelligent.message.send&version=1",
+      "fields": [
+        {
+          "path": "requestId",
+          "title": "唯一请求 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "唯一请求 ID（对接实践 body 表必填；官方示例 fadbsadfg1323）——智能客服面的幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "createTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "推送信封",
+          "description": "13 位毫秒时间戳（数字形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "generator",
+          "title": "会话发起方",
+          "type": "number",
+          "group": "推送信封",
+          "description": "消息的发起者：1 快手侧发起的会话（买家消息，服务商异步回复）/ 2 服务商侧主动发起。买家推送取 1。",
+          "required": true
+        },
+        {
+          "path": "type",
+          "title": "事件类型",
+          "type": "number",
+          "group": "推送信封",
+          "description": "1 消息 / 2 转接——智能客服推送的判型字段。",
+          "required": true
+        },
+        {
+          "path": "fromUser",
+          "title": "发送者（买家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的发送者 User：nickName（官方示例 快手用户1234）/ role（1 买家 2 商家 3 客服）/ openId（开放平台用户唯一标示，官方无样本值取占位）——推送方向带 openId，与发送结构体不对称。",
+          "required": true
+        },
+        {
+          "path": "toUser",
+          "title": "接受者（商家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的接受者 User：nickName（官方无样本值取占位）/ role=2 商家。",
+          "required": true
+        },
+        {
+          "path": "transferList",
+          "title": "转接用户列表",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息转接用户 User 数组（type=2 转接时携带目标客服 role=3；普通消息为空数组）。",
+          "required": true
+        },
+        {
+          "path": "message.contentType",
+          "title": "消息类型",
+          "type": "number",
+          "group": "消息内容",
+          "description": "1 文本消息 / 2 图片消息 / 1011 商品卡片消息 / 1012 订单卡片消息（MessageContent 结构官方枚举）。本模板取 1011 商品卡片消息。",
+          "required": true
+        },
+        {
+          "path": "message.content",
+          "title": "消息内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "商品卡片形态官方示例逐字 {\"text\":\"$itemId\"}：$itemId 为官方模板变量，替换为真实快手商品 ID（与 context.itemId 同源）。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "context",
+          "title": "会话上下文",
+          "type": "json",
+          "group": "会话上下文",
+          "description": "Context 必填：sellerId 商家ID（官方信封样本 12342323）/ openId 用户唯一标志（与 fromUser 同一买家）/ itemId 快手商品ID / orderId 快手订单ID（官方示例 12345）/ orderStatus 订单状态 / assistantOnlineStatus 商家客服在线位（1 在线 2 无）。",
+          "required": true
+        }
+      ]
+    },
+    "ks-cs-order-card": {
+      "version": "2026.09",
+      "source": "https://open.kwaixiaodian.com/rest/open/platform/doc/api/name/detail?name=open.cs.intelligent.message.send&version=1",
+      "fields": [
+        {
+          "path": "requestId",
+          "title": "唯一请求 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "唯一请求 ID（对接实践 body 表必填；官方示例 fadbsadfg1323）——智能客服面的幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "createTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "推送信封",
+          "description": "13 位毫秒时间戳（数字形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "generator",
+          "title": "会话发起方",
+          "type": "number",
+          "group": "推送信封",
+          "description": "消息的发起者：1 快手侧发起的会话（买家消息，服务商异步回复）/ 2 服务商侧主动发起。买家推送取 1。",
+          "required": true
+        },
+        {
+          "path": "type",
+          "title": "事件类型",
+          "type": "number",
+          "group": "推送信封",
+          "description": "1 消息 / 2 转接——智能客服推送的判型字段。",
+          "required": true
+        },
+        {
+          "path": "fromUser",
+          "title": "发送者（买家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的发送者 User：nickName（官方示例 快手用户1234）/ role（1 买家 2 商家 3 客服）/ openId（开放平台用户唯一标示，官方无样本值取占位）——推送方向带 openId，与发送结构体不对称。",
+          "required": true
+        },
+        {
+          "path": "toUser",
+          "title": "接受者（商家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的接受者 User：nickName（官方无样本值取占位）/ role=2 商家。",
+          "required": true
+        },
+        {
+          "path": "transferList",
+          "title": "转接用户列表",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息转接用户 User 数组（type=2 转接时携带目标客服 role=3；普通消息为空数组）。",
+          "required": true
+        },
+        {
+          "path": "message.contentType",
+          "title": "消息类型",
+          "type": "number",
+          "group": "消息内容",
+          "description": "1 文本消息 / 2 图片消息 / 1011 商品卡片消息 / 1012 订单卡片消息（MessageContent 结构官方枚举）。本模板取 1012 订单卡片消息。",
+          "required": true
+        },
+        {
+          "path": "message.content",
+          "title": "消息内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "订单卡片形态官方示例逐字 {\"orderId\":\"12345\"}：替换为真实快手订单 ID（与 context.orderId 同源）。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "context",
+          "title": "会话上下文",
+          "type": "json",
+          "group": "会话上下文",
+          "description": "Context 必填：sellerId 商家ID（官方信封样本 12342323）/ openId 用户唯一标志（与 fromUser 同一买家）/ itemId 快手商品ID / orderId 快手订单ID（官方示例 12345）/ orderStatus 订单状态 / assistantOnlineStatus 商家客服在线位（1 在线 2 无）。",
+          "required": true
+        }
+      ]
+    },
+    "ks-cs-transfer": {
+      "version": "2026.09",
+      "source": "https://open.kwaixiaodian.com/rest/open/platform/doc/api/name/detail?name=open.cs.intelligent.message.send&version=1",
+      "fields": [
+        {
+          "path": "requestId",
+          "title": "唯一请求 ID",
+          "type": "string",
+          "group": "推送信封",
+          "description": "唯一请求 ID（对接实践 body 表必填；官方示例 fadbsadfg1323）——智能客服面的幂等键。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "createTime",
+          "title": "创建时刻",
+          "type": "number",
+          "group": "推送信封",
+          "description": "13 位毫秒时间戳（数字形态）。新建事件时重新生成。",
+          "required": true
+        },
+        {
+          "path": "generator",
+          "title": "会话发起方",
+          "type": "number",
+          "group": "推送信封",
+          "description": "消息的发起者：1 快手侧发起的会话（买家消息，服务商异步回复）/ 2 服务商侧主动发起。转接通知随买家会话取 1。",
+          "required": true
+        },
+        {
+          "path": "type",
+          "title": "事件类型",
+          "type": "number",
+          "group": "推送信封",
+          "description": "1 消息 / 2 转接——智能客服推送的判型字段。本模板取 2 转接（服务商把会话转人工的唯一途径：发送侧 send 的 type=2 + transferList）。",
+          "required": true
+        },
+        {
+          "path": "fromUser",
+          "title": "发送者（买家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的发送者 User：nickName（官方示例 快手用户1234）/ role（1 买家 2 商家 3 客服）/ openId（开放平台用户唯一标示，官方无样本值取占位）——推送方向带 openId，与发送结构体不对称。",
+          "required": true
+        },
+        {
+          "path": "toUser",
+          "title": "接受者（商家）",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息的接受者 User：nickName（官方无样本值取占位）/ role=2 商家。",
+          "required": true
+        },
+        {
+          "path": "transferList",
+          "title": "转接用户列表",
+          "type": "json",
+          "group": "推送信封",
+          "description": "消息转接用户 User 数组：type=2 转接时携带转接目标客服（role=3，官方无样本昵称取占位）。",
+          "required": true
+        },
+        {
+          "path": "message.contentType",
+          "title": "消息类型",
+          "type": "number",
+          "group": "消息内容",
+          "description": "1 文本消息 / 2 图片消息 / 1011 商品卡片消息 / 1012 订单卡片消息（MessageContent 结构官方枚举）。message 必填，转接通知取文本形态。",
+          "required": true
+        },
+        {
+          "path": "message.content",
+          "title": "消息内容",
+          "type": "json",
+          "group": "消息内容",
+          "description": "String 形态的 JSON：文本 {\"text\":\"…\"}。本模板 content 为 JSON 字符串，编辑时保持转义形态。",
+          "required": true,
+          "multiline": true
+        },
+        {
+          "path": "context",
+          "title": "会话上下文",
+          "type": "json",
+          "group": "会话上下文",
+          "description": "Context 必填：sellerId 商家ID（官方信封样本 12342323）/ openId 用户唯一标志（与 fromUser 同一买家）/ itemId 快手商品ID / orderId 快手订单ID（官方示例 12345）/ orderStatus 订单状态 / assistantOnlineStatus 商家客服在线位（1 在线 2 无）。",
+          "required": true
+        }
+      ]
+    }
+  }
+}

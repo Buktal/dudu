@@ -108,8 +108,8 @@
   {
     "id": "kuaishou",
     "name": "快手",
-    "protocol": "开放域 Webhook + 支付回调族 · JSON 回调",
-    "note": "双判型信封：开放域 event 判型（TEST/AUTHORIZE/UN_AUTHORIZE）+ 支付族 biz_type 判型，kwaisign = MD5(body+secret) 头验签无 AES，应答 200 + result=1",
+    "protocol": "开放域 Webhook + 支付回调族 + 电商智能客服 · JSON 回调",
+    "note": "三面并行：开放域 event 判型 + 支付族 biz_type 判型走 kwaisign = MD5(body+secret) 头验签、应答回传 message_id；电商智能客服推送 Ks-Sign = MD5(AppKey+body)（拼接顺序相反）、type 判型 requestId 信封，应答 result=1 无回传",
     "icon": "Video"
   },
   {

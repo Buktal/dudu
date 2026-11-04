@@ -34,7 +34,20 @@ pub(super) const GOLDEN_EVENT_PLAINTEXT: &str = concat!(
 pub(super) fn kuaishou_config(url: String) -> ConnectionConfig {
     ConnectionConfig::Kuaishou {
         url,
+        system: KuaishouSystem::Open,
         app_id: GOLDEN_APP_ID.into(),
         app_secret: GOLDEN_APP_SECRET.into(),
+        app_key: String::new(),
+    }
+}
+
+/// 智能客服面配置（AppKey 为 Ks-Sign 签名源，§6.5.3）
+pub(super) fn kuaishou_cs_config(url: String) -> ConnectionConfig {
+    ConnectionConfig::Kuaishou {
+        url,
+        system: KuaishouSystem::Cs,
+        app_id: String::new(),
+        app_secret: String::new(),
+        app_key: GOLDEN_APP_SECRET.into(),
     }
 }

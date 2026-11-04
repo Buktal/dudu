@@ -61,10 +61,14 @@ export const SNAPSHOT_TRAITS: Partial<Record<ChannelId, RequestSnapshotTrait>> =
         `${step.requestBody ?? step.payload}${step.payload && step.requestBody && step.requestBody !== step.payload ? `\n\n加密/包裹前明文：\n${step.payload}` : ""}`,
     },
     kuaishou: {
-      // 快手：验签在 header（kwaisign = MD5(原始 body + AppSecret)，无 AES），
-      // body 即明文 JSON 逐字节透传；message_id 幂等键在载荷内（msgId 快照即它）
+      // 快手三面：开放域/支付族验签头 kwaisign = MD5(原始 body + AppSecret)，
+      // 智能客服面 Ks-Sign = MD5(AppKey + 原始 body)（拼接顺序相反）——run
+      // 快照不落推送通道，按载荷判型（requestId 信封/心跳即智能客服面）；
+      // body 即明文 JSON 逐字节透传，幂等键在载荷内（msgId 快照即
+      // message_id/requestId）
       contentType: "application/json",
-      headers: (step) => `kwaisign: ${step.signature}`,
+      headers: (step) =>
+        `${isKsCsPayload(step.payload) ? "Ks-Sign" : "kwaisign"}: ${step.signature}`,
     },
     taobao: {
       // 淘宝（全球栈）：验签在 header（Authorization = HEX(HMAC-SHA256(AppKey+body,
@@ -156,6 +160,20 @@ export const SNAPSHOT_TRAITS: Partial<Record<ChannelId, RequestSnapshotTrait>> =
 /** query 附加段的分隔符：目标地址已带 query 时接 & */
 function queryPrefix(url: string): string {
   return url.includes("?") ? "&" : "?";
+}
+
+/**
+ * 快手智能客服面载荷判型（仅快照呈现用，不改线上报文）：requestId 信封
+ * （§6.5.3）或心跳探针 {"test":true}（§6.2）即智能客服面，开放域/支付族
+ * 信封（event/biz_type 判型）恒否；非 JSON 载荷不落智能客服面
+ */
+function isKsCsPayload(payload: string): boolean {
+  try {
+    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    return "requestId" in parsed || parsed.test === true;
+  } catch {
+    return false;
+  }
 }
 
 function renderSnapshot(trait: RequestSnapshotTrait, step: RunStep): string {

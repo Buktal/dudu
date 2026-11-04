@@ -104,6 +104,20 @@ pub enum XiaohongshuSystem {
     Ark,
 }
 
+/// 快手推送通道（事实库 §2/§6.5：开放域双信封与智能客服面并行，传输协议
+/// 不同）。序列化 snake_case，缺省 open（旧连接数据不迁移）。
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum KuaishouSystem {
+    /// 开放域 WebHook + 支付回调族：明文 JSON + header kwaisign =
+    /// MD5(body + AppSecret)，应答 200 + result=1 并回传 message_id
+    #[default]
+    Open,
+    /// 电商智能客服消息推送（§6.5.3）：明文 JSON + header Ks-Sign =
+    /// MD5(AppKey + body)，应答 200 + {"result":1}（无 message_id 回传）
+    Cs,
+}
+
 /// 平台连接配置：持久化（store）与协议握手（douyin/wecom/wechat_mp）共用的域类型。
 /// 按渠道存不同凭据形状，以 channel 内标序列化（旧版抖音/企微数据形状不变，
 /// 新增体系/通道/模式字段全部 serde default 缺省）。
@@ -243,10 +257,19 @@ pub enum ConnectionConfig {
     #[serde(rename = "kuaishou", rename_all = "camelCase")]
     Kuaishou {
         url: String,
+        /// 推送通道（事实库 §2/§6.5 双域 + 智能客服三面）：开放域 WebHook 与支付
+        /// 回调族共用 kwaisign 传输；智能客服面验签/应答不同，按通道路由
+        /// （缺省 open，旧连接数据不迁移）
+        #[serde(default)]
+        system: KuaishouSystem,
         /// 应用 AppID（开放平台/小程序一致口径）：连接测试 TEST 事件信封 app_id
         app_id: String,
         /// 应用 AppSecret：kwaisign = MD5(原始 body + AppSecret) 头验签的签名源
         app_secret: String,
+        /// 智能客服面 AppKey：Ks-Sign = MD5(AppKey + 原始 body) 头验签的签名源
+        /// （§6.5.3 逐字；与开放域 AppSecret 拼接顺序相反）
+        #[serde(default)]
+        app_key: String,
     },
     #[serde(rename = "taobao", rename_all = "camelCase")]
     Taobao {

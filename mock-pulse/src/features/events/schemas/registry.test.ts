@@ -56,8 +56,8 @@ const DEFINITIONS_BY_CHANNEL = {
 } as const;
 
 describe("事件模板聚合注册表", () => {
-  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 8 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 + 饿了么 6 + B站 4 + 支付宝 3 + WhatsApp 9 + Telegram 7 个模板全部入表，id 全仓库唯一", () => {
-    expect(EVENT_SCHEMAS).toHaveLength(274);
+  it("抖音 33 + 企微 89 + 小红书 17 + 公众号 26 + 小程序 7 + 飞书 7 + 钉钉 14 + QQ 8 + 微博 12 + 快手 14 + 淘宝 5 + 京东 12 + 拼多多 3 + 美团 4 + 饿了么 6 + B站 4 + 支付宝 3 + WhatsApp 9 + Telegram 7 个模板全部入表，id 全仓库唯一", () => {
+    expect(EVENT_SCHEMAS).toHaveLength(280);
     const ids = EVENT_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
   });

@@ -147,6 +147,17 @@ export function generateKsMessageId(): string {
 }
 
 /**
+ * 快手智能客服 requestId：官方示例 fadbsadfg1323（事实库 §6.5.2 入参表）为
+ * 小写字母 + 数字混合串——按同族形态取 12~16 位（唯一请求 ID，智能客服幂等键）
+ */
+export function generateKsRequestId(): string {
+  return randomFromChars(
+    "abcdefghijklmnopqrstuvwxyz0123456789",
+    12 + (randomBytes(1)[0] % 5),
+  );
+}
+
+/**
  * 淘宝业务单号（tid/oid/refund_id）：官方样本为数字串形态（TradeCreate 的
  * tid "123456789"、RefundCreated 的 oid "110770592823138"），JSON 里恒为
  * 字符串——取 9~15 位数字串（首位非零）。

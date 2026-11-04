@@ -234,14 +234,28 @@ const CASES: TrimCase[] = [
     requiredKeys: [],
   },
   {
-    name: "kuaishou",
+    name: "kuaishou/open",
     config: {
       channel: "kuaishou",
       url: URL,
+      system: "open",
       appId: "ks696650570360602063",
       appSecret: "Xgm23lSgws235hlgK",
+      appKey: "",
     },
     requiredKeys: ["appId", "appSecret"],
+  },
+  {
+    name: "kuaishou/cs",
+    config: {
+      channel: "kuaishou",
+      url: URL,
+      system: "cs",
+      appId: "",
+      appSecret: "",
+      appKey: "cs_app_key",
+    },
+    requiredKeys: ["appKey"],
   },
   {
     name: "taobao",

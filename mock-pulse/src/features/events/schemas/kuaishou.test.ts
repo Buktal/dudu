@@ -13,9 +13,9 @@ const GOLDEN_WEBHOOK_MESSAGE_ID =
 /** §3.1 测试事件的 data 时间戳（官方样本逐字） */
 const GOLDEN_TEST_TIMESTAMP = 1622518497536;
 
-describe("快手事件 schema 聚合（开放域 event 判型 + 支付族 biz_type 判型；kwaisign 验签在 Rust 适配器）", () => {
-  it("开放域 3 + 支付回调族 5 = 8 模板，id 全仓库唯一", () => {
-    expect(KS_SCHEMAS).toHaveLength(8);
+describe("快手事件 schema 聚合（开放域 event 判型 + 支付族 biz_type 判型 + 智能客服 type 判型；验签在 Rust 适配器）", () => {
+  it("开放域 3 + 支付回调族 5 + 智能客服 6 = 14 模板，id 全仓库唯一", () => {
+    expect(KS_SCHEMAS).toHaveLength(14);
     const ids = KS_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.every((id) => id.startsWith("ks-"))).toBe(true);
@@ -36,10 +36,11 @@ describe("快手事件 schema 聚合（开放域 event 判型 + 支付族 biz_ty
     }
   });
 
-  it("默认期望回执 = 渠道真实应答：HTTP 200 + result=1（jsonField 子集，message_id 回传为额外字段）", () => {
+  it("默认期望回执 = 渠道真实应答：HTTP 200 + result=1（jsonField 子集，开放域 message_id 回传为额外字段）", () => {
     for (const schema of KS_SCHEMAS) {
-      // 事实库 §3.2：result=1 代表成功、其他代表失败并重试；
-      // 应答体 {"result":1,"message_id":"<收到的消息 ID>"} 按 JSON 字段子集声明
+      // 事实库 §3.2：result=1 代表成功、其他代表失败并重试；应答体
+      // {"result":1,"message_id":"<收到的消息 ID>"} 按 JSON 字段子集声明；
+      // 智能客服面应答同为 result=1 但无 message_id 回传义务（§6.5.3）
       expect(schema.expected, `${schema.id} expected`).toEqual({
         status: 200,
         body: '{"result":1}',
@@ -48,16 +49,32 @@ describe("快手事件 schema 聚合（开放域 event 判型 + 支付族 biz_ty
     }
   });
 
-  it("双判型互斥：开放域信封带 event 无 biz_type，支付族信封带 biz_type 无 event", () => {
+  it("三面判型互斥：开放域 event / 支付族 biz_type / 智能客服 requestId+type", () => {
     const openIds = ["ks-test", "ks-authorize", "ks-un-authorize"];
+    const payIds = [
+      "ks-payment",
+      "ks-refund",
+      "ks-settle",
+      "ks-withhold",
+      "ks-contract",
+    ];
     for (const schema of KS_SCHEMAS) {
       const keys = Object.keys(schema.payload);
       if (openIds.includes(schema.id)) {
         expect(keys, `${schema.id} event 判型`).toContain("event");
         expect(keys, `${schema.id} 无 biz_type`).not.toContain("biz_type");
-      } else {
+      } else if (payIds.includes(schema.id)) {
         expect(keys, `${schema.id} biz_type 判型`).toContain("biz_type");
         expect(keys, `${schema.id} 无 event`).not.toContain("event");
+      } else {
+        // 智能客服面（§6.5.3）：requestId 信封 + type 判型，无 event/biz_type
+        // （心跳 {"test":true} 例外——推送基座探针无信封）
+        if (schema.id !== "ks-cs-heartbeat") {
+          expect(keys, `${schema.id} requestId 信封`).toContain("requestId");
+          expect(keys, `${schema.id} type 判型`).toContain("type");
+        }
+        expect(keys, `${schema.id} 无 event`).not.toContain("event");
+        expect(keys, `${schema.id} 无 biz_type`).not.toContain("biz_type");
       }
     }
   });
@@ -154,7 +171,7 @@ describe("快手事件 schema 聚合（开放域 event 判型 + 支付族 biz_ty
     });
   });
 
-  it("事件目录：开放域 3 event + 支付族 5 biz_type，全部为 event 类", () => {
+  it("事件目录：开放域 3 event + 支付族 5 biz_type + 智能客服心跳/4 消息/转接", () => {
     expect(KS_SCHEMAS.map((schema) => schema.eventName)).toEqual([
       "TEST",
       "AUTHORIZE",
@@ -164,10 +181,104 @@ describe("快手事件 schema 聚合（开放域 event 判型 + 支付族 biz_ty
       "SETTLE",
       "WITHHOLD",
       "CONTRACT",
+      "test",
+      "text",
+      "image",
+      "item",
+      "order",
+      "transfer",
     ]);
-    expect(KS_SCHEMAS.map((schema) => schema.kind)).toEqual(
-      Array(8).fill("event"),
+    // 买家消息四型为 message 类（心跳/转接为平台事件）
+    expect(KS_SCHEMAS.map((schema) => schema.kind)).toEqual([
+      ...Array(8).fill("event"),
+      "event",
+      "message",
+      "message",
+      "message",
+      "message",
+      "event",
+    ]);
+  });
+
+  it('智能客服心跳逐字（§6.2 推送基座：保存推送地址即触发 {"test":true}）', () => {
+    const schema = KS_SCHEMAS.find((item) => item.id === "ks-cs-heartbeat");
+    expect(schema?.payload).toEqual({ test: true });
+    // 心跳为平台探针：无幂等键，不声明 ID 生成
+    expect(schema?.idGenerations).toEqual([]);
+  });
+
+  it("智能客服信封骨架逐字（§6.5.3 body 表键序）+ 推送侧 User 带 openId", () => {
+    const csSchemas = KS_SCHEMAS.filter(
+      (schema) =>
+        schema.id.startsWith("ks-cs-") && schema.id !== "ks-cs-heartbeat",
     );
+    expect(csSchemas).toHaveLength(5);
+    for (const schema of csSchemas) {
+      expect(Object.keys(schema.payload), `${schema.id} 键序`).toEqual([
+        "requestId",
+        "createTime",
+        "generator",
+        "type",
+        "fromUser",
+        "toUser",
+        "transferList",
+        "message",
+        "context",
+      ]);
+      // 官方示例值：requestId fadbsadfg1323（§6.5.2 入参表）；
+      // fromUser 官方示例昵称 快手用户1234（§6.5.2 User 结构）
+      expect(schema.payload.requestId).toBe("fadbsadfg1323");
+      expect(schema.payload.generator).toBe(1);
+      const fromUser = schema.payload.fromUser as Record<string, unknown>;
+      expect(fromUser.nickName).toBe("快手用户1234");
+      // 推送侧 User 带 openId（§6.5.3 逐字，与发送结构体不对称）
+      expect(fromUser.role).toBe(1);
+      expect(fromUser.openId).toBe("OPEN_ID");
+    }
+  });
+
+  it("智能客服消息内容四型 + 转接按官方释义逐字（contentType 枚举与 content 形态）", () => {
+    const payloadOf = (id: string) =>
+      KS_SCHEMAS.find((schema) => schema.id === id)?.payload;
+    const messageOf = (id: string) =>
+      payloadOf(id)?.message as Record<string, unknown>;
+    // 文本：官方 demo 示例形态 {"text":"你好"}
+    expect(messageOf("ks-cs-text")).toEqual({
+      contentType: 1,
+      content: '{"text":"你好"}',
+    });
+    // 图片：uri 官方即空串（平台抹除原图链），数值占位
+    expect(messageOf("ks-cs-image")).toEqual({
+      contentType: 2,
+      content: '{"uri":"","width":720,"height":720,"contentLength":102400}',
+    });
+    // 商品卡片：官方示例逐字 {"text":"$itemId"}
+    expect(messageOf("ks-cs-item-card")).toEqual({
+      contentType: 1011,
+      content: '{"text":"$itemId"}',
+    });
+    // 订单卡片：官方示例逐字 {"orderId":"12345"}
+    expect(messageOf("ks-cs-order-card")).toEqual({
+      contentType: 1012,
+      content: '{"orderId":"12345"}',
+    });
+    // 转接（§6.5.3 type=2）：transferList 携带目标客服 role=3
+    const transfer = payloadOf("ks-cs-transfer");
+    expect(transfer?.type).toBe(2);
+    expect(transfer?.transferList).toEqual([
+      { nickName: "CUSTOMER_SERVICE_NICK_NAME", role: 3 },
+    ]);
+  });
+
+  it("智能客服 ID 生成器：requestId 小写字母数字串、createTime 毫秒数字（幂等键随新事件变化）", () => {
+    const schema = KS_SCHEMAS.find((item) => item.id === "ks-cs-text");
+    expect(schema, "ks-cs-text 模板应在表中").toBeDefined();
+    if (!schema) return;
+    const result = applyGeneratedIds(schema, structuredClone(schema.payload));
+    expect(String(result.createTime)).toMatch(/^\d{13}$/);
+    expect(result.requestId).toMatch(/^[a-z0-9]{12,16}$/);
+    // 黄金样本原值被重生成（requestId 为唯一请求 ID）
+    expect(result.requestId).not.toBe(schema.payload.requestId);
   });
 
   it("ID 生成器官方形态：timestamp 毫秒数字、message_id 为 UUID 形态（每次随机生成的 ID）", () => {

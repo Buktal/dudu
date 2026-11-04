@@ -42,8 +42,8 @@ use crate::app_data_dir;
 // 体系/通道/模式枚举按 connections:: 路径对外复用（部分仅子模块测试消费）
 #[allow(unused_imports)]
 pub use config::{
-    ConnectionConfig, DingtalkSystem, DouyinSystem, WechatMiniDataFormat, WechatMiniMode,
-    WechatMpMode, WecomSystem, XiaohongshuSystem,
+    ConnectionConfig, DingtalkSystem, DouyinSystem, KuaishouSystem, WechatMiniDataFormat,
+    WechatMiniMode, WechatMpMode, WecomSystem, XiaohongshuSystem,
 };
 
 // 适配器 seam 与网络骨架按既有 super:: 路径供给渠道与 crate 内消费方

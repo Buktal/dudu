@@ -31,7 +31,7 @@ describe("schemasByChannel 模板清单（交易/海外系）", () => {
     ]);
   });
 
-  it("快手：开放域 WebHook 3 + 小程序支付回调族 5", () => {
+  it("快手：开放域 WebHook 3 + 小程序支付回调族 5 + 智能客服推送 6", () => {
     expect(schemasByChannel("kuaishou").map((schema) => schema.id)).toEqual([
       // 开放域 WebHook 3（事实库 §2.1：全目录穷尽仅此三事件，event 判型）
       "ks-test",
@@ -43,6 +43,13 @@ describe("schemasByChannel 模板清单（交易/海外系）", () => {
       "ks-settle",
       "ks-withhold",
       "ks-contract",
+      // 电商智能客服推送 6（事实库 §6.5.3：type 判型 requestId 信封 + §6.2 心跳）
+      "ks-cs-heartbeat",
+      "ks-cs-text",
+      "ks-cs-image",
+      "ks-cs-item-card",
+      "ks-cs-order-card",
+      "ks-cs-transfer",
     ]);
   });
 

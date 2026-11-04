@@ -53,6 +53,14 @@ export type DingtalkSystem = "http_crypto" | "bot";
 export type XiaohongshuSystem = "miniapp" | "ark";
 
 /**
+ * 快手推送通道（与 Rust 端 KuaishouSystem 内标一致，snake_case）：
+ * 开放域 WebHook 与支付回调族共用 kwaisign 传输；电商智能客服面（事实库
+ * §6.5.3）验签/应答不同——header Ks-Sign = MD5(AppKey + body)，应答
+ * {"result":1} 无 message_id 回传。
+ */
+export type KuaishouSystem = "open" | "cs";
+
+/**
  * 钉钉连接配置形状（与 Rust 端 ConnectionConfig::Dingtalk 内标一致）：
  * 密文通道用 token/encodingAesKey/ownerKey（sha1 四参验签 + AES-CBC，
  * PKCS#7-32，包尾 $key=ownerKey）；机器人通道用 appSecret（HmacSHA256）。
@@ -126,18 +134,24 @@ export type XiaohongshuConnectionConfig = {
 /**
  * 快手连接配置形状（与 Rust 端 ConnectionConfig::Kuaishou 内标一致）：
  * 开放域 WebHook 与支付回调族共用同一传输协议（明文 JSON + header kwaisign），
- * 无推送通道之分——AppSecret 即 kwaisign = MD5(原始 body + AppSecret) 验签密钥，
- * AppID 参与连接测试 TEST 事件的信封。两域回调地址可不同（notify_url 优先），
- * 目标侧按需切换本连接的 url 即可。
+ * AppSecret 即 kwaisign = MD5(原始 body + AppSecret) 验签密钥，AppID 参与连接
+ * 测试 TEST 事件的信封；智能客服面（system=cs，事实库 §6.5.3）AppKey 为
+ * Ks-Sign = MD5(AppKey + 原始 body) 验签密钥（拼接顺序相反），无 GET/TEST
+ * 握手（地址线下报备，连接测试发心跳探针）。各面回调地址可不同，目标侧按需
+ * 切换本连接的 url 即可。
  */
 export type KuaishouConnectionConfig = {
   channel: "kuaishou";
   /** 回调目标地址，事件与剧本共享 */
   url: string;
+  /** 推送通道：开放域双信封 / 电商智能客服推送（缺省 open） */
+  system: KuaishouSystem;
   /** 应用 AppID（开放平台/小程序一致口径）：TEST 握手信封 app_id 即它 */
   appId: string;
   /** 应用 AppSecret：kwaisign = MD5(原始 body + AppSecret) 头验签的签名源 */
   appSecret: string;
+  /** 智能客服面 AppKey：Ks-Sign = MD5(AppKey + 原始 body) 头验签的签名源 */
+  appKey: string;
 };
 
 /**

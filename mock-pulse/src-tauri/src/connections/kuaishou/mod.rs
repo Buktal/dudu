@@ -1,19 +1,23 @@
-//! 快手渠道（事实库 docs/research/channels/kuaishou.md，双域并行共用同一传输
-//! 协议）：开放平台 WebHook（信封 `event` 判型：TEST/AUTHORIZE/UN_AUTHORIZE）
-//! 与小程序支付回调族（信封 `biz_type` 判型：PAYMENT/REFUND/SETTLE/WITHHOLD/
-//! CONTRACT）信封字段不同，验签/应答同族——明文 JSON + header `kwaisign`
-//! （无 AES），成功判定恒为「HTTP 200 且 result=1」，失败按重试表重推。
+//! 快手渠道（事实库 docs/research/channels/kuaishou.md，三面并行）：开放平台
+//! WebHook（信封 `event` 判型：TEST/AUTHORIZE/UN_AUTHORIZE）与小程序支付回调族
+//! （信封 `biz_type` 判型：PAYMENT/REFUND/SETTLE/WITHHOLD/CONTRACT）双域共用同一
+//! 传输——明文 JSON + header `kwaisign`（无 AES），成功判定恒为「HTTP 200 且
+//! result=1」，失败按重试表重推；电商智能客服面（§6.5.3，[`cs`]）传输不同——
+//! header `Ks-Sign` = MD5(AppKey + body)，应答无 message_id 回传，按连接推送通道
+//! 路由。
 //!
 //! 与其他渠道的差异全部留在本模块内（ADR-0001）：
 //! - 验签（§4.1）：kwaisign = MD5(${http_body_string} + ${app_secret})——body 用
-//!   原始字符串（不得重序列化后再算），签名放 http header `kwaisign`，无 AES
+//!   原始字符串（不得重序列化后再算），签名放 http header `kwaisign`，无 AES；
+//!   智能客服面相反序（§6.5.3）：Ks-Sign = MD5(appKey + entity)
 //! - 握手（§3.1/§2.1 TEST）：保存回调地址时平台 POST 一个 TEST 事件验证合法性，
 //!   期望应答 `{"result":1,"message_id":"<收到的消息 ID>"}`；连接测试即照此
-//!   发送 TEST 事件（信封五字段 {app_id,event,timestamp,message_id,data}）
+//!   发送 TEST 事件（信封五字段 {app_id,event,timestamp,message_id,data}）；
+//!   智能客服面无官方握手，以心跳探针验证连通（[`cs`]）
 //! - 直发（§3.1）：POST 明文 JSON（逐字节透传不重排）+ header kwaisign；
 //!   message_id 为全局唯一幂等键（重试保持一致，事实库 §3.3）
 //! - 应答（§3.2 七页逐字一致）：`{"result":1,"message_id":"…"}`，result=1
-//!   之外一律视为失败
+//!   之外一律视为失败；智能客服面应答体仅 `{"result":1}`（§6.5.3）
 
 #[cfg(test)]
 mod tests;
@@ -23,8 +27,10 @@ use crate::connections::util::{md5_hex, now_millis};
 use super::adapter::narrow;
 use super::{
     no_reply, probe_handshake_outcome, send_measured_outcome, ConnectionConfig, DispatchOutcome,
-    DispatchSnapshot, HandshakeOutcome,
+    DispatchSnapshot, HandshakeOutcome, KuaishouSystem,
 };
+
+mod cs;
 
 /// 失败重试口径（附录2 支付回调 16 次重试表 / accessGuide 通用 webhook 重试）：
 /// 官方未给统一应答时限，超时文案附重试提示。
@@ -98,13 +104,29 @@ fn result_reply_check(body: &str, sent_message_id: &str) -> Result<(), String> {
     }
 }
 
+/// 快手握手路由：开放域 TEST 事件握手；智能客服面无官方握手，以带 Ks-Sign 的
+/// 心跳探针验证连通（§6.5.3/§6.2，[`cs::probe_handshake`]）。
+/// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
+fn verify_handshake(
+    client: &reqwest::blocking::Client,
+    url: &str,
+    system: &KuaishouSystem,
+    app_id: &str,
+    app_secret: &str,
+    app_key: &str,
+) -> HandshakeOutcome {
+    if *system == KuaishouSystem::Cs {
+        return cs::probe_handshake(client, url, app_key);
+    }
+    open_verify_handshake(client, url, app_id, app_secret)
+}
+
 /// 连接测试（§3.1 配地址握手 + §2.1 TEST 事件）：保存回调地址时平台即 POST 一个
 /// TEST 事件验证合法性——按官方信封五字段构造 TEST 事件（data 只含测试时间戳，
 /// 与信封同值），header 带 kwaisign；期望 HTTP 200 且应答 result=1 并原样回传
 /// 收到的 message_id。
 /// 超时窗口：官方未给统一应答时限，本地沿用 5 秒上限（trait 默认握手客户端）。
-/// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
-fn verify_handshake(
+fn open_verify_handshake(
     client: &reqwest::blocking::Client,
     url: &str,
     app_id: &str,
@@ -135,21 +157,27 @@ fn verify_handshake(
     )
 }
 
-/// 快手直发（§3.1）：明文 JSON 逐字节透传 + header kwaisign（两域共用同一
-/// 传输；判型字段 event/biz_type 在载荷内，本模块不感知）。明文由前端逐字节
-/// 拼装，不重排（ADR-0001）。
+/// 快手直发路由：开放域明文 JSON 逐字节透传 + header kwaisign（判型字段
+/// event/biz_type 在载荷内，本模块不感知）；智能客服面 + header Ks-Sign
+/// （§6.5.3）。明文由前端逐字节拼装，不重排（ADR-0001）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn dispatch_event(
     client: &reqwest::blocking::Client,
     url: &str,
+    system: &KuaishouSystem,
     app_secret: &str,
+    app_key: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
+    if *system == KuaishouSystem::Cs {
+        return cs::dispatch_event(client, url, app_key, plaintext);
+    }
     post_json(client, url, app_secret, plaintext)
 }
 
-/// 快手渠道适配器：[`super::ChannelAdapter`] 的快手实现——TEST 事件握手与
-/// kwaisign 签名直发；MD5 原语复用 util（md5_hex），差异不外溢。
+/// 快手渠道适配器：[`super::ChannelAdapter`] 的快手实现——按推送通道路由
+/// TEST 事件握手/kwaisign 直发或心跳探针/Ks-Sign 直发；MD5 原语复用 util
+/// （md5_hex），差异不外溢。
 /// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
@@ -175,8 +203,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        narrow!(config, Kuaishou { url, app_id, app_secret } =>
-            verify_handshake(client, url, app_id, app_secret))
+        narrow!(config, Kuaishou { url, system, app_id, app_secret, app_key } =>
+            verify_handshake(client, url, system, app_id, app_secret, app_key))
     }
 
     fn dispatch_event(
@@ -185,7 +213,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        narrow!(config, Kuaishou { url, app_secret } =>
-            dispatch_event(client, url, app_secret, plaintext))
+        narrow!(config, Kuaishou { url, system, app_secret, app_key } =>
+            dispatch_event(client, url, system, app_secret, app_key, plaintext))
     }
 }

@@ -116,8 +116,10 @@ const xiaohongshuConfig: XiaohongshuConnectionConfig = {
 const kuaishouConfig: KuaishouConnectionConfig = {
   channel: "kuaishou",
   url: "http://127.0.0.1:8080/webhooks/kuaishou",
+  system: "open",
   appId: "ks696650570360602063",
   appSecret: "Xgm23lSgws235hlgK",
+  appKey: "",
 };
 
 const taobaoConfig: TaobaoConnectionConfig = {

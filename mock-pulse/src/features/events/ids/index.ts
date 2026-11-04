@@ -19,6 +19,7 @@ import {
   generateHexId32,
   generateJdBizId,
   generateKsMessageId,
+  generateKsRequestId,
   generateLarkChatId,
   generateLarkMessageId,
   generateLarkOpenId,
@@ -70,6 +71,8 @@ import type { Generator as IdGenerator } from "./types";
  *   18 位数字串）
  * - ksMessageId：快手 message_id（官方支付回调样本为小写 UUID，「每次随机
  *   生成的 ID」，幂等键重试保持一致）
+ * - ksRequestId：快手智能客服 requestId（官方示例 fadbsadfg1323 为小写字母
+ *   数字串，唯一请求 ID——智能客服推送面的幂等键，新建事件即新请求故重生成）
  * - taobaoBizId：淘宝 tid/oid/refund_id（官方样本数字串形态 9~15 位，JSON 里
  *   恒为字符串，事实库「ID 形态」速查；排重幂等键随新事件变化）
  * - taobaoModified：淘宝退款 modified（yyyy-MM-dd HH:mm:ss 字符串，经 lib/time
@@ -146,6 +149,7 @@ const GENERATORS: Record<IdKind, IdGenerator> = {
   weiboCreatedAt: generateWeiboCreatedAt,
   xhsMsgId: generateXhsMsgId,
   ksMessageId: generateKsMessageId,
+  ksRequestId: generateKsRequestId,
   taobaoBizId: generateTaobaoBizId,
   taobaoModified: generateTaobaoModified,
   openimMsgId: generateOpenimMsgId,

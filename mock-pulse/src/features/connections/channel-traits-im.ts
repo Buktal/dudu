@@ -4,6 +4,7 @@ import type {
   DingtalkSystem,
   FeishuConnectionConfig,
   KuaishouConnectionConfig,
+  KuaishouSystem,
   QqConnectionConfig,
   TelegramConnectionConfig,
   WeiboConnectionConfig,
@@ -37,6 +38,15 @@ export const XIAOHONGSHU_SYSTEMS: readonly {
 }[] = [
   { value: "miniapp", label: "小程序客服消息（加密 JSON 信封）" },
   { value: "ark", label: "电商 ark 订单推送（JSON 数组明文）" },
+];
+
+/** 快手推送通道（事实库 §2/§6.5：开放域双信封与电商智能客服面并行） */
+export const KUAISHOU_SYSTEMS: readonly {
+  value: KuaishouSystem;
+  label: string;
+}[] = [
+  { value: "open", label: "开放域 WebHook/支付回调（kwaisign 验签）" },
+  { value: "cs", label: "电商智能客服推送（Ks-Sign 验签）" },
 ];
 
 /** 原型默认值：Encrypt Key 留空 = 明文直发起步 */
@@ -88,8 +98,10 @@ export const defaultXiaohongshuConnection: XiaohongshuConnectionConfig = {
 export const defaultKuaishouConnection: KuaishouConnectionConfig = {
   channel: "kuaishou",
   url: "http://127.0.0.1:8080/webhooks/kuaishou",
+  system: "open",
   appId: "",
   appSecret: "",
+  appKey: "",
 };
 
 /** 原型默认值：X-Hub-Signature-256 验签起步 */
@@ -245,8 +257,20 @@ function xiaohongshuFields(
   ];
 }
 
-/** 快手凭证字段（事实库 §4.1）：kwaisign = MD5(原始 body + AppSecret) 头验签 */
+/** 快手按推送通道取凭证字段（事实库 §4.1/§6.5.3）：开放域 kwaisign 双值；
+ * 智能客服面 AppKey 为 Ks-Sign 签名源（拼接顺序相反） */
 function kuaishouFields(draft: KuaishouConnectionConfig): CredentialField[] {
+  if (draft.system === "cs") {
+    return [
+      {
+        key: "appKey",
+        label: "AppKey",
+        note: "智能客服面应用 AppKey：验签 Ks-Sign = MD5(AppKey + 原始 body 字符串)（§6.5.3 逐字，与开放域 kwaisign 的 body+secret 拼接顺序相反），推送地址线下报备、无 TEST 握手（连接测试发心跳探针）。",
+        value: draft.appKey,
+        secret: true,
+      },
+    ];
+  }
   return [
     {
       key: "appId",
@@ -371,9 +395,19 @@ function xiaohongshuReady(config: XiaohongshuConnectionConfig): boolean {
   }
 }
 
-/** 快手核：appId + appSecret 必填（kwaisign 头验签的签名源与 TEST 信封） */
+/** 快手按推送通道核必填集（验签密钥是直发前置） */
 function kuaishouReady(config: KuaishouConnectionConfig): boolean {
-  return hasText(config.appId) && hasText(config.appSecret);
+  switch (config.system) {
+    case "open":
+      return hasText(config.appId) && hasText(config.appSecret);
+    case "cs":
+      return hasText(config.appKey);
+    default: {
+      const exhaustive: never = config.system;
+      void exhaustive;
+      return false;
+    }
+  }
 }
 
 /** WhatsApp 核：appSecret + verifyToken 必填（验签与握手比对，两个无关值） */
@@ -463,9 +497,18 @@ export const imTraits = {
     credentialFields: kuaishouFields,
     credentialReady: kuaishouReady,
     wireFormat: "JSON",
-    testNote: () =>
-      "发送 TEST 测试事件（header kwaisign = MD5(body+AppSecret)），检查服务是否回 HTTP 200 且 result=1 并回传收到的 message_id。",
-    selectors: [],
+    testNote: (draft: KuaishouConnectionConfig) =>
+      draft.system === "cs"
+        ? '发送心跳探针（{"test":true} + header Ks-Sign = MD5(AppKey+body)，智能客服面无官方握手），检查服务是否回 HTTP 200 且 {"result":1}。'
+        : "发送 TEST 测试事件（header kwaisign = MD5(body+AppSecret)），检查服务是否回 HTTP 200 且 result=1 并回传收到的 message_id。",
+    selectors: [
+      {
+        key: "system",
+        label: "推送通道",
+        hint: "快手三面并行（事实库 §2/§6.5）：开放域 WebHook/支付回调 kwaisign 验签应答回传 message_id；电商智能客服推送 Ks-Sign 验签（拼接顺序相反）、应答无 message_id 回传——回调地址与凭证按通道配套填写。",
+        options: KUAISHOU_SYSTEMS,
+      },
+    ],
   },
   whatsapp: {
     defaultConnection: defaultWhatsappConnection,
