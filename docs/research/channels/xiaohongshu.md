@@ -49,6 +49,8 @@
 
 来源：zsmhub/xhs-sdk `message/` 目录（Go 结构体逐字转录，msgTag 与字段名均为平台原样）；`cxjava/xhs-sdk`（分叉，注释佐证）
 
+> **2026-11-05 官方原文升级**：开发者文档 POST 接口实测匿名可用（历史「POST 墙」结论作废）——`POST /api/developer/doc/getDocNavigationSecondListNew` body `{"docId":9}` 枚举子树（10 章）；`POST /api/developer/doc/getDocDetailNew` body `{"docDetailId":N}` 取正文。关键正文已核：**39 签名算法**（API 调用侧：参与签名仅系统参数 appId/timestamp/version/method + appSecret 拼尾，`method?appId=..&timestamp=..&version=2.0` + appSecret，MD5 hex，accessToken 不参与验签；三语官方样例逐字，2026-01-08）；**40 系统参数说明**（公共参数表与 §5.1 公共参数 schema 互证，2026-01-08）；**41 应用消息推送**（2026-01-27）——推送侧加签与 API 侧不同：**除 sign 外系统参数 + 全部 url 请求参数按字母排序 & 连接（body 不参与），拼 `url?params` + app-secret 后 MD5**，签名三元组（timestamp/app-key: `xhs`/sign）现置于 **body 内 `headers` 结构**（官方注明「后续会调整」）；推送应答 `{success,error_code,error_msg}` 与 §2.1 SDK 信封互证；**重试：首推失败后重试 3 次，间隔 30s/5m/30m；响应超时 2 秒，超时即失败触发重试，应先回 200 再异步处理**；推送地址连通性为控制台手动检测（POST `{"test":true}` 须回 httpcode=200，一应用一地址）；消息丢失主因店铺 AT 过期（官方原句）。**文档-SDK 命名漂移照录**：doc 41 消息目录（2022-05-25 版）作 `msg_fulfillment_delivery_time_change`（多个 y）且商品族为 `msg_item_create`/`msg_item_buyable`；SDK 结构体（§2.2 十事件、mock 实现）为 `msg_fulfillment_deliver_time_change` 与 `msg_sku_*` 族——SDK 为实现基准，官方目录系旧版命名，联调时若平台实推 `delivery` 拼写需按实际放行
+
 ### 2.1 推送信封（外层结构）
 
 ```json
@@ -236,11 +238,11 @@ sign = md5_hex_lowercase(signString)
 
 ## 7. 待核验清单（统一 09-27 恢复后重试）
 
-1. **[官方·开发文档正文]** docId=9「开发文档」子树：接入流程、消息推送章节、签名算法官方原文、token 寿命数值、推送重试策略、推送是否带签名头。通道：webReader 恢复后浏览器渲染抓 `https://open.xiaohongshu.com/document/developer/file/{docDetailId}`；或找到 POST `/api/developer/doc/getDocDetailNew` 的带参调用办法。→ **待核验(09-27)**
-2. **[官方·数据加解密]** docDetailId 50/51 正文（encryptedData 的具体算法，大概率 AES，密钥派生方式）。→ **待核验(09-27)**
+1. **[官方·开发文档正文]** docId=9「开发文档」子树：接入流程、消息推送章节、签名算法官方原文、token 寿命数值、推送重试策略、推送是否带签名头。→ **已解决（2026-11-05）**：getDocDetailNew 匿名可用（通道注记见 §2 头部升级块），签名算法官方原文（doc 39）、消息推送章节（doc 41）、重试策略（30s/5m/30m ×3、超时 2s）、推送签名位置（body 内 `headers` 结构）全部落库 §2；token 寿命数值官方文档未载（doc 40 仅公共参数表），维持 SDK 事实源
+2. **[官方·数据加解密]** docDetailId 50/51 正文（encryptedData 的具体算法，大概率 AES，密钥派生方式）。→ **已解决（2026-11-05）**：**AES/CBC/PKCS5Padding**（doc 51，2023-09-21）；密文格式 `#索引串#密文#类型##`，检索串同数据同应用恒定（跨订单密文不同、应用维度隔离、密文可反算订单/店铺溯源），类型码 1 地址/2 姓名/3 电话/4 身份证号，四类逐字样例在页；doc 50（2023-09-25）为订单敏感字段加密改造方案（收件人/海关申报密文化 + 脱敏规则 + 字段级受监控解密接口），均属电商订单域与消息推送无关
 3. **[专业号私信官方通道]** 是否存在面向 ISV 的官方私信 webhook/拉取 API。GitHub 无实现痕迹、开放平台文档中心五大板块均为电商域；不排除藏在登录墙后（服务市场 ISV 专属文档）。**部分解决**：miniapp 域已有官方消息型推送（§10），但那是小程序客服会话，不是专业号私信本身——专业号 DM 是否有 ISV 通道仍未知。→ **已解决（2026-11-03）**：专业号私信 ISV 通道存在——商业开放平台私信三方（third_im）体系的「三方客服接收消息」推送 + 「三方客服发送消息」API，完整接口规格在企业微信文档登录墙内（字段表待核验），详见 §13
 4. **[单源存疑]** `x-xiaohongshu-signature` HMAC-SHA256 + `im.message.receive` + `verify_webhook` challenge 模式（zhilin1719-hue/--）。需官方对质后才能采用；当前判定为模仿飞书的拼装。**注意**：miniapp 域官方握手的参数名叫 `signature`/`echostr`（§10），与该单源声称的头名/事件名仍不相符，维持不可信判定。→ **待核验(09-27)**
-5. **推送 URL 首次配置时是否有连通性校验**（类似微信 echostr）。**已解决**：miniapp 客服消息体系有 echostr 握手（§10.4）；电商 ark 侧仍未知。→ 电商侧待核验(09-27)
+5. **推送 URL 首次配置时是否有连通性校验**（类似微信 echostr）。**已解决**：miniapp 客服消息体系有 echostr 握手（§10.4）；电商 ark 侧**已解决（2026-11-05）**：无自动 challenge，为控制台手动检测（POST `{"test":true}` 须回 httpcode=200 方显示正常，doc 41）
 6. 电子面单/规则中心子树（docDetailId 294-318 等，与 mock-pulse 关系弱，低优先级）。→ 待核验(09-27)
 7. `https://open.xiaohongshu.com/develop/book`（2026-06 有归档，SPA 壳，可能有 SSR 版）。→ 待核验(09-27)
 
