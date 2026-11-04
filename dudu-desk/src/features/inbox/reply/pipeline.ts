@@ -13,9 +13,7 @@ import { sendRestriction } from "./send-rules";
  * 能力统一用这一份判定
  */
 export function isServerPersisted(message: InboxMessage): boolean {
-  return (
-    message.serverId !== undefined || !message.id.startsWith("client:")
-  );
+  return message.serverId !== undefined || !message.id.startsWith("client:");
 }
 
 type ReplySubmissionStart = {

@@ -87,16 +87,23 @@ public class KuaishouTextSender {
         this.visitorNames = visitorNames;
     }
 
-    public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
-        KuaishouCredentials credentials = KuaishouCredentials.of(account);
+    // 发送侧凭据限制说明：凭据未配置、缺签名密钥、未完成授权逐级如实回答；适配器
+    // restriction 与直呼防御共用同阶梯同文案
+    static String restrictionOf(KuaishouCredentials credentials) {
         if (credentials == null) {
-            return ChannelSendResult.failed(ChannelRestrictions.SEND_CREDENTIALS_MISSING);
+            return ChannelRestrictions.SEND_CREDENTIALS_MISSING;
         }
         if (credentials.signSecret() == null) {
-            return ChannelSendResult.failed(SIGN_SECRET_MISSING);
+            return SIGN_SECRET_MISSING;
         }
-        if (credentials.accessToken() == null) {
-            return ChannelSendResult.failed(ACCESS_TOKEN_MISSING);
+        return credentials.accessToken() == null ? ACCESS_TOKEN_MISSING : null;
+    }
+
+    public ChannelSendResult send(CompanyChannelDO account, String externalUserId, String text) {
+        KuaishouCredentials credentials = KuaishouCredentials.of(account);
+        String restriction = restrictionOf(credentials);
+        if (restriction != null) {
+            return ChannelSendResult.failed(restriction);
         }
         String visitorName = visitorNames.nameOf(account.getCompanyChannelId(), externalUserId);
         if (visitorName == null) {

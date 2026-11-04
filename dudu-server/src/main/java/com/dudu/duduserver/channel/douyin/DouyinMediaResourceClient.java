@@ -58,7 +58,8 @@ public class DouyinMediaResourceClient {
     private static final String ESCAPED_AMP = "\\" + "u0026";
     private static final String AMP = "&";
 
-    private static final String FAILURE_PREFIX = "抖音素材读取失败：";
+    // 失败文案前缀（包内共享：适配器直链拒绝文案与本接口失败文案同前缀）
+    static final String FAILURE_PREFIX = "抖音素材读取失败：";
 
     private final RestClient restClient;
 

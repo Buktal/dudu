@@ -6,7 +6,6 @@ import com.dudu.duduserver.channel.ChannelInboundMessage;
 import com.dudu.duduserver.channel.ChannelMediaResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.ChannelSendResult;
-import com.dudu.duduserver.channel.support.ChannelRestrictions;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.springframework.http.HttpHeaders;
@@ -81,14 +80,7 @@ public class KuaishouAdapter implements ChannelAdapter {
 
     @Override
     public String sendRestriction(CompanyChannelDO account) {
-        KuaishouCredentials credentials = KuaishouCredentials.of(account);
-        if (credentials == null) {
-            return ChannelRestrictions.SEND_CREDENTIALS_MISSING;
-        }
-        if (credentials.signSecret() == null) {
-            return KuaishouTextSender.SIGN_SECRET_MISSING;
-        }
-        return credentials.accessToken() == null ? KuaishouTextSender.ACCESS_TOKEN_MISSING : null;
+        return KuaishouTextSender.restrictionOf(KuaishouCredentials.of(account));
     }
 
     @Override

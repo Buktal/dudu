@@ -35,8 +35,7 @@ public class DouyinAdapter implements ChannelAdapter {
     // image/video（无公开下载接口）、旧两段派生标识（留存消息无会话上下文）与 @-加密
     // 标识（视频 item_id 无公开下载接口）如实返回无下载通道说明
     private static final String NO_DOWNLOAD_CHANNEL =
-        "抖音素材读取失败：该素材无官方下载通道（分享类图片/视频与旧版留存的本地素材标识不支持读取）";
-    private static final String MEDIA_FAILURE_PREFIX = "抖音素材读取失败：";
+        DouyinMediaResourceClient.FAILURE_PREFIX + "该素材无官方下载通道（分享类图片/视频与旧版留存的本地素材标识不支持读取）";
 
     // 发送的用户授权缺口说明（发送与素材读取共用 refreshToken 续期链路，场景化文案在此给出）
     private static final String SEND_REFRESH_TOKEN_MISSING =
@@ -111,7 +110,8 @@ public class DouyinAdapter implements ChannelAdapter {
             return mediaResourceClient.read(account, resource);
         }
         // 其余引用：http(s) 直链照常直取，@-加密标识与旧两段派生标识无下载通道
-        return mediaReader.read(account, externalMediaId, NO_DOWNLOAD_CHANNEL, "douyin", MEDIA_FAILURE_PREFIX);
+        return mediaReader.read(account, externalMediaId, NO_DOWNLOAD_CHANNEL, "douyin",
+            DouyinMediaResourceClient.FAILURE_PREFIX);
     }
 
     @Override
