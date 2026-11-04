@@ -302,6 +302,7 @@ sign = md5_hex_lowercase(signString)
 **2026-11-05 复查（无增量）**
 - ark 网关分类树 `/api/doc/listNew`（返回 JSON 字符串需二次 parse）11 个分类（公共/订单/售后/商品/库存/素材中心/物流/财务/即时零售/会员通/供货商）全为电商交易域，零 IM/客服/私信类目，与 §2.2 结论一致
 - miniapp 域 DC897608 现版正文 MsgType 全集仍为 text/image/video/item/order 五种（专属字段 Content/PicUrl/VideoUrl/OutProductId/OutOrderId 逐字核对），无新增消息类型
+- 2026-11-05 晚间复查（无增量）：`listNew` 11 分类 id/名称逐项一致；DC897608 MsgType 表格与样本载荷各恰五种类型，无新增
 
 ---
 

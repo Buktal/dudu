@@ -287,7 +287,7 @@ boolean result = sign.equals(kwaisign); // 验证是否相同
 
 - 加密（逐字）："消息体采用AES加密, 每个应用在开通消息订阅功能时会生成唯一AES私钥"，获取路径 应用中心→详情→查看；官方 `PlatformEventSecurityUtil.decode` 源码逐字：`CIPHER_ALGORITHM = "AES/CBC/PKCS5Padding"`，key = `Base64.decodeBase64(privateKey)`，IV = `new IvParameterSpec(new byte[16])`（**全零 16 字节**——与 §5 服务商推送族 iv=key 前 16 字节、与 §4 域 A/B 明文 MD5 验签均不同，快手三套回调加密体系互相独立）；回执 Header `text/plain;charset=utf-8`、Body 加密内容、返回 `result:int`（1=成功）
 - 重推（逐字）：自动重试 5 次，间隔 5/10/20/30/60 分钟；手动重推走「消息管理-消息查询」；消息测试工具：文档中心-消息文档→在线测试工具
-- **2026-11-05 复查（无增量）**：`POST /rest/open/platform/doc/search` 全库分页聚合 810 个唯一 key（total 字段 821 含重复），updateTime ≥ 2026-11-01 仅「订单发货」一条（docType4 物流域）；客服/会话/消息/私信标题 89 条全为已知域。复查法可复用：按 updateTime 排序筛近期变更即可，无需重抓全库
+- **2026-11-05 复查（无增量）**：`POST /rest/open/platform/doc/search` 全库分页聚合 810 个唯一 key（total 字段 821 含重复），updateTime ≥ 2026-11-01 仅「订单发货」一条（docType4 物流域）；客服/会话/消息/私信标题 89 条全为已知域。复查法可复用：按 updateTime 排序筛近期变更即可，无需重抓全库（同日晚间复查亦无增量：810 key 不变，当日上午复查时刻之后零更新）
 
 ### 6.3 推送事件目录穷尽：12 类 62 事件，零聊天/私信事件 `[网关]`
 
