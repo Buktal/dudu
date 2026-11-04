@@ -121,9 +121,17 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
         ConsoleAccess access = accessService.lock(me);
         CompanyChannelDO account = requireAccount(access, id);
         ConsoleChannelRequests.Changes changes = request.credentialChanges();
-        account.setChannelInfo(configuration.merge(account.getChannel(), info(account), changes.set(), changes.clear(),
+        Map<String, Object> before = info(account);
+        account.setChannelInfo(configuration.merge(account.getChannel(), before, changes.set(), changes.clear(),
             callbackUrls.callback(origin, account.getCompanyChannelId())));
         exchangeThirdImTokensIfNeeded(account.getChannel(), changes.set(), account.getChannelInfo());
+        // 重新录入 refreshToken 即视为新授权链起点：清除服务端续期时刻，抖音续期 job
+        // 改按本次保存时刻起算（DouyinRefreshTokenRefresher），避免旧时刻立即触发对新
+        // 链 token 的续期烧掉 5 次轮换配额；值未变或未提交不重置
+        Object submittedToken = changes.set().get("refreshToken");
+        if (submittedToken != null && !submittedToken.equals(before.get("refreshToken"))) {
+            account.getChannelInfo().remove("refreshTokenRenewedAt");
+        }
         account.setAccountName(name(request.accountName()));
         // 纯凭据与账号名维护不改变账号-组关系，不做全企业广播
         accounts.updateById(account);
