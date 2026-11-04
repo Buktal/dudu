@@ -19,6 +19,7 @@ public final class Digests {
     private static final String SHA256 = "SHA-256";
     private static final String MD5 = "MD5";
     private static final String HMAC_SHA256 = "HmacSHA256";
+    private static final String HMAC_SHA1 = "HmacSHA1";
 
     private Digests() {
     }
@@ -45,12 +46,21 @@ public final class Digests {
 
     // HMAC-SHA256 字节流（WhatsApp 推送验签：key=appSecret、msg=原始 body 字节）
     public static byte[] hmacSha256(byte[] key, byte[] message) {
+        return hmac(HMAC_SHA256, key, message);
+    }
+
+    // HMAC-SHA1 摘要小写 hex（小红书三方推送验签：key=推送 token、msg=原始 body 字节）
+    public static String hmacSha1Hex(byte[] key, byte[] message) {
+        return HexFormat.of().formatHex(hmac(HMAC_SHA1, key, message));
+    }
+
+    private static byte[] hmac(String algorithm, byte[] key, byte[] message) {
         try {
-            Mac mac = Mac.getInstance(HMAC_SHA256);
-            mac.init(new SecretKeySpec(key, HMAC_SHA256));
+            Mac mac = Mac.getInstance(algorithm);
+            mac.init(new SecretKeySpec(key, algorithm));
             return mac.doFinal(message);
         } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("当前运行环境缺少 HMAC-SHA256 实现", e);
+            throw new IllegalStateException("当前运行环境缺少 " + algorithm + " 实现", e);
         }
     }
 

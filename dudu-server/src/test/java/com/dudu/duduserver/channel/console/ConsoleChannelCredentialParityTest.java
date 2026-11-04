@@ -34,6 +34,7 @@ import com.dudu.duduserver.channel.xiaohongshu.XiaohongshuAdapter;
 import com.dudu.duduserver.channel.xiaohongshu.XiaohongshuCrypto;
 import com.dudu.duduserver.channel.xiaohongshu.XiaohongshuProtocol;
 import com.dudu.duduserver.channel.xiaohongshuthirdim.XiaohongshuThirdImAdapter;
+import com.dudu.duduserver.channel.xiaohongshuthirdim.XiaohongshuThirdImProtocol;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.junit.jupiter.api.Test;
@@ -205,7 +206,7 @@ class ConsoleChannelCredentialParityTest {
             new DouyinAdapter(new DouyinProtocol(), null, null, null),
             new KuaishouAdapter(new KuaishouProtocol(), null),
             new XiaohongshuAdapter(new XiaohongshuProtocol(), new XiaohongshuCrypto(), null, null),
-            new XiaohongshuThirdImAdapter(),
+            new XiaohongshuThirdImAdapter(new XiaohongshuThirdImProtocol()),
             dingtalkAdapter(),
             new MeituanAdapter(new MeituanProtocol(), null, null, ""),
             new WhatsappAdapter(new WhatsappProtocol(), null, null),

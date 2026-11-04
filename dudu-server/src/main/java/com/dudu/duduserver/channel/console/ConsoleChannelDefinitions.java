@@ -56,9 +56,10 @@ public final class ConsoleChannelDefinitions {
             field("encodingAesKey", "EncodingAESKey", true, true, false, false),
             field("appId", "App ID", false, true, true, true),
             field("appSecret", "App Secret", true, false, true, false))),
-        definition(XIAOHONGSHU_THIRD_IM, "三方私信绑定：完成平台授权后 10 分钟内填入 Auth Code，保存即换取令牌；也可跳过授权码直接录入既有 Refresh Token。收发规格随平台开白下发，到手前仅维持绑定与令牌轮换。", List.of(
+        definition(XIAOHONGSHU_THIRD_IM, "三方私信绑定：完成平台授权后 10 分钟内填入 Auth Code，保存即换取令牌；也可跳过授权码直接录入既有 Refresh Token。聚光后台「私信 API 对接」配置回调后可收线索推送，推送验签 Token 可选。消息收发规格随平台开白下发，到手前仅维持绑定、令牌轮换与线索接收。", List.of(
             field("appId", "App ID", false, true, true, true),
             field("secret", "App Secret", true, true, true, false),
+            field("pushToken", "推送验签 Token", true, false, false, false),
             field("authCode", "Auth Code", true, false, false, false),
             field("refreshToken", "Refresh Token", true, false, true, false),
             field("accessToken", "Access Token", true, false, false, false))),

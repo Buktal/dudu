@@ -195,7 +195,7 @@ class XiaohongshuThirdImTokenClientTest {
     }
 
     private XiaohongshuThirdImCredentials credentials(String appId, String secret, String refreshToken) {
-        return new XiaohongshuThirdImCredentials(appId, secret, "stale-access-token", refreshToken);
+        return new XiaohongshuThirdImCredentials(appId, secret, "stale-access-token", refreshToken, null);
     }
 
     private void handle(String path, int status, String response) {
