@@ -299,6 +299,10 @@ sign = md5_hex_lowercase(signString)
 - https://miniapp.xiaohongshu.com/doc/DC234367 ✔（[客服]-发送客服消息：POST /api/rmp/message/custom，48h 回复通道；2026-09-10 复核补入）
 - https://miniapp.xiaohongshu.com/doc/DC591932 ✔（**官方错链**：DC577113 引用的「消息加解密」指到此页，实际内容为「开放数据校验与解密」，见 §10.6；另含 DataDecrypt.zip，与消息推送的 MsgDecrypt.zip 是两个不同包，勿混）
 
+**2026-11-05 复查（无增量）**
+- ark 网关分类树 `/api/doc/listNew`（返回 JSON 字符串需二次 parse）11 个分类（公共/订单/售后/商品/库存/素材中心/物流/财务/即时零售/会员通/供货商）全为电商交易域，零 IM/客服/私信类目，与 §2.2 结论一致
+- miniapp 域 DC897608 现版正文 MsgType 全集仍为 text/image/video/item/order 五种（专属字段 Content/PicUrl/VideoUrl/OutProductId/OutOrderId 逐字核对），无新增消息类型
+
 ---
 
 ## 10. 补摄：小程序客服消息体系（miniapp.xiaohongshu.com）`[官方]`
