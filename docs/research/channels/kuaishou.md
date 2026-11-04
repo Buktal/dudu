@@ -520,3 +520,15 @@ curl --request POST 'https://openapi.kwaixiaodian.com/open/cs/intelligent/messag
 - d) 直播旧站 WebHook menu=24 存档——维持
 - 新增 e) `open.cs.dispatching.*` 九接口对商家自研应用的实际可用性（同待商家开发者账号实测）
 - 新增 f) 410004「灰度开关」是否同样约束 message.send（evaluation.message 明示灰度开关需联系客服打开）
+## 8. oauth2 令牌端点契约（2026-11-05 官方 jar 反编译实锤）
+
+来源：官方 SDK jar 重新下载反编译（`GET /rest/open/platform/sdk/api/download`，主域返回 805000 服务异常、备用域 `open.kwaixiaodian.com` 取回 2127560 字节 zip，与 §6.1 记载 2.1 MB 一致）；类 `com.kuaishou.merchant.open.api.client.oauth.OauthAccessTokenKsClient`（javap 字节码逐字）
+
+- **端点**（均为 GET，query 传参，HttpClient.doGet 实锤）：
+  - 首换：`{oauthBase}/oauth2/access_token`，query `app_id`、`app_secret`、`grant_type=code`、`code`（buildOauthAccessTokenRequest 四参逐字）
+  - 刷新：`{oauthBase}/oauth2/refresh_token`，query `app_id`、`app_secret`、`grant_type=refresh_token`、`refresh_token`（buildOauthRefreshTokenRequest 四参逐字）
+  - 无签名（oauth 端点不走 §4.3 网关 sign，仅 app_secret 直传 query）
+- **域**（OauthRestUrlDomainEnum 逐字）：ONLINE `https://openapi.kwaixiaodian.com`；ONLINE_BACKUP `https://open.kwaixiaodian.com`；TEST（测试域）——与网关域同族
+- **响应**（KsAccessTokenResponse 字段 + Gson `@SerializedName` 逐字）：`result`（int）、`error`、`error_msg`→errorMsg、`access_token`→accessToken、`refresh_token`→refreshToken、`open_id`→openId（无注解原名的推断为字段名直映）、`expires_in`（long）、`refresh_token_expires_in`（long）、`scopes`（List&lt;String&gt;）
+- **生命周期交叉**（§7.4 第三方工程参数 + 本节 SDK 响应字段互证）：access_token 默认 86400s（1 天）、refresh_token 每次刷新轮换且带独立有效期字段（refresh_token_expires_in，具体秒数无公开数值，待实测）；轮换次数上限无官方记载（区别于抖音 5 次明文）；token 过期错误码 803000/803001（网关族）
+- **实施判定**：Console 直配 accessToken 只能维持 1 天，发送自动化的前提是录 refreshToken 走每日刷新；首换（grant_type=code）供 Console 授权码链路复用抖音/小红书同款模式，code 时效与一次性无官方数值（按 oauth 族惯例按 10 分钟一次性处理，待实测）
