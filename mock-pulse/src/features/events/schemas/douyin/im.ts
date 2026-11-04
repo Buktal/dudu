@@ -192,10 +192,18 @@ const goldenDyLeadsPhoneCard: WirePayload = {
   },
 };
 
-/** im_send_msg 文本：官方未给独立样本，content 按 §5.10 黄金样本同构、事件名换 im_send_msg */
+/** im_send_msg 文本：官方未给独立样本，content 按 §5.10 黄金样本同构、事件名换
+ * im_send_msg 且 from/to 对调（§2.1：from=授权号、to=访客，与 im_receive_msg 相反），
+ * user_infos 不动（接收侧按 open_id 匹配），text 换商家回复口吻 */
 const goldenDySendText: WirePayload = {
   ...goldenDyText,
   event: "im_send_msg",
+  from_user_id: "aaa-7ae0-4399-914a-5eb1df5861ba",
+  to_user_id: "aaa-ae9b-4dbf-add1-bf67e4093fab",
+  content: {
+    ...(goldenDyText.content as Record<string, unknown>),
+    text: "您好，捷途70现车充足，方便留个手机号帮您安排到店看车吗",
+  },
 };
 
 /** 官方黄金样本 §5.11：im_enter_direct_msg（content 为 json 字符串，逐字） */

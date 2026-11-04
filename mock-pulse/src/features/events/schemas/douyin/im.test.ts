@@ -85,11 +85,21 @@ describe("抖音 IM 私信明细模板", () => {
     ).toHaveLength(2);
   });
 
-  it("发送私信文本与接收文本同构，事件名换 im_send_msg", () => {
+  it("发送私信文本与接收文本同构：事件名换 im_send_msg、from/to 对调、text 换商家口吻", () => {
     const send = schemaById("dy-send-text").payload;
     expect(send.event).toBe("im_send_msg");
     const receive = schemaById("dy-text").payload;
-    expect(send.content).toEqual(receive.content);
+    // §2.1：from=授权号、to=访客（与 im_receive_msg 相反）
+    expect(send.from_user_id).toBe(receive.to_user_id);
+    expect(send.to_user_id).toBe(receive.from_user_id);
+    const sendContent = send.content as { text?: string };
+    const receiveContent = receive.content as { text?: string };
+    expect(sendContent.text).not.toBe(receiveContent.text);
+    // content 其余字段与接收样本同构（user_infos 不动，接收侧按 open_id 匹配）
+    expect({ ...sendContent, text: undefined }).toEqual({
+      ...receiveContent,
+      text: undefined,
+    });
   });
 
   it("撤回私信黄金载荷逐字（§5.12，含掩码星号与独有 msg_id）", () => {
