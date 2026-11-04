@@ -126,7 +126,7 @@ v1.0.5（页面 updateTime 2026-06-16）新增上表 investment_franchise_card �
 - `im_enter_direct_msg` content（来源：enter-direct-msg-webhook 页）：conversation_short_id、server_message_id、conversation_type、objectId（视频 ID）、scene_type（3:视频页 4:主页 5:消息页 6:直播页 100:其他）、create_time、`data-im-extra`（小程序透传字段）、user_infos、ad_info（广告信息：adv_id/adv_name/ad_id/ad_name/creative_id/promotion_id/material_*_id）、query/path（小程序跳转来源）。注意该页 content 是 **json 字符串**（string 类型）
 - `im_recall_msg` content：仅 `server_message_id`；信封额外带 `msg_id`。授权/未授权双端推送规则见该页表格（A/B 授权组合决定推给谁）
 - `im_message_read` content：conversation_short_id、conversation_type、read_open_id、index（与 im_receive/im_send 的 index 匹配判定已读）
-- 群聊三事件（im_group_receive_msg / im_group_send_msg / enter_group_audit_change / group_fans_event）官方仅给空 content `{}`，字段明细文档未找到 → 见待核验
+- 群聊三事件（im_group_receive_msg / im_group_send_msg / enter_group_audit_change / group_fans_event）官方仅给空 content `{}`，字段明细文档未找到 → **已解决（2026-11-03）**：四个事件专页均已抓全文，字段表与示例见 §8.5
 
 ## 3. 回调机制
 
@@ -234,8 +234,8 @@ func sign(clientSecret string, body []byte) string {
 }
 ```
 
-- 验签（逐字）：「根据【消息验证 TOKEN】、Nonce、TimeStamp、Encrypt 获取签名，和 MsgSignature 比较」。具体拼接序（是否字典序）官方示例代码包未随文档给出 → 待核验(09-27)。参照同族小游戏旧客服算法，大概率是 sha1(字典序排序四参拼接)
-- 解密：Encrypt 用【消息加密解密 KEY】（第三方小程序开发配置中配置）调 MsgDecrypt 解密；AES 具体参数在示例代码包中 → 待核验(09-27)
+- 验签（逐字）：「根据【消息验证 TOKEN】、Nonce、TimeStamp、Encrypt 获取签名，和 MsgSignature 比较」。具体拼接序（是否字典序）官方示例代码包未随文档给出 → **已核验（2026-11-03，encryption 页 demo.zip）**：sha1(字典序排序【TOKEN, TimeStamp, Nonce, Encrypt】后直接拼接) hex 小写，java/go/php 三语一致，逐字实现见 §8.7
+- 解密：Encrypt 用【消息加密解密 KEY】（第三方小程序开发配置中配置）调 MsgDecrypt 解密；AES 具体参数在示例代码包中 → **已核验（2026-11-03）**：AES-256-CBC/NoPadding，43 字符 base64 EncodingAesKey 补 `=` 解码 32 字节 key、IV=key 前 16 字节；官方包 Go 版与 Java/PHP 相矛盾（照录见 §8.7），实施按 Java/PHP（2/3 样本一致）
 - TOKEN / KEY 配置位置：「授权事件接收 URL」「消息与事件接收 URL」「消息验证 TOKEN」「消息加密解密 KEY」均在第三方小程序应用的开发配置中
 
 ### 4.4 生活服务字段级加密：AES-256-CBC
