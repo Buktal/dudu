@@ -4,6 +4,8 @@
 
 2026-10-13 移除 Mock 模式：删除 `VITE_DESK_MOCK` / `VITE_DESK_SCENARIO` 开关、开发适配器与固定数据工厂、调试场景及相应测试，应用恒走真实适配器；stores 与组件测试共用的测试夹具迁入 `dudu-desk/src/features/inbox/test-fixtures.ts`。下文历史条目中的 Mock 表述自即日起失效，以本条移除记录为准
 
+2026-11-05 渠道内回复标记：商家在渠道 App（如抖音）原生回复的消息经渠道回调同步为 outgoing 且无操作员身份（senderUserId 缺省），气泡下显示「渠道内回复」标记与来源说明，坐席自己发出的消息带操作员身份不显示标记，访客消息不受影响
+
 2026-11-03 渠道色调补齐：快手新增品牌橙色调与「快」字图标，小红书私信三方复用小红书红调与「红」字图标（`channel-glyph.tsx` 与 `--channel-*-foreground/surface` 变量），未收录渠道继续回退中性色与地球图标
 
 2026-10-13 审查修复（双轴审查结论落地）：失败气泡重试不再只认本次运行的本地提交——重试优先用本地提交，缺失时（重登或他端加载的失败消息）从消息自身取原访客与正文生成新的 `clientRequestId` 调同一发送接口，原失败记录保留、当前草稿不被占用；重新登录后按库展示的 `sending` 受理记录显示「发送中」，failed/unconfirmed 的提示与重试入口不变；delivery 解析收紧到契约三态 `sending/sent/failed`，契约外取值（accepted/delivered/read/unconfirmed）在真实报文里按无效响应拒绝，Mock 世界仍用自身词表；结束接待（closed）与其他端一致地清除本端待处理提醒，较新的待回复状态不被较旧的结束报文误清，重连补回已结束的访客不重建提醒

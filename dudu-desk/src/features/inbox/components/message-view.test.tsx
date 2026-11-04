@@ -57,3 +57,37 @@ it("keeps settled and incoming messages free of a delivery footer", () => {
   );
   expect(screen.queryByText("发送中")).toBeNull();
 });
+
+it("marks channel-synced outgoing messages without a sender", () => {
+  // 渠道同步的商家发出消息（如抖音 im_send_msg）无操作员身份：标记来源避免坐席
+  // 困惑；坐席自己发出的消息带 senderUserId，不显示标记
+  render(<MessageView message={outgoing("sent")} />);
+  expect(screen.getByText("渠道内回复")).toBeTruthy();
+});
+
+it("keeps staff-sent outgoing messages free of the channel marker", () => {
+  render(
+    <MessageView
+      message={defineMessage({
+        id: "server-4",
+        conversationId: "conversation-a",
+        direction: "outgoing",
+        senderUserId: "9",
+        delivery: { state: "sent" },
+      })}
+    />,
+  );
+  expect(screen.queryByText("渠道内回复")).toBeNull();
+});
+
+it("keeps incoming messages free of the channel-reply marker", () => {
+  render(
+    <MessageView
+      message={defineMessage({
+        id: "server-3",
+        conversationId: "conversation-a",
+      })}
+    />,
+  );
+  expect(screen.queryByText("渠道内回复")).toBeNull();
+});

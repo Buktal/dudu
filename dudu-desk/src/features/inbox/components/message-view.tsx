@@ -127,6 +127,13 @@ export function MessageView({
               )}
             </MessageFooter>
           )}
+        {outgoing && !message.senderUserId && (
+          <MessageFooter className="px-0 text-[11px] text-muted-foreground">
+            <span title="运营在渠道 App（如抖音）内回复，经渠道回调同步">
+              渠道内回复
+            </span>
+          </MessageFooter>
+        )}
       </MessageContent>
     </Message>
   );
