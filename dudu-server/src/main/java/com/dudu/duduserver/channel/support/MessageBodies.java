@@ -29,6 +29,19 @@ public final class MessageBodies {
             ? "unknown" : originalType);
     }
 
+    // 带渠道原因说明的 unknown（如平台推送不携带素材链接）：说明空白时不放入
+    public static Map<String, Object> unknown(String originalType, String explanation) {
+        String reason = Texts.blankToNull(explanation);
+        if (reason == null) {
+            return unknown(originalType);
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("type", "unknown");
+        body.put("originalType", Texts.isBlank(originalType) ? "unknown" : originalType);
+        body.put("explanation", reason);
+        return body;
+    }
+
     private static void putIfPresent(Map<String, Object> media, String key, String value) {
         String present = Texts.blankToNull(value);
         if (present != null) {

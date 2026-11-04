@@ -60,10 +60,11 @@ class KuaishouProtocolTest {
         var order = protocol.parse(31L, push(1012, "{\"orderId\":\"12345\"}")).orElseThrow();
         assertThat(order.content()).isEqualTo(Map.of("type", "card", "kind", "order", "externalId", "12345"));
 
-        // 图片（contentType=2）：官方抹除 uri 后无素材引用，按 unknown 如实保存
+        // 图片（contentType=2）：官方抹除 uri 后无素材引用，按 unknown 带平台限制说明
         var image = protocol.parse(31L, push(2,
             "{\"uri\":\"\",\"width\":100,\"height\":100,\"contentLength\":1024}")).orElseThrow();
-        assertThat(image.content()).isEqualTo(Map.of("type", "unknown", "originalType", "image"));
+        assertThat(image.content()).containsEntry("type", "unknown").containsEntry("originalType", "image")
+            .containsEntry("explanation", "快手推送不携带图片链接，仅保留尺寸与大小信息");
 
         // 卡片载荷缺失 externalId 时不填假值
         var bareItem = protocol.parse(31L, push(1011, "")).orElseThrow();

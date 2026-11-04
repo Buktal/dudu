@@ -124,7 +124,10 @@ public class KuaishouProtocol {
         String content = message.getStr(KEY_CONTENT, "");
         return switch (contentType) {
             case CONTENT_TYPE_TEXT -> text(content, contentType);
-            case CONTENT_TYPE_IMAGE -> MessageBodies.unknown("image");
+            // 图片：平台推送把原图 uri 抹为空串、仅保留尺寸与大小（§6.5.2），
+            // 无素材可读，按 unknown 带平台限制说明
+            case CONTENT_TYPE_IMAGE -> MessageBodies.unknown("image",
+                "快手推送不携带图片链接，仅保留尺寸与大小信息");
             // 商品卡片：content 为 {"text": "$itemId"}，text 值即商品标识（保留官方 $ 前缀形态）
             case CONTENT_TYPE_ITEM -> card(KIND_ITEM, textValueOf(content));
             case CONTENT_TYPE_ORDER -> card(KIND_ORDER, orderIdOf(content));
