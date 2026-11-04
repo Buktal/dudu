@@ -42,6 +42,7 @@ import {
   generateWaWamid,
   generateWeiboCreatedAt,
   generateWeiboUid,
+  generateXhsLeadsId,
   generateXhsMsgId,
 } from "./generators";
 import type { Generator as IdGenerator } from "./types";
@@ -69,6 +70,8 @@ import type { Generator as IdGenerator } from "./types";
  *   排重键 sender_id+created_at 的时刻半边，经 lib/time 封装格式化）
  * - xhsMsgId：小红书 MsgId（官方口径字符串无格式样本，微信系 int64 同族
  *   18 位数字串）
+ * - xhsLeadsId：小红书三方线索 leads_id（官方无格式样本，线索系统同族
+ *   12~18 位数字串，随新线索变化）
  * - ksMessageId：快手 message_id（官方支付回调样本为小写 UUID，「每次随机
  *   生成的 ID」，幂等键重试保持一致）
  * - ksRequestId：快手智能客服 requestId（官方示例 fadbsadfg1323 为小写字母
@@ -148,6 +151,7 @@ const GENERATORS: Record<IdKind, IdGenerator> = {
   weiboUid: generateWeiboUid,
   weiboCreatedAt: generateWeiboCreatedAt,
   xhsMsgId: generateXhsMsgId,
+  xhsLeadsId: generateXhsLeadsId,
   ksMessageId: generateKsMessageId,
   ksRequestId: generateKsRequestId,
   taobaoBizId: generateTaobaoBizId,

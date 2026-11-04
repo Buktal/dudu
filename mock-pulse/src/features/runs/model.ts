@@ -41,7 +41,8 @@ export type RunStep = {
   payload: string;
   requestBody?: string | null;
   expected?: ExpectedReceipt | null;
-  /** 签名快照：抖音 X-Douyin-Signature 头 / 企微 msg_signature 查询参数 */
+  /** 签名快照：按渠道取验签值（抖音 X-Douyin-Signature 头 / 企微 msg_signature
+   * 查询参数 / 小红书 third 面 X-Red-Signature 的 hex；未验签渠道为空串） */
   signature: string;
   /** 发送唯一标识快照：抖音 Msg-Id 头 / 企微 nonce */
   msgId: string;

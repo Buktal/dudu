@@ -1,0 +1,158 @@
+{
+  "format": "mockpulse-field-definitions-v1",
+  "channelId": "xiaohongshu",
+  "version": "2026.09",
+  "schemas": {
+    "xhs-third-lead": {
+      "version": "2026.09",
+      "source": "https://github.com/Maskvvv/java-study",
+      "fields": [
+        {
+          "path": "data",
+          "title": "线索数据",
+          "type": "json",
+          "group": "推送信封",
+          "description": "线索字段表整体（联调代码 [联调代码] 级证据：java-study 控制器反序列化模型，SnakeCase 命名策略；详见 docs/research/channels/xiaohongshu-third-im-spec.md §1.4）。",
+          "required": true
+        },
+        {
+          "path": "timestamp",
+          "title": "推送时间戳",
+          "type": "number",
+          "group": "推送信封",
+          "description": "毫秒级时间戳（信封样本 1721796000000 逐字照录）。",
+          "required": true
+        },
+        {
+          "path": "source",
+          "title": "推送来源",
+          "type": "string",
+          "group": "推送信封",
+          "description": "推送来源标识（信封样本值 xx 照录，官方未给枚举）。",
+          "required": true
+        },
+        {
+          "path": "data.landing_page_id",
+          "title": "落地页 ID",
+          "type": "number",
+          "group": "线索字段表",
+          "description": "Long 型落地页 ID（样本值按事实库掩码风格构造）。",
+          "required": false
+        },
+        {
+          "path": "data.url",
+          "title": "发送地址",
+          "type": "string",
+          "group": "线索字段表",
+          "description": "触发线索的发送地址（与 heguang Q&A 口径互证：是发送地址而非落地页地址）。",
+          "required": false,
+          "format": "url"
+        },
+        {
+          "path": "data.submitted_time",
+          "title": "提交时间",
+          "type": "string",
+          "group": "线索字段表",
+          "description": "格式 yyyy-MM-dd HH:mm:ss，时区 GMT+8。",
+          "required": false
+        },
+        {
+          "path": "data.source_channel",
+          "title": "投放渠道",
+          "type": "string",
+          "group": "线索字段表",
+          "description": "可区分搜索广告与信息流广告。",
+          "required": false
+        },
+        {
+          "path": "data.account_id",
+          "title": "投放账号 ID",
+          "type": "string",
+          "group": "线索字段表",
+          "description": "聚光投放账号标识。",
+          "required": false
+        },
+        {
+          "path": "data.account_name",
+          "title": "投放账号名",
+          "type": "string",
+          "group": "线索字段表",
+          "description": "聚光投放账号名称。",
+          "required": false
+        },
+        {
+          "path": "data.campaign_id",
+          "title": "广告计划 ID",
+          "type": "number",
+          "group": "线索字段表",
+          "description": "Long 型广告计划标识（仅广告流量线索携带，自然流量无归因字段）。",
+          "required": false
+        },
+        {
+          "path": "data.campaign_name",
+          "title": "广告计划名",
+          "type": "string",
+          "group": "线索字段表",
+          "description": "广告计划名称。",
+          "required": false
+        },
+        {
+          "path": "data.unit_id",
+          "title": "广告单元 ID",
+          "type": "number",
+          "group": "线索字段表",
+          "description": "Long 型广告单元标识。",
+          "required": false
+        },
+        {
+          "path": "data.unit_name",
+          "title": "广告单元名",
+          "type": "string",
+          "group": "线索字段表",
+          "description": "广告单元名称。",
+          "required": false
+        },
+        {
+          "path": "data.creative_id",
+          "title": "广告创意 ID",
+          "type": "number",
+          "group": "线索字段表",
+          "description": "Long 型广告创意标识。",
+          "required": false
+        },
+        {
+          "path": "data.leads_id",
+          "title": "线索 ID",
+          "type": "string",
+          "group": "线索字段表",
+          "description": "线索唯一标识（会话归属与重推幂等键的来源；官方无格式样本，样本取占位）。",
+          "required": true
+        },
+        {
+          "path": "data.keyword",
+          "title": "搜索关键词",
+          "type": "string",
+          "group": "线索字段表",
+          "description": "搜索广告的触发关键词。",
+          "required": false
+        },
+        {
+          "path": "data.data[0].label",
+          "title": "线索标签",
+          "type": "string",
+          "group": "线索标签键值对",
+          "description": "线索标签数组 {label, value} 的标签名（如 电话号码/微信号/用户昵称，标签集由投放侧配置决定）。",
+          "required": false
+        },
+        {
+          "path": "data.data[0].value",
+          "title": "线索值",
+          "type": "string",
+          "group": "线索标签键值对",
+          "description": "线索标签数组 {label, value} 的取值（用户填写的留资内容）。",
+          "required": false
+        }
+      ]
+    }
+  }
+}

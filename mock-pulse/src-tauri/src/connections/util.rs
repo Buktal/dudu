@@ -9,6 +9,8 @@
 //!   （飞书 X-Lark-Signature：timestamp+nonce+encrypt_key+原始 body 字节）
 //! - [`hmac_sha256_base64`]：HMAC-SHA256（RFC 2104，RustCrypto hmac 构造）→
 //!   标准 base64（钉钉机器人 sign 头）
+//! - [`hmac_sha1_hex`]：HMAC-SHA1 → 40 位小写 hex（小红书三方私信
+//!   X-Red-Signature = "sha1=" + HMAC-SHA1(pushToken, body)）
 //! - [`utc8_timestamp`]：epoch 秒 → 东八区 `yyyy-MM-dd HH:mm:ss`（历法换算
 //!   由 time crate 完成；京东 JOS timestamp §4.1/§4.2 与 B站事件 timestamp
 //!   §2.2 官方逐字同形）
@@ -205,6 +207,17 @@ pub(crate) fn hmac_sha256_hex(key: &str, data: &str) -> String {
     hex::encode(hmac_sha256(key.as_bytes(), data.as_bytes()))
 }
 
+/// HMAC-SHA1 → 40 位小写 hex（小红书三方私信线索推送 X-Red-Signature =
+/// "sha1=" + HMAC-SHA1(token, 原始 body)，spec §1.2「以 token 为 secretKey」
+/// 即 HMAC 口径；RFC 2202 向量验收）。HMAC-SHA256 无此形态需求，不设旁支。
+pub(crate) fn hmac_sha1_hex(key: &str, data: &str) -> String {
+    use hmac::{Hmac, Mac};
+    type HmacSha1 = Hmac<Sha1>;
+    let mut mac = HmacSha1::new_from_slice(key.as_bytes()).expect("HMAC 接受任意长度 key");
+    mac.update(data.as_bytes());
+    hex::encode(mac.finalize().into_bytes())
+}
+
 /// epoch 秒 → 东八区 `yyyy-MM-dd HH:mm:ss`（京东 JOS timestamp §4.1/§4.2
 /// 与 B站事件 timestamp §2.2 官方逐字同形）：历法换算（civil_from_days 曾
 /// 在京东/B站两处手写，退件纠正）由 time crate 单点完成，固定 +08:00 偏移
@@ -396,6 +409,16 @@ mod tests {
             hmac_sha256_hex("Jefe", "what do ya want for nothing?"),
             hex::encode(hmac_sha256(b"Jefe", b"what do ya want for nothing?"))
         );
+    }
+
+    #[test]
+    fn hmac_sha1_hex_matches_rfc_2202_vector() {
+        // 独立来源：RFC 2202 HMAC-SHA1 测试向量 TC2（与 dudu-server 侧同向量，
+        // 经 openssl dgst -sha1 -hmac 独立复算核验）；摘要恒 40 位小写 hex
+        let digest = hmac_sha1_hex("Jefe", "what do ya want for nothing?");
+        assert_eq!(digest.len(), 40);
+        assert!(digest.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+        assert_eq!(digest, "effcdf6ae5eb2fa2d27416d5f184df9c259a7c79");
     }
 
     #[test]

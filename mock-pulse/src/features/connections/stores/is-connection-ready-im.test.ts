@@ -56,6 +56,7 @@ const savedXiaohongshu: ConnectionConfig = {
   token: "token",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   appId: "wx_appid",
+  pushToken: "push-token",
 };
 
 const savedKuaishou: ConnectionConfig = {
@@ -191,9 +192,25 @@ describe("isConnectionReady（小红书按通道核必填集）", () => {
       token: "",
       encodingAesKey: "",
       appId: "",
+      pushToken: "",
     };
     expect(isConnectionReady(ark)).toBe(true);
     expect(isConnectionReady({ ...ark, url: "" })).toBe(false);
+  });
+
+  it("三方面官方验签可选：url 齐全即算已配置（pushToken 空为明文直发）", () => {
+    const third = {
+      ...savedXiaohongshu,
+      system: "third" as const,
+      token: "",
+      encodingAesKey: "",
+      appId: "",
+      pushToken: "",
+    };
+    expect(isConnectionReady(third)).toBe(true);
+    expect(isConnectionReady({ ...third, url: "" })).toBe(false);
+    // pushToken 仅构造 X-Red-Signature 验签头（官方可选），不参与必填集
+    expect(isConnectionReady({ ...third, pushToken: "push-token" })).toBe(true);
   });
 
   it("初始小红书占位连接（凭据全空、小程序通道起步）不算已配置", () => {

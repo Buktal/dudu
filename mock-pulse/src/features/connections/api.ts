@@ -46,11 +46,13 @@ export type DingtalkSystem = "http_crypto" | "bot";
 
 /**
  * 小红书推送通道（与 Rust 端 XiaohongshuSystem 内标一致，snake_case）：
- * 双体系并行（事实库 §2/§10）——小程序客服消息（官方消息型推送基准：GET
- * 四参握手 + AES 加密信封，回 success）与电商 ark 订单推送（POST JSON 数组
- * 明文，回 {"success":true,"error_code":0}），验签/加密体系完全不同。
+ * 三体系并行——小程序客服消息（事实库 §10：GET 四参握手 + AES 加密信封，回
+ * success）、电商 ark 订单推送（事实库 §2：POST JSON 数组明文，回
+ * {"success":true,"error_code":0}）与三方私信线索推送（third，事实库
+ * xiaohongshu-third-im-spec.md §1：POST 明文 + header X-Red-Signature 验签，
+ * 回 HTTP 200 即成功），验签/加密体系完全不同。
  */
-export type XiaohongshuSystem = "miniapp" | "ark";
+export type XiaohongshuSystem = "miniapp" | "ark" | "third";
 
 /**
  * 快手推送通道（与 Rust 端 KuaishouSystem 内标一致，snake_case）：
@@ -115,13 +117,15 @@ export type WeiboConnectionConfig = {
  * 小红书连接配置形状（与 Rust 端 ConnectionConfig::Xiaohongshu 内标一致）：
  * 小程序通道三元组（Token 参与握手三参与 MsgSignature 四参签名、
  * EncodingAESKey 派生 AES-256-CBC、AppID 为加密明文尾部 receiveid）；
- * ark 通道无凭据（两 SDK 均未展示推送侧签名头，事实库 §3.7）。
+ * ark 通道无凭据（两 SDK 均未展示推送侧签名头，事实库 §3.7）；三方私信
+ * 线索推送通道 pushToken 为 X-Red-Signature 验签密钥（官方验签可选，留空
+ * 即明文直发，xiaohongshu-third-im-spec.md §1.2）。
  */
 export type XiaohongshuConnectionConfig = {
   channel: "xiaohongshu";
   /** 回调目标地址，事件与剧本共享 */
   url: string;
-  /** 推送通道：小程序客服消息 / 电商 ark 订单推送（缺省 miniapp） */
+  /** 推送通道：小程序客服消息 / 电商 ark 订单推送 / 三方私信线索推送（缺省 miniapp） */
   system: XiaohongshuSystem;
   /** 小程序通道：消息验证 TOKEN（握手三参与 MsgSignature 四参签名源） */
   token: string;
@@ -129,6 +133,8 @@ export type XiaohongshuConnectionConfig = {
   encodingAesKey: string;
   /** 小程序通道：小程序 AppID（加密明文尾部 receiveid，解密后须校验） */
   appId: string;
+  /** 三方线索推送通道：X-Red-Signature 验签密钥（官方验签可选，留空明文直发） */
+  pushToken: string;
 };
 
 /**

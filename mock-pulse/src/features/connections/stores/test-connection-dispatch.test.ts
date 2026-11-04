@@ -102,6 +102,7 @@ const savedXiaohongshu: ConnectionConfig = {
   token: "mock_token",
   encodingAesKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
   appId: "wx_mock_appid",
+  pushToken: "",
 };
 
 const savedKuaishou: ConnectionConfig = {

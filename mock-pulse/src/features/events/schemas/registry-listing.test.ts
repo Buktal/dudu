@@ -155,7 +155,7 @@ describe("schemasByChannel 模板清单（平台/IM 系）", () => {
     ]);
   });
 
-  it("小红书：客服接收 5 + 支付回调 2 + 电商 ark 订单推送族 10", () => {
+  it("小红书：客服接收 5 + 支付回调 2 + 电商 ark 订单推送族 10 + 三方线索 1", () => {
     expect(schemasByChannel("xiaohongshu").map((schema) => schema.id)).toEqual([
       // 客服接收 5 MsgType（事实库 §10.3：通用字段 + MsgType 专属字段）
       "xhs-text",
@@ -177,6 +177,8 @@ describe("schemasByChannel 模板清单（平台/IM 系）", () => {
       "xhs-ark-sku-buyable",
       "xhs-ark-sku-delete",
       "xhs-ark-item-audit-reject",
+      // 三方私信线索推送（spec xiaohongshu-third-im-spec.md §1.4，仅线索面）
+      "xhs-third-lead",
     ]);
   });
 

@@ -139,6 +139,15 @@ export function generateXhsMsgId(): string {
 }
 
 /**
+ * 小红书三方线索 leads_id：官方无格式样本（spec §1.4 联调代码仅 String）——
+ * 按线索系统同族数字串生成 12~18 位（线索 ID 随新线索变化，会话归属与
+ * 重推幂等键的来源）
+ */
+export function generateXhsLeadsId(): string {
+  return randomDigits(12 + (randomBytes(1)[0] % 7));
+}
+
+/**
  * 快手 message_id：官方支付回调样本为小写 UUID 形态（事实库 §4.1 样本
  * 76a50e0c-a843-492b-…；「每次随机生成的 ID」，重试保持一致——幂等键随新事件变化）
  */

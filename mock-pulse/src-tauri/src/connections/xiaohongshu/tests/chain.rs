@@ -1,7 +1,9 @@
-//! 握手与双通道直发全链路（本地 TcpListener）：
+//! 握手与三通道直发全链路（本地 TcpListener）：
 //! 小程序 GET 四参握手（三参签名可复算 + 原样回显成功/回显不符/非 2xx/超时）、
 //! 加密信封直发（信封可独立验签解密 + 回执 success + 快照）、ark 数组直发
-//! （数组包裹逐字节核对 + 官方应答）、ark 推送探针（成功/应答不合规）。
+//! （数组包裹逐字节核对 + 官方应答）、ark 推送探针（成功/应答不合规）、
+//! 三方线索直发（X-Red-Signature 头可复算 / 未配 pushToken 不带头 + 状态码
+//! 即回执）、三方探针（成功/非 2xx）。
 //! 协议原语经本渠道 Adapter 直调（收窄签名，配置判别由注册表路由保证）。
 
 use std::collections::HashMap;
@@ -10,6 +12,7 @@ use std::net::{Shutdown, SocketAddr, TcpListener};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
+use crate::connections::util::hmac_sha1_hex;
 use crate::connections::{ChannelAdapter, ConnectionConfig};
 use crate::test_support::{quick_client, read_head_and_body};
 
@@ -41,9 +44,20 @@ fn urldecode(value: &str) -> String {
     String::from_utf8_lossy(&out).to_string()
 }
 
-/// 录制到的请求：query 参数集 + body。
+/// 取录制请求的指定头值（名字大小写不敏感；缺头返回 None——三方面未配
+/// pushToken 时的缺席判定依赖 None 语义）。
+fn header_value<'a>(head: &'a str, name: &str) -> Option<&'a str> {
+    head.lines().find_map(|line| {
+        line.split_once(':')
+            .filter(|(key, _)| key.trim().eq_ignore_ascii_case(name))
+            .map(|(_, value)| value.trim())
+    })
+}
+
+/// 录制到的请求：原始头区 + query 参数集 + body。
 #[derive(Clone)]
 struct Recorded {
+    head: String,
     query: HashMap<String, String>,
     body: String,
 }
@@ -64,6 +78,7 @@ fn start_request_server(
         let url = request_line.split_whitespace().nth(1).unwrap_or_default();
         let query = url.split_once('?').map(|(_, q)| q).unwrap_or_default();
         let request = Recorded {
+            head,
             query: query
                 .split('&')
                 .filter(|kv| !kv.is_empty())
@@ -251,6 +266,7 @@ fn dispatch_fails_fast_on_bad_aes_key_without_sending() {
         token: GOLDEN_TOKEN.into(),
         encoding_aes_key: "short-key".into(),
         app_id: GOLDEN_APP_ID.into(),
+        push_token: String::new(),
     };
     let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_MESSAGE_PLAINTEXT);
 
@@ -333,4 +349,104 @@ fn ark_probe_handshake_fails_on_non_official_reply() {
 
     assert!(!outcome.ok);
     assert!(outcome.message.contains("success=true"), "{outcome:?}");
+}
+
+// ---- 三方私信线索通道全链路 ----
+
+#[test]
+fn third_dispatch_posts_plain_envelope_with_recomputable_signature_header() {
+    let ok_receipt = |request: &Recorded| {
+        // 接收侧按官方协议验签（spec §1.2）：头 X-Red-Signature 可由原始
+        // body 字节 + pushToken 复算（dudu-server 接收侧另有拼接算法兜底）
+        assert_eq!(
+            header_value(&request.head, "X-Red-Signature"),
+            Some(format!("sha1={}", hmac_sha1_hex(GOLDEN_PUSH_TOKEN, &request.body)).as_str()),
+            "X-Red-Signature 头应可由原始 body 复算"
+        );
+        // 应答唯一要求 HTTP 200（spec §1.3），正文无口径
+        ("HTTP/1.1 200 OK".into(), String::new())
+    };
+    let (addr, rx) = start_request_server(ok_receipt, Duration::ZERO);
+    let config = third_config(format!("http://{addr}/callback"));
+
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_THIRD_LEAD);
+
+    assert_eq!(outcome.status, 200);
+    assert_eq!(outcome.body, "");
+    assert_eq!(outcome.error, None);
+    // 请求侧逐字节核对：明文信封透传（无包裹无加密，与 ark/miniapp 的差异点）
+    let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    assert_eq!(request.body, GOLDEN_THIRD_LEAD);
+    // 快照与请求要素一致：signature 落裸 hex（前端快照渲染 sha1= 前缀）；
+    // 无独立消息 ID / 发送时间戳要素，快照不落值
+    assert_eq!(outcome.msg_id, "");
+    assert_eq!(outcome.signature, hmac_sha1_hex(GOLDEN_PUSH_TOKEN, GOLDEN_THIRD_LEAD));
+    assert_eq!(outcome.timestamp, None);
+    assert_eq!(outcome.request_body.as_deref(), Some(GOLDEN_THIRD_LEAD));
+}
+
+#[test]
+fn third_dispatch_without_push_token_omits_signature_header() {
+    // 官方验签可选（spec §1.2）：pushToken 未配置即明文直发不带头
+    let ok_receipt = |request: &Recorded| {
+        assert_eq!(
+            header_value(&request.head, "X-Red-Signature"),
+            None,
+            "未配 pushToken 时不应携带验签头"
+        );
+        ("HTTP/1.1 200 OK".into(), String::new())
+    };
+    let (addr, _rx) = start_request_server(ok_receipt, Duration::ZERO);
+    let config = ConnectionConfig::Xiaohongshu {
+        url: format!("http://{addr}/callback"),
+        system: XiaohongshuSystem::Third,
+        token: String::new(),
+        encoding_aes_key: String::new(),
+        app_id: String::new(),
+        push_token: String::new(),
+    };
+
+    let outcome = Adapter.dispatch_event(&client(), &config, GOLDEN_THIRD_LEAD);
+
+    assert_eq!(outcome.status, 200);
+    assert_eq!(outcome.error, None);
+    // 无验签要素即 signature 快照为空串（快照缺席语义与 ark 一致）
+    assert_eq!(outcome.signature, "");
+}
+
+#[test]
+fn third_probe_handshake_succeeds_on_status_code_only() {
+    // 探针刻意不带 leads_id（防接收侧落库，third.rs 模块头注释）——成功
+    // 判定只看 HTTP 2xx（官方唯一应答要求，正文无口径）
+    let ok_receipt = |request: &Recorded| {
+        assert_eq!(
+            header_value(&request.head, "X-Red-Signature"),
+            Some(format!("sha1={}", hmac_sha1_hex(GOLDEN_PUSH_TOKEN, &request.body)).as_str()),
+            "探针同样按连接 pushToken 携带验签头（连通 + 验签一体验证）"
+        );
+        ("HTTP/1.1 200 OK".into(), "anything".into())
+    };
+    let (addr, rx) = start_request_server(ok_receipt, Duration::ZERO);
+    let config = third_config(format!("http://{addr}/callback"));
+    let outcome = Adapter.verify_handshake(&client(), &config);
+
+    assert!(outcome.ok, "应成功：{outcome:?}");
+    assert!(outcome.message.contains("探针成功"), "{outcome:?}");
+    let request = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&request.body).unwrap();
+    assert!(parsed["data"].get("leads_id").is_none(), "探针不带 leads_id");
+}
+
+#[test]
+fn third_probe_handshake_fails_on_rejection() {
+    // 接收侧验签不过即 403（pushToken 配错形态）——探针未通过并给出注记
+    let forbidden =
+        |_request: &Recorded| ("HTTP/1.1 403 Forbidden".into(), String::new());
+    let (addr, _rx) = start_request_server(forbidden, Duration::ZERO);
+    let config = third_config(format!("http://{addr}/callback"));
+    let outcome = Adapter.verify_handshake(&client(), &config);
+
+    assert!(!outcome.ok);
+    assert!(outcome.message.contains("403"), "{outcome:?}");
+    assert!(outcome.message.contains("pushToken"), "{outcome:?}");
 }

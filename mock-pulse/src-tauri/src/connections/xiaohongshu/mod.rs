@@ -1,10 +1,13 @@
-//! 小红书渠道（事实库 docs/research/channels/xiaohongshu.md，双体系并行，
-//! 按 [`ConnectionConfig::Xiaohongshu`] 的 system 通道路由）：
+//! 小红书渠道（事实库 docs/research/channels/xiaohongshu.md + 三方私信 spec
+//! xiaohongshu-third-im-spec.md，三体系并行，按 [`ConnectionConfig::Xiaohongshu`]
+//! 的 system 通道路由）：
 //! - 小程序客服消息（§10 [官方]，官方消息型推送基准）：GET 四参握手
 //!   （[`build_callback_signature`] 三参 sha1 排序验签 + 原样回 echostr）+
 //!   POST 加密信封直发（[`dispatch_event`]：信封 {Nonce,Timestamp,Encrypt,
 //!   MsgSignature} 在 body 内，§11.2；回 success，5s 超时×3 重试 §10.5）
 //! - 电商 ark 推送（§2 [多源]）：POST JSON 数组明文直发，见 [`ark`]
+//! - 三方私信线索推送（spec §1 [多源]+[联调代码]）：POST 明文信封 +
+//!   X-Red-Signature 验签头直发，见 [`third`]
 //!
 //! 与其他渠道的差异全部留在本模块内（ADR-0001）：
 //! - 握手（§10.4）：GET 带 signature/timestamp/nonce/echostr 四 query 参数，
@@ -21,6 +24,7 @@
 //!   `{"Nonce","Timestamp","Encrypt","MsgSignature"}`，Timestamp 为数字（i32）
 
 mod ark;
+mod third;
 
 #[cfg(test)]
 mod tests;
@@ -63,16 +67,20 @@ pub(crate) fn build_msg_signature(
 }
 
 /// 小红书体系握手路由：小程序通道 GET 四参握手（§10.4）；ark 通道无官方
-/// 握手机制（§3.4），以最小推送探针验证连通（[`ark`]）。
+/// 握手机制（§3.4），以最小推送探针验证连通（[`ark`]）；三方面同理以最小
+/// 线索推送探针验证（spec §1.5 无官方握手，[`third`]）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
 fn verify_handshake(
     client: &reqwest::blocking::Client,
     url: &str,
     system: &XiaohongshuSystem,
     token: &str,
+    push_token: &str,
 ) -> HandshakeOutcome {
-    if *system == XiaohongshuSystem::Ark {
-        return ark::probe_handshake(client, url);
+    match system {
+        XiaohongshuSystem::Ark => return ark::probe_handshake(client, url),
+        XiaohongshuSystem::Third => return third::probe_handshake(client, url, push_token),
+        XiaohongshuSystem::Miniapp => {}
     }
     let echostr = random_echostr();
     let timestamp = now_secs().to_string();
@@ -131,9 +139,10 @@ fn build_crypto_push(
     })
 }
 
-/// 小红书直发：小程序加密信封 / ark 数组明文按通道路由，明文由前端逐字节
-/// 拼装，本模块只做协议封装不重排（ADR-0001）。
+/// 小红书直发：小程序加密信封 / ark 数组明文 / 三方明文 + 验签头按通道路由，
+/// 明文由前端逐字节拼装，本模块只做协议封装不重排（ADR-0001）。
 /// 私有协议原语：对外只经 [`Adapter`](super::ChannelAdapter) 路由。
+#[allow(clippy::too_many_arguments)]
 fn dispatch_event(
     client: &reqwest::blocking::Client,
     url: &str,
@@ -141,10 +150,15 @@ fn dispatch_event(
     token: &str,
     encoding_aes_key: &str,
     app_id: &str,
+    push_token: &str,
     plaintext: &str,
 ) -> DispatchOutcome {
-    if *system == XiaohongshuSystem::Ark {
-        return ark::dispatch_event(client, url, plaintext);
+    match system {
+        XiaohongshuSystem::Ark => return ark::dispatch_event(client, url, plaintext),
+        XiaohongshuSystem::Third => {
+            return third::dispatch_event(client, url, push_token, plaintext)
+        }
+        XiaohongshuSystem::Miniapp => {}
     }
     miniapp_dispatch(client, url, token, encoding_aes_key, app_id, plaintext)
 }
@@ -181,8 +195,8 @@ fn miniapp_dispatch(
 }
 
 /// 小红书渠道适配器：[`super::ChannelAdapter`] 的小红书实现——GET 四参握手与
-/// 加密信封/ark 数组双通道直发按连接配置路由；AES 原语复用企微同族
-/// （`wecom::crypto`，官方 MsgDecrypt 与微信同族），差异不外溢。
+/// 加密信封/ark 数组/三方明文验签头三通道直发按连接配置路由；AES 原语复用
+/// 企微同族（`wecom::crypto`，官方 MsgDecrypt 与微信同族），差异不外溢。
 /// 宽配置 → 渠道字段收窄经 `narrow!` 单点（super::adapter）。
 pub(crate) struct Adapter;
 
@@ -208,8 +222,8 @@ impl super::ChannelAdapter for Adapter {
         client: &reqwest::blocking::Client,
         config: &ConnectionConfig,
     ) -> HandshakeOutcome {
-        narrow!(config, Xiaohongshu { url, system, token } =>
-            verify_handshake(client, url, system, token))
+        narrow!(config, Xiaohongshu { url, system, token, push_token } =>
+            verify_handshake(client, url, system, token, push_token))
     }
 
     fn dispatch_event(
@@ -218,7 +232,7 @@ impl super::ChannelAdapter for Adapter {
         config: &ConnectionConfig,
         plaintext: &str,
     ) -> DispatchOutcome {
-        narrow!(config, Xiaohongshu { url, system, token, encoding_aes_key, app_id } =>
-            dispatch_event(client, url, system, token, encoding_aes_key, app_id, plaintext))
+        narrow!(config, Xiaohongshu { url, system, token, encoding_aes_key, app_id, push_token } =>
+            dispatch_event(client, url, system, token, encoding_aes_key, app_id, push_token, plaintext))
     }
 }

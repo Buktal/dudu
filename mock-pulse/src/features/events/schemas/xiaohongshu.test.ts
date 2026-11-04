@@ -29,9 +29,9 @@ const schemaOf = (id: string) => {
   return found;
 };
 
-describe("小红书事件 schema 聚合（双体系；握手/加密/数组直发在 Rust 适配器）", () => {
-  it("客服消息 5 + 支付回调 2 + ark 10 = 17 模板，id 全仓库唯一且 xhs- 前缀", () => {
-    expect(XHS_SCHEMAS).toHaveLength(17);
+describe("小红书事件 schema 聚合（三体系；握手/加密/数组/验签头直发在 Rust 适配器）", () => {
+  it("客服消息 5 + 支付回调 2 + ark 10 + 三方线索 1 = 18 模板，id 全仓库唯一且 xhs- 前缀", () => {
+    expect(XHS_SCHEMAS).toHaveLength(18);
     const ids = XHS_SCHEMAS.map((schema) => schema.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.every((id) => id.startsWith("xhs-"))).toBe(true);
@@ -52,7 +52,7 @@ describe("小红书事件 schema 聚合（双体系；握手/加密/数组直发
     }
   });
 
-  it("默认期望回执 = 渠道真实应答：小程序回 success（逐字）、ark 回 success/error_code JSON 字段", () => {
+  it("默认期望回执 = 渠道真实应答：小程序回 success（逐字）、ark 回 success/error_code JSON 字段、三方回任意正文 HTTP 200", () => {
     for (const schema of XHS_SCHEMAS) {
       if (schema.id.startsWith("xhs-ark-")) {
         // 事实库 §2.1/§5.4：{"success":true,"error_code":0,"error_msg":""}——
@@ -61,6 +61,14 @@ describe("小红书事件 schema 聚合（双体系；握手/加密/数组直发
           status: 200,
           body: '{"success":true,"error_code":0}',
           bodyMode: "jsonField",
+        });
+      } else if (schema.id.startsWith("xhs-third-")) {
+        // spec §1.3：HTTP 200 即视为推送成功，无应答体要求——正文空 = 只看
+        // 状态码；失败每 30s 重试一次最多 3 次
+        expect(schema.expected, `${schema.id} expected`).toEqual({
+          status: 200,
+          body: "",
+          bodyMode: "contains",
         });
       } else {
         // 事实库 §10.5：直接回复 success（不带引号），5s 超时×3 重试
@@ -264,7 +272,7 @@ describe("小红书事件 schema 聚合（双体系；握手/加密/数组直发
     }
   });
 
-  it("事件目录：客服 5 MsgType（message）+ 支付/ark 12 事件（event）", () => {
+  it("事件目录：客服 5 MsgType + 三方线索 1（message）+ 支付/ark 12 事件（event）", () => {
     expect(XHS_SCHEMAS.map((schema) => schema.kind)).toEqual([
       "message",
       "message",
@@ -283,6 +291,48 @@ describe("小红书事件 schema 聚合（双体系；握手/加密/数组直发
       "event",
       "event",
       "event",
+      "message",
     ]);
+  });
+
+  it("三方线索信封官方样本逐字（spec §1.4：键序 data/timestamp/source，data 为线索字段表）", () => {
+    expect(schemaOf("xhs-third-lead").payload).toEqual({
+      data: {
+        landing_page_id: 881,
+        url: "https://www.xiaohongshu.com/note/01****",
+        submitted_time: "2024-07-24 10:00:00",
+        source_channel: "search",
+        account_id: "ACCOUNT_ID",
+        account_name: "MERCHANT_ACCOUNT_NAME",
+        campaign_id: 201,
+        campaign_name: "CAMPAIGN_NAME",
+        unit_id: 301,
+        unit_name: "UNIT_NAME",
+        creative_id: 401,
+        leads_id: "LEADS_ID",
+        keyword: "KEYWORD",
+        data: [
+          { label: "电话号码", value: "138****0000" },
+          { label: "用户昵称", value: "USER_NICK_NAME" },
+        ],
+      },
+      // 信封样本逐字（2024-07-24 10:00 GMT+8，与 submitted_time 自洽）
+      timestamp: 1721796000000,
+      source: "xx",
+    });
+    // 线索为 message 型推送（eventName=lead，非事件回调）
+    expect(schemaOf("xhs-third-lead").eventName).toBe("lead");
+  });
+
+  it("三方线索 ID 生成：leads_id 重生成为 12~18 位数字串（幂等键随新线索变化）", () => {
+    const schema = schemaOf("xhs-third-lead");
+    expect(schema.idGenerations).toEqual([
+      { path: "data.leads_id", kind: "xhsLeadsId" },
+    ]);
+    const result = applyGeneratedIds(schema, structuredClone(schema.payload));
+    expect(result.data.leads_id).toMatch(/^[1-9]\d{11,17}$/);
+    expect(result.data.leads_id).not.toBe(schema.payload.data.leads_id);
+    // 信封 timestamp 是推送时刻（同报文重推不变，幂等键另一半），不重生成
+    expect(result.timestamp).toBe(schema.payload.timestamp);
   });
 });

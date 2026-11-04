@@ -40,6 +40,7 @@ export type IdKind =
   | "weiboUid" // 微博 UID：int64 数字形态的 receiver_id/sender_id（官方样本 10 位）
   | "weiboCreatedAt" // 微博 created_at：Mon Jul 16 18:09:20 +0800 2012 字符串形态
   | "xhsMsgId" // 小红书 MsgId：官方口径字符串无格式样本，取微信系 int64 同族数字串
+  | "xhsLeadsId" // 小红书三方线索 leads_id：官方无格式样本（联调代码 String），取线索系统同族数字串形态（幂等键）
   | "ksMessageId" // 快手 message_id：官方支付回调样本为小写 UUID（每次推送随机生成，幂等键）
   | "ksRequestId" // 快手智能客服 requestId：官方示例 fadbsadfg1323 为小写字母数字串（唯一请求 ID，幂等键）
   | "taobaoBizId" // 淘宝 tid/oid/refund_id：官方样本为数字串形态（9~15 位，JSON 里恒字符串）

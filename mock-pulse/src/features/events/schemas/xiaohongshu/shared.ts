@@ -4,11 +4,12 @@ import {
 } from "../../definitions/loader";
 import arkDefinitions from "../../definitions/xiaohongshu/xiaohongshu-ark.json";
 import miniappDefinitions from "../../definitions/xiaohongshu/xiaohongshu-miniapp.json";
+import thirdDefinitions from "../../definitions/xiaohongshu/xiaohongshu-third.json";
 import type { ExpectedReceipt, IdGeneration, WirePayload } from "../types";
 
 /**
  * 小红书渠道协议元数据公共体（事实库 docs/research/channels/xiaohongshu.md，
- * 双体系：小程序客服消息 + 电商 ark 推送）：
+ * 三体系：小程序客服消息 + 电商 ark 推送 + 三方私信线索推送）：
  * - 小程序客服消息（§10 [官方]）：JSON 载荷，通用字段 MsgId/FromOpenId/ToAppId/
  *   MsgType/CreateTime + 按 MsgType 追加专属字段；GET 四参握手（§10.4 三参
  *   sha1 排序验签 + 原样回 echostr）；推送信封 {Nonce,Timestamp,Encrypt,
@@ -19,12 +20,16 @@ import type { ExpectedReceipt, IdGeneration, WirePayload } from "../types";
  *   JSON 数组（批量推送），data 为内层业务 JSON 序列化字符串（二级转义，
  *   §2.2 明示字段命名不统一应保留原样）；明文数组直发由 Rust 适配器完成
  *   （§3.7 两 SDK 均未展示推送侧签名头，无验签）
+ * - 三方私信线索推送（xiaohongshu-third-im-spec.md §1 [多源]+[联调代码]）：
+ *   聚光「私信 API 对接」回调，明文 JSON 信封 {data,timestamp,source} +
+ *   header X-Red-Signature 验签（官方可选）；应答唯一要求 HTTP 200，
+ *   失败 30s×3 重试——签名头由 Rust 适配器按连接 pushToken 构造
  * 字段说明与版本/来源由 definitions/xiaohongshu/ 分域描述文件装载即校验后合并。
  */
 
-/** 版本化字段描述文件：按体系分两份，装载即校验（坏文件启动即炸）后合并 */
+/** 版本化字段描述文件：按体系分三份，装载即校验（坏文件启动即炸）后合并 */
 export const XHS_DEFINITIONS = mergeChannelDefinitions(
-  [miniappDefinitions, arkDefinitions].map((part) =>
+  [miniappDefinitions, arkDefinitions, thirdDefinitions].map((part) =>
     parseChannelDefinition(part),
   ),
 );
@@ -49,6 +54,16 @@ export const XHS_ARK_EXPECTED: ExpectedReceipt = {
   status: 200,
   body: '{"success":true,"error_code":0}',
   bodyMode: "jsonField",
+};
+
+/**
+ * 三方私信线索推送的官方应答（spec §1.3 [多源]）：HTTP 200 即视为推送成功，
+ * 无应答体要求——期望只看状态码（正文不校验）；失败每 30s 重试一次最多 3 次。
+ */
+export const XHS_THIRD_EXPECTED: ExpectedReceipt = {
+  status: 200,
+  body: "",
+  bodyMode: "contains",
 };
 
 /**

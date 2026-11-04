@@ -89,9 +89,10 @@ pub enum DingtalkSystem {
     Bot,
 }
 
-/// 小红书推送通道（事实库 §2/§10：小程序客服消息与电商 ark 推送双体系并行，
-/// 验签/加密体系完全不同）。连接配置按通道路由协议原语；序列化 snake_case，
-/// 缺省 miniapp（小程序客服消息为小红书侧官方消息型推送基准，事实库 §10.8）。
+/// 小红书推送通道（事实库 §2/§10 + 三方私信 spec：小程序客服消息、电商 ark
+/// 推送与三方私信线索推送三体系并行，验签/加密体系完全不同）。连接配置按
+/// 通道路由协议原语；序列化 snake_case，缺省 miniapp（小程序客服消息为
+/// 小红书侧官方消息型推送基准，事实库 §10.8）。
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum XiaohongshuSystem {
@@ -102,6 +103,10 @@ pub enum XiaohongshuSystem {
     /// 电商 ark 订单推送：POST JSON 数组明文（无签名头），应答
     /// {"success":true,"error_code":0}
     Ark,
+    /// 三方私信线索推送：POST 明文 JSON 信封 {data,timestamp,source} +
+    /// X-Red-Signature = sha1=HMAC-SHA1(token, body) 验签头（官方可选），
+    /// 应答唯一要求 HTTP 200（spec xiaohongshu-third-im-spec.md §1）
+    Third,
 }
 
 /// 快手推送通道（事实库 §2/§6.5：开放域双信封与智能客服面并行，传输协议
@@ -241,7 +246,8 @@ pub enum ConnectionConfig {
     #[serde(rename = "xiaohongshu", rename_all = "camelCase")]
     Xiaohongshu {
         url: String,
-        /// 推送通道：小程序客服消息 / 电商 ark 订单推送（缺省 miniapp）
+        /// 推送通道：小程序客服消息 / 电商 ark 订单推送 / 三方私信线索推送
+        /// （缺省 miniapp）
         #[serde(default)]
         system: XiaohongshuSystem,
         /// 小程序通道：消息验证 TOKEN（GET 握手三参与 MsgSignature 四参签名源）
@@ -253,6 +259,10 @@ pub enum ConnectionConfig {
         /// 小程序通道：小程序 AppID（加密明文尾部 receiveid，解密后须校验）
         #[serde(default)]
         app_id: String,
+        /// 三方面：推送验签 Token（聚光「私信 API 对接」工具获取，与 OAuth
+        /// secret 不同物，spec §1.2；官方验签可选——空则明文直发不带签名头）
+        #[serde(default)]
+        push_token: String,
     },
     #[serde(rename = "kuaishou", rename_all = "camelCase")]
     Kuaishou {

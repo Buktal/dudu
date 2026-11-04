@@ -87,6 +87,30 @@ describe("requestSnapshot（按渠道快照呈现）", () => {
     expect(requestSnapshot(same)).not.toContain("加密/包裹前明文");
   });
 
+  it("小红书三方面：线索信封载荷判型挂 X-Red-Signature 头（sha1= 前缀）；未配 pushToken 无头不渲染空行", () => {
+    const lead = makeStep({
+      channel: "xiaohongshu",
+      payload:
+        '{"data":{"leads_id":"L1"},"timestamp":1721796000000,"source":"xx"}',
+      requestBody: null,
+    });
+    expect(requestSnapshot(lead)).toBe(
+      'POST http://127.0.0.1:8080/hook\nContent-Type: application/json\nX-Red-Signature: sha1=sig-abc\n\n{"data":{"leads_id":"L1"},"timestamp":1721796000000,"source":"xx"}',
+    );
+    // 官方验签可选（spec §1.2）：pushToken 未配置即明文直发无头——signature
+    // 快照为空时不渲染头行，也不留悬空空行
+    const unsigned = { ...lead, signature: "" };
+    expect(requestSnapshot(unsigned)).toBe(
+      'POST http://127.0.0.1:8080/hook\nContent-Type: application/json\n\n{"data":{"leads_id":"L1"},"timestamp":1721796000000,"source":"xx"}',
+    );
+    // ark 面（data 为字符串）不误判为三方面
+    const ark = makeStep({
+      channel: "xiaohongshu",
+      payload: '{"msgTag":"m","sellerId":"s","data":"{}"}',
+    });
+    expect(requestSnapshot(ark)).not.toContain("X-Red-Signature");
+  });
+
   it("快手/淘宝/WhatsApp/Telegram：渠道签名各归其头，body 即载荷", () => {
     expect(requestSnapshot(makeStep({ channel: "kuaishou" }))).toContain(
       "\nkwaisign: sig-abc\n",

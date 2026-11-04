@@ -31,13 +31,14 @@ export const DINGTALK_SYSTEMS: readonly {
   { value: "bot", label: "机器人收消息（明文 JSON）" },
 ];
 
-/** 小红书推送通道（事实库 §2/§10：小程序客服消息与电商 ark 推送双体系并行） */
+/** 小红书推送通道（事实库 §2/§10 与 xiaohongshu-third-im-spec.md §1 三体系并行） */
 export const XIAOHONGSHU_SYSTEMS: readonly {
   value: XiaohongshuSystem;
   label: string;
 }[] = [
   { value: "miniapp", label: "小程序客服消息（加密 JSON 信封）" },
   { value: "ark", label: "电商 ark 订单推送（JSON 数组明文）" },
+  { value: "third", label: "三方私信线索推送（明文 + 验签头）" },
 ];
 
 /** 快手推送通道（事实库 §2/§6.5：开放域双信封与电商智能客服面并行） */
@@ -92,6 +93,7 @@ export const defaultXiaohongshuConnection: XiaohongshuConnectionConfig = {
   token: "",
   encodingAesKey: "",
   appId: "",
+  pushToken: "",
 };
 
 /** 原型默认值：kwaisign MD5 验签起步 */
@@ -225,12 +227,23 @@ function weiboFields(draft: WeiboConnectionConfig): CredentialField[] {
   ];
 }
 
-/** 小红书按推送通道取凭证字段：小程序三元组，ark 明文直发无凭据 */
+/** 小红书按推送通道取凭证字段：小程序三元组，ark 明文直发无凭据，三方线索推送验签 Token 可选 */
 function xiaohongshuFields(
   draft: XiaohongshuConnectionConfig,
 ): CredentialField[] {
   if (draft.system === "ark") {
     return [];
+  }
+  if (draft.system === "third") {
+    return [
+      {
+        key: "pushToken",
+        label: "推送验签 Token",
+        note: "聚光后台「私信 API 对接」工具获取的验签密钥：header X-Red-Signature = sha1=HMAC-SHA1(Token,原始 body)（官方验签可选，留空即明文直发；消息级推送信封未公开，本通道模拟线索推送）。",
+        value: draft.pushToken,
+        secret: true,
+      },
+    ];
   }
   return [
     {
@@ -387,6 +400,9 @@ function xiaohongshuReady(config: XiaohongshuConnectionConfig): boolean {
       );
     case "ark":
       return true;
+    // 三方线索推送：官方验签可选（spec §1.2），pushToken 留空即明文直发
+    case "third":
+      return true;
     default: {
       const exhaustive: never = config.system;
       void exhaustive;
@@ -482,12 +498,14 @@ export const imTraits = {
     testNote: (draft: XiaohongshuConnectionConfig) =>
       draft.system === "ark"
         ? '发送最小 ark 推送探针（单条信封的 JSON 数组），检查服务是否回 {"success":true,"error_code":0}（电商侧无官方握手口径）。'
-        : "发送 GET（signature=sha1(字典序排序(Token,timestamp,nonce)) 与随机 echostr），检查服务是否验签通过并原样回显 echostr。",
+        : draft.system === "third"
+          ? "发送线索推送探针（联调代码信封 + header X-Red-Signature = sha1=HMAC-SHA1(Token,原始 body)，Token 留空则明文直发），检查服务是否回 HTTP 200（官方唯一应答要求，无握手口径）。"
+          : "发送 GET（signature=sha1(字典序排序(Token,timestamp,nonce)) 与随机 echostr），检查服务是否验签通过并原样回显 echostr。",
     selectors: [
       {
         key: "system",
         label: "推送通道",
-        hint: "小红书双体系并行且协议完全不同（小程序客服消息 AES 加密信封回 success / 电商 ark JSON 数组明文回 success+error_code）：回调地址与凭证按通道配套填写。",
+        hint: "小红书三体系并行且协议完全不同（小程序客服消息 AES 加密信封回 success / 电商 ark JSON 数组明文回 success+error_code / 三方私信线索推送明文加验签头回 HTTP 200）：回调地址与凭证按通道配套填写。",
         options: XIAOHONGSHU_SYSTEMS,
       },
     ],

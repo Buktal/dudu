@@ -53,10 +53,17 @@ export const SNAPSHOT_TRAITS: Partial<Record<ChannelId, RequestSnapshotTrait>> =
         `signature=${step.signature}&timestamp=${step.timestamp ?? ""}&nonce=${step.msgId}`,
     },
     xiaohongshu: {
-      // 小红书：小程序通道 body 即加密信封 {Nonce,Timestamp,Encrypt,MsgSignature}
-      // （签名在 body 内，签名快照即 MsgSignature）；ark 通道 body 为官方批量
-      // 数组（payload 为单条信封，数组包裹见 requestBody 快照）
+      // 小红书三面：小程序通道 body 即加密信封 {Nonce,Timestamp,Encrypt,
+      // MsgSignature}（签名在 body 内，签名快照即 MsgSignature）；ark 通道
+      // body 为官方批量数组（payload 为单条信封，数组包裹见 requestBody
+      // 快照）；third 面明文 JSON（线索信封 {data,timestamp,source}），载荷
+      // 判型加 X-Red-Signature 验签头（官方可选——连接未配 pushToken 时
+      // signature 快照为空即无头，spec §1.2/§1.3）
       contentType: "application/json",
+      headers: (step) =>
+        isXhsThirdPayload(step.payload) && step.signature
+          ? `X-Red-Signature: sha1=${step.signature}`
+          : "",
       body: (step) =>
         `${step.requestBody ?? step.payload}${step.payload && step.requestBody && step.requestBody !== step.payload ? `\n\n加密/包裹前明文：\n${step.payload}` : ""}`,
     },
@@ -176,6 +183,26 @@ function isKsCsPayload(payload: string): boolean {
   }
 }
 
+/**
+ * 小红书 third 面载荷判型（仅快照呈现用，不改线上报文）：线索信封顶层
+ * data 为对象 + timestamp 数字 + source 字符串（spec §1.4 判型同
+ * dudu-server parseLead）——与 ark 面 data 字符串、小程序面五字段骨架
+ * 天然区分；非 JSON 载荷不落 third 面
+ */
+function isXhsThirdPayload(payload: string): boolean {
+  try {
+    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    return (
+      typeof parsed.data === "object" &&
+      parsed.data !== null &&
+      typeof parsed.timestamp === "number" &&
+      typeof parsed.source === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function renderSnapshot(trait: RequestSnapshotTrait, step: RunStep): string {
   const contentType =
     typeof trait.contentType === "function"
@@ -185,8 +212,11 @@ function renderSnapshot(trait: RequestSnapshotTrait, step: RunStep): string {
     ? `${queryPrefix(step.url)}${trait.query(step)}`
     : "";
   const head = [`POST ${step.url}${query}`, `Content-Type: ${contentType}`];
-  if (trait.headers) {
-    head.push(trait.headers(step));
+  // 渠道专属头按需缺席（如小红书 third 面未配 pushToken 时无验签头）：
+  // 空串不落行，避免渲染出多余空行
+  const headers = trait.headers?.(step);
+  if (headers) {
+    head.push(headers);
   }
   return `${head.join("\n")}\n\n${trait.body ? trait.body(step) : step.payload}`;
 }

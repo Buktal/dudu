@@ -175,6 +175,7 @@ fn adapter_registry_covers_every_config_variant() {
         token: String::new(),
         encoding_aes_key: String::new(),
         app_id: String::new(),
+        push_token: String::new(),
     };
     let kuaishou_config = ConnectionConfig::Kuaishou {
         url: String::new(),

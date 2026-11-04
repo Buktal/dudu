@@ -83,8 +83,8 @@ export const CHANNEL_REGISTRY = {
   },
   xiaohongshu: {
     name: "小红书",
-    protocol: "小程序客服 + 电商 ark · JSON 回调",
-    note: "双体系：小程序客服消息 GET echostr 握手 + AES 加密信封（MsgSignature 在 body 内，回 success）；电商 ark POST JSON 数组明文，回 {success:true,error_code:0}",
+    protocol: "小程序客服 + 电商 ark + 三方私信 · JSON 回调",
+    note: "三体系：小程序客服消息 GET echostr 握手 + AES 加密信封（MsgSignature 在 body 内，回 success）；电商 ark POST JSON 数组明文，回 {success:true,error_code:0}；三方私信线索推送明文 JSON + X-Red-Signature 验签头（可选），HTTP 200 即成功",
     icon: "Heart",
   },
   feishu: {
