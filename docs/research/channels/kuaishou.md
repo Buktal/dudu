@@ -38,7 +38,7 @@
 | 结算能力 + SETTLE 回调 | https://open.kuaishou.com/docs/develop/server/epay/open-api-new/settle-new.html | `[摘录]`（回调存在性+地址优先级+自动结算） |
 | 开发者入驻（SPA 版，同文） | https://open.kuaishou.com/platform/openApi?group=GROUP_OPEN_PLATFORM&menu=6 | `[摘录]`（与 entry.html 同文） |
 | 内容/视频查询 API（scope.user_video_info，SPA） | https://open.kuaishou.com/platform/openApi?menu=22 | `[摘录]`（仅 API 表，JS 壳） |
-| 直播 openApi（含 WebHook 目录项，SPA） | https://open.kuaishou.com/platform/openApi?menu=24 | `[摘录]`（仅目录，JS 壳，全文待核验(09-27)） |
+| 直播 openApi（含 WebHook 目录项，SPA） | https://open.kuaishou.com/platform/openApi?menu=24 | `[摘录]`（仅目录，JS 壳，全文待核验(11-03)，目录数据为登录态下发） |
 
 ---
 
@@ -62,8 +62,8 @@
 - `UN_AUTHORIZE` data：`open_id`、`scope`（撤销的 scope 列表）
 - `TEST` data：仅 `{"timestamp":1622518497536}`（"测试消息发送了一个测试的时间戳"）
 - 通用信封（accessGuide 页逐字）："Webhooks 会给第三方发送四个固定字段：data（业务数据）……",实际为**五个**：`data` / `message_id` / `event` / `app_id` / `timestamp`（页内自称"四个"但列出五个，原文如此）。另三事件页信封作 `{"app_id","event","timestamp","message_id","data"}`（无 `biz_type`）
-- 示例级事件 `UNBIND_PLC`（accessGuide 页 demo，**无独立事件页**）："视频解绑"场景示例，data 含 `photo_id` / `author_open_id` / `reason`（"视频解绑原因"），`message_id` 注为"每次随机生成的 ID" → 全文待核验(09-27)，仅作示例引用（见 §5.4）
-- 使用场景举例（accessGuide 页逐字，非事件目录）："弹幕小玩法，开发者需要实时感知直播间内的点赞、评论、送礼行为"、"通知开发者用户授权结果"、"小程序支付异步完成通知"——其中点赞/评论/送礼**无公开事件页** → 待核验(09-27)
+- 示例级事件 `UNBIND_PLC`（accessGuide 页 demo，**无独立事件页**）："视频解绑"场景示例，data 含 `photo_id` / `author_open_id` / `reason`（"视频解绑原因"），`message_id` 注为"每次随机生成的 ID"——照录性质（无页可核验），其 message_id 口径即 §3.3 幂等矛盾 accessGuide 侧来源（见 §5.4）
+- 使用场景举例（accessGuide 页逐字，非事件目录）："弹幕小玩法，开发者需要实时感知直播间内的点赞、评论、送礼行为"、"通知开发者用户授权结果"、"小程序支付异步完成通知"——其中点赞/评论/送礼在开放平台主站**无公开事件页**；直播间互动的公开接收路径是电商域推送目录的直播事件 3 个（§6.3），非电商直播场景是否另有事件归入旧站 menu=24 存档项（§6.11 d）
 
 ### 2.2 域 B：小程序支付回调族（`biz_type` 判型）
 
@@ -90,7 +90,7 @@
 1. **目录穷尽证据**：`[路由]` bundle 枚举显示开放平台 WebHook 事件目录仅 3 事件（§2.1），无任何私信/IM/消息事件
 2. **站内搜索证据**：`site:open.kuaishou.com 私信` 仅命中两类非推送内容——(a) 客户端 SDK"分享私信"（端上主动分享：`mKwaiOpenAPI.sendReq` / "通过 TargetOpenId 分享私信给个人，openId 是必须参数"，属端内分享能力，非服务端推送）；(b) 发送订阅消息接口（服务端单向模板下发，见 §6）
 3. **小程序消息能力证据**：小程序服务端"消息"仅有发送侧"发送订阅消息"（需用户先在客户端订阅；错误码含 `10001030 用户拒绝接收消息，例如用户设置了只接受关注者私信等`——证明"关注者私信"只是用户端开关，不对应开放推送事件）
-4. 结论：快手开放平台**无公开的"用户发私信 → 推给开发者回调"的服务端事件**；IM 相关仅抖音式企业号私信 webhook 在快手侧不存在。→ 该"无"结论本身若需复核，标待核验(09-27)（电商/服务号等分域文档未穷尽）
+4. 结论：快手开放平台**无公开的"用户发私信 → 推给开发者回调"的服务端事件**；IM 相关仅抖音式企业号私信 webhook 在快手侧不存在。→ 边界注记（2026-11-05 精修）：该"无"限于开放平台主站公开文档；电商域推送目录已全量扫掠（§6.3，810 key 无 IM 事件），唯一分域例外是 `merchant_cs` 客服通道（§6.11，需商家开发者账号实测）——「无公开私信推送」维持成立
 
 ---
 
@@ -123,7 +123,7 @@
 
 - 支付回调重试表（附录2逐字，全文）："对于未收到成功返回的通知，消息最大重试次数为 16 次"，延迟：1→10s、2→30s、3→1m、4→2m、5→3m、6→4m、7→5m、8→6m、9→7m、10→8m、11→9m、12→10m、13→11m、14→12m、15→1h、16→2h
 - 通用 webhook 重试（accessGuide 页逐字）："webhook 调用第三方支持重试，重试次数可配置，webhook 保证业务方如果调用 webhook 成功，最终一定能通知到第三方"；"如果开发者没有返回或者返回的 result 不等于 1，则平台会尝试重复推送此消息，开发者务必做好消息的幂等处理！"
-- **幂等口径矛盾（已核验，照录）**：accessGuide"消息发送说明"第 1 条称 "(2) message_id 由快手内部业务方调用 webhook，每调用一次都会随机生成的 ID，**不可用于业务幂等控制**……需要自己生产幂等参数放到 eventData"；同页第 2 条又称"第三方开发者需要根据 message_id 做好幂等控制"、"需要根据 eventData 里的业务方幂等参数（如果有的话）或 messageId 两个参数分别去重"。而附录2（支付回调）与三事件页 uniform 口径为："当前回调消息的唯一 ID，在同一个消息多次通知时，**保持一致**" / "唯一的消息 ID，开发者需要幂等，webhook 服务保证全局唯一，重试的消息保证 ID 一致"。→ **模拟器按 `message_id` 幂等实现**（全网七页一致口径），accessGuide 第 1 条作历史/通用通道口径备注 → 待核验(09-27)
+- **幂等口径矛盾（已核验，照录）**：accessGuide"消息发送说明"第 1 条称 "(2) message_id 由快手内部业务方调用 webhook，每调用一次都会随机生成的 ID，**不可用于业务幂等控制**……需要自己生产幂等参数放到 eventData"；同页第 2 条又称"第三方开发者需要根据 message_id 做好幂等控制"、"需要根据 eventData 里的业务方幂等参数（如果有的话）或 messageId 两个参数分别去重"。而附录2（支付回调）与三事件页 uniform 口径为："当前回调消息的唯一 ID，在同一个消息多次通知时，**保持一致**" / "唯一的消息 ID，开发者需要幂等，webhook 服务保证全局唯一，重试的消息保证 ID 一致"。→ **模拟器按 `message_id` 幂等实现**（全网七页一致口径），accessGuide 第 1 条作历史/通用通道口径备注 → 文档侧已核验关闭（2026-11-05），message_id 实推唯一性留 merchant_cs 联调时实测（与 §6.11 d 遗留项 b 同批）
 - 重复通知声明（withhold-new / contract-new 页逐字）："由于网络波动等原因，可能会产生重复的通知消息，开发者需要做好幂等处理。"
 - 有序（accessGuide 页逐字）："webhook 不保证消息发到开发者的顺序和业务方调用 webhook 的顺序一致，如果需要保证消息的顺序，需要业务方自己设计处理。"
 - 异步备注（accessGuide 页逐字，照录）："webhook 是异步调用第三方的，如果业务方想拿到第三方响应结果，需要接 webhook 的消息日志 MQ（包括调用第三方成功事件），但是调用第三方和记录日志 MQ 不是原子的，webhook 不保证调用第三方成功后一定有日志 MQ，解决办法：如果业务方没有收到日志 MQ 则重试调用 webhook"
