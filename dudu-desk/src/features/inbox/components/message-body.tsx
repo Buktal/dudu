@@ -36,6 +36,7 @@ import { useInboxDispatch } from "../hooks/use-inbox-store";
 import { useMessageMedia } from "../hooks/use-message-media";
 import {
   assetPurposeOf,
+  cardKindLabel,
   describeMessageBody,
   mediaIcon,
   mediaLabel,
@@ -133,7 +134,9 @@ export function MessageBody({
       <div className="flex items-start gap-2">
         <Package className="mt-0.5 size-4 shrink-0" />
         <div className="flex min-w-0 flex-col items-start gap-2">
-          <p className="font-medium break-words">{body.title || body.kind}</p>
+          <p className="font-medium break-words">
+            {body.title || cardKindLabel(body.kind)}
+          </p>
           {body.title && <p className="text-xs opacity-70">{body.kind}</p>}
           {body.externalId && (
             <p className="break-all text-xs">编号：{body.externalId}</p>

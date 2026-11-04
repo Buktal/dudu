@@ -130,6 +130,10 @@ it("renders each stored body with the fields the channel actually provided", () 
   expect(screen.getByText("order")).toBeInTheDocument();
   expect(screen.getByText("编号：ORDER-1")).toBeInTheDocument();
 
+  // 卡片无标题时显示 kind 的中文展示名（如抖音线索组件卡），未收录 kind 原样回落
+  show({ type: "card", kind: "leads_phone_card" });
+  expect(screen.getByText("电话线索卡片")).toBeInTheDocument();
+
   show({ type: "unknown", originalType: "sticker" });
   expect(screen.getByText("暂不支持的消息 · sticker")).toBeInTheDocument();
   expect(

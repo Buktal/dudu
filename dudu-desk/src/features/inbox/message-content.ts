@@ -31,6 +31,22 @@ const MEDIA_LABELS: Record<MediaKind, string> = {
   file: "文件",
 };
 
+// 卡片 kind 的展示名（渠道映射事实见各协议）：未知 kind 原样回落，不填假名
+const CARD_KIND_LABELS: Partial<Record<string, string>> = {
+  retain_consult_card: "留资卡片",
+  leads_phone_card: "电话线索卡片",
+  lead_commodity_card: "商品线索卡片",
+  poi_card: "门店卡片",
+  premium_online_appointment_card: "在线预约卡片",
+  item: "商品卡片",
+  order: "订单卡片",
+};
+
+/** 卡片 kind 的中文展示名：未收录的渠道 kind 原样返回。 */
+export function cardKindLabel(kind: string): string {
+  return CARD_KIND_LABELS[kind] ?? kind;
+}
+
 const MEDIA_ICONS: Record<MediaKind, LucideIcon> = {
   image: ImageIcon,
   audio: AudioLines,
@@ -69,7 +85,7 @@ export function messageSummary(body: MessageBody): string {
     case "quote":
       return body.text;
     case "card":
-      return `[${body.kind}] ${body.title || body.externalId || "详情未提供"}`;
+      return `[${cardKindLabel(body.kind)}] ${body.title || body.externalId || "详情未提供"}`;
     case "unknown":
       return `[暂不支持的消息] ${body.originalType}`;
   }

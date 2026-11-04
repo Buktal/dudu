@@ -98,12 +98,19 @@ describe("messageSummary", () => {
     ).toBe("[位置] 1, 2");
     expect(
       messageSummary({ type: "card", kind: "order", title: "订单详情" }),
-    ).toBe("[order] 订单详情");
+    ).toBe("[订单卡片] 订单详情");
     expect(
       messageSummary({ type: "card", kind: "order", externalId: "A7" }),
-    ).toBe("[order] A7");
+    ).toBe("[订单卡片] A7");
     expect(messageSummary({ type: "card", kind: "order" })).toBe(
-      "[order] 详情未提供",
+      "[订单卡片] 详情未提供",
+    );
+    // 收录的线索组件卡用中文名，未收录的渠道 kind 原样回落不填假名
+    expect(messageSummary({ type: "card", kind: "leads_phone_card" })).toBe(
+      "[电话线索卡片] 详情未提供",
+    );
+    expect(messageSummary({ type: "card", kind: "coupon_card" })).toBe(
+      "[coupon_card] 详情未提供",
     );
     expect(messageSummary({ type: "unknown", originalType: "sticker" })).toBe(
       "[暂不支持的消息] sticker",

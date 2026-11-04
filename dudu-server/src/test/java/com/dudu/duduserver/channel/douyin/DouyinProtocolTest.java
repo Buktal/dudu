@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -184,6 +185,35 @@ class DouyinProtocolTest {
              "content":{"server_message_id":"@msg","conversation_short_id":"@conv","message_type":"other"}}
             """)).orElseThrow();
         assertThat(other.content()).containsEntry("type", "unknown").containsEntry("originalType", "other");
+    }
+
+    @Test
+    void parseMapsLeadsComponentCardsAsCardBody() {
+        // §5.18 企业号线索组件消息（官方黄金样本，一键收集电话）：card 分支
+        // kind=leads_phone_card，无 card_id 则不填 externalId（组件配置串不映射为假字段）
+        var phoneCard = protocol.parse(77L, golden("""
+            {"event":"im_receive_msg","client_key":"asdfavetgbvasf",
+             "from_user_id":"3af6e6e5-6dca-5812-86c4-413fa2440ea2",
+             "to_user_id":"2d3201d1-4cf2-4f01-8368-b6f2fb04ac7d",
+             "content":{"conversation_short_id":"@conv","server_message_id":"@msg","conversation_type":1,
+             "create_time":1758193500753,"message_type":"leads_phone_card","source":"","im_mode":"Unset",
+             "leads_phone_card":"{\\"title\\":\\"我\\",\\"button_text\\":\\"立即预约\\",\\"bottom_text\\":\\"提交即发送抖音绑定手机号\\"}",
+             "index":1672502400690000}}
+            """)).orElseThrow();
+        assertThat(phoneCard.content()).containsEntry("type", "card")
+            .containsEntry("kind", "leads_phone_card").doesNotContainKey("externalId");
+
+        // §2.4 对照表其余线索组件卡（线索商品卡/POI 卡/高级在线预约，官方未给独立
+        // 样本）：同 card 分支承载 kind，不猜组件字段
+        for (String kind : List.of("lead_commodity_card", "poi_card", "premium_online_appointment_card")) {
+            var card = protocol.parse(77L, golden("""
+                {"event":"im_receive_msg","client_key":"asdfavetgbvasf",
+                 "from_user_id":"u1","to_user_id":"u2",
+                 "content":{"server_message_id":"@msg","conversation_short_id":"@conv",
+                 "message_type":"%s"}}
+                """.formatted(kind))).orElseThrow();
+            assertThat(card.content()).containsEntry("type", "card").containsEntry("kind", kind);
+        }
     }
 
     @Test

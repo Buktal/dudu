@@ -49,7 +49,7 @@ public class DouyinProtocol {
     private static final String EVENT_IM_RECEIVE_MSG = "im_receive_msg";
     private static final String EVENT_IM_SEND_MSG = "im_send_msg";
 
-    // IM 消息 message_type 枚举（官方 §2.2）；未列出的按 unknown 如实保存
+    // IM 消息 message_type 枚举（官方 §2.2 + §2.4 企业号线索组件对照表）；未列出的按 unknown 如实保存
     private static final String MSG_TEXT = "text";
     private static final String MSG_IMAGE = "image";
     private static final String MSG_USER_LOCAL_IMAGE = "user_local_image";
@@ -57,6 +57,10 @@ public class DouyinProtocol {
     private static final String MSG_VIDEO = "video";
     private static final String MSG_USER_LOCAL_VIDEO = "user_local_video";
     private static final String MSG_RETAIN_CONSULT_CARD = "retain_consult_card";
+    private static final String MSG_LEADS_PHONE_CARD = "leads_phone_card";
+    private static final String MSG_LEAD_COMMODITY_CARD = "lead_commodity_card";
+    private static final String MSG_POI_CARD = "poi_card";
+    private static final String MSG_PREMIUM_ONLINE_APPOINTMENT_CARD = "premium_online_appointment_card";
 
     // 统一消息体的媒体 kind（契约第 4 节）；表情按图片呈现（gif 直链或占位）
     private static final String KIND_IMAGE = "image";
@@ -166,7 +170,8 @@ public class DouyinProtocol {
                 case MSG_EMOJI -> media(messageType, KIND_IMAGE, serverMessageId, conversationId, ownerOpenId, content);
                 case MSG_VIDEO, MSG_USER_LOCAL_VIDEO -> media(messageType, KIND_VIDEO, serverMessageId,
                     conversationId, ownerOpenId, content);
-                case MSG_RETAIN_CONSULT_CARD -> retainCard(messageType, content);
+                case MSG_RETAIN_CONSULT_CARD, MSG_LEADS_PHONE_CARD, MSG_LEAD_COMMODITY_CARD,
+                     MSG_POI_CARD, MSG_PREMIUM_ONLINE_APPOINTMENT_CARD -> cardBody(messageType, content);
                 default -> MessageBodies.unknown(messageType);
             };
         } catch (RuntimeException e) {
@@ -224,8 +229,9 @@ public class DouyinProtocol {
     public record MediaResource(String serverMessageId, String conversationId, String ownerOpenId, String index) {
     }
 
-    // 留资卡片：card 分支只承载 kind 与 card_id（契约 card 无逐项数据位，card_data 不映射为假字段）
-    private Map<String, Object> retainCard(String messageType, JSONObject content) {
+    // 卡片类消息（留资卡与 §2.4 企业号线索组件卡）：card 分支只承载 kind 与可选
+    // card_id（契约 card 无逐项数据位，组件配置串与 card_data 不映射为假字段）
+    private Map<String, Object> cardBody(String messageType, JSONObject content) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", "card");
         body.put("kind", messageType);
