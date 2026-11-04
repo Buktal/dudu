@@ -2,6 +2,7 @@
 
 > 研究日期：2026-09-10。方法：WebFetch（内置）+ curl 直抓 SSR HTML（正文内嵌于服务端渲染 DOM，用脚本抽取逐字文本）
 > 站内搜索引擎为 JS 空壳，改走其文档 BFF 搜索接口发现页面：`POST https://developer.open-douyin.com/bff_api_v2/platform/helpCenter/OpenPlatformSearchService/searchDoc`，body `{"Keyword": "...", "PageNo": 1, "PageSize": 15}`
+> sitemap 复核法（2026-11-05 留档）：robots.txt 声明 `sitemap/home/index.xml` → 索引指向 `index1.xml`（约 10MB、2337 个 docs/resource URL、每日 lastmod）；**收录精选且含陈旧死链**——dop `openapi/enterprise-open-ability/`（message-management-enterprise/accept-message-event、message-to-user、enterprise-messa-card 三页）现全部 `_ROUTER_DATA.redirectUrl=/404`，与 §9.3 已录 interaction-management 死链同系 dop openapi 树重构残留；sitemap URL 只作发现线索，命中后须以直抓 `redirectUrl` 判活。同法发现的 `mini-app/develop/server/basic-abilities/im/customer-service-url`（CustomerServiceUrl，2024-07-24）为**行业授权小程序获取官方客服链接**的工具 API（im_type 声明行业），子树仅此一页，与 dop 企业号 IM 是不同产品不涉渠道契约
 > mcp webReader 配额耗尽（2026-09-27 恢复），本次未使用。所有事实标注来源 URL；示例载荷逐字保留
 
 ## 1. 官方文档入口与关键页面
