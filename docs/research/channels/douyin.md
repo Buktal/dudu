@@ -106,8 +106,17 @@ content 字段
 | leads_phone_card | 20 | 一键收集电话 |
 | lead_commodity_card | 21 | 线索商品卡 |
 | poi_card | 22 | 门店/POI 卡 |
+| investment_franchise_card | 23 | 招商加盟卡 |
+| post_sale_order_card | 24 | 售后订单卡 |
+| phone_collection_card | 25 | 电话收集卡 |
+| enterprise_wechat_card | -（发送侧 msg_type=40） | 企业微信卡 |
+| product | - | 团购商品 |
+| notice | - | 系统提示（如智能客服介入接待） |
+| question_list | - | 问题列表（快捷引导提问） |
 | applet_card | 10 | 小程序引导卡片（发送侧） |
-| text / image | 1 / 2 | 文本 / 图片（发送侧；text=1 已复核，image=2 待补抓 2026-09-10 注） |
+| text / image | 1 / 2 | 文本 / 图片（发送侧；content 构造 §6.1 已复核，2026-09-10 待补抓项就此关闭） |
+
+v1.0.5（页面 updateTime 2026-06-16）新增上表 investment_franchise_card 至 question_list 七类推送，组件 id 位于 content 顶层 `component_id`（字符串）与 `component_status`（int，1-生效）；带组件 id 的有 premium_online_appointment_card / lead_commodity_card / poi_card / investment_franchise_card / phone_collection_card，无组件 id 的有 leads_phone_card / post_sale_order_card / product / notice / question_list（enterprise_wechat_card 样本未见，见 §5.18）。各组件配置串为 content 内同名子字段的 JSON 字符串：`marketing_tool`（高级在线预约）、`life_leads_tool`（线索商品）、`life_poi`（门店/POI）、`common_content`（企业微信卡），逐字样本见 §5.18；发送侧组件 content 构造与 component_type 对照见 §6.1。数值 23/24/25/40 经 2026-11-04 webReader 全文确认；2026-11-05 curl 直抓 SSR 复核（页面已更新至 v1.0.6，解码接口章节编号 2.31→2.40，推送对照未变）
 
 线索私信事件开放（同页 5 节）：scope `ad.leads.im_event_open`，content 额外含 `invalid_conversation`（0-否 1-是折叠）、`enter_chat_from`（0-自然 1-广告）、`item_enter_from`（0-短视频 1-直播 5-未知）、`is_clued`、`guest_id`、`enterprise_id`、`conversation_short_id`、`create_time`
 
@@ -601,6 +610,213 @@ func sign(clientSecret string, body []byte) string {
 
 （外层应再包 `event`/`client_key`/`from_user_id`/`to_user_id` 信封，源页表格仅展示 content 部分。）
 
+### 5.18.1 高级在线预约（v1.0.5 页逐字，2026-11-05 curl 直抓 SSR；注意顶层 `component_id`/`component_status`）
+
+```json
+{
+        "conversation_short_id": "@9VwP3OXCWZloOCf2aN0yVc790GDoPvGAOJdxqQulLFQQavj960zdRmYqig357zEBnE3oJ9maDzmhMGf0vZL3/A==",
+        "server_message_id": "@9VwP3OXCWZloOCf2aN0yVc790GDoPvJ12qgyjJ1IRbPX160zdRmYqig357zEBuujSkOT1XIsJ0i68fSZWfg==",
+        "conversation_type": 1,
+        "create_time": 1758195553589,
+        "message_type": "premium_online_appointment_card",
+        "source": "",
+        "im_mode": "Unset",
+        //type MarketingTool struct {
+        //  //组件类型，45-高级在线预约
+        //  LinkType int32 `json:"link_type"`
+        //  //头图
+        //  TitleImage string `json:"title_image"`
+        //  //创建时间，单位：秒
+        //  CreateTime int64 `json:"create_time"`
+        //  //组件id
+        //  ComponentId int64 `json:"component_id"`
+        //  //标题
+        //  Title string `json:"title"`
+        //  //副标题
+        //  SubTitle string `json:"sub_title"`
+        //}
+        "marketing_tool": "{\"link_type\":45,\"title_image\":\"https://p3-saiyan-sign.byteimg.com/aweme-saiyan-private/cv6349bc77u8vqee6ni0~tplv-k9qcquo31z-2000.image?lk3s=e44e97a5\\u0026x-expires=1758799992\\u0026x-signature=WSwv2ejiu7ONtuvleKy1DYFeRMI%3D\",\"create_time\":1662599423,\"component_id\":7140809997826394892,\"title\":\"点击一键领取价格表⬇️⬇️⬇️\",\"sub_title\":\"\"}",
+        "user_infos": [{
+                "open_id": "_000eVUpyINiqc4u9CMfAce9GgR3Aj6yI9Cn",
+                "nick_name": "深圳广深驾校总部",
+                "avatar": "https://p3.douyinpic.com/aweme/720x720/aweme-avatar/tos-cn-i-hf2m9xxmck_c9102a1f1b3a4f259e87182d921f4a76.jpeg?from=3782654143"
+        }, {
+                "open_id": "_000DpaOwJdpwJNe-cCMmZGHiTrOZtXjgwyE",
+                "nick_name": "毛士祥",
+                "avatar": "https://p3.douyinpic.com/aweme/720x720/aweme-avatar/tos-cn-i-0813_88318e131bcc41efb41713fd4a29fa20.jpeg?from=3782654143"
+        }],
+        "group_info": {},
+        "component_id": "7140809997826394892",
+        "component_status": 1,
+        "index": 1672502400010000
+}
+```
+
+注意两点：组件 id 在 content 顶层是 `component_id`（字符串形态），而 marketing_tool 配置串内同名 `component_id` 是数字形态；title_image 为带签名的临时直链（x-expires 2026-09-25 已过期形态），不可作为长期素材 URL
+
+### 5.18.2 企业微信卡（v1.0.5 新增，逐字）
+
+```json
+{
+        "conversation_short_id": "@9VwIwfmRWdMjN3X3ZYsqVc790WbtOf2KP5B1qAqhJlAXafb160zdRmYqig357zEBKEl8QmyYXAVwecSjKkRWPQ==",
+        "server_message_id": "@9VwIwfmRWdMjN3X3ZYsqVc7902frNfCKMpR4qQqmLVIUaPH560zdRmYqig357zEBKTWcn+lDsk6by5mv/nS+SQ==",
+        "conversation_type": 1,
+        "create_time": 1774842138939,
+        "message_type": "enterprise_wechat_card",
+        "source": "",
+        "im_mode": "Unset",
+        //type WechatCACardCommonContent struct {
+        //  Type           string `json:"type"`
+        //  EnterpriseName string `json:"enterprise_name"`
+        //  CompanyName    string `json:"company_name"`
+        //  Tag            string `json:"tag"`
+        //  ButtonText     string `json:"button_text"`
+        //}
+        "common_content": "{\"type\":\"wechat_ca_card\",\"enterprise_name\":\"蓝v婚庆113\",\"company_name\":\"企业号经营\",\"tag\":\"提供专属优质服务\",\"button_text\":\"添加企业微信\"}",
+        "user_infos": [{
+                "open_id": "9d3b4506-7294-5d2f-aee6-9cf5ace3aa73",
+                "nick_name": "蓝v婚庆113",
+                "avatar": "https://p26.douyinpic.com/aweme/720x720/aweme-avatar/tos-cn-i-0813c001_oQAAAr7YXqzIfCrA4ABF1EarNjvei9igAj2AKS.jpeg?from=3782654143"
+        }, {
+                "open_id": "b9b71865-7fea-44cc-8636-727e89f72be9",
+                "nick_name": "at2201",
+                "avatar": "https://p26.douyinpic.com/aweme/720x720/aweme-avatar/douyin-user-image-file_86e8d1ef074079d967ae2833e0d8772e.jpeg?from=3782654143"
+        }],
+        "group_info": {},
+        "index": 1672502433310000
+}
+```
+
+配置串字段名不是同名子字段而是 `common_content`；样本无顶层 component_id（企业微信卡组件 id 有无以真实推送为准）；user_infos 两条为企业号与访客
+
+### 5.18.3 团购商品（v1.0.5 新增，逐字）
+
+```json
+{
+        "conversation_short_id": "@9VwIwfmRWdMjN3X3ZYsqVc791mzgO/mKM5xwrQmjL1AVafT460zdRmYqig357zEBRiZ5AfXYWc7bz99LFISPpQ==",
+        "server_message_id": "@9VwIwfmRWdMjN3X3ZYsqVc790GDoPvCFMp1zrwuhLVcWaPj960zdRmYqig357zEBsmKVz6Ai3uFZVYq0Ku15yQ==",
+        "conversation_type": 1,
+        "create_time": 1758194529895,
+        "message_type": "product",
+        "source": "",
+        "im_mode": "Unset",
+        //type Product struct {
+        //  // 商品ID
+        //  ProductId *int64 `json:"product_id,omitempty"`
+        //  // 商品名称
+        //  ProductName *string `json:"product_name,omitempty"`
+        //  // 商品图片链接
+        //  ImageUrl *string `json:"image_url,omitempty"`
+        //  // 应付价
+        //  ActualAmount *int64 `json:"actual_amount,omitempty"`
+        //  // 已售量
+        //  SoldQty *int64 `json:"sold_qty,omitempty"`
+        //  // 商品详情页链接
+        //  ProductUrl *string `json:"product_url,omitempty"`
+        //  // 商品图片uri
+        //  ImageUri *string `json:"image_uri,omitempty"`
+        //  // 来客pc商品详情页链接
+        //  PcProductUrl *string `json:"pc_product_url,omitempty"`
+        //  //  原价
+        //  OriginAmount *int64 `json:"origin_amount,omitempty"`
+        //  //  折扣
+        //  DiscountDesc *string `json:"discount_desc,omitempty"`
+        //  // 实际价格后缀 "起"
+        //  ActualAmountSuffix *string `json:"actual_amount_suffix,omitempty"`
+        //  // 商品类型描述 日历房
+        //  ProductTypeDesc *string `json:"product_type_desc,omitempty"`
+        //  // 商品品类
+        //  ProductCategory *string `json:"product_category,omitempty"`
+        //  // 出行人数 （xx 成人 xx 个儿童）
+        //  TravelerNum *string `json:"traveler_num,omitempty"`
+        //}
+        "product": "{\"product_id\":1792588596209674,\"product_name\":\"欢聚|清汤1份2人餐\",\"image_url\":\"https://p9-sign.douyinpic.com/tos-cn-i-hf2m9xxmck/c72a14d204bc4a47b91bc5c62304aff6~noop.jpeg?lk3s=4a7c4021\\u0026x-expires=1758214800\\u0026x-signature=qxVIgkngwMn%2BSa0IsIv4JaUCOLw%3D\\u0026from=1249656865\",\"actual_amount\":100,\"sold_qty\":6,\"product_url\":\"aweme://poi/goodsdetail/?hide_own_nav_bar=1&activity_id=1792588596209674&enter_from=local_life_im&detail_enter_page=local_life_im&is_life_poi=1&detail_enter_method=card\",\"image_uri\":\"tos-cn-i-hf2m9xxmck/c72a14d204bc4a47b91bc5c62304aff6\",\"pc_product_url\":\"\",\"origin_amount\":1500}",
+        "user_infos": [{
+                "open_id": "9d3b4506-7294-5d2f-aee6-9cf5ace3aa73",
+                "nick_name": "蓝v婚庆113",
+                "avatar": "https://p11.douyinpic.com/aweme/720x720/aweme-avatar/tos-cn-i-0813c001_oQAAAr7YXqzIfCrA4ABF1EarNjvei9igAj2AKS.jpeg?from=3782654143"
+        }, {
+                "open_id": "b9b71865-7fea-44cc-8636-727e89f72be9",
+                "nick_name": "at2201",
+                "avatar": "https://p11.douyinpic.com/aweme/720x720/aweme-avatar/douyin-user-image-file_86e8d1ef074079d967ae2833e0d8772e.jpeg?from=3782654143"
+        }],
+        "group_info": {},
+        "index": 1672502400810000
+}
+```
+
+价格字段为分（actual_amount 100 = 1 元，origin_amount 1500 = 15 元）；product_url 是 aweme:// scheme 的 App 内跳转链接（非 http，不可当外链素材用）；image_url 为签名临时直链；无顶层 component_id
+
+### 5.18.4 系统提示（v1.0.5 新增，逐字）
+
+```json
+{
+        "conversation_short_id": "@9VwIwfmRWdMjN3X3ZYsqVc791mzgO/mKM5xwrQmjL1AVafT460zdRmYqig357zEBRiZ5AfXYWc7bz99LFISPpQ==",
+        "server_message_id": "@9VwIwfmRWdMjN3X3ZYsqVc790GDoPvCEPpdyoAmiLFUXafP/60zdRmYqig357zEBRa5mCKbBH8coTKGmZKJ++A==",
+        "conversation_type": 1,
+        "create_time": 1758194191506,
+        "message_type": "notice",
+        "source": "",
+        "im_mode": "Unset",
+        //type Notice struct {
+        //  // 内容
+        //  Tips *string `json:"tips,omitempty"`
+        //  // 通知详情
+        //  PushDetail *string `json:"push_detail,omitempty"`
+        //}
+        "notice": "{\"tips\":\"回复超时，智能客服介入接待（您可以在“人工客服设置-接待不及时设置”中调整配置） {{1}}\",\"push_detail\":\"\"}",
+        "user_infos": [{
+                "open_id": "9d3b4506-7294-5d2f-aee6-9cf5ace3aa73",
+                "nick_name": "蓝v婚庆113",
+                "avatar": "https://p11.douyinpic.com/aweme/720x720/aweme-avatar/tos-cn-i-0813c001_oQAAAr7YXqzIfCrA4ABF1EarNjvei9igAj2AKS.jpeg?from=3782654143"
+        }, {
+                "open_id": "b9b71865-7fea-44cc-8636-727e89f72be9",
+                "nick_name": "at2201",
+                "avatar": "https://p11.douyinpic.com/aweme/720x720/aweme-avatar/douyin-user-image-file_86e8d1ef074079d967ae2833e0d8772e.jpeg?from=3782654143"
+        }],
+        "group_info": {},
+        "index": 1672502400750000
+}
+```
+
+tips 示例是「回复超时，智能客服介入接待」的系统提示，`{{1}}` 为占位符；notice 是平台系统消息而非访客输入，样本未含信封（from_user_id 归属无法确证），实现按 unknown + 渠道原因说明处理（见 DouyinProtocol）
+
+### 5.18.5 问题列表（v1.0.5 新增，逐字）
+
+```json
+{
+        "conversation_short_id": "@9VwIwfmRWdMjN3X3ZYsqVc791mzgO/mKM5xwrQmjL1AVafT460zdRmYqig357zEBRiZ5AfXYWc7bz99LFISPpQ==",
+        "server_message_id": "@9VwIwfmRWdMjN3X3ZYsqVc790GDoPvCEPpZ2qwmvKlARaPL160zdRmYqig357zEBTLO2+Id3h22GEtDgzAsOtQ==",
+        "conversation_type": 1,
+        "create_time": 1758194195199,
+        "message_type": "question_list",
+        "source": "",
+        "im_mode": "Unset",
+        //type QuestionList struct {
+        //  // 标题
+        //  Title *string `json:"title,omitempty"`
+        //  // 问题
+        //  Questions []string `json:"questions,omitempty"`
+        //}
+        "question_list": "{\"title\":\"好的亲，请问您家房子是在【哪个城市】呢？给您安排附近门店。\",\"questions\":[\"北京\",\"上海\",\"深圳\",\"广州\",\"杭州\",\"南京\",\"成都\",\"其他城市\"]}",
+        "user_infos": [{
+                "open_id": "9d3b4506-7294-5d2f-aee6-9cf5ace3aa73",
+                "nick_name": "蓝v婚庆113",
+                "avatar": "https://p11.douyinpic.com/aweme/720x720/aweme-avatar/tos-cn-i-0813c001_oQAAAr7YXqzIfCrA4ABF1EarNjvei9igAj2AKS.jpeg?from=3782654143"
+        }, {
+                "open_id": "b9b71865-7fea-44cc-8636-727e89f72be9",
+                "nick_name": "at2201",
+                "avatar": "https://p11.douyinpic.com/aweme/720x720/aweme-avatar/douyin-user-image-file_86e8d1ef074079d967ae2833e0d8772e.jpeg?from=3782654143"
+        }],
+        "group_info": {},
+        "index": 1672502400770000
+}
+```
+
+对应「快捷引导」能力（2.20-2.23 接口族配置），企业号向访客发出的选项列表；无顶层 component_id
+
+其余三类新推送无官方样本：investment_franchise_card（招商加盟卡）、post_sale_order_card（售后订单卡，无组件 id）、phone_collection_card（电话收集卡，有组件 id）——字段结构以字段表为准（同页组件消息参数表），2026-11-05 抓取时表格矩阵在 SSR 数据中交错无法逐行重组，实现按 card(kind) 保守映射
+
 ### 5.19 小游戏客服消息（msg-push-customer-service 页逐字）
 
 JSON 格式
@@ -663,6 +879,22 @@ XML 格式
 | msg_id | string | 场景一/二必传 | 来源：接收私信消息事件 webhook 的 `content.server_message_id`（**有效期 24 小时**）；进私事件同字段同时效 |
 | conversation_id | string | 场景一/二必传 | 来源：webhook 的 `content.conversation_short_id`（**长期有效**） |
 | to_user_id | string | 是 | 消息接收方 open_id（即私信对端的访客 open_id） |
+| channel | int | 否 | v1.0.5 新增（clue 页发送示例出现）：1-人工发送 2-智能（机器人）发送 3-自动消息 |
+
+- 组件消息 content 构造（clue 页 v1.0.5 逐字）：`{"msg_type": {$msg_type}, "general_msg_content": {"component_type": {$component_type}, "component_id": {$component_id}}}`；component_type 对照（同页注释逐字，component_id 语义随类型不同）
+
+| component_type | 组件 | component_id 取值 |
+|---|---|---|
+| 1 | 高级在线预约 | 高级在线预约组件 id |
+| 2 | 线索商品卡 | 线索商品 id |
+| 3 | 招商加盟卡 | 招商加盟商品 id |
+| 4 | 售后订单卡 | 固定 0 |
+| 5 | 门店 / POI 卡 | 生服 poiId |
+| 6 | 电话收集卡 | 创编卡片 id |
+| 8 | 一键收集电话 | 0；自定义文案时传入「自定义一键收集电话」接口的 reply_id（附加参数 `leads_card_text` 值 `true`），不传即系统默认文案 |
+| 12 | 企业微信卡 | 企业微信卡 id |
+
+- 发送「一键收集电话」curl 逐字要点（clue 页 3.2 示例）：`content` 为 `{"msg_type": 20, "general_msg_content": {"component_type": 8, "component_id": 0}}`（另一变体 component_id 为查询到的配置 id），`scene` 官方示例原文拼写为 `im_replay_msg`（与字段表 `im_reply_msg` 拼写不一致，照录；以字段表为准实现），`channel` 1；响应形态同上文成功响应（顶层返回 msg_id）。自动回复/快捷回复配置类接口另有组件形态 `{"type": 7, "component": {"component_type": "industry_advanced_online_reserve", "component_id": "7441118309736614707"}}`（字符串枚举体系，与私信发送数字枚举不同，勿混用）
 
 - content 构造（msgType 对照，补全 §2.2 发送侧表）：文本 `{"msg_type":1,"text":{"text":"你好"}}`（text ≤1000 字、不可含外部 http 超链接）；图片 `{"msg_type":2,"image":{"media_id":"@..."}}`（media_id 来自图片上传接口的 image_id）；视频 `{"msg_type":3,"video":{"item_id":"@..."}}`（只能发用户自己的公开视频，发布者 uid 要与 OpenID 相同）；群邀请 `msg_type:9` group_invitation；小程序引导卡片 `msg_type:10` applet_card；小程序券 `msg_type:11` applet_coupon；主动私信授权卡片 `msg_type:12` auth_private_message_card；问题引导卡（发消息）`msg_type:204`、（发链接）`msg_type:205`
 - 场景一规则（逐字要点）：需订阅「接收私信消息事件」并从 webhook 解析 msg_id（24 小时时效）；「仅支持消息回复，在用户未发送下一条消息前，24 小时内可向用户发送 6 条消息」；最新规则以抖音 app 内发送消息为准。场景二：收到进私 webhook 后 30 秒内调用，每条 webhook 最多调用 3 次，两次回复间隔需 >1 小时
@@ -699,6 +931,13 @@ XML 格式
 - 实施侧结论（#118）：入站媒体可读范围 = emoji 的非空 resource_url 直链下载；图片类无标识（统一消息体按既有先例以「消息 ID:媒体下标」派生稳定标识落库，读取时如实返回「无素材标识/无下载接口」）、视频类如实返回「无公开下载接口」。媒体下载接口专章核查完毕：**官方不存在 dop IM 私信入站媒体的通用下载接口**，票面「媒体下载接口专章未收录，实施时补证」到此收口
 - **2026-11-03 复核注**：上文「官方不存在通用下载接口」结论被推翻——`GetIMMessageResource`（GET `/api/im/message/resources/`，scope `im.multimedia_message`）即为本地图片/视频消息的官方读取通道，user_local_image/user_local_video 专用，详见 §8.4；emoji 直链外的 image/video（分享类）仍无读取通道
 
+### 6.3 私信消息解码接口（2026-11-05 补证，clue 页 v1.0.5+）
+
+- HTTP：POST `https://open.douyin.com/api/enterprise/v1/im/get_decode_msg_content/`（页面章节编号 2.31，v1.0.6 期已挪至 2.40）；Scope：`im.leads_message_decode`（2026-11-04 webReader 全文确认，2026-11-05 SSR 复核 scope 与 URL 在页）
+- 能力说明（逐字）：「留资相关信息回脱敏推送给开发者，该接口用于查看留资相关信息脱敏后的抖音私信消息」——即 leads_phone_card 类留资消息推送时手机号等内容已脱敏，凭 msg_id + conversation_id 调本接口换回明文
+- 入参：`msg_id`（必填，即 webhook content.server_message_id）、`conversation_id`（必填，即 content.conversation_short_id）、`guest_uid`（可选，访客 open_id）；响应 `data.content` 为解码后内容（官方示例 "1234567890" 手机号形态）
+- 实施判定：**暂不接入**。理由：其一需另行申请 `im.leads_message_decode` scope 且要真实凭据联调；其二「哪些推送消息属于脱敏消息」官方无识别特征说明，无法对入站消息选择性地安全触发解码调用；当前 leads_phone_card 推送本体不携带脱敏手机号文本，映射 card 无信息损失。留待真实账号联调阶段（§7 第 11 项）评估
+
 ## 7. 待核验清单（关闭项就地改写为结论并注明日期）
 
 1. **服务商 MsgSignature 精确算法**：**已核验（2026-11-03 关闭）**——官方示例代码包 demo.zip 已从 encryption 页下载并解析，算法 = sha1(字典序排序【TOKEN, TimeStamp, Nonce, Encrypt】后直接拼接) hex 小写，java/go/php 三语实现一致；包地址与逐字实现见 §8.7
@@ -711,6 +950,7 @@ XML 格式
 8. **抖音云专线推送**（interaction 树 danmu-callback 等）：**已核验（2026-11-03 关闭）**——interaction 树已盘：即直播玩法（弹幕玩法）文档树，消息型回调存在 = 直播间互动数据推送（评论/点赞/礼物/粉丝团），x-signature（md5+base64，体系 B 同族加 x-roomid）HTTP 回调 + 抖音云内网专线两种送达；danmu-callback 文档实体在 developer 树 `developer/tools/cloud/.../danmu-callback`；推送协议全量记录见 §8.8；属直播互动数据非客服会话消息，与 dop 私信体系不相通
 9. **webhook 响应体要求（dop）**：**部分关闭（2026-11-03 扩检）**——已复核 mini-app webhook 教程与「抖音 IM 客服私信」页，全站均仅规定握手响应（challenge 放入 ResponseBody、text 格式 json），业务事件的响应体无任何官方条文，重试判定只看连接/响应时长（dop 5s、生活服务 2.5s）；实施按 HTTP 200、body 任意即可（建议空体或 `{}`）。保留注：不能排除存在未采样页面，但 dop/mini-app/local-life 三树主文档已一致沉默。（2026-11-03 二次复核：三个推送事件页统一引用的 mini-app webhook 概述页 `/mini-app/develop/guide/open-capabilities/webhook/` 实为 301 → `/mini-app/develop/tutorial/basic-ability/webhook` 即本项已复核教程页，无新增条款；mini-game 树体系 B 的业务响应体规范在 §8.2——`{"success":true}`/`{"success":false,err_code,reason}`，仅适用于客服平台推送）
 10. **小程序树订阅消息推送事件**（subscribe-feedcard-webhook、subscription-status-push-event）：**已核验（2026-11-03 关闭）**——两页全文已抓（正式目录为 `mini-app/develop/server/reach-marketing/subscribe-notification/`）：`user_subscribe_action`（订阅动作，content 为 json 串，subscribe_action 1-一次性订阅/2-长期订阅/3-长期拒绝/4-一次性拒绝）与 `user_auth_subscribe_card_notification`（订阅异形卡授权成功，仅开放一次性订阅类型）；均为订阅关系状态事件、非消息型回调，字段表与逐字示例见 §8.9
+11. **leads_phone_card 留资手机号的送达路径**（访客提交手机号后开发者如何拿到明文）：**已核验（2026-11-05 关闭，v1.0.5）**——推送侧 leads_phone_card 消息本身不含手机号；明文经私信消息解码接口 `get_decode_msg_content`（scope `im.leads_message_decode`，msg_id + conversation_id 换回 data.content）获取，接口事实与暂不接入判定见 §6.3
 
 ## 8. 补摄：developer 树与客服平台（2026-11-03）
 

@@ -2,6 +2,7 @@ import dopAuthDefinitions from "../../definitions/douyin/dop-auth.json";
 import dopEngagementDefinitions from "../../definitions/douyin/dop-engagement.json";
 import imCardDefinitions from "../../definitions/douyin/im-card.json";
 import imEventDefinitions from "../../definitions/douyin/im-event.json";
+import imLeadsDefinitions from "../../definitions/douyin/im-leads.json";
 import imReceiveDefinitions from "../../definitions/douyin/im-receive.json";
 import isvDefinitions from "../../definitions/douyin/isv.json";
 import lifeDefinitions from "../../definitions/douyin/life.json";
@@ -27,6 +28,7 @@ export const DOUYIN_DEFINITIONS = mergeChannelDefinitions(
     dopEngagementDefinitions,
     imReceiveDefinitions,
     imCardDefinitions,
+    imLeadsDefinitions,
     imEventDefinitions,
     lifeDefinitions,
     minigameDefinitions,

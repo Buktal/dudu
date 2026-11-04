@@ -40,6 +40,13 @@ public class DouyinProtocol {
     private static final String KEY_MEDIA_ID = "media_id";
     private static final String KEY_RESOURCE_URL = "resource_url";
     private static final String KEY_CARD_ID = "card_id";
+    private static final String KEY_COMPONENT_ID = "component_id";
+    // 组件配置串：content 内同名子字段为 JSON 字符串（§5.18 逐字样本）
+    private static final String KEY_PRODUCT_CONFIG = "product";
+    private static final String KEY_PRODUCT_NAME = "product_name";
+    private static final String KEY_PRODUCT_ID = "product_id";
+    private static final String KEY_QUESTION_LIST_CONFIG = "question_list";
+    private static final String KEY_TITLE = "title";
     private static final String KEY_USER_INFOS = "user_infos";
     private static final String KEY_OPEN_ID = "open_id";
     private static final String KEY_NICK_NAME = "nick_name";
@@ -49,7 +56,7 @@ public class DouyinProtocol {
     private static final String EVENT_IM_RECEIVE_MSG = "im_receive_msg";
     private static final String EVENT_IM_SEND_MSG = "im_send_msg";
 
-    // IM 消息 message_type 枚举（官方 §2.2 + §2.4 企业号线索组件对照表）；未列出的按 unknown 如实保存
+    // IM 消息 message_type 枚举（官方 §2.2 + §2.4 企业号线索组件对照表，v1.0.5 新增七类）；未列出的按 unknown 如实保存
     private static final String MSG_TEXT = "text";
     private static final String MSG_IMAGE = "image";
     private static final String MSG_USER_LOCAL_IMAGE = "user_local_image";
@@ -61,6 +68,13 @@ public class DouyinProtocol {
     private static final String MSG_LEAD_COMMODITY_CARD = "lead_commodity_card";
     private static final String MSG_POI_CARD = "poi_card";
     private static final String MSG_PREMIUM_ONLINE_APPOINTMENT_CARD = "premium_online_appointment_card";
+    private static final String MSG_INVESTMENT_FRANCHISE_CARD = "investment_franchise_card";
+    private static final String MSG_POST_SALE_ORDER_CARD = "post_sale_order_card";
+    private static final String MSG_PHONE_COLLECTION_CARD = "phone_collection_card";
+    private static final String MSG_ENTERPRISE_WECHAT_CARD = "enterprise_wechat_card";
+    private static final String MSG_PRODUCT = "product";
+    private static final String MSG_NOTICE = "notice";
+    private static final String MSG_QUESTION_LIST = "question_list";
 
     // 统一消息体的媒体 kind（契约第 4 节）；表情按图片呈现（gif 直链或占位）
     private static final String KIND_IMAGE = "image";
@@ -171,7 +185,17 @@ public class DouyinProtocol {
                 case MSG_VIDEO, MSG_USER_LOCAL_VIDEO -> media(messageType, KIND_VIDEO, serverMessageId,
                     conversationId, ownerOpenId, content);
                 case MSG_RETAIN_CONSULT_CARD, MSG_LEADS_PHONE_CARD, MSG_LEAD_COMMODITY_CARD,
-                     MSG_POI_CARD, MSG_PREMIUM_ONLINE_APPOINTMENT_CARD -> cardBody(messageType, content);
+                     MSG_POI_CARD, MSG_PREMIUM_ONLINE_APPOINTMENT_CARD,
+                     MSG_INVESTMENT_FRANCHISE_CARD, MSG_POST_SALE_ORDER_CARD,
+                     MSG_PHONE_COLLECTION_CARD, MSG_ENTERPRISE_WECHAT_CARD -> cardBody(messageType, content);
+                case MSG_PRODUCT -> configCardBody(MSG_PRODUCT, content, KEY_PRODUCT_CONFIG,
+                    KEY_PRODUCT_NAME, KEY_PRODUCT_ID);
+                case MSG_QUESTION_LIST -> configCardBody(MSG_QUESTION_LIST, content,
+                    KEY_QUESTION_LIST_CONFIG, KEY_TITLE, null);
+                // 系统提示（§5.18.4）是平台系统消息而非访客输入，信封归属无样本可证，
+                // tips 不映射 text，按 unknown 带渠道原因说明
+                case MSG_NOTICE -> MessageBodies.unknown(messageType,
+                    "抖音系统提示类消息（如智能客服介入接待），非访客输入内容");
                 default -> MessageBodies.unknown(messageType);
             };
         } catch (RuntimeException e) {
@@ -229,17 +253,55 @@ public class DouyinProtocol {
     public record MediaResource(String serverMessageId, String conversationId, String ownerOpenId, String index) {
     }
 
-    // 卡片类消息（留资卡与 §2.4 企业号线索组件卡）：card 分支只承载 kind 与可选
-    // card_id（契约 card 无逐项数据位，组件配置串与 card_data 不映射为假字段）
+    // 卡片类消息（留资卡与线索组件卡）：kind 保留官方 message_type 语义名；组件 id
+    // 取 content 顶层 component_id（§5.18.1 逐字样本），旧类型无样本字段回退 card_id；
+    // 组件配置串其余字段无契约位，不映射为假字段
     private Map<String, Object> cardBody(String messageType, JSONObject content) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", "card");
         body.put("kind", messageType);
-        String cardId = Texts.blankToNull(content.getStr(KEY_CARD_ID, null));
-        if (cardId != null) {
-            body.put("externalId", cardId);
+        String externalId = Texts.firstNonBlank(content.getStr(KEY_COMPONENT_ID, null),
+            content.getStr(KEY_CARD_ID, null));
+        if (externalId != null) {
+            body.put("externalId", externalId);
         }
         return body;
+    }
+
+    // 带配置串的卡片（§5.18.3/§5.18.5 逐字样本）：content 内 configKey 子字段为 JSON
+    // 字符串，取 titleField 与 externalIdField 映射 title/externalId（无该字段位传
+    // null 跳过）；配置串缺失或无法解析时按 kind 原样落 card，不猜内容
+    private Map<String, Object> configCardBody(String messageType, JSONObject content,
+                                               String configKey, String titleField, String externalIdField) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("type", "card");
+        body.put("kind", messageType);
+        JSONObject payload = parseConfigOrNull(content, configKey);
+        if (payload != null) {
+            String title = Texts.blankToNull(payload.getStr(titleField, null));
+            if (title != null) {
+                body.put("title", title);
+            }
+            if (externalIdField != null) {
+                String externalId = Texts.blankToNull(payload.getStr(externalIdField, null));
+                if (externalId != null) {
+                    body.put("externalId", externalId);
+                }
+            }
+        }
+        return body;
+    }
+
+    private JSONObject parseConfigOrNull(JSONObject content, String configKey) {
+        String config = Texts.blankToNull(content.getStr(configKey, null));
+        if (config == null) {
+            return null;
+        }
+        try {
+            return JSONUtil.parseObj(config);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /**

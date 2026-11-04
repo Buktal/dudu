@@ -215,13 +215,14 @@ function userEvent(overrides: Partial<EventItem> = {}): EventItem {
 describe("templatesForChannel（目录模板源）", () => {
   it("all = 全渠道已接入模板；指定渠道 = 该渠道全部模板", () => {
     expect(templatesForChannel("all")).toHaveLength(EVENT_SCHEMAS.length);
-    expect(templatesForChannel("douyin")).toHaveLength(33);
+    expect(templatesForChannel("douyin")).toHaveLength(38);
     expect(templatesForChannel("douyin")[0]?.id).toBe("dy-create-video");
     expect(templatesForChannel("douyin")[13]?.id).toBe(
       "dy-service-market-order",
     );
     expect(templatesForChannel("douyin")[14]?.id).toBe("dy-text");
-    expect(templatesForChannel("douyin")[32]?.id).toBe("dy-isv-authorized");
+    expect(templatesForChannel("douyin")[25]?.id).toBe("dy-premium-card");
+    expect(templatesForChannel("douyin")[37]?.id).toBe("dy-isv-authorized");
     expect(templatesForChannel("wecom")).toHaveLength(89);
     expect(templatesForChannel("wecom")[0]?.id).toBe("wc-text");
     expect(templatesForChannel("wecom")[31]?.id).toBe("wc-active-restored");
@@ -245,14 +246,14 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
       ...NO_FILTERS,
       channel: "douyin",
     });
-    // 16 条 douyin 用户素材 + 33 条抖音内置模板
-    expect(rows).toHaveLength(49);
-    const templateRows = rows.slice(0, 33);
+    // 16 条 douyin 用户素材 + 38 条抖音内置模板
+    expect(rows).toHaveLength(54);
+    const templateRows = rows.slice(0, 38);
     expect(templateRows.every((row) => row.region === "template")).toBe(true);
-    // 分组固定消息在前（12 条消息模板）→ 事件模板按声明序
+    // 分组固定消息在前（17 条消息模板）→ 事件模板按声明序
     expect(
       templateRows
-        .slice(0, 12)
+        .slice(0, 17)
         .map((row) => (row.region === "template" ? row.schema.id : "")),
     ).toEqual([
       "dy-im-group-receive",
@@ -265,10 +266,15 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
       "dy-retain-card",
       "dy-leads-phone-card",
       "dy-send-text",
+      "dy-premium-card",
+      "dy-enterprise-wechat-card",
+      "dy-product",
+      "dy-notice",
+      "dy-question-list",
       "dy-mg-im-text",
       "dy-mg-im-image",
     ]);
-    const users = rows.slice(33);
+    const users = rows.slice(38);
     expect(users.every((row) => row.region === "user")).toBe(true);
     for (let i = 1; i < users.length; i += 1) {
       const previous = users[i - 1];
@@ -297,6 +303,11 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
       "dy-retain-card",
       "dy-leads-phone-card",
       "dy-send-text",
+      "dy-premium-card",
+      "dy-enterprise-wechat-card",
+      "dy-product",
+      "dy-notice",
+      "dy-question-list",
       "dy-mg-im-text",
       "dy-mg-im-image",
     ]);
@@ -336,10 +347,16 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
     const channelRows = byChannelName.map((row) =>
       row.region === "template" ? row.schema : undefined,
     );
-    expect(channelRows).toHaveLength(89);
-    expect(channelRows.every((schema) => schema?.channelId === "wecom")).toBe(
-      true,
-    );
+    // 89 条企微渠道模板 + 名称同样含「企业微信」的抖音企业微信卡片模板
+    expect(channelRows).toHaveLength(90);
+    expect(
+      channelRows.filter((schema) => schema?.channelId === "wecom"),
+    ).toHaveLength(89);
+    expect(
+      channelRows
+        .filter((schema) => schema?.channelId === "douyin")
+        .map((schema) => schema?.id),
+    ).toEqual(["dy-enterprise-wechat-card"]);
 
     const byEventName = libraryRows([], EVENT_SCHEMAS, {
       ...NO_FILTERS,
@@ -368,11 +385,11 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
       }),
     );
     const rows = libraryRows(items, schemasByChannel("douyin"), NO_FILTERS);
-    // 33 条内置模板 + 9 条用户素材
-    expect(rows).toHaveLength(42);
+    // 38 条内置模板 + 9 条用户素材
+    expect(rows).toHaveLength(47);
 
     const first = paginateEvents(rows, 1);
-    expect(first.total).toBe(42);
+    expect(first.total).toBe(47);
     expect(first.pages).toBe(5);
     expect(first.items.filter((row) => row.region === "template")).toHaveLength(
       10,
@@ -383,11 +400,11 @@ describe("libraryRows（列表即目录：模板区在前，用户素材区在�
     const fourth = paginateEvents(rows, 4);
     expect(
       fourth.items.filter((row) => row.region === "template"),
-    ).toHaveLength(3);
-    expect(fourth.items.filter((row) => row.region === "user")).toHaveLength(7);
+    ).toHaveLength(8);
+    expect(fourth.items.filter((row) => row.region === "user")).toHaveLength(2);
 
     const fifth = paginateEvents(rows, 5);
-    expect(fifth.items).toHaveLength(2);
+    expect(fifth.items).toHaveLength(7);
     expect(fifth.items.every((row) => row.region === "user")).toBe(true);
   });
 

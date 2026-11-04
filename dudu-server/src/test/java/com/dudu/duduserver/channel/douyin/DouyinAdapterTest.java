@@ -125,6 +125,73 @@ class DouyinAdapterTest {
     }
 
     @Test
+    void leadsComponentMessagesMapCardsConfiguredTitlesAndNoticeExplanation() {
+        // v1.0.5 组件消息（事实见 docs/research/channels/douyin.md §2.2/§5.18 官方逐字样本节选）：
+        // 组件 id 取 content 顶层 component_id，旧类型无样本字段回退 card_id；
+        // product/question_list 解析同名配置串取标题与商品 id；notice 是系统提示，
+        // 按 unknown 带渠道原因说明
+        String premium = "{\"event\":\"im_receive_msg\",\"from_user_id\":\"visitor-open\","
+            + "\"to_user_id\":\"owner-open\",\"client_key\":\"asdfavetgbvasf\",\"log_id\":\"log-3\","
+            + "\"content\":{\"message_type\":\"premium_online_appointment_card\","
+            + "\"server_message_id\":\"@msg3\",\"conversation_short_id\":\"@conv1\","
+            + "\"component_id\":\"7140809997826394892\",\"component_status\":1}}";
+        sign(premium);
+        var premiumResult = adapter.receive(account(null), Map.of(), headers, premium);
+        assertThat(premiumResult.message().content()).isEqualTo(Map.of(
+            "type", "card", "kind", "premium_online_appointment_card",
+            "externalId", "7140809997826394892"));
+
+        // 无样本三类型（招商加盟卡等）按 kind 映射，缺组件 id 不填假值
+        String franchise = "{\"event\":\"im_receive_msg\",\"from_user_id\":\"visitor-open\","
+            + "\"to_user_id\":\"owner-open\",\"client_key\":\"asdfavetgbvasf\",\"log_id\":\"log-4\","
+            + "\"content\":{\"message_type\":\"investment_franchise_card\","
+            + "\"server_message_id\":\"@msg4\",\"conversation_short_id\":\"@conv1\"}}";
+        sign(franchise);
+        var franchiseResult = adapter.receive(account(null), Map.of(), headers, franchise);
+        assertThat(franchiseResult.message().content())
+            .isEqualTo(Map.of("type", "card", "kind", "investment_franchise_card"));
+
+        // 团购商品：配置串内 product_name/product_id 映射 title/externalId（样本为数字 id）
+        String product = "{\"event\":\"im_receive_msg\",\"from_user_id\":\"visitor-open\","
+            + "\"to_user_id\":\"owner-open\",\"client_key\":\"asdfavetgbvasf\",\"log_id\":\"log-5\","
+            + "\"content\":{\"message_type\":\"product\",\"server_message_id\":\"@msg5\","
+            + "\"conversation_short_id\":\"@conv1\","
+            + "\"product\":\"{\\\"product_id\\\":1792588596209674,"
+            + "\\\"product_name\\\":\\\"欢聚|清汤1份2人餐\\\"}\"}}";
+        sign(product);
+        var productResult = adapter.receive(account(null), Map.of(), headers, product);
+        assertThat(productResult.message().content()).isEqualTo(Map.of(
+            "type", "card", "kind", "product", "title", "欢聚|清汤1份2人餐",
+            "externalId", "1792588596209674"));
+
+        // 问题列表：配置串 title 映射卡片标题，questions 选项无契约位不映射
+        String questionList = "{\"event\":\"im_receive_msg\",\"from_user_id\":\"visitor-open\","
+            + "\"to_user_id\":\"owner-open\",\"client_key\":\"asdfavetgbvasf\",\"log_id\":\"log-6\","
+            + "\"content\":{\"message_type\":\"question_list\",\"server_message_id\":\"@msg6\","
+            + "\"conversation_short_id\":\"@conv1\","
+            + "\"question_list\":\"{\\\"title\\\":\\\"请问您家房子是在【哪个城市】呢？\\\","
+            + "\\\"questions\\\":[\\\"北京\\\",\\\"上海\\\"]}\"}}";
+        sign(questionList);
+        var questionResult = adapter.receive(account(null), Map.of(), headers, questionList);
+        assertThat(questionResult.message().content()).isEqualTo(Map.of(
+            "type", "card", "kind", "question_list",
+            "title", "请问您家房子是在【哪个城市】呢？"));
+
+        // 系统提示：平台消息非访客输入，tips 不映射 text，按 unknown 带原因说明
+        String notice = "{\"event\":\"im_receive_msg\",\"from_user_id\":\"visitor-open\","
+            + "\"to_user_id\":\"owner-open\",\"client_key\":\"asdfavetgbvasf\",\"log_id\":\"log-7\","
+            + "\"content\":{\"message_type\":\"notice\",\"server_message_id\":\"@msg7\","
+            + "\"conversation_short_id\":\"@conv1\","
+            + "\"notice\":\"{\\\"tips\\\":\\\"回复超时，智能客服介入接待 {{1}}\\\","
+            + "\\\"push_detail\\\":\\\"\\\"}\"}}";
+        sign(notice);
+        var noticeResult = adapter.receive(account(null), Map.of(), headers, notice);
+        assertThat(noticeResult.message().content()).containsEntry("type", "unknown")
+            .containsEntry("originalType", "notice")
+            .containsEntry("explanation", "抖音系统提示类消息（如智能客服介入接待），非访客输入内容");
+    }
+
+    @Test
     void signedButUnparsableBodyIsBadRequest() {
         // 签名合法但报文不是合法 JSON → 按参数错误
         sign("not-json");

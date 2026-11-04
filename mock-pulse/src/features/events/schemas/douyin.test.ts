@@ -69,8 +69,8 @@ const goldenDyRead = {
 };
 
 describe("抖音事件 schema 描述符", () => {
-  it("提供 dop 14 + IM 11 + 生活服务 2 + 小游戏 4 + 服务商 2 共 33 个模板，元信息正确", () => {
-    expect(DOUYIN_EVENT_SCHEMAS).toHaveLength(33);
+  it("提供 dop 14 + IM 11 + 线索组件 5 + 生活服务 2 + 小游戏 4 + 服务商 2 共 38 个模板，元信息正确", () => {
+    expect(DOUYIN_EVENT_SCHEMAS).toHaveLength(38);
     expect(schemaById("dy-text")).toMatchObject({
       channelId: "douyin",
       eventName: "im_receive_msg",

@@ -38,6 +38,12 @@ const CARD_KIND_LABELS: Partial<Record<string, string>> = {
   lead_commodity_card: "商品线索卡片",
   poi_card: "门店卡片",
   premium_online_appointment_card: "在线预约卡片",
+  investment_franchise_card: "招商加盟卡片",
+  post_sale_order_card: "售后订单卡片",
+  phone_collection_card: "电话收集卡片",
+  enterprise_wechat_card: "企业微信卡片",
+  product: "团购商品卡片",
+  question_list: "问题引导卡片",
   item: "商品卡片",
   order: "订单卡片",
 };

@@ -10,7 +10,7 @@ import { schemasByChannel } from "./registry";
  */
 
 describe("schemasByChannel 模板清单（平台/IM 系）", () => {
-  it("抖音：dop 主体系 14 + IM 私信明细 11 + 生活服务 2 + 小游戏 4 + 服务商 2", () => {
+  it("抖音：dop 主体系 14 + IM 私信明细 11 + 企业号线索组件 5 + 生活服务 2 + 小游戏 4 + 服务商 2", () => {
     expect(schemasByChannel("douyin").map((schema) => schema.id)).toEqual([
       // dop 主体系
       "dy-create-video",
@@ -39,6 +39,12 @@ describe("schemasByChannel 模板清单（平台/IM 系）", () => {
       "dy-enter",
       "dy-recall",
       "dy-read",
+      // 企业号线索组件（clue-component-open v1.0.5 新增，事实库 §2.2/§5.18）
+      "dy-premium-card",
+      "dy-enterprise-wechat-card",
+      "dy-product",
+      "dy-notice",
+      "dy-question-list",
       // 生活服务
       "dy-verify-webhook",
       "dy-life-order",
