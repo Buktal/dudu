@@ -48,6 +48,53 @@ const definition: ChannelDefinition = {
     },
   ],
 };
+// 抖音字段元数据与服务端 ConsoleChannelDefinitions 对齐：授权码既非接收必需也非
+// 发送所需（可选），是控制台「可选」渲染分支的代表性渠道
+const douyinDefinition: ChannelDefinition = {
+  channel: "douyin",
+  name: "抖音",
+  available: true,
+  restriction: "",
+  notes: [],
+  fields: [
+    {
+      key: "clientKey",
+      label: "Client Key",
+      secret: false,
+      requiredForReceive: true,
+      requiredForSend: true,
+      immutableOnceConfigured: true,
+      control: "text",
+    },
+    {
+      key: "clientSecret",
+      label: "Client Secret",
+      secret: true,
+      requiredForReceive: true,
+      requiredForSend: true,
+      immutableOnceConfigured: false,
+      control: "password",
+    },
+    {
+      key: "refreshToken",
+      label: "Refresh Token",
+      secret: true,
+      requiredForReceive: false,
+      requiredForSend: true,
+      immutableOnceConfigured: false,
+      control: "password",
+    },
+    {
+      key: "authCode",
+      label: "Auth Code",
+      secret: true,
+      requiredForReceive: false,
+      requiredForSend: false,
+      immutableOnceConfigured: false,
+      control: "password",
+    },
+  ],
+};
 const detail: AccountDetail = {
   companyChannelId: "1",
   groupId: "2",
@@ -125,6 +172,68 @@ describe("渠道账号操作", () => {
       fields: { token: "receive-secret" },
     });
     expect(screen.getByLabelText("回调 token · 接收必需")).toHaveValue("");
+  });
+  it("抖音可选授权码留空可保存：可选标签展示，空值不进提交体", async () => {
+    const fetcher = installHttp(() => success(detail));
+    renderEditor(undefined, [douyinDefinition]);
+    fireEvent.click(screen.getByRole("combobox", { name: "渠道" }));
+    fireEvent.pointerDown(await screen.findByRole("option", { name: "抖音" }));
+    fireEvent.click(screen.getByRole("option", { name: "抖音" }), {
+      detail: 1,
+    });
+    fireEvent.change(screen.getByLabelText("账号名称"), {
+      target: { value: "企业号" },
+    });
+    // 可选字段落在发送配置组并带「可选」标签，留空不触发必填校验
+    expect(screen.getByLabelText("Auth Code · 可选")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Client Key · 接收必需"), {
+      target: { value: "client-key" },
+    });
+    fireEvent.change(screen.getByLabelText("Client Secret · 接收必需"), {
+      target: { value: "client-secret" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存参数" }));
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    // 留空的可选授权码与未填的发送令牌都不出现在提交体
+    expect(JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string)).toEqual({
+      accountName: "企业号",
+      groupId: "2",
+      channel: "douyin",
+      fields: { clientKey: "client-key", clientSecret: "client-secret" },
+    });
+  });
+  it("抖音可选授权码填入后原样上报，secret 不裁剪首尾空白", async () => {
+    const fetcher = installHttp(() => success(detail));
+    renderEditor(undefined, [douyinDefinition]);
+    fireEvent.click(screen.getByRole("combobox", { name: "渠道" }));
+    fireEvent.pointerDown(await screen.findByRole("option", { name: "抖音" }));
+    fireEvent.click(screen.getByRole("option", { name: "抖音" }), {
+      detail: 1,
+    });
+    fireEvent.change(screen.getByLabelText("账号名称"), {
+      target: { value: "企业号" },
+    });
+    fireEvent.change(screen.getByLabelText("Client Key · 接收必需"), {
+      target: { value: "client-key" },
+    });
+    fireEvent.change(screen.getByLabelText("Client Secret · 接收必需"), {
+      target: { value: "client-secret" },
+    });
+    fireEvent.change(screen.getByLabelText("Auth Code · 可选"), {
+      target: { value: " auth-code " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存参数" }));
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string)).toEqual({
+      accountName: "企业号",
+      groupId: "2",
+      channel: "douyin",
+      fields: {
+        clientKey: "client-key",
+        clientSecret: "client-secret",
+        authCode: " auth-code ",
+      },
+    });
   });
 });
 
