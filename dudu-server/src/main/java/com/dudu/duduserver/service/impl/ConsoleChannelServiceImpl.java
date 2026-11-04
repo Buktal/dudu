@@ -7,6 +7,7 @@ import com.dudu.duduserver.channel.console.ConsoleChannelCatalog;
 import com.dudu.duduserver.channel.console.ConsoleChannelConfiguration;
 import com.dudu.duduserver.channel.console.ConsoleChannelDefinition;
 import com.dudu.duduserver.channel.douyin.DouyinOAuthClient;
+import com.dudu.duduserver.channel.kuaishou.KuaishouOAuthClient;
 import com.dudu.duduserver.channel.xiaohongshuthirdim.XiaohongshuThirdImTokenClient;
 import com.dudu.duduserver.common.P;
 import com.dudu.duduserver.config.auth.JwtUser;
@@ -51,6 +52,7 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
     private final ConsoleCallbackUrls callbackUrls;
     private final XiaohongshuThirdImTokenClient thirdImTokens;
     private final DouyinOAuthClient douyinOAuth;
+    private final KuaishouOAuthClient kuaishouOAuth;
     private final ApplicationEventPublisher events;
 
     @Override
@@ -106,6 +108,8 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
         account.setChannelInfo(configuration.merge(request.channel(), Map.of(), request.fields(), List.of(),
             callbackUrls.callback(origin, 0L)));
         exchangeThirdImTokensIfNeeded(request.channel(), request.fields(), account.getChannelInfo());
+        exchangeDouyinAuthCodeIfNeeded(request.channel(), request.fields(), account.getChannelInfo());
+        exchangeKuaishouAuthCodeIfNeeded(request.channel(), request.fields(), account.getChannelInfo());
         accounts.save(account);
         if (request.channel() == ChannelEnum.WHATSAPP) {
             account.setChannelInfo(configuration.merge(request.channel(), account.getChannelInfo(), Map.of(), List.of(),
@@ -128,9 +132,11 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
             callbackUrls.callback(origin, account.getCompanyChannelId())));
         exchangeThirdImTokensIfNeeded(account.getChannel(), changes.set(), account.getChannelInfo());
         exchangeDouyinAuthCodeIfNeeded(account.getChannel(), changes.set(), account.getChannelInfo());
+        exchangeKuaishouAuthCodeIfNeeded(account.getChannel(), changes.set(), account.getChannelInfo());
         // 重新录入 refreshToken 即视为新授权链起点：清除服务端续期时刻，抖音续期 job
-        // 改按本次保存时刻起算（DouyinRefreshTokenRefresher），避免旧时刻立即触发对新
-        // 链 token 的续期烧掉 5 次轮换配额；值未变或未提交不重置
+        // 与快手刷新 job 改按本次保存时刻起算（DouyinRefreshTokenRefresher、
+        // KuaishouTokenRefresher），避免旧时刻立即触发对新链 token 的轮换；值未变或
+        // 未提交不重置
         Object submittedToken = changes.set().get("refreshToken");
         if (submittedToken != null && !submittedToken.equals(before.get("refreshToken"))) {
             account.getChannelInfo().remove("refreshTokenRenewedAt");
@@ -194,6 +200,28 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
                 result.failureReason() + "（授权码一次性使用已作废，请重新授权获取新码）");
         }
         info.remove("authCode");
+        info.put("refreshToken", result.refreshToken());
+        info.remove("refreshTokenRenewedAt");
+    }
+
+    // 快手授权码首换（docs/research/channels/kuaishou.md §8）：code 按 oauth 族惯例
+    // 10 分钟时效且一次性，保存即同步换取双 token（access_token 落库供发送直用，
+    // refresh_token 交刷新 job 每日轮换）；成功写入双 token 并丢弃授权码、清除服务端
+    // 刷新时刻（新授权链按保存时刻起算），失败整体拒绝促重新授权
+    private void exchangeKuaishouAuthCodeIfNeeded(ChannelEnum channel, Map<String, Object> set,
+                                                  Map<String, Object> info) {
+        if (channel != ChannelEnum.KUAISHOU || !set.containsKey("authCode")) {
+            return;
+        }
+        KuaishouOAuthClient.ExchangeResult result = kuaishouOAuth.exchange(
+            String.valueOf(info.get("appKey")), String.valueOf(info.get("appSecret")),
+            String.valueOf(set.get("authCode")));
+        if (!result.succeeded()) {
+            throw new BizException(ApiEnum.REQUEST_THIRD_ERROR,
+                result.failureReason() + "（授权码一次性使用已作废，请重新授权获取新码）");
+        }
+        info.remove("authCode");
+        info.put("accessToken", result.accessToken());
         info.put("refreshToken", result.refreshToken());
         info.remove("refreshTokenRenewedAt");
     }

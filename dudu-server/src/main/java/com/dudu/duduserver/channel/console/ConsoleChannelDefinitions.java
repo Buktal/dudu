@@ -48,10 +48,13 @@ public final class ConsoleChannelDefinitions {
             field("clientSecret", "Client Secret", true, true, true, false),
             field("refreshToken", "Refresh Token", true, false, true, false),
             field("authCode", "Auth Code", true, false, false, false))),
-        definition(KUAISHOU, "智能客服通道：推送地址需线下报备给快手侧；发送签名密钥与授权令牌由平台分配。", List.of(
+        definition(KUAISHOU, "智能客服通道：推送地址需线下报备给快手侧；Access Token 有效期一天，完成商家授权后 10 分钟内填入授权码，保存即换取令牌并由服务端每日自动刷新；也可跳过授权码直接录入既有 Refresh Token。本控制台不发起 OAuth 授权。", List.of(
             field("appKey", "App Key", false, true, true, true),
+            field("appSecret", "App Secret", true, false, false, false),
             field("signSecret", "Sign Secret", true, false, true, false),
-            field("accessToken", "Access Token", true, false, true, false))),
+            field("accessToken", "Access Token", true, false, true, false),
+            field("refreshToken", "Refresh Token", true, false, false, false),
+            field("authCode", "Auth Code", true, false, false, false))),
         definition(XIAOHONGSHU, "填写平台回调加密材料；配置齐全不代表平台授权有效。", List.of(
             field("token", "回调 Token", true, true, false, false),
             field("encodingAesKey", "EncodingAESKey", true, true, false, false),

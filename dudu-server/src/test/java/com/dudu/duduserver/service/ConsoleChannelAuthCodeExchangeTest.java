@@ -4,6 +4,7 @@ import com.dudu.duduserver.channel.console.ConsoleCallbackUrls;
 import com.dudu.duduserver.channel.console.ConsoleChannelCatalog;
 import com.dudu.duduserver.channel.console.ConsoleChannelConfiguration;
 import com.dudu.duduserver.channel.douyin.DouyinOAuthClient;
+import com.dudu.duduserver.channel.kuaishou.KuaishouOAuthClient;
 import com.dudu.duduserver.channel.xiaohongshuthirdim.XiaohongshuThirdImTokenClient;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -34,10 +36,11 @@ import static org.mockito.Mockito.when;
 
 /**
  * Console 保存授权码首换验收（小红书三方私信 docs/research/channels/xiaohongshu.md
- * §13.4、抖音 docs/research/channels/douyin.md §6）：授权码 10 分钟时效且一次性，
- * 保存即同步换取（等定时任务必失效）；换取成功把轮换产物写入 channel_info 并丢弃
- * 授权码，失败整体拒绝促重新授权，未携带授权码的保存不触发出网；抖音首换同时清除
- * 服务端续期时刻（新授权链按保存时刻起算，不烧轮换配额）
+ * §13.4、抖音 docs/research/channels/douyin.md §6、快手 docs/research/channels/
+ * kuaishou.md §8）：授权码 10 分钟时效且一次性，保存即同步换取（等定时任务必
+ * 失效）；换取成功把轮换产物写入 channel_info 并丢弃授权码，失败整体拒绝促重新
+ * 授权，未携带授权码的保存不触发出网；抖音/快手首换同时清除服务端续期时刻（新
+ * 授权链按保存时刻起算，不烧轮换配额）
  */
 class ConsoleChannelAuthCodeExchangeTest {
 
@@ -49,6 +52,7 @@ class ConsoleChannelAuthCodeExchangeTest {
     private final CompanyChannelService accounts = mock(CompanyChannelService.class);
     private final XiaohongshuThirdImTokenClient thirdImTokens = mock(XiaohongshuThirdImTokenClient.class);
     private final DouyinOAuthClient douyinOAuth = mock(DouyinOAuthClient.class);
+    private final KuaishouOAuthClient kuaishouOAuth = mock(KuaishouOAuthClient.class);
     private final ConsoleCallbackUrls callbackUrls = mock(ConsoleCallbackUrls.class);
 
     private CompanyChannelDO account;
@@ -81,7 +85,7 @@ class ConsoleChannelAuthCodeExchangeTest {
 
         service = new ConsoleChannelServiceImpl(accessService, accounts, mock(UserGroupService.class),
             mock(ConsoleChannelCatalog.class), new ConsoleChannelConfiguration(), callbackUrls, thirdImTokens,
-            douyinOAuth, mock(ApplicationEventPublisher.class));
+            douyinOAuth, kuaishouOAuth, mock(ApplicationEventPublisher.class));
     }
 
     @Test
@@ -183,6 +187,80 @@ class ConsoleChannelAuthCodeExchangeTest {
         verify(douyinOAuth, never()).exchange(any(), any(), any());
         assertThat(account.getChannelInfo()).containsEntry("refreshToken", "manual-rt-2");
         verify(accounts).updateById(account);
+    }
+
+    @Test
+    void exchangesKuaishouAuthCodeIntoTokenPairAndResetsRefreshClock() {
+        // 快手授权码首换（docs/research/channels/kuaishou.md §8）：code 按 oauth 族惯例
+        // 10 分钟一次性，保存即换双 token；重新授权场景清除旧刷新时刻，按保存时刻起算
+        account.setChannel(ChannelEnum.KUAISHOU);
+        account.setChannelInfo(new LinkedHashMap<>(Map.of(
+            "appKey", "ks7001", "appSecret", "as", "signSecret", "ss",
+            "accessToken", "stale-access", "refreshToken", "expired-rt",
+            "refreshTokenRenewedAt", 1720000000000L)));
+        when(kuaishouOAuth.exchange("ks7001", "as", "fresh-code"))
+            .thenReturn(new KuaishouOAuthClient.ExchangeResult("at-new", "rt-new", null));
+
+        service.update(null, ACCOUNT_ID.toString(),
+            update(Map.of("authCode", "fresh-code")), ORIGIN);
+
+        assertThat(account.getChannelInfo())
+            .containsEntry("appKey", "ks7001")
+            .containsEntry("accessToken", "at-new")
+            .containsEntry("refreshToken", "rt-new")
+            .doesNotContainKey("authCode")
+            .doesNotContainKey("refreshTokenRenewedAt");
+        verify(accounts).updateById(account);
+    }
+
+    @Test
+    void rejectsKuaishouSaveWhenExchangeFails() {
+        account.setChannel(ChannelEnum.KUAISHOU);
+        account.setChannelInfo(new LinkedHashMap<>(Map.of("appKey", "ks7001", "appSecret", "as")));
+        when(kuaishouOAuth.exchange("ks7001", "as", "used-code"))
+            .thenReturn(new KuaishouOAuthClient.ExchangeResult(null, null,
+                "换取快手令牌失败：1000 803000 access token expired"));
+
+        assertThatThrownBy(() -> service.update(null, ACCOUNT_ID.toString(),
+            update(Map.of("authCode", "used-code")), ORIGIN))
+            .isInstanceOf(BizException.class)
+            .hasMessageContaining("803000")
+            .hasMessageContaining("重新授权");
+        verify(accounts, never()).updateById(any(CompanyChannelDO.class));
+    }
+
+    @Test
+    void skipsKuaishouExchangeWhenAuthCodeAbsent() {
+        account.setChannel(ChannelEnum.KUAISHOU);
+        account.setChannelInfo(new LinkedHashMap<>(Map.of(
+            "appKey", "ks7001", "appSecret", "as", "signSecret", "ss", "refreshToken", "manual-rt")));
+
+        service.update(null, ACCOUNT_ID.toString(),
+            update(Map.of("refreshToken", "manual-rt-2")), ORIGIN);
+
+        verify(kuaishouOAuth, never()).exchange(any(), any(), any());
+        assertThat(account.getChannelInfo()).containsEntry("refreshToken", "manual-rt-2");
+        verify(accounts).updateById(account);
+    }
+
+    @Test
+    void exchangesKuaishouAuthCodeOnCreateIntoTokenPair() {
+        // 建号携带授权码一步完成首换（与编辑同规则）：双 token 落库、授权码丢弃
+        when(kuaishouOAuth.exchange("ks7001", "as", "fresh-code"))
+            .thenReturn(new KuaishouOAuthClient.ExchangeResult("at-new", "rt-new", null));
+        when(accounts.getById(isNull())).thenReturn(account);
+
+        service.create(null, new ConsoleChannelRequests.Create(GROUP_ID.toString(), ChannelEnum.KUAISHOU,
+            "快手主号", Map.of("appKey", "ks7001", "appSecret", "as", "authCode", "fresh-code")), ORIGIN);
+
+        org.mockito.ArgumentCaptor<CompanyChannelDO> saved =
+            org.mockito.ArgumentCaptor.forClass(CompanyChannelDO.class);
+        verify(accounts).save(saved.capture());
+        assertThat(saved.getValue().getChannelInfo())
+            .containsEntry("appKey", "ks7001")
+            .containsEntry("accessToken", "at-new")
+            .containsEntry("refreshToken", "rt-new")
+            .doesNotContainKey("authCode");
     }
 
     // ---- 夹具 ----

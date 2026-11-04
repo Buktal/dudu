@@ -20,7 +20,7 @@ class KuaishouProtocolTest {
     @Test
     void verifyMatchesMd5OfAppKeyPlusRawBody() {
         // 独立向量：appKey="123" + body="456" → MD5("123456")
-        KuaishouCredentials credentials = new KuaishouCredentials("123", null, null);
+        KuaishouCredentials credentials = new KuaishouCredentials("123", null, null, null, null);
 
         assertThat(protocol.verify(credentials, "e10adc3949ba59abbe56e057f20f883e", "456")).isTrue();
         assertThat(protocol.verify(credentials, "E10ADC3949BA59ABBE56E057F20F883E", "456")).isTrue();
