@@ -1096,3 +1096,49 @@ dop 现行事件目录复核：https://developer.open-douyin.com/docs/resource/z
 - 问题一：无突破——分享类 image/video 判断维持（官方 SDK 全量路径 + 现版 webhook 页 + GetIMMessageResource UseRestriction 三方互证）；语音消息类型不存在于 dop 私信，无读取通道
 - 问题二：有突破——media_type 全集官方逐字（image/video）、21 条错误码全表（较 §8.4 增 28001005/28001006）、rate limit 确认官方无量化口径（仅 28003017 quota 错误码）
 - 问题三：有突破——遗留企业号事件表逐字全录（receive_msg/enter_im/dial_phone/website_contact/personal_tab_contact + schemas），收口 §8.6 mock 枚举之谜；union_auth_info_for/b content 结构、webhook 12h 退避重试、renew_refresh_token 续期机制为官方新条文；确认不存在「结束会话/取消关注」事件
+
+### 9.6 renew_refresh_token 契约（补抓）
+
+来源（apiMeta 型页，openApiMeta 全量提取；两页同体镜像，meta 完全一致）：dop 树 https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/account-permission/refresh-token/ （标题「刷新 refresh_token」，页面 updateTime 1753969324 ≈ 2025-07-31）；mini-app 树 https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/basic-abilities/interface-request-credential/user-authorization/refresh-user-token （标题「刷新授权调用凭证」）。BFF 检索「renew_refresh_token」无独立命名页（仅社区帖），接口实体在上述两页
+
+- **端点**：`POST https://open.douyin.com/oauth/renew_refresh_token/`（meta 逐字：Name `RenewRefreshToken`、CnName「刷新授权调用凭证」、Method=POST、Domain `https://open.douyin.com`、Psm `ma.open.passport_api`、EndpointId 1728196、Version 1.0.30、SupportSandBox true、ModifyTime 1780284490582 ≈ 2026-06-01）
+- **凭证**：无 access-token 头（meta Token.Hidden=true）；页注（官方逐字）：「client_key 必须拥有 renew_refresh_token 权限」——`renew_refresh_token` 是「抖音授权」能力下的 scope（能力概览页逐字归组：「抖音授权……*授权动态续期：renew_refresh_token」，同组另有 incremental_authorization、auth.comment、unionauth.identification），能力申请入口为「管理中心 > 应用详情」（角色概述页逐字「权限开通及管理请前往『管理中心』>『应用详情』」）；社区帖（DocType 4，2023-03）证实该权限需提交审核（「renew_refresh_token授权审核好几天了，还是审核中」）
+- **入参（form-urlencoded，官方 curl 逐字）**：
+
+```bash
+curl --location --request POST 'https://open.douyin.com/oauth/renew_refresh_token/' \
+--header 'Content-Type: application/x-www-form-urlencoded' \
+--data-urlencode 'client_key=tt10abc******' \
+--data-urlencode 'refresh_token=rft.a736b70544519999a6******'
+```
+
+  字段表（ReqSchema 逐字）：`refresh_token`（「填写通过 /oauth/access_token/ 获取到的 refresh_token 参数」；示例值带 `rft.` 前缀）、`client_key`（「应用唯一标识」）；HeaderParam 写 `Content-Type` 固定值 application/json，与 ReqExample 的 x-www-form-urlencoded **官方自相矛盾，照录**，实施按 curl 形态（同 §6 access_token 换取接口惯例）
+- **响应结构（官方逐字）**：
+
+```json
+{
+  "data": {
+    "description": "",
+    "error_code": 0,
+    "expires_in": "86400",
+    "refresh_token": "refresh_token"
+  },
+  "message": "success"
+}
+```
+
+  信封为顶层 `data` + `message`（success/error，非 extra/data 族）；`data.refresh_token` 即响应携带的新 refresh_token 值；`expires_in` Desc 逐字「过期时间，单位（秒）」（meta Type=5 整型，成功示例却为字符串 "86400"=1 天，与 30 天条款矛盾，照录；实施按数值解析并兼容字符串）
+- **轮换语义（Description 注意事项官方逐字）**：「刷新操作需要在 refresh_token 过期前进行」「通过旧的 refresh_token 获取新的 refresh_token，调用后旧 refresh_token 会失效，新 refresh_token 有 30 天有效期。最多只能获取 5 次新的 refresh_token，**5 次过后需要用户重新授权**」——**确认是轮换（返回新值、旧值立即失效），非仅延长原值**；官方 FAQ（DocType 3「token 有效期与续期」逐字）给出上限算式：「access_token 最长续期15天 refresh_token 30天 最多只能再获取5次新的refresh_token 最长续期：15 + 30 + 30 * 5 = 195 天」（与社区实测帖「网站应用 AccessToken 保持 195 天」互证）
+- **错误码表（官方 ErrCodeList 逐字，HTTP 状态码全部 200）**：
+
+| ErrCode | Desc | Suggestion |
+|---|---|---|
+| 10005 | 缺少参数 | 检查是否填写 client_key 和 refresh_token 参数，请求格式是否正确。 |
+| 10004 | 权限不足 | 请申请 renew_refresh_token 权限。 |
+| 10010 | refresh_token 过期 | token 已过期，请让用户重新授权。 |
+| 10020 | 超过刷新次数限制 | 无法再刷新，请让用户重新授权。 |
+
+  异常示例（官方逐字）：`{"data":{"captcha":"","desc_url":"","description":"scope权限非法","error_code":10004},"message":"error"}`——异常响应额外含 `captcha`/`desc_url` 字段
+- **三语 SDK 方法名（meta 逐字）**：go `OauthRenewRefreshToken`/`OauthRenewRefreshTokenRequest`（douyin-openapi-sdk-go）；node `oauthRenewRefreshToken`（@open-dy/open_api_sdk）；java `OauthRenewRefreshToken`（com.douyin.openapi.client）
+- **FAQ「可配置每次调用 refresh_token 接口都会延长 refresh_token 本身的有效期到30d」的配置项**：未找到公开文档命名该配置开关——renew 接口页与 UseRestriction 均无此条款，能力概览/角色概述仅给 scope 申请入口（管理中心 > 应用详情），社区帖证实权限走审核制；该「配置」为平台侧按特殊需求受理的能力配置，无公开开关名与控制台路径，实施按「默认轮换语义」处理，不依赖该配置
+- **对 §6/§6.1 实施注的修正**：channel_info.refreshToken 语义改为「30 天轮换凭证——每次续期换新值，旧值作废，独立 token 至多续 5 次（此后需用户重新授权）；不续期时链路寿命 = 授权时 refresh_token 30 天 + access_token 15 天，续满 5 次约 195 天」；轮换实现要求落库时原子更新 refresh_token 值并防并发双刷（旧值一经使用即失效，双刷会互相踢）
