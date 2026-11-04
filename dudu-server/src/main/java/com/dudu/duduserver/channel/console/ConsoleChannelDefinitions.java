@@ -56,9 +56,10 @@ public final class ConsoleChannelDefinitions {
             field("encodingAesKey", "EncodingAESKey", true, true, false, false),
             field("appId", "App ID", false, true, true, true),
             field("appSecret", "App Secret", true, false, true, false))),
-        definition(XIAOHONGSHU_THIRD_IM, "三方私信绑定骨架：令牌由运营完成授权换取后录入，本控制台不发起 OAuth；收发规格随平台开白下发，到手前仅维持绑定与令牌轮换。", List.of(
+        definition(XIAOHONGSHU_THIRD_IM, "三方私信绑定：完成平台授权后 10 分钟内填入 Auth Code，保存即换取令牌；也可跳过授权码直接录入既有 Refresh Token。收发规格随平台开白下发，到手前仅维持绑定与令牌轮换。", List.of(
             field("appId", "App ID", false, true, true, true),
             field("secret", "App Secret", true, true, true, false),
+            field("authCode", "Auth Code", true, false, false, false),
             field("refreshToken", "Refresh Token", true, false, true, false),
             field("accessToken", "Access Token", true, false, false, false))),
         definition(DINGTALK, "仅支持 HTTP 密文推送，不支持 Stream；Owner Key 是回调身份校验值。", List.of(

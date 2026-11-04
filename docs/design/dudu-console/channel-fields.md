@@ -20,7 +20,7 @@
 | douyin / 抖音 | clientKey、clientSecret* | clientKey、clientSecret*、refreshToken* | 发送与素材读取需已获授权refreshToken，只填已有凭据，不做OAuth；douyin/ |
 | kuaishou / 快手 | appKey | appKey、signSecret*、accessToken* | 智能客服通道，推送地址需线下报备给快手侧；kuaishou/ |
 | xiaohongshu / 小红书 | token*、encodingAesKey*、appId | appId、appSecret* | url/system目前不由适配器读取，不作为可编辑输入；xiaohongshu/ |
-| xiaohongshu-third-im / 小红书私信三方 | appId、secret* | appId、secret*、refreshToken* | accessToken 为令牌轮换产物由服务端回写，非人工输入；绑定骨架与令牌轮换，收发规格随平台开白下发；xiaohongshuthirdim/ |
+| xiaohongshu-third-im / 小红书私信三方 | appId、secret* | appId、secret*、refreshToken* | 授权码首换：平台授权后 10 分钟内填入 authCode，保存即同步换取令牌（authCode 一次性不入库，失败需重新授权）；accessToken 为令牌轮换产物由服务端回写，非人工输入；收发规格随平台开白下发；xiaohongshuthirdim/ |
 | dingtalk / 钉钉 | token*、encodingAesKey*、ownerKey | appKey、appSecret*、agentId | system后端固定http_crypto，ownerKey为接收身份校验值而非secret；dingtalk/ |
 | meituan / 美团 | app_id、app_secret* | 同接收 | 键名保留下划线；只开放既有HTTP入口，待签URL含实际Host；meituan/ |
 | whatsapp / WhatsApp | appSecret*、verifyToken*；url由后端派生 | accessToken*、phoneNumberId | GET verifyToken和POST appSecret用途不同；api-base/version是部署配置；whatsapp/ |
@@ -37,6 +37,7 @@
 - 钉钉固定system=http_crypto；企业微信固定system=agent。既有其他system记录如aibot只读显示“当前接入方式不受支持”，不自动转换、不将它计为接收配置齐全
 - 小红书既有url/system、通用externalAccountId等未使用键原样保留，不作为新表单字段回显。维护老配置要保留未知键，以免无关改动破坏其他消费者
 - 轮换发送凭据可以分次补齐，但保存后明确提示当前缺失字段。清除接收必需键导致最终配置不完整时整体拒绝；无需增加“半配置账号”持久状态
+- 小红书三方私信的 authCode 只在保存时触发服务端同步首换（POST /api/open/oauth2/access_token），不持久化；换取产物以 accessToken/refreshToken 落库，失败整体拒绝且旧授权码已作废需重新授权。该外网调用在配置白名单合并边界之外，位于保存事务内
 
 ## 渠道侧准备与验收
 

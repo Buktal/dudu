@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.console.ConsoleCallbackUrls;
 import com.dudu.duduserver.channel.console.ConsoleChannelCatalog;
 import com.dudu.duduserver.channel.console.ConsoleChannelConfiguration;
 import com.dudu.duduserver.channel.console.ConsoleChannelDefinition;
+import com.dudu.duduserver.channel.xiaohongshuthirdim.XiaohongshuThirdImTokenClient;
 import com.dudu.duduserver.common.P;
 import com.dudu.duduserver.config.auth.JwtUser;
 import com.dudu.duduserver.config.exception.BizException;
@@ -47,6 +48,7 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
     private final ConsoleChannelCatalog catalog;
     private final ConsoleChannelConfiguration configuration;
     private final ConsoleCallbackUrls callbackUrls;
+    private final XiaohongshuThirdImTokenClient thirdImTokens;
     private final ApplicationEventPublisher events;
 
     @Override
@@ -101,6 +103,7 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
         // 自增 ID 在插入后才可用；先校验整份输入，WhatsApp 的最终 url 在同一事务补齐后再返回。
         account.setChannelInfo(configuration.merge(request.channel(), Map.of(), request.fields(), List.of(),
             callbackUrls.callback(origin, 0L)));
+        exchangeThirdImTokensIfNeeded(request.channel(), request.fields(), account.getChannelInfo());
         accounts.save(account);
         if (request.channel() == ChannelEnum.WHATSAPP) {
             account.setChannelInfo(configuration.merge(request.channel(), account.getChannelInfo(), Map.of(), List.of(),
@@ -120,6 +123,7 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
         ConsoleChannelRequests.Changes changes = request.credentialChanges();
         account.setChannelInfo(configuration.merge(account.getChannel(), info(account), changes.set(), changes.clear(),
             callbackUrls.callback(origin, account.getCompanyChannelId())));
+        exchangeThirdImTokensIfNeeded(account.getChannel(), changes.set(), account.getChannelInfo());
         account.setAccountName(name(request.accountName()));
         // 纯凭据与账号名维护不改变账号-组关系，不做全企业广播
         accounts.updateById(account);
@@ -140,6 +144,26 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
             events.publishEvent(new DeskAccessChangedEvent(access.companyId()));
         }
         return detailView(accounts.getById(account.getCompanyChannelId()), access, origin);
+    }
+
+    // 小红书三方私信授权码首换：auth_code 10 分钟时效且一次性，保存即同步换取（等定时
+    // 任务必失效）；成功把轮换双 token 写入配置并丢弃授权码，失败整体拒绝促重新授权。
+    // 外网调用在 ConsoleChannelConfiguration（不发外网请求）之外，置于保存事务内
+    private void exchangeThirdImTokensIfNeeded(ChannelEnum channel, Map<String, Object> set,
+                                               Map<String, Object> info) {
+        if (channel != ChannelEnum.XIAOHONGSHU_THIRD_IM || !set.containsKey("authCode")) {
+            return;
+        }
+        XiaohongshuThirdImTokenClient.ExchangeResult result = thirdImTokens.exchange(
+            String.valueOf(info.get("appId")), String.valueOf(info.get("secret")),
+            String.valueOf(set.get("authCode")));
+        if (!result.succeeded()) {
+            throw new BizException(ApiEnum.REQUEST_THIRD_ERROR,
+                result.failureReason() + "（授权码一次性使用已作废，请重新授权获取新码）");
+        }
+        info.remove("authCode");
+        info.put("accessToken", result.accessToken());
+        info.put("refreshToken", result.refreshToken());
     }
 
     private CompanyChannelDO requireAccount(ConsoleAccess access, String id) {

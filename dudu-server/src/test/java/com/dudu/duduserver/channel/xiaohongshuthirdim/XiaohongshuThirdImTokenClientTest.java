@@ -19,16 +19,20 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 小红书私信三方令牌刷新验收（事实见 docs/research/channels/xiaohongshu.md §13.4，
- * 4808/4945）：POST /api/open/oauth2/refresh_token JSON body {app_id(long)、secret、
- * refresh_token}，成功信封取 4945 黄金示例逐字（code=0 + data 轮换双 token 与有效期
- * 字段全集）；每次刷新轮换双 token，轮换产物必须回写 channel_info（旧 token 5 分钟
- * 失效，不落库则重启后失去续期能力）；渠道拒绝原样记录 code 与 msg，缺 refreshToken
- * 或 app_id 非数值不出网。
+ * 小红书私信三方令牌链路验收（事实见 docs/research/channels/xiaohongshu.md §13.4，
+ * 4808/4945）：刷新 POST /api/open/oauth2/refresh_token JSON body {app_id(long)、
+ * secret、refresh_token}，成功信封取 4945 黄金示例逐字（code=0 + data 轮换双 token
+ * 与有效期字段全集）；每次刷新轮换双 token，轮换产物必须回写 channel_info（旧
+ * token 5 分钟失效，不落库则重启后失去续期能力）；渠道拒绝原样记录 code 与 msg，
+ * 缺 refreshToken 或 app_id 非数值不出网。首换 POST /api/open/oauth2/access_token
+ * body 换 auth_code（10 分钟时效），同款信封，产物不经 store 回写交调用方落库。
  */
 class XiaohongshuThirdImTokenClientTest {
 
-    // 4945 黄金响应逐字（信封与 data 字段全集；refresh 语境同构复用）
+    private static final String PATH_REFRESH = "/api/open/oauth2/refresh_token";
+    private static final String PATH_ACCESS_TOKEN = "/api/open/oauth2/access_token";
+
+    // 4945 黄金响应逐字（信封与 data 字段全集；refresh/首换语境同构复用）
     private static final String REFRESH_OK = """
         {"code":0,"success":true,"msg":"成功","data":{"user_id":"5c8650cb0000000001004367",
         "role_type":3,"approval_advertisers":[{"advertiser_id":1234,"advertiser_name":"品牌测试账号222"}],
@@ -45,7 +49,7 @@ class XiaohongshuThirdImTokenClientTest {
     private final CopyOnWriteArrayList<Map.Entry<Long, String[]>> stored = new CopyOnWriteArrayList<>();
     private HttpServer server;
     private String baseUrl;
-    private com.sun.net.httpserver.HttpContext refreshContext;
+    private com.sun.net.httpserver.HttpContext context;
 
     // 捕获回写参数的 store 替身（[channelId, accessToken, refreshToken]）
     private final XiaohongshuThirdImTokenStore capturingStore = (channelId, accessToken, refreshToken) ->
@@ -65,7 +69,7 @@ class XiaohongshuThirdImTokenClientTest {
 
     @Test
     void refreshesTokenAndPersistsRotatedPair() {
-        handle(200, REFRESH_OK.trim());
+        handle(PATH_REFRESH, 200, REFRESH_OK.trim());
 
         TokenResult result = client().refresh(account(), accountCredentials());
 
@@ -87,7 +91,7 @@ class XiaohongshuThirdImTokenClientTest {
 
     @Test
     void reportsChannelRejectionWithoutStoring() {
-        handle(200, "{\"code\":40001,\"success\":false,\"msg\":\"invalid refresh_token\"}");
+        handle(PATH_REFRESH, 200, "{\"code\":40001,\"success\":false,\"msg\":\"invalid refresh_token\"}");
 
         TokenResult result = client().refresh(account(), accountCredentials());
 
@@ -99,14 +103,14 @@ class XiaohongshuThirdImTokenClientTest {
     @Test
     void failsHonestlyWhenRotationPairMissingOrStoreRejects() {
         // 信封成功但 data 缺轮换 refresh_token：如实失败，不回写半对 token
-        handle(200, "{\"code\":0,\"success\":true,\"msg\":\"成功\",\"data\":{\"access_token\":\"only-access\"}}");
+        handle(PATH_REFRESH, 200, "{\"code\":0,\"success\":true,\"msg\":\"成功\",\"data\":{\"access_token\":\"only-access\"}}");
         TokenResult missing = client().refresh(account(), accountCredentials());
         assertThat(missing.succeeded()).isFalse();
         assertThat(missing.failureReason()).contains("缺少轮换 token");
         assertThat(stored).isEmpty();
 
         // 回写失败按调用失败处理：新 token 未落库即不可靠（换成功信封走通轮换再让 store 拒绝）
-        handle(200, REFRESH_OK.trim());
+        handle(PATH_REFRESH, 200, REFRESH_OK.trim());
         XiaohongshuThirdImTokenClient failingStore = new XiaohongshuThirdImTokenClient(
             RestClient.builder(), baseUrl, (channelId, accessToken, refreshToken) -> {
             throw new IllegalStateException("db down");
@@ -126,6 +130,50 @@ class XiaohongshuThirdImTokenClientTest {
         TokenResult badAppId = client().refresh(account(), credentials("not-a-number", "1234abc", "used-refresh-token"));
         assertThat(badAppId.succeeded()).isFalse();
         assertThat(badAppId.failureReason()).contains("app_id");
+        assertThat(requestBodies).isEmpty();
+    }
+
+    @Test
+    void exchangesAuthCodeWithoutStoring() {
+        handle(PATH_ACCESS_TOKEN, 200, REFRESH_OK.trim());
+
+        XiaohongshuThirdImTokenClient.ExchangeResult result =
+            client().exchange("234", "1234abc", "auth-code-d6a0b185");
+
+        assertThat(result.succeeded()).isTrue();
+        assertThat(result.accessToken()).isEqualTo(NEW_ACCESS_TOKEN);
+        assertThat(result.refreshToken()).isEqualTo(NEXT_REFRESH_TOKEN);
+
+        // 请求 body 逐字段（§13.4：app_id 为 long 数值形态，auth_code 原样上送）
+        assertThat(requestBodies).hasSize(1);
+        var body = JSONUtil.parseObj(requestBodies.get(0));
+        assertThat(body.getLong("app_id")).isEqualTo(234L);
+        assertThat(body.getStr("secret")).isEqualTo("1234abc");
+        assertThat(body.getStr("auth_code")).isEqualTo("auth-code-d6a0b185");
+
+        // 首换产物不经 store 回写：调用发生在账号落库前，由 Console 保存链路持有写入权
+        assertThat(stored).isEmpty();
+    }
+
+    @Test
+    void exchangeReportsChannelRejection() {
+        handle(PATH_ACCESS_TOKEN, 200, "{\"code\":40001,\"success\":false,\"msg\":\"auth_code expired\"}");
+
+        XiaohongshuThirdImTokenClient.ExchangeResult result =
+            client().exchange("234", "1234abc", "auth-code-d6a0b185");
+
+        assertThat(result.succeeded()).isFalse();
+        assertThat(result.failureReason()).contains("40001").contains("auth_code expired");
+        assertThat(stored).isEmpty();
+    }
+
+    @Test
+    void exchangeFailsBeforeRequestWhenAppIdNotNumeric() {
+        XiaohongshuThirdImTokenClient.ExchangeResult result =
+            client().exchange("not-a-number", "1234abc", "auth-code-d6a0b185");
+
+        assertThat(result.succeeded()).isFalse();
+        assertThat(result.failureReason()).contains("app_id");
         assertThat(requestBodies).isEmpty();
     }
 
@@ -150,12 +198,12 @@ class XiaohongshuThirdImTokenClientTest {
         return new XiaohongshuThirdImCredentials(appId, secret, "stale-access-token", refreshToken);
     }
 
-    private void handle(int status, String response) {
+    private void handle(String path, int status, String response) {
         // 同路径重复注册时旧 context 仍先匹配：持有引用先删后建，保证最新响应生效
-        if (refreshContext != null) {
-            server.removeContext(refreshContext);
+        if (context != null) {
+            server.removeContext(context);
         }
-        refreshContext = server.createContext("/api/open/oauth2/refresh_token", exchange -> {
+        context = server.createContext(path, exchange -> {
             requestBodies.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             byte[] body = response.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
