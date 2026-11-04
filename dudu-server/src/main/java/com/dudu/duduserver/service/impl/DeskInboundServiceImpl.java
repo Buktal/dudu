@@ -3,6 +3,7 @@ package com.dudu.duduserver.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.dudu.duduserver.channel.ChannelInboundMessage;
+import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.constant.VisitorStatusEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.entity.MessageDO;
@@ -35,7 +36,8 @@ import java.util.Map;
  * 来信先锁定访客行串行化同一访客的并发来信，重推判定基于锁定后读到的最新已提交数据，
  * message.message 的唯一键 uk_message_external (visitor_id, external_message_id)（V6）作
  * 数据库最终防线，冲突事务整体回滚即不产生重复计数；渠道资料按未提供、空值与有效值区分更新，
- * 推送在事务提交后发出且失败不影响落库。
+ * 推送在事务提交后发出且失败不影响落库。渠道同步的商家发出消息（direction=OUTGOING，如抖音
+ * im_send_msg）同样经此管道落库，接待状态更新与回复成功路径同语义。
  */
 @Slf4j
 @Service
@@ -75,14 +77,21 @@ public class DeskInboundServiceImpl implements DeskInboundService {
             .set(VisitorDO::getUpdateTime, now));
         Integer sequence = visitorService.getById(visitor.getVisitorId()).getMessageCount();
         MessageDO message = saveMessage(visitor.getVisitorId(), sequence, inbound);
-        // 最后消息与接待状态同事务落库；已待回复保留本轮 waiting_since，否则重新计时
+        // 最后消息与接待状态同事务落库。来信重置待回复并重新计时（已待回复保留本轮
+        // waiting_since）；渠道同步的商家发出消息（抖音 im_send_msg 等，运营在抖音
+        // App 原生回复）与回复成功路径同语义：待回复转等待用户并清计时，等待中与
+        // 已结束保持（已结束会话不因商家回复重开）——消息与状态同事务且访客行锁
+        // 串行，本条即最新，无须再查更新的来信
+        boolean fromVisitor = inbound.direction() != MessageDirectionEnum.OUTGOING;
         visitorService.update(Wrappers.<VisitorDO>lambdaUpdate()
             .eq(VisitorDO::getVisitorId, visitor.getVisitorId())
             .set(VisitorDO::getLastMessageId, message.getMessageId())
             .set(VisitorDO::getLastMessagePreview, DeskMessagePreview.of(inbound.content()))
             .set(VisitorDO::getLastMessageTime, message.getCreateTime())
-            .set(VisitorDO::getStatus, VisitorStatusEnum.NEEDS_REPLY)
-            .set(!visitor.awaitingReply(), VisitorDO::getWaitingSince, now)
+            .set(fromVisitor, VisitorDO::getStatus, VisitorStatusEnum.NEEDS_REPLY)
+            .set(fromVisitor && !visitor.awaitingReply(), VisitorDO::getWaitingSince, now)
+            .set(!fromVisitor && visitor.awaitingReply(), VisitorDO::getStatus, VisitorStatusEnum.WAITING)
+            .set(!fromVisitor && visitor.awaitingReply(), VisitorDO::getWaitingSince, null)
             .set(VisitorDO::getUpdateTime, now));
         pushAfterCommit(account, visitorService.getById(visitor.getVisitorId()), message, profileChange);
     }

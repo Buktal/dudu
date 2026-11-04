@@ -187,6 +187,35 @@ class DouyinProtocolTest {
     }
 
     @Test
+    void parseMapsMerchantSentMessagesAsOutgoingWithSwappedIdentities() {
+        // im_send_msg（授权号发出消息的同步推送，§2.2 与 im_receive_msg content 同构、
+        // 方向相反）：访客身份取 to_user_id、账号身份取 from_user_id（回复三要素复合
+        // 标识的第三段随之互换），运营在抖音 App 原生回复经此同步进 Desk 历史
+        var sent = protocol.parse(77L, golden("""
+            {"event":"im_send_msg","client_key":"asdfavetgbvasf",
+             "from_user_id":"8067f050-f8cf-4fa3-9357-c29bfc00000",
+             "to_user_id":"ac6479a5-d7a6-4018-84be-c29bfc00000",
+             "content":{"conversation_short_id":"@conv","server_message_id":"@msg","conversation_type":1,
+             "create_time":1681303285997,"message_type":"text","source":"","text":"请提供手机号",
+             "index":"1672502407220000",
+             "user_infos":[
+               {"open_id":"ac6479a5-d7a6-4018-84be-c29bfc00000","nick_name":"王五",
+                "avatar":"https://p3.douyinpic.com/aweme/720x720/wangwu.jpeg"},
+               {"open_id":"8067f050-f8cf-4fa3-9357-c29bfc00000","nick_name":"商家号",
+                "avatar":"https://p3.douyinpic.com/aweme/720x720/merchant.jpeg"}]}}
+            """)).orElseThrow();
+
+        // 访客取 to_user_id（from 是授权号），user_infos 按 to_user_id 匹配昵称头像
+        assertThat(sent.externalUserId()).isEqualTo("ac6479a5-d7a6-4018-84be-c29bfc00000");
+        assertThat(sent.name()).isEqualTo("王五");
+        assertThat(sent.avatarUrl()).isEqualTo("https://p3.douyinpic.com/aweme/720x720/wangwu.jpeg");
+        assertThat(sent.direction()).isEqualTo(com.dudu.duduserver.constant.MessageDirectionEnum.OUTGOING);
+        // 复合标识第三段是账号 open_id：im_send_msg 下取 from_user_id
+        assertThat(sent.externalMessageId()).isEqualTo("@msg:@conv:8067f050-f8cf-4fa3-9357-c29bfc00000");
+        assertThat(sent.content()).containsEntry("type", "text").containsEntry("text", "请提供手机号");
+    }
+
+    @Test
     void parseTreatsStringContentDualFormAndNonMessageEventsAsAnswerOnly() {
         // 双形态兼容：im_receive_msg 的 content 若为 JSON 字符串同样解析（票面要点 2）
         var stringContent = protocol.parse(77L, golden("""
@@ -197,11 +226,7 @@ class DouyinProtocolTest {
             """)).orElseThrow();
         assertThat(stringContent.content()).containsEntry("type", "text").containsEntry("text", "你好");
 
-        // im_send_msg / im_enter_direct_msg（content 为 JSON 字符串）/ 已读事件只应答不落库
-        assertThat(protocol.parse(77L, golden("""
-            {"event":"im_send_msg","client_key":"asdfavetgbvasf","from_user_id":"u1","to_user_id":"u2",
-             "content":{"server_message_id":"@msg","message_type":"text","text":"回显"}}
-            """))).isEmpty();
+        // im_enter_direct_msg（content 为 JSON 字符串）/ 已读事件只应答不落库
         assertThat(protocol.parse(77L, golden("""
             {"event":"im_enter_direct_msg","client_key":"aaaoqobz68a71u1",
              "from_user_id":"aaa-8a0b-4c0f-b04f-feba0e909113","to_user_id":"aaa-81ec-424c-b738-8693eeaf53ea",
@@ -220,6 +245,12 @@ class DouyinProtocolTest {
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
             () -> protocol.parse(77L, golden("""
                 {"event":"im_receive_msg","client_key":"asdfavetgbvasf",
+                 "content":{"server_message_id":"@msg","conversation_short_id":"@conv","message_type":"text"}}
+                """)));
+        // im_send_msg 的访客在 to_user_id，缺失同样按参数错误拒绝
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+            () -> protocol.parse(77L, golden("""
+                {"event":"im_send_msg","client_key":"asdfavetgbvasf","from_user_id":"merchant-open",
                  "content":{"server_message_id":"@msg","conversation_short_id":"@conv","message_type":"text"}}
                 """)));
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,

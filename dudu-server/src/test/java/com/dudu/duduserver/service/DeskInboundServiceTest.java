@@ -44,7 +44,9 @@ import static org.mockito.Mockito.when;
 
 /**
  * 入站信件服务单元验证：渠道资料有变化时随来信追加 profile 推送，无变化时不推送；
- * 真实事务提交与推送帧形状由独立 MySQL 验收与网关测试覆盖。
+ * 接待状态按方向分流——来信重置待回复并重新计时，渠道同步的商家发出消息（抖音
+ * im_send_msg 等 direction=OUTGOING）与回复成功路径同语义（待回复转等待用户并清
+ * 计时，等待中与已结束保持）。真实事务提交与推送帧形状由独立 MySQL 验收与网关测试覆盖。
  */
 class DeskInboundServiceTest {
 
@@ -145,6 +147,64 @@ class DeskInboundServiceTest {
         verify(deskSocketGateway, never()).pushProfile(anyLong(), anyLong(), any());
     }
 
+    @Test
+    void marksWaitingForChannelSyncedOutgoingMessage() {
+        // 渠道同步的商家发出消息落到待回复会话：与回复成功路径同语义——转等待用户并
+        // 清计时，不把状态拉回 needs-reply
+        when(visitorService.getOne(any(Wrapper.class)))
+            .thenReturn(visitor(VisitorStatusEnum.NEEDS_REPLY, LocalDateTime.now().minusMinutes(5)));
+
+        deskInboundService.accept(account(), outgoing("ext-1", "msg-out-1"));
+
+        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<VisitorDO> statusUpdate =
+            capturedStatusUpdate();
+        assertThat(valuesOf(statusUpdate, "status")).containsExactly(VisitorStatusEnum.WAITING);
+        assertThat(valuesOf(statusUpdate, "waiting_since")).containsExactly((Object) null);
+    }
+
+    @Test
+    void keepsWaitingAndClosedStatusUntouchedForChannelSyncedOutgoingMessage() {
+        // 等待用户（已结束同理）时商家又在渠道侧发出消息：状态与计时保持不动，最后消息仍更新
+        deskInboundService.accept(account(), outgoing("ext-1", "msg-out-2"));
+
+        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<VisitorDO> statusUpdate =
+            capturedStatusUpdate();
+        assertThat(valuesOf(statusUpdate, "status")).isEmpty();
+        assertThat(valuesOf(statusUpdate, "waiting_since")).isEmpty();
+    }
+
+    @Test
+    void keepsResettingToNeedsReplyForIncomingMessages() {
+        // 来信方向不受 outgoing 分流影响：重置待回复并重新计时（会话原在等待用户）
+        deskInboundService.accept(account(), inbound(List.of()));
+
+        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<VisitorDO> statusUpdate =
+            capturedStatusUpdate();
+        assertThat(valuesOf(statusUpdate, "status")).containsExactly(VisitorStatusEnum.NEEDS_REPLY);
+        // 等待中（awaitingReply=false）重新计时
+        assertThat(valuesOf(statusUpdate, "waiting_since")).hasSize(1);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<VisitorDO> capturedStatusUpdate() {
+        // accept 内最后一次 visitorService.update 是最后消息/接待状态段
+        org.mockito.ArgumentCaptor<Wrapper> updates = org.mockito.ArgumentCaptor.forClass(Wrapper.class);
+        org.mockito.Mockito.verify(visitorService, org.mockito.Mockito.atLeastOnce()).update(updates.capture());
+        return (com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<VisitorDO>)
+            updates.getAllValues().getLast();
+    }
+
+    // set 片段形如 "status=#{ew.paramNameValuePairs.MPGENVAL2}"（逗号拼接），而参数
+    // 绑定 map 的 key 只有最后一段 MPGENVAL2：取片段末段解出绑定值
+    private java.util.List<Object> valuesOf(
+        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<VisitorDO> update, String column) {
+        return java.util.Arrays.stream(update.getSqlSet().split(","))
+            .filter(set -> set.startsWith(column + "=#{"))
+            .map(set -> update.getParamNameValuePairs().get(
+                set.substring(set.lastIndexOf('.') + 1, set.length() - 1)))
+            .toList();
+    }
+
     private CompanyChannelDO account() {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setCompanyId(COMPANY_ID);
@@ -157,6 +217,12 @@ class DeskInboundServiceTest {
     private ChannelInboundMessage inbound(List<ChannelInboundMessage.ChannelField> fields) {
         return new ChannelInboundMessage(COMPANY_CHANNEL_ID, "ext-1", "小林", null, fields, "msg-1",
             MessageDirectionEnum.INCOMING, Map.of("type", "text", "text", "在吗"));
+    }
+
+    // 渠道同步的商家发出消息（抖音 im_send_msg 落库形态）：方向 OUTGOING
+    private ChannelInboundMessage outgoing(String externalUserId, String externalMessageId) {
+        return new ChannelInboundMessage(COMPANY_CHANNEL_ID, externalUserId, null, null, List.of(),
+            externalMessageId, MessageDirectionEnum.OUTGOING, Map.of("type", "text", "text", "已收到"));
     }
 
     private VisitorDO visitor(VisitorStatusEnum status, LocalDateTime waitingSince) {

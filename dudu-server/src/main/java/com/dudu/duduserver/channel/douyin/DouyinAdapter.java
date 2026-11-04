@@ -93,7 +93,8 @@ public class DouyinAdapter implements ChannelAdapter {
         } catch (IllegalArgumentException e) {
             return ChannelReceiveResult.answer(ChannelCallbackResult.badRequest());
         }
-        // im_send_msg、进入会话页、已读等其余事件只按渠道要求应答，不产生访客与消息数据
+        // 进入会话页、已读等其余事件只按渠道要求应答，不产生访客与消息数据；
+        // im_send_msg（授权号发出消息的同步推送）经 parse 转为 OUTGOING 入站信件
         return acceptOrAnswer(inbound);
     }
 

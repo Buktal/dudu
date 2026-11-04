@@ -47,6 +47,7 @@ public class DouyinProtocol {
     private static final String KEY_TEXT = "text";
     private static final String EVENT_VERIFY_WEBHOOK = "verify_webhook";
     private static final String EVENT_IM_RECEIVE_MSG = "im_receive_msg";
+    private static final String EVENT_IM_SEND_MSG = "im_send_msg";
 
     // IM 消息 message_type 枚举（官方 §2.2）；未列出的按 unknown 如实保存
     private static final String MSG_TEXT = "text";
@@ -65,11 +66,13 @@ public class DouyinProtocol {
     private static final String DERIVED_INDEX = ":0";
 
     /**
-     * 解析事件推送（官方 §2.1 信封）：仅 im_receive_msg 转为统一入站消息——访客身份取
-     * from_user_id（user_infos 补昵称头像），回复三要素随消息留存于渠道消息标识
-     * （server_message_id:conversation_short_id:信封 to_user_id，§6.1）；im_send_msg、
-     * 进入会话页、撤回、已读及授权类事件返回空表示只应答不落库。报文无法解析或
-     * 缺少访客身份时抛出 {@link IllegalArgumentException}，由调用方按参数错误拒绝。
+     * 解析事件推送（官方 §2.1/§2.2 信封）：im_receive_msg 与 im_send_msg 转为统一
+     * 消息——两事件 content 同构、方向相反：来信访客身份取 from_user_id，同步的商家
+     * 发出消息（授权号在抖音 App 原生回复等场景）访客取 to_user_id，渠道消息标识与
+     * 媒体要素的账号身份随之互换（§6.1 回复三要素 server_message_id:
+     * conversation_short_id:账号 open_id）；进入会话页、撤回、已读及授权类事件返回
+     * 空表示只应答不落库。报文无法解析或缺少访客身份时抛出
+     * {@link IllegalArgumentException}，由调用方按参数错误拒绝。
      */
     public Optional<ChannelInboundMessage> parse(Long companyChannelId, String body) {
         JSONObject envelope;
@@ -79,22 +82,25 @@ public class DouyinProtocol {
             throw new IllegalArgumentException("抖音事件报文无法解析", e);
         }
         String event = envelope.getStr(KEY_EVENT, "");
-        if (!EVENT_IM_RECEIVE_MSG.equals(event)) {
+        boolean fromVisitor = EVENT_IM_RECEIVE_MSG.equals(event);
+        if (!fromVisitor && !EVENT_IM_SEND_MSG.equals(event)) {
             // 其余事件（含缺 event 字段的未知推送）按渠道口径只应答
             return Optional.empty();
         }
-        String externalUserId = envelope.getStr(KEY_FROM_USER_ID, null);
+        String externalUserId = envelope.getStr(fromVisitor ? KEY_FROM_USER_ID : KEY_TO_USER_ID, null);
         if (externalUserId == null || externalUserId.isBlank()) {
-            throw new IllegalArgumentException("抖音事件缺少发送方身份 from_user_id");
+            throw new IllegalArgumentException("抖音事件缺少访客身份（" + event + " 的 "
+                + (fromVisitor ? KEY_FROM_USER_ID : KEY_TO_USER_ID) + "）");
         }
         JSONObject content = contentOf(envelope);
         String messageType = content.getStr(KEY_MESSAGE_TYPE, "");
         String serverMessageId = content.getStr(KEY_SERVER_MESSAGE_ID, null);
         String conversationId = content.getStr(KEY_CONVERSATION_SHORT_ID, null);
-        String ownerOpenId = envelope.getStr(KEY_TO_USER_ID, null);
+        String ownerOpenId = envelope.getStr(fromVisitor ? KEY_TO_USER_ID : KEY_FROM_USER_ID, null);
         return Optional.of(new ChannelInboundMessage(companyChannelId, externalUserId,
             visitorName(content, externalUserId), visitorAvatar(content, externalUserId), List.of(),
-            replyContext(serverMessageId, conversationId, ownerOpenId), MessageDirectionEnum.INCOMING,
+            replyContext(serverMessageId, conversationId, ownerOpenId),
+            fromVisitor ? MessageDirectionEnum.INCOMING : MessageDirectionEnum.OUTGOING,
             unifiedBody(messageType, serverMessageId, conversationId, ownerOpenId, content)));
     }
 
