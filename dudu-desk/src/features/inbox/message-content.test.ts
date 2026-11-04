@@ -109,6 +109,28 @@ describe("messageSummary", () => {
     expect(messageSummary({ type: "card", kind: "leads_phone_card" })).toBe(
       "[电话线索卡片] 详情未提供",
     );
+    // 抖音 v1.0.5 线索组件卡六种新 kind 同样收录中文名
+    const v105Kinds: { kind: string; label: string }[] = [
+      { kind: "investment_franchise_card", label: "招商加盟卡片" },
+      { kind: "post_sale_order_card", label: "售后订单卡片" },
+      { kind: "phone_collection_card", label: "电话收集卡片" },
+      { kind: "enterprise_wechat_card", label: "企业微信卡片" },
+      { kind: "product", label: "团购商品卡片" },
+      { kind: "question_list", label: "问题引导卡片" },
+    ];
+    for (const { kind, label } of v105Kinds) {
+      expect(messageSummary({ type: "card", kind })).toBe(
+        `[${label}] 详情未提供`,
+      );
+    }
+    // 团购商品与问题引导由服务端映射出 title，摘要优先显示标题
+    expect(
+      messageSummary({
+        type: "card",
+        kind: "product",
+        title: "欢聚|清汤1份2人餐",
+      }),
+    ).toBe("[团购商品卡片] 欢聚|清汤1份2人餐");
     expect(messageSummary({ type: "card", kind: "coupon_card" })).toBe(
       "[coupon_card] 详情未提供",
     );
