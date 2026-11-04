@@ -163,6 +163,24 @@ class DeskInboundServiceTest {
     }
 
     @Test
+    void newVisitorWithChannelSyncedOutgoingMessageStartsWaiting() {
+        // 首条即渠道同步的商家发出消息（运营在抖音 App 主动私信陌生人）：新建访客的
+        // 默认待回复被状态段立即修正为等待用户并清计时，不留下错误的待回复计时
+        when(visitorService.getOne(any(Wrapper.class))).thenReturn(null);
+        when(visitorService.save(any(VisitorDO.class))).thenAnswer(invocation -> {
+            invocation.getArgument(0, VisitorDO.class).setVisitorId(VISITOR_ID);
+            return true;
+        });
+
+        deskInboundService.accept(account(), outgoing("ext-new", "msg-out-3"));
+
+        com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<VisitorDO> statusUpdate =
+            capturedStatusUpdate();
+        assertThat(valuesOf(statusUpdate, "status")).containsExactly(VisitorStatusEnum.WAITING);
+        assertThat(valuesOf(statusUpdate, "waiting_since")).containsExactly((Object) null);
+    }
+
+    @Test
     void keepsWaitingAndClosedStatusUntouchedForChannelSyncedOutgoingMessage() {
         // 等待用户（已结束同理）时商家又在渠道侧发出消息：状态与计时保持不动，最后消息仍更新
         deskInboundService.accept(account(), outgoing("ext-1", "msg-out-2"));
