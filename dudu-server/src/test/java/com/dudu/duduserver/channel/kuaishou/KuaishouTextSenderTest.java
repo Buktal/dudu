@@ -29,9 +29,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * POST /open/cs/intelligent/message/send form 参数族齐全（method/version/access_token/
  * appkey/signMethod=MD5/sign/timestamp 毫秒/param），签名按官方 SDK 算法在测试内独立
  * 重算比对（key 字典序 k=v& 拼接 + &signSecret= 后缀取 MD5 小写 hex，sign 不参签）；
- * param 业务报文按入参表逐字段核对（toUser 买家 role=1、fromUser 商家 role=2、
- * generator=1、type=1、requestId、messageList 文本 content 为 JSON 字符串）；成功以
- * result=1 为准并以 requestId 作外部消息标识，渠道错误与凭据/访客缺失如实失败。
+ * param 业务报文按入参表逐字段核对（toUser 买家 role=1 并随信携带 openId（§7.1 新版
+ * SDK User 三字段形态）、fromUser 商家 role=2、generator=1、type=1、requestId、
+ * messageList 文本 content 为 JSON 字符串）；成功以 result=1 为准并以 requestId 作外部
+ * 消息标识，渠道错误与凭据/访客缺失如实失败。
  */
 class KuaishouTextSenderTest {
 
@@ -87,6 +88,8 @@ class KuaishouTextSenderTest {
         assertThat(param.getStr("requestId")).isEqualTo(result.externalMessageId());
         assertThat(param.getJSONObject("toUser").getStr("nickName")).isEqualTo("小明");
         assertThat(param.getJSONObject("toUser").getInt("role")).isEqualTo(1);
+        // 新版官方 SDK User 三字段形态（§7.1）：openId = externalUserId（推送 fromUser.openId）
+        assertThat(param.getJSONObject("toUser").getStr("openId")).isEqualTo("buyer-open-1");
         assertThat(param.getJSONObject("fromUser").getStr("nickName")).isEqualTo("旗舰店");
         assertThat(param.getJSONObject("fromUser").getInt("role")).isEqualTo(2);
         assertThat(param.getJSONArray("messageList").size()).isEqualTo(1);

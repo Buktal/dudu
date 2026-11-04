@@ -44,10 +44,10 @@ public class KuaishouProtocol {
     // 1011 商品卡片、1012 订单卡片
     static final int CONTENT_TYPE_TEXT = 1;
 
-    // 推送独有 body 字段（§6.5.3 逐字表）
+    // 推送独有 body 字段（§6.5.3 逐字表）；openId 为收发共用的用户身份位，包内共享
     private static final String KEY_TEST = "test";
     private static final String KEY_MESSAGE = "message";
-    private static final String KEY_OPEN_ID = "openId";
+    static final String KEY_OPEN_ID = "openId";
 
     // 推送独有 contentType 枚举（§6.5.2）：2 图片（uri 被平台抹空）、
     // 1011 商品卡片、1012 订单卡片

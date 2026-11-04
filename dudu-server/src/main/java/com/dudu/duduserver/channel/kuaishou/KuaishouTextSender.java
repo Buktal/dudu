@@ -24,12 +24,13 @@ import java.util.UUID;
  * POST /open/cs/intelligent/message/send，form-urlencoded 参数族 method/version/
  * access_token/appkey/signMethod/sign/timestamp(毫秒)/param(URL 编码 JSON)。param 携带
  * requestId（本地生成作幂等与渠道消息标识）、type=1、generator=1（快手侧发起的会话，
- * 服务商异步回复）、fromUser（商家，role=2，nickName 取绑定账号名）与 messageList
- * 文本报文（contentType=1，content 为 JSON 字符串）。签名按电商域网关算法：除 sign 外
- * 参数按 key 字典序 k=v& 拼接，末尾追加 &signSecret=<signSecret> 取 MD5 小写 hex；
- * 先签名后对 param 编码（form 提交自动编码）。成功以 result=1 为准；出参无渠道消息
- * ID，以 requestId 回填。接口地址默认官方推荐域名，可用 dudu.channel.kuaishou.api-base
- * 覆盖为受控替身。
+ * 服务商异步回复）、toUser（买家，role=1，按新版官方 SDK User 三字段形态随信携带
+ * openId——即推送 fromUser.openId，网关是否采信待实测 §7.1，nickName 仍为文档必填位）、
+ * fromUser（商家，role=2，nickName 取绑定账号名）与 messageList 文本报文（contentType=1，
+ * content 为 JSON 字符串）。签名按电商域网关算法：除 sign 外参数按 key 字典序 k=v& 拼接，
+ * 末尾追加 &signSecret=<signSecret> 取 MD5 小写 hex；先签名后对 param 编码（form 提交
+ * 自动编码）。成功以 result=1 为准；出参无渠道消息 ID，以 requestId 回填。接口地址默认
+ * 官方推荐域名，可用 dudu.channel.kuaishou.api-base 覆盖为受控替身。
  */
 @Slf4j
 @Component
@@ -111,8 +112,8 @@ public class KuaishouTextSender {
         }
         // 出参无渠道消息 ID：requestId 是唯一请求标识（官方必填幂等位），作外部消息标识回填
         String requestId = UUID.randomUUID().toString();
-        MultiValueMap<String, String> form = form(credentials, requestId, param(requestId, visitorName,
-            Texts.firstNonBlank(account.getAccountName(), ""), text));
+        MultiValueMap<String, String> form = form(credentials, requestId, param(requestId, externalUserId,
+            visitorName, Texts.firstNonBlank(account.getAccountName(), ""), text));
         try {
             JSONObject response = JSONUtil.parseObj(restClient.post()
                 .uri(PATH_SEND)
@@ -168,12 +169,15 @@ public class KuaishouTextSender {
         return Digests.md5Hex(joined.toString());
     }
 
-    // param 业务报文：{toUser{nickName,role:1}, messageList[{contentType:1, content}],
-    // generator:1, type:1, requestId, fromUser{nickName,role:2}}
-    private String param(String requestId, String visitorName, String sellerNickName, String text) {
+    // param 业务报文：{toUser{nickName,role:1,openId}, messageList[{contentType:1, content}],
+    // generator:1, type:1, requestId, fromUser{nickName,role:2}}；openId 为新版官方
+    // SDK User 三字段形态（§7.1），externalUserId 即推送 fromUser.openId
+    private String param(String requestId, String externalUserId, String visitorName, String sellerNickName,
+                         String text) {
         return JSONUtil.createObj()
             .set(KEY_TO_USER, JSONUtil.createObj()
-                .set(KuaishouProtocol.KEY_NICK_NAME, visitorName).set(KEY_ROLE, ROLE_BUYER))
+                .set(KuaishouProtocol.KEY_NICK_NAME, visitorName).set(KEY_ROLE, ROLE_BUYER)
+                .set(KuaishouProtocol.KEY_OPEN_ID, externalUserId))
             .set(KEY_MESSAGE_LIST, JSONUtil.createArray().set(
                 JSONUtil.createObj().set(KuaishouProtocol.KEY_CONTENT_TYPE, KuaishouProtocol.CONTENT_TYPE_TEXT)
                     .set(KuaishouProtocol.KEY_CONTENT,
