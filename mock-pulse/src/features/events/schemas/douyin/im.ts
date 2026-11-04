@@ -194,7 +194,9 @@ const goldenDyLeadsPhoneCard: WirePayload = {
 
 /** im_send_msg 文本：官方未给独立样本，content 按 §5.10 黄金样本同构、事件名换
  * im_send_msg 且 from/to 对调（§2.1：from=授权号、to=访客，与 im_receive_msg 相反），
- * user_infos 不动（接收侧按 open_id 匹配），text 换商家回复口吻 */
+ * user_infos 随身份对调换序使 [0]=from=授权号（身份字段的 ID 生成 sameAs 与
+ * senderSync 资料[0] 对齐发送者的语义都按 [0]=发送者；服务端按 open_id 匹配
+ * 与顺序无关），text 换商家回复口吻 */
 const goldenDySendText: WirePayload = {
   ...goldenDyText,
   event: "im_send_msg",
@@ -202,6 +204,9 @@ const goldenDySendText: WirePayload = {
   to_user_id: "aaa-ae9b-4dbf-add1-bf67e4093fab",
   content: {
     ...(goldenDyText.content as Record<string, unknown>),
+    user_infos: [
+      ...(goldenDyText.content as { user_infos: unknown[] }).user_infos,
+    ].reverse(),
     text: "您好，捷途70现车充足，方便留个手机号帮您安排到店看车吗",
   },
 };

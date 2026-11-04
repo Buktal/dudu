@@ -85,21 +85,35 @@ describe("抖音 IM 私信明细模板", () => {
     ).toHaveLength(2);
   });
 
-  it("发送私信文本与接收文本同构：事件名换 im_send_msg、from/to 对调、text 换商家口吻", () => {
+  it("发送私信文本与接收文本同构：事件名换 im_send_msg、from/to 与 user_infos 对调、text 换商家口吻", () => {
     const send = schemaById("dy-send-text").payload;
     expect(send.event).toBe("im_send_msg");
     const receive = schemaById("dy-text").payload;
     // §2.1：from=授权号、to=访客（与 im_receive_msg 相反）
     expect(send.from_user_id).toBe(receive.to_user_id);
     expect(send.to_user_id).toBe(receive.from_user_id);
-    const sendContent = send.content as { text?: string };
-    const receiveContent = receive.content as { text?: string };
+    const sendContent = send.content as {
+      text?: string;
+      user_infos: unknown[];
+    };
+    const receiveContent = receive.content as {
+      text?: string;
+      user_infos: unknown[];
+    };
     expect(sendContent.text).not.toBe(receiveContent.text);
-    // content 其余字段与接收样本同构（user_infos 不动，接收侧按 open_id 匹配）
-    expect({ ...sendContent, text: undefined }).toEqual({
-      ...receiveContent,
-      text: undefined,
+    // user_infos 换序对调（[0]=from=发送者，与 ID 生成 sameAs/senderSync 语义一致）
+    expect(sendContent.user_infos).toEqual(
+      [...receiveContent.user_infos].reverse(),
+    );
+    expect(sendContent.user_infos[0]).toMatchObject({
+      open_id: send.from_user_id,
     });
+    // content 其余字段与接收样本同构
+    expect({
+      ...sendContent,
+      text: undefined,
+      user_infos: undefined,
+    }).toEqual({ ...receiveContent, text: undefined, user_infos: undefined });
   });
 
   it("撤回私信黄金载荷逐字（§5.12，含掩码星号与独有 msg_id）", () => {
