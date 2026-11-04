@@ -110,7 +110,7 @@
 
 ---
 
-## 二、小红书（14 项）——详见 `xiaohongshu.md §1/§9/§10/§11`
+## 二、小红书（14 项）——详见 `xiaohongshu.md §1/§9/§10/§11`；三方私信收发规格第二轮深挖见 [xiaohongshu-third-im-spec.md](./xiaohongshu-third-im-spec.md)
 
 ### 2A. 电商 ark 推送（统一 POST 网关；事件体为 SDK 多源，官方推送章节仍在 POST 墙后）——5 API
 
