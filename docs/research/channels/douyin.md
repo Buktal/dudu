@@ -1282,7 +1282,7 @@ AES 解密（Java/PHP 一致，此为 canonical 形态）
 
 ### 9.3 问题三：事件全集复核与三项增量
 
-dop 现行事件目录复核：https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list/ （updateTime 1760338827 = 2025-10-13，与 §2.1 所录一致，12 事件无增减）——im_send_msg、进私、已读之外的完整事件面为：用户撤回 `im_recall_msg`、主动私信授权 `im_authorize`、关注 `new_follow_action`、视频点赞 `new_video_digg`、分享视频 `create_video`、授权/解除 `authorize`/`unauthorize`、经营授权 `contract_authorize`/`contract_unauthorize`、联合授权 `union_auth_info_for_c`/`union_auth_info_for_b`、群族四事件、服务市场订单 `service_market_order`、订阅族两事件（§8.9）——BFF 全量检索交叉核对后**不存在「结束会话」「取消关注」「转人工」类事件**（相关检索仅命中工作台条款：抖音IM客服「6小时内无人发言则自动关闭会话」、客服平台「会话结束48小时内支持再次触达」）
+dop 现行事件目录复核：https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list/ （updateTime 1760338827 = 2025-10-13，与 §2.1 所录一致，12 事件无增减；2026-11-05 晚间复查无增量：页面 updateTime 逐字节未变，SSR 正文在页可直接核）——im_send_msg、进私、已读之外的完整事件面为：用户撤回 `im_recall_msg`、主动私信授权 `im_authorize`、关注 `new_follow_action`、视频点赞 `new_video_digg`、分享视频 `create_video`、授权/解除 `authorize`/`unauthorize`、经营授权 `contract_authorize`/`contract_unauthorize`、联合授权 `union_auth_info_for_c`/`union_auth_info_for_b`、群族四事件、服务市场订单 `service_market_order`、订阅族两事件（§8.9）——BFF 全量检索交叉核对后**不存在「结束会话」「取消关注」「转人工」类事件**（相关检索仅命中工作台条款：抖音IM客服「6小时内无人发言则自动关闭会话」、客服平台「会话结束48小时内支持再次触达」）
 
 增量一：union_auth_info_for_c/b 的 content 结构官方逐字（§2.1 只列表名未录结构，现版事件结构节补全）
 
