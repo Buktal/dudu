@@ -18,9 +18,6 @@ import org.springframework.web.client.RestClient;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,9 +31,10 @@ import static org.mockito.Mockito.when;
 
 /**
  * 快手 accessToken 刷新 job 验收（docs/research/channels/kuaishou.md §8）：每 12
- * 小时巡检快手账号，距上次刷新（channel_info 的 refreshTokenRenewedAt，无记录时以
- * 账号最后修改时刻近似首录时刻）满 20 小时才刷新（24h 寿命留 4h 缓冲），未到期不
- * 出网；未完成授权的账号跳过；单个账号刷新失败（如 803000 令牌过期）留痕后继续
+ * 小时巡检快手账号，距上次刷新（channel_info 的 refreshTokenRenewedAt）满 20 小时
+ * 才刷新（24h 寿命留 4h 缓冲），未到期不出网；无刷新时刻即新授权链（手录
+ * refreshToken 或重新授权清除旧时刻），立即首刷——accessToken 落库直读的发送链路
+ * 不空等；未完成授权的账号跳过；单个账号刷新失败（如 803000 令牌过期）留痕后继续
  * 处理其余账号。
  */
 class KuaishouTokenRefresherTest {
@@ -79,13 +77,12 @@ class KuaishouTokenRefresherTest {
         when(accounts.list(any(Wrapper.class))).thenReturn(List.of(
             dueByRenewedAt(9301L, System.currentTimeMillis() - 21 * HOUR_MILLIS),
             dueByRenewedAt(9302L, System.currentTimeMillis() - 10 * HOUR_MILLIS),
-            dueByUpdateTime(9303L, System.currentTimeMillis() - 21 * HOUR_MILLIS),
-            dueByUpdateTime(9304L, System.currentTimeMillis() - 12 * HOUR_MILLIS)));
+            freshChain(9303L)));
 
         refresher().refreshAll();
 
-        // 20h 节奏：renewedAt 满 20h 与首录（无 renewedAt 按 updateTime 起算）满 20h
-        // 的账号刷新，未到期账号不出网
+        // 20h 节奏：renewedAt 满 20h 的账号刷新，未到期账号不出网；无刷新时刻即
+        // 新授权链，立即首刷（accessToken 尚不在库，发送链路依赖首刷产出）
         assertThat(refreshCalls.get()).isEqualTo(2);
         assertThat(refreshedAccounts).containsExactly(9301L, 9303L);
     }
@@ -98,7 +95,7 @@ class KuaishouTokenRefresherTest {
         info.put("appSecret", "as");
         // 有 renewedAt 且到期，但缺 refreshToken：未完成商家授权
         info.put("refreshTokenRenewedAt", System.currentTimeMillis() - 21 * HOUR_MILLIS);
-        CompanyChannelDO unauthorized = account(9305L, info, null);
+        CompanyChannelDO unauthorized = account(9305L, info);
         when(accounts.list(any(Wrapper.class))).thenReturn(List.of(unauthorized));
 
         refresher().refreshAll();
@@ -139,25 +136,23 @@ class KuaishouTokenRefresherTest {
         info.put("appSecret", "as");
         info.put("refreshToken", "used-" + companyChannelId);
         info.put("refreshTokenRenewedAt", renewedAtMillis);
-        return account(companyChannelId, info, null);
+        return account(companyChannelId, info);
     }
 
-    private CompanyChannelDO dueByUpdateTime(Long companyChannelId, long updateTimeMillis) {
+    // 新授权链：有 refreshToken 无刷新时刻（手录或重新授权后清除），立即首刷
+    private CompanyChannelDO freshChain(Long companyChannelId) {
         Map<String, Object> info = new HashMap<>();
         info.put("appKey", "ks7001");
         info.put("appSecret", "as");
         info.put("refreshToken", "used-" + companyChannelId);
-        return account(companyChannelId, info, LocalDateTime
-            .ofInstant(Instant.ofEpochMilli(updateTimeMillis), ZoneId.systemDefault()));
+        return account(companyChannelId, info);
     }
 
-    private CompanyChannelDO account(Long companyChannelId, Map<String, Object> info,
-        LocalDateTime updateTime) {
+    private CompanyChannelDO account(Long companyChannelId, Map<String, Object> info) {
         CompanyChannelDO account = new CompanyChannelDO();
         account.setCompanyChannelId(companyChannelId);
         account.setChannel(ChannelEnum.KUAISHOU);
         account.setChannelInfo(info);
-        account.setUpdateTime(updateTime);
         return account;
     }
 

@@ -11,17 +11,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.ZoneId;
-
 /**
  * 快手 accessToken 刷新 job（docs/research/channels/kuaishou.md §8）：access_token
  * 默认 86400s 寿命，refresh_token 每次刷新轮换（次数上限无官方记载，按平台常规
  * 每天一刷）。每 12 小时巡检，距上次刷新满 20 小时才刷（24h 寿命留 4h 缓冲，一轮
- * 失败 12h 后重试时 refresh_token 仍可轮换）；到期时刻优先取 channel_info 的
- * refreshTokenRenewedAt（上次刷新成功时刻），缺失时以账号最后修改时刻近似首次
- * 录入授权时刻。凭据不全或刷新失败的账号留痕后继续处理其余账号；803000/803001
- * （token 过期）只能人工重新授权，如实记录不重试。启动 5 分钟后先巡检一轮，尽早
- * 暴露重启后库内令牌已失效的情况。
+ * 失败 12h 后重试时 refresh_token 仍可轮换）；上次刷新时刻取 channel_info 的
+ * refreshTokenRenewedAt，缺失即新授权链（手录 refreshToken 或重新授权后首换/重录
+ * 清除了旧时刻）——立即首刷，accessToken 落库直读的发送链路不空等 20 小时（快手
+ * 轮换无上限记载，立即刷不烧配额，区别于抖音 5 次硬上限的 updateTime 近似起算）。
+ * 凭据不全或刷新失败的账号留痕后继续处理其余账号；803000/803001（token 过期）
+ * 只能人工重新授权，如实记录不重试。启动 5 分钟后先巡检一轮，尽早暴露重启后
+ * 库内令牌已失效的情况。
  */
 @Slf4j
 @Component
@@ -69,13 +69,14 @@ public class KuaishouTokenRefresher {
         log.info("[kuaishou] accessToken 刷新完成, companyChannelId={}", account.getCompanyChannelId());
     }
 
-    // 到期判断：上次刷新时刻（无记录时以账号最后修改时刻近似首录时刻）距今满 20h
+    // 到期判断：有上次刷新时刻则距其满 20h；无记录即新授权链，立即首刷（手录
+    // refreshToken 的账号 accessToken 尚不在库，发送可用性依赖首刷产出）
     private boolean due(CompanyChannelDO account) {
         Object renewedAt = account.getChannelInfo() == null
             ? null : account.getChannelInfo().get(INFO_RENEWED_AT);
-        long since = renewedAt instanceof Number number ? number.longValue()
-            : account.getUpdateTime() == null ? 0L
-            : account.getUpdateTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-        return System.currentTimeMillis() - since >= REFRESH_INTERVAL_MILLIS;
+        if (!(renewedAt instanceof Number number)) {
+            return true;
+        }
+        return System.currentTimeMillis() - number.longValue() >= REFRESH_INTERVAL_MILLIS;
     }
 }
