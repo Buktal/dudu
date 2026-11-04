@@ -3,7 +3,7 @@ package com.dudu.duduserver.service;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.dudu.duduserver.channel.douyin.DouyinRefreshTokenRenewer;
+import com.dudu.duduserver.channel.douyin.DouyinOAuthClient;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.service.impl.DouyinRefreshTokenRefresher;
@@ -123,7 +123,7 @@ class DouyinRefreshTokenRefresherTest {
     // ---- 夹具 ----
 
     private DouyinRefreshTokenRefresher refresher() {
-        DouyinRefreshTokenRenewer renewer = new DouyinRefreshTokenRenewer(
+        DouyinOAuthClient renewer = new DouyinOAuthClient(
             RestClient.builder(), "http://127.0.0.1:" + server.getAddress().getPort(),
             (channelId, expected, next, renewedAtMillis) -> {
                 renewedAccounts.add(channelId);

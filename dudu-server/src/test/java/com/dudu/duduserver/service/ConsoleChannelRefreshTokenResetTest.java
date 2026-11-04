@@ -3,6 +3,7 @@ package com.dudu.duduserver.service;
 import com.dudu.duduserver.channel.console.ConsoleCallbackUrls;
 import com.dudu.duduserver.channel.console.ConsoleChannelCatalog;
 import com.dudu.duduserver.channel.console.ConsoleChannelConfiguration;
+import com.dudu.duduserver.channel.douyin.DouyinOAuthClient;
 import com.dudu.duduserver.channel.xiaohongshuthirdim.XiaohongshuThirdImTokenClient;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.dto.ConsoleChannelRequests;
@@ -73,7 +74,8 @@ class ConsoleChannelRefreshTokenResetTest {
 
         service = new ConsoleChannelServiceImpl(accessService, accounts, mock(UserGroupService.class),
             mock(ConsoleChannelCatalog.class), new ConsoleChannelConfiguration(), callbackUrls,
-            mock(XiaohongshuThirdImTokenClient.class), mock(ApplicationEventPublisher.class));
+            mock(XiaohongshuThirdImTokenClient.class), mock(DouyinOAuthClient.class),
+            mock(ApplicationEventPublisher.class));
     }
 
     @Test

@@ -43,10 +43,11 @@ public final class ConsoleChannelDefinitions {
         definition(ALIPAY, "仅支持支付宝生活号，应用私钥与支付宝公钥必须分别填写完整 PEM。", List.of(
             field("appId", "App ID", false, true, true, true),
             pem("appPrivateKey", "应用私钥", true), pem("alipayPublicKey", "支付宝公钥", false))),
-        definition(DOUYIN, "发送需要已获授权的 Refresh Token，本控制台不发起 OAuth 授权。", List.of(
+        definition(DOUYIN, "发送需要用户授权：完成抖音授权后 10 分钟内填入授权码，保存即换取 Refresh Token；也可跳过授权码直接录入既有 Refresh Token，本控制台不发起 OAuth 授权。", List.of(
             field("clientKey", "Client Key", false, true, true, true),
             field("clientSecret", "Client Secret", true, true, true, false),
-            field("refreshToken", "Refresh Token", true, false, true, false))),
+            field("refreshToken", "Refresh Token", true, false, true, false),
+            field("authCode", "Auth Code", true, false, false, false))),
         definition(KUAISHOU, "智能客服通道：推送地址需线下报备给快手侧；发送签名密钥与授权令牌由平台分配。", List.of(
             field("appKey", "App Key", false, true, true, true),
             field("signSecret", "Sign Secret", true, false, true, false),

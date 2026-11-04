@@ -2,7 +2,7 @@ package com.dudu.duduserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.dudu.duduserver.channel.douyin.DouyinCredentials;
-import com.dudu.duduserver.channel.douyin.DouyinRefreshTokenRenewer;
+import com.dudu.duduserver.channel.douyin.DouyinOAuthClient;
 import com.dudu.duduserver.constant.ChannelEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import com.dudu.duduserver.service.CompanyChannelService;
@@ -40,7 +40,7 @@ public class DouyinRefreshTokenRefresher {
 
     private final CompanyChannelService accounts;
 
-    private final DouyinRefreshTokenRenewer renewer;
+    private final DouyinOAuthClient renewer;
 
     @Scheduled(fixedDelay = CHECK_INTERVAL_MILLIS, initialDelay = INITIAL_DELAY_MILLIS)
     public void renewAll() {
@@ -60,7 +60,7 @@ public class DouyinRefreshTokenRefresher {
         if (!due(account)) {
             return;
         }
-        DouyinRefreshTokenRenewer.RenewResult result = renewer.renew(account, credentials);
+        DouyinOAuthClient.RenewResult result = renewer.renew(account, credentials);
         if (!result.succeeded()) {
             log.warn("[douyin] refreshToken 续期失败, companyChannelId={}, reason={}",
                 account.getCompanyChannelId(), result.failureReason());

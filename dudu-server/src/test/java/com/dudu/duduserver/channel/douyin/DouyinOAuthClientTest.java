@@ -19,15 +19,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 抖音 refreshToken 续期验收（事实见 docs/research/channels/douyin.md §9.6）：
- * POST /oauth/renew_refresh_token/ form 仅 client_key 与 refresh_token 两参，
+ * 抖音 oauth 客户端验收（事实见 docs/research/channels/douyin.md §6、§9.6）：
+ * 续期 POST /oauth/renew_refresh_token/ form 仅 client_key 与 refresh_token 两参，
  * 成功信封取官方示例逐字（顶层 data + message，data.refresh_token 即新值）；
- * 错误全以 HTTP 200 返回且 error_code 在 data 内，10004/10010/10020 附人工
- * 处置建议；轮换产物必须条件回写（旧值即失效，回写未生效即放弃本次新值）；
- * 缺 refreshToken 不出网。
+ * 首换 POST /oauth/access_token/ form 四参（client_key、client_secret、code、
+ * grant_type=authorization_code），产物只含 refreshToken、不经 store 回写；错误全以
+ * HTTP 200 返回且 error_code 在 data 内，10004/10007/10010/10020 附人工处置建议；
+ * 续期轮换产物必须条件回写（旧值即失效，回写未生效即放弃本次新值）；缺
+ * refreshToken 不出网。
  */
-class DouyinRefreshTokenRenewerTest {
+class DouyinOAuthClientTest {
 
+    private static final String PATH_ACCESS_TOKEN = "/oauth/access_token/";
     private static final String PATH_RENEW = "/oauth/renew_refresh_token/";
 
     // §9.6 成功响应逐字（expires_in 官方示例即字符串，不作节奏依据）
@@ -42,6 +45,15 @@ class DouyinRefreshTokenRenewerTest {
         "{\"data\":{\"description\":\"refresh_token过期\",\"error_code\":10010},\"message\":\"error\"}";
     private static final String RENEW_EXHAUSTED =
         "{\"data\":{\"description\":\"超过刷新次数限制\",\"error_code\":10020},\"message\":\"error\"}";
+
+    // §6 首换成功信封（oauth 族同款顶层 data + message；access_token 不落库仅在场证明信封形态）
+    private static final String EXCHANGE_OK = """
+        {"data":{"access_token":"act.44ff8f2b","expires_in":1296000,"refresh_token":"rft.first7c31",\
+        "refresh_expires_in":2592000,"open_id":"7c31aaa","scope":"im.direct_message"},"message":"success"}
+        """;
+    private static final String EXCHANGE_CODE_EXPIRED =
+        "{\"data\":{\"description\":\"code已过期\",\"error_code\":10007},\"message\":\"error\"}";
+    private static final String FIRST_REFRESH_TOKEN = "rft.first7c31";
 
     // 黄金响应轮换出的新值（与 store 回写断言同源）
     private static final String NEXT_REFRESH_TOKEN = "rft.next9f2b";
@@ -73,10 +85,60 @@ class DouyinRefreshTokenRenewerTest {
     }
 
     @Test
+    void exchangesAuthCodeForFirstRefreshTokenWithoutStoring() {
+        handle(PATH_ACCESS_TOKEN, 200, EXCHANGE_OK.trim());
+
+        DouyinOAuthClient.ExchangeResult result = client().exchange("tt10abc", "client-secret", "auth-code-7c31");
+
+        assertThat(result.succeeded()).isTrue();
+        assertThat(result.refreshToken()).isEqualTo(FIRST_REFRESH_TOKEN);
+
+        // form 恰四参（§6 逐字）：grant_type=authorization_code、code 原样上送
+        assertThat(requestBodies).hasSize(1);
+        Map<String, String> form = new LinkedHashMap<>();
+        for (String pair : requestBodies.get(0).split("&")) {
+            String[] entry = pair.split("=", 2);
+            form.put(entry[0], entry.length > 1 ? entry[1] : "");
+        }
+        assertThat(form).containsOnlyKeys("client_key", "client_secret", "code", "grant_type");
+        assertThat(form.get("client_key")).isEqualTo("tt10abc");
+        assertThat(form.get("client_secret")).isEqualTo("client-secret");
+        assertThat(form.get("code")).isEqualTo("auth-code-7c31");
+        assertThat(form.get("grant_type")).isEqualTo("authorization_code");
+
+        // 首换产物不经 store 回写：调用发生在账号保存链路，由调用方持有写入权
+        assertThat(stored).isEmpty();
+    }
+
+    @Test
+    void exchangeReportsCodeRejectionWithAdvice() {
+        handle(PATH_ACCESS_TOKEN, 200, EXCHANGE_CODE_EXPIRED);
+
+        DouyinOAuthClient.ExchangeResult result = client().exchange("tt10abc", "client-secret", "used-code");
+
+        assertThat(result.succeeded()).isFalse();
+        assertThat(result.failureReason()).contains("10007").contains("code已过期")
+            .contains("重新授权获取新码");
+        assertThat(stored).isEmpty();
+    }
+
+    @Test
+    void exchangeFailsHonestlyWhenEnvelopeMissesRefreshToken() {
+        // 信封成功但 data 缺 refresh_token：如实失败，不猜测换取结果
+        handle(PATH_ACCESS_TOKEN, 200,
+            "{\"data\":{\"access_token\":\"act.only\",\"error_code\":0},\"message\":\"success\"}");
+
+        DouyinOAuthClient.ExchangeResult result = client().exchange("tt10abc", "client-secret", "auth-code-7c31");
+
+        assertThat(result.succeeded()).isFalse();
+        assertThat(result.failureReason()).contains("缺少 refresh_token");
+    }
+
+    @Test
     void renewsTokenAndStoresRotationConditionally() {
         handle(200, RENEW_OK.trim());
 
-        DouyinRefreshTokenRenewer.RenewResult result = client().renew(account(), credentials("used-refresh-token"));
+        DouyinOAuthClient.RenewResult result = client().renew(account(), credentials("used-refresh-token"));
 
         assertThat(result.succeeded()).isTrue();
         assertThat(result.refreshToken()).isEqualTo(NEXT_REFRESH_TOKEN);
@@ -103,7 +165,7 @@ class DouyinRefreshTokenRenewerTest {
     void reportsErrorCodeWithManualAdviceWithoutStoring() {
         for (String rejection : List.of(RENEW_SCOPE_REJECTED, RENEW_EXPIRED, RENEW_EXHAUSTED)) {
             handle(200, rejection);
-            DouyinRefreshTokenRenewer.RenewResult result = client().renew(account(), credentials("used-refresh-token"));
+            DouyinOAuthClient.RenewResult result = client().renew(account(), credentials("used-refresh-token"));
             assertThat(result.succeeded()).as(rejection).isFalse();
             assertThat(stored).as(rejection).isEmpty();
         }
@@ -130,7 +192,7 @@ class DouyinRefreshTokenRenewerTest {
         // 信封成功但 data 缺新 refresh_token：如实失败，不回写
         handle(200, "{\"data\":{\"description\":\"\",\"error_code\":0},\"message\":\"success\"}");
 
-        DouyinRefreshTokenRenewer.RenewResult result = client().renew(account(), credentials("used-refresh-token"));
+        DouyinOAuthClient.RenewResult result = client().renew(account(), credentials("used-refresh-token"));
 
         assertThat(result.succeeded()).isFalse();
         assertThat(result.failureReason()).contains("缺少新 refresh_token");
@@ -141,10 +203,10 @@ class DouyinRefreshTokenRenewerTest {
     void abandonsRotationWhenStoreConditionMisses() {
         // 回写条件未命中：库内旧值已被并发续期或重新录入改写，本次新值放弃
         handle(200, RENEW_OK.trim());
-        DouyinRefreshTokenRenewer conditionMissed = new DouyinRefreshTokenRenewer(
+        DouyinOAuthClient conditionMissed = new DouyinOAuthClient(
             RestClient.builder(), baseUrl, (channelId, expected, next, renewedAtMillis) -> false);
 
-        DouyinRefreshTokenRenewer.RenewResult result = conditionMissed.renew(account(), credentials("used-refresh-token"));
+        DouyinOAuthClient.RenewResult result = conditionMissed.renew(account(), credentials("used-refresh-token"));
 
         assertThat(result.succeeded()).isFalse();
         assertThat(result.failureReason()).contains("已变化").contains("放弃");
@@ -152,7 +214,7 @@ class DouyinRefreshTokenRenewerTest {
 
     @Test
     void failsBeforeRequestWhenRefreshTokenMissing() {
-        DouyinRefreshTokenRenewer.RenewResult result = client().renew(account(), credentials(null));
+        DouyinOAuthClient.RenewResult result = client().renew(account(), credentials(null));
 
         assertThat(result.succeeded()).isFalse();
         assertThat(result.failureReason()).contains("refreshToken");
@@ -161,8 +223,8 @@ class DouyinRefreshTokenRenewerTest {
 
     // ---- 夹具 ----
 
-    private DouyinRefreshTokenRenewer client() {
-        return new DouyinRefreshTokenRenewer(RestClient.builder(), baseUrl, capturingStore);
+    private DouyinOAuthClient client() {
+        return new DouyinOAuthClient(RestClient.builder(), baseUrl, capturingStore);
     }
 
     private CompanyChannelDO account() {
@@ -177,11 +239,15 @@ class DouyinRefreshTokenRenewerTest {
     }
 
     private void handle(int status, String response) {
+        handle(PATH_RENEW, status, response);
+    }
+
+    private void handle(String path, int status, String response) {
         // 同路径重复注册时旧 context 仍先匹配：持有引用先删后建，保证最新响应生效
         if (context != null) {
             server.removeContext(context);
         }
-        context = server.createContext(PATH_RENEW, exchange -> {
+        context = server.createContext(path, exchange -> {
             requestBodies.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             byte[] body = response.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");

@@ -6,6 +6,7 @@ import com.dudu.duduserver.channel.console.ConsoleCallbackUrls;
 import com.dudu.duduserver.channel.console.ConsoleChannelCatalog;
 import com.dudu.duduserver.channel.console.ConsoleChannelConfiguration;
 import com.dudu.duduserver.channel.console.ConsoleChannelDefinition;
+import com.dudu.duduserver.channel.douyin.DouyinOAuthClient;
 import com.dudu.duduserver.channel.xiaohongshuthirdim.XiaohongshuThirdImTokenClient;
 import com.dudu.duduserver.common.P;
 import com.dudu.duduserver.config.auth.JwtUser;
@@ -49,6 +50,7 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
     private final ConsoleChannelConfiguration configuration;
     private final ConsoleCallbackUrls callbackUrls;
     private final XiaohongshuThirdImTokenClient thirdImTokens;
+    private final DouyinOAuthClient douyinOAuth;
     private final ApplicationEventPublisher events;
 
     @Override
@@ -125,6 +127,7 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
         account.setChannelInfo(configuration.merge(account.getChannel(), before, changes.set(), changes.clear(),
             callbackUrls.callback(origin, account.getCompanyChannelId())));
         exchangeThirdImTokensIfNeeded(account.getChannel(), changes.set(), account.getChannelInfo());
+        exchangeDouyinAuthCodeIfNeeded(account.getChannel(), changes.set(), account.getChannelInfo());
         // 重新录入 refreshToken 即视为新授权链起点：清除服务端续期时刻，抖音续期 job
         // 改按本次保存时刻起算（DouyinRefreshTokenRefresher），避免旧时刻立即触发对新
         // 链 token 的续期烧掉 5 次轮换配额；值未变或未提交不重置
@@ -172,6 +175,27 @@ public class ConsoleChannelServiceImpl implements ConsoleChannelService {
         info.remove("authCode");
         info.put("accessToken", result.accessToken());
         info.put("refreshToken", result.refreshToken());
+    }
+
+    // 抖音授权码首换（docs/research/channels/douyin.md §6）：code 10 分钟时效且一次性，
+    // 保存即同步换取首个 refreshToken（access_token 不落库、发送链路按需换取缓存）；
+    // 成功写入 refreshToken 并丢弃授权码、清除服务端续期时刻（新授权链按保存时刻起算，
+    // 避免旧时刻立即触发续期烧掉 5 次轮换配额），失败整体拒绝促重新授权
+    private void exchangeDouyinAuthCodeIfNeeded(ChannelEnum channel, Map<String, Object> set,
+                                                Map<String, Object> info) {
+        if (channel != ChannelEnum.DOUYIN || !set.containsKey("authCode")) {
+            return;
+        }
+        DouyinOAuthClient.ExchangeResult result = douyinOAuth.exchange(
+            String.valueOf(info.get("clientKey")), String.valueOf(info.get("clientSecret")),
+            String.valueOf(set.get("authCode")));
+        if (!result.succeeded()) {
+            throw new BizException(ApiEnum.REQUEST_THIRD_ERROR,
+                result.failureReason() + "（授权码一次性使用已作废，请重新授权获取新码）");
+        }
+        info.remove("authCode");
+        info.put("refreshToken", result.refreshToken());
+        info.remove("refreshTokenRenewedAt");
     }
 
     private CompanyChannelDO requireAccount(ConsoleAccess access, String id) {

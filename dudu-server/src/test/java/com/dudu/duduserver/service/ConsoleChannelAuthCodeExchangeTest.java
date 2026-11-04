@@ -3,6 +3,7 @@ package com.dudu.duduserver.service;
 import com.dudu.duduserver.channel.console.ConsoleCallbackUrls;
 import com.dudu.duduserver.channel.console.ConsoleChannelCatalog;
 import com.dudu.duduserver.channel.console.ConsoleChannelConfiguration;
+import com.dudu.duduserver.channel.douyin.DouyinOAuthClient;
 import com.dudu.duduserver.channel.xiaohongshuthirdim.XiaohongshuThirdImTokenClient;
 import com.dudu.duduserver.config.exception.BizException;
 import com.dudu.duduserver.constant.ApiEnum;
@@ -32,9 +33,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Console 保存小红书三方私信授权码首换验收：auth_code 10 分钟时效且一次性，保存即同步
- * 换取（docs/research/channels/xiaohongshu.md §13.4）；换取成功把轮换双 token 写入
- * channel_info 并丢弃授权码，失败整体拒绝促重新授权，未携带授权码的保存不触发出网。
+ * Console 保存授权码首换验收（小红书三方私信 docs/research/channels/xiaohongshu.md
+ * §13.4、抖音 docs/research/channels/douyin.md §6）：授权码 10 分钟时效且一次性，
+ * 保存即同步换取（等定时任务必失效）；换取成功把轮换产物写入 channel_info 并丢弃
+ * 授权码，失败整体拒绝促重新授权，未携带授权码的保存不触发出网；抖音首换同时清除
+ * 服务端续期时刻（新授权链按保存时刻起算，不烧轮换配额）
  */
 class ConsoleChannelAuthCodeExchangeTest {
 
@@ -45,6 +48,7 @@ class ConsoleChannelAuthCodeExchangeTest {
     private final ConsoleAccessService accessService = mock(ConsoleAccessService.class);
     private final CompanyChannelService accounts = mock(CompanyChannelService.class);
     private final XiaohongshuThirdImTokenClient thirdImTokens = mock(XiaohongshuThirdImTokenClient.class);
+    private final DouyinOAuthClient douyinOAuth = mock(DouyinOAuthClient.class);
     private final ConsoleCallbackUrls callbackUrls = mock(ConsoleCallbackUrls.class);
 
     private CompanyChannelDO account;
@@ -77,7 +81,7 @@ class ConsoleChannelAuthCodeExchangeTest {
 
         service = new ConsoleChannelServiceImpl(accessService, accounts, mock(UserGroupService.class),
             mock(ConsoleChannelCatalog.class), new ConsoleChannelConfiguration(), callbackUrls, thirdImTokens,
-            mock(ApplicationEventPublisher.class));
+            douyinOAuth, mock(ApplicationEventPublisher.class));
     }
 
     @Test
@@ -126,6 +130,58 @@ class ConsoleChannelAuthCodeExchangeTest {
         assertThat(account.getChannelInfo())
             .containsEntry("refreshToken", "manually-entered")
             .doesNotContainKey("authCode");
+        verify(accounts).updateById(account);
+    }
+
+    @Test
+    void exchangesDouyinAuthCodeIntoRefreshTokenAndResetsRenewClock() {
+        // 抖音授权码首换（docs/research/channels/douyin.md §6）：code 10 分钟一次性，
+        // 保存即换首个 refreshToken；重新授权场景清除旧续期时刻，按保存时刻重新起算
+        account.setChannel(ChannelEnum.DOUYIN);
+        account.setChannelInfo(new LinkedHashMap<>(Map.of(
+            "clientKey", "tt10abc", "clientSecret", "s",
+            "refreshToken", "expired-rt", "refreshTokenRenewedAt", 1720000000000L)));
+        when(douyinOAuth.exchange("tt10abc", "s", "fresh-code"))
+            .thenReturn(new DouyinOAuthClient.ExchangeResult("rt-new", null));
+
+        service.update(null, ACCOUNT_ID.toString(),
+            update(Map.of("authCode", "fresh-code")), ORIGIN);
+
+        assertThat(account.getChannelInfo())
+            .containsEntry("clientKey", "tt10abc")
+            .containsEntry("refreshToken", "rt-new")
+            .doesNotContainKey("authCode")
+            .doesNotContainKey("refreshTokenRenewedAt");
+        verify(accounts).updateById(account);
+    }
+
+    @Test
+    void rejectsDouyinSaveWhenExchangeFails() {
+        account.setChannel(ChannelEnum.DOUYIN);
+        account.setChannelInfo(new LinkedHashMap<>(Map.of("clientKey", "tt10abc", "clientSecret", "s")));
+        when(douyinOAuth.exchange("tt10abc", "s", "used-code"))
+            .thenReturn(new DouyinOAuthClient.ExchangeResult(null,
+                "换取抖音 refreshToken 失败：10007 code已过期"));
+
+        assertThatThrownBy(() -> service.update(null, ACCOUNT_ID.toString(),
+            update(Map.of("authCode", "used-code")), ORIGIN))
+            .isInstanceOf(BizException.class)
+            .hasMessageContaining("10007")
+            .hasMessageContaining("重新授权");
+        verify(accounts, never()).updateById(any(CompanyChannelDO.class));
+    }
+
+    @Test
+    void skipsDouyinExchangeWhenAuthCodeAbsent() {
+        account.setChannel(ChannelEnum.DOUYIN);
+        account.setChannelInfo(new LinkedHashMap<>(Map.of(
+            "clientKey", "tt10abc", "clientSecret", "s", "refreshToken", "manual-rt")));
+
+        service.update(null, ACCOUNT_ID.toString(),
+            update(Map.of("refreshToken", "manual-rt-2")), ORIGIN);
+
+        verify(douyinOAuth, never()).exchange(any(), any(), any());
+        assertThat(account.getChannelInfo()).containsEntry("refreshToken", "manual-rt-2");
         verify(accounts).updateById(account);
     }
 
