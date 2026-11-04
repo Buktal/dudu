@@ -150,6 +150,7 @@ content 字段
 
 - 控制台开关或 OpenAPI 订阅：「需要在管理中心打开该事件的订阅才可收到通知」
 - OpenAPI：获取订阅状态 `GET /event/status/list/`（无参数，不需授权）；更新订阅状态 `POST /event/status/update/`（已复核 2026-09-10：event-list 页内联表格原文为 `GET /event/status/update/`，专页原文为 `POST /event/status/update/`，官方自相矛盾；模拟器按 POST 实现）。均为 `https://open.douyin.com` 域，Content-Type: application/json
+- 复核 2026-11-05：event-list 页两接口仅 Method/HTTP request 表格，无请求参数、响应结构、鉴权方式与错误码任何细节；「无参数不需授权」与定位应用身份矛盾（无法解释服务端据何 client_key 返回）。契约不足，订阅状态检查不实施——漏订阅的兜底维持 Console 渠道说明提示人工在平台后台订阅
 - 「如果开发者服务器长时间未响应事件推送请求，可能会取消开发者的订阅状态，开发者需重新订阅」
 
 ### 3.3 重试与响应判定
