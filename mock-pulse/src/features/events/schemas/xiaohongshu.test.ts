@@ -330,8 +330,11 @@ describe("小红书事件 schema 聚合（三体系；握手/加密/数组/验�
       { path: "data.leads_id", kind: "xhsLeadsId" },
     ]);
     const result = applyGeneratedIds(schema, structuredClone(schema.payload));
-    expect(result.data.leads_id).toMatch(/^[1-9]\d{11,17}$/);
-    expect(result.data.leads_id).not.toBe(schema.payload.data.leads_id);
+    const lead = result.data as Record<string, unknown>;
+    expect(lead.leads_id).toMatch(/^[1-9]\d{11,17}$/);
+    expect(lead.leads_id).not.toBe(
+      (schema.payload.data as Record<string, unknown>).leads_id,
+    );
     // 信封 timestamp 是推送时刻（同报文重推不变，幂等键另一半），不重生成
     expect(result.timestamp).toBe(schema.payload.timestamp);
   });
