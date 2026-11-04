@@ -1210,7 +1210,7 @@ AES 解密（Java/PHP 一致，此为 canonical 形态）
 - Description（逐字）：「返回的 image_id，可用于 创建/更新留资卡片, 创建更新小程序引导卡片模板 等接口的图片参数」——结合 §6.1 发送私信 `{"msg_type":2,"image":{"media_id":"@..."}}`（「media_id 来自图片上传接口的 image_id」），**发送侧图片链路至此闭合：client_token 上传得 image_id → 作为 media_id 填入发送私信图片消息**；该能力不要求发送方用户授权（上传本身），发送时仍按 §6.1 凭证规则
 - PermissionInfo（meta 结构化能力门禁）：接口挂三个能力条件——`ma.openapi.im.direct_message`（发送私信）、`ma.openapi.im.group_fan.create_list`（粉丝群管理，注意 CapacityKey 拼写为 group_fan 单数，照录）、`ma.openapi.im.group_message`（发送群消息）；条件 = 小程序主营类目黑名单（`main_category_black`，类目码串逐字在 meta：`1,1,500,135,140;1,1,500,135,148;1,1,500,135,700;1,1,504,607,778;1,1,504,607,781;1,1,504,608,777;1,1,504,608,780;1,1,510,602,284`）+ 群消息能力要求小程序上线状态「已上线」（`app_online_multi`）
 - 三语 SDK 示例逐字在 meta（go `github.com/bytedance/douyin-openapi-sdk-go` + `douyin-openapi-util-go` FileField；node `@open-dy/open_api_sdk` ImagexClientUploadRequest；java `com.douyin.openapi.client` ImagexClientUploadRequest）
-- 群聊发送侧指针（同目录新发现，未展开）：发送群消息 `/zh-CN/mini-app/develop/server/reach-marketing/instant-message/group-chat/group-message/im-group-message-send`（scope `im.group_message`，需小程序已上线）、撤回群消息 `.../group-msg-recall`、私信撤回 `.../private-message/recall-msg`（scope `im.recall_message`）
+- 群聊发送侧指针（同目录新发现，未展开）：发送群消息 `/zh-CN/mini-app/develop/server/reach-marketing/instant-message/group-chat/group-message/im-group-message-send`（scope `im.group_message`，需小程序已上线）、撤回群消息 `.../group-msg-recall`、私信撤回 `.../private-message/recall-msg`（scope `im.recall_message`，apiPath `/im/recall/msg/`；2026-11-05 晚间复核：页 updateTime ≈ 2025-09-04 未变，BFF 索引时间 2026-10-23 与页内时间戳不一致系索引侧重，scope 仍在页）
 
 ### 8.11 杂项补摄：im_authorize 事件、IM 教程页增量、能力矩阵表、调试台（2026-11-03）
 
