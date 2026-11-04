@@ -4,6 +4,7 @@ import com.dudu.duduserver.channel.ChannelCallbackResult;
 import com.dudu.duduserver.channel.ChannelReceiveResult;
 import com.dudu.duduserver.channel.support.DirectHttpMediaReader;
 import com.dudu.duduserver.constant.ChannelEnum;
+import com.dudu.duduserver.constant.MessageDirectionEnum;
 import com.dudu.duduserver.entity.CompanyChannelDO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -103,6 +104,24 @@ class DouyinAdapterTest {
         ChannelReceiveResult acked = adapter.receive(account(null), Map.of(), headers, read);
         assertThat(acked.response()).isEqualTo(ChannelCallbackResult.success());
         assertThat(acked.message()).isNull();
+    }
+
+    @Test
+    void signedMerchantSentMessageBecomesOutgoingInboundLetter() {
+        // im_send_msg（授权号发出消息的同步推送）：验签后端到端转为 OUTGOING 信件，
+        // 访客身份取 to_user_id（from 是授权号）
+        String message = "{\"event\":\"im_send_msg\",\"from_user_id\":\"owner-open\","
+            + "\"to_user_id\":\"visitor-open\",\"client_key\":\"asdfavetgbvasf\",\"log_id\":\"log-2\","
+            + "\"content\":{\"message_type\":\"text\",\"text\":\"已收到\","
+            + "\"server_message_id\":\"@msg2\",\"conversation_short_id\":\"@conv1\"}}";
+        sign(message);
+
+        ChannelReceiveResult result = adapter.receive(account(null), Map.of(), headers, message);
+        assertThat(result.response()).isEqualTo(ChannelCallbackResult.success());
+        assertThat(result.message()).isNotNull();
+        assertThat(result.message().externalUserId()).isEqualTo("visitor-open");
+        assertThat(result.message().direction()).isEqualTo(MessageDirectionEnum.OUTGOING);
+        assertThat(result.message().content()).isEqualTo(Map.of("type", "text", "text", "已收到"));
     }
 
     @Test
