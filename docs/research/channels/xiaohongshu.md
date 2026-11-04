@@ -49,7 +49,7 @@
 
 来源：zsmhub/xhs-sdk `message/` 目录（Go 结构体逐字转录，msgTag 与字段名均为平台原样）；`cxjava/xhs-sdk`（分叉，注释佐证）
 
-> **2026-11-05 官方原文升级**：开发者文档 POST 接口实测匿名可用（历史「POST 墙」结论作废）——`POST /api/developer/doc/getDocNavigationSecondListNew` body `{"docId":9}` 枚举子树（10 章）；`POST /api/developer/doc/getDocDetailNew` body `{"docDetailId":N}` 取正文。关键正文已核：**39 签名算法**（API 调用侧：参与签名仅系统参数 appId/timestamp/version/method + appSecret 拼尾，`method?appId=..&timestamp=..&version=2.0` + appSecret，MD5 hex，accessToken 不参与验签；三语官方样例逐字，2026-01-08）；**40 系统参数说明**（公共参数表与 §5.1 公共参数 schema 互证，2026-01-08）；**41 应用消息推送**（2026-01-27）——推送侧加签与 API 侧不同：**除 sign 外系统参数 + 全部 url 请求参数按字母排序 & 连接（body 不参与），拼 `url?params` + app-secret 后 MD5**，签名三元组（timestamp/app-key: `xhs`/sign）现置于 **body 内 `headers` 结构**（官方注明「后续会调整」）；推送应答 `{success,error_code,error_msg}` 与 §2.1 SDK 信封互证；**重试：首推失败后重试 3 次，间隔 30s/5m/30m；响应超时 2 秒，超时即失败触发重试，应先回 200 再异步处理**；推送地址连通性为控制台手动检测（POST `{"test":true}` 须回 httpcode=200，一应用一地址）；消息丢失主因店铺 AT 过期（官方原句）。**文档-SDK 命名漂移照录**：doc 41 消息目录（2022-05-25 版）作 `msg_fulfillment_delivery_time_change`（多个 y）且商品族为 `msg_item_create`/`msg_item_buyable`；SDK 结构体（§2.2 十事件、mock 实现）为 `msg_fulfillment_deliver_time_change` 与 `msg_sku_*` 族——SDK 为实现基准，官方目录系旧版命名，联调时若平台实推 `delivery` 拼写需按实际放行
+> **2026-11-05 官方原文升级**：开发者文档 POST 接口实测匿名可用（历史「POST 墙」结论作废）——`POST /api/developer/doc/getDocNavigationSecondListNew` body `{"docId":9}` 枚举子树（10 章）；`POST /api/developer/doc/getDocDetailNew` body `{"docDetailId":N}` 取正文。关键正文已核：**39 签名算法**（API 调用侧：参与签名仅系统参数 appId/timestamp/version/method + appSecret 拼尾，`method?appId=..&timestamp=..&version=2.0` + appSecret，MD5 hex，accessToken 不参与验签；三语官方样例逐字，2026-01-08）；**40 系统参数说明**（公共参数表与 §5.1 公共参数 schema 互证，2026-01-08）；**41 应用消息推送**（2026-01-27）——推送侧加签与 API 侧不同：**除 sign 外系统参数 + 全部 url 请求参数按字母排序 & 连接（body 不参与），拼 `url?params` + app-secret 后 MD5**，签名三元组（timestamp/app-key: `xhs`/sign）现置于 **body 内 `headers` 结构**（官方注明「后续会调整」）；推送应答 `{success,error_code,error_msg}` 与 §2.1 SDK 信封互证；**重试：首推失败后重试 3 次，间隔 30s/5m/30m；响应超时 2 秒，超时即失败触发重试，应先回 200 再异步处理**；推送地址连通性为控制台手动检测（POST `{"test":true}` 须回 httpcode=200，一应用一地址）；消息丢失主因店铺 AT 过期（官方原句）。**文档-SDK 命名漂移照录**：doc 41 消息目录（2022-05-25 版）作 `msg_fulfillment_delivery_time_change`（多个 y）且商品族为 `msg_item_create`/`msg_item_buyable`；SDK 结构体（§2.2 十事件、mock 实现）为 `msg_fulfillment_deliver_time_change` 与 `msg_sku_*` 族——SDK 为实现基准，官方目录系旧版命名，联调时若平台实推 `delivery` 拼写需按实际放行。**第二批（同日）**：docId=9 子树其余章节全量闭合（32 新手指南/33 应用开发/34 应用测试/341/342 授权流程·新/42 SDK使用说明/292 接口限流/43 上架服务市场，共 11 章无缺）——**341/342**（2026-01-07 新建、01-08 更新）：AT 7 天/RT 14 天官方数值、刷新 30 分钟窗口与旧 AT 5 分钟宽限、code 10 分钟、授权页与移动端二维码 URL 全文（落库 §6）；**292**：限流默认值 100/200 QPS（落库 §6.1）；**42**：SDK 仅 Java，Client 族 Oauth/Common/Product/Package(订单旧)/Order(订单新)/Inventory/AfterSale/Finance/MemberPass，更新日志含渠道相关两条（2025-07-16 解密接口新增隐私号字段→§4.3；2025-12-22 订单详情/列表/售后详情(新)/售后列表(新) 四接口 resp 新增 `xhsOpenId` 字段）——**页内 updateTime 2026-01-08 明显滞后于内容（日志含 2026-10-10 条目），XHS 文档 updateTime 不可靠，复查以内容级时间戳（更新日志行）为权威**；33/34/43 为控制台流程（类目权限矩阵、共用测试店铺与测试 code 按钮、服务市场保证金与 6 工作日审核），渠道相关性低仅存目
 
 ### 2.1 推送信封（外层结构）
 
@@ -108,10 +108,10 @@
 1. **URL 配置**：在开放平台控制台为应用配置「消息推送」回调 URL（HTTPS）。`[多源]` cxjava 注释原话：「生产环境更推荐：在开放平台配置『消息推送』，支付完成后平台 POST 到你的 HTTPS，在回调里解析订单号再调 order.getOrderDetail」
 2. **推送方式**：平台 POST，Content-Type JSON，body 为 `[{msgTag, sellerId, data}, ...]` 数组
 3. **应答**：HTTP 200 + `{"success": true, "error_code": 0, "error_msg": ""}`
-4. **首次校验握手**：**未发现** echo/challenge 类握手机制（电商推送侧）。SDK demo 直接上线收 POST。→ 官方「开发文档-消息推送」章节未取得，待核验(09-27)
+4. **首次校验握手**：**未发现** echo/challenge 类握手机制（电商推送侧）。SDK demo 直接上线收 POST。→ **已解决（2026-11-05，doc 41）**：官方正文通篇未载握手机制，连通性由控制台手动检测承担（POST `{"test":true}` 须回 200）——「无握手」升级为官方正文级结论
 5. **OAuth 授权回调**（与推送回调是两个不同 URL 配置项）：平台 GET 回调地址，带 `code`、`state` 参数；用 code 调 `oauth.getAccessToken` 换 token
-6. **重试策略**：官方文档未取得 → 待核验(09-27)
-7. **推送验签**：cxjava 注释称「验签方式与 API 调用一致（文档『消息推送』章节）。本仓库未内置验签」；zsmhub demo 完全不验签。两 SDK 均未展示推送侧签名头 → 待核验(09-27)
+6. **重试策略**：**已解决（2026-11-05，doc 41）**：首推失败后重试 3 次，间隔 30s/5m/30m；响应超时 2 秒，超时即失败触发重试，官方建议先回 200 再异步处理
+7. **推送验签**：**已解决（2026-11-05，doc 41）**：推送侧确有加签（cxjava「与 API 调用一致」的方向判断成立，机制实则不同）——除 sign 外系统参数 + 全部 url 请求参数按字母排序 & 连接（body 不参与），拼 `url?params` + app-secret 后 MD5；签名三元组（timestamp/app-key:`xhs`/sign）置于 body 内 `headers` 结构（官方注明后续会调整）
 
 ---
 
@@ -145,6 +145,7 @@ sign = md5_hex_lowercase(signString)
   - 请求：`{baseInfos: [{dataTag: "订单场景为orderId", encryptedData}], actionType, appUserId}`
   - `actionType`：`1` 单个查看订单明文 / `2` 批量解密打单 / `3` 批量解密后面向三方的数据下发 / `4` 其他场景
   - 响应：`data.dataInfoList[]: {dataTag, encryptedData, decryptedData, errorCode, errorMsg}`
+  - SDK 更新日志 2025-07-16：解密接口新增隐私号字段（doc 42，字段名未载）
 
 ---
 
@@ -230,15 +231,27 @@ sign = md5_hex_lowercase(signString)
 | 换 token | method=`oauth.getAccessToken`，业务参数 `{code}`（授权回调带回的 code） |
 | 刷新 | method=`oauth.refreshToken`，业务参数 `{refreshToken}` |
 | 响应字段 | accessToken / accessTokenExpiresAt / refreshToken / refreshTokenExpiresAt / sellerId / sellerName（**绝对时间戳**，非 expiresIn 秒数） |
-| 寿命 | 返回绝对过期时间戳；**具体寿命时长官方数值未取得** → 待核验(09-27) |
+| 寿命 | 返回绝对过期时间戳；**官方数值已取得（doc 341/342，2026-01-08）**：accessToken 7 天、refreshToken 14 天；授权到期时间与 RT 对齐，RT 刷新成功即重置（doc 341 原句） |
+| 刷新语义 | AT 剩余 >30 分钟时刷新：**原 AT/RT 原样返回不重置**（频繁调用会被限流）；剩余 <30 分钟时刷新：发新 AT+新 RT 且**旧 AT 缩至 5 分钟失效**；AT 过期后刷新：发新 AT+新 RT；RT 过期只能重新授权（doc 342 注意事项逐条） |
+| code | 有效期 10 分钟（doc 34/341/342 三处一致）；短时间内多次用同一 code 换 AT 返回相同结果；获取与刷新参数均经 body 传输 |
+| 授权规范（自研） | APPKEY 不得转让；同一/关联主体最多 10 个企业店铺（超限工单申请白名单）；一商家一同类目自研应用仅一个；必须店铺主账号授权、店铺不得为个人/个体（doc 341） |
+| 移动端授权 | 二维码 URL `https://ark.xiaohongshu.com/thor/open/authorization?fullscreen=true&appId={appId}&sellerId={sellerId}&redirectUri={redirectUri}`，千帆 APP 扫码进入授权页，规则同 web 端（doc 342） |
 | 参与签名 | accessToken 不参与 sign（官方 paramNew 明示）；code/refreshToken 在 body 中随公共参数一起 POST |
 | 网关 | 全部走 `POST https://ark.xiaohongshu.com/ark/open_api/v3/common_controller`，JSON body = 公共参数 + 业务参数平铺 |
+
+### 6.1 接口限流（doc 292，v1.0 2024-09-14，updateTime 2026-01-08 无版本升级）`[官方]`
+
+- SLA：可用性 99.9%
+- **应用维度**：新对接服务商默认 **100 次/秒**；已对接者按历史调用峰值给 1.5 × MaxQPS 额度（例：峰值 200 QPS → 限流值 300 次/秒）
+- **方法维度**：默认 **200 次/秒**；已对接者 2.5 × APIQPS 额度
+- **应用+方法维度**：按服务商业务单独配置；日常调用频繁限流可工单反馈调整
+- 运营要求：尖刺流量自查（超限影响成功率平台不负责）；提额需对接群/工单提前说明；大促提前报备酌情提升阈值
 
 ---
 
 ## 7. 待核验清单（统一 09-27 恢复后重试）
 
-1. **[官方·开发文档正文]** docId=9「开发文档」子树：接入流程、消息推送章节、签名算法官方原文、token 寿命数值、推送重试策略、推送是否带签名头。→ **已解决（2026-11-05）**：getDocDetailNew 匿名可用（通道注记见 §2 头部升级块），签名算法官方原文（doc 39）、消息推送章节（doc 41）、重试策略（30s/5m/30m ×3、超时 2s）、推送签名位置（body 内 `headers` 结构）全部落库 §2；token 寿命数值官方文档未载（doc 40 仅公共参数表），维持 SDK 事实源
+1. **[官方·开发文档正文]** docId=9「开发文档」子树：接入流程、消息推送章节、签名算法官方原文、token 寿命数值、推送重试策略、推送是否带签名头。→ **已解决（2026-11-05）**：getDocDetailNew 匿名可用（通道注记见 §2 头部升级块），签名算法官方原文（doc 39）、消息推送章节（doc 41）、重试策略（30s/5m/30m ×3、超时 2s）、推送签名位置（body 内 `headers` 结构）全部落库 §2；token 寿命数值后补取得（doc 341/342 授权流程·新：AT 7 天/RT 14 天 + 刷新 30 分钟窗口语义），落库 §6；子树其余章节（32/33/34/42/43/292）同日第二批全量闭合，见 §2 头部块
 2. **[官方·数据加解密]** docDetailId 50/51 正文（encryptedData 的具体算法，大概率 AES，密钥派生方式）。→ **已解决（2026-11-05）**：**AES/CBC/PKCS5Padding**（doc 51，2023-09-21）；密文格式 `#索引串#密文#类型##`，检索串同数据同应用恒定（跨订单密文不同、应用维度隔离、密文可反算订单/店铺溯源），类型码 1 地址/2 姓名/3 电话/4 身份证号，四类逐字样例在页；doc 50（2023-09-25）为订单敏感字段加密改造方案（收件人/海关申报密文化 + 脱敏规则 + 字段级受监控解密接口），均属电商订单域与消息推送无关
 3. **[专业号私信官方通道]** 是否存在面向 ISV 的官方私信 webhook/拉取 API。GitHub 无实现痕迹、开放平台文档中心五大板块均为电商域；不排除藏在登录墙后（服务市场 ISV 专属文档）。**部分解决**：miniapp 域已有官方消息型推送（§10），但那是小程序客服会话，不是专业号私信本身——专业号 DM 是否有 ISV 通道仍未知。→ **已解决（2026-11-03）**：专业号私信 ISV 通道存在——商业开放平台私信三方（third_im）体系的「三方客服接收消息」推送 + 「三方客服发送消息」API，完整接口规格在企业微信文档登录墙内（字段表待核验），详见 §13
 4. **[单源存疑]** `x-xiaohongshu-signature` HMAC-SHA256 + `im.message.receive` + `verify_webhook` challenge 模式（zhilin1719-hue/--）。需官方对质后才能采用；当前判定为模仿飞书的拼装。**注意**：miniapp 域官方握手的参数名叫 `signature`/`echostr`（§10），与该单源声称的头名/事件名仍不相符，维持不可信判定。→ **待核验(09-27)**
