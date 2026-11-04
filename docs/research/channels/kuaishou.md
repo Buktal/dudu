@@ -417,3 +417,106 @@ curl --request POST 'https://openapi.kwaixiaodian.com/open/cs/intelligent/messag
 - 用户「不可能不支持」的判断在电商域成立：买家↔商家聊天通道存在且为晓多等在用，但平台 2021-08 起暂停新增入驻、2022-12 收敛为三家深度合作服务商——**通道真实、非自助开放**；唯一自建路径为商家自研（绑定自有快手小店），准入实测为实施前置
 - DuDu 行动建议：快手渠道从「不可用」改列「有条件可行（电商域智能客服，商家自研线）」；实施前置清单：快手小店商家开发者账号→创建应用→实测 `merchant_cs` scope 开通与消息推送开关→推送地址线下报备→以 requestId 关联推送/回复的买家寻址实测
 - 遗留待核验：a) 商家自研开通 `merchant_cs` 实测（11-03 新增）；b) `open.cs.intelligent.message.send` 的 toUser 买家寻址字段（结构体无 openId，疑走 requestId 关联）；c) 物流会话「厂家」角色实际开通流程；d) 直播旧站 WebHook menu=24 存档
+
+## 7. 补充调研（2026-11-04）
+
+> 任务：三个实施级问题——①发送寻址（toUser 除 nickName+role 外的身份位、nickName→openId 解析、重名处理）②素材（推送 uri 抹空图片的下载/换取接口、发送侧图片/卡片报文）③会话与状态（会话列表/转接详情/结束会话接口、type=2 转接语义）
+> 方法与抓取链：复用 §6 匿名文档网关全部端点，本轮新增 `GET /rest/open/platform/doc/api/list?categoryId=<id>`（按类目取接口清单，仅含 display=true）与 FAQ 语料（docType=2，全库 46 条）；重新下载官方 SDK jar（构建时间 2026-10-29，较 11-03 旧版新增类族）`[SDK]`；全量隐藏接口名探测 40+ 个
+> 标注沿用头注约定；无标注 = 网关官方数据直读已核验。文档语料总量 810 → 821（+11 条均为商品/账单/会员域，与客服无关；2026 年内新增 67 条文档逐一扫描无 cs 类目变化）
+
+### 7.1 Q1 发送寻址：openId 为 SDK 层实锤的第二身份位；无 nickName 解析接口；重名无官方口径
+
+#### 发送侧 User 双形态 `[SDK]`
+
+- 文档结构体 User（structureId 296，网关 2026-11-04 直读）仍仅两字段，与 §6.5.2 一致：`nickName` String 必填（示例 快手用户1234）「用户昵称」；`role` Integer 必填「身份角色  1：买家 2：商家 3：客服」
+- **新版 jar 出现第二套 User**：`com.kuaishou.merchant.open.api.request.param.cs.User` 三字段——`nickName` / `role`(int) / **`openId`(String)**（`javap` 核对 setter/getter 齐全）；旧 `domain.cs.User`（§6.5.2 官方 demo 所用）仍仅 nickName+role
+- 引用方：`KsMerchantCsIntelligentMessageSendRequest`（`request.param.cs.*` 族仅被此一个请求类引用），其 `getApiMethodName()` ldc 常量逐字 `open.cs.intelligent.message.send`、`getRequestSpecialPath()` 逐字 `/open/cs/intelligent/message/send`——**新旧两套请求类打同一接口**，新版序列化 toUser 时可携带 openId。线上网关是否接受 openId 字段（忽略/采信/报错）待实测(11-04)
+- 佐证链：同族 `open.cs.intelligent.evaluation.message`（§6.5.2）入参 `toUserId` String 必填「接收者openId」——同一智能客服接口族存在纯 openId 寻址接口
+
+#### openId 的规范地位与解析接口缺口
+
+- `open.user.fans.check`（校验用户是否为粉丝，categoryId 41 用户API，oauthRole 达人）入参 `fromOpenId` 说明逐字：「用户的openId，同一个用户在同一个开发者主体下返回的openId是一致的，可通过open.user.info.get获取」——官方确认 openId 为开发者主体内一致的规范身份位
+- `open.user.info.get`（获取用户公开信息）：**无任何入参**（出参为授权者本人 UserInfoData：name/sex/head/bigHead/openId，示例 openId `f1787938274893gfuyiiwrtfghghj`）——「查本人」接口，非解析器
+- 用户API 类目全量仅 3 接口（`api/list?categoryId=41` 直读）：fans.check / info.get / `open.user.seller.get`（获取商家信息）——**不存在 nickName→openId 解析接口**；openId 唯一获取途径 = 推送 User 内携带（§6.5.3）或查授权者本人
+- 重名场景：官方文档/FAQ 全库无任何口径（46 条 FAQ 逐条扫描 + 标题/正文关键词「昵称/重名」0 命中）→ 待实测(11-04)（推断：generator=1 异步回复时平台按 requestId 关联推送上下文定位买家，nickName 仅透传展示位；依据为错误码 400003 官方 solution，见 7.4）
+
+#### send 接口元数据补充（11-04 网关直读新增）
+
+- permissions 细目（逐字）：scope `merchant_cs` desc「电商客服信息权限」categoryList `["商家后台","客服管理-客服应用","客服管理-客服绩效","客服管理-客服质检","客服管理-智能客服"]`——控制台授权分档为四档客服管理子项
+- updateTime 1708422800706（2024-02-20）；viewNum 476；version 仅 1（version=0/2/3 探测均「数据不存在」）
+- 官方 Java demo（exampleDocs 新取，逐字要点）：`obj1.setNickName("快手用户1234"); obj1.setRole(1);`——三处 User（transferList/fromUser/toUser）均只设 nickName+role；messageList 仅演示 contentType=1 文本 `"{\"text\": \"你好\"}"`
+- 完整错误码表（逐字，11-04 首取）：
+
+| code | type | description | solution |
+| --- | --- | --- | --- |
+| 1 | 系统错误 | 请求成功 | 无需处理 |
+| 24 | 业务错误 | 验签失败 | 请检查access_token是否过期或者access_token的权限是否与接口需要权限匹配 |
+| 400001 | 业务错误 | 智能客服消息内部不能为空 | 请检查发送消息是否为空 |
+| 400002 | 业务错误 | 智能客服消息发送异常 | 请重试，重试之后还有问题请联系快手的技术支持同学 |
+| 400003 | 业务错误 | 智能客服消息已经被回复过 | 请检查是否是相同的requestId被重复请求 |
+| 400008 | 业务错误 | 智能客服回复消息命中风控 | 请检查答案配置内容 |
+
+### 7.2 Q2 素材：无下载/换取接口；发送侧图片双口径（主消息抹空 vs 辅助建议必填真实链）
+
+#### 下载/换取接口：不存在
+
+- 全语料「素材」命中仅 4 条，全部商品域：`open.item.material.detail.get` / `open.item.material.upload.token.verify` / `open.item.material.upload.token.issue`（categoryId 44 商品素材，含签名上传 token 族）+ 一条校验公告——cs 消息域无任何素材接口
+- 隐藏接口名探测 40+ 全落空：`open.cs.intelligent.message.pull` / `message.detail` / `message.query` / `message.read` / `message.batch.send` / `image.upload` / `file.upload` / `material.upload` / `card.send` / `image.send` 等——**消息详情与素材下载/换取接口不存在**，被抹空 uri 的买家图片无法经 API 取回
+- 发送侧官方 demo 仅演示文本；图片消息发送无官方示例
+
+#### 发送侧图片/卡片报文（structureId 297/298 网关逐字，11-04）
+
+- `MessageContent`（297）：`contentType`「消息类型 1：文本消息 2：图片消息 1011：商品卡片消息  1012：订单卡片消息」/ `content` String 必填 / `hints` List&lt;Hint&gt; 可选（structureId 299「辅助建议」，Hint{hintItemList: List&lt;HintItem&gt;}）
+- content 各型逐字要点（297）：
+  - 文本 `{"text": "xxxxxxxx", "hintTag": {"phone"：["13625******", "13625******"], "address": ["北京市海淀区上****路"]}}`（原文全角冒号笔误照录；hintTag 脱敏标签：address/phone/idCard/bankId/email）
+  - 图片 `{"uri": "", "width": $width, "height": $height, "contentLength": $contentLength}`「uri: 原uri换为空字符串，其他信息保留」「width: 【必填】宽度 height: 【必填】高度 contentLength: 【非必填】文件大小(字节)」
+  - 商品卡片 `{"text": "$itemId"}`；订单卡片 `"{\"orderId\": \"12345\"}"`
+- `HintItem`（298）content 图片口径（逐字）：`{"uri": "$uri", "width": $width, "height": $height, "contentLength": $contentLength}`「uri: 【必填】图片链接，以.jpg / .png等图片的格式结尾」「width: 【非必填】宽度 height: 【非必填】高度」——**辅助建议路径发送真实图片链接为官方明示能力**（且 contentType 枚举少 1012：仅 1/2/1011）
+- 口径矛盾（两份官方文档并存，照录）：297 主消息「uri 原uri换为空字符串」（疑面向「回显买家已抹空图片」场景，平台按原消息自行解析图片）vs 对接实践 docId 401672 MessageContent 表「uri: 【必填】图片链接，以.jpg / .png等图片的格式结尾」（收侧协议形状）。主消息 image uri 发送侧实操语义待实测(11-04)（空串回显 vs 真实链接直发）
+
+### 7.3 Q3 会话与状态：无会话列表/详情/结束接口；新发现 9 个 `open.cs.dispatching.*` 分流配置接口
+
+#### 隐藏接口名探测结论（2026-11-04）
+
+- `open.cs.intelligent.session.list` / `session.close` / `session.transfer` / `session.query` / `session.finish` / `open.cs.transfer` / `open.cs.session.close` / `open.cs.intelligent.close` / `open.cs.dispatching.assistant.list` / `open.cs.logistics.assistant.list` 等 21 个候选名网关全部「数据不存在」——**智能客服通道无会话列表、会话详情、结束会话、转接详情接口**（客服类目 display=true 清单仍仅 §6.6 四个物流会话接口；347 接口总数与 11-03 一致）
+- type=2「转接」语义收敛（两份官方文档并读）：发送侧 send 的 type=2 + transferList（User[]，转接目标客服 role=3）= **服务商把会话转人工的唯一途径**（无独立 transfer 接口）；推送侧 type=2 = 转接事件通知（type 枚举推送侧仅 1/2，发送侧 1/2/4「辅助模式下无法应答」）。转接目标客服工号 id 可经 dispatching 分组接口管理（见下）
+- 平台侧会话状态机旁证（`open.cs.intelligent.evaluation.message` 错误码表逐字，11-04 首取）：1 请求成功 / 410001「请求参数不合法」/ **410004「灰度开关未打开——请联系客服同学打开开关」** / **430010「用户还未咨询过——不满足发送条件」** / **430011「最后一条消息非商家回复——不满足发送条件」** / **430012「邀评卡片发送次数超过限制——不满足发送条件」**——平台内部追踪咨询历史/最后消息方向/发送次数，但无开放查询接口
+
+#### 新发现：客服分流配置接口族（display=false，网关逐字，均 `merchant_cs`/oauthRole 商家/method POST/version 1）`[SDK]` 双实锤
+
+| 接口 | cnName | 入参 | 出参 data |
+| --- | --- | --- | --- |
+| `open.cs.dispatching.group.add` | 添加客服分组 | groupName String 必填「分组名」 | CsGroupInfo{groupId Long「分组id」} |
+| `open.cs.dispatching.group.query` | 查询客服分组 | groupId Long 必填 | CsGroupDetail{groupName「分组信息」; assistantId List&lt;Long&gt;「客服列表」} |
+| `open.cs.dispatching.group.update` | 更新客服分组 | groupId 必填；addAssistantId List&lt;Long&gt; 必填「添加客服账号id列表」；delAssistantId List&lt;Long&gt; 必填「删除的客服id列表」 | 无 |
+| `open.cs.dispatching.group.del` | 删除客服分组 | groupId Long 必填 | 无 |
+| `open.cs.dispatching.mapping.commodity.add` | 添加商品分组映射 | commodityId Long「商品ID」；groupId Long「分组id」 | 无 |
+| `open.cs.dispatching.mapping.commodity.del` | 删除商品分组映射 | （同 query/add 参数族） | 无 |
+| `open.cs.dispatching.mapping.commodity.del_default` | （del_default 变体） | （同上） | 无 |
+| `open.cs.dispatching.mapping.commodity.query` | 查询客服商品分组映射 | commodityId Long 必填 | CsGroupInfo{groupId} |
+| `open.cs.dispatching.mapping.commodity.query_default` | （query_default 变体） | （同上） | 无 |
+
+- 结构体（网关逐字）：CsGroupInfo（structureId 9334）「分组数据信息」；CsGroupDetail（structureId 9335）「分组详细」assistantId 示例 `[1,2]`——assistantId = 客服账号（工号）id，与推送 Context.assistantOnlineStatus、物流 create.callback 入参 assistantId「客服工号」同一 id 体系
+- 路径族（jar ldc 逐字）：`/open/cs/dispatching/group/{add,query,update,del}` + `/open/cs/dispatching/mapping/commodity/{add,del,del_default,query,query_default}`；jar 类 `OpenCsDispatching{GroupAdd,GroupQuery,GroupUpdate,GroupDel,MappingCommodityAdd,MappingCommodityDel,MappingCommodityDelDefault,MappingCommodityQuery,MappingCommodityQueryDefault}Request` 与 4 个 Response（包 `request.cs`/`response.cs`）
+- 判定：分流配置面（按商品把会话分到指定客服分组），非会话运行时操作；对 DuDu 价值 = 若开通商家自研线，可用其配置商品→机器人分组的分流映射，替代人工后台配置
+- 该 9 接口不在智能客服方案「接口文档」表内（docId 401673 仍仅列 message.send + evaluation.message 两行，2026-11-04 重取比对未变）
+
+### 7.4 交叉佐证与待核验更新
+
+#### `[多源]` 第三方生产集成（lmwmm.com，2026-06-03）
+
+- 《快手电商开放平台API集成笔记》（https://lmwmm.com/post/843.html ，第三方转述）：作者 ISV（AppID ks710724317041866789）生产网关在用「客服接口 open.cs.intelligent.message.send POST 支持文本、商品卡片等消息类型」——send 通道在非三家服务商的生产环境真实可用（2026-06 时点，第三方转述非官方）
+- 同文签名细节与 §4.3 互证（反编译官方 SDK 得出：6 字段字典序 + `&signSecret=` 盐 + HMAC_SHA256 Base64；POST 写接口 URL 仅带 appkey）；补充工程参数：access_token 有效期默认 86400s、提前 600s 续期、refresh_token 每次刷新轮换、网关令牌桶限流经验值全局 QPS 5、Token 过期错误码 803000/803001
+
+#### `[多源]` 社区 SDK 覆盖缺口
+
+- zsmhub/ks-sdk（Go，https://github.com/zsmhub/ks-sdk ）与 AndersonBY/kwaixiaodian-python-sdk（Python，https://github.com/AndersonBY/kwaixiaodian-python-sdk ，自述「按Java参考对齐」覆盖 10 业务域）均**无客服域封装**——cs 接口族在社区生态不可见（display=false + 准入制），佐证「小众准入通道」判定
+
+#### 待核验清单更新（修订 §6.11 d 前三条）
+
+- a) 商家自研开通 `merchant_cs` 实测——维持待实测（附 7.1 permissions 四档子项做控制台核对清单）
+- b) toUser 寻址实测——内容升级：①toUser 携带 openId（新版 SDK 序列化形态）线上是否采信；②主消息 contentType=2 图片 uri 空串回显 vs 真实链接直发；③generator=2 主动发起时 requestId 自造的买家定位方式
+- c) 物流会话「厂家」角色开通流程——维持
+- d) 直播旧站 WebHook menu=24 存档——维持
+- 新增 e) `open.cs.dispatching.*` 九接口对商家自研应用的实际可用性（同待商家开发者账号实测）
+- 新增 f) 410004「灰度开关」是否同样约束 message.send（evaluation.message 明示灰度开关需联系客服打开）

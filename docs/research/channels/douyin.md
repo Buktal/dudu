@@ -985,3 +985,114 @@ AES 解密（Java/PHP 一致，此为 canonical 形态）
 - 模拟首次配置校验：POST `{"event":"verify_webhook","client_key":"","content":{"challenge":<数字>}}`，期望响应 text 格式 `{"challenge":<同值>}`
 - ID 形态：open_id 为 uuid 风格（`5adb9d61-b91a-...`）或 `_000` 前缀风格；会话/消息/视频 ID 均为 `@` 开头的加密 base64 串（`@9Vw...==`）；log_id 为 `202306151447300000000000005369C6D` 风格十六进制串；create_time 13 位毫秒
 - 重试语义：连接 5s 断开（dop）/响应超 2.5s 判失败（生活服务），共重试 3 次；同一 Msg-Id 可重复推送，消费方需幂等
+
+## 补充调研（2026-11-04）
+
+> 研究问题：① 分享类 image/video 消息素材是否有新的下载接口或参数形态、语音/audio 消息是否有读取通道；② GetIMMessageResource 的 media_type 全集、错误码表、rate limit 官方口径；③ 回调事件全集（im_send_msg、进私、已读之外），各事件字段结构
+> 方法补注：本次新发现第二文档平台 **`open.douyin.com/platform/resource/docs/`**（Gatsby 4.19.2 纯前端站，正文在 `https://open.douyin.com/platform/resource/page-data/docs/<路径>/page-data.json` 的 `result.pageContext.htmlAst`，页面无 saved_time 元数据）；老站低代码重构页（docType 0）正文改为 `local.component.Text` 组件，`props.value.t` 即 zone 映射（根 zone 键 `0`，每项含 ops），`aceTable`/`codeblock` 挂在 op 的 attributes 上（aceTable 值为空格分隔的 R zone/C zone，行列 id 在 `insert.id`，单元格键 `x{rowId}x{colId}`）；apiMeta 型页的 `openApiMeta` 结构化字段仍是最完整的接口事实源（含 ErrCodeList 全表 + Suggestion 列）。另核官方 Go SDK 仓库全量 API 路径与商业开放平台（oceanengine）同族接口做交叉验证
+
+### 9.1 问题一结论：分享类 image/video 仍无读取通道，语音消息类型不存在（判断维持）
+
+- 现版接收私信消息事件页（https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/instant-message/private-message/private-msg-webhook ，页面 updateTime 1764315099 ≈ 2025-11-28，官方逐字）message_type 全集：`text` / `image` / `user_local_image` / `emoji` / `video` / `user_local_video` / `retain_consult_card` / `other` —— **无 audio/voice 类型**，dop 私信不存在语音消息，语音素材读取通道无从谈起
+- image 消息现版字段表（官方逐字）仅两列一行：`message_type | 消息类型，image：图片消息` —— 无素材标识、无 URL，与 §6.2 黄金样本一致
+- video 分享消息现版字段表（官方逐字）：`message_type | 消息类型，video：视频分享消息`、`item_id | 加密后的视频ID`
+- user_local_image / user_local_video 现版注（官方逐字）：「可以通过获取消息中的多媒体资源接口，获取图片/视频具体 URL」——唯一有读取通道的仍是这两类
+- 官方 Go SDK 全量路径核查（https://github.com/bytedance/douyin-openapi-sdk-go ，releases 最新 v1.0.3 2025-07-29；main 分支 `client/client.go` 7.6 MB 全部 API path 提取）：IM 域端点仅 `/api/im/message/resources/`（媒体读取）、`/api/douyin/v1/im/{set,get,del}_applet_template/`（引导卡模板）、`/im/authorize/{status,user_list}/`、`/im/{get,del}/retain_consult_card/`、`/im/group/*`（群管理 9 个）、`/im/recall/msg/`——**不存在任何分享类媒体下载或语音素材端点**
+- BFF 全文检索「语音 / 语音消息 / audio 消息」：命中仅 RTC 实时语音（tt.getRtcEngine、上报附近语音用户音量）与小程序 audio 组件类文档，无一涉及 IM 私信语音
+- 结论：§6.2/§8.4 的「分享类 image/video 无公开下载接口」在 2026-11-04 复核后**仍然成立**；emoji 非空 resource_url 直链 + user_local 两类经 GetIMMessageResource 仍是全部可读范围
+
+### 9.2 问题二结论：media_type 全集 = image/video（官方逐字），错误码 21 条全表，无量化 rate limit
+
+来源：https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/openapi/search-management/business-tool/get-message-resources （openApiMeta 全量重抓，ModifyTime 1792737635128 ≈ 2026-10-23，与 2026-11-03 补证版本一致未变；meta 字段：EndpointId 2321512、Psm `open.ability.im`、Domain `https://open.douyin.com`、Version 1.0.299、SupportSandBox false）
+
+- **media_type 取值全集（官方逐字）**：RespSchema `data.media_type` Desc = 「资源类型，image/video」——响应侧仅 `image`/`video` 两个值；请求侧无 media_type 参数（媒体类型由 message_id 对应消息决定）
+- **错误码全表（官方 ErrCodeList 逐字，HTTP 状态码全部 200）**：
+
+| ErrCode | Desc | Suggestion |
+|---|---|---|
+| 28001005 | 系统内部错误，请重试 | 请求重试，若依然无解请向平台提交反馈 |
+| 28001003 | access_token无效 | 重新请求生成access_token |
+| 28001008 | access_token过期,请刷新或重新授权 | 重新请求生成access_token |
+| 28001016 | 当前应用已被封禁或下线 | clientKey被封禁或者下线 |
+| 28001006 | 网络调用错误，请重试 | 重试即可 |
+| 28001014 | 应用未授权任何能力 | 确认应用是否授权能力 |
+| 28001018 | 应用未获得该能力 | 开通相关能力 |
+| 28003017 | quota已用完 | 联系平台处理 |
+| 28001019 | 应用该能力已被封禁 | 该能力被封禁，联系平台处理 |
+| 28001007 | 参数不合法 | 根据错误信息检查请求参数是否填写正常 |
+| 28029006 | 权限校验失败 | 请检查用户是否有消息访问权限 |
+| 28029020 | 未获取到资源链接 | — |
+| 28029015 | 未知资源类型 | — |
+| 28029016 | 不支持的消息类型 | — |
+| 28029017 | 非会话内用户 | — |
+| 28029018 | 消息状态异常 | 请确认消息处于正常可见状态 |
+| 28029019 | 多媒体资源为空 | — |
+| 28029014 | 资源签发失败，请重试 | — |
+| 28029021 | 资源加密失败 | — |
+| 28029022 | 无法获取相应消息 | — |
+| 28029023 | 没有权限访问消息 | — |
+
+  较 §8.4 记录增补 `28001005`/`28001006` 两条（其余 19 条与既有记录一致）；分享类 image/video 的 message_id 传入即落 `28029016`（不支持的消息类型，Desc 与 UseRestriction 互证）
+- **rate limit 官方口径：无数值**——openApiMeta 无任何 QPS/频控/quota 数值字段；UseRestriction 仅两条（仅 user_local_image/user_local_video + 只能获取发送时间为半年内消息多媒体资源）；唯一的量级线索是错误码 `28003017 quota已用完`（Suggestion「联系平台处理」）与私有消息 FAQ 同款；FAQ 页无私信多媒体频控条款。结论：官方未公布量化 rate limit，实施按「无公开配额、出错 28003017 时退避」处理
+- conversation_id 官方逐字（增补双源确认）：「会话 ID，来源于接收私信消息事件或群消息 Webhook 事件，对应 webhook 的 content 里的 conversation_short_id 字段（长期有效）」；message_id 同构且「仅支持 webhook content 中 msg_type 为user_local_image 和 user_local_video 的 message_id」
+- Token InfoV2 逐字：Name `access-token`、Position `header`、Scene「所有场景」、Access `https://open.douyin.com/oauth/access_token/`——用户授权 token 链路再确认
+- 异常响应逐字：`{"err_no": 28001008, "err_msg": "access_token过期,请刷新或重新授权", "log_id": "20240711044452AF709254C5F1B364A8D0"}`
+- 三语 SDK 示例（meta 逐字）：go `douyin-openapi-sdk-go` `MessageResources`/`MessageResourcesRequest`；node `@open-dy/open_api_sdk` `messageResources`；java `com.douyin.openapi.client` `MessageResources`——三语方法名均 MessageResources，与 sdk-overview 页一致
+
+### 9.3 问题三：事件全集复核与三项增量
+
+dop 现行事件目录复核：https://developer.open-douyin.com/docs/resource/zh-CN/dop/develop/webhooks/event-list/ （updateTime 1760338827 = 2025-10-13，与 §2.1 所录一致，12 事件无增减）——im_send_msg、进私、已读之外的完整事件面为：用户撤回 `im_recall_msg`、主动私信授权 `im_authorize`、关注 `new_follow_action`、视频点赞 `new_video_digg`、分享视频 `create_video`、授权/解除 `authorize`/`unauthorize`、经营授权 `contract_authorize`/`contract_unauthorize`、联合授权 `union_auth_info_for_c`/`union_auth_info_for_b`、群族四事件、服务市场订单 `service_market_order`、订阅族两事件（§8.9）——BFF 全量检索交叉核对后**不存在「结束会话」「取消关注」「转人工」类事件**（相关检索仅命中工作台条款：抖音IM客服「6小时内无人发言则自动关闭会话」、客服平台「会话结束48小时内支持再次触达」）
+
+增量一：union_auth_info_for_c/b 的 content 结构官方逐字（§2.1 只列表名未录结构，现版事件结构节补全）
+
+```json
+{
+    "event": "union_auth_info_for_c",            //事件名为union_auth_info_for_c
+    "from_user_id": "",                          //授权方user_id，加密
+    "to_user_id": "",                            //被授权方user_id，加密
+    "client_key": "",                            // 小程序id
+    "content":"{
+        \"c_client_key\":\"xxxxxx\",             // c端应用id
+        \"c_open_id\":\"xxxxxxx\",               // c端openid
+        \"b_client_key\": \"xxxxxxxx\",          // b端应用id
+        \"b_open_id\": \"xxxxx\"                 // b端openid
+    }"
+}
+```
+
+（for_b 版本信封相同、content 四字段相同，事件名注释官方笔误写作 union_auth_info_for_c，照录；contract_unauthorize 注释逐字「用户解除授权的经营Scope和事件时间戳」；im_group_receive_msg / im_group_send_msg / group_fans_event / enter_group_audit_change 四个骨架示例 content 仍为空 `{}`，明细仍以 §8.5 群聊专页为准）
+
+增量二：**遗留企业号事件表**（第二文档平台页 https://open.douyin.com/platform/resource/docs/develop/webhooks/event-list ，官方逐字全录）——事件名与现行 im_* 族完全不同，scope 统一 `enterprise.im`，create_video scope 记法为 `aweme.share（默认都有）`（现行页为 aweme.forward（默认开通），历史演进照录）：
+
+| 事件名 | 描述（逐字） |
+|---|---|
+| receive_msg | 当前抖音用户收到的私信消息具体类型 |
+| enter_im | 抖音用户进入当前抖音用户的私信对话框 |
+| dial_phone | 抖音用户拨打当前抖音用户的个人主页智能电话 |
+| website_contact | 抖音用户在当前抖音用户的转化页留资 |
+| personaltabcontact | 抖音用户在当前抖音用户的主页留资 |
+
+页注（逐字）：「当前抖音用户是指: 授权给开发者应用的抖音用户。其中 im 事件，需要当前抖音用户是企业号」「留资是指: 用户留下的咨询信息」「主页留资是指: 用户在账户主页进入商业化组件留下的联系信息」（原文无换行断句，照录）。schemas（逐字要点）：
+- `receive_msg` content 仅 `description`（注释「具体见私信事件列表」；示例注释笔误「事件名为unauthorize」照录）
+- `enter_im` content：`scene`（注释「进入对话来源场景["video", "homepage"]」）、`object`（注释「来源场景对应id（video对应视频id）」）
+- `dial_phone` / `website_contact` / `personal_tab_contact` 无 content 字段（信封仅 event/from_user_id/to_user_id/client_key；目录表写作 personaltabcontact、schema 写作 personal_tab_contact，官方不一致照录）
+
+**该遗留集与 §8.6 mock-webhook-event 的枚举（create_video、authorize、receive_msg、enter_im、dial_phone、website_contact、personal_tab_contact、verify_webhook）完全对应**——§8.6「mock 枚举与真实事件名不一致」就此收口：沙盒 mock 推送覆盖的是遗留企业号事件集，现行 im_* 族事件无 mock 通道
+
+增量三：FAQ 页（https://developer.open-douyin.com/docs/resource/zh-CN/mini-app/develop/server/reach-marketing/instant-message/FAQ ，updateTime 1751286820 ≈ 2025-06-30，官方逐字）
+- webhook 重试新口径：「抖音开放平台 Webhook 能力存在重试机制，会在 12 小时内进行退避重试」「重试机制目前仍在调优中，调用后相关重试规则会在 Webhook 文档上公布」——对 §3.3「5s 断开重试 3 次」的补充：官方现状为 12 小时窗口退避重试，细则待公布
+- token 寿命表逐字：business_token 30d / biz_refresh_token 长期有效 / access_token 15d / refresh_token 30d / client_token 2h；refresh_token 有效性（逐字）：「可以通过renew_refresh_token接口续期5次；特殊需求下，可以配置每次调用 refresh_token 接口都会延长 refresh_token 本身的有效期到30d」——对 §6「刷新不续自身」的修正：**存在 `renew_refresh_token` 续期接口（至多 5 次），且可按应用配置刷新即续自身 30d**，§6.1 实施注中「refreshToken 刷新不续自身」的前提可据此放宽
+- 引导卡防重复提交（逐字）：「应用多次调用接口传入相同的 content, media_id,title,app_id 参数创建小程序引导卡片，接口会返回相同的 card_template_id」
+- 收不到 webhook 自查链：scope 权限 → 控制台订阅 →（需授权事件）用户授权勾选状态
+
+### 9.4 相邻体系辨析（防检索误命中，均非 dop IM 私信）
+
+- **ai-avatar 会话消息接口**：BFF 检索「会话消息查询/获取会话中的消息」命中的 https://developer.open-douyin.com/docs/resource/zh-CN/ai-avatar/develop/openapi/atomic-service/message-query-interface 与 .../get-session-messages 为**抖音 AI 分身**产品接口（apiPath `/dy_open_api/avatar/atomic/api/query_message/`、Domain `http://open-ai-byted-org.dyc.ivolces.com`、Psm `bytedance.avatar_arch.atomic_service_proxy`、无需用户授权的独立 token 体系），与 dop 私信 IM 不相通，勿混入本渠道
+- **企业号素材上传（发送侧）**：第二平台页 https://open.douyin.com/platform/resource/docs/develop/common-tools/material-repo （官方逐字）：`POST /enterprise/media/upload/` 上传素材得 media_id，配 `enterprise/im/message/send/` 使用；「临时素材media_id 3天过期，已使用图片90天过期，私信场景推荐使用」「永久素材（单个抖音用户限500）」，图片 5MB（bmp/gif/png/jpeg/jpg，长宽<1500）、PDF 10MB；申请能力名逐字「im 代用素材上传」（入口 open.douyin.com/platform/business）——企业号命名空间的**发送侧**素材链路，不提供入站消息素材读取
+- **商业开放平台（oceanengine）企业号私信**：https://open.oceanengine.com/labels/14/docs/1708600831239183 （第三方转述+页面摘要）：企业号私信发送消息接口支持文本、图片、消息卡片、群聊邀请、经营工具，「视频消息暂不支持」；窗口 48h/6 条、非互关需用户主动咨询行为——广告线索向的另一套私信发送 API（飞鱼线索回传闭环），未检出入站素材读取接口；与 dop 渠道凭证体系（client_key/oauth）不同源，DuDu 不接入
+
+### 9.5 补充调研收口
+
+- 问题一：无突破——分享类 image/video 判断维持（官方 SDK 全量路径 + 现版 webhook 页 + GetIMMessageResource UseRestriction 三方互证）；语音消息类型不存在于 dop 私信，无读取通道
+- 问题二：有突破——media_type 全集官方逐字（image/video）、21 条错误码全表（较 §8.4 增 28001005/28001006）、rate limit 确认官方无量化口径（仅 28003017 quota 错误码）
+- 问题三：有突破——遗留企业号事件表逐字全录（receive_msg/enter_im/dial_phone/website_contact/personal_tab_contact + schemas），收口 §8.6 mock 枚举之谜；union_auth_info_for/b content 结构、webhook 12h 退避重试、renew_refresh_token 续期机制为官方新条文；确认不存在「结束会话/取消关注」事件
