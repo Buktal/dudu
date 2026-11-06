@@ -257,7 +257,7 @@ sign = md5_hex_lowercase(signString)
 4. **[单源存疑]** `x-xiaohongshu-signature` HMAC-SHA256 + `im.message.receive` + `verify_webhook` challenge 模式（zhilin1719-hue/--）。需官方对质后才能采用；当前判定为模仿飞书的拼装。**注意**：miniapp 域官方握手的参数名叫 `signature`/`echostr`（§10），与该单源声称的头名/事件名仍不相符，维持不可信判定。→ **待核验(09-27)**
 5. **推送 URL 首次配置时是否有连通性校验**（类似微信 echostr）。**已解决**：miniapp 客服消息体系有 echostr 握手（§10.4）；电商 ark 侧**已解决（2026-11-05）**：无自动 challenge，为控制台手动检测（POST `{"test":true}` 须回 httpcode=200 方显示正常，doc 41）
 6. 电子面单/规则中心子树（docDetailId 294-318 等，与 mock-pulse 关系弱，低优先级）。→ 待核验(09-27)
-7. `https://open.xiaohongshu.com/develop/book`（2026-06 有归档，SPA 壳，可能有 SSR 版）。→ 待核验(09-27)
+7. `https://open.xiaohongshu.com/develop/book`（2026-06 有归档，SPA 壳，可能有 SSR 版）。→ **已解决（2026-11-06）**：直抓实测 23KB 纯 SPA 壳、零 SSR 数据标记（无 __NUXT__/__NEXT_DATA__/window.__ 注入），无匿名数据通道；同日验证 getDocDetailNew 仅覆盖开放平台文档中心 docDetailId 空间（聚光/商业开放平台文章 ID 3754/4945/3115/3197/2607 全部 500 拒绝），跨域取文通道不存在——维持 Wayback 归档为唯一来源
 
 ---
 
